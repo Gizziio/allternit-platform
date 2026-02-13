@@ -1,5 +1,5 @@
 use crate::client::{BrainSession, KernelClient};
-use crate::tui_components::{DiffViewer, MultiLineInput, SyntaxHighlighter};
+use crate::tui_components::{DiffViewer, GitManager, HookContext, HookManager, HookType, MultiLineInput, SyntaxHighlighter};
 use clap::Parser;
 use crossterm::{
     event::{self, Event, KeyCode, KeyEvent, KeyModifiers},
@@ -202,6 +202,10 @@ pub struct TuiApp<'a> {
     // Diff viewer for AI changes
     diff_viewer: DiffViewer,
     show_diff: bool,
+    // Hooks system
+    hook_manager: HookManager,
+    // Git auto-commit
+    git_manager: GitManager,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -301,7 +305,40 @@ impl<'a> TuiApp<'a> {
             suggestion_context: SuggestionContext::None,
             diff_viewer: DiffViewer::new(),
             show_diff: false,
+            hook_manager: Self::init_hook_manager(),
+            git_manager: GitManager::new(std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))),
         }
+    }
+
+    /// Initialize hook manager and create default config if needed
+    fn init_hook_manager() -> HookManager {
+        let config_dir = directories::BaseDirs::new()
+            .map(|d| d.config_dir().join("a2rchitech"))
+            .or_else(|| directories::BaseDirs::new().map(|d| d.home_dir().join(".a2r")))
+            .unwrap_or_else(|| PathBuf::from(".a2r"));
+        
+        std::fs::create_dir_all(&config_dir).ok();
+        
+        let config_path = config_dir.join("hooks.yml");
+        
+        // Create default config if it doesn't exist
+        if !config_path.exists() {
+            HookManager::create_default_config(&config_path).ok();
+        }
+        
+        HookManager::new(&config_path)
+    }
+
+    /// Execute pre-command hooks
+    async fn execute_pre_command_hooks(&self, command: &str) -> Vec<(String, crate::tui_components::hooks::HookResult)> {
+        let context = HookContext::for_command(command);
+        self.hook_manager.execute_hooks(HookType::PreCommand, &context).await
+    }
+
+    /// Execute post-command hooks
+    async fn execute_post_command_hooks(&self, command: &str) {
+        let context = HookContext::for_command(command);
+        self.hook_manager.execute_hooks(HookType::PostCommand, &context).await;
     }
 
     async fn initialize(&mut self) {
@@ -1544,6 +1581,20 @@ impl<'a> TuiApp<'a> {
             return;
         }
 
+        // Execute pre-command hooks for non-slash commands
+        if !text.starts_with('/') && !text.starts_with('!') {
+            let hook_results = self.execute_pre_command_hooks(&text).await;
+            for (cmd, result) in hook_results {
+                if !result.stdout.is_empty() {
+                    self.push_system(format!("[pre-hook] {}", result.stdout.trim()));
+                }
+                if !result.success {
+                    self.push_error(format!("Pre-command hook failed: {}", result.stderr));
+                    // Continue anyway, just log the error
+                }
+            }
+        }
+
         self.add_input_history(&raw);
 
         if raw.starts_with('!') && raw != "!" {
@@ -1563,7 +1614,7 @@ impl<'a> TuiApp<'a> {
 
         let busy = self.activity_status != "idle" || self.stream_rx.is_some();
         if busy || !self.prompt_queue.is_empty() {
-            self.prompt_queue.push_back(text);
+            self.prompt_queue.push_back(text.clone());
             self.push_system(format!(
                 "queued prompt #{} (use /queue run to force, /queue list to inspect)",
                 self.prompt_queue.len()
@@ -1571,7 +1622,10 @@ impl<'a> TuiApp<'a> {
             return;
         }
 
-        self.dispatch_message(text).await;
+        self.dispatch_message(text.clone()).await;
+        
+        // Execute post-command hooks (fire and forget)
+        let _ = self.execute_post_command_hooks(&text).await;
     }
 
     async fn run_local_shell(&mut self, line: String) {
@@ -2143,6 +2197,91 @@ impl<'a> TuiApp<'a> {
                     _ => self.push_error("usage: /todo [list|add <task>|done <index>|clear]".to_string()),
                 }
             }
+            "/hooks" => {
+                let action = parts.next().unwrap_or("status");
+                match action {
+                    "status" => {
+                        let enabled = self.hook_manager.is_enabled();
+                        let pre_count = self.hook_manager.get_hooks(HookType::PreCommand).len();
+                        let post_count = self.hook_manager.get_hooks(HookType::PostCommand).len();
+                        self.push_system(format!(
+                            "hooks: {} | pre: {} | post: {}",
+                            if enabled { "enabled" } else { "disabled" },
+                            pre_count,
+                            post_count
+                        ));
+                    }
+                    "reload" => {
+                        self.hook_manager.reload();
+                        self.push_system("hooks configuration reloaded".to_string());
+                    }
+                    "run" => {
+                        if let Some(hook_type_str) = parts.next() {
+                            if let Some(hook_type) = HookType::from_str(hook_type_str) {
+                                let context = HookContext::for_command("manual test");
+                                let results = self.hook_manager.execute_hooks(hook_type, &context).await;
+                                for (cmd, result) in results {
+                                    if result.success {
+                                        self.push_system(format!("✓ {}: {}", cmd, result.stdout.trim()));
+                                    } else {
+                                        self.push_error(format!("✗ {}: {}", cmd, result.stderr));
+                                    }
+                                }
+                            } else {
+                                self.push_error(format!("unknown hook type: {}", hook_type_str));
+                            }
+                        } else {
+                            self.push_error("usage: /hooks run <hook_type>".to_string());
+                        }
+                    }
+                    _ => self.push_error("usage: /hooks [status|reload|run <type>]".to_string()),
+                }
+            }
+            "/git" => {
+                let action = parts.next().unwrap_or("status");
+                match action {
+                    "status" => {
+                        if let Some(status) = self.git_manager.get_status().await {
+                            if status.is_repo {
+                                self.push_system(format!(
+                                    "git: {} | staged: {} | unstaged: {} | untracked: {}",
+                                    status.branch, status.staged_count, status.unstaged_count, status.untracked_count
+                                ));
+                            } else {
+                                self.push_system("not a git repository".to_string());
+                            }
+                        }
+                    }
+                    "commit" => {
+                        let msg = if rest.len() > 7 { &rest[7..] } else { "" };
+                        let msg = if msg.is_empty() { None } else { Some(msg) };
+                        match self.git_manager.auto_commit(msg).await {
+                            Ok(output) => self.push_system(format!("committed: {}", output)),
+                            Err(e) => self.push_error(format!("commit failed: {}", e)),
+                        }
+                    }
+                    "log" => {
+                        let count = parts.next().and_then(|s| s.parse().ok()).unwrap_or(5);
+                        let commits = self.git_manager.get_recent_commits(count).await;
+                        for commit in commits {
+                            self.push_system(commit);
+                        }
+                    }
+                    "auto" => {
+                        let mode = parts.next().unwrap_or("ask");
+                        if let Some(m) = crate::tui_components::git::AutoCommitMode::from_str(mode) {
+                            let mut config = self.git_manager.config().clone();
+                            config.mode = m;
+                            config.enabled = m != crate::tui_components::git::AutoCommitMode::Off;
+                            self.git_manager.set_config(config);
+                            self.push_system(format!("git auto-commit: {} (enabled: {})", mode, self.git_manager.config().enabled));
+                        } else {
+                            self.push_error("usage: /git auto [auto|ask|off]".to_string());
+                        }
+                    }
+                    _ => self.push_error("usage: /git [status|commit|log|auto]".to_string()),
+                }
+            }
             _ => {
                 self.push_system(format!("forwarding slash command: {command}"));
                 self.dispatch_message(command).await;
@@ -2557,6 +2696,7 @@ enum CommandCategory {
     Queue,
     Path,
     Config,
+    Hooks,
     System,
     ClaudeCode, // New Claude Code parity commands
 }
@@ -2571,6 +2711,7 @@ impl CommandCategory {
             CommandCategory::Queue => "Queue",
             CommandCategory::Path => "Path",
             CommandCategory::Config => "Config",
+            CommandCategory::Hooks => "Hooks",
             CommandCategory::System => "System",
             CommandCategory::ClaudeCode => "Claude Code",
         }
@@ -2585,6 +2726,7 @@ impl CommandCategory {
             CommandCategory::Queue => Color::Rgb(248, 162, 141),      // Coral
             CommandCategory::Path => Color::Rgb(112, 214, 255),       // Cyan
             CommandCategory::Config => Color::Rgb(255, 174, 99),      // Orange
+            CommandCategory::Hooks => Color::Rgb(198, 120, 221),      // Purple
             CommandCategory::System => Color::Rgb(144, 224, 190),     // Mint
             CommandCategory::ClaudeCode => Color::Rgb(232, 227, 213), // Cream
         }
@@ -2675,6 +2817,12 @@ fn slash_command_catalog_full() -> Vec<SlashCommand> {
         SlashCommand::new("/subagent", CommandCategory::ClaudeCode, "Spawn subagent"),
         SlashCommand::new("/mcp", CommandCategory::ClaudeCode, "MCP server management"),
         SlashCommand::new("/todo", CommandCategory::ClaudeCode, "Task tracking"),
+        
+        // Hooks
+        SlashCommand::new("/hooks", CommandCategory::Hooks, "Manage hooks [status|reload|run]"),
+        
+        // Git
+        SlashCommand::new("/git", CommandCategory::Hooks, "Git operations [status|commit|log|auto]"),
     ]
 }
 
