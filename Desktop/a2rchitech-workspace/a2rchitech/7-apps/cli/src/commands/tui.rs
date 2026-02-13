@@ -1,5 +1,5 @@
 use crate::client::{BrainSession, KernelClient};
-use crate::tui_components::{DiffViewer, GitManager, HookContext, HookManager, HookType, MultiLineInput, SyntaxHighlighter};
+use crate::tui_components::{DiffViewer, GitManager, HistoryManager, HookContext, HookManager, HookType, MultiLineInput, SyntaxHighlighter};
 use clap::Parser;
 use crossterm::{
     event::{self, Event, KeyCode, KeyEvent, KeyModifiers},
@@ -174,7 +174,6 @@ pub struct TuiApp<'a> {
     last_stream_event: Option<Instant>,
     activity_started_at: Option<Instant>,
     spinner_index: usize,
-    input_history: Vec<String>,
     history_cursor: Option<usize>,
     prompt_queue: VecDeque<String>,
     queue_paused: bool,
@@ -206,6 +205,8 @@ pub struct TuiApp<'a> {
     hook_manager: HookManager,
     // Git auto-commit
     git_manager: GitManager,
+    // Persistent command history
+    history_manager: HistoryManager,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -268,7 +269,6 @@ impl<'a> TuiApp<'a> {
             last_stream_event: None,
             activity_started_at: None,
             spinner_index: 0,
-            input_history: Vec::new(),
             history_cursor: None,
             prompt_queue: VecDeque::new(),
             queue_paused: false,
@@ -307,7 +307,20 @@ impl<'a> TuiApp<'a> {
             show_diff: false,
             hook_manager: Self::init_hook_manager(),
             git_manager: GitManager::new(std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))),
+            history_manager: Self::init_history_manager(),
         }
+    }
+
+    /// Initialize history manager with config directory
+    fn init_history_manager() -> HistoryManager {
+        let config_dir = directories::BaseDirs::new()
+            .map(|d| d.config_dir().join("a2rchitech"))
+            .or_else(|| directories::BaseDirs::new().map(|d| d.home_dir().join(".a2r")))
+            .unwrap_or_else(|| PathBuf::from(".a2r"));
+        
+        std::fs::create_dir_all(&config_dir).ok();
+        
+        HistoryManager::new(config_dir.join("history.jsonl"))
     }
 
     /// Initialize hook manager and create default config if needed
@@ -430,14 +443,13 @@ impl<'a> TuiApp<'a> {
     fn find_history_suggestion(&self, input: &str) -> Option<String> {
         let input_lower = input.to_ascii_lowercase();
         
-        self.input_history
-            .iter()
-            .rev()
-            .find(|cmd| {
-                let cmd_lower = cmd.to_ascii_lowercase();
-                cmd_lower.starts_with(&input_lower) && cmd.len() > input.len()
+        self.history_manager
+            .get_entries_rev()
+            .find(|entry| {
+                let cmd_lower = entry.command.to_ascii_lowercase();
+                cmd_lower.starts_with(&input_lower) && entry.command.len() > input.len()
             })
-            .cloned()
+            .map(|entry| entry.command.clone())
     }
 
     /// Accept the current suggestion
@@ -784,39 +796,38 @@ impl<'a> TuiApp<'a> {
             return;
         }
 
+        // Only add if different from last entry
         let should_push = self
-            .input_history
+            .history_manager
+            .get_entries()
             .last()
-            .map(|last| last != trimmed)
+            .map(|last| last.command.trim() != trimmed)
             .unwrap_or(true);
         if should_push {
-            self.input_history.push(trimmed.to_string());
-            if self.input_history.len() > 200 {
-                let keep_from = self.input_history.len() - 200;
-                self.input_history = self.input_history.split_off(keep_from);
-            }
+            self.history_manager.add(line);
         }
         self.history_cursor = None;
     }
 
     fn navigate_input_history(&mut self, upward: bool) {
-        if self.input_history.is_empty() {
+        if self.history_manager.is_empty() {
             return;
         }
 
+        let history_len = self.history_manager.len();
         let next_cursor = match (self.history_cursor, upward) {
-            (None, true) => Some(self.input_history.len().saturating_sub(1)),
+            (None, true) => Some(history_len.saturating_sub(1)),
             (None, false) => None,
             (Some(0), true) => Some(0),
             (Some(index), true) => Some(index.saturating_sub(1)),
-            (Some(index), false) if index + 1 >= self.input_history.len() => None,
+            (Some(index), false) if index + 1 >= history_len => None,
             (Some(index), false) => Some(index + 1),
         };
 
         self.history_cursor = next_cursor;
         if let Some(index) = self.history_cursor {
-            if let Some(value) = self.input_history.get(index) {
-                self.input.set_text(value.clone());
+            if let Some(entry) = self.history_manager.get_entries().get(index) {
+                self.input.set_text(entry.command.clone());
             }
         } else {
             self.input.clear();
@@ -984,14 +995,8 @@ impl<'a> TuiApp<'a> {
                 "Overlay filter: type to search, Backspace to edit filter".to_string(),
             ],
             Overlay::History => {
-                // Return history in reverse order (most recent first), deduplicated
-                let mut seen = std::collections::HashSet::new();
-                self.input_history
-                    .iter()
-                    .rev()
-                    .filter(|cmd| seen.insert(*cmd))
-                    .cloned()
-                    .collect()
+                // Return unique commands in reverse order (most recent first)
+                self.history_manager.get_unique_commands()
             }
             Overlay::None => Vec::new(),
         }
@@ -1058,7 +1063,7 @@ impl<'a> TuiApp<'a> {
     }
 
     fn open_history_search(&mut self) {
-        if self.input_history.is_empty() {
+        if self.history_manager.is_empty() {
             self.push_system("No command history available".to_string());
             return;
         }

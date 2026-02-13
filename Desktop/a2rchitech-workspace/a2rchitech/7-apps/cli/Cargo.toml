@@ -56,3 +56,6 @@ a2r-skill-portability = { path = "../../0-substrate/a2r-skill-portability" }
 serde_yaml = "0.9"
 
 syntect = { version = "5.1", default-features = false, features = ["default-fancy"] }
+
+[dev-dependencies]
+tempfile = "3.8"
