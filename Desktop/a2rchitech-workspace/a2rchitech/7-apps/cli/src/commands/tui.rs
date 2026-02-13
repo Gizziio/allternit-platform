@@ -1,5 +1,5 @@
 use crate::client::{BrainSession, KernelClient};
-use crate::tui_components::MultiLineInput;
+use crate::tui_components::{DiffViewer, MultiLineInput, SyntaxHighlighter};
 use clap::Parser;
 use crossterm::{
     event::{self, Event, KeyCode, KeyEvent, KeyModifiers},
@@ -102,6 +102,7 @@ enum Overlay {
     Commands,
     Paths,
     Help,
+    History,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -193,6 +194,23 @@ pub struct TuiApp<'a> {
     session_started_at: Instant,
     total_tokens_sent: usize,
     total_tokens_received: usize,
+    // Syntax highlighting
+    syntax_highlighter: SyntaxHighlighter,
+    // Auto-completion suggestions
+    current_suggestion: Option<String>,
+    suggestion_context: SuggestionContext,
+    // Diff viewer for AI changes
+    diff_viewer: DiffViewer,
+    show_diff: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SuggestionContext {
+    None,
+    SlashCommand,
+    FileMention,
+    FilePath,
+    General,
 }
 
 impl<'a> TuiApp<'a> {
@@ -278,6 +296,11 @@ impl<'a> TuiApp<'a> {
             total_tokens_received: 0,
             current_session,
             args,
+            syntax_highlighter: SyntaxHighlighter::new(),
+            current_suggestion: None,
+            suggestion_context: SuggestionContext::None,
+            diff_viewer: DiffViewer::new(),
+            show_diff: false,
         }
     }
 
@@ -310,6 +333,89 @@ impl<'a> TuiApp<'a> {
             .map(str::to_owned)
         {
             self.dispatch_message(message).await;
+        }
+    }
+
+    /// Update auto-completion suggestion based on current input
+    fn update_suggestion(&mut self) {
+        let content = self.input.content();
+        
+        // Determine context and find suggestion
+        if content.starts_with('/') {
+            self.suggestion_context = SuggestionContext::SlashCommand;
+            self.current_suggestion = self.find_slash_command_suggestion(&content);
+        } else if let Some(query) = self.active_mention_query() {
+            self.suggestion_context = SuggestionContext::FileMention;
+            self.current_suggestion = self.find_file_mention_suggestion(&query);
+        } else if !content.is_empty() {
+            self.suggestion_context = SuggestionContext::General;
+            self.current_suggestion = self.find_history_suggestion(&content);
+        } else {
+            self.suggestion_context = SuggestionContext::None;
+            self.current_suggestion = None;
+        }
+    }
+
+    /// Find best matching slash command suggestion
+    fn find_slash_command_suggestion(&self, input: &str) -> Option<String> {
+        let commands = slash_command_catalog();
+        let input_lower = input.to_ascii_lowercase();
+        
+        // Find commands that start with the input
+        let matches: Vec<_> = commands
+            .iter()
+            .filter(|cmd| cmd.to_ascii_lowercase().starts_with(&input_lower))
+            .cloned()
+            .collect();
+        
+        if matches.is_empty() {
+            // Try partial match
+            commands
+                .into_iter()
+                .find(|cmd| cmd.to_ascii_lowercase().contains(&input_lower))
+        } else {
+            // Return the shortest match (most specific)
+            matches.into_iter().min_by_key(|cmd| cmd.len())
+        }
+    }
+
+    /// Find best matching file mention suggestion
+    fn find_file_mention_suggestion(&self, query: &str) -> Option<String> {
+        let query_lower = query.to_ascii_lowercase();
+        
+        self.path_entries
+            .iter()
+            .map(|entry| entry.label.clone())
+            .find(|label| label.to_ascii_lowercase().starts_with(&query_lower))
+    }
+
+    /// Find best matching history suggestion
+    fn find_history_suggestion(&self, input: &str) -> Option<String> {
+        let input_lower = input.to_ascii_lowercase();
+        
+        self.input_history
+            .iter()
+            .rev()
+            .find(|cmd| {
+                let cmd_lower = cmd.to_ascii_lowercase();
+                cmd_lower.starts_with(&input_lower) && cmd.len() > input.len()
+            })
+            .cloned()
+    }
+
+    /// Accept the current suggestion
+    fn accept_suggestion(&mut self) {
+        if let Some(suggestion) = &self.current_suggestion {
+            match self.suggestion_context {
+                SuggestionContext::SlashCommand => {
+                    self.input.set_text(format!("{} ", suggestion));
+                }
+                _ => {
+                    self.input.set_text(suggestion.clone());
+                }
+            }
+            self.current_suggestion = None;
+            self.suggestion_context = SuggestionContext::None;
         }
     }
 
@@ -837,9 +943,19 @@ impl<'a> TuiApp<'a> {
                 "/new /reset /abort /settings /exit".to_string(),
                 "Tab cycles agents. Type '/' for command palette.".to_string(),
                 "Type '@' to open file picker and insert @path into your prompt.".to_string(),
-                "Ctrl+G/P/L pickers, Ctrl+F paths, Ctrl+O tools, Ctrl+T thinking".to_string(),
+                "Ctrl+G/P/L pickers, Ctrl+F paths, Ctrl+O tools, Ctrl+T thinking, Ctrl+H history".to_string(),
                 "Overlay filter: type to search, Backspace to edit filter".to_string(),
             ],
+            Overlay::History => {
+                // Return history in reverse order (most recent first), deduplicated
+                let mut seen = std::collections::HashSet::new();
+                self.input_history
+                    .iter()
+                    .rev()
+                    .filter(|cmd| seen.insert(*cmd))
+                    .cloned()
+                    .collect()
+            }
             Overlay::None => Vec::new(),
         }
     }
@@ -901,6 +1017,18 @@ impl<'a> TuiApp<'a> {
         self.overlay_cursor = 0;
         self.overlay_filter = self.input.trim().trim_start_matches('/').to_string();
         self.overlay_trigger = OverlayTrigger::SlashCommand;
+        self.clamp_overlay_cursor();
+    }
+
+    fn open_history_search(&mut self) {
+        if self.input_history.is_empty() {
+            self.push_system("No command history available".to_string());
+            return;
+        }
+        self.overlay = Overlay::History;
+        self.overlay_cursor = 0;
+        self.overlay_filter = self.input.content().trim().to_string();
+        self.overlay_trigger = OverlayTrigger::Other;
         self.clamp_overlay_cursor();
     }
 
@@ -1048,6 +1176,10 @@ impl<'a> TuiApp<'a> {
                     self.push_system("resumed queue/stream".to_string());
                     return;
                 }
+                KeyCode::Char('h') => {
+                    self.open_history_search();
+                    return;
+                }
                 _ => {}
             }
         }
@@ -1055,7 +1187,10 @@ impl<'a> TuiApp<'a> {
         match key.code {
             KeyCode::Esc => self.abort_active_run().await,
             KeyCode::Tab => {
-                if self.input.trim_start().starts_with('/') {
+                // Check if there's a suggestion to accept
+                if self.current_suggestion.is_some() && self.suggestion_context != SuggestionContext::None {
+                    self.accept_suggestion();
+                } else if self.input.trim_start().starts_with('/') {
                     self.open_commands_overlay();
                 } else if let Some(query) = self.active_mention_query() {
                     self.open_mention_path_overlay(query);
@@ -1076,10 +1211,12 @@ impl<'a> TuiApp<'a> {
             KeyCode::Backspace => {
                 self.input.backspace();
                 self.history_cursor = None;
+                self.update_suggestion();
             }
             KeyCode::Delete => {
                 self.input.delete_char();
                 self.history_cursor = None;
+                self.update_suggestion();
             }
             // Arrow key navigation (including Alt+arrows for word movement)
             KeyCode::Up => {
@@ -1168,6 +1305,8 @@ impl<'a> TuiApp<'a> {
                         self.open_commands_overlay();
                     } else if let Some(query) = self.active_mention_query() {
                         self.open_mention_path_overlay(query);
+                    } else {
+                        self.update_suggestion();
                     }
                 }
             }
@@ -1386,6 +1525,12 @@ impl<'a> TuiApp<'a> {
                             }
                         }
                     }
+                }
+            }
+            Overlay::History => {
+                if let Some(command) = selected {
+                    self.input.set_text(command);
+                    self.history_cursor = None;
                 }
             }
             Overlay::Help | Overlay::None => {}
@@ -3298,7 +3443,9 @@ fn render_input(frame: &mut Frame, area: Rect, app: &TuiApp<'_>) {
     } else if app.input.starts_with("!") {
         "Run /shell on to allow local shell commands.".to_string()
     } else if app.input.is_empty() {
-        "Enter send. Tab cycles agent. '/' opens commands. '@' opens files.".to_string()
+        "Enter send. Tab cycles agent. '/' commands. '@' files. Ctrl+H history.".to_string()
+    } else if app.current_suggestion.is_some() {
+        format!("Tab to accept: {}", app.current_suggestion.as_ref().unwrap())
     } else {
         "Press Enter to send (or auto-queue while a run is active).".to_string()
     };
@@ -3321,15 +3468,15 @@ fn render_input(frame: &mut Frame, area: Rect, app: &TuiApp<'_>) {
         "ready".to_string()
     };
 
-    // Create input widget from MultiLineInput
-    let input_widget = app.input.render()
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .title(format!(" {} ", prompt_icon))
-                .style(Style::default().bg(Color::Rgb(24, 27, 33)))
-                .border_style(Style::default().fg(Color::Rgb(60, 65, 75))),
-        );
+    // Create input widget from MultiLineInput with syntax highlighting
+    let highlighted_lines = app.syntax_highlighter.highlight_markdown(&app.input.content());
+    let input_widget = app.input.render_with_highlight(highlighted_lines).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title(format!(" {} ", prompt_icon))
+            .style(Style::default().bg(Color::Rgb(24, 27, 33)))
+            .border_style(Style::default().fg(Color::Rgb(60, 65, 75))),
+    );
 
     // Create status line
     let (provider, model_id) = split_provider_model(&app.current_model);
@@ -3408,6 +3555,7 @@ fn render_overlay(frame: &mut Frame, app: &TuiApp<'_>) {
             PathOverlayMode::MentionReference => " Files ",
         },
         Overlay::Help => " Help ",
+        Overlay::History => " History (Ctrl+H) ",
         Overlay::None => "",
     };
 

@@ -602,6 +602,73 @@ impl MultiLineInput {
         self.render()
     }
     
+    /// Render with syntax highlighting
+    pub fn render_with_highlight(&self, highlighted: Vec<Line<'static>>) -> Paragraph<'static> {
+        
+        // Apply cursor highlighting
+        let mut lines: Vec<Line<'static>> = Vec::new();
+        for (idx, line) in highlighted.into_iter().enumerate() {
+            if idx == self.cursor_line {
+                // We need to insert cursor highlighting
+                let mut spans: Vec<Span<'static>> = Vec::new();
+                let mut current_col = 0;
+                
+                for span in line.spans {
+                    let span_text = span.content.to_string();
+                    let span_len = span_text.len();
+                    
+                    if current_col + span_len <= self.cursor_col {
+                        // Before cursor
+                        spans.push(span);
+                        current_col += span_len;
+                    } else if current_col >= self.cursor_col {
+                        // After cursor
+                        spans.push(span);
+                    } else {
+                        // Cursor is within this span
+                        let before_cursor_len = self.cursor_col - current_col;
+                        let before_cursor = &span_text[..before_cursor_len.min(span_text.len())];
+                        let cursor_ch = span_text.chars().nth(before_cursor_len).unwrap_or(' ');
+                        let after_cursor = &span_text[(before_cursor_len + 1).min(span_text.len())..];
+                        
+                        if !before_cursor.is_empty() {
+                            spans.push(Span::styled(
+                                before_cursor.to_string(),
+                                span.style,
+                            ));
+                        }
+                        spans.push(Span::styled(
+                            cursor_ch.to_string(),
+                            Style::default()
+                                .bg(Color::Rgb(246, 196, 83))
+                                .fg(Color::Rgb(24, 27, 33))
+                                .add_modifier(Modifier::BOLD),
+                        ));
+                        if !after_cursor.is_empty() {
+                            spans.push(Span::raw(after_cursor.to_string()));
+                        }
+                    }
+                }
+                
+                // Handle cursor at end of line
+                if self.cursor_col >= current_col && self.lines.get(idx).map(|l| l.len()).unwrap_or(0) == self.cursor_col {
+                    spans.push(Span::styled(
+                        " ".to_string(),
+                        Style::default()
+                            .bg(Color::Rgb(246, 196, 83))
+                            .fg(Color::Rgb(24, 27, 33)),
+                    ));
+                }
+                
+                lines.push(Line::from(spans));
+            } else {
+                lines.push(line);
+            }
+        }
+        
+        Paragraph::new(lines)
+    }
+    
     // Convenience methods for TUI compatibility
     
     /// Check if content starts with a prefix
