@@ -226,13 +226,63 @@ impl<'a> TuiApp<'a> {
             .filter(|value| !value.trim().is_empty())
             .unwrap_or_else(|| "main".to_string());
         let current_path = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+        // Comprehensive model list - will be overridden by kernel if connected
         let known_models = vec![
+            // OpenAI
             "openai/gpt-4o".to_string(),
+            "openai/gpt-4o-latest".to_string(),
             "openai/gpt-4o-mini".to_string(),
-            "anthropic/claude-3-5-sonnet".to_string(),
-            "anthropic/claude-3-opus".to_string(),
+            "openai/gpt-4-turbo".to_string(),
+            "openai/gpt-4-turbo-preview".to_string(),
+            "openai/gpt-4".to_string(),
+            "openai/gpt-4-32k".to_string(),
+            "openai/gpt-3.5-turbo".to_string(),
+            "openai/gpt-3.5-turbo-16k".to_string(),
+            "openai/o1".to_string(),
+            "openai/o1-mini".to_string(),
+            "openai/o1-preview".to_string(),
+            // Anthropic
+            "anthropic/claude-3-5-sonnet-latest".to_string(),
+            "anthropic/claude-3-5-sonnet-20241022".to_string(),
+            "anthropic/claude-3-5-sonnet-20240620".to_string(),
+            "anthropic/claude-3-opus-latest".to_string(),
+            "anthropic/claude-3-opus-20240229".to_string(),
+            "anthropic/claude-3-sonnet-20240229".to_string(),
+            "anthropic/claude-3-haiku-20240307".to_string(),
+            // Gemini
+            "gemini/gemini-2.0-flash".to_string(),
+            "gemini/gemini-2.0-flash-lite".to_string(),
             "gemini/gemini-1.5-pro".to_string(),
+            "gemini/gemini-1.5-pro-latest".to_string(),
             "gemini/gemini-1.5-flash".to_string(),
+            "gemini/gemini-1.5-flash-latest".to_string(),
+            "gemini/gemini-1.0-pro".to_string(),
+            // Grok
+            "xai/grok-2".to_string(),
+            "xai/grok-2-latest".to_string(),
+            "xai/grok-2-mini".to_string(),
+            "xai/grok-beta".to_string(),
+            // Mistral
+            "mistral/mistral-large-latest".to_string(),
+            "mistral/mistral-medium-latest".to_string(),
+            "mistral/mistral-small-latest".to_string(),
+            "mistral/codestral-latest".to_string(),
+            "mistral/mistral-embed".to_string(),
+            // Cohere
+            "cohere/command-r".to_string(),
+            "cohere/command-r-plus".to_string(),
+            // Perplexity
+            "perplexity/sonar".to_string(),
+            "perplexity/sonar-pro".to_string(),
+            "perplexity/sonar-reasoning".to_string(),
+            // DeepSeek
+            "deepseek/deepseek-chat".to_string(),
+            "deepseek/deepseek-coder".to_string(),
+            // Local/Ollama placeholders
+            "ollama/llama3.2".to_string(),
+            "ollama/llama3.1".to_string(),
+            "ollama/codellama".to_string(),
+            "ollama/mistral".to_string(),
         ];
 
         Self {
@@ -355,22 +405,53 @@ impl<'a> TuiApp<'a> {
     }
 
     async fn initialize(&mut self) {
+        self.push_system("Initializing TUI...".to_string());
+        
+        // Try to connect and get status
         self.refresh_state().await;
         self.refresh_models().await;
         self.refresh_path_entries();
-        self.push_system(format!(
-            "Connected to {} | agent {} | session {}",
-            self.client.base_url(),
-            self.current_agent,
-            self.current_session
-        ));
-        self.push_system(format!("workspace path: {}", self.current_path.display()));
+        
+        // Set default model if not set
+        if self.current_model == "default" || self.current_model.is_empty() {
+            if let Some(first_model) = self.known_models.first() {
+                self.current_model = first_model.clone();
+                self.push_system(format!("Auto-selected model: {}", self.current_model));
+            }
+        }
+        
+        // Display connection status
+        if self.connection_status == "connected" {
+            self.push_system(format!(
+                "✓ Connected to kernel at {}",
+                self.client.base_url()
+            ));
+            self.push_system(format!(
+                "  Agent: {} | Session: {} | Model: {}",
+                self.current_agent, self.current_session, self.current_model
+            ));
+            self.push_system(format!(
+                "  Available models: {} | Workspace: {}",
+                self.known_models.len(),
+                self.current_path.display()
+            ));
+        } else {
+            self.push_error(format!(
+                "✗ Not connected to kernel (status: {}). Some features may be unavailable.",
+                self.connection_status
+            ));
+            self.push_system(format!(
+                "  Base URL: {} | Check kernel status with /status",
+                self.client.base_url()
+            ));
+        }
+        
         self.push_system(
             "Shortcuts: Ctrl+G agents, Ctrl+P sessions, Ctrl+L models, Ctrl+F path picker, Ctrl+O tools, Ctrl+T thinking, Esc abort, Ctrl+D exit"
                 .to_string(),
         );
         self.push_system(
-            "Slash: /queue /stop /resume /skills /telemetry /path /models /help".to_string(),
+            "Slash: /queue /stop /resume /skills /telemetry /path /models /help /git /hooks".to_string(),
         );
         self.push_system("Type '@' in input to open file reference picker.".to_string());
 
@@ -769,24 +850,37 @@ impl<'a> TuiApp<'a> {
 
     async fn refresh_models(&mut self) {
         let payload = match self.client.get::<Value>("/v1/models").await {
-            Ok(value) => value,
-            Err(_) => json!({
-                "providers": {
-                    "openai": ["gpt-4o", "gpt-4o-mini"],
-                    "anthropic": ["claude-3-5-sonnet", "claude-3-opus"],
-                    "gemini": ["gemini-1.5-pro", "gemini-1.5-flash"]
-                }
-            }),
+            Ok(value) => {
+                self.push_system("Connected to kernel - models refreshed".to_string());
+                value
+            }
+            Err(err) => {
+                self.push_system(format!("Using fallback models (kernel unavailable: {})", err));
+                json!({
+                    "providers": {
+                        "openai": ["gpt-4o", "gpt-4o-latest", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo", "o1", "o1-mini"],
+                        "anthropic": ["claude-3-5-sonnet-latest", "claude-3-opus-latest", "claude-3-sonnet", "claude-3-haiku"],
+                        "gemini": ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-1.5-pro-latest", "gemini-1.5-flash", "gemini-1.5-flash-latest"],
+                        "xai": ["grok-2", "grok-2-latest", "grok-beta"],
+                        "mistral": ["mistral-large-latest", "mistral-medium-latest", "mistral-small-latest", "codestral-latest"],
+                        "cohere": ["command-r", "command-r-plus"],
+                        "perplexity": ["sonar", "sonar-pro", "sonar-reasoning"],
+                        "deepseek": ["deepseek-chat", "deepseek-coder"],
+                        "ollama": ["llama3.2", "llama3.1", "codellama", "mistral"]
+                    }
+                })
+            }
         };
 
         let mut models = extract_models_from_payload(&payload);
-        if !self.current_model.trim().is_empty() {
+        if !self.current_model.trim().is_empty() && self.current_model != "default" {
             models.push(self.current_model.clone());
         }
         models.sort();
         models.dedup();
         if !models.is_empty() {
             self.known_models = models;
+            self.push_system(format!("Available models: {}", self.known_models.len()));
         }
     }
 
@@ -871,17 +965,40 @@ impl<'a> TuiApp<'a> {
         self.refresh_sessions().await;
         self.refresh_health().await;
         self.refresh_mcp_status().await;
+        
+        // Log connection status
+        if self.connection_status == "connected" {
+            self.status_line = format!(
+                "connected | models: {} | session: {} | agent: {}",
+                self.known_models.len(),
+                self.current_session,
+                self.current_agent
+            );
+        }
     }
 
     async fn refresh_sessions(&mut self) {
         match self.client.list_brain_sessions().await {
             Ok(sessions) => {
+                let session_count = sessions.len();
                 self.sessions = sessions;
-                self.connection_status = "connected".to_string();
+                // Only set to connected if we were previously not connected
+                if self.connection_status != "connected" {
+                    self.connection_status = "connected".to_string();
+                    self.push_system(format!(
+                        "Connected to kernel | Sessions: {} | Base URL: {}",
+                        session_count,
+                        self.client.base_url()
+                    ));
+                }
             }
             Err(err) => {
+                let was_connected = self.connection_status == "connected";
                 self.connection_status = "disconnected".to_string();
-                self.status_line = format!("session refresh failed: {err}");
+                self.status_line = format!("disconnected: {err}");
+                if was_connected {
+                    self.push_error(format!("Lost connection to kernel: {err}"));
+                }
             }
         }
     }
@@ -1700,13 +1817,61 @@ impl<'a> TuiApp<'a> {
             "/status" => {
                 self.refresh_state().await;
                 self.refresh_models().await;
+                
                 self.push_system(format!(
-                    "status {} | health {} | mcp {} | sessions {} | queue {} | path {}",
+                    "=== Connection Status ==="
+                ));
+                self.push_system(format!(
+                    "Kernel: {} | Health: {} | MCP: {}",
                     self.connection_status,
                     self.health_status,
-                    self.mcp_status,
-                    self.sessions.len(),
+                    self.mcp_status
+                ));
+                self.push_system(format!(
+                    "Base URL: {}",
+                    self.client.base_url()
+                ));
+                
+                self.push_system(format!(
+                    "=== Session ==="
+                ));
+                self.push_system(format!(
+                    "Agent: {} | Session: {} | Model: {}",
+                    self.current_agent,
+                    self.current_session,
+                    self.current_model
+                ));
+                
+                let model_count = self.known_models.len();
+                let current = self.current_model.clone();
+                let models_to_show: Vec<String> = self.known_models.iter().take(10).cloned().collect();
+                self.push_system(format!(
+                    "=== Models ({}) ===",
+                    model_count
+                ));
+                // Show first 10 models
+                for model in models_to_show {
+                    let marker = if model == current { " ✓" } else { "" };
+                    self.push_system(format!("  {}{}", model, marker));
+                }
+                if model_count > 10 {
+                    self.push_system(format!("  ... and {} more", model_count - 10));
+                }
+                
+                self.push_system(format!(
+                    "=== Queue ==="
+                ));
+                self.push_system(format!(
+                    "Pending: {} | Paused: {}",
                     self.prompt_queue.len(),
+                    self.queue_paused
+                ));
+                
+                self.push_system(format!(
+                    "=== Workspace ==="
+                ));
+                self.push_system(format!(
+                    "Path: {}",
                     self.current_path.display()
                 ));
             }
@@ -2380,6 +2545,28 @@ impl<'a> TuiApp<'a> {
     }
 
     async fn dispatch_message(&mut self, text: String) {
+        // Verify connection before sending
+        if self.connection_status != "connected" {
+            self.push_error(format!("Not connected to kernel (status: {}). Use /status to check connection.", self.connection_status));
+            self.refresh_state().await;
+            return;
+        }
+
+        // Ensure we have a valid model selected
+        let model_to_use = if self.current_model == "default" || self.current_model.is_empty() {
+            // Try to use first available model
+            let first = self.known_models.first().cloned();
+            if let Some(first_model) = first {
+                self.push_system(format!("Using default model: {}", first_model));
+                first_model
+            } else {
+                self.push_error("No models available. Use /models to select a model.".to_string());
+                return;
+            }
+        } else {
+            self.current_model.clone()
+        };
+
         self.set_activity_status("sending");
         self.push_user(text.clone());
 
@@ -2388,9 +2575,10 @@ impl<'a> TuiApp<'a> {
             "agent_id": self.current_agent,
             "session_id": self.current_session,
             "deliver": self.args.deliver,
-            "model": self.current_model,
+            "model": model_to_use,
             "workspace_dir": self.current_path.display().to_string(),
         });
+        
         if let Some(thinking) = self
             .args
             .thinking
@@ -2401,12 +2589,21 @@ impl<'a> TuiApp<'a> {
             request["thinking"] = Value::String(thinking.to_string());
         }
 
+        self.push_system(format!("Sending to model: {} (session: {})", model_to_use, self.current_session));
+
         match self
             .client
             .post::<_, Value>("/v1/intent/dispatch", &request)
             .await
         {
             Ok(payload) => {
+                // Check if kernel acknowledged the model
+                if let Some(used_model) = payload.get("model").and_then(|v| v.as_str()) {
+                    if used_model != model_to_use {
+                        self.push_system(format!("Note: Kernel used model '{}' instead of '{}'", used_model, model_to_use));
+                    }
+                }
+
                 if let Some(text) = extract_assistant_text(&payload) {
                     self.push_assistant(text);
                 } else if let Some(capsule) = payload.get("capsule") {
@@ -2432,6 +2629,7 @@ impl<'a> TuiApp<'a> {
             }
             Err(err) => {
                 self.push_error(format!("dispatch failed: {err}"));
+                self.connection_status = "error".to_string();
                 self.set_activity_status("idle");
             }
         }
