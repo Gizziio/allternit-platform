@@ -1,0 +1,80 @@
+{
+  "version": "v0.1.0",
+  "external_ingress": {
+    "id": "a2r-gateway",
+    "host": "127.0.0.1",
+    "port": 8013,
+    "protocol": "http",
+    "routes": [
+      {
+        "path_prefix": "/api/kernel",
+        "service": "kernel",
+        "methods": [
+          "GET",
+          "POST",
+          "PUT",
+          "DELETE",
+          "OPTIONS"
+        ]
+      },
+      {
+        "path_prefix": "/api/router",
+        "service": "router",
+        "methods": [
+          "GET",
+          "POST",
+          "PUT",
+          "DELETE",
+          "OPTIONS"
+        ]
+      },
+      {
+        "path_prefix": "/api/memory",
+        "service": "memory",
+        "methods": [
+          "GET",
+          "POST",
+          "PUT",
+          "DELETE",
+          "OPTIONS"
+        ]
+      },
+      {
+        "path_prefix": "/api/v1/a2ui",
+        "service": "api",
+        "methods": [
+          "GET",
+          "POST",
+          "PUT",
+          "PATCH",
+          "DELETE",
+          "OPTIONS"
+        ],
+        "strip_prefix": "/api/v1",
+        "add_prefix": "/api"
+      }
+    ]
+  },
+  "services": [
+    {
+      "name": "memory",
+      "internal_url": "http://127.0.0.1:3200",
+      "exposed": true
+    },
+    {
+      "name": "kernel",
+      "internal_url": "http://127.0.0.1:3004",
+      "exposed": true
+    },
+    {
+      "name": "router",
+      "internal_url": "http://127.0.0.1:3014",
+      "exposed": true
+    },
+    {
+      "name": "api",
+      "internal_url": "http://127.0.0.1:3000",
+      "exposed": false
+    }
+  ]
+}

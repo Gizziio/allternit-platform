@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://a2rchitech.local/spec/contracts/CapsulePermission.schema.json",
+  "title": "Capsule Permission",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "network_allowlist",
+    "tool_allowlist",
+    "fs_read_allowlist",
+    "fs_write_allowlist"
+  ],
+  "properties": {
+    "network_allowlist": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "List of allowed hostnames or CIDRs. '*' is not allowed."
+    },
+    "tool_allowlist": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "List of allowed tool IDs from ToolRegistry."
+    },
+    "fs_read_allowlist": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Glob patterns for read access."
+    },
+    "fs_write_allowlist": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Glob patterns for write access."
+    },
+    "env_allowlist": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": [],
+      "description": "List of allowed environment variable names."
+    }
+  }
+}

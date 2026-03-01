@@ -1,0 +1,93 @@
+openapi: 3.0.0
+info:
+  title: A2rchitech Brain Daemon API
+  version: 0.1.0
+  description: Single contract for CLI, TUI, and Unified UI.
+
+paths:
+  /v1/health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: OK
+
+  /v1/intent/dispatch:
+    post:
+      summary: Dispatch human intent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                intent_text: { type: string }
+      responses:
+        '200':
+          description: Capsule response
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KernelCapsuleResponse' }
+
+  /v1/capsules:
+    get:
+      summary: List all capsules
+      responses:
+        '200':
+          description: List of capsules
+    post:
+      summary: Create new capsule
+      responses:
+        '201':
+          description: Created
+
+  /v1/capsules/{id}:
+    get:
+      summary: Get specific capsule
+    post:
+      summary: Patch capsule spec
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+
+  /v1/evidence/add:
+    post:
+      summary: Add raw evidence
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                target: { type: string }
+      responses:
+        '200':
+          description: Evidence ID
+
+  /v1/journal/stream:
+    get:
+      summary: SSE Journal Stream
+      responses:
+        '200':
+          description: Event stream
+
+  /v1/tools:
+    get:
+      summary: List available tools
+
+  /v1/actions/execute:
+    post:
+      summary: Execute tool action
+
+components:
+  schemas:
+    KernelCapsuleResponse:
+      type: object
+      properties:
+        capsule: { type: object }
+        canvases: { type: array, items: { type: object } }
+        events: { type: array, items: { type: object } }

@@ -1,0 +1,118 @@
+{
+  "wih_version": "v0.1",
+  "task_id": "G0051",
+  "graph_id": "graph-0002",
+  "title": "MCP Apps Host Renderer (sandboxed capsule runtime)",
+  "state": "PLANNED",
+  "blocked_by": [
+    "G0050"
+  ],
+  "preset": {
+    "preset_id": "preset-core-dev",
+    "preset_hash": "TBD"
+  },
+  "outputs": {
+    "required_artifacts": [
+      "design_notes",
+      "receipts"
+    ],
+    "artifact_paths": [
+      "/.a2r/artifacts/G0051/"
+    ]
+  },
+  "write_scope": {
+    "root": "/.a2r/",
+    "allowed_globs": [
+      "/.a2r/artifacts/G0051/**",
+      "/.a2r/receipts/**",
+      "/.a2r/capsules/**"
+    ]
+  },
+  "tools": {
+    "allowlist": [
+      "fs.read",
+      "fs.write"
+    ],
+    "pretooluse_hooks": [
+      "WIH_VALID",
+      "DEPS_SATISFIED",
+      "PATH_GUARDS",
+      "TOOL_REGISTRY"
+    ]
+  },
+  "memory": {
+    "packs": [
+      {
+        "pack_id": "law",
+        "layers": [
+          "law"
+        ],
+        "access": "read"
+      }
+    ]
+  },
+  "acceptance": {
+    "checks": [
+      "AT-CAP-0001"
+    ]
+  },
+  "beads": {
+    "wih_version": "v0.1",
+    "task_id": "G0051",
+    "graph_id": "graph-0002",
+    "title": "MCP Apps Host Renderer (sandboxed capsule runtime)",
+    "state": "PLANNED",
+    "blocked_by": [
+      "G0050"
+    ],
+    "preset": {
+      "preset_id": "preset-core-dev",
+      "preset_hash": "TBD"
+    },
+    "outputs": {
+      "required_artifacts": [
+        "design_notes",
+        "receipts"
+      ],
+      "artifact_paths": [
+        "/.a2r/artifacts/G0051/"
+      ]
+    },
+    "write_scope": {
+      "root": "/.a2r/",
+      "allowed_globs": [
+        "/.a2r/artifacts/G0051/**",
+        "/.a2r/receipts/**",
+        "/.a2r/capsules/**"
+      ]
+    },
+    "tools": {
+      "allowlist": [
+        "fs.read",
+        "fs.write"
+      ],
+      "pretooluse_hooks": [
+        "WIH_VALID",
+        "DEPS_SATISFIED",
+        "PATH_GUARDS",
+        "TOOL_REGISTRY"
+      ]
+    },
+    "memory": {
+      "packs": [
+        {
+          "pack_id": "law",
+          "layers": [
+            "law"
+          ],
+          "access": "read"
+        }
+      ]
+    },
+    "acceptance": {
+      "checks": [
+        "AT-CAP-0001"
+      ]
+    }
+  }
+}

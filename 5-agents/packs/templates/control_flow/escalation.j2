@@ -1,0 +1,129 @@
+---
+prompt_id: "a2r.pack.control_flow.escalation"
+version: "v1"
+description: "Escalate unresolvable conditions to human operator"
+model: "any"
+anchors: "input | workflow | output"
+allowed_tools: ["receipt.emit", "notification.send", "state.snapshot"]
+execution_permission_mode: "read_only"
+hooks_required: ["Escalation", "HumanAlert"]
+outputs: ["escalation_envelope.json", "state_snapshot.json"]
+---
+
+# Escalation Handler
+
+**Task**: Package context and escalate to human operator
+**Role**: escalator
+**Stop condition**: Escalation envelope delivered, state preserved
+
+## Variables
+- {{escalation_reason}}: Why escalation is required
+- {{context_refs}}: Relevant receipt/context references
+- {{severity}}: critical|high|medium|low
+- {{blocking_issue}}: Description of blocker
+- {{attempted_resolutions}}: List of attempted fixes
+
+## Instructions
+- IMPORTANT: Preserve full context for human review
+- DO NOT: Attempt further automated resolution
+- CRITICAL: Include all evidence, not just summaries
+- Escalation is a feature, not a failure
+
+## Workflow
+
+### STEP 1: Context Preservation
+- Collect: All receipts in {{context_refs}}
+- Snapshot: Current execution state
+- Gather: Recent tool outputs (last 10)
+- Compile: Decision trail showing attempted resolutions
+
+### STEP 2: Evidence Packaging
+- Verify: All referenced receipts exist
+- Copy: Receipts to escalation bundle
+- Hash: Bundle for integrity
+- Encrypt: If contains sensitive data
+
+### STEP 3: Escalation Envelope
+- Create: escalation_envelope.json with:
+  - escalation_id (UUID)
+  - timestamp
+  - {{escalation_reason}}
+  - {{severity}}
+  - {{blocking_issue}}
+  - {{attempted_resolutions}}
+  - context_bundle_hash
+  - suggested_next_steps (optional)
+
+### STEP 4: Notification
+- Emit: Escalation hook
+- Emit: HumanAlert hook
+- Send: Notification via configured channels
+- Log: Delivery attempt
+
+### STEP 5: State Preservation
+- Write: state_snapshot.json
+- Freeze: All file leases (no auto-expiry)
+- Mark: Session as escalated
+
+## Report
+```yaml
+report:
+  status: ESCALATED
+  summary: "Escalation {{escalation_id}} created for human review"
+  escalation:
+    id: <uuid>
+    severity: critical|high|medium|low
+    reason: <description>
+    timestamp: <iso8601>
+    context:
+      receipts_included: <number>
+      state_snapshot: <path>
+      bundle_hash: <sha256>
+  attempted:
+    count: <number>
+    methods: <list>
+  notification:
+    channels: <list>
+    delivered: <boolean>
+  artifacts:
+    - path: "escalation_envelope.json"
+      kind: "escalation_package"
+    - path: "state_snapshot.json"
+      kind: "state_dump"
+  next_steps:
+    - "Human operator reviews escalation"
+    - "Operator may: resume, modify, abort, or delegate"
+    - "Session frozen until human response"
+```
+
+## Examples
+
+### Example 1: Critical Security Issue
+```yaml
+input:
+  escalation_reason: "Potential security vulnerability detected"
+  severity: critical
+  blocking_issue: "Unauthorized write attempt to protected path"
+  attempted_resolutions: ["path_validation", "permission_check"]
+output:
+  status: ESCALATED
+  escalation_id: "esc-123e4567-e89b-12d3-a456-426614174000"
+  receipts_included: 5
+```
+
+### Example 2: Max Iterations Exceeded
+```yaml
+input:
+  escalation_reason: "Unable to satisfy acceptance gates"
+  severity: medium
+  blocking_issue: "Tests failing after 5 fix iterations"
+  attempted_resolutions: ["fix_cycle_1", "fix_cycle_2", "fix_cycle_3", "fix_cycle_4", "fix_cycle_5"]
+output:
+  status: ESCALATED
+  escalation_id: "esc-987fcdeb-51a2-43f1-9b45-123456789abc"
+  receipts_included: 12
+```
+
+## References
+- Escalation Policy: agent/policy/escalation.md
+- Notification API: agent/spec/notification.api.md

@@ -1,0 +1,187 @@
+import { createMemo, createSignal } from "solid-js"
+import { useLocal } from "@tui/context/local"
+import { useSync } from "@tui/context/sync"
+import { map, pipe, flatMap, entries, filter, sortBy, take } from "remeda"
+import { DialogSelect } from "@tui/ui/dialog-select"
+import { useDialog } from "@tui/ui/dialog"
+import { createDialogProviderOptions, DialogProvider } from "./dialog-provider"
+import { useKeybind } from "../context/keybind"
+import * as fuzzysort from "fuzzysort"
+import { A2RCopy } from "@/brand"
+import { blockedModelReason } from "@/util/model-safety"
+
+export function useConnected() {
+  const sync = useSync()
+  return createMemo(() =>
+    sync.data.provider_next.connected.length > 0,
+  )
+}
+
+export function DialogModel(props: { providerID?: string }) {
+  const local = useLocal()
+  const sync = useSync()
+  const dialog = useDialog()
+  const keybind = useKeybind()
+  const [query, setQuery] = createSignal("")
+
+  const connected = useConnected()
+  const providers = createDialogProviderOptions()
+
+  const showExtra = createMemo(() => connected() && !props.providerID)
+
+  const options = createMemo(() => {
+    const needle = query().trim()
+    const showSections = showExtra() && needle.length === 0
+    const favorites = connected() ? local.model.favorite() : []
+    const recents = local.model.recent()
+
+    function toOptions(items: typeof favorites, category: string) {
+      if (!showSections) return []
+      return items.flatMap((item) => {
+        const provider = sync.data.provider_next.all.find((x) => x.id === item.providerID)
+        if (!provider) return []
+        const model = provider.models[item.modelID]
+        if (!model) return []
+        const blockedReason = blockedModelReason({
+          providerID: provider.id,
+          modelID: model.id,
+          name: model.name,
+        })
+        return [
+          {
+            key: item,
+            value: { providerID: provider.id, modelID: model.id },
+            title: model.name ?? item.modelID,
+            description: provider.name,
+            category,
+            disabled: !!blockedReason,
+            footer: blockedReason
+              ? A2RCopy.model.blockedModelHint
+              : model.cost?.input === 0 && (provider.id === "a2r" || provider.id === "a2r")
+                ? A2RCopy.dialog.free
+                : undefined,
+            onSelect: () => {
+              dialog.clear()
+              local.model.set({ providerID: provider.id, modelID: model.id }, { recent: true })
+            },
+          },
+        ]
+      })
+    }
+
+    const favoriteOptions = toOptions(favorites, A2RCopy.dialog.favorites)
+    const recentOptions = toOptions(
+      recents.filter(
+        (item) => !favorites.some((fav) => fav.providerID === item.providerID && fav.modelID === item.modelID),
+      ),
+      A2RCopy.dialog.recent,
+    )
+
+    const providerOptions = pipe(
+      sync.data.provider_next.all,
+      sortBy(
+        (provider) => provider.id !== "a2r" && provider.id !== "a2r",
+        (provider) => provider.name,
+      ),
+      flatMap((provider) =>
+        pipe(
+          provider.models,
+          entries(),
+          filter(([_, info]) => info.status !== "deprecated"),
+          filter(() => (props.providerID ? provider.id === props.providerID : true)),
+          map(([model, info]) => {
+            const blockedReason = blockedModelReason({
+              providerID: provider.id,
+              modelID: model,
+              name: info.name,
+            })
+            return {
+              value: { providerID: provider.id, modelID: model },
+              title: info.name ?? model,
+              description: favorites.some((item) => item.providerID === provider.id && item.modelID === model)
+                ? A2RCopy.dialog.favoriteTag
+                : undefined,
+              category: connected() ? provider.name : undefined,
+              disabled: !!blockedReason,
+              footer: blockedReason
+                ? A2RCopy.model.blockedModelHint
+                : info.cost?.input === 0 && (provider.id === "a2r" || provider.id === "a2r")
+                  ? A2RCopy.dialog.free
+                  : undefined,
+              onSelect() {
+                dialog.clear()
+                local.model.set({ providerID: provider.id, modelID: model }, { recent: true })
+              },
+            }
+          }),
+          filter((x) => {
+            if (!showSections) return true
+            if (favorites.some((item) => item.providerID === x.value.providerID && item.modelID === x.value.modelID))
+              return false
+            if (recents.some((item) => item.providerID === x.value.providerID && item.modelID === x.value.modelID))
+              return false
+            return true
+          }),
+          sortBy(
+            (x) => x.footer !== A2RCopy.dialog.free,
+            (x) => x.title,
+          ),
+        ),
+      ),
+    )
+
+    const popularProviders = !connected()
+      ? pipe(
+          providers(),
+          map((option) => ({
+            ...option,
+            category: A2RCopy.dialog.popularProviders,
+          })),
+          take(6),
+        )
+      : []
+
+    if (needle) {
+      return [
+        ...fuzzysort.go(needle, providerOptions, { keys: ["title", "category"] }).map((x) => x.obj),
+        ...fuzzysort.go(needle, popularProviders, { keys: ["title"] }).map((x) => x.obj),
+      ]
+    }
+
+    return [...favoriteOptions, ...recentOptions, ...providerOptions, ...popularProviders]
+  })
+
+  const provider = createMemo(() =>
+    props.providerID ? sync.data.provider_next.all.find((x) => x.id === props.providerID) : null,
+  )
+
+  const title = createMemo(() => provider()?.name ?? A2RCopy.dialog.selectModel)
+
+  return (
+    <DialogSelect<ReturnType<typeof options>[number]["value"]>
+      options={options()}
+      keybind={[
+        {
+          keybind: keybind.all.model_provider_list?.[0],
+          title: connected() ? A2RCopy.dialog.connectProvider : A2RCopy.dialog.viewAllProviders,
+          onTrigger() {
+            dialog.replace(() => <DialogProvider />)
+          },
+        },
+        {
+          keybind: keybind.all.model_favorite_toggle?.[0],
+          title: A2RCopy.dialog.favorite,
+          disabled: !connected(),
+          onTrigger: (option) => {
+            local.model.toggleFavorite(option.value as { providerID: string; modelID: string })
+          },
+        },
+      ]}
+      onFilter={setQuery}
+      flat={true}
+      skipFilter={true}
+      title={title()}
+      current={local.model.current()}
+    />
+  )
+}

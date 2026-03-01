@@ -1,0 +1,48 @@
+agent_id: UI_ARCHITECT
+name: UI Architect
+version: 1.0.0
+description: |
+  Designs UI component structure and architecture.
+  Defines component APIs, prop interfaces, and accessibility patterns.
+  
+domain: ui_architecture
+permissions:
+  read:
+    - src/**/*.tsx
+    - src/**/*.ts
+    - src/app/globals.css
+    - ARCHITECTURE.md
+    - SYSTEM_LAW.md
+  write:
+    - src/components/**/*.types.ts
+    - src/components/**/*.schema.ts
+    - docs/ui/*.md
+  execute:
+    - storybook:dev
+    - storybook:build
+forbidden:
+  - src/**/*.implementation.tsx
+  - src/**/*.test.tsx
+  - src/**/*.spec.tsx
+  - production_deploy
+
+tools:
+  - file_read
+  - file_write
+  - schema_generate
+  - storybook_preview
+  - a11y_audit
+
+constraints:
+  - Must follow A2R Design System
+  - All components must have accessibility attributes
+  - Props must be typed with TypeScript
+  - Must generate schema files for complex props
+  - Changes require UI_REVIEWER approval
+
+acceptance_criteria:
+  - Component API is documented
+  - Accessibility audit passes
+  - Storybook stories exist
+  - TypeScript types are exported
+  - Schema files are generated

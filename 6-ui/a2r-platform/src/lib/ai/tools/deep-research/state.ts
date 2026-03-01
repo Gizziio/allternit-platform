@@ -1,0 +1,184 @@
+import type { ToolCall } from "@ai-sdk/provider-utils";
+import {
+  type AssistantModelMessage,
+  type ModelMessage,
+  type ToolModelMessage,
+  tool,
+} from "ai";
+import { z } from "zod";
+import type { DocumentToolResult } from "../documents/types";
+
+//##################
+// Structured Outputs (Zod Schemas)
+//##################
+
+const ConductResearchSchema = z.object({
+  /**
+   * Call this tool to conduct research on a specific topic.
+   */
+  research_topic: z
+    .string()
+    .describe(
+      "The topic to research. Should be a single topic, and should be described in high detail (at least a paragraph)."
+    ),
+});
+
+const ResearchCompleteSchema = z.object({
+  /**
+   * Call this tool to indicate that the research is complete.
+   */
+});
+
+export const ClarifyWithUserSchema = z.object({
+  need_clarification: z
+    .boolean()
+    .describe("Whether the user needs to be asked a clarifying question."),
+  question: z
+    .string()
+    .describe("A question to ask the user to clarify the report scope"),
+  verification: z
+    .string()
+    .describe(
+      "Verify message that we will start research after the user has provided the necessary information."
+    ),
+});
+
+export const ResearchQuestionSchema = z.object({
+  research_brief: z
+    .string()
+    .describe("A research question that will be used to guide the research."),
+  title: z.string().describe("The title of the research report."),
+});
+
+//##################
+// State Definitions
+//##################
+
+export type AgentInputState = {
+  requestId: string;
+  messageId: string;
+  toolCallId: string;
+  messages: ModelMessage[];
+};
+
+export type AgentState = {
+  requestId: string;
+  inputMessages: ModelMessage[];
+  supervisor_messages: ModelMessage[];
+  research_brief?: string;
+  raw_notes: string[];
+  notes: string[];
+  reportResult: DocumentToolResult;
+  clarificationMessage?: string;
+  toolCallId: string;
+};
+
+export type DeepResearchResult =
+  | {
+      type: "clarifying_question";
+      data: string;
+    }
+  | {
+      type: "report";
+      data: DocumentToolResult;
+    };
+
+export type ResponseMessage = AssistantModelMessage | ToolModelMessage;
+
+export const leadResearcherTools = {
+  conductResearch: tool({
+    description: "Call this tool to conduct research on a specific topic.",
+    inputSchema: ConductResearchSchema,
+    // No execute function - will be handled with custom execution
+  }),
+  researchComplete: tool({
+    description: "Call this tool to indicate that the research is complete.",
+    inputSchema: ResearchCompleteSchema,
+    // No execute function - will be handled with custom execution
+  }),
+};
+
+export type SupervisorState = {
+  requestId: string;
+  supervisor_messages: ModelMessage[];
+  tool_calls: ToolCall<string, any>[];
+  research_brief: string;
+  notes: string[];
+  research_iterations: number;
+  raw_notes: string[];
+};
+
+export type ResearcherState = {
+  requestId: string;
+  researcher_messages: ModelMessage[];
+  tool_calls: ToolCall<string, any>[];
+  tool_call_iterations: number;
+  research_topic: string;
+  compressed_research: string;
+  raw_notes: string[];
+};
+
+export type ResearcherOutputState = {
+  compressed_research: string;
+  raw_notes: string[];
+};
+
+//##################
+// Node IO
+//##################
+
+export type ClarifyWithUserInput = {
+  requestId: string;
+  messages: ModelMessage[];
+};
+
+export type WriteResearchBriefInput = {
+  requestId: string;
+  messages: ModelMessage[];
+};
+
+export type WriteResearchBriefOutput = {
+  research_brief: string;
+  title: string;
+};
+
+export type SupervisorInput = {
+  requestId: string;
+  supervisor_messages: ModelMessage[];
+  research_brief: string;
+  notes: string[];
+  research_iterations: number;
+  raw_notes: string[];
+  tool_calls: ToolCall<string, any>[];
+};
+
+export type SupervisorOutput = {
+  supervisor_messages: ModelMessage[];
+  tool_calls: ToolCall<string, any>[];
+  research_iterations: number;
+};
+
+export type SupervisorToolsInput = {
+  requestId: string;
+  supervisor_messages: ModelMessage[];
+  research_brief: string;
+  research_iterations: number;
+  tool_calls: ToolCall<string, any>[];
+};
+
+export type SupervisorToolsOutput = {
+  supervisor_messages: ModelMessage[];
+  raw_notes: string[];
+};
+
+export type ResearcherInput = {
+  requestId: string;
+  researcher_messages: ModelMessage[];
+  research_topic: string;
+  tool_call_iterations: number;
+};
+
+export type CompressResearchInput = {
+  requestId: string;
+  researcher_messages: ModelMessage[];
+};

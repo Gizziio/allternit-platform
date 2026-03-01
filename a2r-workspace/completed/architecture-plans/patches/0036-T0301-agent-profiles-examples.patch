@@ -1,0 +1,168 @@
+diff --git a/agent/agent_profiles.json b/agent/agent_profiles.json
+new file mode 100644
+index 0000000..bbb4e4d
+--- /dev/null
++++ b/agent/agent_profiles.json
+@@ -0,0 +1,38 @@
++{
++  "version": "v0.1",
++  "profiles": [
++    {
++      "id": "kernel-default",
++      "description": "Kernel default agent profile (no subprocess execution).",
++      "worker_allowlist": [],
++      "tool_allowlist": [],
++      "write_scope_policy": {
++        "mode": "run_scoped",
++        "allowed_globs": [
++          "/.a2r/artifacts/{{run_id}}/**",
++          "/.a2r/receipts/{{run_id}}/**"
++        ]
++      },
++      "network_policy": "none",
++      "receipts_required": true
++    },
++    {
++      "id": "builder",
++      "description": "Builder profile with allowlisted read-only subprocess workers.",
++      "worker_allowlist": [
++        "git.diff",
++        "git.status"
++      ],
++      "tool_allowlist": [],
++      "write_scope_policy": {
++        "mode": "run_scoped",
++        "allowed_globs": [
++          "/.a2r/artifacts/{{run_id}}/**",
++          "/.a2r/receipts/{{run_id}}/**"
++        ]
++      },
++      "network_policy": "none",
++      "receipts_required": true
++    }
++  ]
++}
+
+diff --git a/agent/examples/agent_execution_request.example.json b/agent/examples/agent_execution_request.example.json
+new file mode 100644
+index 0000000..a409ce0
+--- /dev/null
++++ b/agent/examples/agent_execution_request.example.json
+@@ -0,0 +1,17 @@
++{
++  "request_id": "req-0001",
++  "created_at": "2026-01-28T00:00:00Z",
++  "run_id": "run-123",
++  "graph_id": "graph-0001",
++  "node_id": "T0000",
++  "wih_id": "T0000",
++  "agent_profile_id": "kernel-default",
++  "write_scope": {
++    "root": "/.a2r/",
++    "allowed_globs": [
++      "/.a2r/artifacts/run-123/**",
++      "/.a2r/receipts/run-123/**"
++    ]
++  },
++  "mode": "execute"
++}
+
+diff --git a/agent/examples/agent_execution_receipt.example.json b/agent/examples/agent_execution_receipt.example.json
+new file mode 100644
+index 0000000..2321f65
+--- /dev/null
++++ b/agent/examples/agent_execution_receipt.example.json
+@@ -0,0 +1,14 @@
++{
++  "receipt_id": "agent-exec-0001",
++  "created_at": "2026-01-28T00:00:00Z",
++  "run_id": "run-123",
++  "graph_id": "graph-0001",
++  "agent_profile_id": "kernel-default",
++  "status": "RUNNING",
++  "run_state_path": "/.a2r/run_state/run-123.json",
++  "receipts_dir": "/.a2r/receipts/run-123",
++  "artifacts_dir": "/.a2r/artifacts/run-123",
++  "node_receipts": [],
++  "tool_receipts": [],
++  "subprocess_receipts": []
++}
+
+diff --git a/scripts/validate_law.py b/scripts/validate_law.py
+index eb02170..476f8ba 100755
+--- a/scripts/validate_law.py
++++ b/scripts/validate_law.py
+@@ -29,15 +29,25 @@ REQUIRED_FILES = [
+     ROOT / "spec" / "Contracts" / "WorkerDefinition.schema.json",
+     ROOT / "spec" / "Contracts" / "WorkerRegistry.schema.json",
+     ROOT / "spec" / "Contracts" / "SubprocessReceipt.schema.json",
++    ROOT / "spec" / "Contracts" / "AgentExecutionRequest.schema.json",
++    ROOT / "spec" / "Contracts" / "AgentExecutionReceipt.schema.json",
++    ROOT / "spec" / "Contracts" / "AgentProfile.schema.json",
++    ROOT / "spec" / "Contracts" / "ExecutionPlan.schema.json",
+     ROOT / "spec" / "Contracts" / "RunState.schema.json",
+     ROOT / "spec" / "Contracts" / "BeadsGraph.schema.json",
+     ROOT / "spec" / "Contracts" / "BeadsNode.schema.json",
+     ROOT / "spec" / "Contracts" / "BeadsRunState.schema.json",
+     ROOT / "workers" / "worker_registry.json",
++    ROOT / "agent" / "agent_profiles.json",
++    ROOT / "agent" / "examples" / "agent_execution_request.example.json",
++    ROOT / "agent" / "examples" / "agent_execution_receipt.example.json",
+ ]
+ 
+ TOOLS_REGISTRY_PATH = ROOT / "tools" / "tool_registry.json"
+ WORKER_REGISTRY_PATH = ROOT / "workers" / "worker_registry.json"
++AGENT_PROFILE_PATH = ROOT / "agent" / "agent_profiles.json"
++AGENT_EXEC_REQUEST_EXAMPLE = ROOT / "agent" / "examples" / "agent_execution_request.example.json"
++AGENT_EXEC_RECEIPT_EXAMPLE = ROOT / "agent" / "examples" / "agent_execution_receipt.example.json"
+ 
+ GRAPH_DIR = ROOT / ".a2r" / "graphs"
+ WIH_DIR = ROOT / ".a2r" / "wih"
+@@ -76,6 +86,10 @@ TOOL_REGISTRY_SCHEMA_ID = "https://a2rchitech.local/spec/contracts/ToolRegistry.
+ WORKER_REGISTRY_SCHEMA_ID = "https://a2rchitech.local/spec/contracts/WorkerRegistry.schema.json"
+ BOOT_MANIFEST_SCHEMA_ID = "https://a2rchitech.local/spec/contracts/BootManifest.schema.json"
+ BEADS_GRAPH_SCHEMA_ID = "https://a2rchitech.local/spec/contracts/BeadsGraph.schema.json"
++AGENT_PROFILE_SCHEMA_ID = "https://a2rchitech.local/spec/contracts/AgentProfile.schema.json"
++AGENT_EXEC_REQUEST_SCHEMA_ID = "https://a2rchitech.local/spec/contracts/AgentExecutionRequest.schema.json"
++AGENT_EXEC_RECEIPT_SCHEMA_ID = "https://a2rchitech.local/spec/contracts/AgentExecutionReceipt.schema.json"
++EXECUTION_PLAN_SCHEMA_ID = "https://a2rchitech.local/spec/contracts/ExecutionPlan.schema.json"
+ DEFAULT_BOOT_MANIFEST_PATH = ROOT / ".a2r" / "boot" / "boot_manifest.json"
+ 
+ 
+@@ -437,6 +451,36 @@ def main():
+     worker_registry = load_json(WORKER_REGISTRY_PATH)
+     validate_instance(worker_registry, WORKER_REGISTRY_SCHEMA_ID, schemas, "workers/worker_registry.json")
+     validate_worker_registry(worker_registry, WORKER_REGISTRY_PATH)
++    worker_ids = {worker["worker_id"] for worker in worker_registry.get("workers", [])}
++
++    agent_profiles = load_json(AGENT_PROFILE_PATH)
++    validate_instance(agent_profiles, AGENT_PROFILE_SCHEMA_ID, schemas, "agent/agent_profiles.json")
++    profiles = agent_profiles.get("profiles", [])
++    profile_ids = set()
++    for profile in profiles:
++        profile_id = profile.get("id")
++        if profile_id in profile_ids:
++            fail(f"Duplicate agent profile id '{profile_id}' in agent/agent_profiles.json")
++        profile_ids.add(profile_id)
++        for worker_id in profile.get("worker_allowlist", []):
++            if worker_id not in worker_ids:
++                fail(f"Agent profile '{profile_id}' references unknown worker '{worker_id}'")
++        for tool_id in profile.get("tool_allowlist", []):
++            if tool_id not in registry_ids:
++                fail(f"Agent profile '{profile_id}' references unknown tool '{tool_id}'")
++
++    validate_instance(
++        load_json(AGENT_EXEC_REQUEST_EXAMPLE),
++        AGENT_EXEC_REQUEST_SCHEMA_ID,
++        schemas,
++        "agent/examples/agent_execution_request.example.json",
++    )
++    validate_instance(
++        load_json(AGENT_EXEC_RECEIPT_EXAMPLE),
++        AGENT_EXEC_RECEIPT_SCHEMA_ID,
++        schemas,
++        "agent/examples/agent_execution_receipt.example.json",
++    )
+ 
+     acceptance_ids = collect_acceptance_ids()
+ 

@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Service identification -->
+    <key>Label</key>
+    <string>io.a2r.node</string>
+
+    <!-- Program to execute -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/a2r/bin/a2r-node</string>
+    </array>
+
+    <!-- Environment variables -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/a2r/bin</string>
+        <key>LANG</key>
+        <string>en_US.UTF-8</string>
+    </dict>
+
+    <!-- Load configuration -->
+    <key>RunAtLoad</key>
+    <true/>
+    
+    <!-- Keep service running -->
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+        <key>NetworkState</key>
+        <true/>
+    </dict>
+
+    <!-- Logging -->
+    <key>StandardOutPath</key>
+    <string>/var/log/a2r/node.log</string>
+    <key>StandardErrorPath</key>
+    <string>/var/log/a2r/node.err</string>
+
+    <!-- Working directory -->
+    <key>WorkingDirectory</key>
+    <string>/opt/a2r</string>
+
+    <!-- Resource limits -->
+    <key>SoftResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>65536</integer>
+        <key>NumberOfProcesses</key>
+        <integer>4096</integer>
+        <key>MemoryLock</key>
+        <integer>2147483648</integer>
+    </dict>
+
+    <key>HardResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>65536</integer>
+        <key>NumberOfProcesses</key>
+        <integer>4096</integer>
+    </dict>
+
+    <!-- Network -->
+    <key>NetworkState</key>
+    <true/>
+
+    <!-- Process management -->
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+
+    <!-- Start interval for KeepAlive -->
+    <key>StartInterval</key>
+    <integer>30</integer>
+
+    <!-- Watch paths for changes -->
+    <key>WatchPaths</key>
+    <array>
+        <string>/etc/a2r/node.env</string>
+    </array>
+
+    <!-- Process type -->
+    <key>ProcessType</key>
+    <string>Background</string>
+
+    <!-- Low priority I/O -->
+    <key>IOPolicy</key>
+    <string>utility</string>
+
+    <!-- Abandon process group on stop -->
+    <key>AbandonProcessGroup</key>
+    <false/>
+
+    <!-- Enable sandboxing (optional, may need adjustment for Docker) -->
+    <!--
+    <key>SandboxProfile</key>
+    <string>(version 1 (allow default) (allow network-outbound))</string>
+    -->
+</dict>
+</plist>

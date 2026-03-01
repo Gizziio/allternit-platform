@@ -1,0 +1,21 @@
+{
+  "name": "@a2rchitech/cli",
+  "version": "1.0.0",
+  "description": "A2rchitech CLI with Superconductor integration",
+  "bin": {
+    "a2r": "./bin/a2r-parallel.js"
+  },
+  "dependencies": {
+    "commander": "^9.0.0",
+    "@a2r/runtime": "workspace:*"
+  },
+  "keywords": [
+    "a2rchitech",
+    "ai",
+    "agents",
+    "parallel-execution",
+    "superconductor"
+  ],
+  "author": "A2rchitech",
+  "license": "MIT"
+}

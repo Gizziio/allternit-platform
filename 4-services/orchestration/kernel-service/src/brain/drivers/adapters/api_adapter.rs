@@ -1,0 +1,1 @@
+// Placeholder API adapter module

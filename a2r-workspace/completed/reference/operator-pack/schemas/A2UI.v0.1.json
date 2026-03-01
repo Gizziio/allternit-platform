@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "A2UI Payload",
+  "version": "0.1",
+  "type": "object",
+  "required": ["schema_version", "data_model", "surfaces"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "a2ui.v0.1" },
+    "data_model": { "type": "object" },
+    "surfaces": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["surface_id", "title", "root"],
+        "properties": {
+          "surface_id": { "type": "string" },
+          "title": { "type": "string" },
+          "root": { "type": "object" }
+        }
+      }
+    },
+    "ui_state": { "type": "object" }
+  }
+}

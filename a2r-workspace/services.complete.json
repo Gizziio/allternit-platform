@@ -1,0 +1,224 @@
+{
+  "version": "2026-02-06-enterprise-complete",
+  "description": "Complete service configuration with all critical services wired",
+  "hosts": {
+    "internal": "127.0.0.1",
+    "public": "0.0.0.0"
+  },
+  "ports": {
+    "gateway": 8013,
+    "api": 3000,
+    "registry": 8080,
+    "kernel": 3004,
+    "memory": 3200,
+    "policy": 3003,
+    "audit_log": 3103,
+    "observation": 3112,
+    "capsule_runtime": 3006
+  },
+  "services": [
+    {
+      "id": "policy",
+      "label": "Policy Service",
+      "description": "Authorization and policy enforcement",
+      "order": 10,
+      "command": "cargo",
+      "args": ["run", "--manifest-path", "2-governance/policy/Cargo.toml"],
+      "env": { 
+        "HOST": "${hosts.internal}",
+        "PORT": "${ports.policy}",
+        "RUST_LOG": "info"
+      },
+      "log": "policy.log",
+      "health_check": "http://${hosts.internal}:${ports.policy}/health"
+    },
+    {
+      "id": "audit-log",
+      "label": "Audit Log Service",
+      "description": "Compliance audit logging",
+      "order": 11,
+      "enabled": true,
+      "command": "cargo",
+      "args": ["run", "--manifest-path", "2-governance/audit-log/Cargo.toml"],
+      "env": { 
+        "HOST": "${hosts.internal}",
+        "PORT": "${ports.audit_log}",
+        "RUST_LOG": "info"
+      },
+      "log": "audit-log.log",
+      "health_check": "http://${hosts.internal}:${ports.audit_log}/health"
+    },
+    {
+      "id": "memory",
+      "label": "Memory Service",
+      "description": "State and context management",
+      "order": 20,
+      "command": "cargo",
+      "args": ["run", "--manifest-path", "4-services/memory/Cargo.toml"],
+      "env": { 
+        "HOST": "${hosts.internal}",
+        "PORT": "${ports.memory}",
+        "RUST_LOG": "info"
+      },
+      "log": "memory.log",
+      "health_check": "http://${hosts.internal}:${ports.memory}/health"
+    },
+    {
+      "id": "observation",
+      "label": "Observation Service",
+      "description": "Event observation and logging",
+      "order": 21,
+      "enabled": true,
+      "command": "cargo",
+      "args": ["run", "--manifest-path", "4-services/memory/observation/Cargo.toml"],
+      "env": { 
+        "HOST": "${hosts.internal}",
+        "PORT": "${ports.observation}",
+        "RUST_LOG": "info"
+      },
+      "log": "observation.log",
+      "health_check": "http://${hosts.internal}:${ports.observation}/health"
+    },
+    {
+      "id": "registry",
+      "label": "Registry Service",
+      "description": "Agent, skill, and tool definitions",
+      "order": 30,
+      "command": "cargo",
+      "args": ["run", "--manifest-path", "4-services/registry/registry-server/Cargo.toml"],
+      "env": { 
+        "HOST": "${hosts.internal}",
+        "PORT": "${ports.registry}",
+        "RUST_LOG": "info"
+      },
+      "log": "registry.log",
+      "health_check": "http://${hosts.internal}:${ports.registry}/health"
+    },
+    {
+      "id": "kernel",
+      "label": "Kernel (Internal)",
+      "description": "Tool execution and brain session management",
+      "order": 40,
+      "command": "cargo",
+      "args": ["run", "--manifest-path", "4-services/orchestration/kernel-service/Cargo.toml"],
+      "env": { 
+        "HOST": "127.0.0.1",
+        "PORT": "${ports.kernel}",
+        "RUST_LOG": "info",
+        "A2R_BIND_LOCAL_ONLY": "true",
+        "A2R_INTERNAL_MODE": "true"
+      },
+      "log": "kernel.log",
+      "health_check": "http://127.0.0.1:${ports.kernel}/health"
+    },
+    {
+      "id": "capsule-runtime",
+      "label": "Capsule Runtime",
+      "description": "WASM capsule execution environment",
+      "order": 45,
+      "enabled": true,
+      "command": "python3",
+      "args": ["4-services/runtime/capsule-runtime/src/main.py"],
+      "env": { 
+        "HOST": "${hosts.internal}",
+        "PORT": "${ports.capsule_runtime}"
+      },
+      "log": "capsule-runtime.log",
+      "health_check": "http://${hosts.internal}:${ports.capsule_runtime}/health"
+    },
+    {
+      "id": "api",
+      "label": "Public API",
+      "description": "Business logic and orchestration layer",
+      "order": 50,
+      "command": "cargo",
+      "args": ["run", "--manifest-path", "6-apps/api/Cargo.toml"],
+      "env": { 
+        "HOST": "${hosts.internal}",
+        "PORT": "${ports.api}",
+        "RUST_LOG": "info",
+        "A2R_KERNEL_URL": "http://127.0.0.1:${ports.kernel}",
+        "A2R_REGISTRY_URL": "http://${hosts.internal}:${ports.registry}",
+        "A2R_MEMORY_URL": "http://${hosts.internal}:${ports.memory}",
+        "A2R_POLICY_URL": "http://${hosts.internal}:${ports.policy}",
+        "A2R_AUDIT_LOG_URL": "http://${hosts.internal}:${ports.audit_log}",
+        "A2R_OBSERVATION_URL": "http://${hosts.internal}:${ports.observation}",
+        "A2R_CAPSULE_RUNTIME_URL": "http://${hosts.internal}:${ports.capsule_runtime}"
+      },
+      "log": "api.log",
+      "health_check": "http://${hosts.internal}:${ports.api}/health",
+      "depends_on": ["kernel", "registry", "memory", "policy", "audit-log", "observation"]
+    },
+    {
+      "id": "gateway",
+      "label": "API Gateway",
+      "description": "Public entry point - auth, routing, rate limiting",
+      "order": 60,
+      "command": "python3",
+      "args": ["4-services/gateway/src/main.py"],
+      "env": { 
+        "HOST": "${hosts.public}",
+        "PORT": "${ports.gateway}",
+        "API_URL": "http://${hosts.internal}:${ports.api}",
+        "CORS_ORIGINS": "http://localhost:5177,http://127.0.0.1:5177",
+        "LOG_LEVEL": "info"
+      },
+      "log": "gateway.log",
+      "health_check": "http://${hosts.public}:${ports.gateway}/health",
+      "depends_on": ["api"]
+    },
+    {
+      "id": "shell-electron",
+      "label": "Shell Electron",
+      "description": "Desktop Electron application",
+      "order": 70,
+      "command": "npm",
+      "args": ["run", "dev:electron"],
+      "cwd": "6-apps/shell-electron",
+      "log": "electron.log",
+      "depends_on": ["gateway"]
+    }
+  ],
+  "optional_services": [
+    {
+      "id": "voice",
+      "label": "Voice Service",
+      "description": "TTS/Voice synthesis (optional)",
+      "port": 8001,
+      "enabled": false,
+      "command": "python3",
+      "args": ["4-services/ai/voice-service/api/main.py"],
+      "env": { "PORT": "8001" },
+      "log": "voice.log"
+    },
+    {
+      "id": "executor",
+      "label": "Task Executor",
+      "description": "Distributed task execution (optional)",
+      "port": 3510,
+      "enabled": false,
+      "command": "cargo",
+      "args": ["run", "--manifest-path", "1-kernel/compute/executor/Cargo.toml"],
+      "env": { "PORT": "3510" },
+      "log": "executor.log"
+    },
+    {
+      "id": "webvm",
+      "label": "WebVM Bridge",
+      "description": "WebAssembly VM bridge (optional)",
+      "port": 8002,
+      "enabled": false,
+      "command": "cargo",
+      "args": ["run", "--manifest-path", "3-adapters/bridges/a2r-webvm/Cargo.toml"],
+      "env": { "PORT": "8002" },
+      "log": "webvm.log"
+    }
+  ],
+  "notes": [
+    "COMPLETE configuration with all critical services",
+    "Core services (7): Policy, Audit, Memory, Observation, Registry, Kernel, API, Gateway, Electron",
+    "Optional services (3): Voice, Executor, WebVM - enable as needed",
+    "All UI traffic MUST go through the Gateway (port 8013)",
+    "For minimal setup, use services.json instead"
+  ]
+}

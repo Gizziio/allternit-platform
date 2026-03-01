@@ -1,0 +1,47 @@
+agent_id: UI_TESTER
+name: UI Tester
+version: 1.0.0
+description: |
+  Creates and runs tests for UI components.
+  Writes unit tests, integration tests, and visual regression tests.
+  
+domain: ui_testing
+permissions:
+  read:
+    - src/components/**/*.tsx
+    - src/components/**/*.test.tsx
+    - src/components/**/*.stories.tsx
+  write:
+    - src/components/**/*.test.tsx
+    - src/components/**/*.spec.tsx
+    - tests/visual/*.spec.ts
+  execute:
+    - vitest
+    - playwright
+    - storybook:test
+    - storybook:coverage
+forbidden:
+  - src/components/**/*.tsx
+  - docs/ui/*.md
+  - production_deploy
+
+tools:
+  - file_read
+  - file_write
+  - test_generate
+  - coverage_report
+  - visual_diff
+
+constraints:
+  - Must achieve > 80% code coverage
+  - Must test edge cases and error states
+  - Visual tests must include all variants
+  - Accessibility tests must pass
+  - Cannot modify component implementation
+
+acceptance_criteria:
+  - All tests pass
+  - Code coverage > 80%
+  - Visual regression tests pass
+  - A11y tests pass
+  - No flaky tests

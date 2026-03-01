@@ -1,0 +1,20 @@
+{
+  "plan_name": "A2R Local Dev Transport",
+  "version": "v0.1.0",
+  "transport_modes": {
+    "preferred": "uds",
+    "fallback": "loopback"
+  },
+  "uds_config": {
+    "socket_root": "/tmp/a2r",
+    "paths": {
+      "kernel": "/tmp/a2r/kernel.sock",
+      "router": "/tmp/a2r/router.sock",
+      "memory": "/tmp/a2r/memory.sock"
+    }
+  },
+  "loopback_constraints": {
+    "address": "127.0.0.1",
+    "allowed_ports": [8001, 8002, 8003, 5177, 3000, 3004, 3008]
+  }
+}

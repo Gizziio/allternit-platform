@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "required": ["course_id", "name"],
+  "properties": {
+    "course_id": {"type": "integer"},
+    "name": {"type": "string", "minLength": 1},
+    "unlock_at": {"type": "string", "nullable": true},
+    "position": {"type": "integer", "nullable": true},
+    "published": {"type": "boolean", "default": false}
+  }
+}

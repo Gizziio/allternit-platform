@@ -1,0 +1,7 @@
+root=/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/7-apps/agent-shell/a2r-shell/packages/a2r-shell
+app=/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/7-apps/agent-shell/a2r-shell/packages/a2r-shell
+prompt=please websearch latest AI shell UX patterns
+submit_mode=manual
+window_id=43906
+size=80x24
+timestamp=20260223-144527

@@ -1,0 +1,7 @@
+{
+  "version": "1.0.0",
+  "schema": "spec/Contracts/UIWorkspaceLayout.schema.json",
+  "layouts": {},
+  "default_layout": null,
+  "created_at": "2026-02-20T22:00:00Z"
+}

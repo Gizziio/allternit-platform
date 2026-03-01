@@ -1,0 +1,21 @@
+[workspace]
+members = ["."]
+resolver = "2"
+
+[package]
+name = "a2r-protocol"
+version = "0.1.0"
+edition = "2021"
+authors = ["A2R Team <team@a2r.io>"]
+license = "MIT OR Apache-2.0"
+description = "Shared protocol types for A2R node-control plane communication"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.6", features = ["v4", "serde"] }
+thiserror = "1.0"
+
+[dev-dependencies]
+tokio = { version = "1.35", features = ["macros", "rt"] }

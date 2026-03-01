@@ -1,0 +1,17 @@
+[package]
+name = "a2rchitech-conflict-arbitration"
+version = "0.1.0"
+edition = "2021"
+description = "Conflict arbitration engine for A2R - diff overlap detection, priority-based arbitration, PR splitting"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+diffy = "0.3"  # Diff library
+similar = "2.4"  # Text comparison
+
+[dev-dependencies]
+tokio = { workspace = true }

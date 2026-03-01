@@ -1,0 +1,28 @@
+[package]
+name = "a2rchitech-context-router"
+version = "0.1.0"
+edition = "2021"
+description = "A2rchitech context routing and precision hydration engine"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+thiserror = "1.0"
+anyhow = "1.0"
+tracing = "0.1"
+a2rchitech-history = { workspace = true }
+a2rchitech-messaging = { workspace = true }
+a2rchitech-policy = { workspace = true }
+a2rchitech-runtime-core = { workspace = true }
+a2rchitech-kernel-contracts = { workspace = true }
+async-trait = "0.1"
+futures = "0.3"
+sha2 = "0.10"
+hex = "0.4"
+lru = "0.12"
+
+[dev-dependencies]
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid"] }
+tempfile = "3.0"

@@ -1,0 +1,424 @@
+/**
+ * A2R Runtime Compatibility Tests
+ *
+ * Verifies that A2R runtime properly implements the required interfaces.
+ * These tests ensure the integration points work correctly.
+ */
+
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import type { A2RKernel, WihItem } from '@a2r/governor';
+import {
+  prepareSessionInit,
+  cleanupSession,
+  getSessionContext,
+  _clearActiveSessions,
+  wrapToolExecution,
+  createWrappedFileOperations,
+  type A2RGatewayOptions,
+} from '@a2r/runtime';
+import { LawLayer, PolicyTemplates } from '@a2r/lawlayer';
+
+// Mock types
+interface MockA2RGatewayClient {
+  sessionId: string;
+  connect(): Promise<void>;
+  disconnect(): Promise<void>;
+  sendMessage(message: string): Promise<void>;
+}
+
+// Mock storage
+class MockStorage {
+  private wihs = new Map<string, WihItem>();
+  private receipts = new Map();
+
+  async create(item: WihItem): Promise<WihItem> {
+    this.wihs.set(item.id, item);
+    return item;
+  }
+
+  async get(id: string): Promise<WihItem | null> {
+    return this.wihs.get(id) ?? null;
+  }
+
+  async update(id: string, updates: Partial<WihItem>): Promise<WihItem> {
+    const existing = this.wihs.get(id);
+    if (!existing) throw new Error('Not found');
+    const updated = { ...existing, ...updates };
+    this.wihs.set(id, updated);
+    return updated;
+  }
+
+  async list(): Promise<WihItem[]> {
+    return Array.from(this.wihs.values());
+  }
+
+  async createReceipt(receipt: any): Promise<any> {
+    this.receipts.set(receipt.id, receipt);
+    return receipt;
+  }
+
+  async getReceipt(id: string): Promise<any | null> {
+    return this.receipts.get(id) ?? null;
+  }
+
+  clear(): void {
+    this.wihs.clear();
+    this.receipts.clear();
+  }
+}
+
+describe('A2R Runtime Compatibility', () => {
+  let storage: MockStorage;
+  let kernel: A2RKernel;
+
+  beforeEach(async () => {
+    storage = new MockStorage();
+    // Use A2RKernelImpl
+    const { A2RKernelImpl } = await import('@a2r/governor');
+    kernel = new A2RKernelImpl(storage);
+    _clearActiveSessions();
+  });
+
+  describe('Session Spawn (src/gateway/client.ts:94-99)', () => {
+    it('should inject WIH validation at session initialization', async () => {
+      const wih = await kernel.createWih({
+        title: 'Test Session WIH',
+        status: 'ready',
+        blockedBy: [],
+        blocks: [],
+        tags: [],
+        receiptRefs: [],
+        artifacts: [],
+        priority: 50,
+      });
+
+      const options: A2RGatewayOptions = {
+        a2rKernel: kernel,
+        wihId: wih.id,
+        enforceWih: true,
+        workspaceRoot: '/test',
+      };
+
+      const result = await prepareSessionInit(options);
+
+      expect(result.success).toBe(true);
+      expect(result.wihId).toBe(wih.id);
+      expect(result.sessionId).toBeDefined();
+
+      // Verify session context is tracked
+      const context = getSessionContext(result.sessionId);
+      expect(context).not.toBeNull();
+      expect(context?.wihId).toBe(wih.id);
+    });
+
+    it('should block session with incomplete dependencies', async () => {
+      const dep = await kernel.createWih({
+        title: 'Incomplete Dependency',
+        status: 'in_progress', // Not complete
+        blockedBy: [],
+        blocks: [],
+        tags: [],
+        receiptRefs: [],
+        artifacts: [],
+        priority: 50,
+      });
+
+      const wih = await kernel.createWih({
+        title: 'Blocked WIH',
+        status: 'ready',
+        blockedBy: [dep.id],
+        blocks: [],
+        tags: [],
+        receiptRefs: [],
+        artifacts: [],
+        priority: 50,
+      });
+
+      await expect(
+        prepareSessionInit({
+          a2rKernel: kernel,
+          wihId: wih.id,
+          enforceWih: true,
+          workspaceRoot: '/test',
+        })
+      ).rejects.toThrow('not complete');
+    });
+
+    it('should update WIH status on session start', async () => {
+      const wih = await kernel.createWih({
+        title: 'Test WIH',
+        status: 'ready',
+        blockedBy: [],
+        blocks: [],
+        tags: [],
+        receiptRefs: [],
+        artifacts: [],
+        priority: 50,
+      });
+
+      await prepareSessionInit({
+        a2rKernel: kernel,
+        wihId: wih.id,
+        enforceWih: true,
+        workspaceRoot: '/test',
+      });
+
+      const updated = await kernel.getWih(wih.id);
+      expect(updated?.status).toBe('in_progress');
+    });
+  });
+
+  describe('Tool Execution (src/agents/tool-policy.ts)', () => {
+    it('should wrap tool execution with A2R routing', async () => {
+      const lawLayer = new LawLayer({ kernel });
+      lawLayer.policies.registerPolicy(PolicyTemplates.denyTools(['dangerous_cmd']));
+
+      const originalExecutor = vi.fn().mockResolvedValue({ success: true });
+
+      const result = await wrapToolExecution(
+        {
+          kernel,
+          sessionId: 'test-session',
+          agentId: 'test-agent',
+          workspaceRoot: '/test',
+          wihId: 'TEST-0001',
+          originalExecutor,
+        },
+        'read_file',
+        { path: '/test.txt' }
+      );
+
+      expect(result.decision).toBe('allow');
+      expect(originalExecutor).toHaveBeenCalled();
+    });
+
+    it('should deny tools blocked by policy', async () => {
+      const lawLayer = new LawLayer({ kernel });
+      lawLayer.policies.registerPolicy(PolicyTemplates.denyTools(['exec']));
+
+      const originalExecutor = vi.fn();
+
+      const result = await wrapToolExecution(
+        {
+          kernel,
+          sessionId: 'test-session',
+          agentId: 'test-agent',
+          workspaceRoot: '/test',
+          wihId: 'TEST-0001',
+          originalExecutor,
+        },
+        'exec',
+        { command: 'rm -rf /' }
+      );
+
+      // Tool wrapper delegates to law-layer, which denies
+      expect(result.decision).toBe('delegate');
+      expect(originalExecutor).not.toHaveBeenCalled();
+    });
+
+    it('should audit tool execution', async () => {
+      const audits: any[] = [];
+      const originalExecutor = vi.fn().mockResolvedValue({ data: 'test' });
+
+      await wrapToolExecution(
+        {
+          kernel,
+          sessionId: 'test-session',
+          agentId: 'test-agent',
+          workspaceRoot: '/test',
+          wihId: 'TEST-0001',
+          originalExecutor,
+          onAudit: (log) => audits.push(log),
+        },
+        'read_file',
+        { path: '/test.txt' }
+      );
+
+      expect(audits).toHaveLength(1);
+      expect(audits[0].toolName).toBe('read_file');
+      expect(audits[0].decision).toBe('allow');
+    });
+  });
+
+  describe('File IO (src/infra/fs-safe.ts:38-100)', () => {
+    it('should validate file paths before access', async () => {
+      const fileOps = createWrappedFileOperations({
+        kernel,
+        sessionId: 'test-session',
+        agentId: 'test-agent',
+        workspaceRoot: '/workspace',
+        wihId: 'TEST-0001',
+      });
+
+      // Mock the actual file system
+      const mockOpen = vi.fn().mockResolvedValue({
+        readFile: vi.fn().mockResolvedValue(Buffer.from('test content')),
+        close: vi.fn().mockResolvedValue(undefined),
+      });
+
+      // Path traversal should be caught
+      const result = await fileOps.open('../../../etc/passwd', 'r');
+      expect(result.decision).toBe('deny');
+    });
+
+    it('should enforce workspace boundaries', async () => {
+      const fileOps = createWrappedFileOperations({
+        kernel,
+        sessionId: 'test-session',
+        agentId: 'test-agent',
+        workspaceRoot: '/workspace',
+        wihId: 'TEST-0001',
+      });
+
+      // Path outside workspace should be denied
+      const result = await fileOps.open('/etc/passwd', 'r');
+      expect(result.decision).toBe('deny');
+    });
+
+    it('should protect sensitive paths', async () => {
+      const fileOps = createWrappedFileOperations({
+        kernel,
+        sessionId: 'test-session',
+        agentId: 'test-agent',
+        workspaceRoot: '/workspace',
+        wihId: 'TEST-0001',
+      });
+
+      // .ssh paths should be protected
+      const result = await fileOps.open('.ssh/id_rsa', 'r');
+      expect(result.decision).toBe('delegate');
+      expect(result.delegateTo).toBe('law-layer');
+    });
+  });
+
+  describe('Plugin Loading (src/plugins/tools.ts:43-129)', () => {
+    it('should validate plugins against allowlist', async () => {
+      const { PluginAdapter } = await import('@a2r/runtime');
+
+      const adapter = new PluginAdapter({
+        kernel,
+        allowedPlugins: ['git', 'github'],
+        requireWih: true,
+      });
+
+      const allowedPlugin = {
+        id: 'git',
+        name: 'Git Plugin',
+        version: '1.0.0',
+        tools: [],
+      };
+
+      const result = await adapter.loadPlugin(allowedPlugin, { wihId: 'TEST-0001' });
+      expect(result.success).toBe(true);
+    });
+
+    it('should reject plugins not in allowlist', async () => {
+      const { PluginAdapter } = await import('@a2r/runtime');
+
+      const adapter = new PluginAdapter({
+        kernel,
+        allowedPlugins: ['git'],
+        requireWih: true,
+      });
+
+      const deniedPlugin = {
+        id: 'dangerous',
+        name: 'Dangerous Plugin',
+        version: '1.0.0',
+        tools: [],
+      };
+
+      const result = await adapter.loadPlugin(deniedPlugin, { wihId: 'TEST-0001' });
+      expect(result.success).toBe(false);
+    });
+
+    it('should require WIH for plugin loading when configured', async () => {
+      const { PluginAdapter } = await import('@a2r/runtime');
+
+      const adapter = new PluginAdapter({
+        kernel,
+        requireWih: true,
+      });
+
+      const plugin = {
+        id: 'test',
+        name: 'Test Plugin',
+        version: '1.0.0',
+        tools: [],
+      };
+
+      // Without WIH should fail
+      const result = await adapter.loadPlugin(plugin, {});
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('End-to-End Integration', () => {
+    it('should complete full workflow: session -> tool -> receipt', async () => {
+      // 1. Create WIH
+      const wih = await kernel.createWih({
+        title: 'Integration Test WIH',
+        status: 'ready',
+        blockedBy: [],
+        blocks: [],
+        tags: [],
+        receiptRefs: [],
+        artifacts: [],
+        priority: 50,
+      });
+
+      // 2. Initialize session
+      const session = await prepareSessionInit({
+        a2rKernel: kernel,
+        wihId: wih.id,
+        enforceWih: true,
+        workspaceRoot: '/test',
+      });
+
+      expect(session.success).toBe(true);
+
+      // 3. Execute tool through wrapper
+      const originalExecutor = vi.fn().mockResolvedValue({ success: true });
+      const toolResult = await wrapToolExecution(
+        {
+          kernel,
+          sessionId: session.sessionId,
+          agentId: 'test-agent',
+          workspaceRoot: '/test',
+          wihId: wih.id,
+          originalExecutor,
+        },
+        'read_file',
+        { path: '/test.txt' }
+      );
+
+      expect(toolResult.decision).toBe('allow');
+
+      // 4. Complete WIH and generate receipt
+      const { LawReceiptGenerator } = await import('@a2r/lawlayer');
+      const receiptGen = new LawReceiptGenerator({ kernel });
+
+      const receipt = await receiptGen.generate(
+        (await kernel.getWih(wih.id))!,
+        {
+          wihId: wih.id,
+          sessionId: session.sessionId,
+          agentId: 'test-agent',
+          workspaceRoot: '/test',
+          artifacts: [],
+        }
+      );
+
+      expect(receipt.wihId).toBe(wih.id);
+      expect(receipt.status).toBe('complete');
+      expect(receipt.attestations.length).toBeGreaterThan(0);
+
+      // 5. Cleanup session
+      await cleanupSession(session.sessionId);
+
+      // Verify session cleaned up
+      const context = getSessionContext(session.sessionId);
+      expect(context).toBeNull();
+    });
+  });
+});

@@ -1,0 +1,7 @@
+packages:
+  - 'packages/*'
+  - 'apps/*'
+  - '5-ui/*'
+  - '6-apps/*'
+  - '3-adapters/*'
+  - '2-governance/*'

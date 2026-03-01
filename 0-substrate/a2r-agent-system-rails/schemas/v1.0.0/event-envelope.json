@@ -1,0 +1,85 @@
+{
+  "$schema": "https://a2r.dev/schemas/v1.0.0/event-envelope.json",
+  "$id": "event-envelope",
+  "type": "object",
+  "required": [
+    "event_id",
+    "ts",
+    "actor",
+    "type",
+    "payload"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "pattern": "^evt_[0-9]{8}_[0-9]{6}_[a-z0-9]{8}$"
+    },
+    "ts": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "actor": {
+      "type": "object",
+      "required": [
+        "type",
+        "id"
+      ],
+      "properties": {
+        "type": {
+          "enum": [
+            "user",
+            "agent",
+            "gate"
+          ]
+        },
+        "id": {
+          "type": "string"
+        }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "dag_id": {
+          "type": "string"
+        },
+        "node_id": {
+          "type": "string"
+        },
+        "wih_id": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        }
+      }
+    },
+    "type": {
+      "type": "string",
+      "pattern": "^[A-Z][a-zA-Z]+$"
+    },
+    "payload": {
+      "type": "object"
+    },
+    "provenance": {
+      "type": "object",
+      "properties": {
+        "prompt_id": {
+          "type": "string"
+        },
+        "delta_id": {
+          "type": "string"
+        },
+        "agent_decision_id": {
+          "type": "string"
+        },
+        "parent_event_id": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

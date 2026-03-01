@@ -1,0 +1,12 @@
+[package]
+name = "extension-adapter"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+a2rchitech-skills = { workspace = true }
+a2rchitech-tools-gateway = { workspace = true }

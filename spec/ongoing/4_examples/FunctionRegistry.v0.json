@@ -1,0 +1,139 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Function Registry v0",
+  "description": "Schema for registering executable functions in the A2rchitech system",
+  "required": ["id", "name", "description", "version", "platform_support", "risk_level", "requires_confirmation", "parameters", "examples"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for the function (reverse-DNS format)",
+      "pattern": "^[a-z0-9]+([._-][a-z0-9]+)*\\.[a-z0-9]+([._-][a-z0-9]+)*$"
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable name of the function"
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description of what the function does"
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version of the function",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "platform_support": {
+      "type": "object",
+      "description": "Platforms where this function is supported",
+      "properties": {
+        "ios": {
+          "type": "boolean",
+          "default": false
+        },
+        "android": {
+          "type": "boolean",
+          "default": false
+        },
+        "web": {
+          "type": "boolean",
+          "default": false
+        },
+        "desktop": {
+          "type": "boolean",
+          "default": false
+        },
+        "backend": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "required": ["ios", "android", "web", "desktop", "backend"]
+    },
+    "risk_level": {
+      "type": "string",
+      "enum": ["low", "medium", "high", "critical"],
+      "description": "Risk level of executing this function"
+    },
+    "requires_confirmation": {
+      "type": "boolean",
+      "description": "Whether this function requires explicit user confirmation before execution"
+    },
+    "parameters": {
+      "type": "object",
+      "description": "JSON Schema for function parameters",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["object"]
+        },
+        "properties": {
+          "type": "object",
+          "description": "Parameter definitions",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["type"],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["string", "number", "boolean", "array", "object", "integer"]
+              },
+              "description": {
+                "type": "string"
+              },
+              "required": {
+                "type": "boolean",
+                "default": false
+              },
+              "default": {}
+            }
+          }
+        },
+        "required": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "examples": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "input": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "execution_context": {
+      "type": "string",
+      "enum": ["local", "remote", "hybrid"],
+      "description": "Where the function executes",
+      "default": "remote"
+    },
+    "capabilities_required": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "System capabilities required to execute this function"
+    },
+    "timeout_ms": {
+      "type": "integer",
+      "description": "Maximum execution time in milliseconds",
+      "default": 30000
+    },
+    "category": {
+      "type": "string",
+      "description": "Category for organizing functions",
+      "enum": ["communication", "productivity", "system", "finance", "health", "social", "custom"]
+    }
+  }
+}

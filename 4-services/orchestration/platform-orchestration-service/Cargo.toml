@@ -1,0 +1,15 @@
+[package]
+name = "a2rchitech-platform"
+version = "0.1.0"
+edition = "2021"
+description = "A2rchitech platform orchestrator that starts all services"
+
+[[bin]]
+name = "a2rchitech-platform"
+path = "src/main.rs"
+
+[dependencies]
+tokio = { workspace = true }
+ctrlc = { version = "3.4", features = ["termination"] }
+serde = { workspace = true }
+serde_json = { workspace = true }

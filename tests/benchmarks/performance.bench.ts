@@ -1,0 +1,265 @@
+/**
+ * Performance Benchmarks
+ * 
+ * Benchmarks for critical paths in A2R system.
+ */
+
+import { bench, describe } from 'vitest';
+import { A2RKernelImpl, preToolUseRouter, fileAccessRouter } from '@a2r/governor';
+import { LawPolicyEngine, PolicyTemplates } from '@a2r/lawlayer';
+
+// Mock storage
+class BenchStorage {
+  private wihs = new Map();
+  private receipts = new Map();
+
+  async create(item: any) {
+    this.wihs.set(item.id, item);
+    return item;
+  }
+
+  async get(id: string) {
+    return this.wihs.get(id) ?? null;
+  }
+
+  async update(id: string, updates: any) {
+    const existing = this.wihs.get(id);
+    if (!existing) throw new Error('Not found');
+    const updated = { ...existing, ...updates };
+    this.wihs.set(id, updated);
+    return updated;
+  }
+
+  async list() {
+    return Array.from(this.wihs.values());
+  }
+
+  async createReceipt(receipt: any) {
+    this.receipts.set(receipt.id, receipt);
+    return receipt;
+  }
+
+  async getReceipt(id: string) {
+    return this.receipts.get(id) ?? null;
+  }
+}
+
+describe('Kernel Performance', () => {
+  const storage = new BenchStorage();
+  const kernel = new A2RKernelImpl(storage);
+
+  // Pre-populate with test data
+  const testWihs: string[] = [];
+  
+  bench('create WIH', async () => {
+    const wih = await kernel.createWih({
+      title: 'Benchmark WIH',
+    });
+    testWihs.push(wih.id);
+  });
+
+  bench('get WIH', async () => {
+    if (testWihs.length > 0) {
+      await kernel.getWih(testWihs[0]);
+    }
+  });
+
+  bench('update WIH', async () => {
+    if (testWihs.length > 0) {
+      await kernel.updateWih(testWihs[0], {
+        title: 'Updated title',
+      });
+    }
+  });
+
+  bench('list WIHs', async () => {
+    await kernel.listWih();
+  });
+});
+
+describe('Routing Performance', () => {
+  const storage = new BenchStorage();
+  const kernel = new A2RKernelImpl(storage);
+
+  // Register routers
+  kernel.registerPreToolUse('default', preToolUseRouter);
+  kernel.registerFileAccessCheck('default', fileAccessRouter);
+
+  const toolContext = {
+    toolName: 'read_file',
+    toolParams: { path: '/test.txt' },
+    sessionId: 'bench-session',
+    agentId: 'bench-agent',
+    workspaceRoot: '/workspace',
+  };
+
+  const fileContext = {
+    operation: 'read' as const,
+    path: 'src/index.ts',
+    resolvedPath: '/workspace/src/index.ts',
+    sessionId: 'bench-session',
+    agentId: 'bench-agent',
+  };
+
+  bench('route tool use', async () => {
+    await kernel.routeToolUse(toolContext);
+  });
+
+  bench('route file access', async () => {
+    await kernel.routeFileAccess(fileContext);
+  });
+});
+
+describe('Policy Engine Performance', () => {
+  const storage = new BenchStorage();
+  const kernel = new A2RKernelImpl(storage);
+  const engine = new LawPolicyEngine({ kernel });
+
+  // Register multiple policies
+  engine.registerPolicy(PolicyTemplates.requireWih());
+  engine.registerPolicy(PolicyTemplates.denyTools(['exec', 'bash']));
+  engine.registerPolicy(PolicyTemplates.allowTools(['read_file', 'write_file']));
+
+  const context = {
+    toolName: 'read_file',
+    toolParams: {},
+    sessionId: 'bench-session',
+    agentId: 'bench-agent',
+    workspaceRoot: '/workspace',
+    wihId: 'TEST-0001',
+  };
+
+  bench('evaluate policy', () => {
+    engine.evaluate({ context });
+  });
+
+  bench('evaluate with 10 policies', () => {
+    // Add more policies
+    for (let i = 0; i < 7; i++) {
+      engine.registerPolicy({
+        id: `bench-policy-${i}`,
+        name: `Bench Policy ${i}`,
+        version: '1.0.0',
+        scope: 'global',
+        rules: [{
+          id: `rule-${i}`,
+          name: `Rule ${i}`,
+          condition: {
+            type: 'custom',
+            operator: 'equals',
+            field: 'always',
+            value: true,
+          },
+          action: {
+            decision: 'allow',
+          },
+        }],
+        enabled: true,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    engine.evaluate({ context });
+  });
+});
+
+describe('Receipt Generation Performance', () => {
+  const storage = new BenchStorage();
+  const kernel = new A2RKernelImpl(storage);
+
+  // Pre-create WIH
+  let testWihId: string;
+  
+  bench.setup = async () => {
+    const wih = await kernel.createWih({
+      title: 'Bench WIH',
+    });
+    testWihId = wih.id;
+  };
+
+  bench('create receipt', async () => {
+    await kernel.createReceipt({
+      wihId: testWihId,
+      status: 'complete',
+      attestations: [
+        { type: 'git-commit', value: 'abc123' },
+        { type: 'test-pass', value: 'all-passed' },
+      ],
+      artifacts: [],
+    });
+  });
+
+  bench('verify receipt', async () => {
+    const receipt = await kernel.createReceipt({
+      wihId: testWihId,
+      status: 'complete',
+      attestations: [{ type: 'manual-sign', value: 'test' }],
+      artifacts: [],
+    });
+
+    await kernel.verifyReceipt(receipt.id);
+  });
+});
+
+describe('Shell Performance', async () => {
+  const { createShell } = await import('@a2r/shell');
+  const storage = new BenchStorage();
+  const kernel = new A2RKernelImpl(storage);
+
+  // Pre-create WIH and shell
+  let shell: ReturnType<typeof createShell>;
+  let wihId: string;
+
+  bench.setup = async () => {
+    const wih = await kernel.createWih({
+      title: 'Bench WIH',
+      status: 'in_progress',
+    });
+    wihId = wih.id;
+    shell = createShell(kernel, { wihId });
+  };
+
+  bench('execute command', async () => {
+    await shell.executeCommand('/help');
+  });
+
+  bench('process input', async () => {
+    await shell.processInput('Hello, this is a test message');
+  });
+
+  bench('add message', () => {
+    shell.addMessage({
+      id: `msg-${Date.now()}`,
+      role: 'user',
+      content: 'Test message',
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  bench.teardown = async () => {
+    await shell.dispose();
+  };
+});
+
+// Memory usage benchmarks
+describe('Memory Usage', () => {
+  const storage = new BenchStorage();
+  const kernel = new A2RKernelImpl(storage);
+
+  bench('create 100 WIHs', async () => {
+    for (let i = 0; i < 100; i++) {
+      await kernel.createWih({
+        title: `WIH ${i}`,
+        description: 'Test description '.repeat(10),
+      });
+    }
+  });
+
+  bench('create 1000 WIHs', async () => {
+    for (let i = 0; i < 1000; i++) {
+      await kernel.createWih({
+        title: `WIH ${i}`,
+      });
+    }
+  });
+});

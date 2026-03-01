@@ -1,0 +1,204 @@
+version: '3.8'
+
+services:
+  # Transport Gateways
+  sms-gateway:
+    build:
+      context: .
+      dockerfile: services/gateway-sms/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - RUST_LOG=info
+      - DATABASE_URL=postgresql://user:password@db:5432/a2rchitech
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - db
+      - redis
+      - agent-router
+      - model-router
+      - policy-service
+      - audit-log
+
+  imessage-gateway:
+    build:
+      context: .
+      dockerfile: services/gateway-imessage/Dockerfile
+    ports:
+      - "3006:3006"
+    environment:
+      - RUST_LOG=info
+      - DATABASE_URL=postgresql://user:password@db:5432/a2rchitech
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - db
+      - redis
+      - agent-router
+      - model-router
+      - policy-service
+
+  appclip-gateway:
+    build:
+      context: .
+      dockerfile: services/gateway-appclip/Dockerfile
+    ports:
+      - "3007:3007"
+    environment:
+      - RUST_LOG=info
+      - DATABASE_URL=postgresql://user:password@db:5432/a2rchitech
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - db
+      - redis
+      - agent-router
+      - model-router
+
+  browser-gateway:
+    build:
+      context: .
+      dockerfile: services/gateway-browser/Dockerfile
+    ports:
+      - "3008:3008"
+    environment:
+      - RUST_LOG=info
+      - DATABASE_URL=postgresql://user:password@db:5432/a2rchitech
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - db
+      - redis
+      - agent-router
+      - model-router
+
+  # Core Routers
+  agent-router:
+    build:
+      context: .
+      dockerfile: services/router-agent/Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - RUST_LOG=info
+      - DATABASE_URL=postgresql://user:password@db:5432/a2rchitech
+    depends_on:
+      - db
+
+  model-router:
+    build:
+      context: .
+      dockerfile: services/router-model/Dockerfile
+    ports:
+      - "3002:3002"
+    environment:
+      - RUST_LOG=info
+      - DATABASE_URL=postgresql://user:password@db:5432/a2rchitech
+    depends_on:
+      - db
+
+  # Policy and Security
+  policy-service:
+    build:
+      context: .
+      dockerfile: services/policy/Dockerfile
+    ports:
+      - "3003:3003"
+    environment:
+      - RUST_LOG=info
+      - DATABASE_URL=postgresql://user:password@db:5432/a2rchitech
+    depends_on:
+      - db
+
+  # Registries
+  function-registry:
+    build:
+      context: .
+      dockerfile: services/registry-functions/Dockerfile
+    ports:
+      - "3005:3005"
+    environment:
+      - RUST_LOG=info
+      - DATABASE_URL=postgresql://user:password@db:5432/a2rchitech
+    depends_on:
+      - db
+
+  apps-registry:
+    build:
+      context: .
+      dockerfile: services/registry-apps/Dockerfile
+    ports:
+      - "3009:3009"
+    environment:
+      - RUST_LOG=info
+      - DATABASE_URL=postgresql://user:password@db:5432/a2rchitech
+    depends_on:
+      - db
+
+  # Execution and Logging
+  executor:
+    build:
+      context: .
+      dockerfile: services/executor/Dockerfile
+    environment:
+      - RUST_LOG=info
+      - DATABASE_URL=postgresql://user:password@db:5432/a2rchitech
+    depends_on:
+      - db
+      - redis
+      - policy-service
+      - function-registry
+
+  audit-log:
+    build:
+      context: .
+      dockerfile: services/audit-log/Dockerfile
+    ports:
+      - "3004:3004"
+    environment:
+      - RUST_LOG=info
+      - DATABASE_URL=postgresql://user:password@db:5432/a2rchitech
+    depends_on:
+      - db
+
+  memory-service:
+    build:
+      context: .
+      dockerfile: services/memory/Dockerfile
+    environment:
+      - RUST_LOG=info
+      - DATABASE_URL=postgresql://user:password@db:5432/a2rchitech
+    depends_on:
+      - db
+      - redis
+
+  local-inference:
+    build:
+      context: .
+      dockerfile: services/local-inference/Dockerfile
+    environment:
+      - RUST_LOG=info
+      - DATABASE_URL=postgresql://user:password@db:5432/a2rchitech
+    depends_on:
+      - db
+
+  # Database and Cache
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: a2rchitech
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:

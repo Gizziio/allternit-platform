@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://a2rchitech.local/spec/contracts/GatewayRegistry.schema.json",
+  "title": "Gateway Registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "external_ingress", "services"],
+  "properties": {
+    "version": { "type": "string" },
+    "external_ingress": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "protocol", "routes"],
+      "properties": {
+        "id": { "type": "string" },
+        "host": { "type": "string" },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "protocol": { "type": "string", "enum": ["http", "https"] },
+        "routes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path_prefix", "service"],
+            "properties": {
+              "path_prefix": { "type": "string" },
+              "service": { "type": "string" },
+              "methods": {
+                "type": "array",
+                "items": { "type": "string" },
+                "default": []
+              }
+            }
+          }
+        }
+      }
+    },
+    "services": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "internal_url", "exposed"],
+        "properties": {
+          "name": { "type": "string" },
+          "internal_url": { "type": "string" },
+          "exposed": { "type": "boolean" }
+        }
+      }
+    }
+  }
+}

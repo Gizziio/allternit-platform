@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://a2rchitech.local/spec/contracts/CapsuleReceipt.schema.json",
+  "title": "Capsule Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "receipt_id",
+    "created_at",
+    "run_id",
+    "capsule_id",
+    "action",
+    "status"
+  ],
+  "properties": {
+    "receipt_id": { "type": "string" },
+    "created_at": { "type": "string" },
+    "run_id": { "type": "string" },
+    "trace_id": { "type": "string" },
+    "capsule_id": { "type": "string" },
+    "action": {
+      "type": "string",
+      "enum": ["start", "stop", "tool_call", "network_request", "install"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["success", "failure", "denied"]
+    },
+    "details": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "hash": { "type": "string" }
+  }
+}

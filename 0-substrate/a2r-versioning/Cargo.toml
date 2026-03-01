@@ -1,0 +1,13 @@
+[package]
+name = "a2r-versioning"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "A2R Versioning - Schema versioning and compatibility (N14)"
+
+[dependencies]
+serde = { workspace = true }
+semver = { workspace = true }
+thiserror = "1.0"
+
+[dev-dependencies]

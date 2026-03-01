@@ -1,0 +1,44 @@
+commit a96a7a60ef5620fcd822b4be156c27190dc81732
+Author: Eoj Edred <eojedredbitepubkey1@proton.me>
+Date:   Tue Jan 27 22:49:12 2026 -0600
+
+    T0008: WIH tool registry lock test
+    
+    Tests: tests/acceptance/test_wih_tool_registry_lock.sh
+    
+    Files: tests/acceptance/test_wih_tool_registry_lock.sh
+
+diff --git a/tests/acceptance/test_wih_tool_registry_lock.sh b/tests/acceptance/test_wih_tool_registry_lock.sh
+new file mode 100755
+index 0000000..0983cd7
+--- /dev/null
++++ b/tests/acceptance/test_wih_tool_registry_lock.sh
+@@ -0,0 +1,28 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++wih_file=".a2r/wih/T0000.wih.json"
++backup="${wih_file}.bak"
++
++cp "$wih_file" "$backup"
++
++python3 - <<'PY'
++import json
++from pathlib import Path
++path = Path('.a2r/wih/T0000.wih.json')
++obj = json.loads(path.read_text())
++obj.setdefault('tools', {}).setdefault('allowlist', []).append('tool.invalid')
++path.write_text(json.dumps(obj, indent=2))
++PY
++
++set +e
++python3 scripts/validate_law.py
++status=$?
++set -e
++
++mv "$backup" "$wih_file"
++
++if [ "$status" -eq 0 ]; then
++  echo "Expected validator failure for invalid tool id"
++  exit 1
++fi

@@ -1,0 +1,18 @@
+{
+  "receipt_version": "v0.1",
+  "receipt_type": "ui_action_receipt",
+  "run_id": "run-001",
+  "task_id": "T1001",
+  "wih_id": "T1001",
+  "timestamp": "2026-01-28T05:00:00.000Z",
+  "ui_action_id": "action-dashboard-refresh",
+  "session_id": "session-abc123",
+  "user_id": "user-admin",
+  "gateway_route_invoked": "GET:/api/dashboard",
+  "request_payload_hash": "sha256:abc123def456",
+  "response_payload_hash": "sha256:def456ghi789",
+  "gateway_response_code": 200,
+  "execution_time_ms": 150,
+  "success": true,
+  "error_message": null
+}

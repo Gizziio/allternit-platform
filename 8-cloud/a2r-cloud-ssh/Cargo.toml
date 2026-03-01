@@ -1,0 +1,24 @@
+[package]
+name = "a2r-cloud-ssh"
+version = "0.1.0"
+edition = "2021"
+description = "A2R Cloud SSH Executor - Real SSH connection management"
+
+[dependencies]
+tokio = { workspace = true, features = ["full"] }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+
+# SSH library (synchronous, wrapped in spawn_blocking for async)
+ssh2 = "0.9"
+
+# Key generation
+ed25519-dalek = { version = "2.0", features = ["rand_core"] }
+rand = "0.8"
+
+# Encoding
+base64 = "0.22"
+
+[dev-dependencies]
+tokio-test = "0.4"

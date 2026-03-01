@@ -1,0 +1,155 @@
+import { Meta, ColorPalette, ColorItem, Typeset } from '@storybook/blocks';
+import { tokens } from './tokens';
+
+<Meta title="Design System/Overview" />
+
+# A2rchitect Design System
+
+The A2R Design System provides a comprehensive set of visual standards, components, and patterns for building consistent user interfaces across the platform.
+
+## Philosophy
+
+- **Glass Morphism**: Translucent, layered interfaces with depth
+- **Motion-First**: Smooth, purposeful animations enhance UX
+- **Accessibility**: WCAG 2.1 AA compliance built-in
+- **Themeable**: Light and dark modes with seamless switching
+
+---
+
+## Colors
+
+### Sand Nude Palette
+
+<ColorPalette>
+  <ColorItem
+    title="Sand Scale"
+    subtitle="Primary neutral palette"
+    colors={{
+      50: '#fbf9f6',
+      100: '#f5f0e8',
+      200: '#e8dcc8',
+      300: '#d4c4a8',
+      400: '#b8a082',
+      500: '#9c7e5c',
+      600: '#8b6f4e',
+      700: '#745a41',
+      800: '#5d4836',
+      900: '#4a3a2d',
+      950: '#2a2118',
+    }}
+  />
+  <ColorItem
+    title="Semantic Colors"
+    subtitle="Status and feedback colors"
+    colors={{
+      Success: '#22c55e',
+      Warning: '#f59e0b',
+      Danger: '#ef4444',
+      Info: '#3b82f6',
+    }}
+  />
+  <ColorItem
+    title="Mode Colors"
+    subtitle="Chat, Cowork, and Code modes"
+    colors={{
+      Chat: '#d4b08c',
+      Cowork: '#af52de',
+      Code: '#34c759',
+    }}
+  />
+</ColorPalette>
+
+---
+
+## Typography
+
+### Font Stack
+
+- **Primary**: Inter, system-ui, sans-serif
+- **Monospace**: JetBrains Mono, Menlo, monospace
+
+### Type Scale
+
+<Typeset
+  fontSizes={['12px', '14px', '16px', '18px', '20px', '24px', '30px', '36px']}
+  fontWeight="600"
+  sampleText="A2R Platform"
+  fontFamily="Inter, system-ui, sans-serif"
+/>
+
+---
+
+## Spacing
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| xs    | 4px   | Tight spacing, icons |
+| sm    | 8px   | Compact elements |
+| md    | 12px  | Default padding |
+| lg    | 16px  | Section padding |
+| xl    | 24px  | Large gaps |
+| xxl   | 32px  | Major sections |
+
+---
+
+## Motion
+
+### Timing Functions
+
+- **Fast**: 140ms cubic-bezier(0.4, 0, 0.2, 1) - Micro-interactions
+- **Base**: 200ms cubic-bezier(0.4, 0, 0.2, 1) - Standard transitions
+- **Slow**: 300ms cubic-bezier(0.4, 0, 0.2, 1) - Emphasis animations
+- **Spring**: cubic-bezier(0.34, 1.56, 0.64, 1) - Playful bounces
+
+### Animation Principles
+
+1. **Purposeful**: Every animation serves a functional purpose
+2. **Performant**: GPU-accelerated transforms and opacity only
+3. **Respectful**: Honors `prefers-reduced-motion`
+4. **Consistent**: Same timing across similar interactions
+
+---
+
+## Glass System
+
+### Intensity Levels
+
+| Level | Blur | Background | Use Case |
+|-------|------|------------|----------|
+| Thin  | 16px | var(--glass-bg) | Tooltips, dropdowns |
+| Base  | 24px | var(--glass-bg) | Cards, panels |
+| Elevated | 32px | var(--glass-bg-thick) | Modals, overlays |
+| Thick | 40px | var(--glass-bg-thick) | Full-screen overlays |
+
+### CSS Variables
+
+```css
+--glass-bg: rgba(255, 255, 255, 0.05);
+--glass-bg-thick: rgba(30, 30, 40, 0.6);
+--border-subtle: rgba(255, 255, 255, 0.08);
+--border-default: rgba(255, 255, 255, 0.12);
+--border-strong: rgba(255, 255, 255, 0.18);
+```
+
+---
+
+## Component Status
+
+| Category | Components | Coverage |
+|----------|------------|----------|
+| Design | 8 | 100% |
+| Shell | 12 | 80% |
+| Navigation | 6 | 100% |
+| Chat | 5 | 100% |
+| Views | 15 | 60% |
+
+---
+
+## Evidence Integration
+
+Stories include metadata for A2R DAG evidence:
+
+- `INTERACTION_TEST` - User interaction validation
+- `VISUAL_SNAPSHOT` - Visual regression baseline
+- `VISUAL_REGRESSION` - Automated comparison
+- `A11Y_SCAN` - Accessibility compliance

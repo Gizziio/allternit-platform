@@ -1,0 +1,141 @@
+---
+prompt_id: "a2r.pack.control_flow.delegation_spawn"
+version: "v1"
+description: "Spawn sub-agent with scoped context and bounded authority"
+model: "any"
+anchors: "input | workflow | output"
+allowed_tools: ["worker.spawn", "lease.create", "context.inject", "receipt.emit"]
+execution_permission_mode: "write_leased"
+hooks_required: ["WorkerSpawned", "WorkerCompleted"]
+outputs: ["delegation_manifest.json", "worker_result.json"]
+---
+
+# Delegation Spawn
+
+**Task**: Spawn sub-agent with constrained scope and authority
+**Role**: delegator
+**Stop condition**: Sub-agent spawned with valid lease, result awaited
+
+## Variables
+- {{worker_role}}: Role for sub-agent (builder, validator, etc.)
+- {{task_scope}}: Narrow scope description
+- {{allowed_paths}}: File paths sub-agent may access
+- {{allowed_tools}}: Tools sub-agent may invoke
+- {{max_duration}}: Timeout for sub-agent execution
+- {{context_injection}}: Context pack to inject
+- {{parent_dag_id}}: Parent execution identifier
+
+## Instructions
+- IMPORTANT: Scope must be narrowest possible authority
+- DO NOT: Grant tools beyond task requirements
+- CRITICAL: All sub-agents must emit receipts
+- Parent remains accountable for child actions
+
+## Workflow
+
+### STEP 1: Scope Validation
+- Review: {{task_scope}} for clarity
+- Verify: {{allowed_paths}} are within parent scope
+- Check: {{allowed_tools}} are authorized for delegation
+- Validate: {{max_duration}} is reasonable
+
+### STEP 2: Lease Creation
+- Create: File lease for {{allowed_paths}}
+- Set: TTL = {{max_duration}} + buffer
+- Tag: Lease with {{parent_dag_id}}
+- Record: Lease in delegation_manifest
+
+### STEP 3: Context Injection
+- Prepare: {{context_injection}} bundle
+- Include: Parent receipts as evidence
+- Add: Delegation metadata (parent_id, scope limits)
+- Seal: Bundle with injection marker
+
+### STEP 4: Worker Spawn
+- Spawn: Worker with {{worker_role}}
+- Inject: Context bundle at SessionStart
+- Emit: WorkerSpawned hook
+- Record: worker_id in delegation_manifest
+
+### STEP 5: Monitor & Await
+- Track: Worker execution via heartbeats
+- Enforce: {{max_duration}} timeout
+- Collect: Receipts emitted by worker
+- On completion: Emit WorkerCompleted hook
+
+### STEP 6: Result Integration
+- Validate: Worker receipts
+- Merge: Results into parent context
+- Release: File leases (if not extended)
+- Write: worker_result.json
+
+## Report
+```yaml
+report:
+  status: PASS|FAIL|TIMEOUT|ERROR
+  summary: "Spawned {{worker_role}} worker {{worker_id}}"
+  delegation:
+    worker_id: <uuid>
+    parent_id: <uuid>
+    role: <worker_role>
+    spawned_at: <timestamp>
+    completed_at: <timestamp>
+    duration_seconds: <number>
+  scope:
+    paths_allowed: <list>
+    paths_accessed: <list>
+    tools_allowed: <list>
+    tools_used: <list>
+  lease:
+    lease_id: <uuid>
+    created_at: <timestamp>
+    expires_at: <timestamp>
+    status: active|released|expired
+  worker:
+    status: completed|failed|timeout|killed
+    receipts_emitted: <number>
+    last_heartbeat: <timestamp>
+  results:
+    primary_receipt: <receipt_ref>
+    artifacts_produced: <list>
+    exit_code: <number>
+  artifacts:
+    - path: "delegation_manifest.json"
+      kind: "delegation_record"
+    - path: "worker_result.json"
+      kind: "worker_output"
+```
+
+## Examples
+
+### Example 1: Successful Delegation
+```yaml
+input:
+  worker_role: "builder"
+  task_scope: "Implement auth middleware"
+  allowed_paths: ["src/auth/"]
+  allowed_tools: ["fs.read", "fs.write", "test.run"]
+  max_duration: "30m"
+output:
+  status: PASS
+  worker_id: "wkr-abc123"
+  duration_seconds: 1245
+  receipts_emitted: 3
+```
+
+### Example 2: Timeout
+```yaml
+input:
+  worker_role: "validator"
+  task_scope: "Run full test suite"
+  max_duration: "10m"
+output:
+  status: TIMEOUT
+  worker_id: "wkr-def456"
+  duration_seconds: 600
+  reason: "Worker exceeded max_duration"
+```
+
+## References
+- Lease API: agent/spec/lease.api.md
+- Worker Protocol: agent/spec/worker.protocol.md

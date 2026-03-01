@@ -1,0 +1,70 @@
+[
+  {
+    "name": "Google",
+    "url": "https://www.google.com",
+    "navigated": true,
+    "loaded": true,
+    "hasContent": true,
+    "hasErrors": true,
+    "errors": [
+      "BrowserCapsuleEnhanced: RENDER {initialUrl: undefined, agentMode: autonomous, timestamp: 1772170712607}",
+      "BrowserCapsuleEnhanced: RENDER {initialUrl: undefined, agentMode: autonomous, timestamp: 1772170712608}",
+      "BrowserCapsuleEnhanced: RENDER {initialUrl: undefined, agentMode: autonomous, timestamp: 1772170712628}",
+      "BrowserCapsuleEnhanced: RENDER {initialUrl: undefined, agentMode: autonomous, timestamp: 1772170712628}",
+      "BrowserCapsuleEnhanced: RENDER {initialUrl: undefined, agentMode: autonomous, timestamp: 1772170712641}"
+    ],
+    "iframeContent": true,
+    "iframeBodyLength": 107079
+  },
+  {
+    "name": "Wikipedia",
+    "url": "https://www.wikipedia.org",
+    "navigated": true,
+    "loaded": true,
+    "hasContent": true,
+    "hasErrors": true,
+    "errors": [
+      "BrowserCapsuleEnhanced: RENDER {initialUrl: undefined, agentMode: autonomous, timestamp: 1772170720842}",
+      "BrowserCapsuleEnhanced: RENDER {initialUrl: undefined, agentMode: autonomous, timestamp: 1772170720843}",
+      "BrowserCapsuleEnhanced: RENDER {initialUrl: undefined, agentMode: autonomous, timestamp: 1772170720877}",
+      "BrowserCapsuleEnhanced: RENDER {initialUrl: undefined, agentMode: autonomous, timestamp: 1772170720878}",
+      "BrowserCapsuleEnhanced: RENDER {initialUrl: undefined, agentMode: autonomous, timestamp: 1772170720885}"
+    ],
+    "iframeContent": true,
+    "iframeBodyLength": 51100
+  },
+  {
+    "name": "GitHub",
+    "url": "https://github.com",
+    "navigated": true,
+    "loaded": true,
+    "hasContent": true,
+    "hasErrors": true,
+    "errors": [
+      "BrowserCapsuleEnhanced: RENDER {initialUrl: undefined, agentMode: autonomous, timestamp: 1772170729076}",
+      "BrowserCapsuleEnhanced: RENDER {initialUrl: undefined, agentMode: autonomous, timestamp: 1772170729077}",
+      "BrowserCapsuleEnhanced: RENDER {initialUrl: undefined, agentMode: autonomous, timestamp: 1772170729087}",
+      "BrowserCapsuleEnhanced: RENDER {initialUrl: undefined, agentMode: autonomous, timestamp: 1772170729087}",
+      "BrowserCapsuleEnhanced: RENDER {initialUrl: undefined, agentMode: autonomous, timestamp: 1772170729090}"
+    ],
+    "iframeContent": true,
+    "iframeBodyLength": 538557
+  },
+  {
+    "name": "Hacker News",
+    "url": "https://news.ycombinator.com",
+    "navigated": true,
+    "loaded": true,
+    "hasContent": true,
+    "hasErrors": true,
+    "errors": [
+      "BrowserCapsuleEnhanced: RENDER {initialUrl: undefined, agentMode: autonomous, timestamp: 1772170737403}",
+      "BrowserCapsuleEnhanced: RENDER {initialUrl: undefined, agentMode: autonomous, timestamp: 1772170737404}",
+      "BrowserCapsuleEnhanced: RENDER {initialUrl: undefined, agentMode: autonomous, timestamp: 1772170737412}",
+      "BrowserCapsuleEnhanced: RENDER {initialUrl: undefined, agentMode: autonomous, timestamp: 1772170737412}",
+      "BrowserCapsuleEnhanced: RENDER {initialUrl: undefined, agentMode: autonomous, timestamp: 1772170737417}"
+    ],
+    "iframeContent": true,
+    "iframeBodyLength": 34516
+  }
+]

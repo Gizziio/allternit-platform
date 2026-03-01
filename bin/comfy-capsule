@@ -1,0 +1,37 @@
+#!/bin/bash
+# ComfyUI Capsule Launcher (Managed Service)
+
+PROJECT_ROOT="$HOME/ComfyUI"
+VENV_PATH="$PROJECT_ROOT/.venv"
+PORT=8188
+
+echo "🚀 Starting Image Generator Service (ComfyUI)..."
+
+if [ ! -d "$PROJECT_ROOT" ]; then
+    echo "❌ Error: ComfyUI directory not found at $PROJECT_ROOT"
+    exit 1
+fi
+
+cd "$PROJECT_ROOT"
+
+# Activate Venv
+if [ -f "$VENV_PATH/bin/activate" ]; then
+    source "$VENV_PATH/bin/activate"
+else
+    echo "⚠️  Warning: Virtual environment not found."
+fi
+
+# Check if already running
+if lsof -i :$PORT > /dev/null; then
+    echo "✅ Service already active on port $PORT"
+else
+    echo "Starting server on 127.0.0.1:$PORT..."
+    # --listen 127.0.0.1 ensures it matches the Vite proxy config
+    python main.py --listen 127.0.0.1 --port $PORT &
+    SERVER_PID=$!
+    echo "Started with PID $SERVER_PID"
+    sleep 2
+fi
+
+echo "🎨 Image Generator Service is ready for the Shell UI."
+# We don't 'open' the browser here anymore, as the Shell will handle the view.

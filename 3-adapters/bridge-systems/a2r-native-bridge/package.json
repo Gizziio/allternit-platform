@@ -1,0 +1,19 @@
+{
+  "name": "@a2r/native-bridge",
+  "version": "0.1.0",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "napi": {
+    "name": "a2r-native-bridge",
+    "package": {
+      "name": "@a2r/native-bridge"
+    }
+  },
+  "scripts": {
+    "build": "node scripts/build.js",
+    "build:debug": "node scripts/build.js --debug"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^2.11.0"
+  }
+}

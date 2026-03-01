@@ -1,0 +1,31 @@
+[package]
+name = "a2rchitech-registry-apps"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "registry-apps"
+path = "src/main.rs"
+
+[lib]
+name = "a2rchitech_registry_apps"
+path = "src/lib.rs"
+
+[dependencies]
+axum = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tower-http = { workspace = true }
+uuid = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+async-trait = { workspace = true }
+a2rchitech-sdk-core = { workspace = true }
+a2rchitech-sdk-apps = { workspace = true }
+a2rchitech-sdk-functions = { workspace = true }
+a2rchitech-sdk-policy = { workspace = true }
+sqlx = { workspace = true }
+reqwest = { workspace = true }

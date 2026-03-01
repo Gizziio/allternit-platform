@@ -1,0 +1,30 @@
+{
+  "name": "@a2r/ars-contexta-nlp",
+  "version": "1.0.0",
+  "description": "Native NLP module for Ars Contexta",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "napi": {
+    "name": "ars-contexta-nlp",
+    "triples": {
+      "additional": [
+        "aarch64-apple-darwin",
+        "aarch64-linux-gnu",
+        "x86_64-apple-darwin",
+        "x86_64-linux-gnu"
+      ]
+    }
+  },
+  "scripts": {
+    "build": "napi build --platform --release",
+    "build:debug": "napi build --platform",
+    "build:stub": "echo 'Native module build skipped (stub mode)'",
+    "test": "cargo test",
+    "install": "npm run build:stub"
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "^2.18"
+  },
+  "keywords": ["nlp", "bert", "embeddings", "rust"],
+  "license": "MIT"
+}

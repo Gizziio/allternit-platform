@@ -1,0 +1,61 @@
+{
+  "wih_id": "N03",
+  "title": "Design single-binary distribution strategy",
+  "type": "design",
+  "priority": "high",
+  "status": "ready",
+  "dag": "A2R_PRIORITY_INITIATIVES",
+  "phase": "Foundation",
+  "assignee": null,
+  "estimate": "2 days",
+  "blocked_by": [],
+  "blocks": ["N30", "N31", "N32"],
+  "created_at": "2026-02-13T15:00:00Z",
+  "context": {
+    "objective": "Design self-contained single-binary distribution for A2R platform",
+    "background": "Moltis achieves 'one binary, no runtime' via Rust embedding. A2R needs similar approach for enterprise distribution.",
+    "challenges": [
+      "80+ Rust crates to link",
+      "Python services (voice, operator)",
+      "Web UI assets",
+      "WASM capsules",
+      "Configuration files",
+      "Cross-platform builds"
+    ]
+  },
+  "research_topics": [
+    "Moltis distribution approach (cargo-deb, cargo-bundle)",
+    "rust-embed for asset embedding",
+    "PyOxidizer for Python services",
+    "Static linking strategies",
+    "Self-extracting archives",
+    "Update mechanisms"
+  ],
+  "outputs": [
+    {
+      "type": "rfc",
+      "path": "docs/rfcs/single-binary-distribution.md",
+      "description": "Distribution strategy RFC"
+    },
+    {
+      "type": "prototype",
+      "path": "infra/deployment/single-binary/prototype/",
+      "description": "Proof of concept build"
+    }
+  ],
+  "acceptance_criteria": [
+    "Research Moltis build configuration",
+    "Evaluate asset embedding options",
+    "Design Python service bundling",
+    "Define release artifact structure",
+    "Plan cross-platform CI/CD",
+    "Estimate binary sizes",
+    "Review with ops team"
+  ],
+  "references": [
+    "https://github.com/moltis-org/moltis/blob/main/Cargo.toml",
+    "https://github.com/pyoxidizer/pyoxidizer",
+    "https://crates.io/crates/rust-embed",
+    "infra/deployment/"
+  ]
+}

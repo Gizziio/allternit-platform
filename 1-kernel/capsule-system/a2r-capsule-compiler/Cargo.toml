@@ -1,0 +1,15 @@
+[package]
+name = "capsule_compiler"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true }
+capsule_spec = { path = "../../../0-substrate/schemas/a2r-capsule-spec" }
+evidence_store = { path = "../../../2-governance/evidence-management/core-evidence" }
+a2ui-types = { path = "../../../0-substrate/types/a2ui_types" }
+a2rchitech-kernel-contracts = { workspace = true }
+chrono = { workspace = true }

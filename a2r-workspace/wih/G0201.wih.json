@@ -1,0 +1,132 @@
+{
+  "wih_version": "v0.1",
+  "task_id": "G0201",
+  "graph_id": "graph-0002",
+  "title": "Implement multi-LLM router adapter interface",
+  "state": "PLANNED",
+  "blocked_by": [
+    "G0200"
+  ],
+  "external_refs": {
+    "claude_task_id": "",
+    "issue_id": "",
+    "pr_id": ""
+  },
+  "preset": {
+    "preset_id": "preset-core-dev",
+    "preset_hash": "TBD"
+  },
+  "resume_cursor": {
+    "last_run_id": "",
+    "next_step": "",
+    "pending_checks": []
+  },
+  "outputs": {
+    "required_artifacts": [
+      "router-adapters"
+    ],
+    "artifact_paths": [
+      "/.a2r/artifacts/G0201/"
+    ]
+  },
+  "write_scope": {
+    "root": "/.a2r/",
+    "allowed_globs": [
+      "/.a2r/artifacts/G0201/**"
+    ]
+  },
+  "tools": {
+    "allowlist": [
+      "fs.read",
+      "fs.write"
+    ],
+    "pretooluse_hooks": [
+      "WIH_VALID",
+      "DEPS_SATISFIED",
+      "PATH_GUARDS",
+      "TOOL_REGISTRY"
+    ]
+  },
+  "memory": {
+    "packs": [
+      {
+        "pack_id": "execution",
+        "layers": [
+          "execution"
+        ],
+        "access": "readwrite"
+      }
+    ]
+  },
+  "acceptance": {
+    "checks": [
+      "AT-TASK-0005"
+    ]
+  },
+  "beads": {
+    "wih_version": "v0.1",
+    "task_id": "G0201",
+    "graph_id": "graph-0002",
+    "title": "Implement multi-LLM router adapter interface",
+    "state": "PLANNED",
+    "blocked_by": [
+      "G0200"
+    ],
+    "external_refs": {
+      "claude_task_id": "",
+      "issue_id": "",
+      "pr_id": ""
+    },
+    "preset": {
+      "preset_id": "preset-core-dev",
+      "preset_hash": "TBD"
+    },
+    "resume_cursor": {
+      "last_run_id": "",
+      "next_step": "",
+      "pending_checks": []
+    },
+    "outputs": {
+      "required_artifacts": [
+        "router-adapters"
+      ],
+      "artifact_paths": [
+        "/.a2r/artifacts/G0201/"
+      ]
+    },
+    "write_scope": {
+      "root": "/.a2r/",
+      "allowed_globs": [
+        "/.a2r/artifacts/G0201/**"
+      ]
+    },
+    "tools": {
+      "allowlist": [
+        "fs.read",
+        "fs.write"
+      ],
+      "pretooluse_hooks": [
+        "WIH_VALID",
+        "DEPS_SATISFIED",
+        "PATH_GUARDS",
+        "TOOL_REGISTRY"
+      ]
+    },
+    "memory": {
+      "packs": [
+        {
+          "pack_id": "execution",
+          "layers": [
+            "execution"
+          ],
+          "access": "readwrite"
+        }
+      ]
+    },
+    "acceptance": {
+      "checks": [
+        "AT-TASK-0005"
+      ]
+    }
+  }
+}

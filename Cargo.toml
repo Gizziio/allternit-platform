@@ -1,0 +1,266 @@
+[workspace]
+resolver = "2"
+
+members = [
+    # API Application
+    "7-apps/api",
+    "7-apps/cli",
+    
+    # Substrate (excluding a2r-protocol which has its own workspace)
+    "0-substrate/sdk/sdk-core",
+    "0-substrate/sdk/sdk-policy",
+    "0-substrate/a2r-embodiment",
+    
+    # Kernel - Core
+    "1-kernel/capsule-system/a2r-capsule",
+    "1-kernel/a2r-kernel/kernel-contracts",
+    "1-kernel/a2r-kernel/runtime-execution-core",
+    "1-kernel/communication/kernel-messaging",
+    "4-services/io-service",
+    "1-kernel/data/history-ledger",
+    
+    # Kernel - Control Plane
+    "1-kernel/control-plane/a2r-control/control-plane-impl",
+    "1-kernel/control-plane/a2r-control/context-router",
+    "1-kernel/control-plane/unified-registry/registry",
+    "1-kernel/control-plane/unified-registry/artifact-registry",
+    "1-kernel/control-plane/a2r-agent-orchestration/workflows",
+    "1-kernel/control-plane/a2r-agent-orchestration/agent-router",
+    "1-kernel/control-plane/a2r-agent-orchestration/model-router",
+    
+    # Kernel - Execution
+    "1-kernel/execution/a2r-process-driver",
+    "1-kernel/execution/a2r-firecracker-driver",
+    "1-kernel/execution/a2r-ops/packaging",
+    "1-kernel/execution/multimodal-streaming",
+    
+    # Kernel - Infrastructure
+    "1-kernel/infrastructure/a2r-driver-interface",
+    "1-kernel/infrastructure/a2r-environment-spec",
+    "1-kernel/infrastructure/a2r-openclaw-host",
+    "1-kernel/infrastructure/a2r-parity",
+    "1-kernel/infrastructure/a2r-rlm",
+    "1-kernel/infrastructure/evolution-layer",
+    "1-kernel/infrastructure/ivkge-advanced",
+    "1-kernel/infrastructure/multimodal-streaming",
+    "1-kernel/infrastructure/swarm-advanced",
+    "1-kernel/infrastructure/tambo-integration",
+    "1-kernel/infrastructure/tambo-napi",
+    "1-kernel/infrastructure/system-law",
+    "1-kernel/infrastructure/ontology-runtime",
+    "1-kernel/infrastructure/a2r-providers",
+    "1-kernel/infrastructure/a2r-runtime",
+    "1-kernel/infrastructure/harness-engineering",
+    
+    # Governance
+    "2-governance/a2r-replay",
+    "2-governance/identity-access-control/policy-tier-gating",
+    "2-governance/identity-access-control/policy-engine",
+    "2-governance/security-network/security-hardening",
+    "2-governance/governance-workflows/rust-governor",
+    "2-governance/security-quality-assurance/evals",
+    "2-governance/garbage-collection/gc-agents",
+    
+    # Adapters
+    "3-adapters/mcp",
+    "3-adapters/rust/skills",
+    
+    # Services
+    "4-services/orchestration/a2r-prewarm",
+    "4-services/orchestration/budget-metering",
+    "4-services/orchestration/kernel-service",
+    "4-services/memory/state/memory",
+    "4-services/io-service",
+
+    # Cloud/Executor
+    "8-cloud/executor",
+]
+
+exclude = [
+    # CLI now enabled
+    # "7-apps/cli",
+    "0-substrate/a2r-agent-workspace",
+    "0-substrate/a2r-protocol",
+    "1-kernel/execution/a2r-ops",
+    # Archived: 6-ui/shell-ui moved to 6-ui/_reference/shell-native-rust
+    # Rust browserview code archived - functionality ported to TypeScript
+    "8-cloud/a2r-node",
+    "distribution/launcher-desktop",
+    "distribution/launcher-simplified",
+    # Temporarily excluded due to missing dependencies
+    "7-apps/api",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/a2rchitect/a2rchitech"
+
+[workspace.dependencies]
+# Core dependencies
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.35", features = ["full"] }
+anyhow = "1.0"
+thiserror = "1.0"
+async-trait = "0.1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.6", features = ["v4", "serde"] }
+tempfile = "3.8"
+once_cell = "1.19"
+
+# HTTP/Web
+tower = { version = "0.5" }
+tower-http = { version = "0.6", features = ["fs"] }
+axum = { version = "0.7", features = ["ws", "http1", "http2"] }
+reqwest = { version = "0.11", features = ["json", "stream"] }
+tokio-stream = { version = "0.1", features = ["sync"] }
+tokio-tungstenite = "0.20"
+http = "1.0"
+hyper = { version = "1.0", features = ["full"] }
+
+# Crypto/Security
+base64 = "0.21"
+sha2 = "0.10"
+blake3 = "1.5"
+ed25519-dalek = { version = "2.0", features = ["std", "rand_core"] }
+ring = "0.17"
+data-encoding = "2.0"
+hex = "0.4"
+
+# Async/Futures
+futures = "0.3"
+futures-util = "0.3"
+async-stream = "0.3"
+
+# Database
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite"] }
+redis = { version = "0.24", features = ["aio", "tokio-comp"] }
+
+# WASM
+wasmtime = "21.0"
+wasmtime-wasi = "21.0"
+wit-bindgen = "0.36"
+wit-component = "0.21"
+
+# Utils
+semver = "1.0"
+rand = "0.8"
+regex = "1.0"
+clap = { version = "4.0", features = ["derive"] }
+portable-pty = "0.8"
+which = "6.0"
+walkdir = "2.5"
+dirs = "5.0"
+lazy_static = "1.4"
+serde_yaml = "0.9"
+tar = "0.4"
+flate2 = "1.0"
+
+# Terminal
+crossterm = "0.27"
+ratatui = "0.26"
+
+# Scheduling
+tokio-cron-scheduler = "0.10"
+
+# OpenTelemetry
+opentelemetry = { version = "0.20", features = ["trace"] }
+opentelemetry_sdk = { version = "0.20", features = ["trace", "rt-tokio"] }
+opentelemetry-http = "0.9"
+tracing-opentelemetry = "0.23"
+
+# API Documentation
+utoipa = { version = "4.2", features = ["uuid", "chrono"] }
+
+# Metrics
+prometheus = "0.13"
+
+# Validation
+validator = { version = "0.18", features = ["derive"] }
+
+# Extism
+extism = "1.0"
+extism-convert = "1.0"
+extism-convert-macros = "1.0"
+extism-manifest = "1.0"
+
+# === A2R Workspace Dependencies - Substrate ===
+a2rchitech-sdk-core = { path = "0-substrate/sdk/sdk-core" }
+a2rchitech-sdk-policy = { path = "0-substrate/sdk/sdk-policy" }
+a2rchitech-sdk-apps = { path = "0-substrate/sdk/sdk-apps" }
+a2rchitech-sdk-functions = { path = "0-substrate/sdk/sdk-functions" }
+a2rchitech-sdk-transport = { path = "0-substrate/sdk/sdk-transport" }
+# a2r-protocol has its own workspace - use path directly in dependent crates
+# a2r-protocol = { path = "0-substrate/a2r-protocol" }
+a2rchitech-embodiment = { path = "0-substrate/a2r-embodiment" }
+
+# === A2R Workspace Dependencies - Kernel Core ===
+a2rchitech-kernel-contracts = { path = "1-kernel/a2r-kernel/kernel-contracts" }
+a2rchitech-messaging = { path = "1-kernel/communication/kernel-messaging" }
+a2rchitech-runtime-core = { path = "1-kernel/a2r-kernel/runtime-execution-core" }
+a2rchitech-tools-gateway = { path = "4-services/io-service" }
+a2rchitech-history = { path = "1-kernel/data/history-ledger" }
+
+# === A2R Workspace Dependencies - Policy (in governance) ===
+a2rchitech-policy = { path = "2-governance/identity-access-control/policy-engine" }
+
+# === A2R Workspace Dependencies - Kernel Control ===
+a2rchitech-control-plane-service = { path = "1-kernel/control-plane/a2r-control/control-plane-impl" }
+a2rchitech-context-router = { path = "1-kernel/control-plane/a2r-control/context-router" }
+a2rchitech-registry = { path = "1-kernel/control-plane/unified-registry/registry" }
+a2rchitech-workflows = { path = "1-kernel/control-plane/a2r-agent-orchestration/workflows" }
+a2rchitech-agent-router = { path = "1-kernel/control-plane/a2r-agent-orchestration/agent-router" }
+a2rchitech-model-router = { path = "1-kernel/control-plane/a2r-agent-orchestration/model-router" }
+a2rchitech-artifact-registry = { path = "1-kernel/control-plane/unified-registry/artifact-registry" }
+
+# === A2R Workspace Dependencies - Kernel Infrastructure ===
+a2r-driver-interface = { path = "1-kernel/infrastructure/a2r-driver-interface" }
+a2r-process-driver = { path = "1-kernel/execution/a2r-process-driver" }
+a2r-environment-spec = { path = "1-kernel/infrastructure/a2r-environment-spec" }
+a2r-parity = { path = "1-kernel/infrastructure/a2r-parity" }
+a2r-rlm = { path = "1-kernel/infrastructure/a2r-rlm" }
+a2r-openclaw-host = { path = "1-kernel/infrastructure/a2r-openclaw-host" }
+a2r-evolution-layer = { path = "1-kernel/infrastructure/evolution-layer" }
+a2r-ontology-runtime = { path = "1-kernel/infrastructure/ontology-runtime" }
+a2rchitech-system-law = { path = "1-kernel/infrastructure/system-law" }
+a2rchitech-providers = { path = "1-kernel/infrastructure/a2r-providers" }
+a2r-runtime = { path = "1-kernel/infrastructure/a2r-runtime" }
+a2r-memory = { path = "1-kernel/data/memory-kernel" }
+a2r-memory-kernel = { path = "1-kernel/data/memory-kernel" }
+a2r-context-control = { path = "1-kernel/control-plane/context-control" }
+
+# === A2R Workspace Dependencies - Capsule System ===
+a2r-capsule = { path = "1-kernel/capsule-system/a2r-capsule" }
+a2r-capsule-sdk = { path = "1-kernel/capsule-system/a2r-capsule-sdk" }
+a2rchitech-capsule = { package = "a2r-capsule", path = "1-kernel/capsule-system/a2r-capsule" }
+
+# === A2R Workspace Dependencies - Governance ===
+a2rchitech-governor = { path = "2-governance/governance-workflows/rust-governor" }
+a2r-replay = { path = "2-governance/a2r-replay" }
+a2r-security-hardening = { path = "2-governance/security-network/security-hardening" }
+a2r-policy-tier-gating = { path = "2-governance/identity-access-control/policy-tier-gating" }
+a2rchitech-evals = { path = "2-governance/security-quality-assurance/evals" }
+a2rchitech-security-governance = { path = "2-governance/governance-workflows/core-governance" }
+
+# === A2R Workspace Dependencies - Adapters ===
+a2rchitech-skills = { path = "3-adapters/rust/skills" }
+
+# === A2R Workspace Dependencies - Services ===
+a2r-prewarm = { path = "4-services/orchestration/a2r-prewarm" }
+a2rchitech-budget-metering = { path = "4-services/orchestration/budget-metering" }
+a2rchitech-memory = { path = "4-services/memory/state/memory" }
+
+# === A2R Workspace Dependencies - Infrastructure ===
+a2r-swarm-advanced = { path = "1-kernel/infrastructure/swarm-advanced" }
+a2r-ivkge-advanced = { path = "1-kernel/infrastructure/ivkge-advanced" }
+a2r-multimodal-streaming = { path = "1-kernel/infrastructure/multimodal-streaming" }
+a2r-tambo-integration = { path = "1-kernel/infrastructure/tambo-integration" }
+a2rchitech-packaging = { path = "1-kernel/execution/a2r-ops/packaging" }
+a2rchitech-harness-engineering = { path = "1-kernel/infrastructure/harness-engineering" }
+
+# === MCP ===
+mcp = { path = "3-adapters/mcp" }

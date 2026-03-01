@@ -1,0 +1,470 @@
+//! IVKGE Advanced API Routes
+//!
+//! Provides HTTP endpoints for visual knowledge graph extraction:
+//! - Screenshot upload and parsing
+//! - Entity/relationship extraction
+//! - User corrections
+//! - Ambiguity resolution
+
+use axum::{
+    extract::{Multipart, Path, State},
+    http::StatusCode,
+    routing::{get, post},
+    Router,
+    Json,
+};
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use a2r_ivkge_advanced::IvkgeAdvancedEngine;
+use chrono::{DateTime, Utc};
+use uuid::Uuid;
+
+/// Create IVKGE router from engine
+pub fn ivkge_router_from_engine(engine: Arc<IvkgeAdvancedEngine>) -> Router {
+    Router::new()
+        // Upload endpoints
+        .route("/upload", post(upload_image))
+
+        // Extraction endpoints
+        .route("/extract", post(extract_entities))
+        .route("/extractions", get(list_extractions))
+        .route("/extractions/:id", get(get_extraction))
+
+        // Correction endpoints
+        .route("/corrections", post(apply_correction))
+        .route("/extractions/:id/corrections", get(get_corrections))
+
+        // Ambiguity endpoints
+        .route("/ambiguities/resolve", post(resolve_ambiguity))
+
+        // Health check
+        .route("/health", get(ivkge_health_check))
+
+        .with_state(engine)
+}
+
+/// Extraction record
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExtractionRecord {
+    pub extraction_id: String,
+    pub source_type: String,
+    pub entities: Vec<Entity>,
+    pub relationships: Vec<Relationship>,
+    pub ocr_text: Option<String>,
+    pub ambiguity_report: Option<AmbiguityReport>,
+    pub created_at: DateTime<Utc>,
+}
+
+/// Entity extracted from visual input
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Entity {
+    pub entity_id: String,
+    pub name: String,
+    pub entity_type: String,
+    pub confidence: f32,
+    pub bounding_box: Option<BoundingBox>,
+    pub properties: std::collections::HashMap<String, String>,
+}
+
+/// Relationship extracted from visual input
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Relationship {
+    pub relationship_id: String,
+    pub source_entity: String,
+    pub target_entity: String,
+    pub relationship_type: String,
+    pub confidence: f32,
+    pub label: Option<String>,
+}
+
+/// Bounding box
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BoundingBox {
+    pub x: u32,
+    pub y: u32,
+    pub width: u32,
+    pub height: u32,
+}
+
+/// Ambiguity report
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AmbiguityReport {
+    pub report_id: String,
+    pub ambiguities: Vec<Ambiguity>,
+    pub overall_confidence: f32,
+}
+
+/// Ambiguity
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Ambiguity {
+    pub ambiguity_id: String,
+    pub ambiguity_type: String,
+    pub description: String,
+    pub options: Vec<String>,
+}
+
+/// Correction record
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CorrectionRecord {
+    pub correction_id: String,
+    pub extraction_id: String,
+    pub correction_type: String,
+    pub changes: serde_json::Value,
+    pub applied_at: DateTime<Utc>,
+    pub status: String,
+}
+
+/// Upload response
+#[derive(Debug, Serialize)]
+pub struct UploadResponse {
+    pub upload_id: String,
+    pub filename: String,
+    pub size_bytes: u64,
+    pub content_type: String,
+}
+
+/// Extraction request
+#[derive(Debug, Deserialize)]
+pub struct ExtractionRequest {
+    pub upload_id: String,
+    pub extraction_type: String,
+    pub options: Option<ExtractionOptions>,
+}
+
+/// Extraction options
+#[derive(Debug, Deserialize)]
+pub struct ExtractionOptions {
+    pub include_ocr: bool,
+    pub detect_ambiguities: bool,
+    pub confidence_threshold: Option<f32>,
+}
+
+/// Correction request
+#[derive(Debug, Deserialize)]
+pub struct CorrectionRequest {
+    pub extraction_id: String,
+    pub correction_type: String,
+    pub entity_id: Option<String>,
+    pub changes: std::collections::HashMap<String, String>,
+}
+
+/// Ambiguity resolution request
+#[derive(Debug, Deserialize)]
+pub struct AmbiguityResolutionRequest {
+    pub extraction_id: String,
+    pub ambiguity_id: String,
+    pub selected_option: usize,
+    pub notes: Option<String>,
+}
+
+/// Create IVKGE router
+pub fn ivkge_router(state: IvkgeState) -> Router {
+    Router::new()
+        // Upload endpoints
+        .route("/upload", post(upload_image))
+
+        // Extraction endpoints
+        .route("/extract", post(extract_entities))
+        .route("/extractions", get(list_extractions))
+        .route("/extractions/:id", get(get_extraction))
+
+        // Correction endpoints
+        .route("/corrections", post(apply_correction))
+        .route("/extractions/:id/corrections", get(get_corrections))
+
+        // Ambiguity endpoints
+        .route("/ambiguities/resolve", post(resolve_ambiguity))
+
+        // Health check
+        .route("/health", get(ivkge_health_check))
+
+        .with_state(state)
+}
+
+// ============================================================================
+// Upload Endpoints
+// ============================================================================
+
+/// Upload an image for extraction
+/// 
+/// POST /api/v1/ivkge/upload
+async fn upload_image(
+    State(state): State<IvkgeState>,
+    mut multipart: Multipart,
+) -> Result<Json<UploadResponse>, StatusCode> {
+    // Get the first file field
+    let Some(field) = multipart.next_field().await.map_err(|_| StatusCode::BAD_REQUEST)? else {
+        return Err(StatusCode::BAD_REQUEST);
+    };
+    
+    let filename = field.file_name().unwrap_or("unknown").to_string();
+    let content_type = field.content_type().map(|ct| ct.to_string()).unwrap_or_else(|| "application/octet-stream".to_string());
+    let data = field.bytes().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let size_bytes = data.len() as u64;
+    
+    // In production, would save to storage and process
+    // For now, just return upload info
+    let upload_id = Uuid::new_v4().to_string();
+    
+    Ok(Json(UploadResponse {
+        upload_id,
+        filename,
+        size_bytes,
+        content_type,
+    }))
+}
+
+// ============================================================================
+// Extraction Endpoints
+// ============================================================================
+
+/// Extract entities and relationships from uploaded image
+/// 
+/// POST /api/v1/ivkge/extract
+async fn extract_entities(
+    State(state): State<IvkgeState>,
+    Json(payload): Json<ExtractionRequest>,
+) -> Result<Json<ExtractionRecord>, StatusCode> {
+    // In production, would run actual extraction
+    // For now, return a sample extraction
+    
+    let extraction = ExtractionRecord {
+        extraction_id: Uuid::new_v4().to_string(),
+        source_type: payload.extraction_type,
+        entities: vec![],
+        relationships: vec![],
+        ocr_text: None,
+        ambiguity_report: None,
+        created_at: Utc::now(),
+    };
+    
+    // Store extraction
+    let mut extractions = state.extractions.write().await;
+    extractions.push(extraction.clone());
+    
+    Ok(Json(extraction))
+}
+
+/// List all extractions
+/// 
+/// GET /api/v1/ivkge/extractions
+async fn list_extractions(
+    State(state): State<IvkgeState>,
+) -> Json<Vec<ExtractionRecord>> {
+    let extractions = state.extractions.read().await;
+    Json(extractions.clone())
+}
+
+/// Get a specific extraction
+/// 
+/// GET /api/v1/ivkge/extractions/:id
+async fn get_extraction(
+    State(state): State<IvkgeState>,
+    Path(id): Path<String>,
+) -> Result<Json<ExtractionRecord>, StatusCode> {
+    let extractions = state.extractions.read().await;
+    
+    let extraction = extractions
+        .iter()
+        .find(|e| e.extraction_id == id)
+        .cloned()
+        .ok_or(StatusCode::NOT_FOUND)?;
+    
+    Ok(Json(extraction))
+}
+
+// ============================================================================
+// Correction Endpoints
+// ============================================================================
+
+/// Apply a correction to an extraction
+/// 
+/// POST /api/v1/ivkge/corrections
+async fn apply_correction(
+    State(state): State<IvkgeState>,
+    Json(payload): Json<CorrectionRequest>,
+) -> Result<Json<CorrectionRecord>, StatusCode> {
+    let correction = CorrectionRecord {
+        correction_id: Uuid::new_v4().to_string(),
+        extraction_id: payload.extraction_id,
+        correction_type: payload.correction_type,
+        changes: serde_json::to_value(&payload.changes).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
+        applied_at: Utc::now(),
+        status: "applied".to_string(),
+    };
+    
+    // Store correction
+    let mut corrections = state.corrections.write().await;
+    corrections.push(correction.clone());
+    
+    Ok(Json(correction))
+}
+
+/// Get corrections for an extraction
+/// 
+/// GET /api/v1/ivkge/extractions/:id/corrections
+async fn get_corrections(
+    State(state): State<IvkgeState>,
+    Path(id): Path<String>,
+) -> Json<Vec<CorrectionRecord>> {
+    let corrections = state.corrections.read().await;
+    
+    let filtered: Vec<_> = corrections
+        .iter()
+        .filter(|c| c.extraction_id == id)
+        .cloned()
+        .collect();
+    
+    Json(filtered)
+}
+
+// ============================================================================
+// Ambiguity Endpoints
+// ============================================================================
+
+/// Resolve an ambiguity
+/// 
+/// POST /api/v1/ivkge/ambiguities/resolve
+async fn resolve_ambiguity(
+    State(state): State<IvkgeState>,
+    Json(payload): Json<AmbiguityResolutionRequest>,
+) -> StatusCode {
+    // In production, would update extraction based on resolution
+    // For now, just return OK
+    StatusCode::OK
+}
+
+// ============================================================================
+// Health Check
+// ============================================================================
+
+/// Health check endpoint
+async fn ivkge_health_check() -> Json<serde_json::Value> {
+    Json(serde_json::json!({
+        "status": "healthy",
+        "service": "ivkge-advanced"
+    }))
+}
+
+// ============================================================================
+// Engine-based Handlers
+// ============================================================================
+
+async fn upload_image_engine(
+    State(_engine): State<Arc<IvkgeAdvancedEngine>>,
+    mut multipart: Multipart,
+) -> Result<Json<UploadResponse>, StatusCode> {
+    let Some(field) = multipart.next_field().await.map_err(|_| StatusCode::BAD_REQUEST) else {
+        return Err(StatusCode::BAD_REQUEST);
+    };
+    
+    let filename = field.file_name().unwrap_or("unknown").to_string();
+    let content_type = field.content_type().map(|ct| ct.to_string()).unwrap_or_else(|| "application/octet-stream".to_string());
+    let data = field.bytes().await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let size_bytes = data.len() as u64;
+    let upload_id = Uuid::new_v4().to_string();
+    
+    Ok(Json(UploadResponse { upload_id, filename, size_bytes, content_type }))
+}
+
+async fn extract_entities_engine(
+    State(engine): State<Arc<IvkgeAdvancedEngine>>,
+    Json(_payload): Json<ExtractionRequest>,
+) -> Result<Json<ExtractionRecord>, StatusCode> {
+    let extraction = engine.process_screenshot(&[]).await.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok(Json(extraction_record_from_engine(extraction)))
+}
+
+async fn list_extractions_engine(
+    State(engine): State<Arc<IvkgeAdvancedEngine>>,
+) -> Json<Vec<ExtractionRecord>> {
+    let extractions = engine.get_extractions().await;
+    Json(extractions.into_iter().map(extraction_record_from_engine).collect())
+}
+
+async fn get_extraction_engine(
+    State(engine): State<Arc<IvkgeAdvancedEngine>>,
+    Path(id): Path<String>,
+) -> Result<Json<ExtractionRecord>, StatusCode> {
+    engine.get_extraction(&id).await.map(|e| Json(extraction_record_from_engine(e))).ok_or(StatusCode::NOT_FOUND)
+}
+
+async fn apply_correction_engine(
+    State(_engine): State<Arc<IvkgeAdvancedEngine>>,
+    Json(_payload): Json<CorrectionRequest>,
+) -> StatusCode { StatusCode::NOT_IMPLEMENTED }
+
+async fn get_corrections_engine(
+    State(_engine): State<Arc<IvkgeAdvancedEngine>>,
+    Path(_id): Path<String>,
+) -> Json<Vec<CorrectionRecord>> { Json(vec![]) }
+
+async fn resolve_ambiguity_engine(
+    State(_engine): State<Arc<IvkgeAdvancedEngine>>,
+    Json(_payload): Json<AmbiguityResolutionRequest>,
+) -> StatusCode { StatusCode::NOT_IMPLEMENTED }
+
+fn extraction_record_from_engine(e: a2r_ivkge_advanced::VisualExtractionResult) -> ExtractionRecord {
+    ExtractionRecord {
+        extraction_id: e.extraction_id,
+        source_type: format!("{:?}", e.source_type),
+        entities: e.entities.into_iter().map(|ent| Entity {
+            entity_id: ent.entity_id, name: ent.name, entity_type: ent.entity_type,
+            confidence: ent.confidence,
+            bounding_box: ent.bounding_box.map(|bb| BoundingBox { x: bb.x, y: bb.y, width: bb.width, height: bb.height }),
+            properties: ent.properties,
+        }).collect(),
+        relationships: e.relationships.into_iter().map(|rel| Relationship {
+            relationship_id: rel.relationship_id, source_entity: rel.source_entity,
+            target_entity: rel.target_entity, relationship_type: rel.relationship_type,
+            confidence: rel.confidence, label: rel.label,
+        }).collect(),
+        ocr_text: e.ocr_text,
+        ambiguity_report: e.ambiguity_report.map(|ar| AmbiguityReport {
+            report_id: ar.report_id,
+            ambiguities: ar.ambiguities.into_iter().map(|a| Ambiguity {
+                ambiguity_id: a.ambiguity_id, ambiguity_type: a.ambiguity_type,
+                description: a.description, options: a.options,
+            }).collect(),
+            overall_confidence: ar.overall_confidence,
+        }),
+        created_at: e.created_at,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::{
+        body::Body,
+        http::{Request, StatusCode},
+        Router,
+    };
+    use tower::ServiceExt;
+
+    fn create_test_app() -> Router {
+        let state = IvkgeState::new();
+        ivkge_router(state)
+    }
+
+    #[tokio::test]
+    async fn test_list_extractions_empty() {
+        let app = create_test_app();
+        
+        let response = app
+            .oneshot(Request::builder()
+                .uri("/extractions")
+                .body(Body::empty())
+                .unwrap())
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn test_health_check() {
+        let response = ivkge_health_check().await;
+        assert_eq!(response.0["status"], "healthy");
+    }
+}

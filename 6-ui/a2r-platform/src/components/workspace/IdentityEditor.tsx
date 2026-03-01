@@ -1,0 +1,806 @@
+/**
+ * Identity Editor Component
+ * 
+ * Edit IDENTITY.md, SOUL.md, USER.md, and VOICE.md files.
+ * Provides a form-based interface for managing agent persona.
+ */
+
+import { useState, useEffect } from 'react';
+import { WorkspaceAPI } from '../../agent-workspace';
+import { IdentityConfig, SoulConfig } from './types';
+
+interface IdentityEditorProps {
+  api: WorkspaceAPI;
+  path: string;
+}
+
+type EditorTab = 'identity' | 'soul' | 'user' | 'voice';
+
+export function IdentityEditor({ api, path }: IdentityEditorProps) {
+  const [activeTab, setActiveTab] = useState<EditorTab>('identity');
+  const [identity, setIdentity] = useState<IdentityConfig>({
+    name: '',
+    nature: '',
+    vibe: '',
+    purpose: '',
+    values: [],
+    boundaries: [],
+    preferences: {},
+  });
+  const [soul, setSoul] = useState<SoulConfig>({
+    voice: '',
+    tone: '',
+    formality: 'neutral',
+    emojiUsage: 'minimal',
+    signature: '',
+    greeting: '',
+  });
+  const [hasChanges, setHasChanges] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    // Load identity config from files
+    const loadConfig = async () => {
+      // Mock data - replace with actual file loading
+      setIdentity({
+        name: 'A2R Assistant',
+        nature: 'Helpful AI coding assistant with a focus on system architecture',
+        vibe: 'Professional yet approachable, precise but friendly',
+        purpose: 'Help users build and maintain complex software systems',
+        values: [
+          'Clarity over cleverness',
+          'Safety by default',
+          'Incremental progress',
+          'User autonomy',
+        ],
+        boundaries: [
+          'Never execute harmful commands',
+          'Respect user privacy',
+          'Acknowledge uncertainty',
+        ],
+        preferences: {
+          codeStyle: 'idiomatic',
+          documentation: 'comprehensive',
+          testing: 'required',
+        },
+      });
+
+      setSoul({
+        voice: 'Clear and articulate',
+        tone: 'Helpful and encouraging',
+        formality: 'neutral',
+        emojiUsage: 'minimal',
+        signature: '— A2R',
+        greeting: 'Hello! How can I help you today?',
+      });
+    };
+
+    loadConfig();
+  }, [api, path]);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      // TODO: Save to actual files (IDENTITY.md, SOUL.md)
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setHasChanges(false);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const updateIdentity = (updates: Partial<IdentityConfig>) => {
+    setIdentity(prev => ({ ...prev, ...updates }));
+    setHasChanges(true);
+  };
+
+  const updateSoul = (updates: Partial<SoulConfig>) => {
+    setSoul(prev => ({ ...prev, ...updates }));
+    setHasChanges(true);
+  };
+
+  const addArrayItem = (key: 'values' | 'boundaries', item: string) => {
+    if (item.trim()) {
+      updateIdentity({ [key]: [...identity[key], item.trim()] });
+    }
+  };
+
+  const removeArrayItem = (key: 'values' | 'boundaries', index: number) => {
+    updateIdentity({ 
+      [key]: identity[key].filter((_, i) => i !== index) 
+    });
+  };
+
+  return (
+    <div className="identity-editor">
+      {/* Tabs */}
+      <nav className="identity-editor__tabs">
+        <TabButton 
+          active={activeTab === 'identity'} 
+          onClick={() => setActiveTab('identity')}
+          label="Identity"
+          description="Name, nature, purpose"
+        />
+        <TabButton 
+          active={activeTab === 'soul'} 
+          onClick={() => setActiveTab('soul')}
+          label="Soul"
+          description="Voice, tone, personality"
+        />
+        <TabButton 
+          active={activeTab === 'user'} 
+          onClick={() => setActiveTab('user')}
+          label="User"
+          description="User preferences"
+        />
+        <TabButton 
+          active={activeTab === 'voice'} 
+          onClick={() => setActiveTab('voice')}
+          label="Voice"
+          description="Speaking style"
+        />
+      </nav>
+
+      {/* Content */}
+      <div className="identity-editor__content">
+        {activeTab === 'identity' && (
+          <IdentityTab 
+            config={identity} 
+            onChange={updateIdentity}
+            onAddItem={addArrayItem}
+            onRemoveItem={removeArrayItem}
+          />
+        )}
+        {activeTab === 'soul' && (
+          <SoulTab config={soul} onChange={updateSoul} />
+        )}
+        {activeTab === 'user' && (
+          <UserTab />
+        )}
+        {activeTab === 'voice' && (
+          <VoiceTab config={soul} onChange={updateSoul} />
+        )}
+      </div>
+
+      {/* Footer */}
+      <footer className="identity-editor__footer">
+        <div className="identity-editor__status">
+          {hasChanges ? (
+            <span className="status--unsaved">● Unsaved changes</span>
+          ) : (
+            <span className="status--saved">✓ All changes saved</span>
+          )}
+        </div>
+        <div className="identity-editor__actions">
+          <button 
+            className="btn btn--secondary"
+            onClick={() => setHasChanges(false)}
+            disabled={!hasChanges}
+          >
+            Discard
+          </button>
+          <button 
+            className="btn btn--primary"
+            onClick={handleSave}
+            disabled={!hasChanges || isSaving}
+          >
+            {isSaving ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+// Sub-components
+
+function TabButton({ 
+  active, 
+  onClick, 
+  label, 
+  description 
+}: { 
+  active: boolean; 
+  onClick: () => void; 
+  label: string;
+  description: string;
+}) {
+  return (
+    <button
+      className={`identity-tab ${active ? 'identity-tab--active' : ''}`}
+      onClick={onClick}
+    >
+      <span className="identity-tab__label">{label}</span>
+      <span className="identity-tab__description">{description}</span>
+    </button>
+  );
+}
+
+function IdentityTab({ 
+  config, 
+  onChange,
+  onAddItem,
+  onRemoveItem,
+}: { 
+  config: IdentityConfig;
+  onChange: (updates: Partial<IdentityConfig>) => void;
+  onAddItem: (key: 'values' | 'boundaries', item: string) => void;
+  onRemoveItem: (key: 'values' | 'boundaries', index: number) => void;
+}) {
+  const [newValue, setNewValue] = useState('');
+  const [newBoundary, setNewBoundary] = useState('');
+
+  return (
+    <div className="identity-tab-content">
+      <section className="form-section">
+        <h3>Basic Information</h3>
+        <div className="form-grid">
+          <FormField label="Agent Name">
+            <input
+              type="text"
+              value={config.name}
+              onChange={(e) => onChange({ name: e.target.value })}
+              placeholder="e.g., Code Assistant"
+            />
+          </FormField>
+          <FormField label="Nature">
+            <input
+              type="text"
+              value={config.nature}
+              onChange={(e) => onChange({ nature: e.target.value })}
+              placeholder="e.g., AI coding assistant"
+            />
+          </FormField>
+        </div>
+        <FormField label="Vibe">
+          <textarea
+            value={config.vibe}
+            onChange={(e) => onChange({ vibe: e.target.value })}
+            placeholder="e.g., Professional yet approachable"
+            rows={2}
+          />
+        </FormField>
+        <FormField label="Purpose">
+          <textarea
+            value={config.purpose}
+            onChange={(e) => onChange({ purpose: e.target.value })}
+            placeholder="e.g., Help users write better code"
+            rows={3}
+          />
+        </FormField>
+      </section>
+
+      <section className="form-section">
+        <h3>Values</h3>
+        <p className="form-hint">Core principles that guide the agent's behavior</p>
+        <div className="tag-list">
+          {config.values.map((value, i) => (
+            <span key={i} className="tag tag--removable">
+              {value}
+              <button onClick={() => onRemoveItem('values', i)}>×</button>
+            </span>
+          ))}
+        </div>
+        <div className="add-item-row">
+          <input
+            type="text"
+            value={newValue}
+            onChange={(e) => setNewValue(e.target.value)}
+            placeholder="Add a value..."
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                onAddItem('values', newValue);
+                setNewValue('');
+              }
+            }}
+          />
+          <button 
+            onClick={() => {
+              onAddItem('values', newValue);
+              setNewValue('');
+            }}
+          >
+            Add
+          </button>
+        </div>
+      </section>
+
+      <section className="form-section">
+        <h3>Boundaries</h3>
+        <p className="form-hint">Hard limits the agent will not cross</p>
+        <div className="tag-list">
+          {config.boundaries.map((boundary, i) => (
+            <span key={i} className="tag tag--warning tag--removable">
+              {boundary}
+              <button onClick={() => onRemoveItem('boundaries', i)}>×</button>
+            </span>
+          ))}
+        </div>
+        <div className="add-item-row">
+          <input
+            type="text"
+            value={newBoundary}
+            onChange={(e) => setNewBoundary(e.target.value)}
+            placeholder="Add a boundary..."
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                onAddItem('boundaries', newBoundary);
+                setNewBoundary('');
+              }
+            }}
+          />
+          <button 
+            onClick={() => {
+              onAddItem('boundaries', newBoundary);
+              setNewBoundary('');
+            }}
+          >
+            Add
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function SoulTab({ 
+  config, 
+  onChange 
+}: { 
+  config: SoulConfig;
+  onChange: (updates: Partial<SoulConfig>) => void;
+}) {
+  return (
+    <div className="identity-tab-content">
+      <section className="form-section">
+        <h3>Voice & Tone</h3>
+        <FormField label="Voice Description">
+          <input
+            type="text"
+            value={config.voice}
+            onChange={(e) => onChange({ voice: e.target.value })}
+            placeholder="e.g., Clear and articulate"
+          />
+        </FormField>
+        <FormField label="Tone">
+          <input
+            type="text"
+            value={config.tone}
+            onChange={(e) => onChange({ tone: e.target.value })}
+            placeholder="e.g., Helpful and encouraging"
+          />
+        </FormField>
+      </section>
+
+      <section className="form-section">
+        <h3>Communication Style</h3>
+        <FormField label="Formality Level">
+          <select
+            value={config.formality}
+            onChange={(e) => onChange({ formality: e.target.value as SoulConfig['formality'] })}
+          >
+            <option value="casual">Casual</option>
+            <option value="neutral">Neutral</option>
+            <option value="formal">Formal</option>
+          </select>
+        </FormField>
+        <FormField label="Emoji Usage">
+          <select
+            value={config.emojiUsage}
+            onChange={(e) => onChange({ emojiUsage: e.target.value as SoulConfig['emojiUsage'] })}
+          >
+            <option value="none">None</option>
+            <option value="minimal">Minimal</option>
+            <option value="moderate">Moderate</option>
+            <option value="frequent">Frequent</option>
+          </select>
+        </FormField>
+      </section>
+
+      <section className="form-section">
+        <h3>Personal Touches</h3>
+        <FormField label="Signature">
+          <input
+            type="text"
+            value={config.signature || ''}
+            onChange={(e) => onChange({ signature: e.target.value })}
+            placeholder="e.g., — Your Assistant"
+          />
+        </FormField>
+        <FormField label="Default Greeting">
+          <textarea
+            value={config.greeting || ''}
+            onChange={(e) => onChange({ greeting: e.target.value })}
+            placeholder="e.g., Hello! How can I help you today?"
+            rows={2}
+          />
+        </FormField>
+      </section>
+    </div>
+  );
+}
+
+function UserTab() {
+  return (
+    <div className="identity-tab-content">
+      <section className="form-section">
+        <h3>User Preferences</h3>
+        <p className="form-hint">
+          These settings are stored in USER.md and define how the agent should interact with you.
+        </p>
+        
+        <FormField label="Preferred Name">
+          <input type="text" placeholder="How should the agent address you?" />
+        </FormField>
+        
+        <FormField label="Expertise Level">
+          <select>
+            <option>Beginner - Explain concepts thoroughly</option>
+            <option>Intermediate - Balance detail and brevity</option>
+            <option>Advanced - Be concise, assume knowledge</option>
+            <option>Expert - Minimal explanation, focus on solutions</option>
+          </select>
+        </FormField>
+        
+        <FormField label="Notification Preferences">
+          <div className="checkbox-group">
+            <label className="checkbox">
+              <input type="checkbox" defaultChecked />
+              <span>Task completion</span>
+            </label>
+            <label className="checkbox">
+              <input type="checkbox" defaultChecked />
+              <span>Policy violations</span>
+            </label>
+            <label className="checkbox">
+              <input type="checkbox" />
+              <span>Daily summaries</span>
+            </label>
+          </div>
+        </FormField>
+      </section>
+    </div>
+  );
+}
+
+function VoiceTab({ 
+  config, 
+  onChange 
+}: { 
+  config: SoulConfig;
+  onChange: (updates: Partial<SoulConfig>) => void;
+}) {
+  return (
+    <div className="identity-tab-content">
+      <section className="form-section">
+        <h3>Voice Configuration</h3>
+        <p className="form-hint">
+          Settings stored in VOICE.md for text-to-speech integration.
+        </p>
+        
+        <FormField label="TTS Provider">
+          <select>
+            <option>System Default</option>
+            <option>OpenAI</option>
+            <option>ElevenLabs</option>
+            <option>Azure Speech</option>
+          </select>
+        </FormField>
+        
+        <FormField label="Voice Model">
+          <input type="text" placeholder="e.g., alloy, echo, fable" />
+        </FormField>
+        
+        <FormField label="Speaking Rate">
+          <input type="range" min="0.5" max="2" step="0.1" defaultValue="1" />
+          <span className="range-hint">Normal speed</span>
+        </FormField>
+        
+        <FormField label="Voice Preview">
+          <div className="voice-preview">
+            <button className="btn btn--secondary">🔊 Test Voice</button>
+          </div>
+        </FormField>
+      </section>
+    </div>
+  );
+}
+
+function FormField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="form-field">
+      <label className="form-field__label">{label}</label>
+      <div className="form-field__input">{children}</div>
+    </div>
+  );
+}
+
+// CSS Styles
+export const identityEditorStyles = `
+.identity-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.identity-editor__tabs {
+  display: flex;
+  gap: 0.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.identity-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem 1.25rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.identity-tab:hover {
+  background: #2a2a2a;
+  color: #e0e0e0;
+}
+
+.identity-tab--active {
+  background: #2a2a2a;
+  border-color: #3b82f6;
+  color: #e0e0e0;
+}
+
+.identity-tab__label {
+  font-weight: 500;
+  font-size: 0.9375rem;
+}
+
+.identity-tab__description {
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.identity-editor__content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem 0;
+}
+
+.identity-tab-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.form-section {
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.form-section h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.form-hint {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  color: #888;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-field__label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #aaa;
+}
+
+.form-field__input input,
+.form-field__input textarea,
+.form-field__input select {
+  width: 100%;
+  padding: 0.625rem;
+  background: #0f0f0f;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  color: #e0e0e0;
+  font-size: 0.875rem;
+  transition: border-color 0.2s;
+}
+
+.form-field__input input:focus,
+.form-field__input textarea:focus,
+.form-field__input select:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.form-field__input textarea {
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.625rem;
+  background: #2a2a2a;
+  border-radius: 4px;
+  font-size: 0.875rem;
+}
+
+.tag--warning {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.tag--removable button {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+  font-size: 1rem;
+  line-height: 1;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.tag--removable button:hover {
+  opacity: 1;
+}
+
+.add-item-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.add-item-row input {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  background: #0f0f0f;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  color: #e0e0e0;
+  font-size: 0.875rem;
+}
+
+.add-item-row button {
+  padding: 0.5rem 1rem;
+  background: #3b82f6;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.add-item-row button:hover {
+  background: #2563eb;
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.checkbox input {
+  width: 16px;
+  height: 16px;
+  accent-color: #3b82f6;
+}
+
+.range-hint {
+  font-size: 0.75rem;
+  color: #666;
+  margin-top: 0.25rem;
+}
+
+.voice-preview {
+  padding: 1rem;
+  background: #0f0f0f;
+  border-radius: 6px;
+}
+
+.identity-editor__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 1rem;
+  border-top: 1px solid #2a2a2a;
+}
+
+.identity-editor__status {
+  font-size: 0.875rem;
+}
+
+.status--unsaved {
+  color: #f59e0b;
+}
+
+.status--saved {
+  color: #10b981;
+}
+
+.identity-editor__actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.btn {
+  padding: 0.625rem 1.25rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn--primary {
+  background: #3b82f6;
+  border: none;
+  color: white;
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.btn--primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn--secondary {
+  background: transparent;
+  border: 1px solid #2a2a2a;
+  color: #e0e0e0;
+}
+
+.btn--secondary:hover:not(:disabled) {
+  background: #2a2a2a;
+}
+
+.btn--secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+`;

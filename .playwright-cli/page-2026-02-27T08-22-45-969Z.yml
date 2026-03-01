@@ -1,0 +1,244 @@
+- generic [ref=e2]:
+  - generic [ref=e221]:
+    - button "Hide Inspector" [ref=e222] [cursor=pointer]:
+      - img [ref=e223]
+      - text: Hide Inspector
+    - generic [ref=e225]:
+      - generic [ref=e229]:
+        - generic [ref=e230]:
+          - generic [ref=e231]:
+            - combobox "Code session selector" [ref=e232]:
+              - option "Code Mode Layout Stabilization" [selected]
+              - option "Approval Token Rails Pass"
+              - option "Diff Review Prototype"
+            - button "Select folder" [ref=e233] [cursor=pointer]:
+              - img [ref=e234]
+              - text: Select folder
+              - img [ref=e236]
+          - generic [ref=e238]:
+            - button "Console" [active] [ref=e239] [cursor=pointer]:
+              - img [ref=e240]
+              - text: Console
+            - button "Preview" [ref=e242] [cursor=pointer]:
+              - img [ref=e243]
+              - text: Preview
+              - img [ref=e245]
+        - generic [ref=e249]:
+          - img [ref=e253] [cursor=pointer]
+          - generic [ref=e298]: Code workspace
+          - generic [ref=e299]: Choose a folder before sending the first instruction. The workspace stays minimal until you are ready to start.
+          - generic [ref=e300]:
+            - generic [ref=e302]:
+              - button "Scaffold" [ref=e303] [cursor=pointer]:
+                - img [ref=e304]
+                - text: Scaffold
+              - button "Refactor" [ref=e306] [cursor=pointer]:
+                - img [ref=e307]
+                - text: Refactor
+              - button "Debug" [ref=e311] [cursor=pointer]:
+                - img [ref=e312]
+                - text: Debug
+              - button "Optimize" [ref=e321] [cursor=pointer]:
+                - img [ref=e322]
+                - text: Optimize
+              - button "Explore" [ref=e324] [cursor=pointer]:
+                - img [ref=e325]
+                - text: Explore
+            - generic [ref=e329]:
+              - textbox "Choose a workspace folder to unlock the session..." [ref=e331]
+              - generic [ref=e332]:
+                - button [ref=e334] [cursor=pointer]:
+                  - img [ref=e335]
+                - generic [ref=e336]:
+                  - button "Codex CLI Extended" [ref=e337] [cursor=pointer]:
+                    - generic [ref=e338]: Codex CLI
+                    - generic [ref=e339]: Extended
+                    - img [ref=e340]
+                  - button [disabled] [ref=e342]:
+                    - img [ref=e343]
+            - generic [ref=e345]:
+              - button "Select folder" [ref=e346] [cursor=pointer]:
+                - img [ref=e347]
+                - text: Select folder
+              - generic [ref=e349]: Workspace required before execution
+      - separator [ref=e350]
+      - generic [ref=e355]:
+        - generic [ref=e356]:
+          - generic [ref=e357]:
+            - generic [ref=e358]:
+              - generic [ref=e359]: Inspector
+              - generic [ref=e360]: Diff, patches, context, artifacts
+            - generic [ref=e361]: IDLE
+          - generic [ref=e362]:
+            - button "diff" [ref=e363] [cursor=pointer]:
+              - img [ref=e364]
+              - generic [ref=e367]: diff
+            - button "patch" [ref=e368] [cursor=pointer]:
+              - img [ref=e369]
+              - generic [ref=e371]: patch
+            - button "files" [ref=e372] [cursor=pointer]:
+              - img [ref=e373]
+              - generic [ref=e375]: files
+            - button "plan" [ref=e376] [cursor=pointer]:
+              - img [ref=e377]
+              - generic [ref=e379]: plan
+            - button "artifacts" [ref=e380] [cursor=pointer]:
+              - img [ref=e381]
+              - generic [ref=e383]: artifacts
+        - generic [ref=e385]:
+          - generic [ref=e386]:
+            - generic [ref=e387]:
+              - img [ref=e388]
+              - generic [ref=e390]:
+                - generic [ref=e391]: Review Changes
+                - generic [ref=e392]: 2 files modified
+            - generic [ref=e393]:
+              - button "Reject All" [ref=e394] [cursor=pointer]
+              - button "Apply ChangeSet" [ref=e395] [cursor=pointer]:
+                - img [ref=e396]
+                - text: Apply ChangeSet
+          - generic [ref=e398]:
+            - generic [ref=e399]:
+              - generic [ref=e400] [cursor=pointer]:
+                - img [ref=e401]
+                - img [ref=e403]
+                - text: src/views/code/CodeCanvas.tsx
+                - generic [ref=e405]: +2 -2
+              - generic [ref=e406]:
+                - generic [ref=e407]:
+                  - generic [ref=e408]: "@@ -0,0 +0,0 @@"
+                  - generic [ref=e409]:
+                    - generic [ref=e410]:
+                      - generic [ref=e411]: "0"
+                      - generic [ref=e412]: "0"
+                      - generic [ref=e413]: "- <Rocket size={32} />"
+                    - generic [ref=e414]:
+                      - generic [ref=e415]: "1"
+                      - generic [ref=e416]: "1"
+                      - generic [ref=e417]: "+ <Rocket size={32} weight=\"duotone\" />"
+                  - generic [ref=e418]:
+                    - button "Reject" [ref=e419] [cursor=pointer]:
+                      - img [ref=e420]
+                      - text: Reject
+                    - button "Accept" [ref=e422] [cursor=pointer]:
+                      - img [ref=e423]
+                      - text: Accept
+                - generic [ref=e425]:
+                  - generic [ref=e426]: "@@ -0,0 +0,0 @@"
+                  - generic [ref=e427]:
+                    - generic [ref=e428]:
+                      - generic [ref=e429]: "0"
+                      - generic [ref=e430]: "0"
+                      - generic [ref=e431]: "- color=\"blue\""
+                    - generic [ref=e432]:
+                      - generic [ref=e433]: "1"
+                      - generic [ref=e434]: "1"
+                      - generic [ref=e435]: + color="var(--accent-chat)"
+                  - generic [ref=e436]:
+                    - button "Reject" [ref=e437] [cursor=pointer]:
+                      - img [ref=e438]
+                      - text: Reject
+                    - button "Accept" [ref=e440] [cursor=pointer]:
+                      - img [ref=e441]
+                      - text: Accept
+            - generic [ref=e443]:
+              - generic [ref=e444] [cursor=pointer]:
+                - img [ref=e445]
+                - img [ref=e447]
+                - text: src/shell/ShellRail.tsx
+                - generic [ref=e449]: +1 -0
+              - generic [ref=e451]:
+                - generic [ref=e452]: "@@ -0,0 +0,0 @@"
+                - generic [ref=e454]:
+                  - generic [ref=e455]: "0"
+                  - generic [ref=e456]: "0"
+                  - generic [ref=e457]: "+ import { Code } from \"@phosphor-icons/react\";"
+                - generic [ref=e458]:
+                  - button "Reject" [ref=e459] [cursor=pointer]:
+                    - img [ref=e460]
+                    - text: Reject
+                  - button "Accept" [ref=e462] [cursor=pointer]:
+                    - img [ref=e463]
+                    - text: Accept
+  - generic:
+    - generic [ref=e185]:
+      - generic [ref=e186]:
+        - button "Expand Sidebar" [ref=e187] [cursor=pointer]:
+          - img [ref=e188]
+        - button "New Chat" [ref=e190] [cursor=pointer]:
+          - img [ref=e191]
+      - button "Browser" [ref=e194] [cursor=pointer]:
+        - img [ref=e195]
+        - generic [ref=e197]: Browser
+    - generic [ref=e199]:
+      - button "Chat" [ref=e200] [cursor=pointer]:
+        - img [ref=e201]
+        - generic [ref=e203]: Chat
+      - button "Cowork" [ref=e204] [cursor=pointer]:
+        - img [ref=e205]
+        - generic [ref=e207]: Cowork
+      - button "Code" [ref=e208] [cursor=pointer]:
+        - img [ref=e209]
+        - generic [ref=e211]: Code
+  - generic:
+    - img [ref=e465]
+    - generic [ref=e216]:
+      - generic [ref=e467]:
+        - button "Queue" [ref=e468] [cursor=pointer]:
+          - img [ref=e469]
+          - text: Queue
+        - button "Changes" [ref=e471] [cursor=pointer]:
+          - img [ref=e472]
+          - text: Changes
+        - button "Context" [ref=e474] [cursor=pointer]:
+          - img [ref=e475]
+          - text: Context
+        - button "Terminal" [ref=e477] [cursor=pointer]:
+          - img [ref=e478]
+          - text: Terminal
+        - button "Logs" [ref=e480] [cursor=pointer]:
+          - img [ref=e481]
+          - text: Logs
+        - button "Executions" [ref=e483] [cursor=pointer]:
+          - img [ref=e484]
+          - text: Executions
+        - button "Receipts" [ref=e486] [cursor=pointer]:
+          - img [ref=e487]
+          - text: Receipts
+        - button "DAG Graph Coming next" [disabled] [ref=e489]:
+          - img [ref=e490]
+          - text: DAG Graph
+          - generic [ref=e492]: Coming next
+        - button "Trace Coming next" [disabled] [ref=e493]:
+          - img [ref=e494]
+          - text: Trace
+          - generic [ref=e496]: Coming next
+        - button "Browser Chat Coming next" [disabled] [ref=e497]:
+          - img [ref=e498]
+          - text: Browser Chat
+          - generic [ref=e500]: Coming next
+        - button "Agents" [ref=e501] [cursor=pointer]:
+          - img [ref=e502]
+          - text: Agents
+        - button "Scheduler" [ref=e504] [cursor=pointer]:
+          - img [ref=e505]
+          - text: Scheduler
+      - generic [ref=e508]:
+        - generic [ref=e509]:
+          - generic [ref=e510]:
+            - generic [ref=e511]: "Session: a2r-session"
+            - generic [ref=e512]: ● Disconnected
+            - generic [ref=e513]:
+              - button "Single" [ref=e514] [cursor=pointer]:
+                - img [ref=e515]
+                - text: Single
+              - button "Grid (0)" [ref=e517] [cursor=pointer]:
+                - img [ref=e518]
+                - text: Grid (0)
+          - button "New Terminal" [ref=e520] [cursor=pointer]:
+            - img [ref=e521]
+            - text: New Terminal
+        - generic [ref=e523]: Failed to load terminals
+        - generic [ref=e525]:
+          - generic [ref=e526]: No terminals yet
+          - button "Create First Terminal" [ref=e527] [cursor=pointer]

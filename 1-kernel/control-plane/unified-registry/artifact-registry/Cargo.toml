@@ -1,0 +1,35 @@
+[package]
+name = "a2rchitech-artifact-registry"
+version = "0.1.0"
+edition = "2021"
+description = "A2rchitech artifact registry for skills, personas, workflows, and packages"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+uuid = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+a2rchitech-history = { workspace = true }
+a2rchitech-messaging = { workspace = true }
+a2rchitech-policy = { workspace = true }
+a2rchitech-tools-gateway = { workspace = true }
+a2rchitech-context-router = { workspace = true }
+a2rchitech-memory = { workspace = true }
+a2rchitech-providers = { workspace = true }
+a2rchitech-runtime-core = { workspace = true }
+a2rchitech-skills = { workspace = true }
+a2rchitech-workflows = { workspace = true }
+a2rchitech-embodiment = { workspace = true }
+a2rchitech-packaging = { workspace = true }
+a2rchitech-evals = { workspace = true }
+async-trait = { workspace = true }
+sqlx = { workspace = true }
+tempfile = { workspace = true }
+sha2 = "0.10"
+rand = "0.8"
+
+[dev-dependencies]
+tempfile = { workspace = true }

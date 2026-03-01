@@ -1,0 +1,11 @@
+{
+  "receipt_id": "7aacf2e7-85d9-43c6-8dcc-22750f15566b",
+  "created_at": "2026-01-28T19:02:49.922958Z",
+  "gateway_id": "a2r-gateway-runtime",
+  "run_id": "test-t0411",
+  "trace_id": "3e443da8-47b8-47c2-961e-e6f9dacc64a5",
+  "route_id": "unknown",
+  "service": "none",
+  "upstream_url": "none",
+  "status_code": 403
+}

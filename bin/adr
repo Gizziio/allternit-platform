@@ -1,0 +1,57 @@
+#!/usr/bin/env node
+import fs from 'fs';
+import path from 'path';
+
+const adrDir = path.join(process.cwd(), 'docs/adr');
+
+if (!fs.existsSync(adrDir)) {
+  fs.mkdirSync(adrDir, { recursive: true });
+}
+
+const command = process.argv[2];
+const title = process.argv.slice(3).join(' ');
+
+if (command === 'new') {
+  if (!title) {
+    console.error('Usage: bin/adr new <title>');
+    process.exit(1);
+  }
+  const files = fs.readdirSync(adrDir).filter(f => f.endsWith('.md'));
+  const nextNum = String(files.length + 1).padStart(4, '0');
+  const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const filename = nextNum + '-' + slug + '.md';
+  
+  const template = '# ' + nextNum + '. ' + title + '
+' +
+'Date: ' + new Date().toISOString().split('T')[0] + '
+
+' +
+'## Status
+' +
+'Proposed
+
+' +
+'## Context
+' +
+'We need to internalize the legacy execution engine into A2R first-party code to ensure interface stability before migrating to Rust.
+
+' +
+'## Decision
+' +
+'Implement a TypeScript ExecutionEngine, PolicyEngine, and RuntimeBridge following the 0-6 layered architecture.
+
+' +
+'## Consequences
+' +
+'- Clean separation of concerns.
+' +
+'- No dependency on vendor vendor code in UI/Apps.
+' +
+'- Clear path for Rust optimization.
+';
+
+  fs.writeFileSync(path.join(adrDir, filename), template);
+  console.log('Created ADR: docs/adr/' + filename);
+} else {
+  console.log('Available commands: new');
+}

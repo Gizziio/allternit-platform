@@ -1,0 +1,39 @@
+version: "1.0"
+voice_personas:
+  - id: "calm-guide-v1"
+    persona_ref: "researcher-agent-v1"
+    voice_profile:
+      voice_id: "onyx"
+      style_labels:
+        - "calm"
+        - "professional"
+        - "informative"
+      speaking_rate: 0.9
+      pitch: 0.1
+      temperature_voice: 0.2
+      barge_in_enabled: false
+      turn_detection:
+        enabled: true
+        timeout_ms: 2000
+    metadata:
+      purpose: "Research guidance and explanation"
+      target_audience: "Researchers and analysts"
+  
+  - id: "crisp-operator-v1"
+    persona_ref: "operator-agent-v1"
+    voice_profile:
+      voice_id: "nova"
+      style_labels:
+        - "crisp"
+        - "efficient"
+        - "direct"
+      speaking_rate: 1.1
+      pitch: -0.1
+      temperature_voice: 0.1
+      barge_in_enabled: true
+      turn_detection:
+        enabled: true
+        timeout_ms: 1500
+    metadata:
+      purpose: "Operational task execution"
+      target_audience: "System operators"

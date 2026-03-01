@@ -1,0 +1,209 @@
+/**
+ * Example Plugin - Message Counter
+ * 
+ * Demonstrates the ChatView plugin API by:
+ * - Tracking message count in the current session
+ * - Contributing a sidebar panel with statistics
+ * - Contributing a toolbar button
+ * - Adding a message action
+ * - Showing notifications
+ */
+
+// Plugin state
+interface CounterState {
+  count: number;
+  userMessages: number;
+  assistantMessages: number;
+  startTime: number;
+}
+
+const state: CounterState = {
+  count: 0,
+  userMessages: 0,
+  assistantMessages: 0,
+  startTime: Date.now(),
+};
+
+// Register the plugin
+declare const registerPlugin: (id: string) => {
+  onActivate: (callback: (api: PluginAPI) => void) => void;
+  registerCommand: (command: string, handler: () => void) => void;
+  unregisterCommand: (command: string) => void;
+};
+
+declare const h: (
+  type: string,
+  props: Record<string, unknown> | null,
+  ...children: unknown[]
+) => unknown;
+
+interface PluginAPI {
+  manifest: {
+    id: string;
+    name: string;
+    version: string;
+  };
+  messages: {
+    onNewMessage: (callback: (message: Message) => () => void) => () => void;
+    getMessageById: (id: string) => Message | undefined;
+    getThreadMessages: () => Message[];
+  };
+  session: {
+    getCurrentSession: () => SessionInfo | null;
+    onSessionChange: (callback: (session: SessionInfo | null) => void) => () => void;
+  };
+  ui: {
+    showNotification: (message: string, type?: 'info' | 'success' | 'warning' | 'error') => void;
+    registerComponent: (id: string, component: unknown) => void;
+    setToolbarBadge: (contributionId: string, badge: string | number | null) => void;
+  };
+}
+
+interface Message {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp: number;
+}
+
+interface SessionInfo {
+  id: string;
+  mode: 'chat' | 'agent' | 'debug';
+  createdAt: number;
+}
+
+const plugin = registerPlugin('example.counter');
+
+plugin.onActivate((api) => {
+  console.log('[MessageCounter] Plugin activated', api.manifest);
+
+  // Initialize from existing messages
+  const messages = api.messages.getThreadMessages();
+  messages.forEach((msg) => {
+    state.count++;
+    if (msg.role === 'user') state.userMessages++;
+    if (msg.role === 'assistant') state.assistantMessages++;
+  });
+
+  // Listen for new messages
+  const unsubscribeMessages = api.messages.onNewMessage((message) => {
+    state.count++;
+    if (message.role === 'user') state.userMessages++;
+    if (message.role === 'assistant') state.assistantMessages++;
+
+    // Update toolbar badge with current count
+    api.ui.setToolbarBadge('count-btn', state.count);
+
+    // Show notification every 5 messages
+    if (state.count % 5 === 0) {
+      api.ui.showNotification(
+        `📊 ${state.count} messages in this session!`,
+        'info'
+      );
+    }
+  });
+
+  // Listen for session changes
+  const unsubscribeSession = api.session.onSessionChange((session) => {
+    if (session) {
+      // Reset counter for new session
+      state.count = 0;
+      state.userMessages = 0;
+      state.assistantMessages = 0;
+      state.startTime = Date.now();
+      api.ui.setToolbarBadge('count-btn', null);
+      api.ui.showNotification('Counter reset for new session', 'success');
+    }
+  });
+
+  // Register sidebar component
+  api.ui.registerComponent('CounterPanel', () => {
+    const duration = Math.floor((Date.now() - state.startTime) / 1000);
+    const minutes = Math.floor(duration / 60);
+    const seconds = duration % 60;
+
+    return h('div', { className: 'counter-panel' }, [
+      h('h3', { key: 'title' }, '📊 Message Statistics'),
+      h(
+        'div',
+        { key: 'stats', className: 'stats-grid' },
+        h('div', { className: 'stat-item' }, [
+          h('span', { key: 'label', className: 'stat-label' }, 'Total'),
+          h('span', { key: 'value', className: 'stat-value' }, String(state.count)),
+        ]),
+        h('div', { className: 'stat-item' }, [
+          h('span', { key: 'label', className: 'stat-label' }, 'User'),
+          h(
+            'span',
+            { key: 'value', className: 'stat-value user' },
+            String(state.userMessages)
+          ),
+        ]),
+        h('div', { className: 'stat-item' }, [
+          h('span', { key: 'label', className: 'stat-label' }, 'Assistant'),
+          h(
+            'span',
+            { key: 'value', className: 'stat-value assistant' },
+            String(state.assistantMessages)
+          ),
+        ])
+      ),
+      h(
+        'div',
+        { key: 'duration', className: 'session-duration' },
+        `Session duration: ${minutes}m ${seconds}s`
+      ),
+      h(
+        'button',
+        {
+          key: 'reset',
+          className: 'reset-btn',
+          onClick: () => {
+            state.count = 0;
+            state.userMessages = 0;
+            state.assistantMessages = 0;
+            state.startTime = Date.now();
+            api.ui.showNotification('Counter reset!', 'success');
+          },
+        },
+        'Reset Counter'
+      ),
+    ]);
+  });
+
+  // Register command: showCount
+  plugin.registerCommand('showCount', () => {
+    const stats = `
+📊 Message Counter Statistics
+
+Total Messages: ${state.count}
+User Messages: ${state.userMessages}
+Assistant Messages: ${state.assistantMessages}
+
+Session started: ${new Date(state.startTime).toLocaleTimeString()}
+    `.trim();
+
+    // eslint-disable-next-line no-alert
+    alert(stats);
+  });
+
+  // Register command: countThisMessage
+  plugin.registerCommand('countThisMessage', () => {
+    api.ui.showNotification(
+      `This is message #${state.count} in the current session`,
+      'info'
+    );
+  });
+
+  // Cleanup on deactivation
+  return () => {
+    unsubscribeMessages();
+    unsubscribeSession();
+    plugin.unregisterCommand('showCount');
+    plugin.unregisterCommand('countThisMessage');
+    console.log('[MessageCounter] Plugin deactivated');
+  };
+});
+
+// Export for module systems
+export {};

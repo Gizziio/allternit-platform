@@ -1,0 +1,10 @@
+#!/usr/bin/env bun
+// A2R Unified CLI - Entry Point
+// This replaces the Rust CLI and shell wrapper
+
+import { main } from "../src/cli/a2r.ts"
+
+main().catch(err => {
+  console.error("Fatal error:", err)
+  process.exit(1)
+})

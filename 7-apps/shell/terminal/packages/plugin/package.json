@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "@a2r/plugin",
+  "version": "1.2.10",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./tool": {
+      "import": "./dist/tool.js",
+      "types": "./dist/tool.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "dependencies": {
+    "@a2r/sdk": "workspace:*"
+  }
+}

@@ -1,0 +1,111 @@
+- generic [ref=e2]:
+  - generic [ref=e11]:
+    - generic [ref=e12]:
+      - img [ref=e19] [cursor=pointer]
+      - heading "M o r n i n g R i t u a l" [level=1] [ref=e64]:
+        - generic [ref=e65]:
+          - generic [ref=e66]:
+            - generic [ref=e67]: M
+            - generic [ref=e68]: o
+            - generic [ref=e69]: r
+            - generic [ref=e70]: "n"
+            - generic [ref=e71]: i
+            - generic [ref=e72]: "n"
+            - generic [ref=e73]: g
+          - generic [ref=e74]:
+            - generic [ref=e75]: R
+            - generic [ref=e76]: i
+            - generic [ref=e77]: t
+            - generic [ref=e78]: u
+            - generic [ref=e79]: a
+            - generic [ref=e80]: l
+      - generic [ref=e84]:
+        - generic [ref=e85]:
+          - generic [ref=e86]: T
+          - generic [ref=e87]: h
+          - generic [ref=e88]: e
+        - generic [ref=e89]:
+          - generic [ref=e90]: I
+          - generic [ref=e91]: "n"
+          - generic [ref=e92]: t
+          - generic [ref=e93]: e
+          - generic [ref=e94]: l
+          - generic [ref=e95]: l
+          - generic [ref=e96]: i
+          - generic [ref=e97]: g
+          - generic [ref=e98]: e
+          - generic [ref=e99]: "n"
+          - generic [ref=e100]: t
+        - generic [ref=e101]:
+          - generic [ref=e102]: W
+          - generic [ref=e103]: o
+          - generic [ref=e104]: r
+          - generic [ref=e105]: k
+          - generic [ref=e106]: s
+          - generic [ref=e107]: p
+          - generic [ref=e108]: a
+          - generic [ref=e109]: c
+          - generic [ref=e110]: e
+    - generic [ref=e113]:
+      - generic [ref=e114]:
+        - button "Code" [ref=e115] [cursor=pointer]:
+          - img [ref=e116]
+          - generic [ref=e119]: Code
+        - button "Create" [ref=e120] [cursor=pointer]:
+          - img [ref=e121]
+          - generic [ref=e122]: Create
+        - button "Write" [ref=e123] [cursor=pointer]:
+          - img [ref=e124]
+          - generic [ref=e129]: Write
+        - button "Learn" [ref=e130] [cursor=pointer]:
+          - img [ref=e131]
+          - generic [ref=e133]: Learn
+        - button "A2R's choice" [ref=e134] [cursor=pointer]:
+          - img [ref=e135]
+          - generic [ref=e137]: A2R's choice
+      - generic [ref=e138]:
+        - textbox "What's brewing today?" [ref=e140]
+        - generic [ref=e141]:
+          - button [ref=e143] [cursor=pointer]:
+            - img [ref=e144]
+          - generic [ref=e145]:
+            - button "Loading..." [disabled] [ref=e146]:
+              - generic [ref=e147]: Loading...
+              - img [ref=e149]
+            - button [disabled] [ref=e151]:
+              - img [ref=e152]
+    - generic [ref=e154]:
+      - generic [ref=e155]:
+        - img [ref=e156]
+        - generic [ref=e157]: Pick a task, any task
+      - generic [ref=e158]:
+        - button "Optimize my week" [ref=e159] [cursor=pointer]:
+          - img [ref=e161]
+          - generic [ref=e165]: Optimize my week
+        - button "Organize my screenshots" [ref=e166] [cursor=pointer]:
+          - img [ref=e168]
+          - generic [ref=e172]: Organize my screenshots
+        - button "Find insights in files" [ref=e173] [cursor=pointer]:
+          - img [ref=e175]
+          - generic [ref=e178]: Find insights in files
+  - generic:
+    - generic [ref=e179]:
+      - generic [ref=e180]:
+        - button "Expand Sidebar" [ref=e181] [cursor=pointer]:
+          - img [ref=e182]
+        - button "New Chat" [ref=e184] [cursor=pointer]:
+          - img [ref=e185]
+      - button "Browser" [ref=e188] [cursor=pointer]:
+        - img [ref=e189]
+        - generic [ref=e191]: Browser
+    - generic [ref=e193]:
+      - button "Chat" [ref=e194] [cursor=pointer]:
+        - img [ref=e195]
+        - generic [ref=e197]: Chat
+      - button "Cowork" [ref=e198] [cursor=pointer]:
+        - img [ref=e199]
+        - generic [ref=e201]: Cowork
+      - button "Code" [ref=e202] [cursor=pointer]:
+        - img [ref=e203]
+        - generic [ref=e205]: Code
+  - img [ref=e208] [cursor=pointer]

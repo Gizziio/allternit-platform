@@ -1,0 +1,221 @@
+- generic [ref=e5]:
+  - generic [ref=e7]:
+    - generic [ref=e8]:
+      - img [ref=e10]
+      - generic [ref=e13]:
+        - generic [ref=e14]:
+          - paragraph [ref=e15]: Native Agent
+          - heading "Strategic Review" [level=1] [ref=e16]
+          - paragraph [ref=e17]: Primary working session
+        - generic [ref=e18]:
+          - generic [ref=e19]: 4 messages
+          - generic [ref=e20]:
+            - img [ref=e21]
+            - text: Updated 11h ago
+          - generic [ref=e24]:
+            - img [ref=e25]
+            - generic [ref=e29]: 2 sessions
+          - generic [ref=e30]:
+            - img [ref=e31]
+            - text: Mode Plan
+    - generic [ref=e33]:
+      - generic [ref=e34]:
+        - generic [ref=e35]:
+          - img [ref=e36]
+          - text: Session sync live
+        - button [ref=e42]:
+          - img [ref=e43]
+      - combobox [ref=e46]:
+        - generic:
+          - generic:
+            - img
+            - text: Strategic Review
+        - img [ref=e47]
+  - generic [ref=e50]:
+    - complementary [ref=e51]:
+      - generic [ref=e52]:
+        - generic [ref=e53]:
+          - generic [ref=e54]:
+            - paragraph [ref=e55]: Session Workbench
+            - heading "Agent Sessions" [level=2] [ref=e56]
+            - paragraph [ref=e57]: Keep long-running contexts visible and recoverable.
+          - button "New Session" [ref=e58]:
+            - img [ref=e59]
+        - generic [ref=e60]:
+          - generic [ref=e61]:
+            - generic [ref=e62]:
+              - img [ref=e63]
+              - text: Sessions
+            - generic [ref=e67]: "2"
+          - generic [ref=e68]:
+            - generic [ref=e69]:
+              - img [ref=e70]
+              - text: Messages
+            - generic [ref=e72]: "6"
+        - generic [ref=e73]:
+          - generic [ref=e74]:
+            - img [ref=e75]
+            - text: Live sync connected
+          - paragraph [ref=e81]: Changes from other clients flow into this rail without reloading the workbench.
+      - generic [ref=e85]:
+        - generic [ref=e86]:
+          - generic [ref=e87]:
+            - generic [ref=e88]:
+              - paragraph [ref=e89]: Runtime Guardrail
+              - heading "Execution Mode" [level=3] [ref=e90]
+            - generic [ref=e91]: Plan
+          - generic [ref=e92]:
+            - button "Set execution mode to plan" [active] [pressed] [ref=e93]:
+              - generic [ref=e94]: Plan
+              - generic [ref=e95]: Preview
+            - button "Set execution mode to safe" [ref=e96]:
+              - generic [ref=e97]: Safe
+              - generic [ref=e98]: Guarded
+            - button "Set execution mode to auto" [ref=e99]:
+              - generic [ref=e100]: Auto
+              - generic [ref=e101]: Direct
+          - paragraph [ref=e102]: Dry-run tool work and inspect the plan before anything executes.
+          - generic [ref=e103]: Runtime updated Feb 27, 6:04 AM
+        - generic [ref=e104]:
+          - generic [ref=e105]:
+            - generic [ref=e106]:
+              - paragraph [ref=e107]: Active Session
+              - heading "Session Brief" [level=3] [ref=e108]
+            - generic [ref=e109]: Strategic Review
+          - generic [ref=e110]:
+            - generic [ref=e111]:
+              - text: Name
+              - textbox "Session name" [ref=e112]: Strategic Review
+            - generic [ref=e113]:
+              - text: Description
+              - textbox "Session description" [ref=e114]:
+                - /placeholder: What is this session responsible for?
+                - text: Primary working session
+            - generic [ref=e115]:
+              - text: Tags
+              - textbox "Session tags" [ref=e116]:
+                - /placeholder: priority, runtime, review
+                - text: priority
+            - generic [ref=e117]:
+              - text: Operator Note
+              - textbox "Operator note" [ref=e118]:
+                - /placeholder: Optional note stored with the session metadata.
+                - text: Hold this thread in safe mode until the GUI handoff is fully verified.
+            - generic [ref=e119]:
+              - generic [ref=e120]:
+                - generic [ref=e121]: Keep session active
+                - generic [ref=e122]: Toggle whether this thread should remain writable and visible as an active runtime lane.
+              - switch "Session active toggle" [checked] [ref=e123]
+            - generic [ref=e124]: Session currently liveFeb 26, 6:12 PM
+            - generic [ref=e125]:
+              - button "Save Session" [disabled] [ref=e126]:
+                - img [ref=e127]
+                - text: Save Session
+              - button "Reset" [disabled] [ref=e129]
+        - generic [ref=e130]: Session Directory
+        - generic [ref=e131]:
+          - generic [ref=e132]:
+            - button "Strategic Review Primary working session Hold this thread in safe mode until the GUI handoff is fully verified." [ref=e133]:
+              - generic [ref=e134]: Strategic Review
+              - paragraph [ref=e135]: Primary working session
+              - paragraph [ref=e136]: Hold this thread in safe mode until the GUI handoff is fully verified.
+            - button "Delete session Strategic Review" [ref=e137]:
+              - img [ref=e138]
+          - button "411h ago priority Session readyFeb 26, 6:12 PM" [ref=e141]:
+            - generic [ref=e142]:
+              - generic [ref=e143]:
+                - img [ref=e144]
+                - text: "4"
+              - generic [ref=e146]:
+                - img [ref=e147]
+                - text: 11h ago
+            - generic [ref=e150]: priority
+            - generic [ref=e151]: Session readyFeb 26, 6:12 PM
+        - generic [ref=e152]:
+          - generic [ref=e153]:
+            - button "Sandbox Draft Secondary exploration session" [ref=e154]:
+              - generic [ref=e155]: Sandbox Draft
+              - paragraph [ref=e156]: Secondary exploration session
+            - button "Delete session Sandbox Draft" [ref=e157]:
+              - img [ref=e158]
+          - button "213h ago Session pausedFeb 26, 4:21 PM" [ref=e161]:
+            - generic [ref=e162]:
+              - generic [ref=e163]:
+                - img [ref=e164]
+                - text: "2"
+              - generic [ref=e166]:
+                - img [ref=e167]
+                - text: 13h ago
+            - generic [ref=e170]: Session pausedFeb 26, 4:21 PM
+    - generic [ref=e172]:
+      - generic [ref=e174]:
+        - generic [ref=e178]:
+          - generic [ref=e179]:
+            - img [ref=e181]
+            - generic [ref=e184]:
+              - generic [ref=e186]: Review the runtime wiring status and highlight the riskiest remaining GUI gaps.
+              - text: 6:02:00 PM
+          - generic [ref=e187]:
+            - img [ref=e189]
+            - generic [ref=e192]:
+              - generic [ref=e194]: The riskiest gaps were stale frontend contracts around sessions, workflow execution, replay, and prewarm. Those are now pointed at the real backend routes.
+              - button "read_runtime_status" [ref=e197]:
+                - img [ref=e198]
+                - text: read_runtime_status
+                - img [ref=e200]
+              - text: 6:03:00 PM
+          - generic [ref=e202]:
+            - img [ref=e204]
+            - generic [ref=e206]:
+              - button "Tool Result" [ref=e208]:
+                - text: Tool Result
+                - img [ref=e209]
+              - text: 6:03:04 PM
+          - generic [ref=e211]:
+            - img [ref=e213]
+            - generic [ref=e216]:
+              - generic [ref=e218]: The agent workspace is now using the same sand-glass surface language as the rest of the updated runtime views, so it reads like a native a2r screen rather than a bolt-on panel.
+              - text: 6:05:00 PM
+        - generic [ref=e220]:
+          - generic [ref=e221]:
+            - textbox "Type your message..." [ref=e222]
+            - button [disabled] [ref=e224]:
+              - img [ref=e225]
+          - generic [ref=e228]: Press Enter to send, Shift+Enter for new line
+      - separator
+      - generic [ref=e230]:
+        - generic [ref=e231]:
+          - generic [ref=e232]:
+            - img [ref=e233]
+            - text: Canvas
+            - generic [ref=e235]: "2"
+          - generic [ref=e236]:
+            - button [ref=e237]:
+              - img [ref=e238]
+            - button [ref=e241]:
+              - img [ref=e242]
+            - button [ref=e245]:
+              - img [ref=e246]
+        - generic [ref=e248]:
+          - generic [ref=e249]:
+            - generic [ref=e250]:
+              - img [ref=e251]
+              - text: GUI Wiring Notes
+              - button [ref=e254]:
+                - img [ref=e255]
+            - generic [ref=e258]:
+              - img [ref=e259]
+              - text: Runtime Console
+              - button [ref=e261]:
+                - img [ref=e262]
+          - generic [ref=e266]:
+            - generic [ref=e267]:
+              - generic [ref=e268]:
+                - text: GUI Wiring Notes
+                - generic [ref=e269]: document
+              - generic [ref=e270]:
+                - button [ref=e271]:
+                  - img [ref=e272]
+                - button [ref=e275]:
+                  - img [ref=e276]
+            - textbox "Enter document content..." [ref=e280]: NativeAgentView - Session boot now waits for the real list load - Duplicate message fetches removed - Canvas remains intentionally local until a backend canvas route exists

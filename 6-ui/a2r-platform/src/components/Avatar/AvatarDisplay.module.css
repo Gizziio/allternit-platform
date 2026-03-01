@@ -1,0 +1,99 @@
+/* AvatarDisplay Styles */
+
+.container {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.avatarWrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.confidenceIndicator {
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  min-width: 40px;
+}
+
+.confidenceBar {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  overflow: hidden;
+  backdrop-filter: blur(4px);
+}
+
+.confidenceFill {
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    #4CAF50 0%,
+    #8BC34A 50%,
+    #FFC107 75%,
+    #F44336 100%
+  );
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.moodText {
+  text-transform: capitalize;
+  font-weight: 500;
+}
+
+.intensityText {
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+/* Inline version */
+.inline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+}
+
+/* Size-specific adjustments */
+.container:has(.avatarWrapper > [data-size="xs"]) {
+  gap: 4px;
+}
+
+.container:has(.avatarWrapper > [data-size="sm"]) {
+  gap: 6px;
+}
+
+.container:has(.avatarWrapper > [data-size="lg"]) {
+  gap: 12px;
+}
+
+.container:has(.avatarWrapper > [data-size="xl"]) {
+  gap: 16px;
+}
+
+/* Animation states */
+.container:hover .confidenceIndicator {
+  opacity: 1;
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .confidenceFill {
+    transition: none;
+  }
+}

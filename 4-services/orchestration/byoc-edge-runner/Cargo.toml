@@ -1,0 +1,26 @@
+[package]
+name = "a2r-edge-runner"
+version = "0.1.0"
+edition = "2021"
+description = "A2R BYOC Edge Runner - Secure tunnel to control plane, worker management, tool execution"
+
+[[bin]]
+name = "a2r-edge-runner"
+path = "src/main.rs"
+
+[dependencies]
+tokio = { workspace = true, features = ["full"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+reqwest = { workspace = true, features = ["json", "rustls-tls"] }
+chrono = { workspace = true }
+sha2 = "0.10"
+clap = { version = "4.4", features = ["derive", "env"] }
+
+[dev-dependencies]
+tokio-test = "0.4"

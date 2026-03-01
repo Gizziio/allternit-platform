@@ -1,0 +1,15 @@
+{
+  "ui_ia_name": "A2R Cockpit IA",
+  "surfaces": {
+    "workspace_home": {
+      "sections": ["active_projects", "resource_usage", "audit_feed"],
+      "metrics": ["total_runs", "token_budget_remaining"]
+    },
+    "today_tab": {
+      "sections": ["current_wih", "task_timeline", "pending_approvals"]
+    },
+    "global_alerts": {
+      "types": ["security_violation", "budget_exceeded", "service_offline"]
+    }
+  }
+}

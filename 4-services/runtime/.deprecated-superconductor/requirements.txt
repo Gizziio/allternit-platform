@@ -1,0 +1,8 @@
+fastapi==0.128.0
+uvicorn==0.40.0
+pydantic==2.10.5
+httpx==0.27.0
+python-dotenv==1.0.1
+browser-use==0.1.40
+playwright==1.49.0
+langchain-openai==0.2.0

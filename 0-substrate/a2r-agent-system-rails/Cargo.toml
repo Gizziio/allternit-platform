@@ -1,0 +1,36 @@
+[package]
+name = "a2r-agent-system-rails"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+publish = false
+
+[[bin]]
+name = "a2r-rails"
+path = "src/bin/a2r-rails.rs"
+
+[[bin]]
+name = "a2r-rails-service"
+path = "src/bin/a2r-rails-service.rs"
+
+[dependencies]
+serde = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+tokio = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+sqlx = { workspace = true }
+rand = { workspace = true }
+hex = { workspace = true }
+tempfile = { workspace = true }
+serde_json = { workspace = true }
+clap = { workspace = true }
+axum = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+tower-http = { workspace = true }
+sha2 = { workspace = true }
+reqwest = { workspace = true }
+worktree-manager = { path = "../../2-governance/worktree-manager" }

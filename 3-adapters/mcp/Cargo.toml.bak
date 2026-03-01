@@ -1,0 +1,39 @@
+[package]
+name = "mcp"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/a2rchitect/a2rchitech"
+description = "MCP (Model Context Protocol) client with stdio/SSE transport, OAuth, health monitoring, and A2R integration"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.35", features = ["full"] }
+thiserror = "1.0"
+async-trait = "0.1"
+tracing = "0.1"
+reqwest = { version = "0.11", features = ["json"] }
+chrono = { version = "0.4", features = ["serde"] }
+base64 = "0.21"
+sha2 = "0.10"
+rand = "0.8"
+futures = "0.3"
+futures-util = "0.3"
+uuid = { version = "1.6", features = ["v4"] }
+
+# Specific dependencies
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite"] }
+bytes = "1.5"
+
+# A2R SDK placeholders (commented until properly integrated)
+# a2rchitech-sdk-core = { path = "../../0-substrate/sdk/sdk-core" }
+# a2rchitech-sdk-policy = { path = "../../0-substrate/sdk/sdk-policy" }
+
+[dev-dependencies]
+tokio-test = "0.4"
+tempfile = "3.8"
+
+[lib]
+name = "mcp"
+path = "src/lib.rs"

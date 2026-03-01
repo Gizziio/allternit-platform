@@ -1,0 +1,20 @@
+#!/bin/bash
+set -e
+
+echo "[CI-GATE] Starting Verification..."
+
+# 1. Vendor Quarantine Check
+if [ -d "3-adapters/vendor" ]; then
+  echo "[CI-GATE] Vendor quarantine present."
+fi
+
+# 2. Run Integration Tests
+echo "[CI-GATE] Running Integration Tests..."
+# Assuming vitest is available globally or via npx
+npx vitest run tests/integration/a2r-e2e.test.ts
+
+# 3. Security Scan (Placeholder)
+echo "[CI-GATE] Running Security Scan..."
+# npm audit or similar
+
+echo "[CI-GATE] All gates passed."

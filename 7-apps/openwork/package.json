@@ -1,0 +1,18 @@
+{
+  "name": "@a2rchitech/openwork",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./src/index.tsx",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "a2r-ui": "workspace:*",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "devDependencies": {
+    "vite": "^6.0.1"
+  }
+}

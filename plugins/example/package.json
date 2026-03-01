@@ -1,0 +1,23 @@
+{
+  "name": "@a2r-plugins/example-counter",
+  "version": "1.0.0",
+  "description": "Example ChatView plugin that counts messages",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc && esbuild src/index.ts --bundle --format=iife --outfile=dist/index.js",
+    "dev": "tsc --watch & esbuild src/index.ts --bundle --format=iife --outfile=dist/index.js --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "esbuild": "^0.20.0"
+  },
+  "keywords": [
+    "a2r-plugin",
+    "chatview",
+    "counter"
+  ],
+  "license": "MIT"
+}

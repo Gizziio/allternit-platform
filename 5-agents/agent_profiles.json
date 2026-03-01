@@ -1,0 +1,38 @@
+{
+  "version": "v0.1",
+  "profiles": [
+    {
+      "id": "kernel-default",
+      "description": "Kernel default agent profile (no subprocess execution).",
+      "worker_allowlist": [],
+      "tool_allowlist": [],
+      "write_scope_policy": {
+        "mode": "run_scoped",
+        "allowed_globs": [
+          "/.a2r/artifacts/{{run_id}}/**",
+          "/.a2r/receipts/{{run_id}}/**"
+        ]
+      },
+      "network_policy": "none",
+      "receipts_required": true
+    },
+    {
+      "id": "builder",
+      "description": "Builder profile with allowlisted read-only subprocess workers.",
+      "worker_allowlist": [
+        "git.diff",
+        "git.status"
+      ],
+      "tool_allowlist": [],
+      "write_scope_policy": {
+        "mode": "run_scoped",
+        "allowed_globs": [
+          "/.a2r/artifacts/{{run_id}}/**",
+          "/.a2r/receipts/{{run_id}}/**"
+        ]
+      },
+      "network_policy": "none",
+      "receipts_required": true
+    }
+  ]
+}

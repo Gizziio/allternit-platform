@@ -1,0 +1,24 @@
+[package]
+name = "a2r-browser-runtime"
+version = "0.1.0"
+edition = "2021"
+description = "A2R Browser Runtime - Secure browser automation with receipts and policy tiers"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+url = "2.5"
+regex = { workspace = true }
+
+a2r-policy-tier-gating = { path = "../../2-governance/identity-access-control/policy-tier-gating" }
+a2r-receipts-schema = { path = "../../2-governance/evidence-management/receipts-schema" }
+a2r-purpose-binding = { path = "../../2-governance/identity-access-control/purpose-binding" }
+a2r-security-hardening = { path = "../../2-governance/security-network/security-hardening" }
+
+[dev-dependencies]
+tokio-test = "0.4"

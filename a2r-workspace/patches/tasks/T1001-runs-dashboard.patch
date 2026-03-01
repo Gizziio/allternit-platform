@@ -1,0 +1,316 @@
+diff --git a/apps/ui/src/App.tsx b/apps/ui/src/App.tsx
+index 1234567..89abcdef 100644
+--- a/apps/ui/src/App.tsx
++++ b/apps/ui/src/App.tsx
+@@ -1,10 +1,38 @@
+ import React from 'react';
++import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+ import Layout from './components/Layout';
++import RunsDashboard from './pages/RunsDashboard';
++import AgentsConsole from './pages/AgentConsole';
++import CapsulesExplorer from './pages/CapsulesExplorer';
++import ReceiptsExplorer from './pages/ReceiptsExplorer';
++import GraphVisualizer from './pages/GraphVisualizer';
++import GatewayRoutesPanel from './pages/GatewayRoutesPanel';
++import MemoryPromotionUI from './pages/MemoryPromotionUI';
++import ForensicsExportUI from './pages/ForensicsExportUI';
++import CLIModuleUI from './pages/CLIModuleUI';
+
+ function App() {
+   return (
+-    <div className="App">
+-      <Layout>
+-        <div className="p-6">
+-          <h1 className="text-3xl font-bold text-gray-900">A2R Control Plane</h1>
+-          <p className="mt-2 text-gray-600">Operational dashboard for A2R systems</p>
+-        </div>
+-      </Layout>
+-    </div>
++    <Router>
++      <div className="App">
++        <Layout>
++          <Routes>
++            <Route path="/" element={
++              <div className="p-6">
++                <h1 className="text-3xl font-bold text-gray-900">A2R Control Plane</h1>
++                <p className="mt-2 text-gray-600">Operational dashboard for A2R systems</p>
++              </div>
++            } />
++            <Route path="/runs" element={<RunsDashboard />} />
++            <Route path="/agents" element={<AgentsConsole />} />
++            <Route path="/capsules" element={<CapsulesExplorer />} />
++            <Route path="/receipts" element={<ReceiptsExplorer />} />
++            <Route path="/graphs" element={<GraphVisualizer />} />
++            <Route path="/gateway" element={<GatewayRoutesPanel />} />
++            <Route path="/memory" element={<MemoryPromotionUI />} />
++            <Route path="/forensics" element={<ForensicsExportUI />} />
++            <Route path="/cli" element={<CLIModuleUI />} />
++            <Route path="*" element={<Navigate to="/" replace />} />
++          </Routes>
++        </Layout>
++      </div>
++    </Router>
+   );
+ }
+
+ export default App;
+
+diff --git a/apps/ui/src/pages/RunsDashboard.tsx b/apps/ui/src/pages/RunsDashboard.tsx
+new file mode 100644
+index 0000000..abcdef1
+--- /dev/null
++++ b/apps/ui/src/pages/RunsDashboard.tsx
+@@ -0,0 +1,192 @@
++import React, { useState, useEffect } from 'react';
++import { useRuns } from '../hooks/useRuns';
++import { Run } from '../types/ui';
++
++const RunsDashboard: React.FC = () => {
++  const { runs, loading, error, fetchRuns } = useRuns();
++  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
++
++  // Start live polling when component mounts
++  useEffect(() => {
++    // Initial fetch
++    fetchRuns();
++
++    // Set up polling interval (every 5 seconds)
++    const interval = setInterval(fetchRuns, 5000);
++    setPollingInterval(interval);
++
++    // Cleanup interval on unmount
++    return () => {
++      if (pollingInterval) {
++        clearInterval(pollingInterval);
++      }
++    };
++  }, [fetchRuns]); // eslint-disable-line react-hooks/exhaustive-deps
++
++  const handleReplayRun = async (runId: string) => {
++    try {
++      // Dispatch action through gateway client to replay run
++      const response = await fetch('/gateway/api/action', {
++        method: 'POST',
++        headers: {
++          'Content-Type': 'application/json',
++        },
++        body: JSON.stringify({
++          action_id: 'action-run-replay',
++          payload: { run_id: runId }
++        })
++      });
++
++      if (!response.ok) {
++        throw new Error(`Failed to replay run: ${response.statusText}`);
++      }
++
++      // Refresh runs after replay
++      await fetchRuns();
++    } catch (err) {
++      console.error('Error replaying run:', err);
++    }
++  };
++
++  const getStatusBadgeClass = (status: string) => {
++    switch (status) {
++      case 'RUNNING':
++        return 'bg-blue-100 text-blue-800';
++      case 'COMPLETE':
++        return 'bg-green-100 text-green-800';
++      case 'FAILED':
++        return 'bg-red-100 text-red-800';
++      case 'PAUSED':
++        return 'bg-yellow-100 text-yellow-800';
++      default:
++        return 'bg-gray-100 text-gray-800';
++    }
++  };
++
++  if (loading) {
++    return (
++      <div className="p-6">
++        <h2 className="text-2xl font-bold text-gray-900 mb-6">Runs Dashboard</h2>
++        <div className="text-center py-10">
++          <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
++          <p className="mt-2 text-gray-600">Loading runs...</p>
++        </div>
++      </div>
++    );
++  }
++
++  if (error) {
++    return (
++      <div className="p-6">
++        <h2 className="text-2xl font-bold text-gray-900 mb-6">Runs Dashboard</h2>
++        <div className="bg-red-50 border border-red-200 rounded-md p-4">
++          <p className="text-red-700">Error: {error}</p>
++          <button
++            onClick={fetchRuns}
++            className="mt-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
++          >
++            Retry
++          </button>
++        </div>
++      </div>
++    );
++  }
++
++  return (
++    <div className="p-6">
++      <div className="flex justify-between items-center mb-6">
++        <h2 className="text-2xl font-bold text-gray-900">Runs Dashboard</h2>
++        <button
++          onClick={fetchRuns}
++          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
++        >
++          Refresh
++        </button>
++      </div>
++
++      <div className="bg-white shadow rounded-lg overflow-hidden">
++        <table className="min-w-full divide-y divide-gray-200">
++          <thead className="bg-gray-50">
++            <tr>
++              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
++                Run ID
++              </th>
++              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
++                Graph ID
++              </th>
++              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
++                Status
++              </th>
++              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
++                Start Time
++              </th>
++              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
++                Progress
++              </th>
++              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
++                Actions
++              </th>
++            </tr>
++          </thead>
++          <tbody className="bg-white divide-y divide-gray-200">
++            {runs.map((run: Run) => (
++              <tr key={run.id} className="hover:bg-gray-50">
++                <td className="px-6 py-4 whitespace-nowrap">
++                  <div className="text-sm font-medium text-gray-900">{run.id}</div>
++                </td>
++                <td className="px-6 py-4 whitespace-nowrap">
++                  <div className="text-sm text-gray-500">{run.graph_id}</div>
++                </td>
++                <td className="px-6 py-4 whitespace-nowrap">
++                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(run.status)}`}>
++                    {run.status}
++                  </span>
++                </td>
++                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
++                  {new Date(run.start_time).toLocaleString()}
++                </td>
++                <td className="px-6 py-4 whitespace-nowrap">
++                  <div className="text-sm text-gray-900">
++                    {run.completed_nodes}/{run.node_count} nodes
++                  </div>
++                  <div className="mt-1 w-full bg-gray-200 rounded-full h-2">
++                    <div
++                      className="bg-blue-600 h-2 rounded-full"
++                      style={{ width: `${(run.completed_nodes / run.node_count) * 100}%` }}
++                    ></div>
++                  </div>
++                </td>
++                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
++                  <div className="flex space-x-2">
++                    <button
++                      onClick={() => handleReplayRun(run.id)}
++                      className="text-indigo-600 hover:text-indigo-900"
++                      title="Replay Run"
++                    >
++                      Replay
++                    </button>
++                    <a
++                      href={`/receipts?run_id=${run.id}`}
++                      className="text-green-600 hover:text-green-900"
++                      title="View Receipts"
++                    >
++                      Receipts
++                    </a>
++                  </div>
++                </td>
++              </tr>
++            ))}
++          </tbody>
++        </table>
++
++        {runs.length === 0 && (
++          <div className="text-center py-10">
++            <p className="text-gray-500">No runs found</p>
++          </div>
++        )}
++      </div>
++    </div>
++  );
++};
++
++export default RunsDashboard;
+
+diff --git a/apps/ui/src/hooks/useRuns.ts b/apps/ui/src/hooks/useRuns.ts
+new file mode 100644
+index 0000000..abcdef2
+--- /dev/null
++++ b/apps/ui/src/hooks/useRuns.ts
+@@ -0,0 +1,18 @@
++import { useState, useEffect } from 'react';
++import gatewayClient from '../services/gateway-client';
++import { Run } from '../types/ui';
++
++export const useRuns = () => {
++  const [runs, setRuns] = useState<Run[]>([]);
++  const [loading, setLoading] = useState<boolean>(true);
++  const [error, setError] = useState<string | null>(null);
++
++  const fetchRuns = async () => {
++    try {
++      setLoading(true);
++      const runsData = await gatewayClient.getRuns();
++      setRuns(runsData);
++      setError(null);
++    } catch (err) {
++      setError(err instanceof Error ? err.message : 'An error occurred while fetching runs');
++    } finally {
++      setLoading(false);
++    }
++  };
++
++  return { runs, loading, error, fetchRuns };
++};
+
+diff --git a/apps/ui/src/ui_registry.json b/apps/ui/src/ui_registry.json
+index 1234567..89abcdef 100644
+--- a/apps/ui/src/ui_registry.json
++++ b/apps/ui/src/ui_registry.json
+@@ -89,6 +89,15 @@
+     {
+       "action_id": "action-agent-spawn",
+       "name": "Spawn Agent",
+       "description": "Spawn a new agent instance",
+       "gateway_route": "POST:/api/agents/spawn",
+      "allowed_methods": ["POST"],
+      "requires_auth": true,
+      "rate_limit": {
+        "requests_per_minute": 10
+      }
+    },
+    {
+      "action_id": "action-run-replay",
+      "name": "Replay Run",
+      "description": "Replay a run from its receipt chain",
+      "gateway_route": "POST:/api/runs/{run_id}/replay",
+      "allowed_methods": ["POST"],
+      "requires_auth": true,
+      "rate_limit": {
+        "requests_per_minute": 5
+      }
+    }
+  ]
+}

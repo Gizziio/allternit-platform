@@ -1,0 +1,82 @@
+version: '3.8'
+
+# A2R Node Agent Docker Compose
+#
+# Usage:
+#   A2R_TOKEN=xxx docker-compose up -d
+#
+# Or with .env file:
+#   cp .env.example .env
+#   # Edit .env with your settings
+#   docker-compose up -d
+
+services:
+  a2r-node:
+    image: ghcr.io/a2r/node:latest
+    # Or build from source:
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+    
+    container_name: a2r-node
+    
+    restart: unless-stopped
+    
+    # Docker socket access for containerized job execution
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - a2r-config:/etc/a2r
+      - a2r-logs:/var/log/a2r
+    
+    # Environment variables
+    environment:
+      - A2R_NODE_ID=${A2R_NODE_ID:-node-${HOSTNAME}}
+      - A2R_TOKEN=${A2R_TOKEN}
+      - A2R_CONTROL_PLANE=${A2R_CONTROL_PLANE:-wss://control.a2r.io}
+      - A2R_LABELS=${A2R_LABELS:-docker}
+      - A2R_MAX_CONCURRENT_JOBS=${A2R_MAX_CONCURRENT_JOBS:-10}
+      - RUST_LOG=${RUST_LOG:-info}
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "/opt/a2r/bin/a2r-node", "--health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    
+    # Read-only root filesystem (optional, may need adjustments)
+    # read_only: true
+    
+    # Temporary filesystems (if read_only is enabled)
+    # tmpfs:
+    #   - /tmp:size=100M
+    #   - /run:size=50M
+
+# Named volumes
+volumes:
+  a2r-config:
+    driver: local
+  a2r-logs:
+    driver: local

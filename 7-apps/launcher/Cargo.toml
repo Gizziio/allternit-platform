@@ -1,0 +1,51 @@
+[package]
+name = "a2r-platform-launcher"
+version = "0.1.0"
+edition = "2021"
+authors = ["A2rchitect Team"]
+description = "Single-binary launcher for A2R Platform"
+license = "MIT"
+
+[dependencies]
+# For embedding assets
+include_dir = "0.7"
+
+# For process management  
+tokio = { version = "1.35", features = ["full", "process"] }
+
+# For HTTP server to serve UI
+axum = "0.7"
+tower-http = { version = "0.5", features = ["fs"] }
+
+# For notifications/indicatif
+dialoguer = "0.11"
+indicatif = "0.17"
+
+# For temp file management
+tempfile = "3.8"
+
+# For error handling
+anyhow = "1.0"
+
+# For logging
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+# For directories
+dirs = "5.0"
+
+# For HTTP client (health checks)
+reqwest = { version = "0.11", default-features = false, features = ["rustls-tls"] }
+
+# OS-specific
+[target.'cfg(target_os = "macos")'.dependencies]
+objc = "0.2"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+winapi = { version = "0.3", features = ["shellapi", "winuser"] }
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true
+codegen-units = 1

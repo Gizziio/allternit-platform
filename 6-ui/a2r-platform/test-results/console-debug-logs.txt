@@ -1,0 +1,27 @@
+[log] selectActiveView: {activeViewId: chat, foundViewType: chat, openViewsKeys: Array(1), timestamp: 1772167597020}
+[log] ShellAppInner: RENDER {activeViewId: chat, activeViewType: chat, historyLength: 1, openViewsCount: 1, timestamp: 1772167597023}
+[log] selectActiveView: {activeViewId: chat, foundViewType: chat, openViewsKeys: Array(1), timestamp: 1772167597024}
+[log] ShellAppInner: RENDER {activeViewId: chat, activeViewType: chat, historyLength: 1, openViewsCount: 1, timestamp: 1772167597024}
+[log] ViewHost: RENDER {activeViewId: chat, activeViewType: chat, registryExists: true, timestamp: 1772167597045}
+[log] ViewHost: Creating view instance {viewType: chat, viewId: chat}
+[log] ViewHost: RENDER {activeViewId: chat, activeViewType: chat, registryExists: true, timestamp: 1772167597046}
+[log] ViewHost: Creating view instance {viewType: chat, viewId: chat}
+[log] selectActiveView: {activeViewId: chat, foundViewType: chat, openViewsKeys: Array(1), timestamp: 1772167597234}
+[log] ShellAppInner: RENDER {activeViewId: chat, activeViewType: chat, historyLength: 1, openViewsCount: 1, timestamp: 1772167597234}
+[log] selectActiveView: {activeViewId: chat, foundViewType: chat, openViewsKeys: Array(1), timestamp: 1772167597235}
+[log] ShellAppInner: RENDER {activeViewId: chat, activeViewType: chat, historyLength: 1, openViewsCount: 1, timestamp: 1772167597235}
+[log] ViewHost: RENDER {activeViewId: chat, activeViewType: chat, registryExists: true, timestamp: 1772167597237}
+[log] ViewHost: RENDER {activeViewId: chat, activeViewType: chat, registryExists: true, timestamp: 1772167597237}
+[log] ShellAppInner: open() called with viewType: browser
+[log] navReducer: BEFORE {eventType: OPEN_VIEW, eventPayload: browser, activeViewId: chat, historyLength: 1, openViewsCount: 1}
+[log] navReducer: AFTER OPEN_VIEW {newActiveViewId: browser, newViewId: browser, viewType: browser, historyLength: 2, isStateSame: false}
+[log] selectActiveView: {activeViewId: browser, foundViewType: browser, openViewsKeys: Array(2), timestamp: 1772167598216}
+[log] ShellAppInner: RENDER {activeViewId: browser, activeViewType: browser, historyLength: 2, openViewsCount: 2, timestamp: 1772167598216}
+[log] navReducer: BEFORE {eventType: OPEN_VIEW, eventPayload: browser, activeViewId: chat, historyLength: 1, openViewsCount: 1}
+[log] navReducer: AFTER OPEN_VIEW {newActiveViewId: browser, newViewId: browser, viewType: browser, historyLength: 2, isStateSame: false}
+[log] selectActiveView: {activeViewId: browser, foundViewType: browser, openViewsKeys: Array(2), timestamp: 1772167598217}
+[log] ShellAppInner: RENDER {activeViewId: browser, activeViewType: browser, historyLength: 2, openViewsCount: 2, timestamp: 1772167598217}
+[log] ViewHost: RENDER {activeViewId: browser, activeViewType: browser, registryExists: true, timestamp: 1772167598220}
+[log] ViewHost: Creating view instance {viewType: browser, viewId: browser}
+[log] ViewHost: RENDER {activeViewId: browser, activeViewType: browser, registryExists: true, timestamp: 1772167598221}
+[log] ViewHost: Creating view instance {viewType: browser, viewId: browser}

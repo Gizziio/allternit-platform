@@ -1,0 +1,106 @@
+{
+  "contract_name": "A2R Gateway Contract",
+  "version": "v0.1.0",
+  "description": "Unified interface for A2R service mesh, providing secure, traceable, and scoped access to internal capabilities.",
+  "request_envelope": {
+    "protocol": "HTTP/1.1",
+    "encoding": "application/json",
+    "headers": {
+      "X-A2R-Workspace-ID": "UUID identifying the active workspace",
+      "X-A2R-Session-ID": "UUID identifying the user session",
+      "X-A2R-Agent-ID": "Optional UUID if request is from another agent",
+      "X-A2R-Trace-ID": "UUID for distributed tracing (standard OpenTelemetry)",
+      "Authorization": "Bearer <workspace_token>"
+    },
+    "body_schema": {
+      "type": "object",
+      "required": [
+        "intent",
+        "context"
+      ],
+      "properties": {
+        "intent": {
+          "type": "string",
+          "description": "Semantic intent or specific route (e.g. 'kernel.spawn_capsule')"
+        },
+        "payload": {
+          "type": "object",
+          "description": "Arguments specific to the intent"
+        },
+        "context": {
+          "type": "object",
+          "properties": {
+            "origin": {
+              "type": "string",
+              "enum": [
+                "cli",
+                "ui",
+                "agent",
+                "system"
+              ]
+            },
+            "environment": {
+              "type": "string"
+            },
+            "priority": {
+              "type": "integer",
+              "default": 0
+            }
+          }
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Optional debugging or profiling markers"
+        }
+      }
+    }
+  },
+  "core_routes": [
+    {
+      "service": "kernel",
+      "prefix": "/api/kernel",
+      "operations": [
+        "POST:/api/kernel/dispatch",
+        "GET:/api/kernel/journal",
+        "POST:/api/kernel/capsules/spawn"
+      ]
+    },
+    {
+      "service": "router",
+      "prefix": "/api/router",
+      "operations": [
+        "POST:/api/router/route",
+        "GET:/api/router/policies"
+      ]
+    },
+    {
+      "service": "memory",
+      "prefix": "/api/memory",
+      "operations": [
+        "POST:/api/memory/ingest",
+        "GET:/api/memory/search",
+        "POST:/api/memory/promote"
+      ]
+    }
+  ],
+  "error_envelope": {
+    "type": "object",
+    "properties": {
+      "error_code": {
+        "type": "string"
+      },
+      "message": {
+        "type": "string"
+      },
+      "trace_id": {
+        "type": "string"
+      },
+      "service_origin": {
+        "type": "string"
+      },
+      "retryable": {
+        "type": "boolean"
+      }
+    }
+  }
+}

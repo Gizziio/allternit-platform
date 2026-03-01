@@ -1,0 +1,84 @@
+- generic [ref=e2]:
+  - generic [ref=e171]:
+    - button "Hide Preview" [active] [ref=e172] [cursor=pointer]:
+      - img [ref=e350]
+      - text: Hide Preview
+    - generic [ref=e175]:
+      - generic [ref=e180]:
+        - img [ref=e184] [cursor=pointer]
+        - generic [ref=e229]: Code workspace
+        - generic [ref=e230]: Choose a folder before sending the first instruction. The workspace stays minimal until you are ready to start.
+        - generic [ref=e231]:
+          - generic [ref=e233]:
+            - button "Scaffold" [ref=e234] [cursor=pointer]:
+              - img [ref=e235]
+              - text: Scaffold
+            - button "Refactor" [ref=e237] [cursor=pointer]:
+              - img [ref=e238]
+              - text: Refactor
+            - button "Debug" [ref=e242] [cursor=pointer]:
+              - img [ref=e243]
+              - text: Debug
+            - button "Optimize" [ref=e252] [cursor=pointer]:
+              - img [ref=e253]
+              - text: Optimize
+            - button "Explore" [ref=e255] [cursor=pointer]:
+              - img [ref=e256]
+              - text: Explore
+          - generic [ref=e260]:
+            - textbox "Choose a workspace folder to unlock the session..." [ref=e262]
+            - generic [ref=e263]:
+              - button [ref=e265] [cursor=pointer]:
+                - img [ref=e266]
+              - generic [ref=e267]:
+                - button "Codex CLI Extended" [ref=e268] [cursor=pointer]:
+                  - generic [ref=e269]: Codex CLI
+                  - generic [ref=e270]: Extended
+                  - img [ref=e271]
+                - button [disabled] [ref=e273]:
+                  - img [ref=e274]
+          - generic [ref=e276]:
+            - generic [ref=e277]:
+              - combobox "Code session selector" [ref=e278]:
+                - option "Code Mode Layout Stabilization" [selected]
+                - option "Approval Token Rails Pass"
+                - option "Diff Review Prototype"
+              - button "Select folder" [ref=e279] [cursor=pointer]:
+                - img [ref=e280]
+                - text: Select folder
+                - img [ref=e282]
+              - button "Console" [ref=e284] [cursor=pointer]:
+                - img [ref=e285]
+                - text: Console
+            - generic [ref=e287]: Workspace required before execution
+      - separator [ref=e288]
+      - generic [ref=e293]:
+        - generic [ref=e295]:
+          - img [ref=e296]
+          - text: Preview
+        - generic [ref=e298]:
+          - img [ref=e302] [cursor=pointer]
+          - generic [ref=e347]: Setting up preview
+          - generic [ref=e348]: Start or attach a preview session and the web surface will stay docked here without adding extra chrome to the workspace.
+        - generic [ref=e349]: View session logs
+  - generic:
+    - generic [ref=e138]:
+      - generic [ref=e139]:
+        - button "Expand Sidebar" [ref=e140] [cursor=pointer]:
+          - img [ref=e141]
+        - button "New Chat" [ref=e143] [cursor=pointer]:
+          - img [ref=e144]
+      - button "Browser" [ref=e147] [cursor=pointer]:
+        - img [ref=e148]
+        - generic [ref=e150]: Browser
+    - generic [ref=e152]:
+      - button "Chat" [ref=e153] [cursor=pointer]:
+        - img [ref=e154]
+        - generic [ref=e156]: Chat
+      - button "Cowork" [ref=e157] [cursor=pointer]:
+        - img [ref=e158]
+        - generic [ref=e160]: Cowork
+      - button "Code" [ref=e161] [cursor=pointer]:
+        - img [ref=e162]
+        - generic [ref=e164]: Code
+  - img [ref=e167] [cursor=pointer]

@@ -1,0 +1,1 @@
+.sidebar-nav{display:flex;gap:8px;padding:0 16px;margin-bottom:16px}.nav-item{flex:1;padding:8px;border:1px solid #e5e7eb;background:#fff;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;color:#4b5563;transition:all .15s ease}.nav-item:hover{background:#f9fafb;border-color:#d1d5db}.nav-item.active{background:#3b82f6;color:#fff;border-color:#3b82f6}

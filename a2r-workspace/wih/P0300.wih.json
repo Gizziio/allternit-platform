@@ -1,0 +1,134 @@
+{
+  "wih_version": "v0.1",
+  "task_id": "P0300",
+  "graph_id": "graph-0000",
+  "title": "Program graph runner: orchestrate subgraphs with meta-deps",
+  "state": "PLANNED",
+  "blocked_by": [
+    "P0002",
+    "P0201"
+  ],
+  "external_refs": {
+    "claude_task_id": "",
+    "issue_id": "",
+    "pr_id": ""
+  },
+  "preset": {
+    "preset_id": "preset-core-dev",
+    "preset_hash": "TBD"
+  },
+  "resume_cursor": {
+    "last_run_id": "",
+    "next_step": "",
+    "pending_checks": []
+  },
+  "outputs": {
+    "required_artifacts": [
+      "program-runner"
+    ],
+    "artifact_paths": [
+      "/.a2r/artifacts/P0300/"
+    ]
+  },
+  "write_scope": {
+    "root": "/.a2r/",
+    "allowed_globs": [
+      "/.a2r/runs/**"
+    ]
+  },
+  "tools": {
+    "allowlist": [
+      "fs.read",
+      "fs.write"
+    ],
+    "pretooluse_hooks": [
+      "WIH_VALID",
+      "DEPS_SATISFIED",
+      "PATH_GUARDS",
+      "TOOL_REGISTRY"
+    ]
+  },
+  "memory": {
+    "packs": [
+      {
+        "pack_id": "graph",
+        "layers": [
+          "graph"
+        ],
+        "access": "readwrite"
+      }
+    ]
+  },
+  "acceptance": {
+    "checks": [
+      "AT-TASK-0003"
+    ]
+  },
+  "beads": {
+    "wih_version": "v0.1",
+    "task_id": "P0300",
+    "graph_id": "graph-0000",
+    "title": "Program graph runner: orchestrate subgraphs with meta-deps",
+    "state": "PLANNED",
+    "blocked_by": [
+      "P0002",
+      "P0201"
+    ],
+    "external_refs": {
+      "claude_task_id": "",
+      "issue_id": "",
+      "pr_id": ""
+    },
+    "preset": {
+      "preset_id": "preset-core-dev",
+      "preset_hash": "TBD"
+    },
+    "resume_cursor": {
+      "last_run_id": "",
+      "next_step": "",
+      "pending_checks": []
+    },
+    "outputs": {
+      "required_artifacts": [
+        "program-runner"
+      ],
+      "artifact_paths": [
+        "/.a2r/artifacts/P0300/"
+      ]
+    },
+    "write_scope": {
+      "root": "/.a2r/",
+      "allowed_globs": [
+        "/.a2r/runs/**"
+      ]
+    },
+    "tools": {
+      "allowlist": [
+        "fs.read",
+        "fs.write"
+      ],
+      "pretooluse_hooks": [
+        "WIH_VALID",
+        "DEPS_SATISFIED",
+        "PATH_GUARDS",
+        "TOOL_REGISTRY"
+      ]
+    },
+    "memory": {
+      "packs": [
+        {
+          "pack_id": "graph",
+          "layers": [
+            "graph"
+          ],
+          "access": "readwrite"
+        }
+      ]
+    },
+    "acceptance": {
+      "checks": [
+        "AT-TASK-0003"
+      ]
+    }
+  }
+}

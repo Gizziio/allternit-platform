@@ -1,0 +1,54 @@
+{
+  "name": "Rust Development Environment",
+  "image": "mcr.microsoft.com/devcontainers/rust:1",
+  "workspaceFolder": "/workspace",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "18"
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "containerEnv": {
+    "RUST_BACKTRACE": "1",
+    "CARGO_HOME": "/usr/local/cargo"
+  },
+  "postCreateCommand": "cargo install cargo-watch cargo-expand",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "vadimcn.vscode-lldb",
+        "serayuzgur.crates"
+      ],
+      "settings": {
+        "rust-analyzer.cargo.autoreload": true,
+        "rust-analyzer.checkOnSave.command": "clippy"
+      }
+    },
+    "a2r": {
+      "driver": "process",
+      "enablePrewarm": true,
+      "isolation": "standard"
+    }
+  },
+  "hostRequirements": {
+    "cpus": 4,
+    "memory": 8192,
+    "storage": 20480
+  },
+  "mounts": [
+    {
+      "type": "bind",
+      "source": "${localEnv:HOME}/.ssh",
+      "target": "/home/vscode/.ssh",
+      "readOnly": true
+    },
+    {
+      "type": "bind",
+      "source": "${localEnv:HOME}/.gitconfig",
+      "target": "/home/vscode/.gitconfig",
+      "readOnly": true
+    }
+  ],
+  "forwardPorts": [3000, 8080]
+}

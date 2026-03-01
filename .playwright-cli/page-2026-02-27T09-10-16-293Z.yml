@@ -1,0 +1,51 @@
+- generic [ref=e2]:
+  - generic [ref=e603]:
+    - generic [ref=e605]:
+      - generic [ref=e608]: hello
+      - generic [ref=e611]:
+        - generic [ref=e703]:
+          - button "Let me respond directly. (+2 more)" [ref=e706] [cursor=pointer]:
+            - img [ref=e707]
+            - img [ref=e709]
+            - generic [ref=e719]: Let me respond directly. (+2 more)
+          - paragraph [ref=e722]: Hello! How can I help you today?
+        - generic [ref=e723]:
+          - button "Copy" [ref=e724] [cursor=pointer]:
+            - img [ref=e725]
+          - button "Regenerate" [ref=e728] [cursor=pointer]:
+            - img [ref=e729]
+    - generic:
+      - generic [ref=e681]:
+        - textbox "Reply..." [ref=e683]
+        - generic [ref=e684]:
+          - button [ref=e686] [cursor=pointer]:
+            - img [ref=e687]
+          - generic [ref=e688]:
+            - button "Big Pickle Extended" [ref=e689] [cursor=pointer]:
+              - generic [ref=e690]: Big Pickle
+              - generic [ref=e691]: Extended
+              - img [ref=e692]
+            - button [disabled] [ref=e734]:
+              - img [ref=e735]
+      - generic [ref=e702]: A2R is AI and can make mistakes. Please double-check responses.
+  - generic:
+    - generic [ref=e138]:
+      - generic [ref=e139]:
+        - button "Expand Sidebar" [ref=e560] [cursor=pointer]:
+          - img [ref=e141]
+        - button "New Chat" [ref=e143] [cursor=pointer]:
+          - img [ref=e144]
+      - button "Browser" [ref=e147] [cursor=pointer]:
+        - img [ref=e148]
+        - generic [ref=e150]: Browser
+    - generic [ref=e152]:
+      - button "Chat" [ref=e153] [cursor=pointer]:
+        - img [ref=e154]
+        - generic [ref=e156]: Chat
+      - button "Cowork" [ref=e157] [cursor=pointer]:
+        - img [ref=e158]
+        - generic [ref=e160]: Cowork
+      - button "Code" [ref=e161] [cursor=pointer]:
+        - img [ref=e162]
+        - generic [ref=e164]: Code
+  - img [ref=e167] [cursor=pointer]

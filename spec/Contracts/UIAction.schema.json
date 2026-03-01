@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://a2rchitech.local/spec/contracts/UIAction.schema.json",
+  "title": "UI Action Contract",
+  "description": "Schema for UI actions in the A2R system",
+  "type": "object",
+  "properties": {
+    "action_version": {
+      "type": "string",
+      "description": "Version of the action schema"
+    },
+    "action_id": {
+      "type": "string",
+      "description": "Unique identifier for the UI action"
+    },
+    "gateway_route": {
+      "type": "string",
+      "description": "Gateway route string in format 'METHOD:/path'"
+    },
+    "run_id": {
+      "type": "string",
+      "description": "ID of the run this action belongs to"
+    },
+    "wih_id": {
+      "type": "string",
+      "description": "ID of the WIH associated with this action"
+    },
+    "payload": {
+      "type": "object",
+      "description": "Payload data for the action"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of the action"
+    },
+    "source": {
+      "type": "string",
+      "description": "Source of the action (e.g., 'dashboard', 'inspector')"
+    },
+    "session_id": {
+      "type": "string",
+      "description": "ID of the UI session"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "ID of the user triggering the action"
+    }
+  },
+  "required": [
+    "action_version",
+    "action_id",
+    "gateway_route",
+    "run_id",
+    "wih_id",
+    "payload",
+    "timestamp",
+    "source",
+    "session_id",
+    "user_id"
+  ]
+}

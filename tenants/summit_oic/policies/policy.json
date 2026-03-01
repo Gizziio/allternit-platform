@@ -1,0 +1,36 @@
+{
+  "default_mode": "deny",
+  "allow": [
+    {"tool": "canvas.list_courses"},
+    {"tool": "canvas.list_course_content"},
+    {"tool": "office.xlsx_read"},
+    {"tool": "office.docx_read"}
+  ],
+  "conditional_allow": [
+    {
+      "tool": "canvas.create_module",
+      "requires": ["plan.confirmed==true", "inputs.course_id!=null"]
+    },
+    {
+      "tool": "desktop_click",
+      "requires": [
+        "plan.desktop.confirmed_steps.contains(step_id)==true",
+        "session.is_active==true",
+        "user.is_authorized==true"
+      ]
+    },
+    {
+      "tool": "desktop_type",
+      "requires": ["plan.desktop.confirmed_steps.contains(step_id)==true"]
+    }
+  ],
+  "safety": {
+    "max_desktop_steps_per_run": 50,
+    "require_human_confirmation_for_destructive_office_edits": true,
+    "session_timeout_minutes": 15
+  },
+  "redactions": [
+    {"field": "auth.token", "action": "redact"},
+    {"field": "student_pii", "action": "block_export"}
+  ]
+}

@@ -1,0 +1,23 @@
+[package]
+name = "a2r-observability-dashboard"
+version = "0.1.0"
+edition = "2021"
+description = "A2R Observability Dashboard - Trace visualization and telemetry"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+axum = { workspace = true }
+tower-http = { workspace = true }
+
+a2r-dag-wih-integration = { path = "../dag-wih-integration" }
+a2r-evaluation-harness = { path = "../evaluation-harness" }
+a2rchitech-messaging = { workspace = true }
+
+[dev-dependencies]
+tokio-test = "0.4"

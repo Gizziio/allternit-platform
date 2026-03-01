@@ -1,0 +1,240 @@
+/* Avatar Settings Styles */
+
+.settings {
+  padding: 24px;
+  max-width: 600px;
+}
+
+.settings h2 {
+  margin: 0 0 24px 0;
+  font-size: 24px;
+  color: #333;
+}
+
+.section {
+  margin-bottom: 32px;
+}
+
+.section h3 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #555;
+}
+
+/* Adapter Selection */
+
+.adapterGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.adapterCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.adapterCard:hover {
+  border-color: #667eea;
+}
+
+.adapterCard.selected {
+  border-color: #667eea;
+  background: #f0f4ff;
+}
+
+.adapterPreview {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.adapterInfo {
+  text-align: center;
+}
+
+.adapterInfo strong {
+  display: block;
+  font-size: 14px;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.adapterInfo p {
+  margin: 0;
+  font-size: 12px;
+  color: #666;
+}
+
+/* Mood Selector */
+
+.moodSelector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.moodBtn {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  border-radius: 20px;
+  background: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: capitalize;
+}
+
+.moodBtn:hover {
+  border-color: #667eea;
+  background: #f5f5f5;
+}
+
+.moodBtn.active {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+/* Checkboxes */
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  cursor: pointer;
+  font-size: 14px;
+  color: #333;
+}
+
+.checkbox input {
+  width: 20px;
+  height: 20px;
+  accent-color: #667eea;
+}
+
+/* Slider */
+
+.slider {
+  width: 100%;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #e0e0e0;
+  border-radius: 3px;
+  outline: none;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  background: #667eea;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  background: #667eea;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
+
+.sliderLabels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #999;
+}
+
+/* Live Preview */
+
+.livePreview {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 24px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.previewAvatar {
+  flex-shrink: 0;
+}
+
+.previewInfo p {
+  margin: 4px 0;
+  font-size: 14px;
+  color: #555;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .settings h2 {
+    color: #fff;
+  }
+
+  .section h3 {
+    color: #999;
+  }
+
+  .adapterCard {
+    background: #252525;
+    border-color: #444;
+  }
+
+  .adapterCard.selected {
+    background: #1e3a5f;
+  }
+
+  .adapterInfo strong {
+    color: #fff;
+  }
+
+  .adapterInfo p {
+    color: #999;
+  }
+
+  .moodBtn {
+    background: #252525;
+    border-color: #444;
+    color: #fff;
+  }
+
+  .moodBtn:hover {
+    background: #333;
+  }
+
+  .checkbox {
+    color: #fff;
+  }
+
+  .slider {
+    background: #444;
+  }
+
+  .livePreview {
+    background: #252525;
+  }
+
+  .previewInfo p {
+    color: #999;
+  }
+}

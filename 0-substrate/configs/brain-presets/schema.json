@@ -1,0 +1,77 @@
+{
+  "$schema": "https://raw.githubusercontent.com/a2rchitech/brain-presets/main/schema.json",
+  "title": "Brain Runtime Preset",
+  "type": "object",
+  "required": ["id", "name", "vendor", "type", "logo_asset", "install", "verify", "launch", "event_mode"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for the runtime"
+    },
+    "name": {
+      "type": "string",
+      "description": "Display name"
+    },
+    "vendor": {
+      "type": "string",
+      "description": "Vendor/organization name"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["api", "cli", "local"],
+      "description": "Runtime type"
+    },
+    "logo_asset": {
+      "type": "string",
+      "description": "SVG filename in runtime-logos/"
+    },
+    "description": {
+      "type": "string",
+      "description": "Short description"
+    },
+    "install": {
+      "type": "object",
+      "properties": {
+        "darwin": { "type": "string" },
+        "linux": { "type": "string" },
+        "windows": { "type": "string" }
+      }
+    },
+    "verify": {
+      "type": "object",
+      "required": ["command"],
+      "properties": {
+        "command": { "type": "string" },
+        "args": { "type": "array", "items": { "type": "string" } },
+        "expected_output": { "type": "string" }
+      }
+    },
+    "auth": {
+      "type": "object",
+      "properties": {
+        "required": { "type": "boolean" },
+        "instructions": { "type": "string" },
+        "detection_regex": { "type": "string" },
+        "auth_command": { "type": "string" }
+      }
+    },
+    "launch": {
+      "type": "object",
+      "required": ["command"],
+      "properties": {
+        "command": { "type": "string" },
+        "args": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "event_mode": {
+      "type": "string",
+      "enum": ["acp", "jsonl", "terminal"],
+      "description": "Event streaming mode: ACP protocol, JSON-lines, or terminal-only"
+    },
+    "capabilities": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Capabilities like ['code', 'terminal', 'files', 'chat', 'vision']"
+    }
+  }
+}

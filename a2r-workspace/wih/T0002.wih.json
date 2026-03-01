@@ -1,0 +1,134 @@
+{
+  "wih_version": "v0.1",
+  "task_id": "T0002",
+  "graph_id": "graph-0001",
+  "title": "Add WIH schema validation at dispatch + pretool",
+  "state": "PLANNED",
+  "blocked_by": [
+    "T0000"
+  ],
+  "external_refs": {
+    "claude_task_id": "",
+    "issue_id": "",
+    "pr_id": ""
+  },
+  "preset": {
+    "preset_id": "preset-core-dev",
+    "preset_hash": "TBD"
+  },
+  "resume_cursor": {
+    "last_run_id": "",
+    "next_step": "",
+    "pending_checks": []
+  },
+  "outputs": {
+    "required_artifacts": [
+      "wih-validation"
+    ],
+    "artifact_paths": [
+      "/.a2r/artifacts/T0002/"
+    ]
+  },
+  "write_scope": {
+    "root": "/.a2r/",
+    "allowed_globs": [
+      "/.a2r/**"
+    ]
+  },
+  "tools": {
+    "allowlist": [
+      "fs.read",
+      "fs.write"
+    ],
+    "pretooluse_hooks": [
+      "WIH_VALID",
+      "DEPS_SATISFIED",
+      "PATH_GUARDS",
+      "TOOL_REGISTRY"
+    ]
+  },
+  "memory": {
+    "packs": [
+      {
+        "pack_id": "law",
+        "layers": [
+          "law"
+        ],
+        "access": "read"
+      }
+    ]
+  },
+  "acceptance": {
+    "checks": [
+      "AT-WIH-0001",
+      "AT-WIH-0002"
+    ]
+  },
+  "beads": {
+    "wih_version": "v0.1",
+    "task_id": "T0002",
+    "graph_id": "graph-0001",
+    "title": "Add WIH schema validation at dispatch + pretool",
+    "state": "PLANNED",
+    "blocked_by": [
+      "T0000"
+    ],
+    "external_refs": {
+      "claude_task_id": "",
+      "issue_id": "",
+      "pr_id": ""
+    },
+    "preset": {
+      "preset_id": "preset-core-dev",
+      "preset_hash": "TBD"
+    },
+    "resume_cursor": {
+      "last_run_id": "",
+      "next_step": "",
+      "pending_checks": []
+    },
+    "outputs": {
+      "required_artifacts": [
+        "wih-validation"
+      ],
+      "artifact_paths": [
+        "/.a2r/artifacts/T0002/"
+      ]
+    },
+    "write_scope": {
+      "root": "/.a2r/",
+      "allowed_globs": [
+        "/.a2r/**"
+      ]
+    },
+    "tools": {
+      "allowlist": [
+        "fs.read",
+        "fs.write"
+      ],
+      "pretooluse_hooks": [
+        "WIH_VALID",
+        "DEPS_SATISFIED",
+        "PATH_GUARDS",
+        "TOOL_REGISTRY"
+      ]
+    },
+    "memory": {
+      "packs": [
+        {
+          "pack_id": "law",
+          "layers": [
+            "law"
+          ],
+          "access": "read"
+        }
+      ]
+    },
+    "acceptance": {
+      "checks": [
+        "AT-WIH-0001",
+        "AT-WIH-0002"
+      ]
+    }
+  }
+}

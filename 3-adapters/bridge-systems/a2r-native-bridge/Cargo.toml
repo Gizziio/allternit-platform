@@ -1,0 +1,20 @@
+[package]
+name = "a2r-native-bridge"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+napi = { version = "2.12", features = ["async", "serde-json"] }
+napi-derive = "2.12"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+a2r-governor = { path = "../../../2-governance/governance-workflows/rust-governor" }
+a2r-substrate = { path = "../../../0-substrate/a2r-substrate" }
+
+[build-dependencies]
+napi-build = "2.0"

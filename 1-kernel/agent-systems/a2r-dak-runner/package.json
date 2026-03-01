@@ -1,0 +1,40 @@
+{
+  "name": "@a2r/dak-runner",
+  "version": "1.0.0",
+  "description": "Deterministic Agent Kernel (DAK) - Execution runtime for A2R",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "lint": "eslint src/**/*.ts",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "axios": "^1.13.5",
+    "crypto": "^1.0.1",
+    "events": "^3.3.0",
+    "js-yaml": "^4.1.0",
+    "uuid": "^9.0.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.19.33",
+    "@types/uuid": "^9.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "jest": "^29.0.0",
+    "ts-jest": "^29.0.0",
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "a2r",
+    "agent-runner",
+    "dak",
+    "deterministic",
+    "orchestration"
+  ],
+  "license": "MIT"
+}

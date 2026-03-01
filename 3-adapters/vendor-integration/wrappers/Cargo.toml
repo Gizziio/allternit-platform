@@ -1,0 +1,11 @@
+[package]
+name = "a2r-vendor-wrappers"
+version = "0.1.0"
+edition = "2021"
+description = "A2R Vendor Wrappers - Unified interface for vendor library integration"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }

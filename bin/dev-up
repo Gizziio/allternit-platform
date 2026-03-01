@@ -1,0 +1,57 @@
+#!/bin/bash
+set -e
+
+# Detect Workspace Directory
+WORKING_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+LAUNCH_AGENTS_DIR="$HOME/Library/LaunchAgents"
+LOGS_DIR="$WORKING_DIR/.logs"
+
+# Ensure logs directory exists
+mkdir -p "$LOGS_DIR"
+
+echo "NGINX gateway disabled (removed)"
+echo "Working Dir: $WORKING_DIR"
+
+# Function to process and install plist
+install_plist() {
+    local template="$1"
+    local name=$(basename "$template" .plist.template)
+    local target="$LAUNCH_AGENTS_DIR/$name.plist"
+
+    # Make sure we use absolute path for template
+    local full_template_path="$WORKING_DIR/$template"
+
+    if [ ! -f "$full_template_path" ]; then
+        echo "Error: Template not found at $full_template_path"
+        return 1
+    fi
+
+    echo "Installing $name..."
+    sed -e "s|{{WORKING_DIR}}|$WORKING_DIR|g" \
+        "$full_template_path" > "$target"
+    
+    # Unload if running, then load
+    launchctl unload "$target" 2>/dev/null || true
+    launchctl load "$target"
+}
+
+# Build Monolith Kernel
+echo "Building monolith kernel..."
+cd "$WORKING_DIR/4-services/orchestration/kernel-service"
+cargo build --release
+
+# Install and Load LaunchAgents
+cd "$WORKING_DIR"
+./bin/dev-down 2>/dev/null || true
+
+install_plist "launchd/com.a2rchitech.intent-graph-kernel.plist.template"
+install_plist "launchd/com.a2rchitech.capsule-runtime.plist.template"
+install_plist "launchd/com.a2rchitech.presentation-kernel.plist.template"
+install_plist "launchd/com.a2rchitech.kernel.plist.template"
+install_plist "launchd/com.a2rchitech.shell.plist.template"
+install_plist "launchd/com.a2rchitech.ui-tars-operator.plist.template"
+install_plist "launchd/com.a2rchitech.agui-gateway.plist.template"
+
+echo "All services started via launchd."
+echo "Gateway listening on http://localhost:3000"
+echo "Logs are in $LOGS_DIR"

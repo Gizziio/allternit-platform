@@ -1,0 +1,19 @@
+{
+  "name": "@a2r/agent-characterization",
+  "version": "1.0.0",
+  "description": "Agent Characterization Framework - Operational metrics and behavioral profiles",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": ["a2r", "agent", "characterization", "metrics"],
+  "license": "MIT"
+}

@@ -1,0 +1,41 @@
+/**
+ * Test script to verify the SkillRegistryBridge works with the Rust binary
+ */
+
+import { SkillRegistryBridge } from './skill_registry_bridge';
+
+async function testBridge() {
+  console.log('Testing SkillRegistryBridge...');
+  
+  const bridge = new SkillRegistryBridge({
+    openclawPath: '../../../3-adapters/vendor/openclaw', // Adjust path for relative location
+    binaryPath: '../../../../target/debug/skill-registry-bridge'
+  });
+  
+  try {
+    console.log('Listing skills...');
+    const skills = await bridge.listSkills();
+    console.log(`Found ${skills.length} skills:`);
+    
+    // Print first 5 skills as sample
+    skills.slice(0, 5).forEach((skill, index) => {
+      console.log(`${index + 1}. ${skill.id} - ${skill.description} (available: ${skill.available})`);
+    });
+    
+    if (skills.length > 0) {
+      console.log('\nTesting getSkill with first skill...');
+      const firstSkill = skills[0];
+      const retrievedSkill = await bridge.getSkill(firstSkill.id);
+      console.log(`Retrieved skill: ${retrievedSkill?.name} - ${retrievedSkill?.description}`);
+      
+      console.log('\nTesting isSkillAvailable...');
+      const isAvailable = await bridge.isSkillAvailable(firstSkill.id);
+      console.log(`Skill ${firstSkill.id} is available: ${isAvailable}`);
+    }
+  } catch (error) {
+    console.error('Error testing bridge:', error);
+  }
+}
+
+// Run the test
+testBridge();

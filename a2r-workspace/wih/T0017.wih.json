@@ -1,0 +1,136 @@
+{
+  "wih_version": "v0.1",
+  "task_id": "T0017",
+  "graph_id": "graph-0001",
+  "title": "Disable python exec / gate python-gateway behind ToolGateway",
+  "state": "PLANNED",
+  "blocked_by": [
+    "T0000"
+  ],
+  "external_refs": {
+    "claude_task_id": "",
+    "issue_id": "",
+    "pr_id": ""
+  },
+  "preset": {
+    "preset_id": "preset-core-dev",
+    "preset_hash": "TBD"
+  },
+  "resume_cursor": {
+    "last_run_id": "",
+    "next_step": "",
+    "pending_checks": []
+  },
+  "outputs": {
+    "required_artifacts": [
+      "python-exec-removed"
+    ],
+    "artifact_paths": [
+      "/.a2r/artifacts/T0017/"
+    ]
+  },
+  "write_scope": {
+    "root": "/.a2r/",
+    "allowed_globs": [
+      "/services/python-gateway/main.py",
+      "/.a2r/artifacts/T0017/**"
+    ]
+  },
+  "tools": {
+    "allowlist": [
+      "fs.read",
+      "fs.write",
+      "rg.search"
+    ],
+    "pretooluse_hooks": [
+      "WIH_VALID",
+      "DEPS_SATISFIED",
+      "PATH_GUARDS",
+      "TOOL_REGISTRY"
+    ]
+  },
+  "memory": {
+    "packs": [
+      {
+        "pack_id": "law",
+        "layers": [
+          "law"
+        ],
+        "access": "readwrite"
+      }
+    ]
+  },
+  "acceptance": {
+    "checks": [
+      "AT-SEC-0002"
+    ]
+  },
+  "beads": {
+    "wih_version": "v0.1",
+    "task_id": "T0017",
+    "graph_id": "graph-0001",
+    "title": "Disable python exec / gate python-gateway behind ToolGateway",
+    "state": "PLANNED",
+    "blocked_by": [
+      "T0000"
+    ],
+    "external_refs": {
+      "claude_task_id": "",
+      "issue_id": "",
+      "pr_id": ""
+    },
+    "preset": {
+      "preset_id": "preset-core-dev",
+      "preset_hash": "TBD"
+    },
+    "resume_cursor": {
+      "last_run_id": "",
+      "next_step": "",
+      "pending_checks": []
+    },
+    "outputs": {
+      "required_artifacts": [
+        "python-exec-removed"
+      ],
+      "artifact_paths": [
+        "/.a2r/artifacts/T0017/"
+      ]
+    },
+    "write_scope": {
+      "root": "/.a2r/",
+      "allowed_globs": [
+        "/services/python-gateway/main.py",
+        "/.a2r/artifacts/T0017/**"
+      ]
+    },
+    "tools": {
+      "allowlist": [
+        "fs.read",
+        "fs.write",
+        "rg.search"
+      ],
+      "pretooluse_hooks": [
+        "WIH_VALID",
+        "DEPS_SATISFIED",
+        "PATH_GUARDS",
+        "TOOL_REGISTRY"
+      ]
+    },
+    "memory": {
+      "packs": [
+        {
+          "pack_id": "law",
+          "layers": [
+            "law"
+          ],
+          "access": "readwrite"
+        }
+      ]
+    },
+    "acceptance": {
+      "checks": [
+        "AT-SEC-0002"
+      ]
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "receipt_id": "agent-exec-4bcc7dd6-8f36-4599-a2cc-63ab45f89175",
+  "created_at": "2026-01-28T15:37:01.923766+00:00",
+  "run_id": "ea27ca34-8330-4829-b0ab-e0dc3a7b801a",
+  "graph_id": "graph-0001",
+  "agent_profile_id": "kernel-default",
+  "status": "INSTALLED",
+  "run_state_path": "//Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/.a2r/run_state/ea27ca34-8330-4829-b0ab-e0dc3a7b801a.json",
+  "receipts_dir": "//Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/.a2r/receipts/ea27ca34-8330-4829-b0ab-e0dc3a7b801a",
+  "artifacts_dir": "//Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/.a2r/artifacts/ea27ca34-8330-4829-b0ab-e0dc3a7b801a",
+  "node_receipts": [],
+  "tool_receipts": [],
+  "subprocess_receipts": []
+}

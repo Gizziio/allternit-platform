@@ -1,0 +1,33 @@
+[package]
+name = "a2rchitech-workflows"
+version = "0.1.0"
+edition = "2021"
+description = "A2rchitech workflow engine with DAG execution and scientific loop"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+tokio = { version = "1.0", features = ["full"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+thiserror = "1.0"
+anyhow = "1.0"
+tracing = "0.1"
+schemars = { version = "0.8", features = ["derive"] }
+sha2 = "0.10"
+a2rchitech-history = { workspace = true }
+a2rchitech-messaging = { workspace = true }
+a2rchitech-policy = { workspace = true }
+a2rchitech-tools-gateway = { workspace = true }
+a2rchitech-skills = { workspace = true }
+a2rchitech-kernel-contracts = { workspace = true }
+async-trait = "0.1"
+futures = "0.3"
+petgraph = "0.6"
+a2r-driver-interface = { path = "../../../infrastructure/a2r-driver-interface" }
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid"] }
+
+[dev-dependencies]
+tempfile = "3.0"
+ring = "0.17"
+data-encoding = "2.0"

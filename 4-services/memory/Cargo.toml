@@ -1,0 +1,26 @@
+[package]
+name = "a2rchitech-simple-memory"
+version = "0.1.0"
+edition = "2021"
+description = "Simple memory service for the A2rchitech platform"
+license = "MIT"
+
+[dependencies]
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+a2rchitech-memory = { workspace = true }
+a2rchitech-sdk-core = { workspace = true }
+a2rchitech-sdk-functions = { workspace = true }
+a2rchitech-sdk-policy = { workspace = true }
+a2rchitech-sdk-transport = { workspace = true }
+axum = { version = "0.7", features = ["macros"] }
+tower = { version = "0.5", features = ["util"] }
+tower-http = { workspace = true }
+uuid = { workspace = true, features = ["v4", "serde"] }
+sqlx = { workspace = true }
+a2rchitech-memory-provider = { path = "../../1-kernel/data/a2r-memory-provider", features = [] }
+async-trait = { workspace = true }

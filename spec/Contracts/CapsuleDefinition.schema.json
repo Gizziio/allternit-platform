@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://a2rchitech.local/spec/contracts/CapsuleDefinition.schema.json",
+  "title": "Capsule Definition",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "capsule_id",
+    "version",
+    "name",
+    "kind",
+    "entrypoint",
+    "permissions"
+  ],
+  "properties": {
+    "capsule_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-.]{2,64}$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^v\\\\d+\\\\.\\\\d+\\\\.\\\\d+$"
+    },
+    "name": { "type": "string" },
+    "description": { "type": "string" },
+    "kind": {
+      "type": "string",
+      "enum": ["mcp_stdio", "mcp_sse", "browser", "native_capsule"]
+    },
+    "entrypoint": {
+      "type": "string",
+      "description": "Command definition or URL"
+    },
+    "permissions": {
+      "$ref": "CapsulePermission.schema.json"
+    }
+  }
+}

@@ -1,0 +1,169 @@
+---
+prompt_id: "a2r.pack.evidence.trace_summarize"
+version: "v1"
+description: "Summarize execution trace for human review and replay"
+model: "any"
+anchors: "input | workflow | output"
+allowed_tools: ["receipt.read", "receipt.list", "trace.render", "receipt.emit"]
+execution_permission_mode: "read_only"
+hooks_required: ["TraceSummarized"]
+outputs: ["trace_summary.json", "execution_graph.svg"]
+---
+
+# Evidence: Trace Summarize
+
+**Task**: Summarize execution trace from receipts for review and replay
+**Role**: historian
+**Stop condition**: Trace summary generated with replay capability
+
+## Variables
+- {{session_id}}: Session to summarize
+- {{dag_id}}: DAG execution to trace
+- {{receipt_filter}}: Optional filter (tool_type, time_range, etc.)
+- {{summary_depth}}: brief|standard|detailed|forensic
+- {{include_outputs}}: Include tool outputs (boolean)
+- {{output_format}}: json|markdown|html|graph
+
+## Instructions
+- IMPORTANT: Summary must enable full replay
+- DO NOT: Omit any tool invocations
+- CRITICAL: Maintain causal ordering
+- Graph shows control flow and data dependencies
+
+## Workflow
+
+### STEP 1: Receipt Collection
+- List: All receipts for {{session_id}} or {{dag_id}}
+- Filter: By {{receipt_filter}} if provided
+- Sort: By timestamp (causal order)
+- Verify: No gaps in sequence
+
+### STEP 2: Timeline Construction
+- Build: Chronological timeline
+- Group: Related receipts (same node, same transaction)
+- Identify: Branches (parallel execution)
+- Mark: Decision points and gates
+
+### STEP 3: Execution Analysis
+- Calculate: Duration by phase
+- Count: Tool invocations by type
+- Identify: Errors and recoveries
+- Flag: Anomalies or deviations
+
+### STEP 4: Dependency Graph
+- Extract: Data flow between receipts
+- Build: Dependency graph
+- Render: As execution_graph.svg
+- Highlight: Critical path
+
+### STEP 5: Summary Generation
+- Create: trace_summary.json with:
+  - metadata (session, duration, agent)
+  - timeline (ordered events)
+  - statistics (counts, durations)
+  - outcomes (success/failure by task)
+  - key_decisions (gate outcomes)
+  - artifacts_produced
+  - replay_instructions
+
+### STEP 6: Output
+- Write: trace_summary.json
+- Render: execution_graph.svg
+- Emit: TraceSummarized hook
+
+## Report
+```yaml
+report:
+  status: COMPLETE|PARTIAL|FAILED
+  summary: "Trace summarized: {{event_count}} events, {{duration}}"
+  session:
+    session_id: <uuid>
+    dag_id: <uuid>
+    agent_id: <uuid>
+    started_at: <timestamp>
+    completed_at: <timestamp>
+    duration_seconds: <number>
+  timeline:
+    event_count: <number>
+    phases:
+      - name: <phase_name>
+        started_at: <timestamp>
+        duration_seconds: <number>
+        events: <number>
+  events:
+    - sequence: <number>
+      timestamp: <iso8601>
+      type: tool_invoke|gate_check|decision|spawn|completion
+      receipt_id: <uuid>
+      node_id: <string>
+      description: <summary>
+      duration_ms: <number>
+      status: success|failure|blocked
+  statistics:
+    tools_invoked:
+      total: <number>
+      by_tool:
+        <tool_name>: <count>
+    gates_checked:
+      total: <number>
+      passed: <number>
+      failed: <number>
+    receipts_emitted: <number>
+    errors_encountered: <number>
+    recoveries_attempted: <number>
+  outcomes:
+    overall: success|partial|failure
+    completed_nodes: <number>
+    failed_nodes: <number>
+    blocked_nodes: <number>
+  artifacts_produced:
+    - type: <kind>
+      path: <location>
+      receipt: <ref>
+  replay:
+    can_replay: <boolean>
+    replay_id: <uuid>
+    required_context: <list>
+  artifacts:
+    - path: "trace_summary.json"
+      kind: "trace_summary"
+    - path: "execution_graph.svg"
+      kind: "visualization"
+```
+
+## Examples
+
+### Example 1: Successful Session
+```yaml
+input:
+  session_id: "sess-abc123"
+  summary_depth: standard
+  output_format: json
+output:
+  status: COMPLETE
+  event_count: 45
+  duration_seconds: 360
+  overall: success
+  receipts_emitted: 45
+```
+
+### Example 2: Forensic Analysis
+```yaml
+input:
+  dag_id: "dag-xyz789"
+  summary_depth: forensic
+  output_format: html
+output:
+  status: COMPLETE
+  event_count: 127
+  duration_seconds: 1200
+  overall: partial
+  errors_encountered: 3
+  replay:
+    can_replay: true
+    replay_id: "replay-456"
+```
+
+## References
+- Trace Format: agent/spec/trace.format.md
+- Replay Protocol: agent/spec/replay.protocol.md

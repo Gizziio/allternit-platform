@@ -1,0 +1,62 @@
+{
+  "name": "@a2r/browser",
+  "version": "0.1.0",
+  "description": "A2R Browser Automation and Canvas Hosting",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "demo.ts"
+  ],
+  "bin": {
+    "a2r-browser-demo": "./demo.ts"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "demo": "tsx demo.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src/**/*.ts",
+    "typecheck": "tsc --noEmit",
+    "start:browser": "tsx -e \"import { startBrowserServer } from './src/index.js'; startBrowserServer({ config: { enabled: true, controlPort: 9222, headless: false, noSandbox: false, attachOnly: false, profiles: { default: { name: 'default', cdpPort: 9222, cdpUrl: 'http://127.0.0.1:9222' } } } }); console.log('Browser server on http://127.0.0.1:9222')\"",
+    "start:canvas": "tsx -e \"import { startCanvasHost } from './src/index.js'; startCanvasHost({ port: 8080, liveReload: true }).then(h => console.log('Canvas host on http://localhost:8080'));\""
+  },
+  "dependencies": {
+    "chokidar": "^3.5.3",
+    "express": "^4.18.2",
+    "playwright": "^1.40.0",
+    "sharp": "^0.34.5",
+    "ws": "^8.14.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.9.0",
+    "@types/ws": "^8.5.8",
+    "@vitest/coverage-v8": "^1.0.0",
+    "tsx": "^4.6.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "a2r",
+    "browser",
+    "automation",
+    "cdp",
+    "playwright",
+    "canvas",
+    "a2ui"
+  ],
+  "license": "MIT"
+}

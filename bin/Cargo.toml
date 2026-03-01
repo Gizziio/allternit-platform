@@ -1,0 +1,11 @@
+[package]
+name = "a2rchitech-platform"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "a2rchitech-platform"
+path = "platform_orchestrator.rs"
+
+[dependencies]
+ctrlc = { version = "3.4", features = ["termination"] }

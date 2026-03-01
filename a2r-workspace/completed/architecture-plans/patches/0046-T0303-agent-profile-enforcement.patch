@@ -1,0 +1,373 @@
+diff --git a/services/kernel/src/taskgraph.rs b/services/kernel/src/taskgraph.rs
+index ddb407a..1d5d947 100644
+--- a/services/kernel/src/taskgraph.rs
++++ b/services/kernel/src/taskgraph.rs
+@@ -9,6 +9,8 @@ use uuid::Uuid;
+ const GRAPH_DIR: &str = ".a2r/graphs";
+ const RUN_STATE_DIR: &str = ".a2r/run_state";
+ const RECEIPTS_DIR: &str = ".a2r/receipts";
++const ARTIFACTS_DIR: &str = ".a2r/artifacts";
++const AGENT_PROFILES_PATH: &str = "agent/agent_profiles.json";
+ 
+ const BEADS_KEYS: [&str; 8] = [
+     "wih_version",
+@@ -117,7 +119,43 @@ fn validate_wih_node(node: &GraphNode, wih: &Value, graph_id: &str) -> Result<()
+     Ok(())
+ }
+ 
++fn load_agent_profiles() -> Result<HashSet<String>, String> {
++    let data = fs::read_to_string(AGENT_PROFILES_PATH)
++        .map_err(|e| format!("Agent profiles not found: {} ({})", AGENT_PROFILES_PATH, e))?;
++    let json: Value = serde_json::from_str(&data)
++        .map_err(|e| format!("Failed to parse agent profiles: {}", e))?;
++    let profiles = json
++        .get("profiles")
++        .and_then(|v| v.as_array())
++        .ok_or_else(|| "Agent profiles missing profiles array".to_string())?;
++    let mut ids = HashSet::new();
++    for profile in profiles {
++        let id = profile
++            .get("id")
++            .and_then(|v| v.as_str())
++            .ok_or_else(|| "Agent profile missing id".to_string())?;
++        ids.insert(id.to_string());
++    }
++    if ids.is_empty() {
++        return Err("Agent profiles list is empty".to_string());
++    }
++    Ok(ids)
++}
++
++fn require_agent_profile(agent_profile_id: &str) -> Result<(), String> {
++    let profiles = load_agent_profiles()?;
++    if !profiles.contains(agent_profile_id) {
++        return Err(format!("Unknown agent profile: {}", agent_profile_id));
++    }
++    Ok(())
++}
++
+ pub fn install_run(graph_id: &str) -> Result<Value, String> {
++    install_run_with_profile(graph_id, "kernel-default")
++}
++
++pub fn install_run_with_profile(graph_id: &str, agent_profile_id: &str) -> Result<Value, String> {
++    require_agent_profile(agent_profile_id)?;
+     let graph = load_graph(graph_id)?;
+     if graph.nodes.is_empty() {
+         return Err(format!("Graph has no nodes: {}", graph_id));
+@@ -171,6 +209,14 @@ pub fn install_run(graph_id: &str) -> Result<Value, String> {
+     fs::write(&run_path, serde_json::to_string_pretty(&run_state).map_err(|e| e.to_string())?)
+         .map_err(|e| format!("Failed to write run_state: {}", e))?;
+ 
++    write_agent_execution_receipt(
++        &run_id,
++        graph_id,
++        agent_profile_id,
++        "INSTALLED",
++        &run_path,
++    )?;
++
+     Ok(json!({
+         "run_id": run_id,
+         "graph_id": graph_id,
+@@ -179,6 +225,11 @@ pub fn install_run(graph_id: &str) -> Result<Value, String> {
+ }
+ 
+ pub fn resume_run(run_id: &str) -> Result<Value, String> {
++    resume_run_with_profile(run_id, "kernel-default")
++}
++
++pub fn resume_run_with_profile(run_id: &str, agent_profile_id: &str) -> Result<Value, String> {
++    require_agent_profile(agent_profile_id)?;
+     let run_path = Path::new(RUN_STATE_DIR).join(format!("{}.json", run_id));
+     if !run_path.exists() {
+         return Err(format!("Run state not found: {}", run_path.display()));
+@@ -313,9 +364,54 @@ pub fn resume_run(run_id: &str) -> Result<Value, String> {
+     fs::write(&run_path, serde_json::to_string_pretty(&run_state).map_err(|e| e.to_string())?)
+         .map_err(|e| format!("Failed to write run_state: {}", e))?;
+ 
++    write_agent_execution_receipt(
++        run_id,
++        &graph_id,
++        agent_profile_id,
++        "RESUMED",
++        &run_path,
++    )?;
++
+     Ok(json!({
+         "run_id": run_id,
+         "graph_id": graph_id,
+         "next_nodes": runnable_sorted
+     }))
+ }
++
++fn write_agent_execution_receipt(
++    run_id: &str,
++    graph_id: &str,
++    agent_profile_id: &str,
++    status: &str,
++    run_state_path: &Path,
++) -> Result<String, String> {
++    let receipt_id = format!("agent-exec-{}", Uuid::new_v4());
++    let created_at = Utc::now().to_rfc3339();
++    let receipts_dir = Path::new(RECEIPTS_DIR).join(run_id);
++    fs::create_dir_all(&receipts_dir)
++        .map_err(|e| format!("Failed to create receipts dir: {}", e))?;
++
++    let receipt = json!({
++        "receipt_id": receipt_id,
++        "created_at": created_at,
++        "run_id": run_id,
++        "graph_id": graph_id,
++        "agent_profile_id": agent_profile_id,
++        "status": status,
++        "run_state_path": format!("/{}", run_state_path.display()),
++        "receipts_dir": format!("/{}/{}", RECEIPTS_DIR, run_id),
++        "artifacts_dir": format!("/{}/{}", ARTIFACTS_DIR, run_id),
++        "node_receipts": [],
++        "tool_receipts": [],
++        "subprocess_receipts": []
++    });
++
++    let receipt_path = receipts_dir.join(format!("{}.json", receipt_id));
++    fs::write(
++        &receipt_path,
++        serde_json::to_string_pretty(&receipt).map_err(|e| e.to_string())?,
++    )
++    .map_err(|e| format!("Failed to write agent execution receipt: {}", e))?;
++    Ok(receipt_id)
++}
+
+diff --git a/scripts/taskgraph.py b/scripts/taskgraph.py
+index a79453d..088b2c6 100755
+--- a/scripts/taskgraph.py
++++ b/scripts/taskgraph.py
+@@ -11,6 +11,7 @@ GRAPH_DIR = ROOT / ".a2r" / "graphs"
+ WIH_DIR = ROOT / ".a2r" / "wih"
+ RUN_STATE_DIR = ROOT / ".a2r" / "run_state"
+ RECEIPTS_DIR = ROOT / ".a2r" / "receipts"
++ARTIFACTS_DIR = ROOT / ".a2r" / "artifacts"
+ 
+ BEADS_KEYS = [
+     "wih_version",
+@@ -23,6 +24,8 @@ BEADS_KEYS = [
+     "acceptance",
+ ]
+ 
++AGENT_PROFILES_PATH = ROOT / "agent" / "agent_profiles.json"
++
+ NODE_STATUS_PENDING = "PENDING"
+ NODE_STATUS_BLOCKED = "BLOCKED"
+ NODE_STATUS_RUNNING = "RUNNING"
+@@ -61,6 +64,26 @@ def load_wih(wih_path: str) -> dict:
+     return load_json(path)
+ 
+ 
++def load_agent_profiles() -> set[str]:
++    profiles = load_json(AGENT_PROFILES_PATH)
++    items = profiles.get("profiles", [])
++    if not items:
++        fail("Agent profiles list is empty")
++    ids = set()
++    for profile in items:
++        pid = profile.get("id")
++        if not pid:
++            fail("Agent profile missing id")
++        ids.add(pid)
++    return ids
++
++
++def require_agent_profile(agent_profile_id: str) -> None:
++    profiles = load_agent_profiles()
++    if agent_profile_id not in profiles:
++        fail(f"Unknown agent profile: {agent_profile_id}")
++
++
+ def validate_wih_node(node: dict, wih: dict, graph_id: str) -> None:
+     if wih.get("task_id") != node.get("task_id"):
+         fail(f"WIH task_id mismatch for {node.get('task_id')}")
+@@ -81,7 +104,8 @@ def validate_wih_node(node: dict, wih: dict, graph_id: str) -> None:
+             fail(f"Beads.{key} mismatch for {node.get('task_id')}")
+ 
+ 
+-def install_run(graph_id: str) -> dict:
++def install_run(graph_id: str, agent_profile_id: str) -> dict:
++    require_agent_profile(agent_profile_id)
+     graph = load_graph(graph_id)
+     nodes = graph.get("nodes", [])
+     if not nodes:
+@@ -124,6 +148,13 @@ def install_run(graph_id: str) -> dict:
+     RUN_STATE_DIR.mkdir(parents=True, exist_ok=True)
+     run_path = RUN_STATE_DIR / f"{run_id}.json"
+     run_path.write_text(json.dumps(run_state, indent=2))
++    write_agent_execution_receipt(
++        run_id,
++        graph_id,
++        agent_profile_id,
++        "INSTALLED",
++        run_path,
++    )
+ 
+     return {
+         "run_id": run_id,
+@@ -132,7 +163,8 @@ def install_run(graph_id: str) -> dict:
+     }
+ 
+ 
+-def resume_run(run_id: str) -> dict:
++def resume_run(run_id: str, agent_profile_id: str) -> dict:
++    require_agent_profile(agent_profile_id)
+     run_path = RUN_STATE_DIR / f"{run_id}.json"
+     if not run_path.exists():
+         fail(f"Run state not found: {run_path}")
+@@ -205,6 +237,13 @@ def resume_run(run_id: str) -> dict:
+     }
+ 
+     run_path.write_text(json.dumps(run_state, indent=2))
++    write_agent_execution_receipt(
++        run_id,
++        graph_id,
++        agent_profile_id,
++        "RESUMED",
++        run_path,
++    )
+ 
+     return {
+         "run_id": run_id,
+@@ -213,25 +252,55 @@ def resume_run(run_id: str) -> dict:
+     }
+ 
+ 
++def write_agent_execution_receipt(
++    run_id: str,
++    graph_id: str,
++    agent_profile_id: str,
++    status: str,
++    run_path: Path,
++) -> None:
++    receipt_id = f"agent-exec-{uuid.uuid4()}"
++    created_at = datetime.now(timezone.utc).isoformat()
++    receipts_dir = RECEIPTS_DIR / run_id
++    receipts_dir.mkdir(parents=True, exist_ok=True)
++    receipt = {
++        "receipt_id": receipt_id,
++        "created_at": created_at,
++        "run_id": run_id,
++        "graph_id": graph_id,
++        "agent_profile_id": agent_profile_id,
++        "status": status,
++        "run_state_path": f"/{run_path.as_posix()}",
++        "receipts_dir": f"/{receipts_dir.as_posix()}",
++        "artifacts_dir": f"/{(ARTIFACTS_DIR / run_id).as_posix()}",
++        "node_receipts": [],
++        "tool_receipts": [],
++        "subprocess_receipts": [],
++    }
++    (receipts_dir / f"{receipt_id}.json").write_text(json.dumps(receipt, indent=2))
++
++
+ def main() -> None:
+     parser = argparse.ArgumentParser(description="A2R task graph runner")
+     sub = parser.add_subparsers(dest="command", required=True)
+ 
+     install_parser = sub.add_parser("install", help="Create run_state for a graph")
+     install_parser.add_argument("graph_id")
++    install_parser.add_argument("--agent-profile", default="kernel-default")
+ 
+     resume_parser = sub.add_parser("resume", help="Resume a run")
+     resume_parser.add_argument("run_id")
++    resume_parser.add_argument("--agent-profile", default="kernel-default")
+ 
+     args = parser.parse_args()
+ 
+     if args.command == "install":
+-        result = install_run(args.graph_id)
++        result = install_run(args.graph_id, args.agent_profile)
+         print(json.dumps(result, indent=2))
+         return
+ 
+     if args.command == "resume":
+-        result = resume_run(args.run_id)
++        result = resume_run(args.run_id, args.agent_profile)
+         print(json.dumps(result, indent=2))
+         return
+ 
+
+
+diff --git a/spec/AcceptanceTests.md b/spec/AcceptanceTests.md
+index 7db6bb7..d727fd4 100644
+--- a/spec/AcceptanceTests.md
++++ b/spec/AcceptanceTests.md
+@@ -55,6 +55,14 @@ These acceptance tests are platform-level gates. Every major change must referen
+ - **AT-PROC-0003**: Allowlisted worker execution emits a subprocess receipt under `/.a2r/receipts/<run_id>/`.
+ - **AT-PROC-0004**: Subprocess receipts include worker_id, argv, cwd, env_allowlist, exit_code, stdout/stderr hashes, and previews.
+ 
++## AT-EXEC — Agent execution contract
++
++- **AT-EXEC-0001**: Execution without run_id is denied.
++- **AT-EXEC-0002**: Execution without wih_id or node_id is denied.
++- **AT-EXEC-0003**: Run emits AgentExecutionReceipt under `/.a2r/receipts/<run_id>/`.
++- **AT-EXEC-0004**: Deterministic replay reconstructs the same next-node selection.
++- **AT-EXEC-0005**: Missing agent profile is denied.
++
+ ## AT-IO — Output law and write scopes
+ 
+ - **AT-IO-0001**: Any write outside `/.a2r/` is denied.
+@@ -92,6 +100,9 @@ These acceptance tests are platform-level gates. Every major change must referen
+ - **AT-NET-0002**: Internal services are not externally reachable.
+ - **AT-NET-0003**: Service addressing is name-based; ports are centralized in generated config.
+ - **AT-NET-0004**: Single ingress endpoint enforced; port sprawl is forbidden.
++- **AT-NET-0101**: Gateway registry is required and validates against `/spec/Contracts/GatewayRegistry.schema.json`.
++- **AT-NET-0102**: Gateway registry must define exactly one external ingress.
++- **AT-NET-0103**: Gateway routes must reference registered services.
+ 
+ ## AT-CAP — Capsules / MCP Apps
+ 
+
+diff --git a/.github/workflows/ci-cd.yml b/.github/workflows/ci-cd.yml
+index a3a3241..76e185f 100644
+--- a/.github/workflows/ci-cd.yml
++++ b/.github/workflows/ci-cd.yml
+@@ -66,6 +66,40 @@ jobs:
+         tests/acceptance/test_subprocess_allows_only_allowlisted_worker.sh
+         tests/acceptance/test_subprocess_receipt_emitted.sh
+ 
++  phase1-6-exec:
++    runs-on: ubuntu-latest
++    needs: phase1-5-proc
++    steps:
++    - uses: actions/checkout@v4
++    - name: Set up Python 3.12
++      uses: actions/setup-python@v5
++      with:
++        python-version: "3.12"
++    - name: Run agent execution gates
++      run: |
++        bash scripts/law_setup.sh
++        tests/acceptance/test_exec_missing_run_id.sh
++        tests/acceptance/test_exec_missing_wih_or_node.sh
++        tests/acceptance/test_exec_receipt_emitted.sh
++        tests/acceptance/test_exec_deterministic_replay.sh
++        tests/acceptance/test_exec_missing_agent_profile.sh
++
++  phase2-gateway:
++    runs-on: ubuntu-latest
++    needs: phase1-6-exec
++    steps:
++    - uses: actions/checkout@v4
++    - name: Set up Python 3.12
++      uses: actions/setup-python@v5
++      with:
++        python-version: "3.12"
++    - name: Run gateway law gates
++      run: |
++        bash scripts/law_setup.sh
++        tests/acceptance/test_gateway_registry_required.sh
++        tests/acceptance/test_gateway_single_ingress.sh
++        tests/acceptance/test_gateway_routes_valid.sh
++
+   lint:
+     runs-on: ubuntu-latest
+     steps:
+
+

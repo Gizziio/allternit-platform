@@ -1,0 +1,92 @@
+commit 34f654387fde7ed4fc63fbd811db6accc0ee4cae
+Author: Eoj Edred <eojedredbitepubkey1@proton.me>
+Date:   Tue Jan 27 23:13:59 2026 -0600
+
+    T0009: use law venv in acceptance tests
+
+diff --git a/tests/acceptance/test_boot_anchors.sh b/tests/acceptance/test_boot_anchors.sh
+index 93fcbce..378dd24 100755
+--- a/tests/acceptance/test_boot_anchors.sh
++++ b/tests/acceptance/test_boot_anchors.sh
+@@ -1,4 +1,9 @@
+ #!/usr/bin/env bash
+ set -euo pipefail
+ 
+-python3 scripts/validate_law.py
++PYTHON_BIN="${PYTHON_BIN:-python3}"
++if [ -x ".venv-law/bin/python" ]; then
++  PYTHON_BIN=".venv-law/bin/python"
++fi
++
++"$PYTHON_BIN" scripts/validate_law.py
+diff --git a/tests/acceptance/test_boot_manifest_validation.sh b/tests/acceptance/test_boot_manifest_validation.sh
+index 7a1cba0..ae60e6d 100755
+--- a/tests/acceptance/test_boot_manifest_validation.sh
++++ b/tests/acceptance/test_boot_manifest_validation.sh
+@@ -1,6 +1,11 @@
+ #!/usr/bin/env bash
+ set -euo pipefail
+ 
++PYTHON_BIN="${PYTHON_BIN:-python3}"
++if [ -x ".venv-law/bin/python" ]; then
++  PYTHON_BIN=".venv-law/bin/python"
++fi
++
+ boot_dir=".a2r/boot"
+ manifest_path="$boot_dir/boot_manifest.json"
+ 
+@@ -16,6 +21,6 @@ cat > "$manifest_path" <<'JSON'
+ }
+ JSON
+ 
+-python3 scripts/validate_law.py --validate-boot-manifest
++"$PYTHON_BIN" scripts/validate_law.py --validate-boot-manifest
+ 
+ rm -f "$manifest_path"
+diff --git a/tests/acceptance/test_law_bootstrap_offline.sh b/tests/acceptance/test_law_bootstrap_offline.sh
+index 6237ad4..c240c86 100755
+--- a/tests/acceptance/test_law_bootstrap_offline.sh
++++ b/tests/acceptance/test_law_bootstrap_offline.sh
+@@ -4,4 +4,9 @@ set -euo pipefail
+ rm -rf .venv-law
+ 
+ bash scripts/law_setup.sh
+-python3 scripts/validate_law.py
++PYTHON_BIN="${PYTHON_BIN:-python3}"
++if [ -x ".venv-law/bin/python" ]; then
++  PYTHON_BIN=".venv-law/bin/python"
++fi
++
++"$PYTHON_BIN" scripts/validate_law.py
+diff --git a/tests/acceptance/test_wih_tool_registry_lock.sh b/tests/acceptance/test_wih_tool_registry_lock.sh
+index 0983cd7..da0e2dd 100755
+--- a/tests/acceptance/test_wih_tool_registry_lock.sh
++++ b/tests/acceptance/test_wih_tool_registry_lock.sh
+@@ -1,12 +1,17 @@
+ #!/usr/bin/env bash
+ set -euo pipefail
+ 
++PYTHON_BIN="${PYTHON_BIN:-python3}"
++if [ -x ".venv-law/bin/python" ]; then
++  PYTHON_BIN=".venv-law/bin/python"
++fi
++
+ wih_file=".a2r/wih/T0000.wih.json"
+ backup="${wih_file}.bak"
+ 
+ cp "$wih_file" "$backup"
+ 
+-python3 - <<'PY'
++"$PYTHON_BIN" - <<'PY'
+ import json
+ from pathlib import Path
+ path = Path('.a2r/wih/T0000.wih.json')
+@@ -16,7 +21,7 @@ path.write_text(json.dumps(obj, indent=2))
+ PY
+ 
+ set +e
+-python3 scripts/validate_law.py
++"$PYTHON_BIN" scripts/validate_law.py
+ status=$?
+ set -e
+ 

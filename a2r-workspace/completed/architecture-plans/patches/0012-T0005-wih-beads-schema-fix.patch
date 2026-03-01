@@ -1,0 +1,29 @@
+commit 9540e9210ad61f1d772631b38992a293bc9dbac4
+Author: Eoj Edred <eojedredbitepubkey1@proton.me>
+Date:   Tue Jan 27 22:54:00 2026 -0600
+
+    T0005: fix WIH schema beads composition
+
+diff --git a/spec/Contracts/WIH.schema.json b/spec/Contracts/WIH.schema.json
+index 5aa6a36..2ef0108 100644
+--- a/spec/Contracts/WIH.schema.json
++++ b/spec/Contracts/WIH.schema.json
+@@ -2,11 +2,6 @@
+   "$schema": "https://json-schema.org/draft/2020-12/schema",
+   "$id": "https://a2rchitech.local/spec/contracts/WIH.schema.json",
+   "title": "Work Item Header (WIH) / Beads Front Matter",
+-  "allOf": [
+-    {
+-      "$ref": "https://a2rchitech.local/spec/contracts/BeadsNode.schema.json"
+-    }
+-  ],
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+@@ -244,4 +239,4 @@
+       "$ref": "https://a2rchitech.local/spec/contracts/BeadsNode.schema.json"
+     }
+   }
+-}
+\ No newline at end of file
++}

@@ -1,0 +1,25 @@
+{
+  "appId": "comfyui-gen",
+  "name": "Qwen Image Generator",
+  "version": "1.0.0",
+  "description": "Local Image Generation via ComfyUI proxy.",
+  "icon": "🎨",
+  "category": "creative",
+  "views": {
+    "main": {
+      "viewId": "comfy_main",
+      "type": "iframe_view",
+      "title": "Image Studio",
+      "data": {
+        "url": "http://127.0.0.1:8188/"
+      }
+    }
+  },
+  "actions": {
+    "launch": {
+      "id": "launch_server",
+      "label": "Start Generator",
+      "command": "bin/comfy-capsule"
+    }
+  }
+}

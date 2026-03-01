@@ -1,0 +1,456 @@
+/**
+ * A2R Continuity - CI Gates
+ * 
+ * Validation gates for handoff quality assurance
+ * - Evidence Gate: Verify artifacts exist and references are valid
+ * - No-Lazy Gate: Detect lazy patterns, ensure concrete actions
+ * - Resume Gate: Validate baton is resumable by target tool
+ */
+
+import { Log } from "@/util/log"
+import { Filesystem } from "@/util/filesystem"
+import path from "path"
+import type { SessionContext, HandoffBaton, DAGTask, NextAction, ToolType } from "./types"
+
+const log = Log.create({ service: "continuity.gates" })
+
+export namespace CIGates {
+  export interface GateResult {
+    passed: boolean
+    gate: string
+    errors: string[]
+    warnings: string[]
+    metadata?: Record<string, unknown>
+  }
+
+  export interface ValidationReport {
+    passed: boolean
+    gates: GateResult[]
+    timestamp: number
+    session_id: string
+  }
+
+  export interface GateOptions {
+    strict?: boolean
+    targetTool?: ToolType
+    maxContextTokens?: number
+  }
+
+  /**
+   * Run all gates and return comprehensive report
+   */
+  export async function validate(
+    baton: HandoffBaton,
+    options?: GateOptions
+  ): Promise<ValidationReport> {
+    log.info("Running CI gates", { session_id: baton.session_context.session_id })
+
+    const gates: GateResult[] = []
+
+    // Run each gate
+    gates.push(await evidenceGate(baton))
+    gates.push(await noLazyGate(baton, options))
+    gates.push(await resumeGate(baton, options))
+
+    const allPassed = gates.every(g => g.passed)
+
+    const report: ValidationReport = {
+      passed: allPassed,
+      gates,
+      timestamp: Date.now(),
+      session_id: baton.session_context.session_id,
+    }
+
+    log.info("CI gates complete", {
+      session_id: baton.session_context.session_id,
+      passed: allPassed,
+      errors: gates.flatMap(g => g.errors).length,
+      warnings: gates.flatMap(g => g.warnings).length,
+    })
+
+    return report
+  }
+
+  /**
+   * Evidence Gate: Verify receipts, files, and commands
+   */
+  export async function evidenceGate(baton: HandoffBaton): Promise<GateResult> {
+    const errors: string[] = []
+    const warnings: string[] = []
+    const metadata: Record<string, unknown> = {
+      files_checked: 0,
+      files_missing: 0,
+      receipts_checked: 0,
+    }
+
+    const ctx = baton.session_context
+
+    // Check files changed exist
+    if (ctx.files_changed.length > 0) {
+      metadata.files_checked = ctx.files_changed.length
+      
+      for (const file of ctx.files_changed) {
+        const fullPath = path.join(ctx.workspace_path, file.path)
+        const exists = await Filesystem.exists(fullPath)
+        
+        if (!exists) {
+          errors.push(`Evidence: Referenced file does not exist: ${file.path}`)
+          ;(metadata.files_missing as number)++
+        } else {
+          // Verify action matches reality
+          const stat = Filesystem.stat(fullPath)
+          if (!stat) {
+            warnings.push(`Evidence: Cannot stat file: ${file.path}`)
+          }
+        }
+      }
+    } else {
+      warnings.push("Evidence: No files changed in session")
+    }
+
+    // Check for receipt references
+    if (ctx.evidence?.receipt_offset !== undefined) {
+      metadata.receipts_checked = 1
+      
+      // Verify receipt offset is non-negative
+      if (ctx.evidence.receipt_offset < 0) {
+        errors.push("Evidence: Invalid receipt offset (negative)")
+      }
+    }
+
+    // Check evidence pointers exist
+    if (ctx.evidence?.diff_refs && ctx.evidence.diff_refs.length > 0) {
+      for (const diffRef of ctx.evidence.diff_refs) {
+        // Diff refs should be in format "path:line" or similar
+        const [filePath] = diffRef.split(":")
+        if (filePath) {
+          const fullPath = path.join(ctx.workspace_path, filePath)
+          if (!(await Filesystem.exists(fullPath))) {
+            warnings.push(`Evidence: Diff reference file not found: ${filePath}`)
+          }
+        }
+      }
+    }
+
+    // Validate state hash format if present
+    if (ctx.evidence?.state_hash) {
+      const hashPattern = /^[a-f0-9]{8,64}$/i
+      if (!hashPattern.test(ctx.evidence.state_hash)) {
+        warnings.push("Evidence: State hash has unexpected format")
+      }
+    }
+
+    const passed = errors.length === 0
+
+    return {
+      passed,
+      gate: "evidence",
+      errors,
+      warnings,
+      metadata,
+    }
+  }
+
+  /**
+   * No-Lazy Gate: Detect lazy patterns, ensure concrete actions
+   */
+  export async function noLazyGate(
+    baton: HandoffBaton,
+    options?: GateOptions
+  ): Promise<GateResult> {
+    const errors: string[] = []
+    const warnings: string[] = []
+    const metadata: Record<string, unknown> = {
+      lazy_patterns_found: 0,
+      vague_actions: 0,
+      actionable_items: 0,
+    }
+
+    const ctx = baton.session_context
+
+    // Lazy patterns to detect
+    const lazyPatterns = [
+      {
+        pattern: /I'll let you (handle|do|take care of)/i,
+        message: "Lazy handoff: deferring responsibility to next runner",
+      },
+      {
+        pattern: /as an AI (language model|assistant)/i,
+        message: "Lazy pattern: AI disclaimer instead of concrete action",
+      },
+      {
+        pattern: /you can (just|simply|just) /i,
+        message: "Lazy pattern: vague instruction with minimizer words",
+      },
+      {
+        pattern: /(should|could|might) be (easy|straightforward|simple)/i,
+        message: "Lazy pattern: downplaying complexity",
+      },
+      {
+        pattern: /I (didn't|did not) (have time|get to|finish)/i,
+        message: "Lazy pattern: excuse for incomplete work",
+      },
+      {
+        pattern: /(TODO|FIXME|XXX).*\?$/i,
+        message: "Lazy pattern: open-ended question instead of task",
+      },
+      {
+        pattern: /good luck|you'll figure it out/i,
+        message: "Lazy pattern: unhelpful handoff sentiment",
+      },
+    ]
+
+    // Check objective for lazy patterns
+    for (const { pattern, message } of lazyPatterns) {
+      if (pattern.test(ctx.objective)) {
+        errors.push(`No-Lazy: ${message} (in objective)`)
+        ;(metadata.lazy_patterns_found as number)++
+      }
+    }
+
+    // Check progress summary
+    for (const progress of ctx.progress_summary) {
+      for (const { pattern, message } of lazyPatterns) {
+        if (pattern.test(progress)) {
+          warnings.push(`No-Lazy: ${message} (in progress summary)`)
+          ;(metadata.lazy_patterns_found as number)++
+        }
+      }
+    }
+
+    // Check decisions for vagueness
+    for (const decision of ctx.decisions) {
+      if (decision.length < 10) {
+        warnings.push(`No-Lazy: Decision too vague: "${decision}"`)
+      }
+    }
+
+    // Validate next actions are concrete
+    if (ctx.next_actions.length === 0) {
+      errors.push("No-Lazy: No next actions defined - handoff is incomplete")
+    } else {
+      for (const action of ctx.next_actions) {
+        // Check for vague action types
+        const vaguePatterns = [
+          /continue/i,
+          /work on/i,
+          /handle/i,
+          /deal with/i,
+          /take care of/i,
+          /look into/i,
+          /investigate/i,
+        ]
+
+        const isVague = vaguePatterns.some(p => p.test(action.description))
+        
+        if (isVague && !action.target) {
+          warnings.push(`No-Lazy: Vague action without target: "${action.description}"`)
+          ;(metadata.vague_actions as number)++
+        } else {
+          ;(metadata.actionable_items as number)++
+        }
+
+        // Check action has sufficient detail
+        if (action.description.length < 15) {
+          warnings.push(`No-Lazy: Action description too short: "${action.description}"`)
+        }
+      }
+    }
+
+    // Validate TODOs are specific
+    for (const todo of ctx.open_todos) {
+      if (todo.task.length < 10) {
+        warnings.push(`No-Lazy: TODO too vague: "${todo.task}"`)
+      }
+    }
+
+    // Check DAG tasks have descriptions
+    for (const task of ctx.dag_tasks) {
+      if (task.description.length < 10) {
+        warnings.push(`No-Lazy: DAG task "${task.name}" lacks detailed description`)
+      }
+    }
+
+    // In strict mode, warnings become errors
+    const passed = options?.strict 
+      ? errors.length === 0 && warnings.length === 0
+      : errors.length === 0
+
+    return {
+      passed,
+      gate: "no-lazy",
+      errors,
+      warnings,
+      metadata,
+    }
+  }
+
+  /**
+   * Resume Gate: Validate baton can be resumed by target tool
+   */
+  export async function resumeGate(
+    baton: HandoffBaton,
+    options?: GateOptions
+  ): Promise<GateResult> {
+    const errors: string[] = []
+    const warnings: string[] = []
+    const metadata: Record<string, unknown> = {
+      context_tokens: 0,
+      context_limit: options?.maxContextTokens ?? 200000,
+      fits_in_context: true,
+      target_compatible: true,
+    }
+
+    const ctx = baton.session_context
+
+    // Estimate baton size for context window check
+    const estimatedTokens = estimateBatonTokens(baton)
+    metadata.context_tokens = estimatedTokens
+
+    const limit = options?.maxContextTokens ?? 200000
+    const threshold = limit * 0.9 // 90% threshold
+
+    if (estimatedTokens > limit) {
+      errors.push(`Resume: Baton too large for context window (${estimatedTokens.toLocaleString()} > ${limit.toLocaleString()} tokens)`)
+      metadata.fits_in_context = false
+    } else if (estimatedTokens > threshold) {
+      warnings.push(`Resume: Baton near context limit (${Math.round(estimatedTokens/limit*100)}%)`)
+    }
+
+    // Check target tool compatibility
+    if (options?.targetTool && baton.target_tool && baton.target_tool !== options.targetTool) {
+      warnings.push(`Resume: Baton targets ${baton.target_tool}, resuming with ${options.targetTool}`)
+      metadata.target_compatible = false
+    }
+
+    // Validate required fields for resumption
+    if (!ctx.objective || ctx.objective.length < 5) {
+      errors.push("Resume: Missing or insufficient objective")
+    }
+
+    if (!ctx.workspace_path) {
+      errors.push("Resume: Missing workspace path")
+    } else {
+      // Verify workspace still exists
+      const workspaceExists = await Filesystem.exists(ctx.workspace_path)
+      if (!workspaceExists) {
+        errors.push(`Resume: Workspace does not exist: ${ctx.workspace_path}`)
+      }
+    }
+
+    // Check session ID is valid
+    if (!ctx.session_id || ctx.session_id.length < 8) {
+      errors.push("Resume: Invalid session ID")
+    }
+
+    // Validate timestamps
+    const now = Date.now()
+    const maxAge = 30 * 24 * 60 * 60 * 1000 // 30 days
+    if (ctx.time_start && (now - ctx.time_start) > maxAge) {
+      warnings.push("Resume: Session is older than 30 days, context may be stale")
+    }
+
+    // Check for blocking tasks without resolution
+    const blockingIncomplete = ctx.dag_tasks.filter(
+      t => t.blocking && t.status !== "completed"
+    )
+    if (blockingIncomplete.length > 0) {
+      warnings.push(`Resume: ${blockingIncomplete.length} blocking tasks incomplete`)
+    }
+
+    // Verify at least one actionable item exists
+    const hasActionable = 
+      ctx.next_actions.length > 0 || 
+      ctx.open_todos.length > 0 || 
+      ctx.dag_tasks.some(t => t.status !== "completed")
+    
+    if (!hasActionable) {
+      errors.push("Resume: No actionable items (tasks, todos, or next actions)")
+    }
+
+    // Check for unresolved errors
+    const unrecoverableErrors = ctx.errors_seen.filter(e => !e.recoverable)
+    if (unrecoverableErrors.length > 0) {
+      warnings.push(`Resume: ${unrecoverableErrors.length} unrecoverable errors in session`)
+    }
+
+    const passed = errors.length === 0
+
+    return {
+      passed,
+      gate: "resume",
+      errors,
+      warnings,
+      metadata,
+    }
+  }
+
+  /**
+   * Estimate token count for baton
+   */
+  function estimateBatonTokens(baton: HandoffBaton): number {
+    const ctx = baton.session_context
+    
+    // Rough estimation: ~4 chars per token
+    const text = JSON.stringify({
+      objective: ctx.objective,
+      progress: ctx.progress_summary,
+      decisions: ctx.decisions,
+      todos: ctx.open_todos,
+      tasks: ctx.dag_tasks.map(t => ({ name: t.name, desc: t.description })),
+      files: ctx.files_changed.map(f => f.path),
+      commands: ctx.commands_executed,
+      errors: ctx.errors_seen.map(e => e.message),
+      next: ctx.next_actions,
+      conventions: ctx.a2r_conventions,
+    })
+
+    return Math.ceil(text.length / 4)
+  }
+
+  /**
+   * Format validation report for display
+   */
+  export function formatReport(report: ValidationReport): string {
+    const lines: string[] = []
+    
+    lines.push(`# CI Gates Report`)
+    lines.push(``)
+    lines.push(`**Session:** ${report.session_id}`)
+    lines.push(`**Status:** ${report.passed ? "✅ PASSED" : "❌ FAILED"}`)
+    lines.push(`**Time:** ${new Date(report.timestamp).toISOString()}`)
+    lines.push(``)
+    lines.push(`---`)
+    lines.push(``)
+
+    for (const gate of report.gates) {
+      const icon = gate.passed ? "✅" : "❌"
+      lines.push(`## ${icon} ${gate.gate.toUpperCase()}`)
+      
+      if (gate.errors.length > 0) {
+        lines.push(``)
+        lines.push(`**Errors:**`)
+        for (const error of gate.errors) {
+          lines.push(`- ❌ ${error}`)
+        }
+      }
+
+      if (gate.warnings.length > 0) {
+        lines.push(``)
+        lines.push(`**Warnings:**`)
+        for (const warning of gate.warnings) {
+          lines.push(`- ⚠️ ${warning}`)
+        }
+      }
+
+      if (gate.errors.length === 0 && gate.warnings.length === 0) {
+        lines.push(``)
+        lines.push(`*All checks passed*`)
+      }
+
+      lines.push(``)
+    }
+
+    return lines.join("\n")
+  }
+}

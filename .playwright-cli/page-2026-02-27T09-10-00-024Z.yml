@@ -1,0 +1,84 @@
+- generic [ref=e2]:
+  - generic [ref=e377]:
+    - button "Hide Preview" [ref=e561] [cursor=pointer]:
+      - img [ref=e562]
+      - text: Hide Preview
+    - generic [ref=e381]:
+      - generic [ref=e386]:
+        - img [ref=e390] [cursor=pointer]
+        - generic [ref=e435]: Code workspace
+        - generic [ref=e436]: The workspace is selected. Start with a prompt, and the heavier detail will stay out of the way until it is needed.
+        - generic [ref=e437]:
+          - generic [ref=e439]:
+            - button "Scaffold" [ref=e440] [cursor=pointer]:
+              - img [ref=e441]
+              - text: Scaffold
+            - button "Refactor" [ref=e443] [cursor=pointer]:
+              - img [ref=e444]
+              - text: Refactor
+            - button "Debug" [ref=e448] [cursor=pointer]:
+              - img [ref=e449]
+              - text: Debug
+            - button "Optimize" [ref=e458] [cursor=pointer]:
+              - img [ref=e459]
+              - text: Optimize
+            - button "Explore" [ref=e461] [cursor=pointer]:
+              - img [ref=e462]
+              - text: Explore
+          - generic [ref=e466]:
+            - textbox "Describe what you want to build or modify..." [ref=e600]
+            - generic [ref=e469]:
+              - button [ref=e471] [cursor=pointer]:
+                - img [ref=e472]
+              - generic [ref=e473]:
+                - button "Codex CLI Extended" [ref=e474] [cursor=pointer]:
+                  - generic [ref=e475]: Codex CLI
+                  - generic [ref=e476]: Extended
+                  - img [ref=e477]
+                - button [disabled] [ref=e479]:
+                  - img [ref=e480]
+          - generic [ref=e482]:
+            - generic [ref=e483]:
+              - combobox "Code session selector" [ref=e484]:
+                - option "Code Mode Layout Stabilization" [selected]
+                - option "Approval Token Rails Pass"
+                - option "Diff Review Prototype"
+              - button "a2rchitech" [ref=e601] [cursor=pointer]:
+                - img [ref=e486]
+                - text: a2rchitech
+                - img [ref=e488]
+              - button "Console" [ref=e490] [cursor=pointer]:
+                - img [ref=e491]
+                - text: Console
+            - generic [ref=e493]: /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech
+      - separator [ref=e494]
+      - generic [ref=e499]:
+        - generic [ref=e501]:
+          - img [ref=e502]
+          - text: Preview
+        - generic [ref=e504]:
+          - img [ref=e508] [cursor=pointer]
+          - generic [ref=e553]: Setting up preview
+          - generic [ref=e554]: Start or attach a preview session and the web surface will stay docked here without adding extra chrome to the workspace.
+        - generic [ref=e555]: View session logs
+  - generic:
+    - generic [ref=e138]:
+      - generic [ref=e139]:
+        - button "Expand Sidebar" [ref=e560] [cursor=pointer]:
+          - img [ref=e141]
+        - button "New Chat" [ref=e143] [cursor=pointer]:
+          - img [ref=e144]
+      - button "Browser" [ref=e147] [cursor=pointer]:
+        - img [ref=e148]
+        - generic [ref=e150]: Browser
+    - generic [ref=e152]:
+      - button "Chat" [ref=e153] [cursor=pointer]:
+        - img [ref=e154]
+        - generic [ref=e156]: Chat
+      - button "Cowork" [ref=e157] [cursor=pointer]:
+        - img [ref=e158]
+        - generic [ref=e160]: Cowork
+      - button "Code" [ref=e161] [cursor=pointer]:
+        - img [ref=e162]
+        - generic [ref=e164]: Code
+  - img [ref=e167] [cursor=pointer]

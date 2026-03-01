@@ -1,0 +1,17 @@
+{
+  "url": "http://127.0.0.1:5177",
+  "capturedAt": "2026-02-26T21:21:30.370Z",
+  "summary": {
+    "totalMessages": 0,
+    "totalErrors": 1,
+    "totalWarnings": 0
+  },
+  "errors": [
+    {
+      "timestamp": "2026-02-26T21:21:22.290Z",
+      "type": "requestfailed",
+      "url": "http://127.0.0.1:5177/",
+      "error": "net::ERR_CONNECTION_REFUSED"
+    }
+  ]
+}

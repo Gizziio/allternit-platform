@@ -1,0 +1,56 @@
+{
+  "nodes": {
+    "tsk_d0fe7ae0": {
+      "id": "tsk_d0fe7ae0",
+      "node_type": "Task",
+      "title": "Process fwk_note",
+      "content": {
+        "framework": "fwk_note"
+      },
+      "created_at": 1768106018361,
+      "provenance_id": null
+    },
+    "int_7585f30b": {
+      "id": "int_7585f30b",
+      "node_type": "Intent",
+      "title": "Human Intent",
+      "content": {
+        "text": "capture how to implement ragic primitives"
+      },
+      "created_at": 1768106018361,
+      "provenance_id": null
+    },
+    "int_9a02535d": {
+      "id": "int_9a02535d",
+      "node_type": "Intent",
+      "title": "Human Intent",
+      "content": {
+        "text": "capture learning on Jan 10 Session: Building an Agentic OS foundation"
+      },
+      "created_at": 1768107132833,
+      "provenance_id": null
+    },
+    "tsk_19d772e2": {
+      "id": "tsk_19d772e2",
+      "node_type": "Task",
+      "title": "Process fwk_note",
+      "content": {
+        "framework": "fwk_note"
+      },
+      "created_at": 1768107132833,
+      "provenance_id": null
+    }
+  },
+  "edges": [
+    {
+      "from": "int_7585f30b",
+      "to": "tsk_d0fe7ae0",
+      "relation": "PART_OF"
+    },
+    {
+      "from": "int_9a02535d",
+      "to": "tsk_19d772e2",
+      "relation": "PART_OF"
+    }
+  ]
+}

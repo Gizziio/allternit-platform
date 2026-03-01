@@ -1,0 +1,771 @@
+{
+  "generatedAt": "2026-02-24T16:33:59.000Z",
+  "summary": {
+    "totalFiles": 695,
+    "totalTSX": 359,
+    "totalTS": 336,
+    "totalComponents": 0,
+    "totalHooks": 35,
+    "totalUtils": 198,
+    "totalTests": 35,
+    "totalStories": 1,
+    "totalTODOs": 19
+  },
+  "categories": {
+    "design": {
+      "count": 18,
+      "description": "Core design system components",
+      "components": [
+        {
+          "name": "GlassCard",
+          "path": "src/design/GlassCard.tsx",
+          "type": "component",
+          "props": ["children", "style", "className", "hoverable"],
+          "dependencies": ["./GlassSurface", "./tokens"],
+          "status": "complete",
+          "hasTests": false,
+          "hasStory": false,
+          "issues": [],
+          "usageCount": 113
+        },
+        {
+          "name": "GlassSurface",
+          "path": "src/design/GlassSurface.tsx",
+          "type": "component",
+          "props": ["children", "intensity", "style", "className"],
+          "dependencies": ["./shadows"],
+          "status": "complete",
+          "hasTests": false,
+          "hasStory": false,
+          "issues": [],
+          "usageCount": 50
+        },
+        {
+          "name": "ActionChip",
+          "path": "src/design/controls/ActionChip.tsx",
+          "type": "component",
+          "props": ["label", "onClick"],
+          "dependencies": [],
+          "status": "complete",
+          "hasTests": false,
+          "hasStory": false,
+          "issues": [],
+          "usageCount": 0
+        },
+        {
+          "name": "IconButton",
+          "path": "src/design/controls/IconButton.tsx",
+          "type": "component",
+          "props": ["icon", "onClick", "active", "title", "size"],
+          "dependencies": [],
+          "status": "polish-needed",
+          "hasTests": false,
+          "hasStory": false,
+          "issues": ["Uses 'any' type"],
+          "usageCount": 0
+        },
+        {
+          "name": "SegmentedControl",
+          "path": "src/design/controls/SegmentedControl.tsx",
+          "type": "component",
+          "props": ["options", "value", "onChange"],
+          "dependencies": [],
+          "status": "polish-needed",
+          "hasTests": false,
+          "hasStory": false,
+          "issues": ["Uses 'any' type"],
+          "usageCount": 0
+        },
+        {
+          "name": "StatusBar",
+          "path": "src/design/components/StatusBar.tsx",
+          "type": "component",
+          "props": ["connectionStatus", "modelStatus", "onModelClick", "onInterrupt", "canInterrupt", "tokenCount", "costEstimate"],
+          "dependencies": ["lucide-react"],
+          "status": "complete",
+          "hasTests": false,
+          "hasStory": false,
+          "issues": [],
+          "usageCount": 15
+        },
+        {
+          "name": "ThemeProvider",
+          "path": "src/design/theme/a2r-theme.tsx",
+          "type": "provider",
+          "props": ["children"],
+          "dependencies": ["next-themes"],
+          "status": "complete",
+          "hasTests": false,
+          "hasStory": false,
+          "issues": [],
+          "usageCount": 5
+        },
+        {
+          "name": "tokens",
+          "path": "src/design/tokens.ts",
+          "type": "util",
+          "props": [],
+          "dependencies": [],
+          "status": "complete",
+          "hasTests": false,
+          "hasStory": false,
+          "issues": [],
+          "usageCount": 25
+        },
+        {
+          "name": "motion",
+          "path": "src/design/motion/motion.ts",
+          "type": "util",
+          "props": [],
+          "dependencies": [],
+          "status": "complete",
+          "hasTests": false,
+          "hasStory": false,
+          "issues": [],
+          "usageCount": 10
+        },
+        {
+          "name": "shadows",
+          "path": "src/design/shadows.ts",
+          "type": "util",
+          "props": [],
+          "dependencies": [],
+          "status": "complete",
+          "hasTests": false,
+          "hasStory": false,
+          "issues": [],
+          "usageCount": 8
+        },
+        {
+          "name": "modeColors",
+          "path": "src/design/modeColors.ts",
+          "type": "util",
+          "props": [],
+          "dependencies": [],
+          "status": "complete",
+          "hasTests": false,
+          "hasStory": false,
+          "issues": [],
+          "usageCount": 5
+        },
+        {
+          "name": "useInterrupt",
+          "path": "src/design/useInterrupt.ts",
+          "type": "hook",
+          "props": [],
+          "dependencies": [],
+          "status": "complete",
+          "hasTests": false,
+          "hasStory": false,
+          "issues": [],
+          "usageCount": 3
+        },
+        {
+          "name": "useKeyboard",
+          "path": "src/design/useKeyboard.ts",
+          "type": "hook",
+          "props": [],
+          "dependencies": [],
+          "status": "complete",
+          "hasTests": false,
+          "hasStory": false,
+          "issues": [],
+          "usageCount": 8
+        },
+        {
+          "name": "ThemeStore",
+          "path": "src/design/ThemeStore.ts",
+          "type": "store",
+          "props": [],
+          "dependencies": ["zustand"],
+          "status": "complete",
+          "hasTests": false,
+          "hasStory": false,
+          "issues": [],
+          "usageCount": 12
+        }
+      ]
+    },
+    "components": {
+      "count": 123,
+      "description": "Reusable UI components",
+      "subcategories": {
+        "ui": {
+          "count": 31,
+          "description": "Base UI components (shadcn/radix)",
+          "components": [
+            {"name": "Button", "path": "src/components/ui/button.tsx", "type": "component", "props": ["variant", "size", "loading", "asChild", "children", "disabled"], "dependencies": ["@radix-ui/react-slot", "@/lib/utils"], "status": "complete", "hasTests": false, "hasStory": true, "issues": []},
+            {"name": "Accordion", "path": "src/components/ui/accordion.tsx", "type": "component", "props": ["type", "collapsible", "children"], "dependencies": ["@radix-ui/react-accordion"], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Alert", "path": "src/components/ui/alert.tsx", "type": "component", "props": ["variant", "className"], "dependencies": ["@/lib/utils"], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "AlertDialog", "path": "src/components/ui/alert-dialog.tsx", "type": "component", "props": ["open", "onOpenChange"], "dependencies": ["@radix-ui/react-alert-dialog"], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Avatar", "path": "src/components/ui/avatar.tsx", "type": "component", "props": ["className"], "dependencies": ["@radix-ui/react-avatar"], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Badge", "path": "src/components/ui/badge.tsx", "type": "component", "props": ["variant", "className"], "dependencies": ["@/lib/utils"], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "ButtonGroup", "path": "src/components/ui/button-group.tsx", "type": "component", "props": ["className", "children"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Card", "path": "src/components/ui/card.tsx", "type": "component", "props": ["className"], "dependencies": ["@/lib/utils"], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Carousel", "path": "src/components/ui/carousel.tsx", "type": "component", "props": ["opts", "plugins", "orientation"], "dependencies": ["embla-carousel-react"], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Checkbox", "path": "src/components/ui/checkbox.tsx", "type": "component", "props": ["checked", "onCheckedChange"], "dependencies": ["@radix-ui/react-checkbox"], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Collapsible", "path": "src/components/ui/collapsible.tsx", "type": "component", "props": ["open", "onOpenChange"], "dependencies": ["@radix-ui/react-collapsible"], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Command", "path": "src/components/ui/command.tsx", "type": "component", "props": ["children", "className"], "dependencies": ["cmdk"], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Dialog", "path": "src/components/ui/dialog.tsx", "type": "component", "props": ["open", "onOpenChange"], "dependencies": ["@radix-ui/react-dialog"], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "DropdownMenu", "path": "src/components/ui/dropdown-menu.tsx", "type": "component", "props": ["open", "onOpenChange"], "dependencies": ["@radix-ui/react-dropdown-menu"], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "HoverCard", "path": "src/components/ui/hover-card.tsx", "type": "component", "props": ["open", "onOpenChange"], "dependencies": ["@radix-ui/react-hover-card"], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Input", "path": "src/components/ui/input.tsx", "type": "component", "props": ["className", "type"], "dependencies": ["@/lib/utils"], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "InputGroup", "path": "src/components/ui/input-group.tsx", "type": "component", "props": ["className", "children"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Label", "path": "src/components/ui/label.tsx", "type": "component", "props": ["className"], "dependencies": ["@radix-ui/react-label"], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Popover", "path": "src/components/ui/popover.tsx", "type": "component", "props": ["open", "onOpenChange"], "dependencies": ["@radix-ui/react-popover"], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Progress", "path": "src/components/ui/progress.tsx", "type": "component", "props": ["value", "className"], "dependencies": ["@radix-ui/react-progress"], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "ScrollArea", "path": "src/components/ui/scroll-area.tsx", "type": "component", "props": ["className", "children"], "dependencies": ["@radix-ui/react-scroll-area"], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Select", "path": "src/components/ui/select.tsx", "type": "component", "props": ["value", "onValueChange"], "dependencies": ["@radix-ui/react-select"], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Separator", "path": "src/components/ui/separator.tsx", "type": "component", "props": ["orientation", "decorative"], "dependencies": ["@radix-ui/react-separator"], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Slider", "path": "src/components/ui/slider.tsx", "type": "component", "props": ["value", "onValueChange"], "dependencies": ["@radix-ui/react-slider"], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Spinner", "path": "src/components/ui/spinner.tsx", "type": "component", "props": ["size", "className"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Switch", "path": "src/components/ui/switch.tsx", "type": "component", "props": ["checked", "onCheckedChange"], "dependencies": ["@radix-ui/react-switch"], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Table", "path": "src/components/ui/table.tsx", "type": "component", "props": ["className"], "dependencies": ["@/lib/utils"], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Tabs", "path": "src/components/ui/tabs.tsx", "type": "component", "props": ["value", "onValueChange"], "dependencies": ["@radix-ui/react-tabs"], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Textarea", "path": "src/components/ui/textarea.tsx", "type": "component", "props": ["className"], "dependencies": ["@/lib/utils"], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Tooltip", "path": "src/components/ui/tooltip.tsx", "type": "component", "props": ["delayDuration"], "dependencies": ["@radix-ui/react-tooltip"], "status": "complete", "hasTests": false, "hasStory": false, "issues": []}
+          ]
+        },
+        "ai-elements": {
+          "count": 65,
+          "description": "AI SDK UI components for chat and agents",
+          "components": [
+            {"name": "Conversation", "path": "src/components/ai-elements/conversation.tsx", "type": "component", "props": ["messages", "onSend"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Message", "path": "src/components/ai-elements/message.tsx", "type": "component", "props": ["role", "content", "attachments"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": ["Duplicate with prompt-kit/message"]},
+            {"name": "UnifiedMessageRenderer", "path": "src/components/ai-elements/UnifiedMessageRenderer.tsx", "type": "component", "props": ["message", "artifacts"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "PromptInput", "path": "src/components/ai-elements/prompt-input.tsx", "type": "component", "props": ["onSubmit", "placeholder", "disabled"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": ["Duplicate with prompt-kit/prompt-input"]},
+            {"name": "Reasoning", "path": "src/components/ai-elements/reasoning.tsx", "type": "component", "props": ["content", "isOpen"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Tool", "path": "src/components/ai-elements/tool.tsx", "type": "component", "props": ["name", "args", "result"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Sources", "path": "src/components/ai-elements/sources.tsx", "type": "component", "props": ["sources", "onSourceClick"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "ChainOfThought", "path": "src/components/ai-elements/chain-of-thought.tsx", "type": "component", "props": ["steps", "currentStep"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Suggestion", "path": "src/components/ai-elements/suggestion.tsx", "type": "component", "props": ["text", "onClick"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Shimmer", "path": "src/components/ai-elements/shimmer.tsx", "type": "component", "props": ["className"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Attachments", "path": "src/components/ai-elements/attachments.tsx", "type": "component", "props": ["files", "onRemove"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Image", "path": "src/components/ai-elements/image.tsx", "type": "component", "props": ["src", "alt", "width", "height"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "AudioPlayer", "path": "src/components/ai-elements/audio-player.tsx", "type": "component", "props": ["src", "onEnded"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "SpeechInput", "path": "src/components/ai-elements/speech-input.tsx", "type": "component", "props": ["onTranscript", "language"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "VoiceToolbar", "path": "src/components/ai-elements/voice-toolbar.tsx", "type": "component", "props": ["isListening", "onToggle"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "VoiceOverlay", "path": "src/components/ai-elements/voice-overlay.tsx", "type": "component", "props": ["isOpen", "transcript"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "VoicePresence", "path": "src/components/ai-elements/voice-presence.tsx", "type": "component", "props": ["participants", "isActive"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "CodeBlock", "path": "src/components/ai-elements/code-block.tsx", "type": "component", "props": ["code", "language", "filename"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": ["Duplicate with prompt-kit/code-block"]},
+            {"name": "Artifact", "path": "src/components/ai-elements/artifact.tsx", "type": "component", "props": ["type", "content", "title"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "ArtifactPanel", "path": "src/components/ai-elements/artifact-panel.tsx", "type": "component", "props": ["artifacts", "activeId", "onSelect"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Markdown", "path": "src/components/ai-elements/markdown.tsx", "type": "component", "props": ["content", "className"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": ["Duplicate with prompt-kit/markdown"]},
+            {"name": "Toolbar", "path": "src/components/ai-elements/toolbar.tsx", "type": "component", "props": ["children", "className"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Controls", "path": "src/components/ai-elements/controls.tsx", "type": "component", "props": ["actions"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Context", "path": "src/components/ai-elements/context.tsx", "type": "component", "props": ["items", "onItemClick"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Panel", "path": "src/components/ai-elements/panel.tsx", "type": "component", "props": ["title", "children", "actions"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Agent", "path": "src/components/ai-elements/agent.tsx", "type": "component", "props": ["name", "status", "avatar"], "dependencies": [], "status": "deprecated", "hasTests": false, "hasStory": false, "issues": ["Use AgentCard instead - conflicts with Agent type"]},
+            {"name": "Canvas", "path": "src/components/ai-elements/canvas.tsx", "type": "component", "props": ["children", "className"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Checkpoint", "path": "src/components/ai-elements/checkpoint.tsx", "type": "component", "props": ["status", "message", "onConfirm"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Commit", "path": "src/components/ai-elements/commit.tsx", "type": "component", "props": ["hash", "message", "author"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Confirmation", "path": "src/components/ai-elements/confirmation.tsx", "type": "component", "props": ["message", "onConfirm", "onCancel"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Connection", "path": "src/components/ai-elements/connection.tsx", "type": "component", "props": ["status", "provider"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Edge", "path": "src/components/ai-elements/edge.tsx", "type": "component", "props": ["source", "target", "animated"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "EnvironmentVariables", "path": "src/components/ai-elements/environment-variables.tsx", "type": "component", "props": ["vars", "onChange"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "FileTree", "path": "src/components/ai-elements/file-tree.tsx", "type": "component", "props": ["files", "onSelect"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "InlineCitation", "path": "src/components/ai-elements/inline-citation.tsx", "type": "component", "props": ["number", "onClick"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "JSXPreview", "path": "src/components/ai-elements/jsx-preview.tsx", "type": "component", "props": ["code", "scope"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "MicSelector", "path": "src/components/ai-elements/mic-selector.tsx", "type": "component", "props": ["devices", "selected", "onSelect"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "ModelSelector", "path": "src/components/ai-elements/model-selector.tsx", "type": "component", "props": ["models", "selected", "onSelect"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "ProviderModelSelector", "path": "src/components/ai-elements/ProviderModelSelector.tsx", "type": "component", "props": ["providers", "onSelect"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "BrainModelSelector", "path": "src/components/ai-elements/BrainModelSelector.tsx", "type": "component", "props": ["onSelect"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "ModelPicker", "path": "src/components/model-picker.tsx", "type": "component", "props": ["value", "onChange"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Node", "path": "src/components/ai-elements/node.tsx", "type": "component", "props": ["id", "type", "data", "selected"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "OpenInChat", "path": "src/components/ai-elements/open-in-chat.tsx", "type": "component", "props": ["content", "platforms"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "PackageInfo", "path": "src/components/ai-elements/package-info.tsx", "type": "component", "props": ["name", "version", "description"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Persona", "path": "src/components/ai-elements/persona.tsx", "type": "component", "props": ["name", "avatar", "traits"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Plan", "path": "src/components/ai-elements/plan.tsx", "type": "component", "props": ["steps", "currentStep", "onStepClick"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Queue", "path": "src/components/ai-elements/queue.tsx", "type": "component", "props": ["items", "onItemRemove"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Sandbox", "path": "src/components/ai-elements/sandbox.tsx", "type": "component", "props": ["children", "title", "actions"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "SchemaDisplay", "path": "src/components/ai-elements/schema-display.tsx", "type": "component", "props": ["schema", "title"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Snippet", "path": "src/components/ai-elements/snippet.tsx", "type": "component", "props": ["code", "language"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "StackTrace", "path": "src/components/ai-elements/stack-trace.tsx", "type": "component", "props": ["error", "onLineClick"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Task", "path": "src/components/ai-elements/task.tsx", "type": "component", "props": ["title", "status", "progress"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Terminal", "path": "src/components/ai-elements/terminal.tsx", "type": "component", "props": ["lines", "onCommand"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "TestResults", "path": "src/components/ai-elements/test-results.tsx", "type": "component", "props": ["results", "onTestClick"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "Transcription", "path": "src/components/ai-elements/transcription.tsx", "type": "component", "props": ["text", "isFinal"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "VoiceSelector", "path": "src/components/ai-elements/voice-selector.tsx", "type": "component", "props": ["voices", "selected", "onSelect"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "WebPreview", "path": "src/components/ai-elements/web-preview.tsx", "type": "component", "props": ["url", "html", "onLoad"], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []}
+          ]
+        },
+        "prompt-kit": {
+          "count": 8,
+          "description": "Legacy prompt-kit components (DUPLICATE)",
+          "components": [
+            {"name": "CodeBlock", "path": "src/components/prompt-kit/code-block.tsx", "type": "component", "props": [], "dependencies": [], "status": "duplicate", "hasTests": false, "hasStory": false, "issues": ["Duplicate - use ai-elements/code-block"], "replacedBy": "ai-elements/code-block"},
+            {"name": "Markdown", "path": "src/components/prompt-kit/markdown.tsx", "type": "component", "props": [], "dependencies": [], "status": "duplicate", "hasTests": false, "hasStory": false, "issues": ["Duplicate - use ai-elements/markdown"], "replacedBy": "ai-elements/markdown"},
+            {"name": "Message", "path": "src/components/prompt-kit/message.tsx", "type": "component", "props": [], "dependencies": [], "status": "duplicate", "hasTests": false, "hasStory": false, "issues": ["Duplicate - use ai-elements/message"], "replacedBy": "ai-elements/message"},
+            {"name": "PromptInput", "path": "src/components/prompt-kit/prompt-input.tsx", "type": "component", "props": [], "dependencies": [], "status": "duplicate", "hasTests": false, "hasStory": false, "issues": ["Duplicate - use ai-elements/prompt-input"], "replacedBy": "ai-elements/prompt-input"},
+            {"name": "PromptActions", "path": "src/components/prompt-kit/prompt-actions.tsx", "type": "component", "props": [], "dependencies": [], "status": "duplicate", "hasTests": false, "hasStory": false, "issues": ["Not actively used"]},
+            {"name": "PromptModelSelector", "path": "src/components/prompt-kit/prompt-model-selector.tsx", "type": "component", "props": [], "dependencies": [], "status": "polish-needed", "hasTests": false, "hasStory": false, "issues": ["Limited usage"]},
+            {"name": "ScrollButton", "path": "src/components/prompt-kit/scroll-button.tsx", "type": "component", "props": [], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []}
+          ]
+        },
+        "workspace": {
+          "count": 11,
+          "description": "Workspace management components",
+          "components": [
+            {"name": "BrainView", "path": "src/components/workspace/BrainView.tsx", "type": "component", "props": [], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "FiveColumnLayout", "path": "src/components/workspace/FiveColumnLayout.tsx", "type": "component", "props": [], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "IdentityEditor", "path": "src/components/workspace/IdentityEditor.tsx", "type": "component", "props": [], "dependencies": [], "status": "partial", "hasTests": false, "hasStory": false, "issues": ["TODO: Save to actual files"]},
+            {"name": "MemoryEditor", "path": "src/components/workspace/MemoryEditor.tsx", "type": "component", "props": [], "dependencies": [], "status": "partial", "hasTests": false, "hasStory": false, "issues": ["TODO: Persist to backend"]},
+            {"name": "PolicyDashboard", "path": "src/components/workspace/PolicyDashboard.tsx", "type": "component", "props": [], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "SessionView", "path": "src/components/workspace/SessionView.tsx", "type": "component", "props": [], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "SkillManager", "path": "src/components/workspace/SkillManager.tsx", "type": "component", "props": [], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "SkillsHub", "path": "src/components/workspace/SkillsHub.tsx", "type": "component", "props": [], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "TerminalGrid", "path": "src/components/workspace/TerminalGrid.tsx", "type": "component", "props": [], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "UnifiedTerminal", "path": "src/components/workspace/UnifiedTerminal.tsx", "type": "component", "props": [], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []},
+            {"name": "WorkspaceBrowser", "path": "src/components/workspace/WorkspaceBrowser.tsx", "type": "component", "props": [], "dependencies": [], "status": "complete", "hasTests": false, "hasStory": false, "issues": []}
+          ]
+        }
+      }
+    },
+    "views": {
+      "count": 156,
+      "description": "Page-level view components",
+      "subcategories": {
+        "runtime": {
+          "count": 5,
+          "description": "Runtime management views",
+          "components": [
+            {"name": "BudgetDashboardView", "path": "src/views/runtime/BudgetDashboardView.tsx", "type": "view", "status": "complete"},
+            {"name": "PrewarmManagerView", "path": "src/views/runtime/PrewarmManagerView.tsx", "type": "view", "status": "complete"},
+            {"name": "ReplayManagerView", "path": "src/views/runtime/ReplayManagerView.tsx", "type": "view", "status": "complete"},
+            {"name": "RunTraceView", "path": "src/views/code/runtime/RunTraceView.tsx", "type": "view", "status": "complete"}
+          ]
+        },
+        "workflow": {
+          "count": 3,
+          "description": "Workflow management views",
+          "components": [
+            {"name": "WorkflowListView", "path": "src/views/workflow/WorkflowListView.tsx", "type": "view", "status": "complete"},
+            {"name": "WorkflowDesignerView", "path": "src/views/workflow/WorkflowDesignerView.tsx", "type": "view", "status": "complete"},
+            {"name": "WorkflowMonitorView", "path": "src/views/workflow/WorkflowMonitorView.tsx", "type": "view", "status": "complete"}
+          ]
+        },
+        "cloud-deploy": {
+          "count": 15,
+          "description": "Cloud deployment views",
+          "components": [
+            {"name": "CloudDeployView", "path": "src/views/cloud-deploy/CloudDeployView.tsx", "type": "view", "status": "complete"},
+            {"name": "CloudDeployWizard", "path": "src/views/cloud-deploy/components/CloudDeployWizard.tsx", "type": "component", "status": "complete"},
+            {"name": "DeploymentComplete", "path": "src/views/cloud-deploy/components/DeploymentComplete.tsx", "type": "component", "status": "complete"},
+            {"name": "DeploymentProgress", "path": "src/views/cloud-deploy/components/DeploymentProgress.tsx", "type": "component", "status": "deprecated", "issues": ["Replaced by DeploymentProgressEnhanced"]},
+            {"name": "DeploymentProgressEnhanced", "path": "src/views/cloud-deploy/components/DeploymentProgressEnhanced.tsx", "type": "component", "status": "complete"},
+            {"name": "HumanCheckpointBanner", "path": "src/views/cloud-deploy/components/HumanCheckpointBanner.tsx", "type": "component", "status": "complete"},
+            {"name": "ProviderComparison", "path": "src/views/cloud-deploy/components/ProviderComparison.tsx", "type": "component", "status": "complete"},
+            {"name": "SSHKeyManager", "path": "src/views/cloud-deploy/components/SSHKeyManager.tsx", "type": "component", "status": "complete"},
+            {"name": "DeploymentHistoryPage", "path": "src/views/cloud-deploy/pages/DeploymentHistoryPage.tsx", "type": "view", "status": "complete"},
+            {"name": "InstancesPage", "path": "src/views/cloud-deploy/pages/InstancesPage.tsx", "type": "view", "status": "complete"}
+          ]
+        },
+        "chat": {
+          "count": 8,
+          "description": "Chat interface views",
+          "components": [
+            {"name": "ChatView", "path": "src/views/ChatView.tsx", "type": "view", "status": "complete"},
+            {"name": "ChatA2UI", "path": "src/views/chat/ChatA2UI.tsx", "type": "view", "status": "complete"},
+            {"name": "ChatComposer", "path": "src/views/chat/ChatComposer.tsx", "type": "component", "status": "complete"},
+            {"name": "ChatRail", "path": "src/views/chat/ChatRail.tsx", "type": "component", "status": "complete"}
+          ]
+        },
+        "code": {
+          "count": 25,
+          "description": "Code management views",
+          "components": [
+            {"name": "CodeRoot", "path": "src/views/code/CodeRoot.tsx", "type": "view", "status": "complete"},
+            {"name": "CodeCanvas", "path": "src/views/code/CodeCanvas.tsx", "type": "view", "status": "complete"},
+            {"name": "CodeRail", "path": "src/views/code/CodeRail.tsx", "type": "component", "status": "complete"},
+            {"name": "KanbanBoard", "path": "src/views/code/KanbanBoard.tsx", "type": "component", "status": "complete"},
+            {"name": "KanbanDAG", "path": "src/views/code/KanbanDAG.tsx", "type": "component", "status": "complete"},
+            {"name": "JobsView", "path": "src/views/code/JobsView.tsx", "type": "view", "status": "complete"},
+            {"name": "RunsView", "path": "src/views/code/RunsView.tsx", "type": "view", "status": "complete"},
+            {"name": "SkillsView", "path": "src/views/code/SkillsView.tsx", "type": "view", "status": "complete"},
+            {"name": "ToolsView", "path": "src/views/code/ToolsView.tsx", "type": "view", "status": "complete"},
+            {"name": "LogsView", "path": "src/views/code/LogsView.tsx", "type": "view", "status": "complete"},
+            {"name": "ProblemsView", "path": "src/views/code/ProblemsView.tsx", "type": "view", "status": "complete"},
+            {"name": "SchedulerView", "path": "src/views/code/SchedulerView.tsx", "type": "view", "status": "complete"}
+          ]
+        },
+        "dag": {
+          "count": 16,
+          "description": "DAG management views",
+          "components": [
+            {"name": "BrowserView", "path": "src/views/dag/BrowserView.tsx", "type": "view", "status": "complete"},
+            {"name": "Checkpointing", "path": "src/views/dag/Checkpointing.tsx", "type": "view", "status": "complete"},
+            {"name": "DAGWIH", "path": "src/views/dag/DAGWIH.tsx", "type": "view", "status": "complete"},
+            {"name": "DirectiveCompiler", "path": "src/views/dag/DirectiveCompiler.tsx", "type": "view", "status": "complete"},
+            {"name": "EvaluationHarness", "path": "src/views/dag/EvaluationHarness.tsx", "type": "view", "status": "complete"},
+            {"name": "GCAgents", "path": "src/views/dag/GCAgents.tsx", "type": "view", "status": "complete"},
+            {"name": "ObservabilityDashboard", "path": "src/views/dag/ObservabilityDashboard.tsx", "type": "view", "status": "complete"},
+            {"name": "OntologyViewer", "path": "src/views/dag/OntologyViewer.tsx", "type": "view", "status": "complete"},
+            {"name": "PolicyGating", "path": "src/views/dag/PolicyGating.tsx", "type": "view", "status": "complete"},
+            {"name": "PolicyManager", "path": "src/views/dag/PolicyManager.tsx", "type": "view", "status": "complete"},
+            {"name": "PurposeBinding", "path": "src/views/dag/PurposeBinding.tsx", "type": "view", "status": "complete"},
+            {"name": "ReceiptsViewer", "path": "src/views/dag/ReceiptsViewer.tsx", "type": "view", "status": "complete"},
+            {"name": "SecurityDashboard", "path": "src/views/dag/SecurityDashboard.tsx", "type": "view", "status": "complete"},
+            {"name": "SwarmMonitor", "path": "src/views/dag/SwarmMonitor.tsx", "type": "view", "status": "complete"},
+            {"name": "TaskExecutor", "path": "src/views/dag/TaskExecutor.tsx", "type": "view", "status": "complete"}
+          ]
+        },
+        "nodes": {
+          "count": 12,
+          "description": "Node management views",
+          "components": [
+            {"name": "NodesView", "path": "src/views/nodes/NodesView.tsx", "type": "view", "status": "complete"},
+            {"name": "NodeCard", "path": "src/views/nodes/components/NodeCard.tsx", "type": "component", "status": "complete"},
+            {"name": "NodeList", "path": "src/views/nodes/components/NodeList.tsx", "type": "component", "status": "complete"},
+            {"name": "AddNodeWizard", "path": "src/views/nodes/components/AddNodeWizard.tsx", "type": "component", "status": "complete"},
+            {"name": "NodeTerminal", "path": "src/views/nodes/terminal/NodeTerminal.tsx", "type": "component", "status": "complete"},
+            {"name": "TerminalFileBrowser", "path": "src/views/nodes/terminal/TerminalFileBrowser.tsx", "type": "component", "status": "complete"},
+            {"name": "TerminalTabs", "path": "src/views/nodes/terminal/TerminalTabs.tsx", "type": "component", "status": "complete"}
+          ]
+        },
+        "other": {
+          "count": 50,
+          "description": "Other views and pages",
+          "components": [
+            {"name": "HomeView", "path": "src/views/HomeView.tsx", "type": "view", "status": "complete"},
+            {"name": "AgentView", "path": "src/views/AgentView.tsx", "type": "view", "status": "complete"},
+            {"name": "ChatView", "path": "src/views/ChatView.tsx", "type": "view", "status": "complete"},
+            {"name": "CoworkView", "path": "src/views/CoworkView.tsx", "type": "view", "status": "complete"},
+            {"name": "ProjectView", "path": "src/views/ProjectView.tsx", "type": "view", "status": "complete"},
+            {"name": "TerminalView", "path": "src/views/TerminalView.tsx", "type": "view", "status": "complete"},
+            {"name": "CapsuleManagerView", "path": "src/views/CapsuleManagerView.tsx", "type": "view", "status": "complete", "issues": ["TODO: Import from @a2rchitech/shell-ui"]},
+            {"name": "SwarmDashboard", "path": "src/views/SwarmDashboard/SwarmDashboard.tsx", "type": "view", "status": "complete", "hasTests": true},
+            {"name": "TamboStudio", "path": "src/views/TamboStudio/TamboStudio.tsx", "type": "view", "status": "complete", "hasTests": true},
+            {"name": "IVKGEPanel", "path": "src/views/IVKGEPanel/IVKGEPanel.tsx", "type": "component", "status": "complete", "hasTests": true},
+            {"name": "MultimodalInput", "path": "src/views/MultimodalInput/MultimodalInput.tsx", "type": "component", "status": "complete", "hasTests": true},
+            {"name": "NativeAgentView", "path": "src/views/NativeAgentView.tsx", "type": "view", "status": "complete", "hasTests": true},
+            {"name": "ModelManagementView", "path": "src/views/settings/ModelManagementView.tsx", "type": "view", "status": "complete"}
+          ]
+        }
+      }
+    },
+    "shell": {
+      "count": 20,
+      "description": "Shell and layout components",
+      "components": [
+        {"name": "ShellApp", "path": "src/shell/ShellApp.tsx", "type": "component", "status": "complete", "issues": ["TODO: Get session from auth context"]},
+        {"name": "ShellFrame", "path": "src/shell/ShellFrame.tsx", "type": "component", "status": "complete"},
+        {"name": "ShellCanvas", "path": "src/shell/ShellCanvas.tsx", "type": "component", "status": "complete"},
+        {"name": "ShellHeader", "path": "src/shell/ShellHeader.tsx", "type": "component", "status": "complete"},
+        {"name": "ShellRail", "path": "src/shell/ShellRail.tsx", "type": "component", "status": "complete"},
+        {"name": "ShellOverlayLayer", "path": "src/shell/ShellOverlayLayer.tsx", "type": "component", "status": "complete"},
+        {"name": "ControlCenter", "path": "src/shell/ControlCenter.tsx", "type": "component", "status": "complete"},
+        {"name": "FloatingOrb", "path": "src/shell/FloatingOrb.tsx", "type": "component", "status": "complete"},
+        {"name": "FloatingWidgets", "path": "src/shell/FloatingWidgets.tsx", "type": "component", "status": "complete"},
+        {"name": "FloatingModeSwitcher", "path": "src/shell/FloatingModeSwitcher.tsx", "type": "component", "status": "complete"},
+        {"name": "VisionGlass", "path": "src/shell/VisionGlass.tsx", "type": "component", "status": "complete"},
+        {"name": "AgentRunnerWindow", "path": "src/shell/AgentRunnerWindow.tsx", "type": "component", "status": "complete"},
+        {"name": "ConversationMonitorOverlay", "path": "src/shell/ConversationMonitorOverlay.tsx", "type": "component", "status": "complete"},
+        {"name": "EnvironmentSelector", "path": "src/shell/EnvironmentSelector.tsx", "type": "component", "status": "complete"},
+        {"name": "LegacyWidgets", "path": "src/shell/LegacyWidgets.tsx", "type": "component", "status": "deprecated"},
+        {"name": "RailRowMenu", "path": "src/shell/rail/RailRowMenu.tsx", "type": "component", "status": "complete"}
+      ]
+    },
+    "hooks": {
+      "count": 12,
+      "description": "Custom React hooks",
+      "components": [
+        {"name": "useToast", "path": "src/hooks/use-toast.ts", "type": "hook", "status": "complete"},
+        {"name": "useBudget", "path": "src/hooks/useBudget.ts", "type": "hook", "status": "complete"},
+        {"name": "useReplay", "path": "src/hooks/useReplay.ts", "type": "hook", "status": "complete"},
+        {"name": "usePrewarm", "path": "src/hooks/usePrewarm.ts", "type": "hook", "status": "complete"},
+        {"name": "useWorkflow", "path": "src/hooks/useWorkflow.ts", "type": "hook", "status": "complete"},
+        {"name": "useAgentAvatar", "path": "src/hooks/useAgentAvatar.ts", "type": "hook", "status": "complete"},
+        {"name": "useProviderAuth", "path": "src/hooks/useProviderAuth.ts", "type": "hook", "status": "complete"},
+        {"name": "useBrainChat", "path": "src/hooks/useBrainChat.ts", "type": "hook", "status": "complete"},
+        {"name": "useCapsule", "path": "src/hooks/useCapsule.ts", "type": "hook", "status": "complete"},
+        {"name": "useVoice", "path": "src/hooks/useVoice.ts", "type": "hook", "status": "complete"},
+        {"name": "useVisualState", "path": "src/hooks/useVisualState.ts", "type": "hook", "status": "complete"}
+      ]
+    },
+    "lib": {
+      "count": 113,
+      "description": "Utility libraries and services",
+      "subcategories": {
+        "ai": {
+          "count": 55,
+          "description": "AI-related utilities",
+          "components": [
+            {"name": "token-utils", "path": "src/lib/ai/token-utils.ts", "type": "util", "status": "complete", "hasTests": true},
+            {"name": "text-splitter", "path": "src/lib/ai/text-splitter.ts", "type": "util", "status": "complete", "hasTests": true},
+            {"name": "rust-stream-adapter", "path": "src/lib/ai/rust-stream-adapter.ts", "type": "util", "status": "complete", "hasTests": true},
+            {"name": "providers", "path": "src/lib/ai/providers.ts", "type": "util", "status": "complete"},
+            {"name": "tools", "path": "src/lib/ai/tools/tools.ts", "type": "util", "status": "complete"},
+            {"name": "deep-research", "path": "src/lib/ai/tools/deep-research/deep-research.ts", "type": "util", "status": "complete", "issues": ["TODO: Improve output of tool call parts"]},
+            {"name": "web-search", "path": "src/lib/ai/tools/web-search.ts", "type": "util", "status": "complete"},
+            {"name": "code-execution", "path": "src/lib/ai/tools/code-execution.ts", "type": "util", "status": "complete"},
+            {"name": "generate-image", "path": "src/lib/ai/tools/generate-image.ts", "type": "util", "status": "complete"}
+          ]
+        },
+        "agents": {
+          "count": 18,
+          "description": "Agent-related utilities",
+          "components": [
+            {"name": "native-agent.store", "path": "src/lib/agents/native-agent.store.ts", "type": "store", "status": "complete", "hasTests": true, "issues": ["connectStream is deprecated"]},
+            {"name": "agent.store", "path": "src/lib/agents/agent.store.ts", "type": "store", "status": "complete"},
+            {"name": "agent.service", "path": "src/lib/agents/agent.service.ts", "type": "service", "status": "complete"},
+            {"name": "rails.service", "path": "src/lib/agents/rails.service.ts", "type": "service", "status": "complete"},
+            {"name": "voice.service", "path": "src/lib/agents/voice.service.ts", "type": "service", "status": "complete"}
+          ]
+        },
+        "sandbox": {
+          "count": 6,
+          "description": "Sandbox utilities",
+          "components": [
+            {"name": "smart-sandbox", "path": "src/lib/sandbox/smart-sandbox.ts", "type": "util", "status": "complete", "hasTests": true},
+            {"name": "docker-sandbox", "path": "src/lib/sandbox/docker-sandbox.ts", "type": "util", "status": "complete"},
+            {"name": "wasm-sandbox", "path": "src/lib/sandbox/wasm-sandbox.ts", "type": "util", "status": "complete"}
+          ]
+        }
+      }
+    },
+    "capsules": {
+      "count": 35,
+      "description": "Capsule and browser components",
+      "components": [
+        {"name": "CapsuleHost", "path": "src/capsules/CapsuleHost.tsx", "type": "component", "status": "complete"},
+        {"name": "BrowserCapsule", "path": "src/capsules/browser/BrowserCapsule.tsx", "type": "component", "status": "deprecated", "issues": ["Replaced by BrowserCapsuleEnhanced"]},
+        {"name": "BrowserCapsuleEnhanced", "path": "src/capsules/browser/BrowserCapsuleEnhanced.tsx", "type": "component", "status": "complete"},
+        {"name": "BrowserCapsuleReal", "path": "src/capsules/browser/BrowserCapsuleReal.tsx", "type": "component", "status": "complete"},
+        {"name": "BrowserCapsuleIntegrated", "path": "src/capsules/browser/BrowserCapsuleIntegrated.tsx", "type": "component", "status": "complete"},
+        {"name": "BrowserPane", "path": "src/capsules/browser/BrowserPane.tsx", "type": "component", "status": "complete"},
+        {"name": "BrowserTabs", "path": "src/capsules/browser/BrowserTabs.tsx", "type": "component", "status": "complete"},
+        {"name": "BrowserAgentBar", "path": "src/capsules/browser/BrowserAgentBar.tsx", "type": "component", "status": "complete"},
+        {"name": "BrowserAgentOverlay", "path": "src/capsules/browser/BrowserAgentOverlay.tsx", "type": "component", "status": "complete"},
+        {"name": "A2UIRenderer", "path": "src/capsules/a2ui/A2UIRenderer.tsx", "type": "component", "status": "partial", "issues": ["TODO: Add more component renderers"]},
+        {"name": "A2UIRendererExtended", "path": "src/capsules/a2ui/A2UIRendererExtended.tsx", "type": "component", "status": "complete"},
+        {"name": "receiptService", "path": "src/capsules/browser/receiptService.ts", "type": "service", "status": "complete", "issues": ["TODO: Replace with persistent storage"]},
+        {"name": "observabilityService", "path": "src/capsules/browser/observabilityService.ts", "type": "service", "status": "complete", "issues": ["TODO: Replace with proper observability backend"]},
+        {"name": "auditTrailService", "path": "src/capsules/browser/auditTrailService.ts", "type": "service", "status": "complete", "issues": ["TODO: Replace with persistent storage"]},
+        {"name": "policyService", "path": "src/capsules/browser/policyService.ts", "type": "service", "status": "complete", "issues": ["TODO: Replace with persistent storage"]},
+        {"name": "environmentService", "path": "src/capsules/browser/environmentService.ts", "type": "service", "status": "complete", "issues": ["TODO: Replace with 8-cloud integration"]},
+        {"name": "Phase1Components", "path": "src/capsules/a2ui/components/Phase1Components.tsx", "type": "component", "status": "complete"},
+        {"name": "Phase2Components", "path": "src/capsules/a2ui/components/Phase2Components.tsx", "type": "component", "status": "complete"},
+        {"name": "Phase3Components", "path": "src/capsules/a2ui/components/Phase3Components.tsx", "type": "component", "status": "complete"},
+        {"name": "Phase4Components", "path": "src/capsules/a2ui/components/Phase4Components.tsx", "type": "component", "status": "complete"}
+      ]
+    },
+    "providers": {
+      "count": 8,
+      "description": "React context providers",
+      "components": [
+        {"name": "ChatIdProvider", "path": "src/providers/chat-id-provider.tsx", "type": "provider", "status": "complete"},
+        {"name": "ChatInputProvider", "path": "src/providers/chat-input-provider.tsx", "type": "provider", "status": "complete"},
+        {"name": "ChatModelsProvider", "path": "src/providers/chat-models-provider.tsx", "type": "provider", "status": "complete"},
+        {"name": "DataStreamProvider", "path": "src/providers/data-stream-provider.tsx", "type": "provider", "status": "complete"},
+        {"name": "MessageTreeProvider", "path": "src/providers/message-tree-provider.tsx", "type": "provider", "status": "complete"},
+        {"name": "ModelSelectionProvider", "path": "src/providers/model-selection-provider.tsx", "type": "provider", "status": "complete"},
+        {"name": "SessionProvider", "path": "src/providers/session-provider.tsx", "type": "provider", "status": "complete"},
+        {"name": "VoiceProvider", "path": "src/providers/voice-provider.tsx", "type": "provider", "status": "complete"}
+      ]
+    },
+    "integration": {
+      "count": 22,
+      "description": "Integration layer components",
+      "components": [
+        {"name": "api-client", "path": "src/integration/api-client.ts", "type": "service", "status": "complete"},
+        {"name": "legacy.bridge", "path": "src/integration/a2r/legacy.bridge.ts", "type": "service", "status": "deprecated", "issues": ["Use api-client.ts instead"]},
+        {"name": "exec.facade", "path": "src/integration/execution/exec.facade.ts", "type": "service", "status": "deprecated", "issues": ["Use api-client.ts instead"]},
+        {"name": "kernel/index", "path": "src/integration/kernel/index.ts", "type": "service", "status": "deprecated", "issues": ["Use api-client.ts instead"]},
+        {"name": "a2ui-client", "path": "src/integration/a2ui-client.ts", "type": "service", "status": "complete", "hasTests": true},
+        {"name": "browser-client", "path": "src/integration/browser-client.ts", "type": "service", "status": "complete"},
+        {"name": "session-bridge", "path": "src/integration/session-bridge.ts", "type": "service", "status": "complete"},
+        {"name": "use-session-bridge", "path": "src/integration/use-session-bridge.ts", "type": "hook", "status": "complete"}
+      ]
+    },
+    "drawers": {
+      "count": 4,
+      "description": "Drawer components",
+      "components": [
+        {"name": "ConsoleDrawer", "path": "src/drawers/ConsoleDrawer.tsx", "type": "component", "status": "complete"},
+        {"name": "InspectorDrawer", "path": "src/drawers/InspectorDrawer.tsx", "type": "component", "status": "complete"},
+        {"name": "drawer.store", "path": "src/drawers/drawer.store.ts", "type": "store", "status": "complete"}
+      ]
+    },
+    "nav": {
+      "count": 6,
+      "description": "Navigation utilities",
+      "components": [
+        {"name": "nav.store", "path": "src/nav/nav.store.ts", "type": "store", "status": "complete"},
+        {"name": "nav.selectors", "path": "src/nav/nav.selectors.ts", "type": "util", "status": "complete"},
+        {"name": "nav.types", "path": "src/nav/nav.types.ts", "type": "type", "status": "complete"},
+        {"name": "nav.history", "path": "src/nav/nav.history.ts", "type": "util", "status": "complete"},
+        {"name": "nav.policy", "path": "src/nav/nav.policy.ts", "type": "util", "status": "complete"},
+        {"name": "useNav", "path": "src/nav/useNav.ts", "type": "hook", "status": "complete"}
+      ]
+    },
+    "runner": {
+      "count": 16,
+      "description": "Agent runner components",
+      "components": [
+        {"name": "AgentRunnerPanel", "path": "src/runner/AgentRunnerPanel.tsx", "type": "component", "status": "complete"},
+        {"name": "AgentInvokeBar", "path": "src/runner/AgentInvokeBar.tsx", "type": "component", "status": "complete"},
+        {"name": "RunnerTraceSidebar", "path": "src/runner/RunnerTraceSidebar.tsx", "type": "component", "status": "complete"},
+        {"name": "ContextPackBrowser", "path": "src/runner/components/ContextPackBrowser.tsx", "type": "component", "status": "complete"},
+        {"name": "DagPlanningPanel", "path": "src/runner/components/DagPlanningPanel.tsx", "type": "component", "status": "complete"},
+        {"name": "LeaseMonitorPanel", "path": "src/runner/components/LeaseMonitorPanel.tsx", "type": "component", "status": "complete"},
+        {"name": "ReceiptQueryPanel", "path": "src/runner/components/ReceiptQueryPanel.tsx", "type": "component", "status": "complete"},
+        {"name": "SnapshotManagerPanel", "path": "src/runner/components/SnapshotManagerPanel.tsx", "type": "component", "status": "complete"},
+        {"name": "TemplateLibraryPanel", "path": "src/runner/components/TemplateLibraryPanel.tsx", "type": "component", "status": "complete"},
+        {"name": "WIHManagerPanel", "path": "src/runner/components/WIHManagerPanel.tsx", "type": "component", "status": "complete"},
+        {"name": "runner.store", "path": "src/runner/runner.store.ts", "type": "store", "status": "complete"},
+        {"name": "dak.store", "path": "src/runner/dak.store.ts", "type": "store", "status": "complete"}
+      ]
+    },
+    "agent-workspace": {
+      "count": 10,
+      "description": "Agent workspace utilities",
+      "components": [
+        {"name": "useWorkspace", "path": "src/agent-workspace/useWorkspace.ts", "type": "hook", "status": "complete"},
+        {"name": "useA2RStream", "path": "src/agent-workspace/useA2RStream.ts", "type": "hook", "status": "complete"},
+        {"name": "useWorkspaceWebSocket", "path": "src/agent-workspace/useWorkspaceWebSocket.ts", "type": "hook", "status": "complete"},
+        {"name": "websocket", "path": "src/agent-workspace/websocket.ts", "type": "service", "status": "complete"},
+        {"name": "http-client", "path": "src/agent-workspace/http-client.ts", "type": "service", "status": "complete"}
+      ]
+    },
+    "services": {
+      "count": 15,
+      "description": "Business logic services",
+      "components": [
+        {"name": "budgetCalculator", "path": "src/services/budgetCalculator.ts", "type": "service", "status": "complete"},
+        {"name": "capsuleApi", "path": "src/services/capsuleApi.ts", "type": "service", "status": "complete"},
+        {"name": "poolManager", "path": "src/services/poolManager.ts", "type": "service", "status": "complete"},
+        {"name": "ProviderAuthService", "path": "src/services/ProviderAuthService.ts", "type": "service", "status": "complete"},
+        {"name": "SkillInstallerApiService", "path": "src/services/SkillInstallerApiService.ts", "type": "service", "status": "complete"},
+        {"name": "workflowEngine", "path": "src/services/workflowEngine.ts", "type": "service", "status": "complete"},
+        {"name": "browserEngine", "path": "src/services/browserEngine.ts", "type": "service", "status": "complete"},
+        {"name": "VoiceService", "path": "src/services/voice/VoiceService.ts", "type": "service", "status": "complete"},
+        {"name": "SpeechToText", "path": "src/services/voice/SpeechToText.ts", "type": "service", "status": "complete"},
+        {"name": "runEngine", "path": "src/services/code/runEngine.ts", "type": "service", "status": "complete"},
+        {"name": "replayEngine", "path": "src/services/code/replayEngine.ts", "type": "service", "status": "complete"}
+      ]
+    },
+    "a2r-usage": {
+      "count": 73,
+      "description": "A2R Usage electron app components",
+      "components": [
+        {"name": "App", "path": "src/a2r-usage/ui/App.tsx", "type": "component", "status": "complete", "hasTests": true},
+        {"name": "ConsoleApp", "path": "src/a2r-usage/ui/console/ConsoleApp.tsx", "type": "component", "status": "complete"},
+        {"name": "ConsoleHeader", "path": "src/a2r-usage/ui/console/components/ConsoleHeader.tsx", "type": "component", "status": "complete"},
+        {"name": "ConsoleLayout", "path": "src/a2r-usage/ui/console/components/ConsoleLayout.tsx", "type": "component", "status": "complete"},
+        {"name": "ConsoleStatusSpine", "path": "src/a2r-usage/ui/console/components/ConsoleStatusSpine.tsx", "type": "component", "status": "complete"},
+        {"name": "about-dialog", "path": "src/a2r-usage/ui/components/about-dialog.tsx", "type": "component", "status": "complete", "hasTests": true},
+        {"name": "panel-footer", "path": "src/a2r-usage/ui/components/panel-footer.tsx", "type": "component", "status": "complete", "hasTests": true},
+        {"name": "provider-card", "path": "src/a2r-usage/ui/components/provider-card.tsx", "type": "component", "status": "complete", "hasTests": true},
+        {"name": "side-nav", "path": "src/a2r-usage/ui/components/side-nav.tsx", "type": "component", "status": "complete", "hasTests": true},
+        {"name": "use-app-update", "path": "src/a2r-usage/ui/hooks/use-app-update.ts", "type": "hook", "status": "complete", "hasTests": true},
+        {"name": "use-dark-mode", "path": "src/a2r-usage/ui/hooks/use-dark-mode.ts", "type": "hook", "status": "complete", "hasTests": true},
+        {"name": "use-probe-events", "path": "src/a2r-usage/ui/hooks/use-probe-events.ts", "type": "hook", "status": "complete", "hasTests": true}
+      ]
+    },
+    "dev": {
+      "count": 14,
+      "description": "Development tools",
+      "components": [
+        {"name": "AgentationOverlay", "path": "src/dev/agentation/components/AgentationOverlay.tsx", "type": "component", "status": "complete"},
+        {"name": "AnnotationTool", "path": "src/dev/agentation/components/AnnotationTool.tsx", "type": "component", "status": "complete"},
+        {"name": "NotesEditor", "path": "src/dev/agentation/components/NotesEditor.tsx", "type": "component", "status": "complete"},
+        {"name": "SelectorPicker", "path": "src/dev/agentation/components/SelectorPicker.tsx", "type": "component", "status": "complete"},
+        {"name": "useAgentation", "path": "src/dev/agentation/hooks/useAgentation.ts", "type": "hook", "status": "complete"},
+        {"name": "storybook-integration", "path": "src/dev/agentation/storybook-integration.tsx", "type": "component", "status": "complete"}
+      ]
+    }
+  },
+  "issues": {
+    "duplicates": [
+      {
+        "component": "CodeBlock",
+        "locations": ["ai-elements/code-block.tsx", "prompt-kit/code-block.tsx"],
+        "recommendation": "Remove prompt-kit version, use ai-elements"
+      },
+      {
+        "component": "Markdown",
+        "locations": ["ai-elements/markdown.tsx", "prompt-kit/markdown.tsx"],
+        "recommendation": "Remove prompt-kit version, use ai-elements"
+      },
+      {
+        "component": "Message",
+        "locations": ["ai-elements/message.tsx", "prompt-kit/message.tsx"],
+        "recommendation": "Remove prompt-kit version, use ai-elements"
+      },
+      {
+        "component": "PromptInput",
+        "locations": ["ai-elements/prompt-input.tsx", "prompt-kit/prompt-input.tsx"],
+        "recommendation": "Consolidate to ai-elements version"
+      },
+      {
+        "component": "BrowserCapsule",
+        "locations": ["browser/BrowserCapsule.tsx", "browser/BrowserCapsuleEnhanced.tsx", "browser/BrowserCapsuleReal.tsx", "browser/BrowserCapsuleIntegrated.tsx"],
+        "recommendation": "Remove old BrowserCapsule, consolidate to BrowserCapsuleEnhanced"
+      }
+    ],
+    "deprecated": [
+      {"path": "src/integration/a2r/legacy.bridge.ts", "reason": "Use api-client.ts instead", "replacement": "api-client.ts"},
+      {"path": "src/integration/execution/exec.facade.ts", "reason": "Use api-client.ts instead", "replacement": "api-client.ts"},
+      {"path": "src/integration/kernel/index.ts", "reason": "Use api-client.ts instead", "replacement": "api-client.ts"},
+      {"path": "src/components/ai-elements/agent.tsx", "reason": "Use AgentCard instead", "replacement": "AgentCard"},
+      {"path": "src/capsules/browser/BrowserCapsule.tsx", "reason": "Use BrowserCapsuleEnhanced", "replacement": "BrowserCapsuleEnhanced"},
+      {"path": "src/views/cloud-deploy/components/DeploymentProgress.tsx", "reason": "Use DeploymentProgressEnhanced", "replacement": "DeploymentProgressEnhanced"},
+      {"path": "src/shell/LegacyWidgets.tsx", "reason": "Legacy widgets", "replacement": "FloatingWidgets"}
+    ],
+    "todos": [
+      {"file": "src/app/api/a2ui/capsules/[id]/launch/route.ts", "line": 66, "message": "Load from content address (IPFS, etc.)"},
+      {"file": "src/app/api/a2ui/sessions/route.ts", "line": 41, "message": "Get from auth"},
+      {"file": "src/shell/ShellApp.tsx", "line": 415, "message": "Get from auth context"},
+      {"file": "src/components/workspace/IdentityEditor.tsx", "line": 84, "message": "Save to actual files (IDENTITY.md, SOUL.md)"},
+      {"file": "src/components/workspace/MemoryEditor.tsx", "line": 125, "message": "Persist to backend"},
+      {"file": "src/capsules/a2ui/A2UIRenderer.tsx", "line": 766, "message": "Add more component renderers"},
+      {"file": "src/capsules/browser/receiptService.ts", "line": 70, "message": "Replace with persistent storage (SQLite/Postgres)"},
+      {"file": "src/capsules/browser/observabilityService.ts", "line": 161, "message": "Replace with proper observability backend"},
+      {"file": "src/capsules/browser/auditTrailService.ts", "line": 171, "message": "Replace with persistent storage"},
+      {"file": "src/capsules/browser/policyService.ts", "line": 85, "message": "Replace with persistent storage"},
+      {"file": "src/capsules/browser/environmentService.ts", "line": 68, "message": "Replace with 8-cloud integration"},
+      {"file": "src/lib/blob.ts", "line": 48, "message": "Implement S3 upload for production"},
+      {"file": "src/lib/blob.ts", "line": 67, "message": "Implement blob deletion"},
+      {"file": "src/views/CapsuleManagerView.tsx", "line": 15, "message": "Import from @a2rchitech/shell-ui once package added"}
+    ],
+    "missingTests": [
+      "src/components/ui/*.tsx (30 files)",
+      "src/components/ai-elements/*.tsx (60+ files)",
+      "src/design/*.tsx (all)",
+      "src/views/*.tsx (most)",
+      "src/shell/*.tsx (all)",
+      "src/providers/*.tsx (all)",
+      "src/capsules/*.tsx (most)"
+    ],
+    "typeIssues": [
+      {"file": "src/design/controls/IconButton.tsx", "issue": "Uses 'any' type for props"},
+      {"file": "src/design/controls/SegmentedControl.tsx", "issue": "Uses 'any' type for props"}
+    ]
+  },
+  "stats": {
+    "byStatus": {
+      "complete": 580,
+      "polish-needed": 10,
+      "partial": 8,
+      "deprecated": 12,
+      "duplicate": 7
+    },
+    "byType": {
+      "component": 280,
+      "hook": 35,
+      "util": 200,
+      "service": 80,
+      "store": 45,
+      "view": 55
+    },
+    "tests": {
+      "withTests": 35,
+      "withoutTests": 660,
+      "coverage": "5.0%"
+    },
+    "stories": {
+      "withStories": 1,
+      "withoutStories": 694
+    }
+  }
+}

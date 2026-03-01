@@ -1,0 +1,1331 @@
+{
+  "version": "v0.1",
+  "tools": [
+    {
+      "id": "canvas.list.courses",
+      "title": "Canvas List Courses",
+      "kind": "read",
+      "safety_level": "safe",
+      "entrypoint": "tools/canvas/impl/canvas_http.ts",
+      "inputs_schema": {
+        "type": "object",
+        "properties": {
+          "enrollment_type": {
+            "type": "string",
+            "enum": [
+              "teacher",
+              "student",
+              "ta",
+              "observer"
+            ],
+            "default": "teacher"
+          },
+          "state": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "unpublished",
+                "available",
+                "completed",
+                "deleted"
+              ]
+            },
+            "default": [
+              "available"
+            ]
+          }
+        }
+      },
+      "outputs_schema": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "preconditions": [
+        "WIH_VALID",
+        "TASK_RUNNING"
+      ]
+    },
+    {
+      "id": "canvas.list.modules",
+      "title": "Canvas List Modules",
+      "kind": "read",
+      "safety_level": "safe",
+      "entrypoint": "tools/canvas/impl/canvas_http.ts",
+      "inputs_schema": {
+        "type": "object",
+        "required": [
+          "course_id"
+        ],
+        "properties": {
+          "course_id": {
+            "type": "integer"
+          },
+          "search_term": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "outputs_schema": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "preconditions": [
+        "WIH_VALID",
+        "TASK_RUNNING"
+      ]
+    },
+    {
+      "id": "canvas.create.module",
+      "title": "Canvas Create Module",
+      "kind": "write",
+      "safety_level": "caution",
+      "entrypoint": "tools/canvas/impl/canvas_http.ts",
+      "inputs_schema": {
+        "type": "object",
+        "required": [
+          "course_id",
+          "name"
+        ],
+        "properties": {
+          "course_id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "unlock_at": {
+            "type": "string",
+            "nullable": true
+          },
+          "position": {
+            "type": "integer",
+            "nullable": true
+          },
+          "published": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "outputs_schema": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "preconditions": [
+        "WIH_VALID",
+        "TASK_RUNNING"
+      ]
+    },
+    {
+      "id": "canvas.create.page",
+      "title": "Canvas Create Page",
+      "kind": "write",
+      "safety_level": "caution",
+      "entrypoint": "tools/canvas/impl/canvas_http.ts",
+      "inputs_schema": {
+        "type": "object",
+        "required": [
+          "course_id",
+          "title",
+          "body"
+        ],
+        "properties": {
+          "course_id": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "published": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "outputs_schema": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "preconditions": [
+        "WIH_VALID",
+        "TASK_RUNNING"
+      ]
+    },
+    {
+      "id": "canvas.create.assignment",
+      "title": "Canvas Create Assignment",
+      "kind": "write",
+      "safety_level": "caution",
+      "entrypoint": "tools/canvas/impl/canvas_http.ts",
+      "inputs_schema": {
+        "type": "object",
+        "required": [
+          "course_id",
+          "name"
+        ],
+        "properties": {
+          "course_id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "points_possible": {
+            "type": "number",
+            "default": 0
+          },
+          "grading_type": {
+            "type": "string",
+            "enum": [
+              "pass_fail",
+              "percent",
+              "letter_grade",
+              "points"
+            ],
+            "default": "points"
+          },
+          "submission_types": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [
+              "online_upload"
+            ]
+          },
+          "published": {
+            "type": "boolean",
+            "default": false
+          },
+          "due_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "outputs_schema": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "preconditions": [
+        "WIH_VALID",
+        "TASK_RUNNING"
+      ]
+    },
+    {
+      "id": "canvas.add.module.item",
+      "title": "Canvas Add Module Item",
+      "kind": "write",
+      "safety_level": "caution",
+      "entrypoint": "tools/canvas/impl/canvas_http.ts",
+      "inputs_schema": {
+        "type": "object",
+        "required": [
+          "course_id",
+          "module_id",
+          "title",
+          "type"
+        ],
+        "properties": {
+          "course_id": {
+            "type": "integer"
+          },
+          "module_id": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "Page",
+              "Assignment",
+              "ExternalUrl",
+              "File"
+            ]
+          },
+          "content_id": {
+            "type": "integer",
+            "nullable": true
+          },
+          "external_url": {
+            "type": "string",
+            "nullable": true
+          },
+          "new_tab": {
+            "type": "boolean",
+            "default": false
+          },
+          "indent": {
+            "type": "integer",
+            "default": 0
+          }
+        }
+      },
+      "outputs_schema": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "preconditions": [
+        "WIH_VALID",
+        "TASK_RUNNING"
+      ]
+    },
+    {
+      "id": "canvas.publish.module",
+      "title": "Canvas Publish Module",
+      "kind": "write",
+      "safety_level": "caution",
+      "entrypoint": "tools/canvas/impl/canvas_http.ts",
+      "inputs_schema": {
+        "type": "object",
+        "required": [
+          "course_id",
+          "module_id",
+          "published"
+        ],
+        "properties": {
+          "course_id": {
+            "type": "integer"
+          },
+          "module_id": {
+            "type": "integer"
+          },
+          "published": {
+            "type": "boolean"
+          }
+        }
+      },
+      "outputs_schema": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "preconditions": [
+        "WIH_VALID",
+        "TASK_RUNNING"
+      ]
+    },
+    {
+      "id": "canvas.upload.file",
+      "title": "Canvas Upload File",
+      "kind": "write",
+      "safety_level": "caution",
+      "entrypoint": "tools/canvas/impl/canvas_http.ts",
+      "inputs_schema": {
+        "type": "object",
+        "required": [
+          "course_id",
+          "name",
+          "content"
+        ],
+        "properties": {
+          "course_id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string",
+            "description": "Base64 encoded file content or local path"
+          },
+          "parent_folder_path": {
+            "type": "string",
+            "default": "course files"
+          }
+        }
+      },
+      "outputs_schema": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "preconditions": [
+        "WIH_VALID",
+        "TASK_RUNNING"
+      ]
+    },
+    {
+      "id": "canvas.search.course",
+      "title": "Canvas Search Course",
+      "kind": "read",
+      "safety_level": "safe",
+      "entrypoint": "tools/canvas/impl/canvas_http.ts",
+      "inputs_schema": {
+        "type": "object",
+        "required": [
+          "course_id",
+          "query"
+        ],
+        "properties": {
+          "course_id": {
+            "type": "integer"
+          },
+          "query": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "integer",
+            "default": 10
+          }
+        }
+      },
+      "outputs_schema": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "preconditions": [
+        "WIH_VALID",
+        "TASK_RUNNING"
+      ]
+    },
+    {
+      "id": "office.xlsx.read",
+      "title": "Office Xlsx Read",
+      "kind": "read",
+      "safety_level": "safe",
+      "entrypoint": "tools/office/impl/office_local.ts",
+      "inputs_schema": {
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "sheet": {
+            "type": "string",
+            "nullable": true
+          },
+          "range": {
+            "type": "string",
+            "nullable": true
+          },
+          "as_table": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "outputs_schema": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "preconditions": [
+        "WIH_VALID",
+        "TASK_RUNNING"
+      ]
+    },
+    {
+      "id": "office.xlsx.write",
+      "title": "Office Xlsx Write",
+      "kind": "write",
+      "safety_level": "caution",
+      "entrypoint": "tools/office/impl/office_local.ts",
+      "inputs_schema": {
+        "type": "object",
+        "required": [
+          "path",
+          "edits",
+          "output_path"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "output_path": {
+            "type": "string"
+          },
+          "edits": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "sheet",
+                "cell",
+                "value"
+              ],
+              "properties": {
+                "sheet": {
+                  "type": "string"
+                },
+                "cell": {
+                  "type": "string"
+                },
+                "value": {}
+              }
+            }
+          },
+          "track_changes": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "outputs_schema": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "preconditions": [
+        "WIH_VALID",
+        "TASK_RUNNING"
+      ]
+    },
+    {
+      "id": "office.docx.read",
+      "title": "Office Docx Read",
+      "kind": "read",
+      "safety_level": "safe",
+      "entrypoint": "tools/office/impl/office_local.ts",
+      "inputs_schema": {
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "as_markdown": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "outputs_schema": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "preconditions": [
+        "WIH_VALID",
+        "TASK_RUNNING"
+      ]
+    },
+    {
+      "id": "office.docx.write",
+      "title": "Office Docx Write",
+      "kind": "write",
+      "safety_level": "caution",
+      "entrypoint": "tools/office/impl/office_local.ts",
+      "inputs_schema": {
+        "type": "object",
+        "required": [
+          "path",
+          "patches",
+          "output_path"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "output_path": {
+            "type": "string"
+          },
+          "patches": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "op",
+                "target",
+                "value"
+              ],
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "enum": [
+                    "replace",
+                    "append",
+                    "insert_after"
+                  ]
+                },
+                "target": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "track_changes": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "outputs_schema": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "preconditions": [
+        "WIH_VALID",
+        "TASK_RUNNING"
+      ]
+    },
+    {
+      "id": "desktop.cowork.connect",
+      "title": "Desktop Cowork Connect",
+      "kind": "read",
+      "safety_level": "safe",
+      "entrypoint": "tools/desktop/impl/cowork_bridge.ts",
+      "inputs_schema": {
+        "type": "object",
+        "required": [
+          "endpoint_ref"
+        ],
+        "properties": {
+          "endpoint_ref": {
+            "type": "string"
+          },
+          "display_name": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "outputs_schema": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "preconditions": [
+        "WIH_VALID",
+        "TASK_RUNNING"
+      ]
+    },
+    {
+      "id": "desktop.screenshot",
+      "title": "Desktop Screenshot",
+      "kind": "read",
+      "safety_level": "safe",
+      "entrypoint": "tools/desktop/impl/cowork_bridge.ts",
+      "inputs_schema": {
+        "type": "object",
+        "required": [
+          "session_id"
+        ],
+        "properties": {
+          "session_id": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "full",
+              "active_window"
+            ],
+            "default": "active_window"
+          }
+        }
+      },
+      "outputs_schema": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "preconditions": [
+        "WIH_VALID",
+        "TASK_RUNNING"
+      ]
+    },
+    {
+      "id": "desktop.click",
+      "title": "Desktop Click",
+      "kind": "destructive",
+      "safety_level": "danger",
+      "entrypoint": "tools/desktop/impl/cowork_bridge.ts",
+      "inputs_schema": {
+        "type": "object",
+        "required": [
+          "session_id",
+          "x",
+          "y"
+        ],
+        "properties": {
+          "session_id": {
+            "type": "string"
+          },
+          "x": {
+            "type": "integer"
+          },
+          "y": {
+            "type": "integer"
+          },
+          "button": {
+            "type": "string",
+            "enum": [
+              "left",
+              "right"
+            ],
+            "default": "left"
+          }
+        }
+      },
+      "outputs_schema": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "preconditions": [
+        "WIH_VALID",
+        "TASK_RUNNING"
+      ]
+    },
+    {
+      "id": "desktop.type",
+      "title": "Desktop Type",
+      "kind": "destructive",
+      "safety_level": "danger",
+      "entrypoint": "tools/desktop/impl/cowork_bridge.ts",
+      "inputs_schema": {
+        "type": "object",
+        "required": [
+          "session_id",
+          "text"
+        ],
+        "properties": {
+          "session_id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "outputs_schema": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "preconditions": [
+        "WIH_VALID",
+        "TASK_RUNNING"
+      ]
+    },
+    {
+      "id": "desktop.wait",
+      "title": "Desktop Wait",
+      "kind": "read",
+      "safety_level": "safe",
+      "entrypoint": "tools/desktop/impl/cowork_bridge.ts",
+      "inputs_schema": {
+        "type": "object",
+        "required": [
+          "session_id",
+          "seconds"
+        ],
+        "properties": {
+          "session_id": {
+            "type": "string"
+          },
+          "seconds": {
+            "type": "number",
+            "minimum": 0.1,
+            "maximum": 60
+          }
+        }
+      },
+      "outputs_schema": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "preconditions": [
+        "WIH_VALID",
+        "TASK_RUNNING"
+      ]
+    },
+    {
+      "id": "desktop.hotkey",
+      "title": "Desktop Hotkey",
+      "kind": "destructive",
+      "safety_level": "danger",
+      "entrypoint": "tools/desktop/impl/cowork_bridge.ts",
+      "inputs_schema": {
+        "type": "object",
+        "required": [
+          "session_id",
+          "keys"
+        ],
+        "properties": {
+          "session_id": {
+            "type": "string"
+          },
+          "keys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "e.g., ['command', 'c']"
+          }
+        }
+      },
+      "outputs_schema": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "object"
+          }
+        }
+      },
+      "preconditions": [
+        "WIH_VALID",
+        "TASK_RUNNING"
+      ]
+    },
+    {
+      "id": "fs.read",
+      "title": "Read file",
+      "kind": "read",
+      "safety_level": "safe",
+      "entrypoint": "kernel.tools.fs.read",
+      "inputs_schema": {
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputs_schema": {
+        "type": "object",
+        "required": [
+          "content"
+        ],
+        "properties": {
+          "content": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "preconditions": [
+        "WIH_VALID",
+        "TASK_RUNNING"
+      ]
+    },
+    {
+      "id": "fs.write",
+      "title": "Write file (scoped)",
+      "kind": "write",
+      "safety_level": "caution",
+      "entrypoint": "kernel.tools.fs.write_scoped",
+      "inputs_schema": {
+        "type": "object",
+        "required": [
+          "path",
+          "content"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputs_schema": {
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "preconditions": [
+        "WIH_VALID",
+        "TASK_RUNNING",
+        "PATH_UNDER_A2R",
+        "PATH_MATCHES_GLOBS"
+      ]
+    },
+    {
+      "id": "fs.list",
+      "title": "List directory entries",
+      "kind": "read",
+      "safety_level": "safe",
+      "entrypoint": "kernel.tools.fs.list",
+      "inputs_schema": {
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "recursive": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputs_schema": {
+        "type": "object",
+        "required": [
+          "entries"
+        ],
+        "properties": {
+          "entries": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "preconditions": [
+        "WIH_VALID",
+        "TASK_RUNNING"
+      ]
+    },
+    {
+      "id": "grep.search",
+      "title": "Search text in repository",
+      "kind": "read",
+      "safety_level": "safe",
+      "entrypoint": "kernel.tools.grep.search",
+      "inputs_schema": {
+        "type": "object",
+        "required": [
+          "pattern"
+        ],
+        "properties": {
+          "pattern": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "glob": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputs_schema": {
+        "type": "object",
+        "required": [
+          "matches"
+        ],
+        "properties": {
+          "matches": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "preconditions": [
+        "WIH_VALID",
+        "TASK_RUNNING"
+      ]
+    },
+    {
+      "id": "schema.validate",
+      "title": "Validate JSON data against schema",
+      "kind": "read",
+      "safety_level": "safe",
+      "entrypoint": "kernel.tools.schema.validate",
+      "inputs_schema": {
+        "type": "object",
+        "required": [
+          "schema",
+          "instance"
+        ],
+        "properties": {
+          "schema": {
+            "type": "object"
+          },
+          "instance": {}
+        },
+        "additionalProperties": false
+      },
+      "outputs_schema": {
+        "type": "object",
+        "required": [
+          "valid"
+        ],
+        "properties": {
+          "valid": {
+            "type": "boolean"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "preconditions": [
+        "WIH_VALID",
+        "TASK_RUNNING"
+      ]
+    },
+    {
+      "id": "shell.run",
+      "title": "Run shell command",
+      "kind": "exec",
+      "safety_level": "danger",
+      "entrypoint": "kernel.tools.shell.run",
+      "inputs_schema": {
+        "type": "object",
+        "required": [
+          "command"
+        ],
+        "properties": {
+          "command": {
+            "type": "string"
+          },
+          "cwd": {
+            "type": "string"
+          },
+          "timeout_ms": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputs_schema": {
+        "type": "object",
+        "required": [
+          "exit_code",
+          "stdout",
+          "stderr"
+        ],
+        "properties": {
+          "exit_code": {
+            "type": "integer"
+          },
+          "stdout": {
+            "type": "string"
+          },
+          "stderr": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "preconditions": [
+        "WIH_VALID",
+        "TASK_RUNNING",
+        "APPROVAL_TOKEN_VALID"
+      ]
+    },
+    {
+      "id": "git.worktree",
+      "title": "Manage git worktree",
+      "kind": "write",
+      "safety_level": "caution",
+      "entrypoint": "kernel.tools.git.worktree",
+      "inputs_schema": {
+        "type": "object",
+        "required": [
+          "op",
+          "path"
+        ],
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": [
+              "add",
+              "remove",
+              "list"
+            ]
+          },
+          "path": {
+            "type": "string"
+          },
+          "branch": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputs_schema": {
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "worktrees": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "preconditions": [
+        "WIH_VALID",
+        "TASK_RUNNING"
+      ]
+    },
+    {
+      "id": "agent-browser.automation",
+      "title": "Agent Browser Automation",
+      "kind": "write",
+      "safety_level": "caution",
+      "entrypoint": "tools/agent-browser/mod.ts",
+      "version": "1.0.0",
+      "tags": ["browser", "automation", "playwright", "web", "screenshot"],
+      "inputs_schema": {
+        "type": "object",
+        "required": ["action"],
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": ["open", "snapshot", "click", "fill", "type", "screenshot", "get_text", "get_html", "get_value", "wait", "find", "close"],
+            "description": "Browser action to perform"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL to navigate to (for 'open' action)"
+          },
+          "selector": {
+            "type": "string",
+            "description": "Element selector (e.g., '@e2', 'button.submit', '#login', 'role=button')"
+          },
+          "value": {
+            "type": "string",
+            "description": "Value to fill/type into input field"
+          },
+          "path": {
+            "type": "string",
+            "description": "File path for screenshot (e.g., '/tmp/screenshot.png')"
+          },
+          "timeout": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 60000,
+            "description": "Timeout in milliseconds (default: 30000)"
+          },
+          "session_id": {
+            "type": "string",
+            "description": "Session ID for persistent browser session"
+          },
+          "profile": {
+            "type": "string",
+            "description": "Profile path for persistent cookies/login (e.g., '~/.myapp-profile')"
+          },
+          "json": {
+            "type": "boolean",
+            "default": true,
+            "description": "Return JSON output (default: true)"
+          }
+        }
+      },
+      "outputs_schema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the action succeeded"
+          },
+          "data": {
+            "type": "object",
+            "description": "Action-specific data (text, HTML, values)"
+          },
+          "error": {
+            "type": "string",
+            "description": "Error message if action failed"
+          },
+          "screenshot": {
+            "type": "string",
+            "description": "Base64-encoded screenshot (if applicable)"
+          },
+          "snapshot": {
+            "type": "object",
+            "description": "Accessibility tree snapshot with element refs",
+            "properties": {
+              "elements": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "ref": { "type": "string" },
+                    "role": { "type": "string" },
+                    "text": { "type": "string" },
+                    "label": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "execution_time_ms": {
+            "type": "number",
+            "description": "Execution time in milliseconds"
+          }
+        }
+      },
+      "preconditions": ["WIH_VALID", "TASK_RUNNING"],
+      "postconditions": ["BROWSER_STATE_UPDATED"],
+      "side_effects": ["browser_navigation", "dom_modification", "screenshot_capture"],
+      "policy": {
+        "domain_allowlist": [],
+        "require_approval_for": ["fill", "click", "type"],
+        "output_limit_bytes": 10485760,
+        "session_isolation_recommended": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+agent_id: UI_IMPLEMENTER
+name: UI Implementer
+version: 1.0.0
+description: |
+  Implements UI components based on architecture specifications.
+  Writes component code, styles, and unit tests.
+  
+domain: ui_implementation
+permissions:
+  read:
+    - src/**/*.types.ts
+    - src/**/*.schema.ts
+    - src/app/globals.css
+    - docs/ui/*.md
+  write:
+    - src/components/**/*.tsx
+    - src/components/**/*.css
+    - src/components/**/*.test.tsx
+    - src/components/**/*.stories.tsx
+  execute:
+    - vitest
+    - storybook:dev
+    - storybook:build
+forbidden:
+    - src/**/*.types.ts
+    - docs/ui/*.md
+    - production_deploy
+
+tools:
+  - file_read
+  - file_write
+  - component_scaffold
+  - test_generate
+  - story_generate
+
+constraints:
+  - Must follow UI_ARCHITECT specifications
+  - All components must have tests
+  - Code coverage must be > 80%
+  - Must use Tailwind CSS for styling
+  - Cannot modify API contracts without approval
+
+acceptance_criteria:
+  - Component implementation matches spec
+  - Unit tests pass
+  - Storybook stories render correctly
+  - Code coverage > 80%
+  - No TypeScript errors

@@ -1,0 +1,416 @@
+/**
+ * BrainUX Animation Styles
+ * Animation styles for BrainUX component - brain state visualization
+ */
+
+/* Container */
+.brainux-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Orb Base */
+.brainux-orb {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Pulsing Rings */
+.brainux-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid rgba(139, 92, 246, 0.3);
+  animation: brainux-pulse 2s ease-out infinite;
+}
+
+.brainux-ring:nth-child(1) {
+  width: 100%;
+  height: 100%;
+  animation-delay: 0s;
+}
+
+.brainux-ring:nth-child(2) {
+  width: 80%;
+  height: 80%;
+  animation-delay: 0.3s;
+  border-color: rgba(236, 72, 153, 0.4);
+}
+
+.brainux-ring:nth-child(3) {
+  width: 60%;
+  height: 60%;
+  animation-delay: 0.6s;
+  border-color: rgba(52, 211, 153, 0.5);
+}
+
+@keyframes brainux-pulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+/* Core Orb */
+.brainux-core {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #8b5cf6, #ec4899);
+  border-radius: 50%;
+  box-shadow: 0 0 30px rgba(139, 92, 246, 0.6),
+              0 0 60px rgba(236, 72, 153, 0.3);
+  animation: brainux-core-glow 2s ease-in-out infinite;
+}
+
+@keyframes brainux-core-glow {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 30px rgba(139, 92, 246, 0.6),
+                0 0 60px rgba(236, 72, 153, 0.3);
+  }
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 0 40px rgba(139, 92, 246, 0.8),
+                0 0 80px rgba(236, 72, 153, 0.5);
+  }
+}
+
+/* Thinking Animation - Scanning Line */
+.brainux-thinking {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  border: 3px solid rgba(139, 92, 246, 0.3);
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.brainux-scan-line {
+  position: absolute;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #34d399, transparent);
+  animation: brainux-scan 1.5s linear infinite;
+}
+
+@keyframes brainux-scan {
+  0% {
+    top: 0;
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0.5;
+  }
+}
+
+/* Searching Animation - Rotating Dots */
+.brainux-searching {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brainux-dot {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: #8b5cf6;
+  border-radius: 50%;
+  animation: brainux-orbit 2s linear infinite;
+}
+
+.brainux-dot:nth-child(1) { animation-delay: 0s; }
+.brainux-dot:nth-child(2) { animation-delay: 0.5s; }
+.brainux-dot:nth-child(3) { animation-delay: 1s; }
+.brainux-dot:nth-child(4) { animation-delay: 1.5s; }
+
+@keyframes brainux-orbit {
+  0% {
+    transform: rotate(0deg) translateX(30px);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(360deg) translateX(30px);
+    opacity: 0.3;
+  }
+}
+
+/* Tool Use Animation */
+.brainux-tool-use {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brainux-tool-icon {
+  font-size: 24px;
+  animation: brainux-tool-bounce 0.8s ease-in-out infinite;
+}
+
+@keyframes brainux-tool-bounce {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-5px) rotate(10deg);
+  }
+}
+
+.brainux-progress-bar {
+  position: absolute;
+  bottom: -10px;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: rgba(139, 92, 246, 0.2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.brainux-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #8b5cf6, #34d399);
+  animation: brainux-progress 2s ease-in-out infinite;
+}
+
+@keyframes brainux-progress {
+  0% {
+    width: 0%;
+    opacity: 1;
+  }
+  100% {
+    width: 100%;
+    opacity: 0.5;
+  }
+}
+
+/* Generating Animation - 8 Dot Ring */
+.brainux-generating {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brainux-gen-dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #8b5cf6;
+  border-radius: 50%;
+  animation: brainux-gen-pulse 1.2s ease-in-out infinite;
+}
+
+.brainux-gen-dot:nth-child(1) { animation-delay: 0s; transform: rotate(0deg) translateX(30px); }
+.brainux-gen-dot:nth-child(2) { animation-delay: 0.15s; transform: rotate(45deg) translateX(30px); }
+.brainux-gen-dot:nth-child(3) { animation-delay: 0.3s; transform: rotate(90deg) translateX(30px); }
+.brainux-gen-dot:nth-child(4) { animation-delay: 0.45s; transform: rotate(135deg) translateX(30px); }
+.brainux-gen-dot:nth-child(5) { animation-delay: 0.6s; transform: rotate(180deg) translateX(30px); }
+.brainux-gen-dot:nth-child(6) { animation-delay: 0.75s; transform: rotate(225deg) translateX(30px); }
+.brainux-gen-dot:nth-child(7) { animation-delay: 0.9s; transform: rotate(270deg) translateX(30px); }
+.brainux-gen-dot:nth-child(8) { animation-delay: 1.05s; transform: rotate(315deg) translateX(30px); }
+
+@keyframes brainux-gen-pulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.5);
+  }
+}
+
+/* Reasoning Animation - Step Indicator */
+.brainux-reasoning {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.brainux-step {
+  width: 12px;
+  height: 12px;
+  background: rgba(139, 92, 246, 0.3);
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.brainux-step.active {
+  background: #8b5cf6;
+  box-shadow: 0 0 10px rgba(139, 92, 246, 0.6);
+}
+
+.brainux-step.completed {
+  background: #34d399;
+}
+
+.brainux-reasoning-text {
+  font-size: 14px;
+  color: #8b5cf6;
+  font-weight: 500;
+  min-width: 100px;
+  text-align: left;
+}
+
+/* Writing Animation - Cursor */
+.brainux-writing {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: monospace;
+  font-size: 16px;
+  color: #8b5cf6;
+}
+
+.brainux-cursor {
+  width: 2px;
+  height: 20px;
+  background: #8b5cf6;
+  animation: brainux-blink 1s step-end infinite;
+}
+
+@keyframes brainux-blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
+}
+
+/* Error Animation - Shake */
+.brainux-error {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: brainux-shake 0.5s ease-in-out;
+}
+
+.brainux-error-icon {
+  font-size: 32px;
+  color: #ef4444;
+}
+
+@keyframes brainux-shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-5px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(5px);
+  }
+}
+
+/* Particles */
+.brainux-particles {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.brainux-particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: rgba(139, 92, 246, 0.6);
+  border-radius: 50%;
+  animation: brainux-float 3s ease-in-out infinite;
+}
+
+@keyframes brainux-float {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-50px) rotate(180deg);
+    opacity: 0;
+  }
+}
+
+/* Badge for Animation Type */
+.brainux-badge {
+  position: absolute;
+  bottom: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 12px;
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  border-radius: 12px;
+  font-size: 12px;
+  color: #8b5cf6;
+  white-space: nowrap;
+}
+
+/* Hidden state */
+.brainux-hidden {
+  display: none;
+}
+
+/* Fullscreen overlay */
+.brainux-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9998;
+}
+
+/* Mini mode (for embedding in chat) */
+.brainux-mini .brainux-orb {
+  width: 40px;
+  height: 40px;
+}
+
+.brainux-mini .brainux-core {
+  width: 16px;
+  height: 16px;
+}
+
+.brainux-mini .brainux-ring {
+  border-width: 1px;
+}

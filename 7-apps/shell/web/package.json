@@ -1,0 +1,52 @@
+{
+  "name": "@a2rchitech/shell-ui",
+  "version": "1.0.0",
+  "description": "A2rchitect Shell - Web Application (React/Vite). Deployable to Vercel/Netlify. Consumed by desktop/ in production builds.",
+  "type": "module",
+  "keywords": [
+    "a2rchitect",
+    "shell",
+    "web",
+    "react",
+    "ui"
+  ],
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5177 --strictPort",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "openclaw:parity-smoke": "node ./scripts/openclaw-parity-smoke.mjs",
+    "openclaw:live-probe": "node ./scripts/openclaw-live-probe.mjs"
+  },
+  "dependencies": {
+    "@a2r/mcp-apps-adapter": "workspace:*",
+    "@a2r/platform": "workspace:*",
+    "@ai-sdk/provider-utils": "^1.0.0",
+    "@phosphor-icons/react": "^2.1.10",
+    "@reduxjs/toolkit": "^2.2.7",
+    "axios": "^1.6.0",
+    "clsx": "^2.1.1",
+    "js-tiktoken": "^1.0.11",
+    "lucide-react": "^0.474.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-redux": "^9.1.2",
+    "redux": "^5.0.1",
+    "tailwind-merge": "^3.0.1",
+    "zustand": "^4.5.7"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.19",
+    "@types/react": "18.3.28",
+    "@types/react-dom": "18.3.1",
+    "@vitejs/plugin-react": "^4.2.0",
+    "autoprefixer": "^10.4.24",
+    "postcss": "^8.5.6",
+    "rollup-plugin-visualizer": "^7.0.0",
+    "tailwindcss": "^3.4.19",
+    "tailwindcss-animate": "^1.0.7",
+    "typescript": "^5.9.3",
+    "vite": "^5.0.0",
+    "vite-plugin-node-polyfills": "^0.25.0"
+  }
+}

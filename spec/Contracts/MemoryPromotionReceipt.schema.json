@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://a2rchitech.local/spec/contracts/MemoryPromotionReceipt.schema.json",
+  "title": "Memory Promotion Receipt",
+  "description": "Schema for memory promotion receipts in the A2R system",
+  "type": "object",
+  "properties": {
+    "receipt_version": {
+      "type": "string",
+      "description": "Version of the receipt schema"
+    },
+    "receipt_type": {
+      "type": "string",
+      "const": "memory_promotion_receipt",
+      "description": "Type of receipt"
+    },
+    "run_id": {
+      "type": "string",
+      "description": "ID of the run that generated this receipt"
+    },
+    "task_id": {
+      "type": "string",
+      "description": "ID of the task that initiated the promotion"
+    },
+    "wih_id": {
+      "type": "string",
+      "description": "ID of the WIH associated with this promotion"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of the promotion"
+    },
+    "candidate_id": {
+      "type": "string",
+      "description": "ID of the memory candidate being promoted"
+    },
+    "memory_layer": {
+      "type": "string",
+      "description": "Target memory layer for the promotion"
+    },
+    "promoter_id": {
+      "type": "string",
+      "description": "ID of the entity performing the promotion"
+    },
+    "approvals_collected": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "approver_id": {
+            "type": "string"
+          },
+          "approver_type": {
+            "type": "string"
+          },
+          "approval_timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "approval_reason": {
+            "type": "string"
+          }
+        },
+        "required": ["approver_id", "approver_type", "approval_timestamp"]
+      },
+      "description": "Approvals collected for this promotion"
+    },
+    "promotion_result": {
+      "type": "string",
+      "enum": ["SUCCESS", "FAILURE", "PARTIAL"],
+      "description": "Result of the promotion operation"
+    },
+    "failure_reason": {
+      "type": "string",
+      "description": "Reason for failure if promotion_result is FAILURE"
+    },
+    "previous_content_hash": {
+      "type": "string",
+      "description": "Hash of the previous content in the memory layer"
+    },
+    "new_content_hash": {
+      "type": "string",
+      "description": "Hash of the new content after promotion"
+    },
+    "rollback_available": {
+      "type": "boolean",
+      "description": "Whether a rollback option is available"
+    }
+  },
+  "required": [
+    "receipt_version",
+    "receipt_type",
+    "run_id",
+    "task_id",
+    "wih_id",
+    "timestamp",
+    "candidate_id",
+    "memory_layer",
+    "promoter_id",
+    "approvals_collected",
+    "promotion_result",
+    "previous_content_hash",
+    "new_content_hash",
+    "rollback_available"
+  ]
+}

@@ -1,0 +1,126 @@
+- generic [ref=e2]:
+  - generic [ref=e172]:
+    - generic [ref=e173]:
+      - img [ref=e178]
+      - generic [ref=e182] [cursor=pointer]:
+        - img [ref=e183]
+        - generic [ref=e186]: Google
+        - button [ref=e187]:
+          - img [ref=e188]
+      - button "New Tab" [ref=e191] [cursor=pointer]:
+        - img [ref=e192]
+      - generic [ref=e194]:
+        - button "web" [ref=e195] [cursor=pointer]
+        - button "canvas" [ref=e196] [cursor=pointer]
+        - button "studio" [ref=e197] [cursor=pointer]
+    - generic [ref=e198]:
+      - generic [ref=e199]:
+        - button "Go Back" [ref=e200] [cursor=pointer]:
+          - img [ref=e201]
+        - button "Go Forward" [ref=e203] [cursor=pointer]:
+          - img [ref=e204]
+        - button "Refresh" [ref=e206] [cursor=pointer]:
+          - img [ref=e207]
+      - generic [ref=e213]:
+        - img [ref=e214]
+        - textbox "Enter URL or search..." [ref=e217]: https://www.google.com
+        - img [ref=e218]
+      - generic [ref=e221]:
+        - generic [ref=e222]:
+          - button "Human" [ref=e223] [cursor=pointer]
+          - button "Assist" [ref=e224] [cursor=pointer]
+          - button "Agent" [ref=e225] [cursor=pointer]
+        - generic [ref=e226]:
+          - button "Screenshot" [ref=e227] [cursor=pointer]:
+            - img [ref=e228]
+          - button "More Options" [ref=e231] [cursor=pointer]:
+            - img [ref=e232]
+    - generic [ref=e236]:
+      - iframe [ref=e239]:
+        - generic [ref=f1e2]:
+          - navigation [ref=f1e3]:
+            - link "About" [ref=f1e4] [cursor=pointer]:
+              - /url: https://about.google/?fg=1&utm_source=google-US&utm_medium=referral&utm_campaign=hp-header
+            - link "Store" [ref=f1e5] [cursor=pointer]:
+              - /url: https://store.google.com/US?utm_source=hp_header&utm_medium=google_ooo&utm_campaign=GS100042&hl=en-US
+            - generic [ref=f1e7]:
+              - generic [ref=f1e8]:
+                - link "Gmail" [ref=f1e10] [cursor=pointer]:
+                  - /url: https://mail.google.com/mail/&ogbl
+                - link "Search for Images" [ref=f1e12] [cursor=pointer]:
+                  - /url: https://www.google.com/imghp?hl=en&ogbl
+                  - text: Images
+              - button "Google apps" [ref=f1e15] [cursor=pointer]:
+                - img [ref=f1e16]
+              - link "Sign in" [ref=f1e20] [cursor=pointer]:
+                - /url: https://accounts.google.com/ServiceLogin?hl=en&passive=true&continue=https://www.google.com/&ec=futura_exp_og_so_72776762_e
+          - img "Google" [ref=f1e23]
+          - search [ref=f1e31]:
+            - generic [ref=f1e33]:
+              - generic [ref=f1e35]:
+                - button "Upload files or images" [ref=f1e37] [cursor=pointer]:
+                  - img [ref=f1e39]
+                - combobox "Search" [ref=f1e42]
+                - generic [ref=f1e43]:
+                  - generic [ref=f1e44]:
+                    - button "Search by voice" [ref=f1e45] [cursor=pointer]:
+                      - img [ref=f1e46]
+                    - button "Search by image" [ref=f1e48] [cursor=pointer]:
+                      - img [ref=f1e49]
+                  - link "AI Mode" [ref=f1e51] [cursor=pointer]:
+                    - generic [ref=f1e53]:
+                      - img [ref=f1e55]
+                      - generic [ref=f1e62]: AI Mode
+              - generic [ref=f1e64]:
+                - button "Google Search" [ref=f1e65] [cursor=pointer]
+                - button "I'm Feeling Lucky" [ref=f1e66] [cursor=pointer]
+          - contentinfo [ref=f1e69]:
+            - generic [ref=f1e70]:
+              - generic [ref=f1e71]:
+                - link "Advertising" [ref=f1e72] [cursor=pointer]:
+                  - /url: https://www.google.com/intl/en_us/ads/?subid=ww-ww-et-g-awa-a-g_hpafoot1_1!o2&utm_source=google.com&utm_medium=referral&utm_campaign=google_hpafooter&fg=1
+                - link "Business" [ref=f1e73] [cursor=pointer]:
+                  - /url: https://www.google.com/services/?subid=ww-ww-et-g-awa-a-g_hpbfoot1_1!o2&utm_source=google.com&utm_medium=referral&utm_campaign=google_hpbfooter&fg=1
+                - link "How Search works" [ref=f1e74] [cursor=pointer]:
+                  - /url: https://google.com/search/howsearchworks/?fg=1
+              - link "Applying AI towards science and the environment" [ref=f1e76] [cursor=pointer]:
+                - /url: https://ai.google/societal-impact/?utm_source=googlehpfooter&utm_medium=housepromos&utm_campaign=bottom-footer
+              - generic [ref=f1e77]:
+                - link "Privacy" [ref=f1e78] [cursor=pointer]:
+                  - /url: https://policies.google.com/privacy?hl=en&fg=1
+                - link "Terms" [ref=f1e79] [cursor=pointer]:
+                  - /url: https://policies.google.com/terms?hl=en&fg=1
+                - button "Settings" [ref=f1e83] [cursor=pointer]:
+                  - generic [ref=f1e84]: Settings
+      - generic [ref=e242]:
+        - generic [ref=e245]: Manual browsing - you control everything
+        - generic [ref=e246]:
+          - textbox "Enter a URL to navigate..." [ref=e247]
+          - button "Go" [ref=e249] [cursor=pointer]
+    - generic [ref=e250]:
+      - generic [ref=e251]:
+        - generic [ref=e253]: Connected
+        - generic [ref=e254]: •
+        - generic [ref=e255]: Google
+      - generic [ref=e257]: A2R Browser
+  - generic:
+    - generic [ref=e138]:
+      - generic [ref=e139]:
+        - button "Expand Sidebar" [ref=e140] [cursor=pointer]:
+          - img [ref=e141]
+        - button "New Chat" [ref=e143] [cursor=pointer]:
+          - img [ref=e144]
+      - button "Browser" [active] [ref=e147] [cursor=pointer]:
+        - img [ref=e148]
+        - generic [ref=e150]: Browser
+    - generic [ref=e152]:
+      - button "Chat" [ref=e153] [cursor=pointer]:
+        - img [ref=e154]
+        - generic [ref=e156]: Chat
+      - button "Cowork" [ref=e157] [cursor=pointer]:
+        - img [ref=e158]
+        - generic [ref=e160]: Cowork
+      - button "Code" [ref=e161] [cursor=pointer]:
+        - img [ref=e162]
+        - generic [ref=e164]: Code
+  - img [ref=e167] [cursor=pointer]

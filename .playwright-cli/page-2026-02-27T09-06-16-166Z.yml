@@ -1,0 +1,71 @@
+- generic [ref=e2]:
+  - generic [ref=e11]:
+    - generic [ref=e12]:
+      - img [ref=e19] [cursor=pointer]
+      - heading "A2R & Coffee" [level=1] [ref=e64]:
+        - generic [ref=e65]: A2R & Coffee
+      - generic [ref=e69]: Building the Future, One Block at a Time
+    - generic [ref=e72]:
+      - generic [ref=e73]:
+        - button "Code" [ref=e74] [cursor=pointer]:
+          - img [ref=e75]
+          - generic [ref=e78]: Code
+        - button "Create" [ref=e79] [cursor=pointer]:
+          - img [ref=e80]
+          - generic [ref=e81]: Create
+        - button "Write" [ref=e82] [cursor=pointer]:
+          - img [ref=e83]
+          - generic [ref=e88]: Write
+        - button "Learn" [ref=e89] [cursor=pointer]:
+          - img [ref=e90]
+          - generic [ref=e92]: Learn
+        - button "A2R's choice" [ref=e93] [cursor=pointer]:
+          - img [ref=e94]
+          - generic [ref=e96]: A2R's choice
+      - generic [ref=e97]:
+        - textbox "What's brewing today?" [ref=e99]
+        - generic [ref=e100]:
+          - button [ref=e102] [cursor=pointer]:
+            - img [ref=e103]
+          - generic [ref=e104]:
+            - button "Big Pickle Extended" [ref=e170] [cursor=pointer]:
+              - generic [ref=e171]: Big Pickle
+              - generic [ref=e172]: Extended
+              - img [ref=e108]
+            - button [disabled] [ref=e110]:
+              - img [ref=e111]
+    - generic [ref=e113]:
+      - generic [ref=e114]:
+        - img [ref=e115]
+        - generic [ref=e116]: Pick a task, any task
+      - generic [ref=e117]:
+        - button "Optimize my week" [ref=e118] [cursor=pointer]:
+          - img [ref=e120]
+          - generic [ref=e124]: Optimize my week
+        - button "Organize my screenshots" [ref=e125] [cursor=pointer]:
+          - img [ref=e127]
+          - generic [ref=e131]: Organize my screenshots
+        - button "Find insights in files" [ref=e132] [cursor=pointer]:
+          - img [ref=e134]
+          - generic [ref=e137]: Find insights in files
+  - generic:
+    - generic [ref=e138]:
+      - generic [ref=e139]:
+        - button "Expand Sidebar" [ref=e140] [cursor=pointer]:
+          - img [ref=e141]
+        - button "New Chat" [ref=e143] [cursor=pointer]:
+          - img [ref=e144]
+      - button "Browser" [ref=e147] [cursor=pointer]:
+        - img [ref=e148]
+        - generic [ref=e150]: Browser
+    - generic [ref=e152]:
+      - button "Chat" [ref=e153] [cursor=pointer]:
+        - img [ref=e154]
+        - generic [ref=e156]: Chat
+      - button "Cowork" [ref=e157] [cursor=pointer]:
+        - img [ref=e158]
+        - generic [ref=e160]: Cowork
+      - button "Code" [ref=e161] [cursor=pointer]:
+        - img [ref=e162]
+        - generic [ref=e164]: Code
+  - img [ref=e167] [cursor=pointer]

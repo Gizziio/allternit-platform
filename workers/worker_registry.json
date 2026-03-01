@@ -1,0 +1,25 @@
+{
+  "version": "v0.1",
+  "workers": [
+    {
+      "worker_id": "core.echo",
+      "description": "Echoes input",
+      "command": "/bin/echo",
+      "args_template": ["{{input}}"],
+      "cwd_policy": "run_artifacts_dir",
+      "env_allowlist": [],
+      "timeouts": {
+        "wall_ms": 30000,
+        "cpu_ms": 10000
+      },
+      "output_limits": {
+        "max_stdout_bytes": 1024,
+        "max_stderr_bytes": 1024
+      },
+      "fs_policy": {
+        "must_be_run_scoped": true,
+        "allowed_output_roots": ["/.a2r/tmp"]
+      }
+    }
+  ]
+}

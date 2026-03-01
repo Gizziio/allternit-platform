@@ -1,0 +1,183 @@
+- generic [ref=e2]:
+  - generic [ref=e218]:
+    - button "Hide Inspector" [ref=e219] [cursor=pointer]:
+      - img [ref=e220]
+      - text: Hide Inspector
+    - generic [ref=e222]:
+      - generic [ref=e226]:
+        - generic [ref=e227]:
+          - generic [ref=e228]:
+            - combobox "Code session selector" [ref=e229]:
+              - option "Code Mode Layout Stabilization" [selected]
+              - option "Approval Token Rails Pass"
+              - option "Diff Review Prototype"
+            - button "Select folder" [ref=e230] [cursor=pointer]:
+              - img [ref=e231]
+              - text: Select folder
+              - img [ref=e233]
+          - generic [ref=e235]:
+            - button "Console" [ref=e236] [cursor=pointer]:
+              - img [ref=e237]
+              - text: Console
+            - button "Preview" [ref=e239] [cursor=pointer]:
+              - img [ref=e240]
+              - text: Preview
+              - img [ref=e242]
+        - generic [ref=e246]:
+          - img [ref=e250] [cursor=pointer]
+          - generic [ref=e295]: Code workspace
+          - generic [ref=e296]: Choose a folder before sending the first instruction. The workspace stays minimal until you are ready to start.
+          - generic [ref=e297]:
+            - generic [ref=e299]:
+              - button "Scaffold" [ref=e300] [cursor=pointer]:
+                - img [ref=e301]
+                - text: Scaffold
+              - button "Refactor" [ref=e303] [cursor=pointer]:
+                - img [ref=e304]
+                - text: Refactor
+              - button "Debug" [ref=e308] [cursor=pointer]:
+                - img [ref=e309]
+                - text: Debug
+              - button "Optimize" [ref=e318] [cursor=pointer]:
+                - img [ref=e319]
+                - text: Optimize
+              - button "Explore" [ref=e321] [cursor=pointer]:
+                - img [ref=e322]
+                - text: Explore
+            - generic [ref=e326]:
+              - textbox "Choose a workspace folder to unlock the session..." [ref=e328]
+              - generic [ref=e329]:
+                - button [ref=e331] [cursor=pointer]:
+                  - img [ref=e332]
+                - generic [ref=e333]:
+                  - button "Codex CLI Extended" [ref=e334] [cursor=pointer]:
+                    - generic [ref=e335]: Codex CLI
+                    - generic [ref=e336]: Extended
+                    - img [ref=e337]
+                  - button [disabled] [ref=e339]:
+                    - img [ref=e340]
+            - generic [ref=e342]:
+              - button "Select folder" [ref=e343] [cursor=pointer]:
+                - img [ref=e344]
+                - text: Select folder
+              - generic [ref=e346]: Workspace required before execution
+      - separator [ref=e347]
+      - generic [ref=e352]:
+        - generic [ref=e353]:
+          - generic [ref=e354]:
+            - generic [ref=e355]:
+              - generic [ref=e356]: Inspector
+              - generic [ref=e357]: Diff, patches, context, artifacts
+            - generic [ref=e358]: IDLE
+          - generic [ref=e359]:
+            - button "diff" [ref=e360] [cursor=pointer]:
+              - img [ref=e361]
+              - generic [ref=e364]: diff
+            - button "patch" [ref=e365] [cursor=pointer]:
+              - img [ref=e366]
+              - generic [ref=e368]: patch
+            - button "files" [ref=e369] [cursor=pointer]:
+              - img [ref=e370]
+              - generic [ref=e372]: files
+            - button "plan" [ref=e373] [cursor=pointer]:
+              - img [ref=e374]
+              - generic [ref=e376]: plan
+            - button "artifacts" [ref=e377] [cursor=pointer]:
+              - img [ref=e378]
+              - generic [ref=e380]: artifacts
+        - generic [ref=e382]:
+          - generic [ref=e383]:
+            - generic [ref=e384]:
+              - img [ref=e385]
+              - generic [ref=e387]:
+                - generic [ref=e388]: Review Changes
+                - generic [ref=e389]: 2 files modified
+            - generic [ref=e390]:
+              - button "Reject All" [ref=e391] [cursor=pointer]
+              - button "Apply ChangeSet" [ref=e392] [cursor=pointer]:
+                - img [ref=e393]
+                - text: Apply ChangeSet
+          - generic [ref=e395]:
+            - generic [ref=e396]:
+              - generic [ref=e397] [cursor=pointer]:
+                - img [ref=e398]
+                - img [ref=e400]
+                - text: src/views/code/CodeCanvas.tsx
+                - generic [ref=e402]: +2 -2
+              - generic [ref=e403]:
+                - generic [ref=e404]:
+                  - generic [ref=e405]: "@@ -0,0 +0,0 @@"
+                  - generic [ref=e406]:
+                    - generic [ref=e407]:
+                      - generic [ref=e408]: "0"
+                      - generic [ref=e409]: "0"
+                      - generic [ref=e410]: "- <Rocket size={32} />"
+                    - generic [ref=e411]:
+                      - generic [ref=e412]: "1"
+                      - generic [ref=e413]: "1"
+                      - generic [ref=e414]: "+ <Rocket size={32} weight=\"duotone\" />"
+                  - generic [ref=e415]:
+                    - button "Reject" [ref=e416] [cursor=pointer]:
+                      - img [ref=e417]
+                      - text: Reject
+                    - button "Accept" [ref=e419] [cursor=pointer]:
+                      - img [ref=e420]
+                      - text: Accept
+                - generic [ref=e422]:
+                  - generic [ref=e423]: "@@ -0,0 +0,0 @@"
+                  - generic [ref=e424]:
+                    - generic [ref=e425]:
+                      - generic [ref=e426]: "0"
+                      - generic [ref=e427]: "0"
+                      - generic [ref=e428]: "- color=\"blue\""
+                    - generic [ref=e429]:
+                      - generic [ref=e430]: "1"
+                      - generic [ref=e431]: "1"
+                      - generic [ref=e432]: + color="var(--accent-chat)"
+                  - generic [ref=e433]:
+                    - button "Reject" [ref=e434] [cursor=pointer]:
+                      - img [ref=e435]
+                      - text: Reject
+                    - button "Accept" [ref=e437] [cursor=pointer]:
+                      - img [ref=e438]
+                      - text: Accept
+            - generic [ref=e440]:
+              - generic [ref=e441] [cursor=pointer]:
+                - img [ref=e442]
+                - img [ref=e444]
+                - text: src/shell/ShellRail.tsx
+                - generic [ref=e446]: +1 -0
+              - generic [ref=e448]:
+                - generic [ref=e449]: "@@ -0,0 +0,0 @@"
+                - generic [ref=e451]:
+                  - generic [ref=e452]: "0"
+                  - generic [ref=e453]: "0"
+                  - generic [ref=e454]: "+ import { Code } from \"@phosphor-icons/react\";"
+                - generic [ref=e455]:
+                  - button "Reject" [ref=e456] [cursor=pointer]:
+                    - img [ref=e457]
+                    - text: Reject
+                  - button "Accept" [ref=e459] [cursor=pointer]:
+                    - img [ref=e460]
+                    - text: Accept
+  - generic:
+    - generic [ref=e182]:
+      - generic [ref=e183]:
+        - button "Expand Sidebar" [ref=e184] [cursor=pointer]:
+          - img [ref=e185]
+        - button "New Chat" [ref=e187] [cursor=pointer]:
+          - img [ref=e188]
+      - button "Browser" [ref=e191] [cursor=pointer]:
+        - img [ref=e192]
+        - generic [ref=e194]: Browser
+    - generic [ref=e196]:
+      - button "Chat" [ref=e197] [cursor=pointer]:
+        - img [ref=e198]
+        - generic [ref=e200]: Chat
+      - button "Cowork" [ref=e201] [cursor=pointer]:
+        - img [ref=e202]
+        - generic [ref=e204]: Cowork
+      - button "Code" [active] [ref=e205] [cursor=pointer]:
+        - img [ref=e206]
+        - generic [ref=e208]: Code
+  - img [ref=e211] [cursor=pointer]

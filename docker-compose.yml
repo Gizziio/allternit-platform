@@ -1,0 +1,115 @@
+version: "3.9"
+
+services:
+  intent-graph-kernel:
+    build: ./crates/intent-graph-kernel
+    ports:
+      - "3005:3005"
+    environment:
+      RUST_LOG: info
+    volumes:
+      - a2r-data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3005/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  capsule-runtime:
+    build: ./crates/capsule-runtime
+    ports:
+      - "3006:3006"
+    environment:
+      RUST_LOG: info
+    volumes:
+      - a2r-data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3006/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  presentation-kernel:
+    build: ./crates/presentation-kernel
+    ports:
+      - "3007:3007"
+    environment:
+      RUST_LOG: info
+    volumes:
+      - a2r-data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3007/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  pattern-recognizer:
+    build: ./services/pattern-service
+    ports:
+      - "3008:3008"
+    environment:
+      RUST_LOG: info
+    volumes:
+      - a2r-data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3008/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+  
+  voice-service:
+    build:
+      context: ./4-services/ai/voice-service
+      dockerfile: Dockerfile.voice
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./audio:/tmp/voice-service
+    environment:
+      PRELOAD_MODEL: "false"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+  
+  webvm-service:
+    build:
+      context: ./services/webvm-service
+      dockerfile: Dockerfile.webvm
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./webvm-static:/app/static
+    environment:
+      WEBVM_BASE_URL: "http://localhost:8002"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+  
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.api
+    ports:
+      - "3000:3000"
+    environment:
+      A2RCHITECH_API_BIND: ${A2RCHITECH_API_BIND:-0.0.0.0:3000}
+      A2RCHITECH_LEDGER_PATH: ${A2RCHITECH_LEDGER_PATH:-/data/a2rchitech.jsonl}
+      A2RCHITECH_DB_PATH: ${A2RCHITECH_DB_PATH:-/data/a2rchitech.db}
+      A2RCHITECH_API_IDENTITY: ${A2RCHITECH_API_IDENTITY:-api-service}
+      A2RCHITECH_API_TENANT: ${A2RCHITECH_API_TENANT:-default}
+      A2RCHITECH_API_BOOTSTRAP_POLICY: ${A2RCHITECH_API_BOOTSTRAP_POLICY:-true}
+      A2RCHITECH_API_POLICY_ENFORCE: ${A2RCHITECH_API_POLICY_ENFORCE:-true}
+    volumes:
+      - a2r-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  a2r-data:

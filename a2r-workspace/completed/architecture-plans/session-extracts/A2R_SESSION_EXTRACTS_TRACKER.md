@@ -1,0 +1,41 @@
+# A2R Session Extraction Tracker
+
+- Total session files: 49
+- Extracted so far: 15
+- Remaining: 34
+
+## Remaining files (pending extraction)
+- `a2r-sessions/A2R Session- Agent Runtime Brainstorm.md`
+- `a2r-sessions/A2R Session- Agent Runtime Positioning vs xpander.md`
+- `a2r-sessions/A2R Session- Dynamic Context-Retrieval-Quantization.md`
+- `a2r-sessions/A2R Session- Multimodal Stack.md`
+- `a2r-sessions/A2R Session- NL Shells.md`
+- `a2r-sessions/A2R Session-AG-UI.md`
+- `a2r-sessions/A2R Session-Agent-Governance.md`
+- `a2r-sessions/A2R Session-Browser Control Frontier.md`
+- `a2r-sessions/A2R Session-Claude-Tasks-Vs-Beads.md`
+- `a2r-sessions/A2R Session-Context Engineering - Long Running Agents.md`
+- `a2r-sessions/A2R Session-CrewAI.md`
+- `a2r-sessions/A2R Session-ShellUI-Browsercapsule-openwork-cliorchestrator-uitars.md`
+- `a2r-sessions/A2R Session-Skill_Discovery_Session_2026-01-26.md`
+- `a2r-sessions/A2R Session-Studio-Kernel-UiBuild.md`
+- `a2r-sessions/A2R Session-Web Agent Layer Integration.md`
+- `a2r-sessions/A2R_SESSION_2026-01-26_shell-ui-browser-capsules.md`
+- `a2r-sessions/A2R_Session_Multimodal_Modular_Stack_2026-01-26.md`
+- `a2r-sessions/A2R_Session_Summary_2026-01-26_221919_BrowserSkill_Artifacts_Extensions.md`
+- `a2r-sessions/A2R_Session_Summary_2026-01-26_browser_os_cli_capsules.md`
+- `a2r-sessions/A2R_Session_Summary__Memory_v2_Proof_Gating_and_External_Memory_Systems.md`
+- `a2r-sessions/A2rchitech_Session_Summary__Skills_Discovery__2026-01-26.md`
+- `a2r-sessions/Framing/A2R Repo Documentation Bootstrap.md`
+- `a2r-sessions/Framing/A2R Session- Ai Software company blue print.md`
+- `a2r-sessions/Framing/Branding/Brand-A2rchitech.md`
+- `a2r-sessions/Framing/_Repo Framework/Guardrails.md`
+- `a2r-sessions/Framing/_Repo Framework/PROJECT_LAW copy.md`
+- `a2r-sessions/Framing/_Repo Framework/Project_Law.md`
+- `a2r-sessions/Framing/_Repo Framework/RepoLaw.md`
+- `a2r-sessions/Framing/onboarding/A2R_SESSION_Onboarding_Login_Fun.md`
+- `a2r-sessions/a2r_agentops_session_summary.md`
+- `a2r-sessions/a2r_session_2026-01-26_cli_agents_skills_registry.md`
+- `a2r-sessions/a2r_session_2026-01-26_gizzi-avatar-3d.md`
+- `a2r-sessions/a2r_session_2026-01-26_shellui_brain_runtime_ui_e2e.md`
+- `a2r-sessions/a2r_session_marketplace_registry.md`

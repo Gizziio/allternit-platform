@@ -1,0 +1,47 @@
+[workspace]
+members = [
+    "services/framework",
+    "services/kernel",
+    "services/voice-service",
+    "services/webvm-service",
+    "crates/intent-graph-kernel",
+    "crates/capsule-runtime",
+    "crates/presentation-kernel",
+    "crates/a2ui_types",
+    "crates/capsule_spec",
+    "crates/evidence_store",
+    "crates/capsule_compiler",
+    "crates/rlm",
+    "crates/marketplace",
+    "apps/cli",
+    "1-kernel/a2r-engine"
+]
+resolver = "2"
+exclude = ["crates/security"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/a2rchitech/a2rchitech"
+
+[workspace.dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+thiserror = "1.0"
+anyhow = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+async-trait = "0.1"
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid"] }
+tempfile = "3.0"
+axum = "0.7"
+tower-http = { version = "0.5", features = ["cors", "fs"] }
+reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
+redis = { version = "0.24", features = ["aio", "tokio-comp"] }
+chrono = { version = "0.4", features = ["serde"] }
+blake3 = "1.5"
+a2rchitech-sdk-core = { path = "crates/sdk/sdk-core" }
+a2rchitech-sdk-transport = { path = "crates/sdk/sdk-transport" }

@@ -1,0 +1,138 @@
+commit 5bbdeed3abbb6f19eafc6ea17a59bc83a29a2a7e
+Author: Eoj Edred <eojedredbitepubkey1@proton.me>
+Date:   Wed Jan 28 01:09:21 2026 -0600
+
+    T0201: worker registry + law validation
+
+diff --git a/scripts/validate_law.py b/scripts/validate_law.py
+index ed9e6df..eb02170 100755
+--- a/scripts/validate_law.py
++++ b/scripts/validate_law.py
+@@ -26,13 +26,18 @@ REQUIRED_FILES = [
+     ROOT / "spec" / "Contracts" / "ToolRegistry.schema.json",
+     ROOT / "spec" / "Contracts" / "ToolDefinition.schema.json",
+     ROOT / "spec" / "Contracts" / "Receipt.schema.json",
++    ROOT / "spec" / "Contracts" / "WorkerDefinition.schema.json",
++    ROOT / "spec" / "Contracts" / "WorkerRegistry.schema.json",
++    ROOT / "spec" / "Contracts" / "SubprocessReceipt.schema.json",
+     ROOT / "spec" / "Contracts" / "RunState.schema.json",
+     ROOT / "spec" / "Contracts" / "BeadsGraph.schema.json",
+     ROOT / "spec" / "Contracts" / "BeadsNode.schema.json",
+     ROOT / "spec" / "Contracts" / "BeadsRunState.schema.json",
++    ROOT / "workers" / "worker_registry.json",
+ ]
+ 
+ TOOLS_REGISTRY_PATH = ROOT / "tools" / "tool_registry.json"
++WORKER_REGISTRY_PATH = ROOT / "workers" / "worker_registry.json"
+ 
+ GRAPH_DIR = ROOT / ".a2r" / "graphs"
+ WIH_DIR = ROOT / ".a2r" / "wih"
+@@ -68,6 +73,7 @@ ALLOWED_SCAN_EXTS = {
+ GRAPH_SCHEMA_ID = "https://a2rchitech.local/spec/contracts/Graph.schema.json"
+ WIH_SCHEMA_ID = "https://a2rchitech.local/spec/contracts/WIH.schema.json"
+ TOOL_REGISTRY_SCHEMA_ID = "https://a2rchitech.local/spec/contracts/ToolRegistry.schema.json"
++WORKER_REGISTRY_SCHEMA_ID = "https://a2rchitech.local/spec/contracts/WorkerRegistry.schema.json"
+ BOOT_MANIFEST_SCHEMA_ID = "https://a2rchitech.local/spec/contracts/BootManifest.schema.json"
+ BEADS_GRAPH_SCHEMA_ID = "https://a2rchitech.local/spec/contracts/BeadsGraph.schema.json"
+ DEFAULT_BOOT_MANIFEST_PATH = ROOT / ".a2r" / "boot" / "boot_manifest.json"
+@@ -212,6 +218,36 @@ def validate_tool_registry(registry, path: Path):
+                 fail(f"Tool registry entry missing '{key}' in {path}")
+ 
+ 
++def validate_worker_registry(registry, path: Path):
++    if "version" not in registry:
++        fail(f"Worker registry missing version in {path}")
++    workers = registry.get("workers")
++    ensure_nonempty_list(workers, f"{path} workers")
++    seen = set()
++    for worker in workers:
++        worker_id = worker.get("worker_id")
++        if not worker_id:
++            fail(f"Worker registry entry missing worker_id in {path}")
++        if worker_id in seen:
++            fail(f"Duplicate worker_id '{worker_id}' in {path}")
++        seen.add(worker_id)
++
++        command = worker.get("command", "")
++        if " " in command.strip():
++            fail(f"Worker command must not contain spaces in {path}: {worker_id}")
++        if command.endswith("bash") or command.endswith("/bash") or command.endswith("sh") or command.endswith("/sh"):
++            fail(f"Worker command cannot be a shell in {path}: {worker_id}")
++
++        fs_policy = worker.get("fs_policy", {})
++        if fs_policy.get("must_be_run_scoped") is not True:
++            fail(f"Worker fs_policy.must_be_run_scoped must be true in {path}: {worker_id}")
++        roots = fs_policy.get("allowed_output_roots", [])
++        ensure_nonempty_list(roots, f"{path} fs_policy.allowed_output_roots")
++        for root in roots:
++            if not str(root).startswith("/.a2r/"):
++                fail(f"Worker allowed_output_roots must be under /.a2r/ in {path}: {worker_id}")
++
++
+ def validate_instance(instance, schema_id: str, schemas: dict, label: str):
+     if Draft202012Validator is None or RefResolver is None:
+         fail("jsonschema dependency missing. Install with: python3 -m pip install -r scripts/requirements.txt")
+@@ -398,6 +434,10 @@ def main():
+     validate_tool_registry(registry, TOOLS_REGISTRY_PATH)
+     registry_ids = {tool["id"] for tool in registry.get("tools", [])}
+ 
++    worker_registry = load_json(WORKER_REGISTRY_PATH)
++    validate_instance(worker_registry, WORKER_REGISTRY_SCHEMA_ID, schemas, "workers/worker_registry.json")
++    validate_worker_registry(worker_registry, WORKER_REGISTRY_PATH)
++
+     acceptance_ids = collect_acceptance_ids()
+ 
+     wih_by_path = {}
+diff --git a/workers/worker_registry.json b/workers/worker_registry.json
+new file mode 100644
+index 0000000..561ef9e
+--- /dev/null
++++ b/workers/worker_registry.json
+@@ -0,0 +1,47 @@
++{
++  "version": "v0.1",
++  "workers": [
++    {
++      "worker_id": "git.diff",
++      "description": "List changed files (git diff --name-only)",
++      "command": "/usr/bin/git",
++      "args_template": ["diff", "--name-only"],
++      "cwd_policy": "repo_root",
++      "env_allowlist": [],
++      "fs_policy": {
++        "must_be_run_scoped": true,
++        "allowed_output_roots": [
++          "/.a2r/artifacts/{{run_id}}/**"
++        ]
++      },
++      "timeouts": {
++        "wall_ms": 5000
++      },
++      "output_limits": {
++        "max_stdout_bytes": 4096,
++        "max_stderr_bytes": 2048
++      }
++    },
++    {
++      "worker_id": "git.status",
++      "description": "Show git status (porcelain)",
++      "command": "/usr/bin/git",
++      "args_template": ["status", "--porcelain"],
++      "cwd_policy": "repo_root",
++      "env_allowlist": [],
++      "fs_policy": {
++        "must_be_run_scoped": true,
++        "allowed_output_roots": [
++          "/.a2r/artifacts/{{run_id}}/**"
++        ]
++      },
++      "timeouts": {
++        "wall_ms": 5000
++      },
++      "output_limits": {
++        "max_stdout_bytes": 4096,
++        "max_stderr_bytes": 2048
++      }
++    }
++  ]
++}

@@ -1,0 +1,21 @@
+[package]
+name = "a2r-runtime"
+version = "0.1.0"
+edition = "2021"
+description = "A2rchitech Runtime Interface - BrainRuntime trait for alternate harnesses"
+
+[dependencies]
+async-trait = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+anyhow = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+a2rchitech-providers = { workspace = true }
+futures = "0.3"
+
+[dev-dependencies]
+tokio-test = "0.4"

@@ -1,0 +1,31 @@
+[package]
+name = "a2r-terminal"
+version = "0.1.0"
+edition = "2021"
+authors = ["A2rchitech Team"]
+license = "MIT"
+description = "Terminal/SSH session management for A2rchitech platform"
+
+[dependencies]
+tokio = { version = "1.0", features = ["full"] }
+async-trait = "0.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+tracing = "0.1"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+anyhow = "1.0"
+russh = "0.50.0-beta.7"
+russh-keys = "0.50.0-beta.7"
+tokio-util = "0.7"
+xterm-color = "1.0.2"
+axum = { version = "0.7", features = ["macros"] }
+tower = { version = "0.4", features = ["util"] }
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+ed25519-dalek = { version = "2.0", features = ["std", "rand_core"] }
+rand = "0.8"
+sha2 = "0.10"
+hex = "0.4"
+base64 = "0.22"
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid"] }
+# Removed internal dependencies to make the crate more self-contained

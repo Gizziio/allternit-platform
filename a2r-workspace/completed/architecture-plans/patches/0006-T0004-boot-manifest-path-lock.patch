@@ -1,0 +1,433 @@
+commit 0c13fc0ce335ce4c0f3d6b7b5f2b73667cca4f70
+Author: Eoj Edred <eojedredbitepubkey1@proton.me>
+Date:   Tue Jan 27 22:47:53 2026 -0600
+
+    T0004: boot manifest path lock
+    
+    Tests: tests/acceptance/test_boot_manifest_path.sh
+    
+    Files: services/kernel/src/main.rs, scripts/validate_law.py, tests/acceptance/test_boot_manifest_validation.sh, tests/acceptance/test_boot_manifest_path.sh, spec/AcceptanceTests.md, .a2r/graphs/graph-0001.json, .a2r/wih/T0004.wih.json
+
+diff --git a/.a2r/graphs/graph-0001.json b/.a2r/graphs/graph-0001.json
+index 30ecd91..338fd48 100644
+--- a/.a2r/graphs/graph-0001.json
++++ b/.a2r/graphs/graph-0001.json
+@@ -35,7 +35,7 @@
+     },
+     {
+       "task_id": "T0004",
+-      "title": "Define TaskGraph + TaskNode + Run persistence model",
++      "title": "Boot manifest path lock",
+       "blocked_by": [
+         "T0000"
+       ],
+@@ -43,7 +43,7 @@
+     },
+     {
+       "task_id": "T0005",
+-      "title": "Implement scheduler with blockedBy enforcement",
++      "title": "WIH to Beads contract hard binding",
+       "blocked_by": [
+         "T0004"
+       ],
+@@ -51,37 +51,33 @@
+     },
+     {
+       "task_id": "T0006",
+-      "title": "Implement /install presets (immutable hash)",
++      "title": "Local deterministic law setup",
+       "blocked_by": [
+-        "T0004"
++        "T0005"
+       ],
+       "wih_path": "/.a2r/wih/T0006.wih.json"
+     },
+     {
+       "task_id": "T0007",
+-      "title": "Implement /resume deterministic rehydration",
++      "title": "Graph/WIH/Beads semantic gate",
+       "blocked_by": [
+-        "T0005",
+         "T0006"
+       ],
+       "wih_path": "/.a2r/wih/T0007.wih.json"
+     },
+     {
+       "task_id": "T0008",
+-      "title": "Tool registry enforcement (registry required + safety)",
++      "title": "Tool registry \u2194 WIH lock",
+       "blocked_by": [
+-        "T0002"
++        "T0007"
+       ],
+       "wih_path": "/.a2r/wih/T0008.wih.json"
+     },
+     {
+       "task_id": "T0009",
+-      "title": "Run receipts: tool-call timeline + artifact manifest + hashes",
++      "title": "Phase-0 closure gate",
+       "blocked_by": [
+-        "T0005",
+-        "T0008",
+-        "T0003",
+-        "T0018"
++        "T0008"
+       ],
+       "wih_path": "/.a2r/wih/T0009.wih.json"
+     },
+@@ -183,34 +179,22 @@
+       "from": "T0004",
+       "to": "T0005"
+     },
+-    {
+-      "from": "T0004",
+-      "to": "T0006"
+-    },
+     {
+       "from": "T0005",
+-      "to": "T0007"
++      "to": "T0006"
+     },
+     {
+       "from": "T0006",
+       "to": "T0007"
+     },
+     {
+-      "from": "T0002",
++      "from": "T0007",
+       "to": "T0008"
+     },
+-    {
+-      "from": "T0005",
+-      "to": "T0009"
+-    },
+     {
+       "from": "T0008",
+       "to": "T0009"
+     },
+-    {
+-      "from": "T0003",
+-      "to": "T0009"
+-    },
+     {
+       "from": "T0002",
+       "to": "T0010"
+@@ -262,10 +246,6 @@
+     {
+       "from": "T0000",
+       "to": "T0018"
+-    },
+-    {
+-      "from": "T0018",
+-      "to": "T0009"
+     }
+   ]
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/T0004.wih.json b/.a2r/wih/T0004.wih.json
+index d70607f..4fb4fa1 100644
+--- a/.a2r/wih/T0004.wih.json
++++ b/.a2r/wih/T0004.wih.json
+@@ -2,7 +2,7 @@
+   "wih_version": "v0.1",
+   "task_id": "T0004",
+   "graph_id": "graph-0001",
+-  "title": "Define TaskGraph + TaskNode + Run persistence model",
++  "title": "Boot manifest path lock",
+   "state": "PLANNED",
+   "blocked_by": [
+     "T0000"
+@@ -23,7 +23,7 @@
+   },
+   "outputs": {
+     "required_artifacts": [
+-      "task-model"
++      "boot_manifest_path_lock"
+     ],
+     "artifact_paths": [
+       "/.a2r/artifacts/T0004/"
+@@ -32,8 +32,7 @@
+   "write_scope": {
+     "root": "/.a2r/",
+     "allowed_globs": [
+-      "/.a2r/graphs/**",
+-      "/.a2r/runs/**"
++      "/.a2r/boot/**"
+     ]
+   },
+   "tools": {
+@@ -51,17 +50,83 @@
+   "memory": {
+     "packs": [
+       {
+-        "pack_id": "graph",
++        "pack_id": "law",
+         "layers": [
+-          "graph"
++          "law"
+         ],
+-        "access": "readwrite"
++        "access": "read"
+       }
+     ]
+   },
+   "acceptance": {
+     "checks": [
+-      "AT-TASK-0001"
++      "AT-BOOT-0015"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "T0004",
++    "graph_id": "graph-0001",
++    "title": "Boot manifest path lock",
++    "state": "PLANNED",
++    "blocked_by": [
++      "T0000"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "boot_manifest_path_lock"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/T0004/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/boot/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-BOOT-0015"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/scripts/validate_law.py b/scripts/validate_law.py
+index dc1fb6b..ed9e6df 100755
+--- a/scripts/validate_law.py
++++ b/scripts/validate_law.py
+@@ -36,6 +36,7 @@ TOOLS_REGISTRY_PATH = ROOT / "tools" / "tool_registry.json"
+ 
+ GRAPH_DIR = ROOT / ".a2r" / "graphs"
+ WIH_DIR = ROOT / ".a2r" / "wih"
++BEADS_GRAPH_DIR = ROOT / ".a2r" / "beads" / "graphs"
+ 
+ ACCEPTANCE_FILE = ROOT / "spec" / "AcceptanceTests.md"
+ 
+@@ -68,7 +69,8 @@ GRAPH_SCHEMA_ID = "https://a2rchitech.local/spec/contracts/Graph.schema.json"
+ WIH_SCHEMA_ID = "https://a2rchitech.local/spec/contracts/WIH.schema.json"
+ TOOL_REGISTRY_SCHEMA_ID = "https://a2rchitech.local/spec/contracts/ToolRegistry.schema.json"
+ BOOT_MANIFEST_SCHEMA_ID = "https://a2rchitech.local/spec/contracts/BootManifest.schema.json"
+-DEFAULT_BOOT_MANIFEST_PATH = ROOT / ".a2r" / "boot" / "receipt.json"
++BEADS_GRAPH_SCHEMA_ID = "https://a2rchitech.local/spec/contracts/BeadsGraph.schema.json"
++DEFAULT_BOOT_MANIFEST_PATH = ROOT / ".a2r" / "boot" / "boot_manifest.json"
+ 
+ 
+ def fail(msg: str) -> None:
+@@ -152,6 +154,7 @@ def validate_wih(wih, path: Path):
+         "tools",
+         "memory",
+         "acceptance",
++        "beads",
+     ]
+     for key in required:
+         if key not in wih:
+@@ -176,6 +179,19 @@ def validate_wih(wih, path: Path):
+     acceptance = wih.get("acceptance", {})
+     ensure_nonempty_list(acceptance.get("checks"), f"{path} acceptance.checks")
+ 
++    beads = wih.get("beads")
++    if not isinstance(beads, dict):
++        fail(f"WIH beads envelope missing or invalid in {path}")
++    for key in ("task_id", "graph_id", "blocked_by"):
++        if beads.get(key) != wih.get(key):
++            fail(f"WIH beads.{key} mismatch in {path}")
++    if beads.get("write_scope") != wih.get("write_scope"):
++        fail(f"WIH beads.write_scope mismatch in {path}")
++    if beads.get("tools") != wih.get("tools"):
++        fail(f"WIH beads.tools mismatch in {path}")
++    if beads.get("acceptance") != wih.get("acceptance"):
++        fail(f"WIH beads.acceptance mismatch in {path}")
++
+ 
+ def validate_tool_registry(registry, path: Path):
+     if "version" not in registry:
+@@ -321,6 +337,27 @@ def validate_graph_semantics(graph, path: Path, wih_by_path: dict):
+             )
+ 
+ 
++def normalize_graph_for_compare(graph):
++    nodes = []
++    for node in graph.get("nodes", []):
++        nodes.append(
++            {
++                "task_id": node.get("task_id"),
++                "title": node.get("title"),
++                "blocked_by": sorted(node.get("blocked_by", [])),
++                "wih_path": node.get("wih_path"),
++            }
++        )
++    edges = []
++    for edge in graph.get("edges", []):
++        edges.append({"from": edge.get("from"), "to": edge.get("to")})
++    return {
++        "graph_id": graph.get("graph_id"),
++        "title": graph.get("title"),
++        "nodes": sorted(nodes, key=lambda n: n["task_id"] or ""),
++        "edges": sorted(edges, key=lambda e: (e["from"] or "", e["to"] or "")),
++    }
++
+ def write_beacon():
+     boot_dir = ROOT / ".a2r" / "boot"
+     boot_dir.mkdir(parents=True, exist_ok=True)
+@@ -350,6 +387,8 @@ def main():
+         fail("Missing .a2r/graphs/*.json")
+     if not WIH_DIR.exists() or not any(WIH_DIR.glob("*.json")):
+         fail("Missing .a2r/wih/*.json")
++    if not BEADS_GRAPH_DIR.exists() or not any(BEADS_GRAPH_DIR.glob("*.json")):
++        fail("Missing .a2r/beads/graphs/*.json")
+ 
+     if not TOOLS_REGISTRY_PATH.exists():
+         fail("Missing tools/tool_registry.json")
+@@ -380,11 +419,26 @@ def main():
+         canonical = "/" + str(wih_path.relative_to(ROOT)).replace("\\", "/")
+         wih_by_path[canonical] = wih
+ 
++    graph_by_id = {}
+     for graph_path in GRAPH_DIR.glob("*.json"):
+         graph = load_json(graph_path)
+         validate_instance(graph, GRAPH_SCHEMA_ID, schemas, str(graph_path))
+         validate_graph(graph, graph_path)
+         validate_graph_semantics(graph, graph_path, wih_by_path)
++        graph_id = graph.get("graph_id")
++        if graph_id in graph_by_id:
++            fail(f"Duplicate graph_id {graph_id} in {graph_path}")
++        graph_by_id[graph_id] = graph
++
++    for beads_graph_path in BEADS_GRAPH_DIR.glob("*.json"):
++        beads_graph = load_json(beads_graph_path)
++        validate_instance(beads_graph, BEADS_GRAPH_SCHEMA_ID, schemas, str(beads_graph_path))
++        beads_id = beads_graph.get("graph_id")
++        if beads_id not in graph_by_id:
++            fail(f"Beads graph {beads_id} missing matching graph in .a2r/graphs")
++        base_graph = graph_by_id[beads_id]
++        if normalize_graph_for_compare(beads_graph) != normalize_graph_for_compare(base_graph):
++            fail(f"Beads graph {beads_id} inconsistent with graph definition")
+ 
+     scan_legacy_refs()
+ 
+diff --git a/services/kernel/src/main.rs b/services/kernel/src/main.rs
+index 94bc9cd..006141d 100644
+--- a/services/kernel/src/main.rs
++++ b/services/kernel/src/main.rs
+@@ -229,7 +229,7 @@ fn write_boot_manifest() -> anyhow::Result<()> {
+     let boot_dir = StdPath::new(".a2r/boot");
+     fs::create_dir_all(boot_dir)
+         .map_err(|e| anyhow::anyhow!("Boot manifest failed to create .a2r/boot: {}", e))?;
+-    let receipt_path = boot_dir.join("receipt.json");
++    let receipt_path = boot_dir.join("boot_manifest.json");
+     let payload = serde_json::to_string_pretty(&manifest)?;
+     fs::write(&receipt_path, payload)
+         .map_err(|e| anyhow::anyhow!("Boot manifest failed to write {}: {}", receipt_path.display(), e))?;
+diff --git a/spec/AcceptanceTests.md b/spec/AcceptanceTests.md
+index 697fbec..c279369 100644
+--- a/spec/AcceptanceTests.md
++++ b/spec/AcceptanceTests.md
+@@ -9,7 +9,7 @@ These acceptance tests are platform-level gates. Every major change must referen
+ - **AT-BOOT-0001**: Kernel refuses to start if `/SOT.md` missing.
+ - **AT-BOOT-0002**: Kernel refuses to start if `CODEBASE.md` missing.
+ - **AT-BOOT-0003**: Kernel refuses to start if `/spec/Contracts/WIH.schema.json` missing.
+-- **AT-BOOT-0004**: Kernel prints the loaded boot manifest (hashes of law files) into `/.a2r/boot/receipt.json`.
++- **AT-BOOT-0004**: Kernel prints the loaded boot manifest (hashes of law files) into `/.a2r/boot/boot_manifest.json`.
+ - **AT-BOOT-0005**: Kernel refuses to start if `/spec/AcceptanceTests.md` missing.
+ - **AT-BOOT-0006**: Kernel refuses to start if `/spec/Contracts/Graph.schema.json` missing.
+ - **AT-BOOT-0007**: Kernel refuses to start if `/.a2r/graphs/` or `/.a2r/wih/` missing.
+@@ -20,6 +20,8 @@ These acceptance tests are platform-level gates. Every major change must referen
+ - **AT-BOOT-0012**: Instances must validate against their canonical JSON Schemas (graphs/WIH/tool registry).
+ - **AT-BOOT-0013**: WIH must include a valid Beads envelope (via schema composition).
+ - **AT-BOOT-0014**: Boot manifest validates against `/spec/Contracts/BootManifest.schema.json`.
++- **AT-BOOT-0015**: Boot manifest path is consistent between kernel writer and validator.
++- **AT-BOOT-0016**: Offline law bootstrap (`scripts/law_setup.sh`) passes.
+ 
+ ## AT-WIH — WIH/Beads enforcement
+ 
+@@ -58,6 +60,7 @@ These acceptance tests are platform-level gates. Every major change must referen
+ - **AT-TOOLS-0002**: Tool call denied if tool safety level exceeds WIH allowance.
+ - **AT-TOOLS-0003**: PreToolUse hook runs before every tool call and can deny.
+ - **AT-TOOLS-0004**: Tool registry file validates against `/spec/Contracts/ToolRegistry.schema.json`.
++- **AT-TOOLS-0005**: WIH tool allowlist entries must exist in tool registry (validation gate).
+ 
+ ## AT-RECEIPT — Receipts as proofs
+ 
+diff --git a/tests/acceptance/test_boot_manifest_path.sh b/tests/acceptance/test_boot_manifest_path.sh
+new file mode 100755
+index 0000000..a1d66ce
+--- /dev/null
++++ b/tests/acceptance/test_boot_manifest_path.sh
+@@ -0,0 +1,10 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++kernel_file="services/kernel/src/main.rs"
++validator_file="scripts/validate_law.py"
++
++rg -n "boot_dir = StdPath::new\(\"\.a2r/boot\"\)" "$kernel_file" > /dev/null
++rg -n "receipt_path = boot_dir.join\(\"boot_manifest.json\"\)" "$kernel_file" > /dev/null
++
++rg -n "DEFAULT_BOOT_MANIFEST_PATH = ROOT / \"\.a2r\" / \"boot\" / \"boot_manifest.json\"" "$validator_file" > /dev/null
+diff --git a/tests/acceptance/test_boot_manifest_validation.sh b/tests/acceptance/test_boot_manifest_validation.sh
+index 474ba67..7a1cba0 100755
+--- a/tests/acceptance/test_boot_manifest_validation.sh
++++ b/tests/acceptance/test_boot_manifest_validation.sh
+@@ -2,7 +2,7 @@
+ set -euo pipefail
+ 
+ boot_dir=".a2r/boot"
+-manifest_path="$boot_dir/receipt.json"
++manifest_path="$boot_dir/boot_manifest.json"
+ 
+ mkdir -p "$boot_dir"
+ 

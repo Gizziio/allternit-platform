@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>A2rchitech Shell - Direct Test</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: system-ui, -apple-system, sans-serif;
+        background: #f9fafb;
+      }
+      #direct-test {
+        padding: 40px;
+      }
+      h1 {
+        color: #111;
+        margin-bottom: 20px;
+      }
+      .test-box {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 20px;
+        max-width: 600px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="direct-test">
+      <h1>Direct HTML Test</h1>
+      <div class="test-box">
+        <h2>Static Content Test</h2>
+        <p>If you can see this, HTML is rendering correctly.</p>
+        <p>Time: <span id="time-display">Loading...</span></p>
+      </div>
+      <script>
+        document.getElementById('time-display').textContent = new Date().toLocaleTimeString();
+        console.log('Direct HTML test loaded');
+      </script>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,42 @@
+commit b227888d60a9ae948ac59b481aacb6f4eeb4d3b9
+Author: Eoj Edred <eojedredbitepubkey1@proton.me>
+Date:   Tue Jan 27 22:49:28 2026 -0600
+
+    T0009: phase0-law-gates CI job
+    
+    Tests: phase0-law-gates (CI)
+    
+    Files: .github/workflows/ci-cd.yml
+
+diff --git a/.github/workflows/ci-cd.yml b/.github/workflows/ci-cd.yml
+index 43030e7..ea375b5 100644
+--- a/.github/workflows/ci-cd.yml
++++ b/.github/workflows/ci-cd.yml
+@@ -11,21 +11,21 @@ env:
+   RUST_BACKTRACE: full
+ 
+ jobs:
+-  law-gates:
++  phase0-law-gates:
+     runs-on: ubuntu-latest
+     steps:
+     - uses: actions/checkout@v4
+ 
+-    - name: Install Python deps for law gates
+-      run: |
+-        python3 -m pip install --upgrade pip
+-        python3 -m pip install -r scripts/requirements.txt
+-
+     - name: Run law gates
+       run: |
++        bash scripts/law_setup.sh
++        python3 scripts/validate_law.py
+         tests/acceptance/test_boot_anchors.sh
+         tests/acceptance/test_codebase_regen.sh
+         tests/acceptance/test_boot_manifest_validation.sh
++        tests/acceptance/test_boot_manifest_path.sh
++        tests/acceptance/test_wih_tool_registry_lock.sh
++        tests/acceptance/test_law_bootstrap_offline.sh
+ 
+   lint:
+     runs-on: ubuntu-latest

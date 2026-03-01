@@ -1,0 +1,42 @@
+{
+  "researcher": {
+    "id": "spec_researcher",
+    "role": "Researcher",
+    "description": "Researches topics and gathers information.",
+    "tools": [
+      "search",
+      "browser"
+    ],
+    "policies": [
+      "read_only"
+    ],
+    "publisher": {
+      "publisher_id": "",
+      "public_key_id": ""
+    },
+    "signature": {
+      "manifest_sig": "",
+      "bundle_hash": ""
+    }
+  },
+  "builder": {
+    "id": "spec_builder",
+    "role": "Builder",
+    "description": "Implements code and modifies files.",
+    "tools": [
+      "fs_write",
+      "shell"
+    ],
+    "policies": [
+      "plan_first"
+    ],
+    "publisher": {
+      "publisher_id": "",
+      "public_key_id": ""
+    },
+    "signature": {
+      "manifest_sig": "",
+      "bundle_hash": ""
+    }
+  }
+}

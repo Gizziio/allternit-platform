@@ -1,0 +1,243 @@
+- generic [ref=e6]:
+  - generic [ref=e7]:
+    - generic [ref=e8]:
+      - generic [ref=e9]:
+        - generic [ref=e10]:
+          - img [ref=e11]
+          - text: Runtime Command
+        - heading "Runtime Operations" [level=2] [ref=e21]
+        - paragraph [ref=e22]: "Keep the shared runtime lane coherent from one place: global execution posture, budget pressure, replay readiness, and prewarm capacity. This surface stays pinned to the runtime contracts the backend already exposes today."
+      - generic [ref=e23]:
+        - generic [ref=e24]:
+          - img [ref=e330]
+          - text: Plan rail
+        - generic [ref=e27]:
+          - generic [ref=e28]: Mode sync 10:45 AM
+          - button "Refresh all" [ref=e29]:
+            - img [ref=e30]
+            - text: Refresh all
+    - generic [ref=e35]:
+      - button "Native Agent Jump into the live session workbench." [disabled] [ref=e36]:
+        - generic [ref=e37]: Native Agent
+        - generic [ref=e38]: Jump into the live session workbench.
+      - button "Budget Detail Open the dedicated quota and pressure surface." [disabled] [ref=e39]:
+        - generic [ref=e40]: Budget Detail
+        - generic [ref=e41]: Open the dedicated quota and pressure surface.
+      - button "Replay Detail Inspect full capture catalogs and launch replays." [disabled] [ref=e42]:
+        - generic [ref=e43]: Replay Detail
+        - generic [ref=e44]: Inspect full capture catalogs and launch replays.
+      - button "Prewarm Detail Tune pool controls and inspect topology." [disabled] [ref=e45]:
+        - generic [ref=e46]: Prewarm Detail
+        - generic [ref=e47]: Tune pool controls and inspect topology.
+  - generic [ref=e48]:
+    - generic [ref=e51]:
+      - img [ref=e53]
+      - generic [ref=e55]:
+        - paragraph [ref=e56]: Execution Mode
+        - paragraph [ref=e57]: PLAN
+    - generic [ref=e60]:
+      - img [ref=e62]
+      - generic [ref=e65]:
+        - paragraph [ref=e66]: Projected Burn
+        - paragraph [ref=e67]: 5.6credits/hr
+    - generic [ref=e70]:
+      - img [ref=e72]
+      - generic [ref=e77]:
+        - paragraph [ref=e78]: Warm Capacity
+        - paragraph [ref=e79]: 3instances
+    - generic [ref=e82]:
+      - img [ref=e84]
+      - generic [ref=e88]:
+        - paragraph [ref=e89]: Replayable Runs
+        - paragraph [ref=e90]: 2sessions
+  - generic [ref=e91]:
+    - generic [ref=e92]:
+      - generic [ref=e94]:
+        - generic [ref=e95]:
+          - generic [ref=e96]:
+            - generic [ref=e97]:
+              - img [ref=e98]
+              - heading "Shared Execution Posture" [level=3] [ref=e100]
+            - paragraph [ref=e101]: The runtime default used by tool execution when a request does not explicitly override the mode.
+          - generic [ref=e102]:
+            - generic [ref=e103]:
+              - img [ref=e333]
+              - text: plan
+            - button "Refresh" [ref=e106]:
+              - img [ref=e107]
+              - text: Refresh
+        - generic [ref=e112]:
+          - generic [ref=e113]:
+            - button "plan Active Generate and inspect a plan before runtime changes are allowed." [ref=e336]:
+              - generic [ref=e115]:
+                - generic [ref=e116]: plan
+                - generic [ref=e337]:
+                  - img [ref=e338]
+                  - text: Active
+              - paragraph [ref=e117]: Generate and inspect a plan before runtime changes are allowed.
+            - button "safe Require runtime rails and policy checks before direct execution." [ref=e341]:
+              - generic [ref=e120]: safe
+              - paragraph [ref=e124]: Require runtime rails and policy checks before direct execution.
+            - button "auto Execute directly when the runtime and rails permit the request." [ref=e125]:
+              - generic [ref=e127]: auto
+              - paragraph [ref=e128]: Execute directly when the runtime and rails permit the request.
+          - generic [ref=e130]: Last updated 10:45 AM
+      - generic [ref=e132]:
+        - generic [ref=e133]:
+          - generic [ref=e134]:
+            - generic [ref=e135]:
+              - img [ref=e136]
+              - heading "Budget Pressure" [level=3] [ref=e139]
+            - paragraph [ref=e140]: Live budget posture from the runtime metering service, with the shared quota control close to the pressure bars.
+          - generic [ref=e141]:
+            - generic [ref=e142]:
+              - img [ref=e143]
+              - text: healthy
+            - button "Refresh" [ref=e146]:
+              - img [ref=e147]
+              - text: Refresh
+        - generic [ref=e152]:
+          - generic [ref=e153]:
+            - text: Shared credits per hour
+            - spinbutton "Shared credits per hour" [ref=e154]: "20"
+          - generic [ref=e155]:
+            - button "5" [ref=e156]
+            - button "10" [ref=e157]
+            - button "20" [ref=e158]
+            - button "40" [ref=e159]
+            - button "Apply quota" [ref=e160]:
+              - img [ref=e161]
+              - text: Apply quota
+        - generic [ref=e164]:
+          - generic [ref=e165]:
+            - generic [ref=e166]:
+              - generic [ref=e167]: CPU
+              - generic [ref=e168]: 41.0% utilized
+            - paragraph [ref=e170]: 41.0%
+          - generic [ref=e171]:
+            - generic [ref=e172]:
+              - generic [ref=e173]: Memory
+              - generic [ref=e174]: 37.0% utilized
+            - paragraph [ref=e176]: 37.0%
+          - generic [ref=e177]:
+            - generic [ref=e178]:
+              - generic [ref=e179]: Network
+              - generic [ref=e180]: 24.0% utilized
+            - paragraph [ref=e182]: 24.0%
+          - generic [ref=e183]:
+            - generic [ref=e184]:
+              - generic [ref=e185]: Workers
+              - generic [ref=e186]: 54.0% utilized
+            - paragraph [ref=e188]: 54.0%
+        - generic [ref=e189]:
+          - generic [ref=e190]:
+            - generic [ref=e191]:
+              - img [ref=e192]
+              - text: Pressure ceiling
+            - generic [ref=e195]: 54.0%
+            - paragraph [ref=e196]: Last budget sync 10:46 AM
+          - generic [ref=e197]:
+            - generic [ref=e198]: Current posture
+            - generic [ref=e200]:
+              - generic [ref=e201]:
+                - img [ref=e202]
+                - text: Runtime budget healthy
+              - paragraph [ref=e204]: The shared default runtime tenant is operating inside its current budget envelope.
+    - generic [ref=e205]:
+      - generic [ref=e207]:
+        - generic [ref=e208]:
+          - generic [ref=e209]:
+            - generic [ref=e210]:
+              - img [ref=e211]
+              - heading "Prewarm Capacity" [level=3] [ref=e213]
+            - paragraph [ref=e214]: Manage the live prewarm pool so hot capacity stays ahead of the runtime queue.
+          - generic [ref=e215]:
+            - generic [ref=e216]:
+              - img [ref=e217]
+              - text: Enabled
+            - button "Refresh" [ref=e220]:
+              - img [ref=e221]
+              - text: Refresh
+        - generic [ref=e226]:
+          - generic [ref=e227]:
+            - generic [ref=e228]: Pool size
+            - generic [ref=e229]: "4"
+          - generic [ref=e230]:
+            - generic [ref=e231]: Available
+            - generic [ref=e232]: "3"
+          - generic [ref=e233]:
+            - generic [ref=e234]: In use
+            - generic [ref=e235]: "1"
+        - generic [ref=e236]:
+          - generic [ref=e237]:
+            - generic [ref=e238]:
+              - generic [ref=e239]: Shared pool size
+              - paragraph [ref=e240]: Adjust the shared pool target, then push a warmup if the lane needs faster startup.
+            - generic [ref=e241]: "4"
+          - slider "Shared pool size" [ref=e242]: "4"
+          - generic [ref=e243]:
+            - button "Trigger warmup" [ref=e244]:
+              - img [ref=e342]
+              - text: Trigger warmup
+            - button "Apply pool size" [disabled] [ref=e249]:
+              - img [ref=e250]
+              - text: Apply pool size
+        - generic [ref=e256]:
+          - generic [ref=e257]:
+            - generic [ref=e258]:
+              - generic [ref=e259]: default
+              - generic [ref=e260]: runtime/default
+            - generic [ref=e261]:
+              - img [ref=e262]
+              - text: healthy
+          - generic [ref=e268]: 1 / 4
+      - generic [ref=e270]:
+        - generic [ref=e271]:
+          - generic [ref=e272]:
+            - generic [ref=e273]:
+              - img [ref=e274]
+              - heading "Replay Readiness" [level=3] [ref=e278]
+            - paragraph [ref=e279]: Use captured runs to verify the same execution substrate the TUI can replay today.
+          - generic [ref=e280]:
+            - generic [ref=e281]:
+              - img [ref=e282]
+              - text: 2 replayable
+            - button "Refresh" [ref=e285]:
+              - img [ref=e286]
+              - text: Refresh
+        - generic [ref=e291]:
+          - generic [ref=e292]:
+            - generic [ref=e293]: Captures
+            - generic [ref=e294]: "2"
+          - generic [ref=e295]:
+            - generic [ref=e296]: Full capture
+            - generic [ref=e297]: "1"
+          - generic [ref=e298]:
+            - generic [ref=e299]: Outputs
+            - generic [ref=e300]: "9"
+        - generic [ref=e301]:
+          - generic [ref=e303]:
+            - generic [ref=e304]:
+              - generic [ref=e305]: run_alpha_...apture
+              - generic [ref=e306]:
+                - generic [ref=e307]: full capture
+                - generic [ref=e308]: 6 outputs
+                - generic [ref=e309]: 12 timestamps
+            - button "Replay" [ref=e310]:
+              - img [ref=e311]
+              - text: Replay
+          - generic [ref=e314]:
+            - generic [ref=e315]:
+              - generic [ref=e316]: run_beta_m...apture
+              - generic [ref=e317]:
+                - generic [ref=e318]: minimal capture
+                - generic [ref=e319]: 3 outputs
+                - generic [ref=e320]: 7 timestamps
+            - button "Replay" [ref=e321]:
+              - img [ref=e322]
+              - text: Replay
+  - generic [ref=e325]:
+    - generic [ref=e326]: Runtime deck last synced across budget, replay, and prewarm controls at 10:46 AM.
+    - generic [ref=e327]:
+      - img [ref=e328]
+      - text: Warmup triggered 1 time(s) in the story surface

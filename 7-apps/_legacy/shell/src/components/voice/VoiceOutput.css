@@ -1,0 +1,217 @@
+/**
+ * VoiceOutput Component Styles
+ */
+
+.voice-output {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(79, 172, 254, 0.1), rgba(0, 242, 254, 0.1));
+  border: 1px solid rgba(79, 172, 254, 0.2);
+  transition: all 0.3s ease;
+}
+
+.voice-output--speaking {
+  background: linear-gradient(135deg, rgba(79, 172, 254, 0.15), rgba(0, 242, 254, 0.15));
+  border-color: rgba(79, 172, 254, 0.4);
+  animation: speaking-glow 2s ease-in-out infinite;
+}
+
+@keyframes speaking-glow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(79, 172, 254, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(79, 172, 254, 0.4);
+  }
+}
+
+/* Visualizer */
+.voice-output__visualizer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  min-width: 120px;
+}
+
+/* Waveform visualizer */
+.voice-output__waveform {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: 100%;
+}
+
+.voice-output__bar {
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(to top, #4facfe, #00f2fe);
+  border-radius: 2px;
+  transition: transform 0.1s ease;
+  transform-origin: center bottom;
+}
+
+/* Bars visualizer */
+.voice-output__bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+  height: 100%;
+}
+
+.voice-output__bar--rect {
+  width: 6px;
+  min-height: 20%;
+  background: linear-gradient(to top, #4facfe, #00f2fe);
+  border-radius: 3px;
+  transition: height 0.1s ease;
+}
+
+/* Circular visualizer */
+.voice-output__circular {
+  position: relative;
+  width: 32px;
+  height: 32px;
+}
+
+.voice-output__orb {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  background: linear-gradient(135deg, #4facfe, #00f2fe);
+  border-radius: 50%;
+  margin-left: -3px;
+  margin-top: -3px;
+  transition: all 0.1s ease;
+}
+
+/* Status */
+.voice-output__status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #4facfe;
+  font-weight: 500;
+}
+
+.voice-output__status--dot {
+  color: #4facfe;
+  animation: dot-blink 1s ease-in-out infinite;
+}
+
+@keyframes dot-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* Controls */
+.voice-output__controls {
+  display: flex;
+  gap: 8px;
+}
+
+.voice-output__stop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(79, 172, 254, 0.2);
+  color: #4facfe;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.voice-output__stop:hover {
+  background: rgba(79, 172, 254, 0.3);
+  transform: scale(1.05);
+}
+
+.voice-output__stop:active {
+  transform: scale(0.95);
+}
+
+/* Size variants */
+.voice-output--small .voice-output__visualizer {
+  min-width: 80px;
+  height: 24px;
+}
+
+.voice-output--small .voice-output__bar {
+  width: 3px;
+}
+
+.voice-output--small .voice-output__status {
+  font-size: 11px;
+}
+
+.voice-output--large .voice-output__visualizer {
+  min-width: 180px;
+  height: 48px;
+}
+
+.voice-output--large .voice-output__bar {
+  width: 6px;
+}
+
+.voice-output--large .voice-output__status {
+  font-size: 15px;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .voice-output {
+    padding: 6px 10px;
+  }
+
+  .voice-output__visualizer {
+    min-width: 80px;
+  }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .voice-output--speaking,
+  .voice-output__bar,
+  .voice-output__orb,
+  .voice-output__status--dot {
+    animation: none !important;
+  }
+}
+
+/* Focus styles */
+.voice-output__stop:focus-visible {
+  outline: 3px solid rgba(79, 172, 254, 0.5);
+  outline-offset: 2px;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .voice-output {
+    background: linear-gradient(135deg, rgba(79, 172, 254, 0.15), rgba(0, 242, 254, 0.15));
+    border-color: rgba(79, 172, 254, 0.3);
+  }
+
+  .voice-output--speaking {
+    background: linear-gradient(135deg, rgba(79, 172, 254, 0.2), rgba(0, 242, 254, 0.2));
+  }
+
+  .voice-output__status {
+    color: #4facfe;
+  }
+
+  .voice-output__stop {
+    background: rgba(79, 172, 254, 0.3);
+    color: #4facfe;
+  }
+}

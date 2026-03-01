@@ -1,0 +1,5416 @@
+commit 5cdaa15b982ce41654576dae5fe28a651dc116ba
+Author: Eoj Edred <eojedredbitepubkey1@proton.me>
+Date:   Tue Jan 27 22:48:20 2026 -0600
+
+    T0005: WIH schema requires Beads
+    
+    Tests: python3 scripts/validate_law.py (requires wheelhouse)
+    
+    Files: spec/Contracts/WIH.schema.json, .a2r/wih/*.json
+
+diff --git a/.a2r/wih/G0050.wih.json b/.a2r/wih/G0050.wih.json
+index 6a9c379..0259ab7 100644
+--- a/.a2r/wih/G0050.wih.json
++++ b/.a2r/wih/G0050.wih.json
+@@ -53,5 +53,62 @@
+     "checks": [
+       "AT-NET-0001"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "G0050",
++    "graph_id": "graph-0002",
++    "title": "Thin Overlay Shell (global hotkey + minimal chat)",
++    "state": "PLANNED",
++    "blocked_by": [],
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "outputs": {
++      "required_artifacts": [
++        "design_notes",
++        "receipts"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/G0050/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/G0050/**",
++        "/.a2r/receipts/**",
++        "/.a2r/capsules/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-NET-0001"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/G0051.wih.json b/.a2r/wih/G0051.wih.json
+index 60fa3da..1df5fdd 100644
+--- a/.a2r/wih/G0051.wih.json
++++ b/.a2r/wih/G0051.wih.json
+@@ -55,5 +55,64 @@
+     "checks": [
+       "AT-CAP-0001"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "G0051",
++    "graph_id": "graph-0002",
++    "title": "MCP Apps Host Renderer (sandboxed capsule runtime)",
++    "state": "PLANNED",
++    "blocked_by": [
++      "G0050"
++    ],
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "outputs": {
++      "required_artifacts": [
++        "design_notes",
++        "receipts"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/G0051/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/G0051/**",
++        "/.a2r/receipts/**",
++        "/.a2r/capsules/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-CAP-0001"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/G0052.wih.json b/.a2r/wih/G0052.wih.json
+index 605e642..eae0255 100644
+--- a/.a2r/wih/G0052.wih.json
++++ b/.a2r/wih/G0052.wih.json
+@@ -56,5 +56,65 @@
+       "AT-CAP-0002",
+       "AT-CAP-0003"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "G0052",
++    "graph_id": "graph-0002",
++    "title": "Capsule Bridge (events + WIH enforcement + tool requests)",
++    "state": "PLANNED",
++    "blocked_by": [
++      "G0051"
++    ],
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "outputs": {
++      "required_artifacts": [
++        "design_notes",
++        "receipts"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/G0052/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/G0052/**",
++        "/.a2r/receipts/**",
++        "/.a2r/capsules/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-CAP-0002",
++        "AT-CAP-0003"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/G0053.wih.json b/.a2r/wih/G0053.wih.json
+index 0474e49..0cfe858 100644
+--- a/.a2r/wih/G0053.wih.json
++++ b/.a2r/wih/G0053.wih.json
+@@ -55,5 +55,64 @@
+     "checks": [
+       "AT-CAP-0004"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "G0053",
++    "graph_id": "graph-0002",
++    "title": "Capsule Permissioning + Approvals UI (manifest-driven)",
++    "state": "PLANNED",
++    "blocked_by": [
++      "G0052"
++    ],
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "outputs": {
++      "required_artifacts": [
++        "design_notes",
++        "receipts"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/G0053/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/G0053/**",
++        "/.a2r/receipts/**",
++        "/.a2r/capsules/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-CAP-0004"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/G0054.wih.json b/.a2r/wih/G0054.wih.json
+index 4fcb0cf..f0e1304 100644
+--- a/.a2r/wih/G0054.wih.json
++++ b/.a2r/wih/G0054.wih.json
+@@ -56,5 +56,65 @@
+     "checks": [
+       "AT-CAP-0005"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "G0054",
++    "graph_id": "graph-0002",
++    "title": "Browser Capsule (agent-driven WebView + receipts)",
++    "state": "PLANNED",
++    "blocked_by": [
++      "G0052",
++      "G0100"
++    ],
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "outputs": {
++      "required_artifacts": [
++        "design_notes",
++        "receipts"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/G0054/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/G0054/**",
++        "/.a2r/receipts/**",
++        "/.a2r/capsules/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-CAP-0005"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/G0055.wih.json b/.a2r/wih/G0055.wih.json
+index 61ff578..d487cb1 100644
+--- a/.a2r/wih/G0055.wih.json
++++ b/.a2r/wih/G0055.wih.json
+@@ -56,5 +56,65 @@
+     "checks": [
+       "AT-IO-0003"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "G0055",
++    "graph_id": "graph-0002",
++    "title": "Capsule receipts integration (bridge events \u2192 run receipts)",
++    "state": "PLANNED",
++    "blocked_by": [
++      "G0052",
++      "G0202"
++    ],
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "outputs": {
++      "required_artifacts": [
++        "design_notes",
++        "receipts"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/G0055/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/G0055/**",
++        "/.a2r/receipts/**",
++        "/.a2r/capsules/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-IO-0003"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/G0100.wih.json b/.a2r/wih/G0100.wih.json
+index ed8f181..da97aec 100644
+--- a/.a2r/wih/G0100.wih.json
++++ b/.a2r/wih/G0100.wih.json
+@@ -61,5 +61,70 @@
+       "AT-NET-0001",
+       "AT-NET-0002"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "G0100",
++    "graph_id": "graph-0002",
++    "title": "Design Gateway contract + request envelope",
++    "state": "PLANNED",
++    "blocked_by": [],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "gateway-contract"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/G0100/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/G0100/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-NET-0001",
++        "AT-NET-0002"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/G0101.wih.json b/.a2r/wih/G0101.wih.json
+index 4c74466..d3e2452 100644
+--- a/.a2r/wih/G0101.wih.json
++++ b/.a2r/wih/G0101.wih.json
+@@ -62,5 +62,71 @@
+     "checks": [
+       "AT-NET-0003"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "G0101",
++    "graph_id": "graph-0002",
++    "title": "Implement gateway config generator (env profiles)",
++    "state": "PLANNED",
++    "blocked_by": [
++      "G0100"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "gateway-config"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/G0101/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/config/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "execution",
++          "layers": [
++            "execution"
++          ],
++          "access": "readwrite"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-NET-0003"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/G0102.wih.json b/.a2r/wih/G0102.wih.json
+index 12ab8eb..ee48abe 100644
+--- a/.a2r/wih/G0102.wih.json
++++ b/.a2r/wih/G0102.wih.json
+@@ -63,5 +63,72 @@
+       "AT-NET-0002",
+       "AT-NET-0003"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "G0102",
++    "graph_id": "graph-0002",
++    "title": "Service discovery: name-based internal routing spec",
++    "state": "PLANNED",
++    "blocked_by": [
++      "G0100"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "service-discovery-spec"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/G0102/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/G0102/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-NET-0002",
++        "AT-NET-0003"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/G0103.wih.json b/.a2r/wih/G0103.wih.json
+index d078fd5..c2faf88 100644
+--- a/.a2r/wih/G0103.wih.json
++++ b/.a2r/wih/G0103.wih.json
+@@ -62,5 +62,71 @@
+     "checks": [
+       "AT-NET-0002"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "G0103",
++    "graph_id": "graph-0002",
++    "title": "Local dev transport plan: UDS + loopback constraints",
++    "state": "PLANNED",
++    "blocked_by": [
++      "G0102"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "uds-plan"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/G0103/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/G0103/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-NET-0002"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/G0104.wih.json b/.a2r/wih/G0104.wih.json
+index ee454a4..b74e872 100644
+--- a/.a2r/wih/G0104.wih.json
++++ b/.a2r/wih/G0104.wih.json
+@@ -69,5 +69,78 @@
+       "AT-NET-0002",
+       "AT-NET-0004"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "G0104",
++    "graph_id": "graph-0002",
++    "title": "Refactor port sprawl: centralize ports to generated config",
++    "state": "PLANNED",
++    "blocked_by": [
++      "G0101",
++      "G0102"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "port-centralization"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/G0104/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/infra/gateway/nginx.conf",
++        "/dev/run.sh",
++        "/infra/docker-compose/development.yml",
++        "/launchd/*.plist.template",
++        "/.a2r/artifacts/G0104/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "execution",
++          "layers": [
++            "execution"
++          ],
++          "access": "readwrite"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-NET-0001",
++        "AT-NET-0002",
++        "AT-NET-0004"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/G0105.wih.json b/.a2r/wih/G0105.wih.json
+index a0986b8..f6b51c3 100644
+--- a/.a2r/wih/G0105.wih.json
++++ b/.a2r/wih/G0105.wih.json
+@@ -62,5 +62,71 @@
+     "checks": [
+       "AT-TOOLS-0002"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "G0105",
++    "graph_id": "graph-0002",
++    "title": "Gateway authZ: workspace/session scoped tokens",
++    "state": "PLANNED",
++    "blocked_by": [
++      "G0100"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "gateway-authz"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/G0105/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/G0105/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-TOOLS-0002"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/G0200.wih.json b/.a2r/wih/G0200.wih.json
+index e6c7a23..1cc4fdd 100644
+--- a/.a2r/wih/G0200.wih.json
++++ b/.a2r/wih/G0200.wih.json
+@@ -60,5 +60,69 @@
+     "checks": [
+       "AT-TOOLS-0002"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "G0200",
++    "graph_id": "graph-0002",
++    "title": "Routing policy contract: model allowlists, caps, budgets",
++    "state": "PLANNED",
++    "blocked_by": [],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "router-policy-contract"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/G0200/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/G0200/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-TOOLS-0002"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/G0201.wih.json b/.a2r/wih/G0201.wih.json
+index bce5208..7a84eeb 100644
+--- a/.a2r/wih/G0201.wih.json
++++ b/.a2r/wih/G0201.wih.json
+@@ -62,5 +62,71 @@
+     "checks": [
+       "AT-TASK-0005"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "G0201",
++    "graph_id": "graph-0002",
++    "title": "Implement multi-LLM router adapter interface",
++    "state": "PLANNED",
++    "blocked_by": [
++      "G0200"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "router-adapters"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/G0201/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/G0201/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "execution",
++          "layers": [
++            "execution"
++          ],
++          "access": "readwrite"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-TASK-0005"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/G0202.wih.json b/.a2r/wih/G0202.wih.json
+index 3116d03..fca6a4c 100644
+--- a/.a2r/wih/G0202.wih.json
++++ b/.a2r/wih/G0202.wih.json
+@@ -62,5 +62,71 @@
+     "checks": [
+       "AT-TASK-0005"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "G0202",
++    "graph_id": "graph-0002",
++    "title": "Routing audit receipts (why model chosen)",
++    "state": "PLANNED",
++    "blocked_by": [
++      "G0201"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "routing-audit"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/G0202/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/receipts/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "execution",
++          "layers": [
++            "execution"
++          ],
++          "access": "readwrite"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-TASK-0005"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/G0203.wih.json b/.a2r/wih/G0203.wih.json
+index 094d689..bfb1910 100644
+--- a/.a2r/wih/G0203.wih.json
++++ b/.a2r/wih/G0203.wih.json
+@@ -62,5 +62,71 @@
+     "checks": [
+       "AT-TOOLS-0001"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "G0203",
++    "graph_id": "graph-0002",
++    "title": "Provider plugins: Claude/GPT/Gemini/local interface stubs",
++    "state": "PLANNED",
++    "blocked_by": [
++      "G0201"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "provider-stubs"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/G0203/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/G0203/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "execution",
++          "layers": [
++            "execution"
++          ],
++          "access": "readwrite"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-TOOLS-0001"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/G0300.wih.json b/.a2r/wih/G0300.wih.json
+index a6c24bd..5363b59 100644
+--- a/.a2r/wih/G0300.wih.json
++++ b/.a2r/wih/G0300.wih.json
+@@ -60,5 +60,69 @@
+     "checks": [
+       "AT-NET-0001"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "G0300",
++    "graph_id": "graph-0002",
++    "title": "UI Cockpit IA: Workspace home + Today tab + global alerts",
++    "state": "PLANNED",
++    "blocked_by": [],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "ui-ia"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/G0300/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/G0300/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-NET-0001"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/G0301.wih.json b/.a2r/wih/G0301.wih.json
+index 2dbfee4..839b337 100644
+--- a/.a2r/wih/G0301.wih.json
++++ b/.a2r/wih/G0301.wih.json
+@@ -62,5 +62,71 @@
+     "checks": [
+       "AT-WIH-0001"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "G0301",
++    "graph_id": "graph-0002",
++    "title": "DAG view + node inspector requirements (WIH visible always)",
++    "state": "PLANNED",
++    "blocked_by": [
++      "G0300"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "ui-dag-inspector"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/G0301/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/G0301/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-WIH-0001"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/G0302.wih.json b/.a2r/wih/G0302.wih.json
+index 33028c7..5c42289 100644
+--- a/.a2r/wih/G0302.wih.json
++++ b/.a2r/wih/G0302.wih.json
+@@ -63,5 +63,72 @@
+     "checks": [
+       "AT-IO-0003"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "G0302",
++    "graph_id": "graph-0002",
++    "title": "Run replay UX: logs, tool timeline, filesystem diff, hashes",
++    "state": "PLANNED",
++    "blocked_by": [
++      "G0301",
++      "G0202"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "ui-replay"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/G0302/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/G0302/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "execution",
++          "layers": [
++            "execution"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-IO-0003"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/G0303.wih.json b/.a2r/wih/G0303.wih.json
+index 741dbc2..e43611b 100644
+--- a/.a2r/wih/G0303.wih.json
++++ b/.a2r/wih/G0303.wih.json
+@@ -62,5 +62,71 @@
+     "checks": [
+       "AT-MEM-0004"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "G0303",
++    "graph_id": "graph-0002",
++    "title": "Promotion dashboard UX: proposals, rules, diffs, rollback",
++    "state": "PLANNED",
++    "blocked_by": [
++      "G0301"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "ui-promo-dashboard"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/G0303/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/G0303/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "proposal",
++          "layers": [
++            "proposal"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-MEM-0004"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/G0304.wih.json b/.a2r/wih/G0304.wih.json
+index 6e0650c..05f43e1 100644
+--- a/.a2r/wih/G0304.wih.json
++++ b/.a2r/wih/G0304.wih.json
+@@ -63,5 +63,72 @@
+     "checks": [
+       "AT-NET-0001"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "G0304",
++    "graph_id": "graph-0002",
++    "title": "Gateway integration wiring: UI and CLI only talk to gateway",
++    "state": "PLANNED",
++    "blocked_by": [
++      "G0101",
++      "G0300"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "ui-gateway-wiring"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/G0304/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/G0304/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "execution",
++          "layers": [
++            "execution"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-NET-0001"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/G0400.wih.json b/.a2r/wih/G0400.wih.json
+index a13208a..859c027 100644
+--- a/.a2r/wih/G0400.wih.json
++++ b/.a2r/wih/G0400.wih.json
+@@ -60,5 +60,69 @@
+     "checks": [
+       "AT-BOOT-0001"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "G0400",
++    "graph_id": "graph-0002",
++    "title": "Optional layer spec: crypto module boundaries + contracts",
++    "state": "PLANNED",
++    "blocked_by": [],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "crypto-layer-spec"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/G0400/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/G0400/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-BOOT-0001"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/G0401.wih.json b/.a2r/wih/G0401.wih.json
+index 122d972..7ae8f9d 100644
+--- a/.a2r/wih/G0401.wih.json
++++ b/.a2r/wih/G0401.wih.json
+@@ -62,5 +62,71 @@
+     "checks": [
+       "AT-BOOT-0001"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "G0401",
++    "graph_id": "graph-0002",
++    "title": "Optional layer spec: social network module boundaries",
++    "state": "PLANNED",
++    "blocked_by": [
++      "G0400"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "social-layer-spec"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/G0401/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/G0401/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-BOOT-0001"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/G2000.wih.json b/.a2r/wih/G2000.wih.json
+index a84ba92..f8f1de5 100644
+--- a/.a2r/wih/G2000.wih.json
++++ b/.a2r/wih/G2000.wih.json
+@@ -61,5 +61,70 @@
+       "AT-NET-0001",
+       "AT-NET-0003"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "G2000",
++    "graph_id": "graph-0002",
++    "title": "Define Gateway contract + config schema",
++    "state": "PLANNED",
++    "blocked_by": [],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-net-ui",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "gateway-schema"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/G2000/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/G2000/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "readwrite"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-NET-0001",
++        "AT-NET-0003"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/G2001.wih.json b/.a2r/wih/G2001.wih.json
+index 5cba6d1..abc680d 100644
+--- a/.a2r/wih/G2001.wih.json
++++ b/.a2r/wih/G2001.wih.json
+@@ -62,5 +62,71 @@
+     "checks": [
+       "AT-NET-0001"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "G2001",
++    "graph_id": "graph-0002",
++    "title": "Implement single-ingress gateway stub",
++    "state": "PLANNED",
++    "blocked_by": [
++      "G2000"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-net-ui",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "gateway-stub"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/G2001/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/G2001/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "execution",
++          "layers": [
++            "execution"
++          ],
++          "access": "readwrite"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-NET-0001"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/G2002.wih.json b/.a2r/wih/G2002.wih.json
+index 9b731c0..7815f75 100644
+--- a/.a2r/wih/G2002.wih.json
++++ b/.a2r/wih/G2002.wih.json
+@@ -62,5 +62,71 @@
+     "checks": [
+       "AT-NET-0003"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "G2002",
++    "graph_id": "graph-0002",
++    "title": "Service discovery registry (name-based)",
++    "state": "PLANNED",
++    "blocked_by": [
++      "G2000"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-net-ui",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "service-registry"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/G2002/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/G2002/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "execution",
++          "layers": [
++            "execution"
++          ],
++          "access": "readwrite"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-NET-0003"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/G2003.wih.json b/.a2r/wih/G2003.wih.json
+index c3699e3..1673e8e 100644
+--- a/.a2r/wih/G2003.wih.json
++++ b/.a2r/wih/G2003.wih.json
+@@ -63,5 +63,72 @@
+     "checks": [
+       "AT-NET-0003"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "G2003",
++    "graph_id": "graph-0002",
++    "title": "Remove arbitrary port configs + generator",
++    "state": "PLANNED",
++    "blocked_by": [
++      "G2001",
++      "G2002"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-net-ui",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "portless-config"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/G2003/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/G2003/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-NET-0003"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/G2004.wih.json b/.a2r/wih/G2004.wih.json
+index dfccbf5..b5e8943 100644
+--- a/.a2r/wih/G2004.wih.json
++++ b/.a2r/wih/G2004.wih.json
+@@ -62,5 +62,71 @@
+     "checks": [
+       "AT-TOOLS-0002"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "G2004",
++    "graph_id": "graph-0002",
++    "title": "LLM router contract + policy schema",
++    "state": "PLANNED",
++    "blocked_by": [
++      "G2000"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-net-ui",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "router-schema"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/G2004/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/G2004/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "readwrite"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-TOOLS-0002"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/G2005.wih.json b/.a2r/wih/G2005.wih.json
+index ebe2c13..497cb69 100644
+--- a/.a2r/wih/G2005.wih.json
++++ b/.a2r/wih/G2005.wih.json
+@@ -62,5 +62,71 @@
+     "checks": [
+       "AT-TOOLS-0001"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "G2005",
++    "graph_id": "graph-0002",
++    "title": "Provider adapters (Claude/GPT/Gemini/local)",
++    "state": "PLANNED",
++    "blocked_by": [
++      "G2004"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-net-ui",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "provider-adapters"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/G2005/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/G2005/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "execution",
++          "layers": [
++            "execution"
++          ],
++          "access": "readwrite"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-TOOLS-0001"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/G2006.wih.json b/.a2r/wih/G2006.wih.json
+index 54913a4..7562b01 100644
+--- a/.a2r/wih/G2006.wih.json
++++ b/.a2r/wih/G2006.wih.json
+@@ -62,5 +62,71 @@
+     "checks": [
+       "AT-TASK-0005"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "G2006",
++    "graph_id": "graph-0002",
++    "title": "Routing audit receipts + decision logs",
++    "state": "PLANNED",
++    "blocked_by": [
++      "G2005"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-net-ui",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "router-receipts"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/G2006/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/runs/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "execution",
++          "layers": [
++            "execution"
++          ],
++          "access": "readwrite"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-TASK-0005"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/G2007.wih.json b/.a2r/wih/G2007.wih.json
+index 5091323..cc79dbf 100644
+--- a/.a2r/wih/G2007.wih.json
++++ b/.a2r/wih/G2007.wih.json
+@@ -62,5 +62,71 @@
+     "checks": [
+       "AT-NET-0001"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "G2007",
++    "graph_id": "graph-0002",
++    "title": "Workspace home cockpit UI spec",
++    "state": "PLANNED",
++    "blocked_by": [
++      "G2003"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-net-ui",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "workspace-ui-spec"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/G2007/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/G2007/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-NET-0001"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/G2008.wih.json b/.a2r/wih/G2008.wih.json
+index 6e9ebf4..a06e767 100644
+--- a/.a2r/wih/G2008.wih.json
++++ b/.a2r/wih/G2008.wih.json
+@@ -62,5 +62,71 @@
+     "checks": [
+       "AT-NET-0001"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "G2008",
++    "graph_id": "graph-0002",
++    "title": "Today cockpit + DAG inspector spec",
++    "state": "PLANNED",
++    "blocked_by": [
++      "G2007"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-net-ui",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "today-ui-spec"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/G2008/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/G2008/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-NET-0001"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/G2009.wih.json b/.a2r/wih/G2009.wih.json
+index 9936263..24868ce 100644
+--- a/.a2r/wih/G2009.wih.json
++++ b/.a2r/wih/G2009.wih.json
+@@ -63,5 +63,72 @@
+     "checks": [
+       "AT-IO-0003"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "G2009",
++    "graph_id": "graph-0002",
++    "title": "Live run replay UI + provenance viewer",
++    "state": "PLANNED",
++    "blocked_by": [
++      "G2006",
++      "G2008"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-net-ui",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "replay-ui-spec"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/G2009/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/G2009/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-IO-0003"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/P0000.wih.json b/.a2r/wih/P0000.wih.json
+index 11e18b3..5d14fe8 100644
+--- a/.a2r/wih/P0000.wih.json
++++ b/.a2r/wih/P0000.wih.json
+@@ -60,5 +60,69 @@
+     "checks": [
+       "AT-BOOT-0004"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "P0000",
++    "graph_id": "graph-0000",
++    "title": "Load SOT + CODEBASE + Contracts and hash them",
++    "state": "PLANNED",
++    "blocked_by": [],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-governance",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "boot-manifest"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/P0000/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/boot/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-BOOT-0004"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/P0001.wih.json b/.a2r/wih/P0001.wih.json
+index ee78a9f..1acdbb3 100644
+--- a/.a2r/wih/P0001.wih.json
++++ b/.a2r/wih/P0001.wih.json
+@@ -61,5 +61,70 @@
+     "checks": [
+       "AT-TASK-0001"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "P0001",
++    "graph_id": "graph-0000",
++    "title": "Register subgraph graph-0001 (bootstrap)",
++    "state": "PLANNED",
++    "blocked_by": [],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "subgraph-0001-registered"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/P0001/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/graphs/**",
++        "/.a2r/wih/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "graph",
++          "layers": [
++            "graph"
++          ],
++          "access": "readwrite"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-TASK-0001"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/P0002.wih.json b/.a2r/wih/P0002.wih.json
+index 8a58576..8314e9b 100644
+--- a/.a2r/wih/P0002.wih.json
++++ b/.a2r/wih/P0002.wih.json
+@@ -63,5 +63,72 @@
+     "checks": [
+       "AT-TASK-0001"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "P0002",
++    "graph_id": "graph-0000",
++    "title": "Register subgraph graph-0002 (gateway/router/ui)",
++    "state": "PLANNED",
++    "blocked_by": [
++      "P0001"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "subgraph-0002-registered"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/P0002/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/graphs/**",
++        "/.a2r/wih/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "graph",
++          "layers": [
++            "graph"
++          ],
++          "access": "readwrite"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-TASK-0001"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/P0003.wih.json b/.a2r/wih/P0003.wih.json
+index 7c8b7cb..79f4e24 100644
+--- a/.a2r/wih/P0003.wih.json
++++ b/.a2r/wih/P0003.wih.json
+@@ -62,5 +62,71 @@
+     "checks": [
+       "AT-WIH-0001"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "P0003",
++    "graph_id": "graph-0000",
++    "title": "CI gate: run AcceptanceTests.md referenced by WIHs",
++    "state": "PLANNED",
++    "blocked_by": [
++      "P0000"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-governance",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "ci-report"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/P0003/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/P0003/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "execution",
++          "layers": [
++            "execution"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-WIH-0001"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/P0004.wih.json b/.a2r/wih/P0004.wih.json
+index e307178..3b4a285 100644
+--- a/.a2r/wih/P0004.wih.json
++++ b/.a2r/wih/P0004.wih.json
+@@ -61,5 +61,70 @@
+     "checks": [
+       "AT-TASK-0001"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "P0004",
++    "graph_id": "graph-0000",
++    "title": "Subgraph: Bootstrap Law\u2192Tasks\u2192Memory (graph-0001)",
++    "state": "PLANNED",
++    "blocked_by": [
++      "P0000"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-governance",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "graph-0001-run"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/P0004/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/P0004/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "graph.run"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "graph",
++          "layers": [
++            "graph"
++          ],
++          "access": "readwrite"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-TASK-0001"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/P0005.wih.json b/.a2r/wih/P0005.wih.json
+index 4fc755c..808be80 100644
+--- a/.a2r/wih/P0005.wih.json
++++ b/.a2r/wih/P0005.wih.json
+@@ -61,5 +61,70 @@
+     "checks": [
+       "AT-NET-0001"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "P0005",
++    "graph_id": "graph-0000",
++    "title": "Subgraph: Gateway+Router+UI (graph-0002)",
++    "state": "PLANNED",
++    "blocked_by": [
++      "P0004"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-governance",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "graph-0002-run"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/P0005/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/P0005/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "graph.run"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "graph",
++          "layers": [
++            "graph"
++          ],
++          "access": "readwrite"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-NET-0001"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/P0006.wih.json b/.a2r/wih/P0006.wih.json
+index efd2090..8a791ce 100644
+--- a/.a2r/wih/P0006.wih.json
++++ b/.a2r/wih/P0006.wih.json
+@@ -63,5 +63,72 @@
+     "checks": [
+       "AT-MEM-0004"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "P0006",
++    "graph_id": "graph-0000",
++    "title": "Promotion review sweep + auto-approve pass",
++    "state": "PLANNED",
++    "blocked_by": [
++      "P0004",
++      "P0005"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-governance",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "promotion-report"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/P0006/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/promotions/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "proposal",
++          "layers": [
++            "proposal"
++          ],
++          "access": "readwrite"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-MEM-0004"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/P0007.wih.json b/.a2r/wih/P0007.wih.json
+index f602194..7615ef4 100644
+--- a/.a2r/wih/P0007.wih.json
++++ b/.a2r/wih/P0007.wih.json
+@@ -62,5 +62,71 @@
+     "checks": [
+       "AT-IO-0003"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "P0007",
++    "graph_id": "graph-0000",
++    "title": "Publish program receipts + provenance index",
++    "state": "PLANNED",
++    "blocked_by": [
++      "P0006"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-governance",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "program-receipts"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/P0007/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/receipts/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "execution",
++          "layers": [
++            "execution"
++          ],
++          "access": "readwrite"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-IO-0003"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/P0100.wih.json b/.a2r/wih/P0100.wih.json
+index 5b8e029..2365a78 100644
+--- a/.a2r/wih/P0100.wih.json
++++ b/.a2r/wih/P0100.wih.json
+@@ -60,5 +60,69 @@
+     "checks": [
+       "AT-BOOT-0002"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "P0100",
++    "graph_id": "graph-0000",
++    "title": "RCP-001 CODEBASE generator spec + CLI stub plan",
++    "state": "PLANNED",
++    "blocked_by": [],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "rcp-001-plan"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/P0100/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/P0100/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-BOOT-0002"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/P0101.wih.json b/.a2r/wih/P0101.wih.json
+index 01d45f1..51b5ee0 100644
+--- a/.a2r/wih/P0101.wih.json
++++ b/.a2r/wih/P0101.wih.json
+@@ -63,5 +63,72 @@
+     "checks": [
+       "AT-BOOT-0002"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "P0101",
++    "graph_id": "graph-0000",
++    "title": "CODEBASE.md regeneration job (deterministic, diffed)",
++    "state": "PLANNED",
++    "blocked_by": [
++      "P0100"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "codebase-regenerated"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/P0101/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/receipts/**",
++        "/.a2r/artifacts/P0101/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "execution",
++          "layers": [
++            "execution"
++          ],
++          "access": "readwrite"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-BOOT-0002"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/P0200.wih.json b/.a2r/wih/P0200.wih.json
+index ffb4e90..c32e431 100644
+--- a/.a2r/wih/P0200.wih.json
++++ b/.a2r/wih/P0200.wih.json
+@@ -60,5 +60,69 @@
+     "checks": [
+       "AT-BOOT-0001"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "P0200",
++    "graph_id": "graph-0000",
++    "title": "ADR enforcement: require ADR IDs for cross-cutting changes",
++    "state": "PLANNED",
++    "blocked_by": [],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "adr-gate"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/P0200/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/P0200/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-BOOT-0001"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/P0201.wih.json b/.a2r/wih/P0201.wih.json
+index ad4fb1e..967a7b0 100644
+--- a/.a2r/wih/P0201.wih.json
++++ b/.a2r/wih/P0201.wih.json
+@@ -63,5 +63,72 @@
+     "checks": [
+       "AT-BOOT-0003"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "P0201",
++    "graph_id": "graph-0000",
++    "title": "CI gates: run AcceptanceTests.md suite in pipeline",
++    "state": "PLANNED",
++    "blocked_by": [
++      "P0200",
++      "P0204"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "ci-gates"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/P0201/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/P0201/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "execution",
++          "layers": [
++            "execution"
++          ],
++          "access": "readwrite"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-BOOT-0003"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/P0202.wih.json b/.a2r/wih/P0202.wih.json
+index 6ad8430..e697d46 100644
+--- a/.a2r/wih/P0202.wih.json
++++ b/.a2r/wih/P0202.wih.json
+@@ -62,5 +62,71 @@
+     "checks": [
+       "AT-TOOLS-0001"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "P0202",
++    "graph_id": "graph-0000",
++    "title": "Tool registry gate in CI (schema validate registry + WIH)",
++    "state": "PLANNED",
++    "blocked_by": [
++      "P0201"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "tool-ci-gate"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/P0202/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/P0202/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "execution",
++          "layers": [
++            "execution"
++          ],
++          "access": "readwrite"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-TOOLS-0001"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/P0203.wih.json b/.a2r/wih/P0203.wih.json
+index 87d42c1..5fb7c36 100644
+--- a/.a2r/wih/P0203.wih.json
++++ b/.a2r/wih/P0203.wih.json
+@@ -64,5 +64,73 @@
+       "AT-SEC-0001",
+       "AT-SEC-0002"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "P0203",
++    "graph_id": "graph-0000",
++    "title": "Security CI fail conditions (auth bypass list, python exec)",
++    "state": "PLANNED",
++    "blocked_by": [
++      "P0201"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "ci-security-gates"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/P0203/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/P0203/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write",
++        "rg"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "execution",
++          "layers": [
++            "execution"
++          ],
++          "access": "readwrite"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-SEC-0001",
++        "AT-SEC-0002"
++      ]
++    }
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/.a2r/wih/P0204.wih.json b/.a2r/wih/P0204.wih.json
+index 30f224b..2f6bc1e 100644
+--- a/.a2r/wih/P0204.wih.json
++++ b/.a2r/wih/P0204.wih.json
+@@ -64,5 +64,73 @@
+     "checks": [
+       "AT-LAW-0004"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "P0204",
++    "graph_id": "graph-0000",
++    "title": "Contract-root canon ADR (spec/Contracts; deprecate spec/1_contracts)",
++    "state": "PLANNED",
++    "blocked_by": [
++      "P0200"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "contract-root-adr"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/P0204/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/spec/Contracts/**",
++        "/spec/Deltas/**",
++        "/.a2r/artifacts/P0204/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "readwrite"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-LAW-0004"
++      ]
++    }
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/.a2r/wih/P0300.wih.json b/.a2r/wih/P0300.wih.json
+index 0898793..f230a51 100644
+--- a/.a2r/wih/P0300.wih.json
++++ b/.a2r/wih/P0300.wih.json
+@@ -63,5 +63,72 @@
+     "checks": [
+       "AT-TASK-0003"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "P0300",
++    "graph_id": "graph-0000",
++    "title": "Program graph runner: orchestrate subgraphs with meta-deps",
++    "state": "PLANNED",
++    "blocked_by": [
++      "P0002",
++      "P0201"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "program-runner"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/P0300/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/runs/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "graph",
++          "layers": [
++            "graph"
++          ],
++          "access": "readwrite"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-TASK-0003"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/T0000.wih.json b/.a2r/wih/T0000.wih.json
+index 2c02f46..3447198 100644
+--- a/.a2r/wih/T0000.wih.json
++++ b/.a2r/wih/T0000.wih.json
+@@ -62,5 +62,71 @@
+       "AT-BOOT-0002",
+       "AT-BOOT-0003"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "T0000",
++    "graph_id": "graph-0001",
++    "title": "Import spec tree into repo",
++    "state": "PLANNED",
++    "blocked_by": [],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "spec-tree-imported"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/T0000/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "readwrite"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-BOOT-0001",
++        "AT-BOOT-0002",
++        "AT-BOOT-0003"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/T0001.wih.json b/.a2r/wih/T0001.wih.json
+index d0a700e..0728efc 100644
+--- a/.a2r/wih/T0001.wih.json
++++ b/.a2r/wih/T0001.wih.json
+@@ -62,5 +62,71 @@
+     "checks": [
+       "AT-BOOT-0004"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "T0001",
++    "graph_id": "graph-0001",
++    "title": "Implement boot manifest receipt generation",
++    "state": "PLANNED",
++    "blocked_by": [
++      "T0000"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "boot-receipt.json"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/T0001/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/boot/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-BOOT-0004"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/T0002.wih.json b/.a2r/wih/T0002.wih.json
+index f1f00c6..205f34a 100644
+--- a/.a2r/wih/T0002.wih.json
++++ b/.a2r/wih/T0002.wih.json
+@@ -63,5 +63,72 @@
+       "AT-WIH-0001",
+       "AT-WIH-0002"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "T0002",
++    "graph_id": "graph-0001",
++    "title": "Add WIH schema validation at dispatch + pretool",
++    "state": "PLANNED",
++    "blocked_by": [
++      "T0000"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "wih-validation"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/T0002/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-WIH-0001",
++        "AT-WIH-0002"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/T0003.wih.json b/.a2r/wih/T0003.wih.json
+index 34812ff..e3fccae 100644
+--- a/.a2r/wih/T0003.wih.json
++++ b/.a2r/wih/T0003.wih.json
+@@ -63,5 +63,72 @@
+       "AT-IO-0001",
+       "AT-IO-0002"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "T0003",
++    "graph_id": "graph-0001",
++    "title": "Enforce output routing + write-scope guards",
++    "state": "PLANNED",
++    "blocked_by": [
++      "T0002"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "path-guard"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/T0003/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-IO-0001",
++        "AT-IO-0002"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/T0005.wih.json b/.a2r/wih/T0005.wih.json
+index 14deff8..0bbd086 100644
+--- a/.a2r/wih/T0005.wih.json
++++ b/.a2r/wih/T0005.wih.json
+@@ -2,7 +2,7 @@
+   "wih_version": "v0.1",
+   "task_id": "T0005",
+   "graph_id": "graph-0001",
+-  "title": "Implement scheduler with blockedBy enforcement",
++  "title": "WIH to Beads contract hard binding",
+   "state": "PLANNED",
+   "blocked_by": [
+     "T0004"
+@@ -23,7 +23,7 @@
+   },
+   "outputs": {
+     "required_artifacts": [
+-      "scheduler"
++      "wih_beads_binding"
+     ],
+     "artifact_paths": [
+       "/.a2r/artifacts/T0005/"
+@@ -32,8 +32,7 @@
+   "write_scope": {
+     "root": "/.a2r/",
+     "allowed_globs": [
+-      "/.a2r/graphs/**",
+-      "/.a2r/runs/**"
++      "/.a2r/artifacts/T0005/**"
+     ]
+   },
+   "tools": {
+@@ -51,17 +50,83 @@
+   "memory": {
+     "packs": [
+       {
+-        "pack_id": "graph",
++        "pack_id": "law",
+         "layers": [
+-          "graph"
++          "law"
+         ],
+-        "access": "readwrite"
++        "access": "read"
+       }
+     ]
+   },
+   "acceptance": {
+     "checks": [
+-      "AT-TASK-0001"
++      "AT-BOOT-0013"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "T0005",
++    "graph_id": "graph-0001",
++    "title": "WIH to Beads contract hard binding",
++    "state": "PLANNED",
++    "blocked_by": [
++      "T0004"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "wih_beads_binding"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/T0005/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/T0005/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-BOOT-0013"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/T0006.wih.json b/.a2r/wih/T0006.wih.json
+index 322979e..50f1e60 100644
+--- a/.a2r/wih/T0006.wih.json
++++ b/.a2r/wih/T0006.wih.json
+@@ -2,10 +2,10 @@
+   "wih_version": "v0.1",
+   "task_id": "T0006",
+   "graph_id": "graph-0001",
+-  "title": "Implement /install presets (immutable hash)",
++  "title": "Local deterministic law setup",
+   "state": "PLANNED",
+   "blocked_by": [
+-    "T0004"
++    "T0005"
+   ],
+   "external_refs": {
+     "claude_task_id": "",
+@@ -23,7 +23,7 @@
+   },
+   "outputs": {
+     "required_artifacts": [
+-      "preset-store"
++      "law_setup"
+     ],
+     "artifact_paths": [
+       "/.a2r/artifacts/T0006/"
+@@ -32,7 +32,7 @@
+   "write_scope": {
+     "root": "/.a2r/",
+     "allowed_globs": [
+-      "/.a2r/presets/**"
++      "/.a2r/artifacts/T0006/**"
+     ]
+   },
+   "tools": {
+@@ -50,18 +50,83 @@
+   "memory": {
+     "packs": [
+       {
+-        "pack_id": "execution",
++        "pack_id": "law",
+         "layers": [
+-          "execution"
++          "law"
+         ],
+-        "access": "readwrite"
++        "access": "read"
+       }
+     ]
+   },
+   "acceptance": {
+     "checks": [
+-      "AT-TASK-0002",
+-      "AT-TASK-0004"
++      "AT-BOOT-0012"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "T0006",
++    "graph_id": "graph-0001",
++    "title": "Local deterministic law setup",
++    "state": "PLANNED",
++    "blocked_by": [
++      "T0005"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "law_setup"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/T0006/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/T0006/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-BOOT-0012"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/T0007.wih.json b/.a2r/wih/T0007.wih.json
+index dd341db..8b49458 100644
+--- a/.a2r/wih/T0007.wih.json
++++ b/.a2r/wih/T0007.wih.json
+@@ -2,10 +2,9 @@
+   "wih_version": "v0.1",
+   "task_id": "T0007",
+   "graph_id": "graph-0001",
+-  "title": "Implement /resume deterministic rehydration",
++  "title": "Graph/WIH/Beads semantic gate",
+   "state": "PLANNED",
+   "blocked_by": [
+-    "T0005",
+     "T0006"
+   ],
+   "external_refs": {
+@@ -24,7 +23,7 @@
+   },
+   "outputs": {
+     "required_artifacts": [
+-      "resume"
++      "semantic_gate"
+     ],
+     "artifact_paths": [
+       "/.a2r/artifacts/T0007/"
+@@ -33,8 +32,7 @@
+   "write_scope": {
+     "root": "/.a2r/",
+     "allowed_globs": [
+-      "/.a2r/runs/**",
+-      "/.a2r/artifacts/**"
++      "/.a2r/artifacts/T0007/**"
+     ]
+   },
+   "tools": {
+@@ -52,17 +50,83 @@
+   "memory": {
+     "packs": [
+       {
+-        "pack_id": "execution",
++        "pack_id": "law",
+         "layers": [
+-          "execution"
++          "law"
+         ],
+-        "access": "readwrite"
++        "access": "read"
+       }
+     ]
+   },
+   "acceptance": {
+     "checks": [
+-      "AT-TASK-0003"
++      "AT-BOOT-0012"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "T0007",
++    "graph_id": "graph-0001",
++    "title": "Graph/WIH/Beads semantic gate",
++    "state": "PLANNED",
++    "blocked_by": [
++      "T0006"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "semantic_gate"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/T0007/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/T0007/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-BOOT-0012"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/T0008.wih.json b/.a2r/wih/T0008.wih.json
+index 5083544..0d66bb6 100644
+--- a/.a2r/wih/T0008.wih.json
++++ b/.a2r/wih/T0008.wih.json
+@@ -2,10 +2,10 @@
+   "wih_version": "v0.1",
+   "task_id": "T0008",
+   "graph_id": "graph-0001",
+-  "title": "Tool registry enforcement (registry required + safety)",
++  "title": "Tool registry \u2194 WIH lock",
+   "state": "PLANNED",
+   "blocked_by": [
+-    "T0002"
++    "T0007"
+   ],
+   "external_refs": {
+     "claude_task_id": "",
+@@ -23,7 +23,7 @@
+   },
+   "outputs": {
+     "required_artifacts": [
+-      "tool-registry-enforced"
++      "tool_registry_lock"
+     ],
+     "artifact_paths": [
+       "/.a2r/artifacts/T0008/"
+@@ -32,7 +32,7 @@
+   "write_scope": {
+     "root": "/.a2r/",
+     "allowed_globs": [
+-      "/.a2r/**"
++      "/.a2r/artifacts/T0008/**"
+     ]
+   },
+   "tools": {
+@@ -60,9 +60,73 @@
+   },
+   "acceptance": {
+     "checks": [
+-      "AT-TOOLS-0001",
+-      "AT-TOOLS-0002",
+-      "AT-TOOLS-0003"
++      "AT-TOOLS-0005"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "T0008",
++    "graph_id": "graph-0001",
++    "title": "Tool registry \u2194 WIH lock",
++    "state": "PLANNED",
++    "blocked_by": [
++      "T0007"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "tool_registry_lock"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/T0008/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/T0008/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-TOOLS-0005"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/T0009.wih.json b/.a2r/wih/T0009.wih.json
+index 95a0532..3b662b3 100644
+--- a/.a2r/wih/T0009.wih.json
++++ b/.a2r/wih/T0009.wih.json
+@@ -2,13 +2,10 @@
+   "wih_version": "v0.1",
+   "task_id": "T0009",
+   "graph_id": "graph-0001",
+-  "title": "Run receipts: tool-call timeline + artifact manifest + hashes",
++  "title": "Phase-0 closure gate",
+   "state": "PLANNED",
+   "blocked_by": [
+-    "T0005",
+-    "T0008",
+-    "T0003",
+-    "T0018"
++    "T0008"
+   ],
+   "external_refs": {
+     "claude_task_id": "",
+@@ -26,7 +23,7 @@
+   },
+   "outputs": {
+     "required_artifacts": [
+-      "run-receipts"
++      "phase0_gate"
+     ],
+     "artifact_paths": [
+       "/.a2r/artifacts/T0009/"
+@@ -35,8 +32,7 @@
+   "write_scope": {
+     "root": "/.a2r/",
+     "allowed_globs": [
+-      "/.a2r/runs/**",
+-      "/.a2r/receipts/**"
++      "/.a2r/artifacts/T0009/**"
+     ]
+   },
+   "tools": {
+@@ -54,19 +50,83 @@
+   "memory": {
+     "packs": [
+       {
+-        "pack_id": "execution",
++        "pack_id": "law",
+         "layers": [
+-          "execution"
++          "law"
+         ],
+-        "access": "readwrite"
++        "access": "read"
+       }
+     ]
+   },
+   "acceptance": {
+     "checks": [
+-      "AT-TASK-0005",
+-      "AT-IO-0003",
+-      "AT-RECEIPT-0001"
++      "AT-BOOT-0012"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "T0009",
++    "graph_id": "graph-0001",
++    "title": "Phase-0 closure gate",
++    "state": "PLANNED",
++    "blocked_by": [
++      "T0008"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "phase0_gate"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/T0009/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/T0009/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-BOOT-0012"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/T0010.wih.json b/.a2r/wih/T0010.wih.json
+index ebbbaaf..ed169ee 100644
+--- a/.a2r/wih/T0010.wih.json
++++ b/.a2r/wih/T0010.wih.json
+@@ -63,5 +63,72 @@
+       "AT-MEM-0001",
+       "AT-MEM-0002"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "T0010",
++    "graph_id": "graph-0001",
++    "title": "Memory pack access control via WIH declarations",
++    "state": "PLANNED",
++    "blocked_by": [
++      "T0002"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "memory-acl"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/T0010/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/memory/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "semantic",
++          "layers": [
++            "semantic"
++          ],
++          "access": "readwrite"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-MEM-0001",
++        "AT-MEM-0002"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/T0011.wih.json b/.a2r/wih/T0011.wih.json
+index 9e2b450..5c81cbb 100644
+--- a/.a2r/wih/T0011.wih.json
++++ b/.a2r/wih/T0011.wih.json
+@@ -63,5 +63,72 @@
+     "checks": [
+       "AT-MEM-0003"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "T0011",
++    "graph_id": "graph-0001",
++    "title": "Proposal artifact writer + schema validation",
++    "state": "PLANNED",
++    "blocked_by": [
++      "T0010",
++      "T0003"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "proposal-writer"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/T0011/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/proposals/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "proposal",
++          "layers": [
++            "proposal"
++          ],
++          "access": "readwrite"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-MEM-0003"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/T0012.wih.json b/.a2r/wih/T0012.wih.json
+index 3e3afa5..8f85438 100644
+--- a/.a2r/wih/T0012.wih.json
++++ b/.a2r/wih/T0012.wih.json
+@@ -70,5 +70,79 @@
+     "checks": [
+       "AT-MEM-0004"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "T0012",
++    "graph_id": "graph-0001",
++    "title": "Promotion engine: rules + checks + receipts + apply/rollback",
++    "state": "PLANNED",
++    "blocked_by": [
++      "T0011",
++      "T0009"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "promotion-engine"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/T0012/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/promotions/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "proposal",
++          "layers": [
++            "proposal"
++          ],
++          "access": "readwrite"
++        },
++        {
++          "pack_id": "execution",
++          "layers": [
++            "execution"
++          ],
++          "access": "readwrite"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-MEM-0004"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/T0013.wih.json b/.a2r/wih/T0013.wih.json
+index ed46e85..f0bc257 100644
+--- a/.a2r/wih/T0013.wih.json
++++ b/.a2r/wih/T0013.wih.json
+@@ -63,5 +63,72 @@
+     "checks": [
+       "AT-MEM-0002"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "T0013",
++    "graph_id": "graph-0001",
++    "title": "RLM policy surface (tunes non-law layers only)",
++    "state": "PLANNED",
++    "blocked_by": [
++      "T0010",
++      "T0012"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "rlm-policy"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/T0013/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/rlm/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "semantic",
++          "layers": [
++            "semantic"
++          ],
++          "access": "readwrite"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-MEM-0002"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/T0014.wih.json b/.a2r/wih/T0014.wih.json
+index e4a1ee2..9ab2a63 100644
+--- a/.a2r/wih/T0014.wih.json
++++ b/.a2r/wih/T0014.wih.json
+@@ -63,5 +63,72 @@
+       "AT-NET-0001",
+       "AT-NET-0003"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "T0014",
++    "graph_id": "graph-0001",
++    "title": "Gateway law plan: single endpoint routing doc + config generator stub",
++    "state": "PLANNED",
++    "blocked_by": [
++      "T0000"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "gateway-plan"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/T0014/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/T0014/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-NET-0001",
++        "AT-NET-0003"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/T0015.wih.json b/.a2r/wih/T0015.wih.json
+index e031418..ea07f02 100644
+--- a/.a2r/wih/T0015.wih.json
++++ b/.a2r/wih/T0015.wih.json
+@@ -63,5 +63,72 @@
+     "checks": [
+       "AT-NET-0001"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "T0015",
++    "graph_id": "graph-0001",
++    "title": "UI cockpit skeleton: Workspace + Today + DAG inspector requirements",
++    "state": "PLANNED",
++    "blocked_by": [
++      "T0014",
++      "T0004"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "ui-skeleton-spec"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/T0015/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/artifacts/T0015/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-NET-0001"
++      ]
++    }
+   }
+ }
+\ No newline at end of file
+diff --git a/.a2r/wih/T0016.wih.json b/.a2r/wih/T0016.wih.json
+index 6c0d70f..0b1b796 100644
+--- a/.a2r/wih/T0016.wih.json
++++ b/.a2r/wih/T0016.wih.json
+@@ -64,5 +64,73 @@
+     "checks": [
+       "AT-SEC-0001"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "T0016",
++    "graph_id": "graph-0001",
++    "title": "Remove kernel auth bypass (B0 security gate)",
++    "state": "PLANNED",
++    "blocked_by": [
++      "T0000"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "auth-bypass-removed"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/T0016/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/services/kernel/src/main.rs",
++        "/.a2r/artifacts/T0016/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write",
++        "rg"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "readwrite"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-SEC-0001"
++      ]
++    }
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/.a2r/wih/T0017.wih.json b/.a2r/wih/T0017.wih.json
+index b8af5f4..c668cda 100644
+--- a/.a2r/wih/T0017.wih.json
++++ b/.a2r/wih/T0017.wih.json
+@@ -64,5 +64,73 @@
+     "checks": [
+       "AT-SEC-0002"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "T0017",
++    "graph_id": "graph-0001",
++    "title": "Disable python exec / gate python-gateway behind ToolGateway",
++    "state": "PLANNED",
++    "blocked_by": [
++      "T0000"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "python-exec-removed"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/T0017/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/services/python-gateway/main.py",
++        "/.a2r/artifacts/T0017/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write",
++        "rg"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "readwrite"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-SEC-0002"
++      ]
++    }
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/.a2r/wih/T0018.wih.json b/.a2r/wih/T0018.wih.json
+index 6e51e4e..c6be51b 100644
+--- a/.a2r/wih/T0018.wih.json
++++ b/.a2r/wih/T0018.wih.json
+@@ -68,5 +68,77 @@
+       "AT-RECEIPT-0001",
+       "AT-RECEIPT-0002"
+     ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "T0018",
++    "graph_id": "graph-0001",
++    "title": "Define Receipt.schema.json + enforce validation at tool/workflow boundaries",
++    "state": "PLANNED",
++    "blocked_by": [
++      "T0000"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "receipt-schema"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/T0018/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/spec/Contracts/Receipt.schema.json",
++        "/crates/kernel/tools-gateway/src/**",
++        "/crates/orchestration/workflows/src/**",
++        "/services/kernel/src/**",
++        "/.a2r/artifacts/T0018/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write",
++        "rg"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "readwrite"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-RECEIPT-0001",
++        "AT-RECEIPT-0002"
++      ]
++    }
+   }
+-}
++}
+\ No newline at end of file
+diff --git a/spec/Contracts/WIH.schema.json b/spec/Contracts/WIH.schema.json
+index ec680e6..5aa6a36 100644
+--- a/spec/Contracts/WIH.schema.json
++++ b/spec/Contracts/WIH.schema.json
+@@ -19,7 +19,8 @@
+     "write_scope",
+     "tools",
+     "memory",
+-    "acceptance"
++    "acceptance",
++    "beads"
+   ],
+   "properties": {
+     "wih_version": {
+@@ -238,6 +239,9 @@
+           "minItems": 1
+         }
+       }
++    },
++    "beads": {
++      "$ref": "https://a2rchitech.local/spec/contracts/BeadsNode.schema.json"
+     }
+   }
+-}
++}
+\ No newline at end of file

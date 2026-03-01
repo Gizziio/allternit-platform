@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "module": "ES2022",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "jsx": "react-jsx",
+    "types": [
+      "vite/client"
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@ui/*": ["../ui/src/*"],
+      "@ui-tars/*": ["../../packages/ui-tars/src/*"],
+      "@executor-core/*": ["../../packages/executor-core/src/*"],
+      "@executor-superconductor/*": ["../../packages/executor-superconductor/src/*"],
+      "@parallel-run/*": ["../../packages/parallel-run/src/*"],
+      "@a2rchitech/openwork": ["../openwork/src/index.tsx"],
+      "@a2rchitech/types/*": ["../../types/*"]
+    }
+  },
+  "include": [
+    "src"
+  ]
+}

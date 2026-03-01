@@ -1,0 +1,175 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ContextBundle",
+  "description": "ContextBundle represents a deterministic compilation of context for a decision.",
+  "type": "object",
+  "required": [
+    "budgets",
+    "bundle_hash",
+    "inputs",
+    "memory_refs",
+    "metadata",
+    "redactions",
+    "timestamp"
+  ],
+  "properties": {
+    "budgets": {
+      "description": "Budget constraints",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ContextBudgets"
+        }
+      ]
+    },
+    "bundle_hash": {
+      "description": "Hash of this context bundle (for deterministic replay)",
+      "type": "string"
+    },
+    "inputs": {
+      "description": "Inputs to the context compilation",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ContextInputs"
+        }
+      ]
+    },
+    "memory_refs": {
+      "description": "Selected memory references",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/MemoryReference"
+      }
+    },
+    "metadata": {
+      "description": "Metadata for the context bundle",
+      "type": "object",
+      "additionalProperties": true
+    },
+    "redactions": {
+      "description": "Applied redactions",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/Redaction"
+      }
+    },
+    "timestamp": {
+      "description": "Unix timestamp when bundle was created",
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    }
+  },
+  "definitions": {
+    "ContextBudgets": {
+      "type": "object",
+      "properties": {
+        "max_execution_time_ms": {
+          "description": "Maximum execution time in milliseconds",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "max_memory_refs": {
+          "description": "Maximum memory references",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "max_tokens": {
+          "description": "Maximum tokens allowed",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "max_tool_calls": {
+          "description": "Maximum number of tool calls",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0.0
+        }
+      }
+    },
+    "ContextInputs": {
+      "type": "object",
+      "required": [
+        "previous_outputs",
+        "system_inputs",
+        "user_inputs"
+      ],
+      "properties": {
+        "previous_outputs": {
+          "description": "Previous step outputs",
+          "type": "array",
+          "items": true
+        },
+        "system_inputs": {
+          "description": "System-provided inputs"
+        },
+        "user_inputs": {
+          "description": "User-provided inputs"
+        }
+      }
+    },
+    "MemoryReference": {
+      "type": "object",
+      "required": [
+        "content",
+        "memory_id",
+        "memory_type",
+        "relevance"
+      ],
+      "properties": {
+        "content": {
+          "description": "Content of the memory"
+        },
+        "memory_id": {
+          "description": "ID of the memory item",
+          "type": "string"
+        },
+        "memory_type": {
+          "description": "Type of memory (e.g., \"history\", \"knowledge\", \"context\")",
+          "type": "string"
+        },
+        "relevance": {
+          "description": "Relevance score (0.0 to 1.0)",
+          "type": "number",
+          "format": "double"
+        }
+      }
+    },
+    "Redaction": {
+      "type": "object",
+      "required": [
+        "reason",
+        "redaction_type",
+        "target"
+      ],
+      "properties": {
+        "reason": {
+          "description": "Reason for the redaction",
+          "type": "string"
+        },
+        "redaction_type": {
+          "description": "Type of redaction",
+          "type": "string"
+        },
+        "target": {
+          "description": "Target of the redaction",
+          "type": "string"
+        }
+      }
+    }
+  }
+}

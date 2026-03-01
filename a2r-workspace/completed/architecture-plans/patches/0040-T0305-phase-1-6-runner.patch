@@ -1,0 +1,34 @@
+diff --git a/scripts/run_phase_1_6.sh b/scripts/run_phase_1_6.sh
+new file mode 100755
+index 0000000..447259e
+--- /dev/null
++++ b/scripts/run_phase_1_6.sh
+@@ -0,0 +1,28 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++bash scripts/law_setup.sh
++PYTHON_BIN="${PYTHON_BIN:-python3}"
++if [ -x ".venv-law/bin/python" ]; then
++  PYTHON_BIN=".venv-law/bin/python"
++fi
++$PYTHON_BIN scripts/validate_law.py
++
++# Phase 1: Task parity gates
++bash tests/acceptance/test_task_install_run_state.sh
++bash tests/acceptance/test_task_blocked_by.sh
++bash tests/acceptance/test_task_resume_deterministic.sh
++bash tests/acceptance/test_task_node_receipt_required.sh
++bash tests/acceptance/test_task_beads_mismatch.sh
++
++# Phase 1.5: Subprocess worker gates
++bash tests/acceptance/test_worker_registry_required.sh
++bash tests/acceptance/test_subprocess_denied_without_worker.sh
++bash tests/acceptance/test_subprocess_allows_only_allowlisted_worker.sh
++bash tests/acceptance/test_subprocess_receipt_emitted.sh
++
++# Phase 1.6: Agent execution contract gates
++bash tests/acceptance/test_exec_missing_run_id.sh
++bash tests/acceptance/test_exec_missing_wih_or_node.sh
++bash tests/acceptance/test_exec_receipt_emitted.sh
++bash tests/acceptance/test_exec_deterministic_replay.sh

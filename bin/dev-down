@@ -1,0 +1,22 @@
+#!/bin/bash
+# Stop all a2rchitech launchd services
+
+LAUNCH_AGENTS_DIR="$HOME/Library/LaunchAgents"
+
+unload_service() {
+    local label="$1"
+    local plist="$LAUNCH_AGENTS_DIR/$label.plist"
+    if [ -f "$plist" ]; then
+        echo "Unloading $label..."
+        launchctl unload "$plist" 2>/dev/null || true
+    fi
+}
+
+unload_service "com.a2rchitech.intent-graph-kernel"
+unload_service "com.a2rchitech.capsule-runtime"
+unload_service "com.a2rchitech.presentation-kernel"
+unload_service "com.a2rchitech.kernel"
+unload_service "com.a2rchitech.shell"
+unload_service "com.a2rchitech.ui-tars-operator"
+
+echo "All a2rchitech development services stopped."

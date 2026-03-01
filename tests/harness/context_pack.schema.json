@@ -1,0 +1,161 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://a2rchitech.com/schemas/context_pack.v1.schema.json",
+  "title": "ContextPack",
+  "description": "Deterministic context bundle for WIH execution. Must include LAW + SOT + Architecture + Contracts + WIH.",
+  "version": "1.0.0",
+  "type": "object",
+  "required": [
+    "pack_id",
+    "wih_id",
+    "dag_id",
+    "node_id",
+    "inputs",
+    "inputs_manifest",
+    "method_version",
+    "created_at"
+  ],
+  "properties": {
+    "pack_id": {
+      "type": "string",
+      "description": "Deterministic hash identifier (cp_<sha256>)",
+      "pattern": "^cp_[a-f0-9]{64}$"
+    },
+    "wih_id": {
+      "type": "string",
+      "description": "Work Item Header identifier"
+    },
+    "dag_id": {
+      "type": "string",
+      "description": "DAG identifier"
+    },
+    "node_id": {
+      "type": "string",
+      "description": "DAG node identifier"
+    },
+    "inputs": {
+      "type": "object",
+      "description": "ContextPack content (LAW, SOT, Architecture, Contracts, Deltas, WIH)",
+      "required": [
+        "tier0_law",
+        "sot",
+        "architecture",
+        "contracts",
+        "deltas",
+        "wih"
+      ],
+      "properties": {
+        "tier0_law": {
+          "type": "string",
+          "description": "Full text of SYSTEM_LAW.md"
+        },
+        "sot": {
+          "type": "string",
+          "description": "Full text of SOT.md"
+        },
+        "architecture": {
+          "type": "string",
+          "description": "Full text of ARCHITECTURE.md"
+        },
+        "contracts": {
+          "type": "array",
+          "description": "Relevant contract files from /spec/Contracts/",
+          "items": {
+            "type": "object",
+            "required": ["path", "content", "hash"],
+            "properties": {
+              "path": { "type": "string" },
+              "content": { "type": "string" },
+              "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+            }
+          }
+        },
+        "deltas": {
+          "type": "array",
+          "description": "Relevant delta files from /spec/Deltas/",
+          "items": {
+            "type": "object",
+            "required": ["path", "content", "hash"],
+            "properties": {
+              "path": { "type": "string" },
+              "content": { "type": "string" },
+              "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+            }
+          }
+        },
+        "wih": {
+          "type": "object",
+          "description": "Work Item Header",
+          "required": [
+            "wih_id",
+            "role",
+            "scope_paths",
+            "allowed_tools",
+            "acceptance_refs",
+            "execution_mode"
+          ],
+          "properties": {
+            "wih_id": { "type": "string" },
+            "role": {
+              "type": "string",
+              "enum": ["orchestrator", "planner", "builder", "validator", "reviewer", "security"]
+            },
+            "scope_paths": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "allowed_tools": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "acceptance_refs": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "execution_mode": {
+              "type": "string",
+              "enum": ["PLAN_ONLY", "REQUIRE_APPROVAL", "ACCEPT_EDITS", "BYPASS_PERMISSIONS"]
+            }
+          }
+        }
+      }
+    },
+    "inputs_manifest": {
+      "type": "array",
+      "description": "List of all inputs with hashes for deterministic verification",
+      "items": {
+        "type": "object",
+        "required": ["path", "hash", "size_bytes"],
+        "properties": {
+          "path": { "type": "string" },
+          "hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+          "size_bytes": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "method_version": {
+      "type": "string",
+      "description": "ContextPack builder version (semver)",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 timestamp"
+    },
+    "policy_bundle": {
+      "type": "object",
+      "description": "Policy bundle reference and hash",
+      "properties": {
+        "bundle_id": { "type": "string" },
+        "agents_md_hash": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+        "role_envelope": { "type": "string" },
+        "pack_ids": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

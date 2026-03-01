@@ -1,0 +1,146 @@
+{
+  "wih_version": "v0.1",
+  "task_id": "G0104",
+  "graph_id": "graph-0002",
+  "title": "Refactor port sprawl: centralize ports to generated config",
+  "state": "PLANNED",
+  "blocked_by": [
+    "G0101",
+    "G0102"
+  ],
+  "external_refs": {
+    "claude_task_id": "",
+    "issue_id": "",
+    "pr_id": ""
+  },
+  "preset": {
+    "preset_id": "preset-core-dev",
+    "preset_hash": "TBD"
+  },
+  "resume_cursor": {
+    "last_run_id": "",
+    "next_step": "",
+    "pending_checks": []
+  },
+  "outputs": {
+    "required_artifacts": [
+      "port-centralization"
+    ],
+    "artifact_paths": [
+      "/.a2r/artifacts/G0104/"
+    ]
+  },
+  "write_scope": {
+    "root": "/.a2r/",
+    "allowed_globs": [
+      "/infra/gateway/nginx.conf",
+      "/dev/run.sh",
+      "/infra/docker-compose/development.yml",
+      "/launchd/*.plist.template",
+      "/.a2r/artifacts/G0104/**"
+    ]
+  },
+  "tools": {
+    "allowlist": [
+      "fs.read",
+      "fs.write"
+    ],
+    "pretooluse_hooks": [
+      "WIH_VALID",
+      "DEPS_SATISFIED",
+      "PATH_GUARDS",
+      "TOOL_REGISTRY"
+    ]
+  },
+  "memory": {
+    "packs": [
+      {
+        "pack_id": "execution",
+        "layers": [
+          "execution"
+        ],
+        "access": "readwrite"
+      }
+    ]
+  },
+  "acceptance": {
+    "checks": [
+      "AT-NET-0001",
+      "AT-NET-0002",
+      "AT-NET-0004"
+    ]
+  },
+  "beads": {
+    "wih_version": "v0.1",
+    "task_id": "G0104",
+    "graph_id": "graph-0002",
+    "title": "Refactor port sprawl: centralize ports to generated config",
+    "state": "PLANNED",
+    "blocked_by": [
+      "G0101",
+      "G0102"
+    ],
+    "external_refs": {
+      "claude_task_id": "",
+      "issue_id": "",
+      "pr_id": ""
+    },
+    "preset": {
+      "preset_id": "preset-core-dev",
+      "preset_hash": "TBD"
+    },
+    "resume_cursor": {
+      "last_run_id": "",
+      "next_step": "",
+      "pending_checks": []
+    },
+    "outputs": {
+      "required_artifacts": [
+        "port-centralization"
+      ],
+      "artifact_paths": [
+        "/.a2r/artifacts/G0104/"
+      ]
+    },
+    "write_scope": {
+      "root": "/.a2r/",
+      "allowed_globs": [
+        "/infra/gateway/nginx.conf",
+        "/dev/run.sh",
+        "/infra/docker-compose/development.yml",
+        "/launchd/*.plist.template",
+        "/.a2r/artifacts/G0104/**"
+      ]
+    },
+    "tools": {
+      "allowlist": [
+        "fs.read",
+        "fs.write"
+      ],
+      "pretooluse_hooks": [
+        "WIH_VALID",
+        "DEPS_SATISFIED",
+        "PATH_GUARDS",
+        "TOOL_REGISTRY"
+      ]
+    },
+    "memory": {
+      "packs": [
+        {
+          "pack_id": "execution",
+          "layers": [
+            "execution"
+          ],
+          "access": "readwrite"
+        }
+      ]
+    },
+    "acceptance": {
+      "checks": [
+        "AT-NET-0001",
+        "AT-NET-0002",
+        "AT-NET-0004"
+      ]
+    }
+  }
+}

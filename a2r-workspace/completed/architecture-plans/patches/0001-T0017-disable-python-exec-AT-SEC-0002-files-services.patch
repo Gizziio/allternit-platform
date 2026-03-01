@@ -1,0 +1,123 @@
+From 0d5c36ae3b0681390e07268106f3b61a99185d25 Mon Sep 17 00:00:00 2001
+From: Eoj Edred <eojedredbitepubkey1@proton.me>
+Date: Tue, 27 Jan 2026 15:42:17 -0600
+Subject: [PATCH] T0017: disable python exec (AT-SEC-0002) | files:
+ services/python-gateway/main.py
+ tests/acceptance/test_python_exec_forbidden.sh spec/AcceptanceTests.md
+
+---
+ services/python-gateway/main.py               | 64 +------------------
+ spec/AcceptanceTests.md                       |  1 +
+ .../acceptance/test_python_exec_forbidden.sh  | 11 ++++
+ 3 files changed, 15 insertions(+), 61 deletions(-)
+ create mode 100755 tests/acceptance/test_python_exec_forbidden.sh
+
+diff --git a/services/python-gateway/main.py b/services/python-gateway/main.py
+index ee13094..e3586f7 100644
+--- a/services/python-gateway/main.py
++++ b/services/python-gateway/main.py
+@@ -27,69 +27,11 @@ class ExecuteResponse(BaseModel):
+ @app.post("/v1/tools/execute", response_model=ExecuteResponse)
+ async def execute_code(request: ExecuteRequest):
+     """
+-    Execute Python code in a constrained environment.
+-    This is a V0 implementation using exec() - NOT SANDBOXED.
++    Python execution is disabled by default. Use ToolGateway with WIH + approvals.
+     """
+-    logger.info(f"Executing code for session {request.session_id}, context length: {request.context_length}")
++    logger.warning("Python gateway execute disabled; request rejected.")
++    raise HTTPException(status_code=403, detail="python-gateway exec disabled; use ToolGateway with WIH + approval")
+     
+-    # Capture stdout/stderr
+-    stdout_buffer = io.StringIO()
+-    stderr_buffer = io.StringIO()
+-    
+-    # Global/Local namespace
+-    # We inject 'context' if passed, but the RLM crate injects it into the code string itself
+-    # so we just need a clean namespace.
+-    
+-    def ask_sub_model(prompt: str, content: str = "") -> str:
+-        """
+-        Stub for RLM sub-model delegation.
+-        In a full implementation, this would make an HTTP call back to the Kernel/Provider service.
+-        """
+-        logger.info(f"Sub-model called with prompt: {prompt[:50]}...")
+-        # Simple heuristic for testing
+-        if "summarize" in prompt.lower():
+-            return f"Summary of {len(content)} chars: [Content processed]"
+-        return f"Sub-model response to: {prompt}"
+-
+-    globals_dict = {
+-        "__builtins__": __builtins__, 
+-        "json": __import__("json"),
+-        "ask_sub_model": ask_sub_model
+-    }
+-    locals_dict = {}
+-
+-    exit_code = 0
+-    
+-    start_time = time.time()
+-    
+-    try:
+-        with contextlib.redirect_stdout(stdout_buffer), contextlib.redirect_stderr(stderr_buffer):
+-            # The RLM crate wraps code in a try/except or expects 'result' variable
+-            exec(request.code, globals_dict, locals_dict)
+-    except Exception as e:
+-        logger.error(f"Execution error: {e}")
+-        stderr_buffer.write(str(e))
+-        exit_code = 1
+-        
+-    execution_time = time.time() - start_time
+-    logger.info(f"Execution finished in {execution_time:.2f}s, exit code: {exit_code}")
+-
+-    stdout = stdout_buffer.getvalue()
+-    stderr = stderr_buffer.getvalue()
+-    
+-    # The RLM contract expects a 'result' dictionary in the local scope
+-    output = locals_dict.get("result", {})
+-    
+-    # Ensure answer is extracted if present separately
+-    if "answer" in locals_dict and "answer" not in output:
+-        output["answer"] = locals_dict["answer"]
+-
+-    return ExecuteResponse(
+-        stdout=stdout,
+-        stderr=stderr,
+-        output=output,
+-        exit_code=exit_code
+-    )
+ 
+ @app.get("/health")
+ async def health_check():
+diff --git a/spec/AcceptanceTests.md b/spec/AcceptanceTests.md
+index 9f981d0..1a407d1 100644
+--- a/spec/AcceptanceTests.md
++++ b/spec/AcceptanceTests.md
+@@ -39,6 +39,7 @@ These acceptance tests are platform-level gates. Every major change must referen
+ ## AT-SEC — Security boot gates
+ 
+ - **AT-SEC-0001**: Kernel auth bypass list for `/v1/brain`, `/v1/config`, `/v1/sessions` is forbidden.
++- **AT-SEC-0002**: Python gateway `exec()` is forbidden in request handling.
+ 
+ ## AT-MEM — Layered memory + promotion
+ 
+diff --git a/tests/acceptance/test_python_exec_forbidden.sh b/tests/acceptance/test_python_exec_forbidden.sh
+new file mode 100755
+index 0000000..27f85e5
+--- /dev/null
++++ b/tests/acceptance/test_python_exec_forbidden.sh
+@@ -0,0 +1,11 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++FILE="services/python-gateway/main.py"
++
++if rg -n "exec\(" "$FILE"; then
++  echo "FAIL: exec() detected in $FILE"
++  exit 1
++fi
++
++echo "PASS: no exec() usage in $FILE"
+-- 
+2.50.1 (Apple Git-155)
+

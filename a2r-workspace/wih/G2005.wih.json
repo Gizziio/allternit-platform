@@ -1,0 +1,132 @@
+{
+  "wih_version": "v0.1",
+  "task_id": "G2005",
+  "graph_id": "graph-0002",
+  "title": "Provider adapters (Claude/GPT/Gemini/local)",
+  "state": "PLANNED",
+  "blocked_by": [
+    "G2004"
+  ],
+  "external_refs": {
+    "claude_task_id": "",
+    "issue_id": "",
+    "pr_id": ""
+  },
+  "preset": {
+    "preset_id": "preset-net-ui",
+    "preset_hash": "TBD"
+  },
+  "resume_cursor": {
+    "last_run_id": "",
+    "next_step": "",
+    "pending_checks": []
+  },
+  "outputs": {
+    "required_artifacts": [
+      "provider-adapters"
+    ],
+    "artifact_paths": [
+      "/.a2r/artifacts/G2005/"
+    ]
+  },
+  "write_scope": {
+    "root": "/.a2r/",
+    "allowed_globs": [
+      "/.a2r/artifacts/G2005/**"
+    ]
+  },
+  "tools": {
+    "allowlist": [
+      "fs.read",
+      "fs.write"
+    ],
+    "pretooluse_hooks": [
+      "WIH_VALID",
+      "DEPS_SATISFIED",
+      "PATH_GUARDS",
+      "TOOL_REGISTRY"
+    ]
+  },
+  "memory": {
+    "packs": [
+      {
+        "pack_id": "execution",
+        "layers": [
+          "execution"
+        ],
+        "access": "readwrite"
+      }
+    ]
+  },
+  "acceptance": {
+    "checks": [
+      "AT-TOOLS-0001"
+    ]
+  },
+  "beads": {
+    "wih_version": "v0.1",
+    "task_id": "G2005",
+    "graph_id": "graph-0002",
+    "title": "Provider adapters (Claude/GPT/Gemini/local)",
+    "state": "PLANNED",
+    "blocked_by": [
+      "G2004"
+    ],
+    "external_refs": {
+      "claude_task_id": "",
+      "issue_id": "",
+      "pr_id": ""
+    },
+    "preset": {
+      "preset_id": "preset-net-ui",
+      "preset_hash": "TBD"
+    },
+    "resume_cursor": {
+      "last_run_id": "",
+      "next_step": "",
+      "pending_checks": []
+    },
+    "outputs": {
+      "required_artifacts": [
+        "provider-adapters"
+      ],
+      "artifact_paths": [
+        "/.a2r/artifacts/G2005/"
+      ]
+    },
+    "write_scope": {
+      "root": "/.a2r/",
+      "allowed_globs": [
+        "/.a2r/artifacts/G2005/**"
+      ]
+    },
+    "tools": {
+      "allowlist": [
+        "fs.read",
+        "fs.write"
+      ],
+      "pretooluse_hooks": [
+        "WIH_VALID",
+        "DEPS_SATISFIED",
+        "PATH_GUARDS",
+        "TOOL_REGISTRY"
+      ]
+    },
+    "memory": {
+      "packs": [
+        {
+          "pack_id": "execution",
+          "layers": [
+            "execution"
+          ],
+          "access": "readwrite"
+        }
+      ]
+    },
+    "acceptance": {
+      "checks": [
+        "AT-TOOLS-0001"
+      ]
+    }
+  }
+}

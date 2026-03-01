@@ -1,0 +1,102 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://a2r.io/schemas/surface.json",
+  "title": "Tool UI Surface",
+  "description": "Schema for tool-generated UI surfaces",
+  "type": "object",
+  "required": ["html", "permissions"],
+  "properties": {
+    "html": {
+      "type": "string",
+      "minLength": 1,
+      "description": "HTML content rendered in the capsule iframe"
+    },
+    "css": {
+      "type": "string",
+      "description": "CSS styles applied to the capsule"
+    },
+    "js": {
+      "type": "string",
+      "description": "JavaScript executed in the capsule context"
+    },
+    "props": {
+      "type": "object",
+      "description": "Initial properties passed to the capsule",
+      "additionalProperties": true
+    },
+    "permissions": {
+      "type": "array",
+      "description": "Permissions granted to this surface",
+      "items": {
+        "type": "object",
+        "required": ["type", "resource"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "tool:invoke",
+              "tool:subscribe",
+              "state:read",
+              "state:write",
+              "event:emit",
+              "event:subscribe"
+            ]
+          },
+          "resource": {
+            "type": "string"
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "conditions": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Optional metadata about the surface",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Human-readable title"
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "default": "1.0.0",
+          "description": "Semantic version of the surface"
+        },
+        "author": {
+          "type": "string",
+          "description": "Creator of the surface"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "html": "<button id='btn'>Click me</button>",
+      "css": "button { padding: 10px; }",
+      "js": "document.getElementById('btn').onclick = () => a2r.emitEvent('clicked');",
+      "permissions": [
+        {
+          "type": "event:emit",
+          "resource": "*"
+        }
+      ],
+      "metadata": {
+        "title": "Simple Button",
+        "version": "1.0.0"
+      }
+    }
+  ]
+}

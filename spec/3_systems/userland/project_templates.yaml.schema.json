@@ -1,0 +1,207 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "A2rchitech Project Templates Schema",
+  "description": "Schema for defining project templates that bundle workflows, agent templates, and task templates",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Version of the project template specification",
+      "default": "1.0"
+    },
+    "project_templates": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/project_template"
+      }
+    }
+  },
+  "required": ["version", "project_templates"],
+  "definitions": {
+    "project_template": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the project template"
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable name for the project template"
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the project template purpose and function"
+        },
+        "version": {
+          "type": "string",
+          "description": "Version of the project template",
+          "default": "1.0.0"
+        },
+        "tenant_id": {
+          "type": "string",
+          "description": "Tenant identifier for multi-tenant isolation"
+        },
+        "default_agents": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "template_ref": {
+                "type": "string",
+                "description": "Reference to an agent template ID"
+              },
+              "role_assignment": {
+                "type": "string",
+                "description": "Role assignment for this agent instance"
+              },
+              "instance_count": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "description": "Number of agent instances to create",
+                "default": 1
+              },
+              "allocation_strategy": {
+                "type": "string",
+                "enum": ["round_robin", "load_balanced", "specialized", "dedicated"],
+                "description": "Strategy for allocating tasks to agent instances",
+                "default": "round_robin"
+              }
+            },
+            "required": ["template_ref", "role_assignment"]
+          },
+          "description": "Default agents to instantiate for this project"
+        },
+        "workflow_bundle": {
+          "type": "object",
+          "properties": {
+            "default_workflow_ref": {
+              "type": "string",
+              "description": "Reference to the default workflow for this project"
+            },
+            "alternative_workflows": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Alternative workflows available for this project"
+            },
+            "workflow_routing_rules": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "condition": {
+                    "type": "string",
+                    "description": "Condition expression for routing"
+                  },
+                  "workflow_ref": {
+                    "type": "string",
+                    "description": "Workflow to route to if condition matches"
+                  }
+                },
+                "required": ["condition", "workflow_ref"]
+              },
+              "description": "Rules for routing to different workflows based on conditions"
+            }
+          }
+        },
+        "task_template_bundle": {
+          "type": "object",
+          "properties": {
+            "default_task_templates": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Default task templates available for this project"
+            },
+            "custom_task_templates": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "ID for the custom task template"
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Name for the custom task template"
+                  },
+                  "definition": {
+                    "$ref": "../../../kernel-contracts/src/lib.rs#/definitions/task_template"
+                  }
+                },
+                "required": ["id", "name", "definition"]
+              },
+              "description": "Custom task templates specific to this project"
+            }
+          }
+        },
+        "governance_defaults": {
+          "type": "object",
+          "properties": {
+            "default_budgets": {
+              "type": "object",
+              "properties": {
+                "max_execution_time_minutes": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Default maximum execution time in minutes"
+                },
+                "max_tool_calls_per_minute": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Default maximum tool calls per minute"
+                },
+                "max_tokens_per_minute": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "description": "Default maximum tokens per minute"
+                }
+              }
+            },
+            "policy_overrides": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "policy_id": {
+                    "type": "string",
+                    "description": "ID of the policy to override"
+                  },
+                  "override_value": {
+                    "type": "string",
+                    "description": "New value for the policy"
+                  }
+                },
+                "required": ["policy_id", "override_value"]
+              },
+              "description": "Policy overrides specific to this project template"
+            }
+          }
+        },
+        "ui_preferences": {
+          "type": "object",
+          "properties": {
+            "theme": {
+              "type": "string",
+              "description": "UI theme preference"
+            },
+            "layout": {
+              "type": "string",
+              "description": "Layout preference"
+            },
+            "default_view": {
+              "type": "string",
+              "description": "Default view for the project dashboard"
+            }
+          }
+        }
+      },
+      "required": ["id", "name", "description", "tenant_id", "default_agents", "workflow_bundle"]
+    }
+  }
+}

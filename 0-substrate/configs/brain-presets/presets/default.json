@@ -1,0 +1,438 @@
+{
+  "claude-code": {
+    "id": "claude-code",
+    "name": "Claude Code",
+    "vendor": "Anthropic",
+    "type": "cli",
+    "logo_asset": "claude-logo.svg",
+    "description": "Advanced AI coding assistant with Claude 3.5 Sonnet",
+    "install": {
+      "darwin": "brew install claude-code",
+      "linux": "curl -fsSL https://claude.ai/install.sh | sh",
+      "windows": "winget install Anthropic.ClaudeCode"
+    },
+    "verify": {
+      "command": "claude-code",
+      "args": ["--version"],
+      "expected_output": "claude-code version"
+    },
+    "auth": {
+      "required": true,
+      "instructions": "First run will prompt for API key. Enter your Anthropic API key when prompted.",
+      "detection_regex": "Successfully authenticated|API key set"
+    },
+    "launch": {
+      "command": "claude-code",
+      "args": []
+    },
+    "event_mode": "acp",
+    "capabilities": ["code", "terminal", "files", "chat"]
+  },
+  "aider": {
+    "id": "aider",
+    "name": "Aider",
+    "vendor": "Aider AI",
+    "type": "cli",
+    "logo_asset": "aider-logo.svg",
+    "description": "AI pair programming tool for git repositories",
+    "install": {
+      "darwin": "pip install aider-chat",
+      "linux": "pip install aider-chat",
+      "windows": "pip install aider-chat"
+    },
+    "verify": {
+      "command": "aider",
+      "args": ["--version"],
+      "expected_output": "aider version"
+    },
+    "auth": {
+      "required": false
+    },
+    "launch": {
+      "command": "aider",
+      "args": ["--stream"]
+    },
+    "event_mode": "jsonl",
+    "capabilities": ["code", "terminal", "files", "git"]
+  },
+  "goose": {
+    "id": "goose",
+    "name": "Goose",
+    "vendor": "Block",
+    "type": "cli",
+    "logo_asset": "goose-logo.svg",
+    "description": "Open source AI developer agent framework",
+    "install": {
+      "darwin": "brew install goose",
+      "linux": "curl -fsSL https://goose.dev/install.sh | sh",
+      "windows": "winget install Block.Goose"
+    },
+    "verify": {
+      "command": "goose",
+      "args": ["--version"],
+      "expected_output": "goose version"
+    },
+    "auth": {
+      "required": true,
+      "instructions": "Run 'goose auth' to configure your API keys",
+      "auth_command": "goose auth",
+      "detection_regex": "Authentication successful"
+    },
+    "launch": {
+      "command": "goose",
+      "args": []
+    },
+    "event_mode": "acp",
+    "capabilities": ["code", "terminal", "files"]
+  },
+  "anthropic-api": {
+    "id": "anthropic-api",
+    "name": "Anthropic Claude API",
+    "vendor": "Anthropic",
+    "type": "api",
+    "logo_asset": "claude-logo.svg",
+    "description": "Direct access to Claude 3.5 Sonnet via API",
+    "install": {},
+    "verify": {
+      "command": "echo",
+      "args": ["API key required"]
+    },
+    "auth": {
+      "required": true,
+      "instructions": "Enter your Anthropic API key"
+    },
+    "launch": {
+      "command": "anthropic",
+      "args": []
+    },
+    "event_mode": "acp",
+    "capabilities": ["chat", "vision", "code"]
+  },
+  "openai-api": {
+    "id": "openai-api",
+    "name": "OpenAI GPT",
+    "vendor": "OpenAI",
+    "type": "api",
+    "logo_asset": "openai-logo.svg",
+    "description": "GPT-4o and GPT-4.1 models via OpenAI API",
+    "install": {},
+    "verify": {
+      "command": "echo",
+      "args": ["API key required"]
+    },
+    "auth": {
+      "required": true,
+      "instructions": "Enter your OpenAI API key"
+    },
+    "launch": {
+      "command": "openai",
+      "args": []
+    },
+    "event_mode": "acp",
+    "capabilities": ["chat", "vision", "code"]
+  },
+  "google-gemini": {
+    "id": "google-gemini",
+    "name": "Google Gemini",
+    "vendor": "Google",
+    "type": "api",
+    "logo_asset": "gemini-logo.svg",
+    "description": "Gemini Pro and Ultra models via Google AI",
+    "install": {},
+    "verify": {
+      "command": "echo",
+      "args": ["API key required"]
+    },
+    "auth": {
+      "required": true,
+      "instructions": "Enter your Google AI API key"
+    },
+    "launch": {
+      "command": "gemini",
+      "args": []
+    },
+    "event_mode": "acp",
+    "capabilities": ["chat", "vision", "code"]
+  },
+  "ollama": {
+    "id": "ollama",
+    "name": "Ollama",
+    "vendor": "Ollama",
+    "type": "local",
+    "logo_asset": "ollama-logo.svg",
+    "description": "Run LLaMA, Mistral, and other open models locally",
+    "install": {
+      "darwin": "brew install ollama",
+      "linux": "curl -fsSL https://ollama.com/install.sh | sh",
+      "windows": "winget install Ollama.Ollama"
+    },
+    "verify": {
+      "command": "ollama",
+      "args": ["--version"],
+      "expected_output": "ollama version"
+    },
+    "auth": {
+      "required": false
+    },
+    "launch": {
+      "command": "ollama",
+      "args": ["run", "llama3"]
+    },
+    "event_mode": "terminal",
+    "capabilities": ["chat", "code"]
+  },
+  "codex": {
+    "id": "codex",
+    "name": "Codex",
+    "vendor": "OpenAI",
+    "type": "cli",
+    "logo_asset": "openai-logo.svg",
+    "description": "OpenAI Codex CLI wrapper for coding tasks",
+    "install": {
+      "darwin": "npm install -g @openai/codex",
+      "linux": "npm install -g @openai/codex",
+      "windows": "npm install -g @openai/codex"
+    },
+    "verify": {
+      "command": "codex",
+      "args": ["--version"],
+      "expected_output": "codex version"
+    },
+    "auth": {
+      "required": true,
+      "instructions": "Run 'codex auth' to configure your OpenAI API key",
+      "auth_command": "codex auth",
+      "detection_regex": "Authentication successful"
+    },
+    "launch": {
+      "command": "codex",
+      "args": []
+    },
+    "event_mode": "jsonl",
+    "capabilities": ["code", "terminal", "files"]
+  },
+  "qwen-cli": {
+    "id": "qwen-cli",
+    "name": "Qwen CLI",
+    "vendor": "Alibaba Cloud",
+    "type": "cli",
+    "logo_asset": "qwen-logo.svg",
+    "description": "Qwen AI-powered command-line assistant",
+    "auth": {
+      "required": true,
+      "instructions": "First run requires API key configuration",
+      "detection_regex": "Authentication successful|API key configured"
+    },
+    "install": {
+      "darwin": "pip install qwen-cli",
+      "linux": "pip install qwen-cli",
+      "windows": "pip install qwen-cli"
+    },
+    "verify": {
+      "command": "qwen",
+      "args": ["--version"]
+    },
+    "launch": {
+      "command": "qwen",
+      "args": ["chat"]
+    },
+    "event_mode": "jsonl",
+    "capabilities": ["code", "terminal", "files"]
+  },
+  "amp-cli": {
+    "id": "amp-cli",
+    "name": "AMP CLI",
+    "vendor": "AMP",
+    "type": "cli",
+    "logo_asset": "amp-logo.svg",
+    "description": "AMP AI-powered command-line assistant",
+    "auth": {
+      "required": true,
+      "instructions": "Configure API key on first run",
+      "detection_regex": "Connected to AMP|Authentication complete"
+    },
+    "install": {
+      "darwin": "npm install -g @amp/cli",
+      "linux": "npm install -g @amp/cli",
+      "windows": "npm install -g @amp/cli"
+    },
+    "verify": {
+      "command": "amp",
+      "args": ["--version"]
+    },
+    "launch": {
+      "command": "amp",
+      "args": ["assistant"]
+    },
+    "event_mode": "jsonl",
+    "capabilities": ["code", "terminal", "files"]
+  },
+  "open-code-cli": {
+    "id": "open-code-cli",
+    "name": "Open Code CLI",
+    "vendor": "Open Code",
+    "type": "cli",
+    "logo_asset": "open-code-logo.svg",
+    "description": "Open Code AI-powered development assistant",
+    "auth": {
+      "required": true,
+      "instructions": "First run requires API key or login",
+      "detection_regex": "Successfully authenticated|Ready to assist"
+    },
+    "install": {
+      "darwin": "npm install -g @opencode/cli",
+      "linux": "npm install -g @opencode/cli",
+      "windows": "npm install -g @opencode/cli"
+    },
+    "verify": {
+      "command": "open-code",
+      "args": ["--version"]
+    },
+    "launch": {
+      "command": "open-code",
+      "args": []
+    },
+    "event_mode": "acp",
+    "capabilities": ["code", "terminal", "files", "ui-automation"]
+  },
+  "cursor-cli": {
+    "id": "cursor-cli",
+    "name": "Cursor CLI",
+    "vendor": "Cursor AI",
+    "type": "cli",
+    "logo_asset": "cursor-logo.svg",
+    "description": "Cursor AI command-line interface",
+    "auth": {
+      "required": true,
+      "instructions": "Configure Cursor account on first launch",
+      "detection_regex": "Authenticated|Connected to Cursor"
+    },
+    "install": {
+      "darwin": "npm install -g @cursor/cli",
+      "linux": "npm install -g @cursor/cli",
+      "windows": "npm install -g @cursor/cli"
+    },
+    "verify": {
+      "command": "cursor",
+      "args": ["--version"]
+    },
+    "launch": {
+      "command": "cursor-cli",
+      "args": ["chat"]
+    },
+    "event_mode": "jsonl",
+    "capabilities": ["code", "terminal", "files"]
+  },
+  "amp-api": {
+    "id": "amp-api",
+    "name": "AMP API",
+    "vendor": "AMP",
+    "type": "api",
+    "logo_asset": "amp-logo.svg",
+    "description": "AMP AI models via API",
+    "auth": {
+      "required": true,
+      "instructions": "Enter AMP API key",
+      "detection_regex": "Key verified|Connection successful"
+    },
+    "install": {
+      "darwin": "echo 'API only - no install needed'",
+      "linux": "echo 'API only - no install needed'",
+      "windows": "echo 'API only - no install needed'"
+    },
+    "verify": {
+      "command": "curl",
+      "args": ["-s", "-I", "https://api.amp.ai/health"]
+    },
+    "launch": {
+      "command": "python",
+      "args": ["-m", "a2r_kernel", "--provider", "amp"]
+    },
+    "event_mode": "terminal",
+    "capabilities": ["chat", "vision"]
+  },
+  "qwen-api": {
+    "id": "qwen-api",
+    "name": "Qwen API",
+    "vendor": "Alibaba Cloud",
+    "type": "api",
+    "logo_asset": "qwen-logo.svg",
+    "description": "Qwen AI models via Alibaba Cloud API",
+    "auth": {
+      "required": true,
+      "instructions": "Enter Alibaba Cloud API key",
+      "detection_regex": "API key valid|Connection established"
+    },
+    "install": {
+      "darwin": "echo 'API only - no install needed'",
+      "linux": "echo 'API only - no install needed'",
+      "windows": "echo 'API only - no install needed'"
+    },
+    "verify": {
+      "command": "curl",
+      "args": ["-s", "-I", "https://dashscope.aliyuncs.com/api"]
+    },
+    "launch": {
+      "command": "python",
+      "args": ["-m", "a2r_kernel", "--provider", "qwen"]
+    },
+    "event_mode": "terminal",
+    "capabilities": ["chat", "vision", "code"]
+  },
+  "mistral-api": {
+    "id": "mistral-api",
+    "name": "Mistral API",
+    "vendor": "Mistral AI",
+    "type": "api",
+    "logo_asset": "minstral-logo.svg",
+    "description": "Mistral AI models via API",
+    "auth": {
+      "required": true,
+      "instructions": "Enter Mistral API key",
+      "detection_regex": "Valid API key|Authentication successful"
+    },
+    "install": {
+      "darwin": "echo 'API only - no install needed'",
+      "linux": "echo 'API only - no install needed'",
+      "windows": "echo 'API only - no install needed'"
+    },
+    "verify": {
+      "command": "curl",
+      "args": ["-s", "-I", "https://api.mistral.ai/v1"]
+    },
+    "launch": {
+      "command": "python",
+      "args": ["-m", "a2r_kernel", "--provider", "mistral"]
+    },
+    "event_mode": "terminal",
+    "capabilities": ["chat", "vision", "code"]
+  },
+  "zai-api": {
+    "id": "zai-api",
+    "name": "Zai API",
+    "vendor": "Zai",
+    "type": "api",
+    "logo_asset": "zai-logo.svg",
+    "description": "Zai AI models via API",
+    "auth": {
+      "required": true,
+      "instructions": "Enter Zai API key",
+      "detection_regex": "API key validated|Connection successful"
+    },
+    "install": {
+      "darwin": "echo 'API only - no install needed'",
+      "linux": "echo 'API only - no install needed'",
+      "windows": "echo 'API only - no install needed'"
+    },
+    "verify": {
+      "command": "curl",
+      "args": ["-s", "-I", "https://api.zai.ai/v1"]
+    },
+    "launch": {
+      "command": "python",
+      "args": ["-m", "a2r_kernel", "--provider", "zai"]
+    },
+    "event_mode": "terminal",
+    "capabilities": ["chat", "code"]
+  }
+}

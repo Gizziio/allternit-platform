@@ -1,0 +1,84 @@
+// 1-kernel/stubs/execution.stub.ts
+import type { ExecutionEngine, ExecutionRequest, ExecutionResult, FileOperationRequest, FileOperationResult, ResourceUsage } from '../contracts/execution';
+
+export class StubExecutionEngine implements ExecutionEngine {
+  async execute(request: ExecutionRequest): Promise<ExecutionResult> {
+    console.log(`[STUB] Executing: ${request.command} ${request.args.join(' ')}`);
+    
+    // Return a mock result that satisfies the interface
+    return {
+      id: request.id,
+      exitCode: 0,
+      stdout: `[MOCK] Executed: ${request.command} ${request.args.join(' ')}`,
+      stderr: '',
+      durationMs: 100,
+      resourcesUsed: {
+        cpuTimeMs: 50,
+        memoryPeakKb: 1024,
+        networkBytes: 0,
+        filesystemOps: 0
+      }
+    };
+  }
+
+  async sandbox(code: string, context?: any): Promise<ExecutionResult> {
+    console.log('[STUB] Executing in sandbox:', code.substring(0, 50) + '...');
+    
+    return {
+      id: 'sandbox-' + Date.now().toString(),
+      exitCode: 0,
+      stdout: '[MOCK] Sandbox execution completed',
+      stderr: '',
+      durationMs: 200,
+      resourcesUsed: {
+        cpuTimeMs: 75,
+        memoryPeakKb: 2048,
+        networkBytes: 0,
+        filesystemOps: 0
+      }
+    };
+  }
+
+  async terminate(processId: string): Promise<boolean> {
+    console.log(`[STUB] Terminating process: ${processId}`);
+    return true; // Mock success
+  }
+}
+
+// 1-kernel/stubs/file.stub.ts
+export class StubFileOperations {
+  async executeFileOperation(request: FileOperationRequest): Promise<FileOperationResult> {
+    console.log(`[STUB] File operation: ${request.operation} ${request.path}`);
+    
+    switch (request.operation) {
+      case 'read':
+        return {
+          success: true,
+          content: '[MOCK] File content',
+          stats: { size: 1024, modified: new Date() }
+        };
+      case 'write':
+        return {
+          success: true,
+          content: request.content,
+          stats: { size: request.content?.length || 0, modified: new Date() }
+        };
+      case 'delete':
+        return {
+          success: true,
+          stats: { deleted: true }
+        };
+      case 'list':
+        return {
+          success: true,
+          content: JSON.stringify(['file1.txt', 'file2.txt']),
+          stats: { count: 2 }
+        };
+      default:
+        return {
+          success: false,
+          error: `Unknown operation: ${request.operation}`
+        };
+    }
+  }
+}

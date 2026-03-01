@@ -1,0 +1,132 @@
+{
+  "wih_version": "v0.1",
+  "task_id": "T0004",
+  "graph_id": "graph-0001",
+  "title": "Boot manifest path lock",
+  "state": "PLANNED",
+  "blocked_by": [
+    "T0000"
+  ],
+  "external_refs": {
+    "claude_task_id": "",
+    "issue_id": "",
+    "pr_id": ""
+  },
+  "preset": {
+    "preset_id": "preset-core-dev",
+    "preset_hash": "TBD"
+  },
+  "resume_cursor": {
+    "last_run_id": "",
+    "next_step": "",
+    "pending_checks": []
+  },
+  "outputs": {
+    "required_artifacts": [
+      "boot_manifest_path_lock"
+    ],
+    "artifact_paths": [
+      "/.a2r/artifacts/T0004/"
+    ]
+  },
+  "write_scope": {
+    "root": "/.a2r/",
+    "allowed_globs": [
+      "/.a2r/boot/**"
+    ]
+  },
+  "tools": {
+    "allowlist": [
+      "fs.read",
+      "fs.write"
+    ],
+    "pretooluse_hooks": [
+      "WIH_VALID",
+      "DEPS_SATISFIED",
+      "PATH_GUARDS",
+      "TOOL_REGISTRY"
+    ]
+  },
+  "memory": {
+    "packs": [
+      {
+        "pack_id": "law",
+        "layers": [
+          "law"
+        ],
+        "access": "read"
+      }
+    ]
+  },
+  "acceptance": {
+    "checks": [
+      "AT-BOOT-0015"
+    ]
+  },
+  "beads": {
+    "wih_version": "v0.1",
+    "task_id": "T0004",
+    "graph_id": "graph-0001",
+    "title": "Boot manifest path lock",
+    "state": "PLANNED",
+    "blocked_by": [
+      "T0000"
+    ],
+    "external_refs": {
+      "claude_task_id": "",
+      "issue_id": "",
+      "pr_id": ""
+    },
+    "preset": {
+      "preset_id": "preset-core-dev",
+      "preset_hash": "TBD"
+    },
+    "resume_cursor": {
+      "last_run_id": "",
+      "next_step": "",
+      "pending_checks": []
+    },
+    "outputs": {
+      "required_artifacts": [
+        "boot_manifest_path_lock"
+      ],
+      "artifact_paths": [
+        "/.a2r/artifacts/T0004/"
+      ]
+    },
+    "write_scope": {
+      "root": "/.a2r/",
+      "allowed_globs": [
+        "/.a2r/boot/**"
+      ]
+    },
+    "tools": {
+      "allowlist": [
+        "fs.read",
+        "fs.write"
+      ],
+      "pretooluse_hooks": [
+        "WIH_VALID",
+        "DEPS_SATISFIED",
+        "PATH_GUARDS",
+        "TOOL_REGISTRY"
+      ]
+    },
+    "memory": {
+      "packs": [
+        {
+          "pack_id": "law",
+          "layers": [
+            "law"
+          ],
+          "access": "read"
+        }
+      ]
+    },
+    "acceptance": {
+      "checks": [
+        "AT-BOOT-0015"
+      ]
+    }
+  }
+}

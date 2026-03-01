@@ -1,0 +1,120 @@
+diff --git a/tests/acceptance/test_exec_missing_run_id.sh b/tests/acceptance/test_exec_missing_run_id.sh
+new file mode 100755
+index 0000000..428e994
+--- /dev/null
++++ b/tests/acceptance/test_exec_missing_run_id.sh
+@@ -0,0 +1,4 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++cargo test -p a2rchitech-tools-gateway test_execution_requires_run_id
+
+diff --git a/tests/acceptance/test_exec_missing_wih_or_node.sh b/tests/acceptance/test_exec_missing_wih_or_node.sh
+new file mode 100755
+index 0000000..38e027a
+--- /dev/null
++++ b/tests/acceptance/test_exec_missing_wih_or_node.sh
+@@ -0,0 +1,4 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++cargo test -p a2rchitech-tools-gateway test_execution_requires_wih_and_node
+
+diff --git a/tests/acceptance/test_exec_receipt_emitted.sh b/tests/acceptance/test_exec_receipt_emitted.sh
+new file mode 100755
+index 0000000..3cc2fc3
+--- /dev/null
++++ b/tests/acceptance/test_exec_receipt_emitted.sh
+@@ -0,0 +1,34 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++PYTHON_BIN="${PYTHON_BIN:-python3}"
++if [ -x ".venv-law/bin/python" ]; then
++  PYTHON_BIN=".venv-law/bin/python"
++fi
++
++out=$($PYTHON_BIN scripts/taskgraph.py install graph-0001)
++run_id=$(echo "$out" | $PYTHON_BIN -c 'import json,sys; print(json.load(sys.stdin)["run_id"])')
++receipt_dir=".a2r/receipts/${run_id}"
++if ! ls "${receipt_dir}"/agent-exec-*.json >/dev/null 2>&1; then
++  echo "Missing agent execution receipt in ${receipt_dir}" >&2
++  exit 1
++fi
++
++$PYTHON_BIN - <<PY
++import json
++from pathlib import Path
++import glob
++run_id = "${run_id}"
++paths = glob.glob(f".a2r/receipts/{run_id}/agent-exec-*.json")
++if not paths:
++    raise SystemExit("No agent execution receipt found")
++receipt = json.loads(Path(paths[0]).read_text())
++for key in ("receipt_id", "created_at", "run_id", "graph_id", "agent_profile_id", "status"):
++    if key not in receipt:
++        raise SystemExit(f"Missing {key} in receipt")
++if receipt["run_id"] != run_id:
++    raise SystemExit("run_id mismatch in receipt")
++PY
++
++rm -f ".a2r/run_state/${run_id}.json"
++rm -rf "${receipt_dir}"
+
+diff --git a/tests/acceptance/test_exec_deterministic_replay.sh b/tests/acceptance/test_exec_deterministic_replay.sh
+new file mode 100755
+index 0000000..8f074b2
+--- /dev/null
++++ b/tests/acceptance/test_exec_deterministic_replay.sh
+@@ -0,0 +1,4 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++bash tests/acceptance/test_task_resume_deterministic.sh
+
+diff --git a/.github/workflows/ci-cd.yml b/.github/workflows/ci-cd.yml
+index a3a3241..348eb41 100644
+--- a/.github/workflows/ci-cd.yml
++++ b/.github/workflows/ci-cd.yml
+@@ -66,6 +66,23 @@ jobs:
+         tests/acceptance/test_subprocess_allows_only_allowlisted_worker.sh
+         tests/acceptance/test_subprocess_receipt_emitted.sh
+ 
++  phase1-6-exec:
++    runs-on: ubuntu-latest
++    needs: phase1-5-proc
++    steps:
++    - uses: actions/checkout@v4
++    - name: Set up Python 3.12
++      uses: actions/setup-python@v5
++      with:
++        python-version: "3.12"
++    - name: Run agent execution gates
++      run: |
++        bash scripts/law_setup.sh
++        tests/acceptance/test_exec_missing_run_id.sh
++        tests/acceptance/test_exec_missing_wih_or_node.sh
++        tests/acceptance/test_exec_receipt_emitted.sh
++        tests/acceptance/test_exec_deterministic_replay.sh
++
+   lint:
+     runs-on: ubuntu-latest
+     steps:
+diff --git a/spec/AcceptanceTests.md b/spec/AcceptanceTests.md
+index 7db6bb7..1df8523 100644
+--- a/spec/AcceptanceTests.md
++++ b/spec/AcceptanceTests.md
+@@ -55,6 +55,13 @@ These acceptance tests are platform-level gates. Every major change must referen
+ - **AT-PROC-0003**: Allowlisted worker execution emits a subprocess receipt under `/.a2r/receipts/<run_id>/`.
+ - **AT-PROC-0004**: Subprocess receipts include worker_id, argv, cwd, env_allowlist, exit_code, stdout/stderr hashes, and previews.
+ 
++## AT-EXEC — Agent execution contract
++
++- **AT-EXEC-0001**: Execution without run_id is denied.
++- **AT-EXEC-0002**: Execution without wih_id or node_id is denied.
++- **AT-EXEC-0003**: Run emits AgentExecutionReceipt under `/.a2r/receipts/<run_id>/`.
++- **AT-EXEC-0004**: Deterministic replay reconstructs the same next-node selection.
++
+ ## AT-IO — Output law and write scopes
+ 
+ - **AT-IO-0001**: Any write outside `/.a2r/` is denied.

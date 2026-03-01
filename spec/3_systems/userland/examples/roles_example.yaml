@@ -1,0 +1,141 @@
+version: "1.0"
+roles:
+  - id: "researcher-v1"
+    name: "Researcher"
+    description: "Agent specialized in conducting research and analysis"
+    responsibilities:
+      - "Literature review and research"
+      - "Data analysis and synthesis"
+      - "Hypothesis formation"
+      - "Source verification"
+    capabilities:
+      allowed_skill_tiers:
+        - "T0"
+        - "T1"
+        - "T2"
+      allowed_tools:
+        - "academic_search"
+        - "data_analysis_tool"
+        - "citation_formatter"
+        - "document_summarizer"
+      allowed_phases:
+        - "Observe"
+        - "Think"
+        - "Plan"
+        - "Learn"
+      resource_limits:
+        max_cpu_millicores: 500
+        max_memory_mb: 1024
+        max_execution_time_seconds: 3600
+    permissions:
+      required_permissions:
+        - "perm_t0_read"
+        - "perm_t1_read"
+        - "perm_t2_read"
+      forbidden_actions:
+        - "modify_system_state"
+        - "execute_destructive_commands"
+    verification_requirements:
+      required_verify_artifacts:
+        - "source_verification"
+        - "data_accuracy"
+      confidence_threshold: 0.85
+    memory_policy:
+      allowed_memory_tiers:
+        - "Working"
+        - "Episodic"
+        - "Semantic"
+      retention_policy:
+        max_retention_days: 30
+        automatic_consolidation: true
+
+  - id: "operator-v1"
+    name: "Operator"
+    description: "Agent specialized in executing operational tasks"
+    responsibilities:
+      - "Task execution"
+      - "System monitoring"
+      - "Maintenance operations"
+      - "Status reporting"
+    capabilities:
+      allowed_skill_tiers:
+        - "T0"
+        - "T1"
+      allowed_tools:
+        - "monitoring_tool"
+        - "status_checker"
+        - "maintenance_tool"
+        - "report_generator"
+      allowed_phases:
+        - "Execute"
+        - "Verify"
+        - "Observe"
+      resource_limits:
+        max_cpu_millicores: 300
+        max_memory_mb: 512
+        max_execution_time_seconds: 1800
+    permissions:
+      required_permissions:
+        - "perm_t0_read"
+        - "perm_t0_write"
+        - "perm_t1_read"
+      forbidden_actions:
+        - "modify_core_system"
+        - "access_sensitive_data"
+    verification_requirements:
+      required_verify_artifacts:
+        - "execution_log"
+        - "status_report"
+      confidence_threshold: 0.9
+    memory_policy:
+      allowed_memory_tiers:
+        - "Working"
+        - "Episodic"
+      retention_policy:
+        max_retention_days: 7
+        automatic_consolidation: false
+
+  - id: "auditor-v1"
+    name: "Auditor"
+    description: "Agent specialized in verification and compliance checking"
+    responsibilities:
+      - "Output verification"
+      - "Compliance checking"
+      - "Audit trail maintenance"
+      - "Quality assurance"
+    capabilities:
+      allowed_skill_tiers:
+        - "T0"
+      allowed_tools:
+        - "verification_tool"
+        - "compliance_checker"
+        - "audit_logger"
+        - "quality_assessor"
+      allowed_phases:
+        - "Verify"
+        - "Learn"
+      resource_limits:
+        max_cpu_millicores: 200
+        max_memory_mb: 256
+        max_execution_time_seconds: 1200
+    permissions:
+      required_permissions:
+        - "perm_t0_read"
+        - "perm_audit_read"
+      forbidden_actions:
+        - "modify_execution"
+        - "execute_tools"
+    verification_requirements:
+      required_verify_artifacts:
+        - "compliance_report"
+        - "verification_certificate"
+        - "audit_trail"
+      confidence_threshold: 0.95
+    memory_policy:
+      allowed_memory_tiers:
+        - "Working"
+        - "Episodic"
+        - "Declarative"
+      retention_policy:
+        max_retention_days: 90
+        automatic_consolidation: true

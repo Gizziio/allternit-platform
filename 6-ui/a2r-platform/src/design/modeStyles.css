@@ -1,0 +1,57 @@
+
+/* Interactive Rail Hover */
+.rail-item-button {
+  position: relative;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.rail-item-button:hover {
+  background: rgba(128, 128, 128, 0.08) !important;
+  transform: translateX(4px);
+  color: var(--text-primary) !important;
+}
+
+.rail-item-button:active {
+  transform: translateX(2px) scale(0.98);
+}
+
+/* Active State Glow */
+.rail-item-active {
+  background: rgba(0, 122, 255, 0.1) !important;
+}
+
+.rail-item-active .rail-icon {
+  filter: drop-shadow(0 0 8px var(--accent-chat));
+}
+
+/* Tooltip-like behavior for collapsed state */
+.rail-item-collapsed:hover::after {
+  content: attr(data-label);
+  position: absolute;
+  left: 100%;
+  margin-left: 12px;
+  padding: 6px 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 1000;
+  box-shadow: var(--shadow-md);
+}
+
+.glass-card-hover:hover {
+  transform: translateY(-4px) scale(1.02);
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3) !important;
+}
+
+.dropdown-item-hover:focus { 
+  background: var(--accent-chat) !important; 
+  color: white !important; 
+}
+
+.user-footer-button:hover {
+  background: rgba(128, 128, 128, 0.08) !important;
+}

@@ -1,0 +1,406 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://a2rchitech.local/schemas/MiniAppManifest.schema.json",
+  "title": "MiniAppManifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "version",
+    "name",
+    "data_models",
+    "views",
+    "actions",
+    "workflows",
+    "transitions",
+    "permissions",
+    "integrations"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9._-]+$"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string"
+    },
+    "author": {
+      "type": "string"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "data_models": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "tier",
+          "entities"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tier": {
+            "type": "string",
+            "enum": [
+              "local_first",
+              "big_collection"
+            ]
+          },
+          "entities": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "fields"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "primary_key": {
+                  "type": "string"
+                },
+                "fields": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "name",
+                      "type"
+                    ],
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "string",
+                          "number",
+                          "boolean",
+                          "date",
+                          "json",
+                          "reference"
+                        ]
+                      },
+                      "required": {
+                        "type": "boolean",
+                        "default": false
+                      },
+                      "indexed": {
+                        "type": "boolean",
+                        "default": false
+                      },
+                      "ref": {
+                        "type": "string",
+                        "description": "Target entity if type=reference"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "views": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "title",
+          "component_tree"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "component_tree": {
+            "type": "object",
+            "description": "UI component AST/DSL"
+          },
+          "bindings": {
+            "type": "object"
+          },
+          "visibility": {
+            "$ref": "#/$defs/visibilityRule"
+          }
+        }
+      }
+    },
+    "actions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/actionDef"
+      }
+    },
+    "workflows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "nodes",
+          "edges"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "trigger": {
+            "type": "object"
+          },
+          "nodes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "view_id"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "view_id": {
+                  "type": "string"
+                },
+                "gate": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "edges": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "from",
+                "to",
+                "transition"
+              ],
+              "properties": {
+                "from": {
+                  "type": "string"
+                },
+                "to": {
+                  "type": "string"
+                },
+                "transition": {
+                  "$ref": "#/$defs/transitionPolicy"
+                },
+                "telemetry": {
+                  "type": "object"
+                },
+                "conditions": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "transitions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "allowed": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "push",
+              "modal",
+              "fade",
+              "stepper_next",
+              "shared_element_push"
+            ]
+          }
+        },
+        "defaults": {
+          "$ref": "#/$defs/transitionPolicy"
+        }
+      }
+    },
+    "permissions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "roles",
+        "rules"
+      ],
+      "properties": {
+        "roles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/visibilityRule"
+          }
+        }
+      }
+    },
+    "integrations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "providers"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "providers": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "actions": {
+                "type": "boolean",
+                "default": false
+              },
+              "widgets": {
+                "type": "boolean",
+                "default": false
+              },
+              "transforms": {
+                "type": "boolean",
+                "default": false
+              },
+              "analytics": {
+                "type": "boolean",
+                "default": false
+              }
+            }
+          },
+          "secrets_schema": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "visibilityRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "role": {
+          "type": "string"
+        },
+        "allow": {
+          "type": "boolean"
+        },
+        "target": {
+          "type": "string"
+        },
+        "conditions": {
+          "type": "object"
+        }
+      }
+    },
+    "transitionPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "push",
+            "modal",
+            "fade",
+            "stepper_next",
+            "shared_element_push"
+          ]
+        },
+        "durationMs": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 250
+        },
+        "easing": {
+          "type": "string",
+          "default": "standard"
+        },
+        "sharedElementKey": {
+          "type": "string"
+        }
+      }
+    },
+    "actionDef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "setValue",
+            "addRow",
+            "updateRow",
+            "navigate",
+            "showToast",
+            "callAPI"
+          ]
+        },
+        "input_schema": {
+          "type": "object"
+        },
+        "output_schema": {
+          "type": "object"
+        },
+        "permissions": {
+          "$ref": "#/$defs/visibilityRule"
+        }
+      }
+    }
+  }
+}

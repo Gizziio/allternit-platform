@@ -1,0 +1,132 @@
+{
+  "wih_version": "v0.1",
+  "task_id": "G2004",
+  "graph_id": "graph-0002",
+  "title": "LLM router contract + policy schema",
+  "state": "PLANNED",
+  "blocked_by": [
+    "G2000"
+  ],
+  "external_refs": {
+    "claude_task_id": "",
+    "issue_id": "",
+    "pr_id": ""
+  },
+  "preset": {
+    "preset_id": "preset-net-ui",
+    "preset_hash": "TBD"
+  },
+  "resume_cursor": {
+    "last_run_id": "",
+    "next_step": "",
+    "pending_checks": []
+  },
+  "outputs": {
+    "required_artifacts": [
+      "router-schema"
+    ],
+    "artifact_paths": [
+      "/.a2r/artifacts/G2004/"
+    ]
+  },
+  "write_scope": {
+    "root": "/.a2r/",
+    "allowed_globs": [
+      "/.a2r/artifacts/G2004/**"
+    ]
+  },
+  "tools": {
+    "allowlist": [
+      "fs.read",
+      "fs.write"
+    ],
+    "pretooluse_hooks": [
+      "WIH_VALID",
+      "DEPS_SATISFIED",
+      "PATH_GUARDS",
+      "TOOL_REGISTRY"
+    ]
+  },
+  "memory": {
+    "packs": [
+      {
+        "pack_id": "law",
+        "layers": [
+          "law"
+        ],
+        "access": "readwrite"
+      }
+    ]
+  },
+  "acceptance": {
+    "checks": [
+      "AT-TOOLS-0002"
+    ]
+  },
+  "beads": {
+    "wih_version": "v0.1",
+    "task_id": "G2004",
+    "graph_id": "graph-0002",
+    "title": "LLM router contract + policy schema",
+    "state": "PLANNED",
+    "blocked_by": [
+      "G2000"
+    ],
+    "external_refs": {
+      "claude_task_id": "",
+      "issue_id": "",
+      "pr_id": ""
+    },
+    "preset": {
+      "preset_id": "preset-net-ui",
+      "preset_hash": "TBD"
+    },
+    "resume_cursor": {
+      "last_run_id": "",
+      "next_step": "",
+      "pending_checks": []
+    },
+    "outputs": {
+      "required_artifacts": [
+        "router-schema"
+      ],
+      "artifact_paths": [
+        "/.a2r/artifacts/G2004/"
+      ]
+    },
+    "write_scope": {
+      "root": "/.a2r/",
+      "allowed_globs": [
+        "/.a2r/artifacts/G2004/**"
+      ]
+    },
+    "tools": {
+      "allowlist": [
+        "fs.read",
+        "fs.write"
+      ],
+      "pretooluse_hooks": [
+        "WIH_VALID",
+        "DEPS_SATISFIED",
+        "PATH_GUARDS",
+        "TOOL_REGISTRY"
+      ]
+    },
+    "memory": {
+      "packs": [
+        {
+          "pack_id": "law",
+          "layers": [
+            "law"
+          ],
+          "access": "readwrite"
+        }
+      ]
+    },
+    "acceptance": {
+      "checks": [
+        "AT-TOOLS-0002"
+      ]
+    }
+  }
+}

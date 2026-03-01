@@ -1,0 +1,132 @@
+{
+  "wih_version": "v0.1",
+  "task_id": "G0103",
+  "graph_id": "graph-0002",
+  "title": "Local dev transport plan: UDS + loopback constraints",
+  "state": "PLANNED",
+  "blocked_by": [
+    "G0102"
+  ],
+  "external_refs": {
+    "claude_task_id": "",
+    "issue_id": "",
+    "pr_id": ""
+  },
+  "preset": {
+    "preset_id": "preset-core-dev",
+    "preset_hash": "TBD"
+  },
+  "resume_cursor": {
+    "last_run_id": "",
+    "next_step": "",
+    "pending_checks": []
+  },
+  "outputs": {
+    "required_artifacts": [
+      "uds-plan"
+    ],
+    "artifact_paths": [
+      "/.a2r/artifacts/G0103/"
+    ]
+  },
+  "write_scope": {
+    "root": "/.a2r/",
+    "allowed_globs": [
+      "/.a2r/artifacts/G0103/**"
+    ]
+  },
+  "tools": {
+    "allowlist": [
+      "fs.read",
+      "fs.write"
+    ],
+    "pretooluse_hooks": [
+      "WIH_VALID",
+      "DEPS_SATISFIED",
+      "PATH_GUARDS",
+      "TOOL_REGISTRY"
+    ]
+  },
+  "memory": {
+    "packs": [
+      {
+        "pack_id": "law",
+        "layers": [
+          "law"
+        ],
+        "access": "read"
+      }
+    ]
+  },
+  "acceptance": {
+    "checks": [
+      "AT-NET-0002"
+    ]
+  },
+  "beads": {
+    "wih_version": "v0.1",
+    "task_id": "G0103",
+    "graph_id": "graph-0002",
+    "title": "Local dev transport plan: UDS + loopback constraints",
+    "state": "PLANNED",
+    "blocked_by": [
+      "G0102"
+    ],
+    "external_refs": {
+      "claude_task_id": "",
+      "issue_id": "",
+      "pr_id": ""
+    },
+    "preset": {
+      "preset_id": "preset-core-dev",
+      "preset_hash": "TBD"
+    },
+    "resume_cursor": {
+      "last_run_id": "",
+      "next_step": "",
+      "pending_checks": []
+    },
+    "outputs": {
+      "required_artifacts": [
+        "uds-plan"
+      ],
+      "artifact_paths": [
+        "/.a2r/artifacts/G0103/"
+      ]
+    },
+    "write_scope": {
+      "root": "/.a2r/",
+      "allowed_globs": [
+        "/.a2r/artifacts/G0103/**"
+      ]
+    },
+    "tools": {
+      "allowlist": [
+        "fs.read",
+        "fs.write"
+      ],
+      "pretooluse_hooks": [
+        "WIH_VALID",
+        "DEPS_SATISFIED",
+        "PATH_GUARDS",
+        "TOOL_REGISTRY"
+      ]
+    },
+    "memory": {
+      "packs": [
+        {
+          "pack_id": "law",
+          "layers": [
+            "law"
+          ],
+          "access": "read"
+        }
+      ]
+    },
+    "acceptance": {
+      "checks": [
+        "AT-NET-0002"
+      ]
+    }
+  }
+}

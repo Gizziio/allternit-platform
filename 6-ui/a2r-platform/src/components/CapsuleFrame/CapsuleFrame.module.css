@@ -1,0 +1,126 @@
+/* CapsuleFrame Component Styles */
+
+.capsuleFrame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 200px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+}
+
+.capsuleFrame[data-state="loading"] {
+  background: #fafafa;
+}
+
+.capsuleFrame[data-state="error"] {
+  border-color: #ff4444;
+}
+
+.iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: white;
+}
+
+/* Loading State */
+
+.loadingOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.9);
+  z-index: 10;
+  gap: 12px;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e0e0e0;
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loadingText {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+/* Error State */
+
+.errorOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 235, 235, 0.95);
+  z-index: 10;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+}
+
+.errorIcon {
+  font-size: 32px;
+}
+
+.errorText {
+  font-size: 14px;
+  color: #d32f2f;
+  font-weight: 500;
+}
+
+/* Dark Mode Support */
+
+@media (prefers-color-scheme: dark) {
+  .capsuleFrame {
+    background: #1a1a1a;
+    border-color: #333;
+  }
+
+  .capsuleFrame[data-state="loading"] {
+    background: #1a1a1a;
+  }
+
+  .iframe {
+    background: #1a1a1a;
+  }
+
+  .loadingOverlay {
+    background: rgba(26, 26, 26, 0.9);
+  }
+
+  .spinner {
+    border-color: #333;
+    border-top-color: #667eea;
+  }
+
+  .loadingText {
+    color: #999;
+  }
+
+  .errorOverlay {
+    background: rgba(50, 20, 20, 0.95);
+  }
+
+  .errorText {
+    color: #ff6666;
+  }
+}

@@ -1,0 +1,128 @@
+{
+  "wih_version": "v0.1",
+  "external_refs": {
+    "claude_task_id": "",
+    "issue_id": "",
+    "pr_id": ""
+  },
+  "preset": {
+    "preset_id": "preset-core-dev",
+    "preset_hash": "TBD"
+  },
+  "resume_cursor": {
+    "last_run_id": "",
+    "next_step": "",
+    "pending_checks": []
+  },
+  "write_scope": {
+    "root": "/.a2r/",
+    "allowed_globs": [
+      "/.a2r/**"
+    ]
+  },
+  "tools": {
+    "allowlist": [
+      "fs.read",
+      "fs.write"
+    ],
+    "pretooluse_hooks": [
+      "WIH_VALID",
+      "DEPS_SATISFIED",
+      "PATH_GUARDS",
+      "TOOL_REGISTRY"
+    ]
+  },
+  "memory": {
+    "packs": [
+      {
+        "pack_id": "law",
+        "layers": [
+          "law"
+        ],
+        "access": "readwrite"
+      }
+    ]
+  },
+  "acceptance": {
+    "checks": [
+      "AT-BOOT-0001"
+    ]
+  },
+  "task_id": "G0501",
+  "graph_id": "graph-0003",
+  "title": "A2R Receipt Generation in a2r-operator",
+  "state": "COMPLETE",
+  "blocked_by": [],
+  "outputs": {
+    "required_artifacts": [
+      "g0501-complete"
+    ],
+    "artifact_paths": [
+      "/.a2r/artifacts/G0501/"
+    ]
+  },
+  "beads": {
+    "wih_version": "v0.1",
+    "external_refs": {
+      "claude_task_id": "",
+      "issue_id": "",
+      "pr_id": ""
+    },
+    "preset": {
+      "preset_id": "preset-core-dev",
+      "preset_hash": "TBD"
+    },
+    "resume_cursor": {
+      "last_run_id": "",
+      "next_step": "",
+      "pending_checks": []
+    },
+    "write_scope": {
+      "root": "/.a2r/",
+      "allowed_globs": [
+        "/.a2r/**"
+      ]
+    },
+    "tools": {
+      "allowlist": [
+        "fs.read",
+        "fs.write"
+      ],
+      "pretooluse_hooks": [
+        "WIH_VALID",
+        "DEPS_SATISFIED",
+        "PATH_GUARDS",
+        "TOOL_REGISTRY"
+      ]
+    },
+    "memory": {
+      "packs": [
+        {
+          "pack_id": "law",
+          "layers": [
+            "law"
+          ],
+          "access": "readwrite"
+        }
+      ]
+    },
+    "acceptance": {
+      "checks": [
+        "AT-BOOT-0001"
+      ]
+    },
+    "task_id": "G0501",
+    "graph_id": "graph-0003",
+    "title": "A2R Receipt Generation in a2r-operator",
+    "state": "COMPLETE",
+    "blocked_by": [],
+    "outputs": {
+      "required_artifacts": [
+        "g0501-complete"
+      ],
+      "artifact_paths": [
+        "/.a2r/artifacts/G0501/"
+      ]
+    }
+  }
+}

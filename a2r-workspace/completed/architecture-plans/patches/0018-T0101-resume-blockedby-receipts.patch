@@ -1,0 +1,96 @@
+commit fca61966e8351cf50d8939f87929295a2a32f033
+Author: Eoj Edred <eojedredbitepubkey1@proton.me>
+Date:   Tue Jan 27 23:34:10 2026 -0600
+
+    T0101: resume + blockedBy + receipt gating
+
+diff --git a/scripts/taskgraph.py b/scripts/taskgraph.py
+index 1893a33..a79453d 100755
+--- a/scripts/taskgraph.py
++++ b/scripts/taskgraph.py
+@@ -133,7 +133,84 @@ def install_run(graph_id: str) -> dict:
+ 
+ 
+ def resume_run(run_id: str) -> dict:
+-    raise NotImplementedError("resume not implemented")
++    run_path = RUN_STATE_DIR / f"{run_id}.json"
++    if not run_path.exists():
++        fail(f"Run state not found: {run_path}")
++    run_state = load_json(run_path)
++
++    graph_id = run_state.get("graph_id")
++    if not graph_id:
++        fail(f"Run state missing graph_id: {run_path}")
++
++    graph = load_graph(graph_id)
++    nodes = graph.get("nodes", [])
++    if not nodes:
++        fail(f"Graph has no nodes: {graph_id}")
++
++    node_states = run_state.get("node_states", [])
++    state_by_task = {state.get("task_id"): state for state in node_states}
++    for node in nodes:
++        task_id = node.get("task_id")
++        if task_id not in state_by_task:
++            fail(f"Run state missing node state for {task_id}")
++
++        wih = load_wih(node.get("wih_path", ""))
++        validate_wih_node(node, wih, graph_id)
++
++    receipt_dir = RECEIPTS_DIR / run_id
++    receipt_nodes = set()
++    receipt_ids = []
++    if receipt_dir.exists():
++        for receipt_path in receipt_dir.glob("*.json"):
++            receipt = load_json(receipt_path)
++            receipt_run_id = receipt.get("run_id")
++            if receipt_run_id and receipt_run_id != run_id:
++                fail(f"Receipt run_id mismatch in {receipt_path}")
++            node_id = receipt.get("node_id") or receipt.get("task_id")
++            if node_id:
++                receipt_nodes.add(node_id)
++            receipt_id = receipt.get("receipt_id") or receipt_path.stem
++            receipt_ids.append(receipt_id)
++
++    for state in node_states:
++        if state.get("status") == NODE_STATUS_SUCCEEDED:
++            if state.get("task_id") not in receipt_nodes:
++                fail(f"Missing receipt for completed node {state.get('task_id')}")
++
++    runnable = []
++    for node in nodes:
++        task_id = node.get("task_id")
++        state = state_by_task.get(task_id, {})
++        status = state.get("status")
++        if status in [NODE_STATUS_SUCCEEDED, NODE_STATUS_FAILED, NODE_STATUS_SKIPPED]:
++            continue
++
++        deps = node.get("blocked_by", [])
++        deps_missing = [dep for dep in deps if dep not in receipt_nodes]
++        if deps_missing:
++            if status == NODE_STATUS_RUNNING:
++                fail(f"Node {task_id} running without dependency receipts")
++            state["status"] = NODE_STATUS_BLOCKED
++            continue
++
++        if status == NODE_STATUS_BLOCKED:
++            state["status"] = NODE_STATUS_PENDING
++        if state["status"] == NODE_STATUS_PENDING:
++            runnable.append(task_id)
++
++    run_state["receipts"] = sorted(receipt_ids)
++    run_state["resume_cursor"] = {
++        "last_node": run_state.get("resume_cursor", {}).get("last_node", ""),
++        "next_nodes": sorted(runnable)
++    }
++
++    run_path.write_text(json.dumps(run_state, indent=2))
++
++    return {
++        "run_id": run_id,
++        "graph_id": graph_id,
++        "next_nodes": sorted(runnable)
++    }
+ 
+ 
+ def main() -> None:

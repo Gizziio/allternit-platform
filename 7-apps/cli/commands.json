@@ -1,0 +1,111 @@
+{
+  "commands": [
+    {
+      "name": "up",
+      "aliases": ["start"],
+      "description": "Start the brain daemon"
+    },
+    {
+      "name": "down",
+      "aliases": ["stop"],
+      "description": "Stop the brain daemon"
+    },
+    {
+      "name": "status",
+      "aliases": ["ps"],
+      "description": "Check system status"
+    },
+    {
+      "name": "health",
+      "description": "Fetch health from kernel/API"
+    },
+    {
+      "name": "sessions",
+      "description": "List stored/running sessions"
+    },
+    {
+      "name": "doctor",
+      "description": "Diagnostic tool"
+    },
+    {
+      "name": "logs",
+      "description": "Show daemon logs"
+    },
+    {
+      "name": "daemon",
+      "description": "Manage daemon lifecycle"
+    },
+    {
+      "name": "ev",
+      "description": "Evidence management"
+    },
+    {
+      "name": "cap",
+      "description": "Capsule operations"
+    },
+    {
+      "name": "j",
+      "description": "Journal interaction"
+    },
+    {
+      "name": "tools",
+      "description": "Tool and action management"
+    },
+    {
+      "name": "skills",
+      "description": "Skills and publisher key management"
+    },
+    {
+      "name": "auth",
+      "description": "Authentication and provider setup"
+    },
+    {
+      "name": "model",
+      "description": "Model selection and configuration"
+    },
+    {
+      "name": "run",
+      "description": "Send a one-shot intent"
+    },
+    {
+      "name": "repl",
+      "description": "Start an interactive chat session"
+    },
+    {
+      "name": "tui",
+      "description": "Launch the Operator Workspace (TUI)"
+    },
+    {
+      "name": "rlm",
+      "description": "RLM mode and session management"
+    },
+    {
+      "name": "voice",
+      "description": "Voice operations (TTS and voice cloning)"
+    },
+    {
+      "name": "webvm",
+      "description": "WebVM operations"
+    },
+    {
+      "name": "marketplace",
+      "description": "Marketplace operations"
+    },
+    {
+      "name": "brain",
+      "description": "Brain session management"
+    },
+    {
+      "name": "task",
+      "description": "Task graph operations"
+    },
+    {
+      "name": "config",
+      "description": "CLI configuration"
+    },
+    {
+      "name": "registry",
+      "description": "Show CLI command registry"
+    }
+  ]
+}

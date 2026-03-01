@@ -1,0 +1,115 @@
+version: '3.8'
+
+services:
+  gateway:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.gateway
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - GATEWAY_PORT=3000
+      - KERNEL_URL=http://kernel:3004
+      - UI_TARS_URL=http://ui-tars:3007
+    env_file:
+      - ../.env.production
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+    depends_on:
+      - kernel
+      - ui-tars
+    networks:
+      - a2rchitect-network
+
+  kernel:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.kernel
+    ports:
+      - "3004:3004"
+    environment:
+      - NODE_ENV=production
+      - KERNEL_PORT=3004
+      - DATABASE_URL=${DATABASE_URL}
+    env_file:
+      - ../.env.production
+    volumes:
+      - data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3004/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - a2rchitect-network
+
+  ui-tars:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.ui-tars
+    ports:
+      - "3007:3007"
+    environment:
+      - NODE_ENV=production
+      - UI_TARS_PORT=3007
+    env_file:
+      - ../.env.production
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3007/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - a2rchitect-network
+
+  # Optional: PostgreSQL database
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: a2rchitect
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: a2rchitect
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U a2rchitect"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - a2rchitect-network
+
+  # Optional: Redis for caching
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - a2rchitect-network
+
+volumes:
+  data:
+  postgres_data:
+  redis_data:
+
+networks:
+  a2rchitect-network:
+    driver: bridge

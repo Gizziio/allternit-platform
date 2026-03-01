@@ -1,0 +1,134 @@
+{
+  "wih_version": "v0.1",
+  "task_id": "P0002",
+  "graph_id": "graph-0000",
+  "title": "Register subgraph graph-0002 (gateway/router/ui)",
+  "state": "PLANNED",
+  "blocked_by": [
+    "P0001"
+  ],
+  "external_refs": {
+    "claude_task_id": "",
+    "issue_id": "",
+    "pr_id": ""
+  },
+  "preset": {
+    "preset_id": "preset-core-dev",
+    "preset_hash": "TBD"
+  },
+  "resume_cursor": {
+    "last_run_id": "",
+    "next_step": "",
+    "pending_checks": []
+  },
+  "outputs": {
+    "required_artifacts": [
+      "subgraph-0002-registered"
+    ],
+    "artifact_paths": [
+      "/.a2r/artifacts/P0002/"
+    ]
+  },
+  "write_scope": {
+    "root": "/.a2r/",
+    "allowed_globs": [
+      "/.a2r/graphs/**",
+      "/.a2r/wih/**"
+    ]
+  },
+  "tools": {
+    "allowlist": [
+      "fs.read",
+      "fs.write"
+    ],
+    "pretooluse_hooks": [
+      "WIH_VALID",
+      "DEPS_SATISFIED",
+      "PATH_GUARDS",
+      "TOOL_REGISTRY"
+    ]
+  },
+  "memory": {
+    "packs": [
+      {
+        "pack_id": "graph",
+        "layers": [
+          "graph"
+        ],
+        "access": "readwrite"
+      }
+    ]
+  },
+  "acceptance": {
+    "checks": [
+      "AT-TASK-0001"
+    ]
+  },
+  "beads": {
+    "wih_version": "v0.1",
+    "task_id": "P0002",
+    "graph_id": "graph-0000",
+    "title": "Register subgraph graph-0002 (gateway/router/ui)",
+    "state": "PLANNED",
+    "blocked_by": [
+      "P0001"
+    ],
+    "external_refs": {
+      "claude_task_id": "",
+      "issue_id": "",
+      "pr_id": ""
+    },
+    "preset": {
+      "preset_id": "preset-core-dev",
+      "preset_hash": "TBD"
+    },
+    "resume_cursor": {
+      "last_run_id": "",
+      "next_step": "",
+      "pending_checks": []
+    },
+    "outputs": {
+      "required_artifacts": [
+        "subgraph-0002-registered"
+      ],
+      "artifact_paths": [
+        "/.a2r/artifacts/P0002/"
+      ]
+    },
+    "write_scope": {
+      "root": "/.a2r/",
+      "allowed_globs": [
+        "/.a2r/graphs/**",
+        "/.a2r/wih/**"
+      ]
+    },
+    "tools": {
+      "allowlist": [
+        "fs.read",
+        "fs.write"
+      ],
+      "pretooluse_hooks": [
+        "WIH_VALID",
+        "DEPS_SATISFIED",
+        "PATH_GUARDS",
+        "TOOL_REGISTRY"
+      ]
+    },
+    "memory": {
+      "packs": [
+        {
+          "pack_id": "graph",
+          "layers": [
+            "graph"
+          ],
+          "access": "readwrite"
+        }
+      ]
+    },
+    "acceptance": {
+      "checks": [
+        "AT-TASK-0001"
+      ]
+    }
+  }
+}

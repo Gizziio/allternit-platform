@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <script>
+      window.onerror = function(msg, url, line, col, error) {
+        console.log('[HTML ERROR] ' + msg + ' at ' + url + ':' + line + ':' + col);
+        document.body.innerHTML = '<div style="padding:20px; color:red; background:white; position:fixed; top:0; left:0; z-index:9999"><h1>RENDERER CRASH</h1><p>' + msg + '</p></div>';
+      };
+      window.onunhandledrejection = function(event) {
+        console.log('[HTML REJECTION] ' + event.reason);
+      };
+      console.log('[FPRINT] index.html boot');
+    </script>
+
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>A2rchitect Platform</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

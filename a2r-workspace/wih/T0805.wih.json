@@ -1,0 +1,57 @@
+{
+  "wih_version": "v0.1",
+  "task_id": "T0805",
+  "graph_id": "graph-0001",
+  "title": "WIH + Graph Updates",
+  "state": "COMPLETE",
+  "blocked_by": [
+    "T0804"
+  ],
+  "external_refs": {},
+  "preset": { "preset_id": "preset-core-dev", "preset_hash": "TBD" },
+  "resume_cursor": { "last_run_id": "", "next_step": "", "pending_checks": [] },
+  "outputs": {
+    "required_artifacts": ["ui_wiring"],
+    "artifact_paths": ["/.a2r/artifacts/T0805/"]
+  },
+  "write_scope": {
+    "root": "/.a2r/",
+    "allowed_globs": [
+      ".a2r/graphs/graph-0001.json",
+      ".a2r/beads/graphs/graph-0001.json"
+    ]
+  },
+  "tools": {
+    "allowlist": ["fs.read", "fs.write"],
+    "pretooluse_hooks": ["WIH_VALID"]
+  },
+  "memory": { "packs": [{"pack_id": "law", "layers": ["law"], "access": "read"}] },
+  "acceptance": { "checks": ["AT-UI-0001", "AT-UI-0002", "AT-UI-0003", "AT-UI-0004", "AT-UI-0005"] },
+  "beads": {
+    "wih_version": "v0.1",
+    "task_id": "T0805",
+    "graph_id": "graph-0001",
+    "title": "WIH + Graph Updates",
+    "state": "COMPLETE",
+    "blocked_by": [
+      "T0804"
+    ],
+    "outputs": {
+      "required_artifacts": ["ui_wiring"],
+      "artifact_paths": ["/.a2r/artifacts/T0805/"]
+    },
+    "write_scope": {
+      "root": "/.a2r/",
+      "allowed_globs": [
+        ".a2r/graphs/graph-0001.json",
+        ".a2r/beads/graphs/graph-0001.json"
+      ]
+    },
+    "tools": {
+      "allowlist": ["fs.read", "fs.write"],
+      "pretooluse_hooks": ["WIH_VALID"]
+    },
+    "memory": { "packs": [{"pack_id": "law", "layers": ["law"], "access": "read"}] },
+    "acceptance": { "checks": ["AT-UI-0001", "AT-UI-0002", "AT-UI-0003", "AT-UI-0004", "AT-UI-0005"] }
+  }
+}

@@ -1,0 +1,30 @@
+[package]
+name = "a2rchitech-providers"
+version = "0.1.0"
+edition = "2021"
+description = "A2rchitech provider routing and persona kernel system"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+uuid = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+a2rchitech-history = { workspace = true }
+a2rchitech-messaging = { workspace = true }
+a2rchitech-policy = { workspace = true }
+a2rchitech-context-router = { workspace = true }
+a2rchitech-memory = { workspace = true }
+a2rchitech-runtime-core = { workspace = true }
+async-trait = { workspace = true }
+sqlx = { workspace = true }
+futures = "0.3"
+sha2 = "0.10"
+hex = "0.4"
+lru = "0.12"
+reqwest = { workspace = true, features = ["json"] }
+
+[dev-dependencies]
+tempfile = { workspace = true }

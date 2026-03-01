@@ -1,0 +1,257 @@
+commit 8887da35e8bea803f271312405de4f61b4e5b05e
+Author: Eoj Edred <eojedredbitepubkey1@proton.me>
+Date:   Tue Jan 27 23:36:14 2026 -0600
+
+    T0102: task parity acceptance tests + CI job
+
+diff --git a/.github/workflows/ci-cd.yml b/.github/workflows/ci-cd.yml
+index c125b32..2173bbf 100644
+--- a/.github/workflows/ci-cd.yml
++++ b/.github/workflows/ci-cd.yml
+@@ -31,6 +31,24 @@ jobs:
+         tests/acceptance/test_wih_tool_registry_lock.sh
+         tests/acceptance/test_law_bootstrap_offline.sh
+ 
++  phase1-task-parity:
++    runs-on: ubuntu-latest
++    needs: phase0-law-gates
++    steps:
++    - uses: actions/checkout@v4
++    - name: Set up Python 3.12
++      uses: actions/setup-python@v5
++      with:
++        python-version: "3.12"
++    - name: Run task parity gates
++      run: |
++        bash scripts/law_setup.sh
++        tests/acceptance/test_task_install_run_state.sh
++        tests/acceptance/test_task_blocked_by.sh
++        tests/acceptance/test_task_resume_deterministic.sh
++        tests/acceptance/test_task_node_receipt_required.sh
++        tests/acceptance/test_task_beads_mismatch.sh
++
+   lint:
+     runs-on: ubuntu-latest
+     steps:
+diff --git a/spec/AcceptanceTests.md b/spec/AcceptanceTests.md
+index c279369..fbc5cab 100644
+--- a/spec/AcceptanceTests.md
++++ b/spec/AcceptanceTests.md
+@@ -42,11 +42,11 @@ These acceptance tests are platform-level gates. Every major change must referen
+ 
+ ## AT-TASK — DAG + resume
+ 
+-- **AT-TASK-0001**: `blockedBy` prevents dispatch until deps COMPLETE.
+-- **AT-TASK-0002**: `/install` produces immutable preset hash; tasks reference exact hash.
+-- **AT-TASK-0003**: `/resume <task_id>` restores last run receipts + cursor and continues deterministically.
+-- **AT-TASK-0004**: COMPLETE requires declared artifacts exist and acceptance checks pass.
+-- **AT-TASK-0005**: Node completion requires receipt proof bound to graph/task/run identifiers.
++- **AT-TASK-0001**: `blockedBy` prevents scheduling until dependency receipts exist.
++- **AT-TASK-0002**: `/install <graph_id>` creates `/.a2r/run_state/<run_id>.json` with correct initial statuses.
++- **AT-TASK-0003**: `/resume <run_id>` produces deterministic next-node selection given identical receipts/state.
++- **AT-TASK-0004**: Node cannot be `SUCCEEDED` without a node receipt under `/.a2r/receipts/<run_id>/`.
++- **AT-TASK-0005**: Beads blocked_by mismatch with graph/WIH hard-fails.
+ 
+ ## AT-IO — Output law and write scopes
+ 
+diff --git a/tests/acceptance/test_task_beads_mismatch.sh b/tests/acceptance/test_task_beads_mismatch.sh
+new file mode 100755
+index 0000000..6b51203
+--- /dev/null
++++ b/tests/acceptance/test_task_beads_mismatch.sh
+@@ -0,0 +1,35 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++PYTHON_BIN="${PYTHON_BIN:-python3}"
++if [ -x ".venv-law/bin/python" ]; then
++  PYTHON_BIN=".venv-law/bin/python"
++fi
++
++wih_file=".a2r/wih/T0004.wih.json"
++backup="${wih_file}.bak"
++
++cp "$wih_file" "$backup"
++
++$PYTHON_BIN - <<'PY'
++import json
++from pathlib import Path
++path = Path('.a2r/wih/T0004.wih.json')
++obj = json.loads(path.read_text())
++beads = obj.get('beads', {})
++beads['blocked_by'] = ['T0009']
++obj['beads'] = beads
++path.write_text(json.dumps(obj, indent=2))
++PY
++
++set +e
++$PYTHON_BIN scripts/taskgraph.py install graph-0001
++status=$?
++set -e
++
++mv "$backup" "$wih_file"
++
++if [ "$status" -eq 0 ]; then
++  echo "Expected install to fail on beads mismatch" >&2
++  exit 1
++fi
+diff --git a/tests/acceptance/test_task_blocked_by.sh b/tests/acceptance/test_task_blocked_by.sh
+new file mode 100755
+index 0000000..c57bf12
+--- /dev/null
++++ b/tests/acceptance/test_task_blocked_by.sh
+@@ -0,0 +1,36 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++PYTHON_BIN="${PYTHON_BIN:-python3}"
++if [ -x ".venv-law/bin/python" ]; then
++  PYTHON_BIN=".venv-law/bin/python"
++fi
++
++out=$($PYTHON_BIN scripts/taskgraph.py install graph-0001)
++run_id=$(echo "$out" | $PYTHON_BIN - <<'PY'
++import json,sys
++print(json.load(sys.stdin)["run_id"])
++PY
++)
++
++resume_out=$($PYTHON_BIN scripts/taskgraph.py resume "$run_id")
++
++next_nodes=$(echo "$resume_out" | $PYTHON_BIN - <<'PY'
++import json,sys
++print(" ".join(sorted(json.load(sys.stdin).get("next_nodes", []))))
++PY
++)
++
++if echo "$next_nodes" | grep -q "T0001"; then
++  echo "Expected T0001 blocked, got next_nodes: $next_nodes" >&2
++  rm -f ".a2r/run_state/${run_id}.json"
++  exit 1
++fi
++
++if ! echo "$next_nodes" | grep -q "T0000"; then
++  echo "Expected T0000 runnable, got next_nodes: $next_nodes" >&2
++  rm -f ".a2r/run_state/${run_id}.json"
++  exit 1
++fi
++
++rm -f ".a2r/run_state/${run_id}.json"
+diff --git a/tests/acceptance/test_task_install_run_state.sh b/tests/acceptance/test_task_install_run_state.sh
+new file mode 100755
+index 0000000..0d424d3
+--- /dev/null
++++ b/tests/acceptance/test_task_install_run_state.sh
+@@ -0,0 +1,34 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++PYTHON_BIN="${PYTHON_BIN:-python3}"
++if [ -x ".venv-law/bin/python" ]; then
++  PYTHON_BIN=".venv-law/bin/python"
++fi
++
++out=$($PYTHON_BIN scripts/taskgraph.py install graph-0001)
++run_id=$(echo "$out" | $PYTHON_BIN - <<'PY'
++import json,sys
++print(json.load(sys.stdin)["run_id"])
++PY
++)
++
++run_path=".a2r/run_state/${run_id}.json"
++if [ ! -f "$run_path" ]; then
++  echo "Missing run_state file: $run_path" >&2
++  exit 1
++fi
++
++$PYTHON_BIN - <<PY
++import json
++from pathlib import Path
++run_id = "${run_id}"
++state = json.loads(Path(f".a2r/run_state/{run_id}.json").read_text())
++node_states = {n["task_id"]: n["status"] for n in state.get("node_states", [])}
++if node_states.get("T0000") != "PENDING":
++    raise SystemExit("Expected T0000 PENDING")
++if node_states.get("T0001") != "BLOCKED":
++    raise SystemExit("Expected T0001 BLOCKED")
++PY
++
++rm -f "$run_path"
+diff --git a/tests/acceptance/test_task_node_receipt_required.sh b/tests/acceptance/test_task_node_receipt_required.sh
+new file mode 100755
+index 0000000..88c2d26
+--- /dev/null
++++ b/tests/acceptance/test_task_node_receipt_required.sh
+@@ -0,0 +1,39 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++PYTHON_BIN="${PYTHON_BIN:-python3}"
++if [ -x ".venv-law/bin/python" ]; then
++  PYTHON_BIN=".venv-law/bin/python"
++fi
++
++out=$($PYTHON_BIN scripts/taskgraph.py install graph-0001)
++run_id=$(echo "$out" | $PYTHON_BIN - <<'PY'
++import json,sys
++print(json.load(sys.stdin)["run_id"])
++PY
++)
++
++run_path=".a2r/run_state/${run_id}.json"
++
++$PYTHON_BIN - <<PY
++import json
++from pathlib import Path
++path = Path("${run_path}")
++state = json.loads(path.read_text())
++for node in state.get("node_states", []):
++    if node.get("task_id") == "T0000":
++        node["status"] = "SUCCEEDED"
++path.write_text(json.dumps(state, indent=2))
++PY
++
++set +e
++$PYTHON_BIN scripts/taskgraph.py resume "$run_id"
++status=$?
++set -e
++
++rm -f "$run_path"
++
++if [ "$status" -eq 0 ]; then
++  echo "Expected resume to fail without node receipt" >&2
++  exit 1
++fi
+diff --git a/tests/acceptance/test_task_resume_deterministic.sh b/tests/acceptance/test_task_resume_deterministic.sh
+new file mode 100755
+index 0000000..c6fe3a5
+--- /dev/null
++++ b/tests/acceptance/test_task_resume_deterministic.sh
+@@ -0,0 +1,27 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++PYTHON_BIN="${PYTHON_BIN:-python3}"
++if [ -x ".venv-law/bin/python" ]; then
++  PYTHON_BIN=".venv-law/bin/python"
++fi
++
++out=$($PYTHON_BIN scripts/taskgraph.py install graph-0001)
++run_id=$(echo "$out" | $PYTHON_BIN - <<'PY'
++import json,sys
++print(json.load(sys.stdin)["run_id"])
++PY
++)
++
++out1=$($PYTHON_BIN scripts/taskgraph.py resume "$run_id")
++out2=$($PYTHON_BIN scripts/taskgraph.py resume "$run_id")
++
++if [ "$out1" != "$out2" ]; then
++  echo "Resume output not deterministic" >&2
++  echo "$out1" >&2
++  echo "$out2" >&2
++  rm -f ".a2r/run_state/${run_id}.json"
++  exit 1
++fi
++
++rm -f ".a2r/run_state/${run_id}.json"

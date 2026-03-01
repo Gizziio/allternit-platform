@@ -1,0 +1,53 @@
+[package]
+name = "kernel"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1.0", features = ["full"] }
+axum = { version = "0.7", features = ["ws", "macros"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tower-http = { version = "0.5", features = ["cors"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
+anyhow = "1.0"
+thiserror = "1.0"
+uuid = { version = "1.10.0", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+tempfile = "3.10"
+reqwest = { workspace = true, features = ["json", "rustls-tls", "stream"] }
+base64 = "0.22"
+lazy_static = "1.4"
+sqlx = { version = "0.7", features = ["runtime-tokio", "sqlite"] }
+a2rchitech-tools = { path = "../../../1-kernel/support/a2r-kernel-tools-components" }
+a2rchitech-providers = { workspace = true }
+a2rchitech-kernel-contracts = { workspace = true }
+voice-service = { path = "../../ml-ai-services/voice-service" }
+webvm-service = { path = "../../../3-adapters/bridge-systems/a2r-webvm" }
+capsule_spec = { path = "../../../0-substrate/schemas/a2r-capsule-spec" }
+evidence_store = { path = "../../../2-governance/evidence-management/core-evidence" }
+capsule_compiler = { path = "../../../1-kernel/capsule-system/a2r-capsule-compiler" }
+async-trait = "0.1"
+regex = "1.0"
+a2rchitech-history = { workspace = true }
+a2rchitech-messaging = { workspace = true }
+a2rchitech-policy = { workspace = true }
+a2rchitech-skills = { workspace = true }
+a2rchitech-tools-gateway = { workspace = true }
+a2rchitech-evals = { workspace = true }
+a2rchitech-context-router = { workspace = true }
+a2rchitech-embodiment = { workspace = true }
+a2rchitech-artifact-registry = { workspace = true }
+a2rchitech-memory = { workspace = true }
+a2rchitech-packaging = { workspace = true }
+a2rchitech-runtime-core = { workspace = true }
+a2r-runtime = { path = "../../../1-kernel/infrastructure/a2r-runtime" }
+portable-pty = "0.8"
+futures = "0.3"
+tokio-stream = { version = "0.1", features = ["sync"] }
+a2rchitech-workflows = { workspace = true }
+ring = "0.17"
+data-encoding = "2.0"
+a2r-governor = { path = "../../../2-governance/governance-workflows/rust-governor" }
+a2r-substrate = { path = "../../../0-substrate/a2r-substrate" }

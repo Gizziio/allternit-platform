@@ -1,0 +1,19 @@
+{
+  "name": "@a2r/legacy-spec-audit",
+  "version": "1.0.0",
+  "description": "Legacy Spec Audit - Categorization, migration, implementation planning",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": ["a2r", "audit", "specs", "migration"],
+  "license": "MIT"
+}

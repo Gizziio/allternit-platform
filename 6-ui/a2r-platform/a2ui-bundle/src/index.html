@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>A2R Canvas</title>
+    <script>
+      (() => {
+        try {
+          const params = new URLSearchParams(window.location.search);
+          const platform = (params.get("platform") || "").trim().toLowerCase();
+          if (platform) {
+            document.documentElement.dataset.platform = platform;
+            return;
+          }
+          if (/android/i.test(navigator.userAgent || "")) {
+            document.documentElement.dataset.platform = "android";
+          }
+        } catch (_) {}
+      })();
+    </script>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        background: #0a0a0f;
+        color: #fff;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
+      }
+      #a2r-root {
+        position: fixed;
+        inset: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="a2r-root"></div>
+    <script type="module" src="./main.tsx"></script>
+  </body>
+</html>

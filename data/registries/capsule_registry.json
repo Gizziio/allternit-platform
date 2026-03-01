@@ -1,0 +1,18 @@
+{
+  "registry_version": "v0.1.0",
+  "capsules": [
+    {
+      "capsule_id": "default-capsule",
+      "version": "v0.1.0",
+      "name": "Default Capsule",
+      "kind": "native_capsule",
+      "entrypoint": "kernel",
+      "permissions": {
+        "network_allowlist": [],
+        "tool_allowlist": ["fs.read"],
+        "fs_read_allowlist": [],
+        "fs_write_allowlist": []
+      }
+    }
+  ]
+}

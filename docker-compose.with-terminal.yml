@@ -1,0 +1,216 @@
+version: "3.9"
+
+# A2rchitect Workspace with Terminal Server
+# This compose file adds the Terminal Server as a core service
+# The Terminal Server provides AI model APIs to Web and Desktop apps
+
+services:
+  # Terminal Server - AI Model Service
+  # Provides unified API for AI providers (OpenAI, Anthropic, Google, etc.)
+  terminal-server:
+    build:
+      context: ./7-apps/shell/terminal
+      dockerfile: Dockerfile
+    ports:
+      - "4096:4096"
+    environment:
+      - A2R_SERVER_PORT=4096
+      - A2R_SERVER_HOST=0.0.0.0
+      - A2R_DATA_DIR=/data
+      # API Keys (set these in .env file)
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY:-}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - COHERE_API_KEY=${COHERE_API_KEY:-}
+    volumes:
+      - a2r-data:/data
+      - ./7-apps/shell/terminal:/app
+    working_dir: /app
+    command: ["bun", "run", "src/index.ts", "serve", "--port", "4096", "--hostname", "0.0.0.0"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4096/doc"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+    networks:
+      - a2r-network
+
+  # Web Shell UI - Connects to Terminal Server
+  shell-web:
+    build:
+      context: ./7-apps/shell/web
+      dockerfile: Dockerfile
+    ports:
+      - "5177:5177"
+    environment:
+      - VITE_API_URL=http://terminal-server:4096
+      - VITE_TERMINAL_SERVER=http://terminal-server:4096
+    depends_on:
+      terminal-server:
+        condition: service_healthy
+    networks:
+      - a2r-network
+
+  # Core API Service
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.api
+    ports:
+      - "3000:3000"
+    environment:
+      A2RCHITECH_API_BIND: ${A2RCHITECH_API_BIND:-0.0.0.0:3000}
+      A2RCHITECH_LEDGER_PATH: ${A2RCHITECH_LEDGER_PATH:-/data/a2rchitech.jsonl}
+      A2RCHITECH_DB_PATH: ${A2RCHITECH_DB_PATH:-/data/a2rchitech.db}
+      A2RCHITECH_API_IDENTITY: ${A2RCHITECH_API_IDENTITY:-api-service}
+      A2RCHITECH_API_TENANT: ${A2RCHITECH_API_TENANT:-default}
+      A2RCHITECH_API_BOOTSTRAP_POLICY: ${A2RCHITECH_API_BOOTSTRAP_POLICY:-true}
+      A2RCHITECH_API_POLICY_ENFORCE: ${A2RCHITECH_API_POLICY_ENFORCE:-true}
+      # Terminal Server URL for AI model proxy
+      TERMINAL_SERVER_URL: http://terminal-server:4096
+    volumes:
+      - a2r-data:/data
+    depends_on:
+      terminal-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - a2r-network
+
+  # Intent Graph Kernel
+  intent-graph-kernel:
+    build: ./crates/intent-graph-kernel
+    ports:
+      - "3005:3005"
+    environment:
+      RUST_LOG: info
+      TERMINAL_SERVER_URL: http://terminal-server:4096
+    volumes:
+      - a2r-data:/app/data
+    depends_on:
+      - terminal-server
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3005/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - a2r-network
+
+  # Capsule Runtime
+  capsule-runtime:
+    build: ./crates/capsule-runtime
+    ports:
+      - "3006:3006"
+    environment:
+      RUST_LOG: info
+      TERMINAL_SERVER_URL: http://terminal-server:4096
+    volumes:
+      - a2r-data:/app/data
+    depends_on:
+      - terminal-server
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3006/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - a2r-network
+
+  # Presentation Kernel
+  presentation-kernel:
+    build: ./crates/presentation-kernel
+    ports:
+      - "3007:3007"
+    environment:
+      RUST_LOG: info
+      TERMINAL_SERVER_URL: http://terminal-server:4096
+    volumes:
+      - a2r-data:/app/data
+    depends_on:
+      - terminal-server
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3007/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - a2r-network
+
+  # Pattern Recognizer
+  pattern-recognizer:
+    build: ./services/pattern-service
+    ports:
+      - "3008:3008"
+    environment:
+      RUST_LOG: info
+      TERMINAL_SERVER_URL: http://terminal-server:4096
+    volumes:
+      - a2r-data:/app/data
+    depends_on:
+      - terminal-server
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3008/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - a2r-network
+  
+  # Voice Service
+  voice-service:
+    build:
+      context: ./4-services/ml-ai-services/voice-service
+      dockerfile: Dockerfile.voice
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./audio:/tmp/voice-service
+    environment:
+      PRELOAD_MODEL: "false"
+      TERMINAL_SERVER_URL: http://terminal-server:4096
+    depends_on:
+      - terminal-server
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - a2r-network
+  
+  # WebVM Service
+  webvm-service:
+    build:
+      context: ./services/webvm-service
+      dockerfile: Dockerfile.webvm
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./webvm-static:/app/static
+    environment:
+      WEBVM_BASE_URL: "http://localhost:8002"
+      TERMINAL_SERVER_URL: http://terminal-server:4096
+    depends_on:
+      - terminal-server
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - a2r-network
+
+volumes:
+  a2r-data:
+
+networks:
+  a2r-network:
+    driver: bridge

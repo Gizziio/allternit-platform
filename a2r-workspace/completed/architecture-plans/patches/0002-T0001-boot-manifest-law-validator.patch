@@ -1,0 +1,602 @@
+commit 133fbc305a5395a0a9e29860603e778a70093ec0
+Author: Eoj Edred <eojedredbitepubkey1@proton.me>
+Date:   Tue Jan 27 21:54:11 2026 -0600
+
+    T0001: boot manifest + law validator
+    
+    Tests: tests/acceptance/test_boot_anchors.sh, tests/acceptance/test_codebase_regen.sh
+    
+    Files: agent/POLICY.md, services/kernel/src/main.rs, scripts/validate_law.py, spec/AcceptanceTests.md, spec/Contracts/BeadsGraph.schema.json, spec/Contracts/Graph.schema.json, spec/Contracts/PromotionRules.schema.json, spec/Contracts/ToolDefinition.schema.json, spec/Contracts/ToolRegistry.schema.json, SOT.md
+
+diff --git a/SOT.md b/SOT.md
+index 348d5e4..9bd21d0 100644
+--- a/SOT.md
++++ b/SOT.md
+@@ -33,7 +33,7 @@ A2rchitech is an **AgenticOS engineering platform**:
+ 
+ ## 2. Platform Laws (Non‑Negotiable)
+ 
+-1. Deterministic boot (B0): `/SOT.md`, specs, contracts, CODEBASE first.
++1. Deterministic boot (B0): `/SOT.md`, `/CODEBASE.md`, `/agent/POLICY.md`, specs, contracts, acceptance tests first.
+ 2. Task DAG is the primary abstraction.
+ 3. Every node carries WIH / Beads.
+ 4. Claude‑Tasks parity engine is built *inside* A2R.
+diff --git a/agent/POLICY.md b/agent/POLICY.md
+new file mode 100644
+index 0000000..355a9c3
+--- /dev/null
++++ b/agent/POLICY.md
+@@ -0,0 +1,34 @@
++# /agent/POLICY.md — A2R Law Policy (v0)
++
++Generated: 2026-01-28
++
++## Scope
++
++This policy is boot-gated and enforced by kernel + CI. It is not advisory.
++
++## Non-Negotiable Invariants
++
++- Tool execution only via ToolRegistry.
++- Tool execution requires full envelope: run_id, graph_id, task_id/node_id, wih_id, write_scope.
++- All outputs are run-scoped under `/.a2r/` only.
++- Forbidden writes: `/.a2r/wih/**`, `/.a2r/graphs/**`, `/.a2r/spec/**`, and other runs' receipts.
++- PreToolUse gating is mandatory before any tool execution.
++- Receipts are proofs: tool + node receipts required for completion and resume.
++- No auth bypass for core endpoints.
++- No raw exec paths in python gateway.
++
++## Approvals
++
++- Destructive operations require explicit user approval.
++- Approval authority must be recorded in receipts.
++
++## Dev Profiles
++
++Dev/prod profiles may relax performance or observability only. They may not bypass:
++- auth
++- tool gating
++- write_scope
++- receipts
++- law validation
++
++END.
+diff --git a/scripts/validate_law.py b/scripts/validate_law.py
+index 676b04e..0db0233 100755
+--- a/scripts/validate_law.py
++++ b/scripts/validate_law.py
+@@ -1,7 +1,9 @@
+ #!/usr/bin/env python3
++import argparse
+ import json
+ import re
+ import sys
++from datetime import datetime, timezone
+ from pathlib import Path
+ 
+ ROOT = Path(__file__).resolve().parents[1]
+@@ -9,11 +11,16 @@ ROOT = Path(__file__).resolve().parents[1]
+ REQUIRED_FILES = [
+     ROOT / "SOT.md",
+     ROOT / "CODEBASE.md",
++    ROOT / "agent" / "POLICY.md",
+     ROOT / "spec" / "AcceptanceTests.md",
++    ROOT / "spec" / "Baseline.md",
++    ROOT / "spec" / "ADRs" / "ADR-0000-template.md",
++    ROOT / "spec" / "Contracts" / "BootManifest.schema.json",
+     ROOT / "spec" / "Contracts" / "WIH.schema.json",
+     ROOT / "spec" / "Contracts" / "Graph.schema.json",
+     ROOT / "spec" / "Contracts" / "ToolRegistry.schema.json",
+     ROOT / "spec" / "Contracts" / "ToolDefinition.schema.json",
++    ROOT / "spec" / "Contracts" / "Receipt.schema.json",
+     ROOT / "spec" / "Contracts" / "RunState.schema.json",
+     ROOT / "spec" / "Contracts" / "BeadsGraph.schema.json",
+     ROOT / "spec" / "Contracts" / "BeadsNode.schema.json",
+@@ -27,6 +34,8 @@ WIH_DIR = ROOT / ".a2r" / "wih"
+ 
+ ACCEPTANCE_FILE = ROOT / "spec" / "AcceptanceTests.md"
+ 
++DELTAS_DIR = ROOT / "spec" / "Deltas"
++
+ LEGACY_SCAN_DIRS = [
+     ROOT / ".github",
+     ROOT / "scripts",
+@@ -36,6 +45,19 @@ LEGACY_SCAN_DIRS = [
+ ]
+ 
+ LEGACY_TOKEN = "spec/1_contracts"
++MAX_SCAN_BYTES = 2_000_000
++ALLOWED_SCAN_EXTS = {
++    ".rs",
++    ".py",
++    ".ts",
++    ".tsx",
++    ".md",
++    ".yml",
++    ".yaml",
++    ".toml",
++    ".json",
++    ".sh",
++}
+ 
+ 
+ def fail(msg: str) -> None:
+@@ -62,6 +84,13 @@ def scan_legacy_refs():
+         for path in base.rglob("*"):
+             if not path.is_file():
+                 continue
++            if path.suffix and path.suffix not in ALLOWED_SCAN_EXTS:
++                continue
++            try:
++                if path.stat().st_size > MAX_SCAN_BYTES:
++                    continue
++            except Exception:
++                continue
+             if "spec/Deltas" in str(path):
+                 continue
+             if path.name == "validate_law.py":
+@@ -156,11 +185,119 @@ def validate_tool_registry(registry, path: Path):
+                 fail(f"Tool registry entry missing '{key}' in {path}")
+ 
+ 
++def validate_schema_files():
++    contracts_dir = ROOT / "spec" / "Contracts"
++    schema_files = list(contracts_dir.glob("*.schema.json"))
++    if not schema_files:
++        fail("No schema files found in spec/Contracts")
++    for schema_path in schema_files:
++        schema = load_json(schema_path)
++        if "$schema" not in schema:
++            fail(f"Schema missing $schema in {schema_path}")
++
++
++def ensure_deltas_present():
++    if not DELTAS_DIR.exists():
++        fail("Missing spec/Deltas directory")
++    has_delta = any(path.suffix == ".md" for path in DELTAS_DIR.iterdir())
++    if not has_delta:
++        fail("spec/Deltas has no .md files")
++
++
++def validate_graph_semantics(graph, path: Path, wih_by_path: dict):
++    nodes = graph.get("nodes", [])
++    edges = graph.get("edges", [])
++    graph_id = graph.get("graph_id")
++
++    node_ids = []
++    for node in nodes:
++        task_id = node.get("task_id")
++        if not task_id:
++            fail(f"Graph node missing task_id in {path}")
++        if task_id in node_ids:
++            fail(f"Duplicate task_id '{task_id}' in {path}")
++        node_ids.append(task_id)
++
++    node_set = set(node_ids)
++    inbound = {node_id: set() for node_id in node_set}
++    adjacency = {node_id: set() for node_id in node_set}
++    indegree = {node_id: 0 for node_id in node_set}
++
++    for edge in edges:
++        src = edge.get("from")
++        dst = edge.get("to")
++        if src not in node_set or dst not in node_set:
++            fail(f"Edge references missing node in {path}: {src} -> {dst}")
++        if src == dst:
++            fail(f"Self-referential edge in {path}: {src} -> {dst}")
++        if dst not in adjacency[src]:
++            adjacency[src].add(dst)
++            indegree[dst] += 1
++            inbound[dst].add(src)
++
++    queue = [node_id for node_id, deg in indegree.items() if deg == 0]
++    visited = 0
++    while queue:
++        current = queue.pop()
++        visited += 1
++        for nxt in adjacency[current]:
++            indegree[nxt] -= 1
++            if indegree[nxt] == 0:
++                queue.append(nxt)
++
++    if visited != len(node_set):
++        fail(f"Graph contains cycle(s) in {path}")
++
++    for node in nodes:
++        task_id = node["task_id"]
++        blocked_by = set(node.get("blocked_by", []))
++        inbound_blocked = inbound.get(task_id, set())
++        if blocked_by != inbound_blocked:
++            fail(
++                f"blocked_by mismatch in {path} for {task_id}: "
++                f"node={sorted(blocked_by)} edges={sorted(inbound_blocked)}"
++            )
++        wih_path = node.get("wih_path")
++        if not wih_path:
++            fail(f"Graph node missing wih_path in {path}")
++        wih = wih_by_path.get(wih_path)
++        if not wih:
++            fail(f"Missing WIH {wih_path} referenced by {path}")
++        if wih.get("task_id") != task_id:
++            fail(f"WIH task_id mismatch for {wih_path} in {path}")
++        if wih.get("graph_id") != graph_id:
++            fail(f"WIH graph_id mismatch for {wih_path} in {path}")
++        wih_blocked = set(wih.get("blocked_by", []))
++        if wih_blocked != blocked_by:
++            fail(
++                f"blocked_by mismatch between WIH and graph for {task_id}: "
++                f"wih={sorted(wih_blocked)} graph={sorted(blocked_by)}"
++            )
++
++
++def write_beacon():
++    boot_dir = ROOT / ".a2r" / "boot"
++    boot_dir.mkdir(parents=True, exist_ok=True)
++    beacon_path = boot_dir / "validator.json"
++    beacon = {
++        "status": "ok",
++        "timestamp": datetime.now(timezone.utc).isoformat(),
++        "validator": "scripts/validate_law.py",
++    }
++    beacon_path.write_text(json.dumps(beacon, indent=2))
++
+ def main():
++    parser = argparse.ArgumentParser()
++    parser.add_argument("--emit-beacon", action="store_true")
++    args = parser.parse_args()
++
+     missing = [str(p) for p in REQUIRED_FILES if not p.exists()]
+     if missing:
+         fail(f"Missing required anchors: {', '.join(missing)}")
+ 
++    ensure_deltas_present()
++    validate_schema_files()
++
+     if not GRAPH_DIR.exists() or not any(GRAPH_DIR.glob("*.json")):
+         fail("Missing .a2r/graphs/*.json")
+     if not WIH_DIR.exists() or not any(WIH_DIR.glob("*.json")):
+@@ -175,17 +312,7 @@ def main():
+ 
+     acceptance_ids = collect_acceptance_ids()
+ 
+-    for graph_path in GRAPH_DIR.glob("*.json"):
+-        graph = load_json(graph_path)
+-        validate_graph(graph, graph_path)
+-        for node in graph.get("nodes", []):
+-            wih_path = node.get("wih_path")
+-            if not wih_path:
+-                fail(f"Graph node missing wih_path in {graph_path}")
+-            wih_file = ROOT / wih_path.lstrip("/")
+-            if not wih_file.exists():
+-                fail(f"Missing WIH file {wih_file} referenced by {graph_path}")
+-
++    wih_by_path = {}
+     for wih_path in WIH_DIR.glob("*.json"):
+         wih = load_json(wih_path)
+         validate_wih(wih, wih_path)
+@@ -200,8 +327,19 @@ def main():
+             if tool_id not in registry_ids:
+                 fail(f"Tool '{tool_id}' in {wih_path} missing from tool registry")
+ 
++        canonical = "/" + str(wih_path.relative_to(ROOT)).replace("\\", "/")
++        wih_by_path[canonical] = wih
++
++    for graph_path in GRAPH_DIR.glob("*.json"):
++        graph = load_json(graph_path)
++        validate_graph(graph, graph_path)
++        validate_graph_semantics(graph, graph_path, wih_by_path)
++
+     scan_legacy_refs()
+ 
++    if args.emit_beacon:
++        write_beacon()
++
+     print("OK: law validation passed")
+ 
+ 
+diff --git a/services/kernel/src/main.rs b/services/kernel/src/main.rs
+index e9754ee..858f700 100644
+--- a/services/kernel/src/main.rs
++++ b/services/kernel/src/main.rs
+@@ -8,12 +8,13 @@ use axum::{
+     routing::{get, post, put, Router},
+ };
+ use std::time::Duration;
+-use std::path::Path as StdPath;
++use std::path::{Path as StdPath, PathBuf as StdPathBuf};
+ use std::fs;
+ use serde::{Deserialize, Serialize};
+ use async_trait::async_trait;
+ use std::sync::{Arc, Mutex};
+ use std::str::FromStr;
++use std::process::Command;
+ use data_encoding::{BASE64, BASE64URL, HEXLOWER};
+ use ring::{digest, signature};
+ use tokio::sync::RwLock;
+@@ -48,11 +49,16 @@ fn ensure_boot_anchors() -> anyhow::Result<()> {
+     let required_files = [
+         "SOT.md",
+         "CODEBASE.md",
++        "agent/POLICY.md",
+         "spec/AcceptanceTests.md",
++        "spec/Baseline.md",
++        "spec/ADRs/ADR-0000-template.md",
++        "spec/Contracts/BootManifest.schema.json",
+         "spec/Contracts/WIH.schema.json",
+         "spec/Contracts/Graph.schema.json",
+         "spec/Contracts/ToolRegistry.schema.json",
+         "spec/Contracts/ToolDefinition.schema.json",
++        "spec/Contracts/Receipt.schema.json",
+         "spec/Contracts/RunState.schema.json",
+         "spec/Contracts/BeadsGraph.schema.json",
+         "spec/Contracts/BeadsNode.schema.json",
+@@ -83,6 +89,140 @@ fn ensure_boot_anchors() -> anyhow::Result<()> {
+         anyhow::bail!("Boot gate failed: missing tools/tool_registry.json");
+     }
+ 
++    let deltas_dir = StdPath::new("spec/Deltas");
++    if !deltas_dir.exists() {
++        anyhow::bail!("Boot gate failed: missing spec/Deltas");
++    }
++    let has_deltas = fs::read_dir(deltas_dir)
++        .map_err(|e| anyhow::anyhow!("Boot gate failed: spec/Deltas unreadable: {}", e))?
++        .filter_map(|entry| entry.ok())
++        .any(|entry| entry.path().extension().map(|ext| ext == "md").unwrap_or(false));
++    if !has_deltas {
++        anyhow::bail!("Boot gate failed: spec/Deltas has no md files");
++    }
++
++    Ok(())
++}
++
++#[derive(Serialize)]
++struct BootManifest {
++    b0_version: String,
++    timestamp: String,
++    loaded_files: Vec<String>,
++    hashes: HashMap<String, String>,
++    env: HashMap<String, String>,
++}
++
++fn run_law_validator() -> anyhow::Result<()> {
++    let status = Command::new("python3")
++        .arg("scripts/validate_law.py")
++        .arg("--emit-beacon")
++        .status()
++        .map_err(|e| anyhow::anyhow!("Law validation failed to start: {}", e))?;
++    if !status.success() {
++        anyhow::bail!("Law validation failed: scripts/validate_law.py returned non-zero");
++    }
++    Ok(())
++}
++
++fn canonical_path(path: &StdPath) -> String {
++    let text = path.to_string_lossy();
++    let trimmed = text.trim_start_matches("./");
++    format!("/{}", trimmed)
++}
++
++fn hash_file(path: &StdPath) -> anyhow::Result<String> {
++    let data = fs::read(path)
++        .map_err(|e| anyhow::anyhow!("Failed to read {}: {}", path.display(), e))?;
++    let digest = digest::digest(&digest::SHA256, &data);
++    Ok(HEXLOWER.encode(digest.as_ref()))
++}
++
++fn collect_boot_files() -> anyhow::Result<Vec<StdPathBuf>> {
++    let mut files = Vec::new();
++    let mut push = |path: &str, list: &mut Vec<StdPathBuf>| {
++        list.push(StdPathBuf::from(path));
++    };
++
++    push("SOT.md", &mut files);
++    push("CODEBASE.md", &mut files);
++    push("agent/POLICY.md", &mut files);
++    push("spec/AcceptanceTests.md", &mut files);
++    push("spec/Baseline.md", &mut files);
++    push("spec/ADRs/ADR-0000-template.md", &mut files);
++    push("spec/Contracts/BootManifest.schema.json", &mut files);
++    push("spec/Contracts/WIH.schema.json", &mut files);
++    push("spec/Contracts/Graph.schema.json", &mut files);
++    push("spec/Contracts/ToolRegistry.schema.json", &mut files);
++    push("spec/Contracts/ToolDefinition.schema.json", &mut files);
++    push("spec/Contracts/Receipt.schema.json", &mut files);
++    push("spec/Contracts/RunState.schema.json", &mut files);
++    push("spec/Contracts/BeadsGraph.schema.json", &mut files);
++    push("spec/Contracts/BeadsNode.schema.json", &mut files);
++    push("spec/Contracts/BeadsRunState.schema.json", &mut files);
++    push("tools/tool_registry.json", &mut files);
++
++    for entry in fs::read_dir("spec/Deltas")? {
++        let entry = entry?;
++        let path = entry.path();
++        if path.extension().map(|ext| ext == "md").unwrap_or(false) {
++            files.push(path);
++        }
++    }
++    for entry in fs::read_dir(".a2r/graphs")? {
++        let entry = entry?;
++        let path = entry.path();
++        if path.extension().map(|ext| ext == "json").unwrap_or(false) {
++            files.push(path);
++        }
++    }
++    for entry in fs::read_dir(".a2r/wih")? {
++        let entry = entry?;
++        let path = entry.path();
++        if path.extension().map(|ext| ext == "json").unwrap_or(false) {
++            files.push(path);
++        }
++    }
++
++    Ok(files)
++}
++
++fn write_boot_manifest() -> anyhow::Result<()> {
++    let boot_files = collect_boot_files()?;
++    let mut loaded_files = Vec::new();
++    let mut hashes = HashMap::new();
++
++    for path in boot_files {
++        if !path.exists() {
++            anyhow::bail!("Boot manifest failed: missing {}", path.display());
++        }
++        let canonical = canonical_path(&path);
++        let hash = hash_file(&path)?;
++        hashes.insert(canonical.clone(), hash);
++        loaded_files.push(canonical);
++    }
++
++    let mut env = HashMap::new();
++    let profile = std::env::var("A2R_PROFILE").unwrap_or_else(|_| "default".to_string());
++    env.insert("profile".to_string(), profile);
++
++    let manifest = BootManifest {
++        b0_version: "v0.1".to_string(),
++        timestamp: Utc::now().to_rfc3339(),
++        loaded_files,
++        hashes,
++        env,
++    };
++
++    let boot_dir = StdPath::new(".a2r/boot");
++    fs::create_dir_all(boot_dir)
++        .map_err(|e| anyhow::anyhow!("Boot manifest failed to create .a2r/boot: {}", e))?;
++    let receipt_path = boot_dir.join("receipt.json");
++    let payload = serde_json::to_string_pretty(&manifest)?;
++    fs::write(&receipt_path, payload)
++        .map_err(|e| anyhow::anyhow!("Boot manifest failed to write {}: {}", receipt_path.display(), e))?;
++
++    info!("Boot manifest written to {}", receipt_path.display());
+     Ok(())
+ }
+ use a2rchitech_context_router::ContextRouter;
+@@ -3144,6 +3284,8 @@ async fn main() -> anyhow::Result<()> {
+     info!("Starting Kernel Service...");
+ 
+     ensure_boot_anchors()?;
++    run_law_validator()?;
++    write_boot_manifest()?;
+ 
+     // Create the kernel services which initializes all the services including memory fabric
+     let services = create_kernel_services().await?;
+diff --git a/spec/AcceptanceTests.md b/spec/AcceptanceTests.md
+index 87695e4..c465eea 100644
+--- a/spec/AcceptanceTests.md
++++ b/spec/AcceptanceTests.md
+@@ -16,6 +16,7 @@ These acceptance tests are platform-level gates. Every major change must referen
+ - **AT-BOOT-0008**: Kernel refuses to start if `/spec/Contracts/ToolRegistry.schema.json` missing.
+ - **AT-BOOT-0009**: Runtime/CI fails if `spec/1_contracts/` is referenced as canonical input.
+ - **AT-BOOT-0010**: CODEBASE generator output must match `CODEBASE.md`.
++- **AT-BOOT-0011**: Kernel refuses to start if `/agent/POLICY.md` missing.
+ 
+ ## AT-WIH — WIH/Beads enforcement
+ 
+diff --git a/spec/Contracts/BeadsGraph.schema.json b/spec/Contracts/BeadsGraph.schema.json
+index ab21999..ef49c62 100644
+--- a/spec/Contracts/BeadsGraph.schema.json
++++ b/spec/Contracts/BeadsGraph.schema.json
+@@ -13,7 +13,7 @@
+   "properties": {
+     "graph_id": {
+       "type": "string",
+-      "pattern": "^[a-z0-9\-_.]+$"
++      "pattern": "^[a-z0-9-_.]+$"
+     },
+     "created_at": {
+       "type": "string"
+@@ -33,7 +33,7 @@
+         "properties": {
+           "graph_id": {
+             "type": "string",
+-            "pattern": "^[a-z0-9\-_.]+$"
++            "pattern": "^[a-z0-9-_.]+$"
+           },
+           "purpose": {
+             "type": "string"
+@@ -57,7 +57,7 @@
+         "properties": {
+           "task_id": {
+             "type": "string",
+-            "pattern": "^[A-Z0-9\-]+$"
++            "pattern": "^[A-Z0-9-]+$"
+           },
+           "title": {
+             "type": "string"
+diff --git a/spec/Contracts/Graph.schema.json b/spec/Contracts/Graph.schema.json
+index f7922ce..ac1e0d4 100644
+--- a/spec/Contracts/Graph.schema.json
++++ b/spec/Contracts/Graph.schema.json
+@@ -13,7 +13,7 @@
+   "properties": {
+     "graph_id": {
+       "type": "string",
+-      "pattern": "^[a-z0-9\-_.]+$"
++      "pattern": "^[a-z0-9-_.]+$"
+     },
+     "created_at": {
+       "type": "string"
+@@ -33,7 +33,7 @@
+         "properties": {
+           "graph_id": {
+             "type": "string",
+-            "pattern": "^[a-z0-9\-_.]+$"
++            "pattern": "^[a-z0-9-_.]+$"
+           },
+           "purpose": {
+             "type": "string"
+@@ -57,7 +57,7 @@
+         "properties": {
+           "task_id": {
+             "type": "string",
+-            "pattern": "^[A-Z0-9\-]+$"
++            "pattern": "^[A-Z0-9-]+$"
+           },
+           "title": {
+             "type": "string"
+diff --git a/spec/Contracts/PromotionRules.schema.json b/spec/Contracts/PromotionRules.schema.json
+index 100118e..4390737 100644
+--- a/spec/Contracts/PromotionRules.schema.json
++++ b/spec/Contracts/PromotionRules.schema.json
+@@ -29,7 +29,7 @@
+         "properties": {
+           "id": {
+             "type": "string",
+-            "pattern": "^[A-Z0-9_\\-]{4,64}$"
++            "pattern": "^[A-Z0-9_-]{4,64}$"
+           },
+           "applies_to": {
+             "type": "array",
+diff --git a/spec/Contracts/ToolDefinition.schema.json b/spec/Contracts/ToolDefinition.schema.json
+index 758a57d..d52e165 100644
+--- a/spec/Contracts/ToolDefinition.schema.json
++++ b/spec/Contracts/ToolDefinition.schema.json
+@@ -16,7 +16,7 @@
+   "properties": {
+     "id": {
+       "type": "string",
+-      "pattern": "^[a-z0-9][a-z0-9\-\.]{2,64}$"
++      "pattern": "^[a-z0-9][a-z0-9-.]{2,64}$"
+     },
+     "title": {
+       "type": "string"
+diff --git a/spec/Contracts/ToolRegistry.schema.json b/spec/Contracts/ToolRegistry.schema.json
+index d0d87fb..436d872 100644
+--- a/spec/Contracts/ToolRegistry.schema.json
++++ b/spec/Contracts/ToolRegistry.schema.json
+@@ -31,7 +31,7 @@
+         "properties": {
+           "id": {
+             "type": "string",
+-            "pattern": "^[a-z0-9][a-z0-9\\-\\.]{2,64}$"
++            "pattern": "^[a-z0-9][a-z0-9-.]{2,64}$"
+           },
+           "title": {
+             "type": "string"
+@@ -88,4 +88,4 @@
+       }
+     }
+   }
+-}
+\ No newline at end of file
++}

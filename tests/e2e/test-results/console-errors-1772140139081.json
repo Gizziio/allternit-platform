@@ -1,0 +1,123 @@
+{
+  "url": "http://127.0.0.1:5177",
+  "capturedAt": "2026-02-26T21:08:59.087Z",
+  "summary": {
+    "totalMessages": 51,
+    "totalErrors": 12,
+    "totalWarnings": 25
+  },
+  "errors": [
+    {
+      "timestamp": "2026-02-26T21:08:51.663Z",
+      "text": "Error: <line> attribute y2: Expected length, \"undefined\".",
+      "location": {
+        "url": "http://127.0.0.1:5177/node_modules/.vite/deps/framer-motion.js?v=d3d05002",
+        "lineNumber": 5710,
+        "columnNumber": 0
+      },
+      "args": []
+    },
+    {
+      "timestamp": "2026-02-26T21:08:51.689Z",
+      "text": "Error: <line> attribute y2: Expected length, \"undefined\".",
+      "location": {
+        "url": "http://127.0.0.1:5177/node_modules/.vite/deps/framer-motion.js?v=d3d05002",
+        "lineNumber": 5710,
+        "columnNumber": 0
+      },
+      "args": []
+    },
+    {
+      "timestamp": "2026-02-26T21:08:51.689Z",
+      "text": "Error: <line> attribute y2: Expected length, \"undefined\".",
+      "location": {
+        "url": "http://127.0.0.1:5177/node_modules/.vite/deps/framer-motion.js?v=d3d05002",
+        "lineNumber": 5710,
+        "columnNumber": 0
+      },
+      "args": []
+    },
+    {
+      "timestamp": "2026-02-26T21:08:51.689Z",
+      "text": "Error: <line> attribute y2: Expected length, \"undefined\".",
+      "location": {
+        "url": "http://127.0.0.1:5177/node_modules/.vite/deps/framer-motion.js?v=d3d05002",
+        "lineNumber": 5710,
+        "columnNumber": 0
+      },
+      "args": []
+    },
+    {
+      "timestamp": "2026-02-26T21:08:51.689Z",
+      "text": "Error: <line> attribute y2: Expected length, \"undefined\".",
+      "location": {
+        "url": "http://127.0.0.1:5177/node_modules/.vite/deps/framer-motion.js?v=d3d05002",
+        "lineNumber": 5710,
+        "columnNumber": 0
+      },
+      "args": []
+    },
+    {
+      "timestamp": "2026-02-26T21:08:51.694Z",
+      "text": "Error: <line> attribute y2: Expected length, \"undefined\".",
+      "location": {
+        "url": "http://127.0.0.1:5177/node_modules/.vite/deps/framer-motion.js?v=d3d05002",
+        "lineNumber": 5710,
+        "columnNumber": 0
+      },
+      "args": []
+    },
+    {
+      "timestamp": "2026-02-26T21:08:51.694Z",
+      "text": "Error: <line> attribute y2: Expected length, \"undefined\".",
+      "location": {
+        "url": "http://127.0.0.1:5177/node_modules/.vite/deps/framer-motion.js?v=d3d05002",
+        "lineNumber": 5710,
+        "columnNumber": 0
+      },
+      "args": []
+    },
+    {
+      "timestamp": "2026-02-26T21:08:51.694Z",
+      "text": "Error: <line> attribute y2: Expected length, \"undefined\".",
+      "location": {
+        "url": "http://127.0.0.1:5177/node_modules/.vite/deps/framer-motion.js?v=d3d05002",
+        "lineNumber": 5710,
+        "columnNumber": 0
+      },
+      "args": []
+    },
+    {
+      "timestamp": "2026-02-26T21:08:51.730Z",
+      "type": "requestfailed",
+      "url": "http://127.0.0.1:8001/health",
+      "error": "net::ERR_CONNECTION_REFUSED"
+    },
+    {
+      "timestamp": "2026-02-26T21:08:51.731Z",
+      "text": "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+      "location": {
+        "url": "http://127.0.0.1:8001/health",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "args": []
+    },
+    {
+      "timestamp": "2026-02-26T21:08:51.732Z",
+      "type": "requestfailed",
+      "url": "http://127.0.0.1:8001/health",
+      "error": "net::ERR_CONNECTION_REFUSED"
+    },
+    {
+      "timestamp": "2026-02-26T21:08:51.732Z",
+      "text": "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+      "location": {
+        "url": "http://127.0.0.1:8001/health",
+        "lineNumber": 0,
+        "columnNumber": 0
+      },
+      "args": []
+    }
+  ]
+}

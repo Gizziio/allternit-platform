@@ -1,0 +1,24 @@
+{
+  "version": "v0.1.0",
+  "workers": [
+    {
+      "worker_id": "local-worker",
+      "description": "Local worker for scoped tasks",
+      "command": "python3",
+      "args_template": [],
+      "cwd_policy": "repo_root",
+      "env_allowlist": [],
+      "fs_policy": {
+        "must_be_run_scoped": true,
+        "allowed_output_roots": ["/.a2r/artifacts"]
+      },
+      "timeouts": {
+        "wall_ms": 60000
+      },
+      "output_limits": {
+        "max_stdout_bytes": 1048576,
+        "max_stderr_bytes": 1048576
+      }
+    }
+  ]
+}

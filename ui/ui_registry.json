@@ -1,0 +1,13 @@
+{
+  "version": "v0.1",
+  "ui_actions": [
+    {
+      "action_id": "core.ping",
+      "name": "Ping",
+      "description": "Ping the UI",
+      "gateway_route": "GET:/ping",
+      "allowed_methods": ["GET"],
+      "requires_auth": false
+    }
+  ]
+}

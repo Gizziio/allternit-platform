@@ -1,0 +1,73 @@
+[package]
+name = "prompt-pack-service"
+version = "1.0.0"
+edition = "2021"
+description = "Deterministic, versioned prompt pack service for A2R"
+authors = ["A2R Platform <team@a2r.io>"]
+license = "MIT"
+
+[dependencies]
+# Web framework
+axum = { version = "0.7", features = ["json", "macros"] }
+tokio = { version = "1.35", features = ["full"] }
+tower = { version = "0.4", features = ["full"] }
+tower-http = { version = "0.5", features = ["cors", "trace", "compression-br"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+
+# Templating (Jinja2-compatible)
+tera = "1.19"
+
+# Cryptography / Hashing
+sha2 = "0.10"
+hex = "0.4"
+
+# Storage / Database
+sqlx = { version = "0.7", features = ["runtime-tokio", "sqlite", "migrate", "chrono"] }
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Logging / Observability
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Configuration
+config = "0.14"
+dotenvy = "0.15"
+
+# HTTP client (for Rails integration)
+reqwest = { version = "0.11", features = ["json"] }
+
+# Git operations
+git2 = "0.18"
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Validation
+validator = { version = "0.18", features = ["derive"] }
+semver = "1.0"
+
+# Caching
+moka = { version = "0.12", features = ["future"] }
+
+# UUID
+diesel = { version = "2.1", features = ["uuid", "chrono", "sqlite"] }
+uuid = { version = "1.6", features = ["v4", "serde"] }
+
+[dev-dependencies]
+# Testing
+tokio-test = "0.4"
+reqwest = { version = "0.11", features = ["json"] }
+mockito = "1.2"
+criterion = { version = "0.5", features = ["async_tokio"] }
+tempfile = { workspace = true }
+
+[[bench]]
+name = "render_benchmark"
+harness = false

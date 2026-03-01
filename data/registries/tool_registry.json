@@ -1,0 +1,107 @@
+{
+  "version": "v1.0",
+  "tools": [
+    {
+      "id": "shell",
+      "title": "Shell",
+      "kind": "exec",
+      "safety_level": "danger",
+      "entrypoint": "shell",
+      "inputs_schema": {
+        "type": "object",
+        "properties": {
+          "command": { "type": "string" }
+        },
+        "required": ["command"]
+      },
+      "outputs_schema": {
+        "type": "object",
+        "properties": {
+          "output": { "type": "string" }
+        }
+      }
+    },
+    {
+      "id": "fs.read",
+      "title": "Filesystem Read",
+      "kind": "read",
+      "safety_level": "safe",
+      "entrypoint": "fs.read",
+      "inputs_schema": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string" }
+        },
+        "required": ["path"]
+      },
+      "outputs_schema": {
+        "type": "object",
+        "properties": {
+          "content": { "type": "string" }
+        }
+      }
+    },
+    {
+      "id": "fs.write",
+      "title": "Filesystem Write",
+      "kind": "write",
+      "safety_level": "caution",
+      "entrypoint": "fs.write",
+      "inputs_schema": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string" },
+          "content": { "type": "string" }
+        },
+        "required": ["path", "content"]
+      },
+      "outputs_schema": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string" }
+        }
+      }
+    },
+    {
+      "id": "graph.run",
+      "title": "Graph Runner",
+      "kind": "exec",
+      "safety_level": "danger",
+      "entrypoint": "graph.run",
+      "inputs_schema": {
+        "type": "object",
+        "properties": {
+          "graph_id": { "type": "string" }
+        },
+        "required": ["graph_id"]
+      },
+      "outputs_schema": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string" }
+        }
+      }
+    },
+    {
+      "id": "rg.search",
+      "title": "Ripgrep Search",
+      "kind": "read",
+      "safety_level": "safe",
+      "entrypoint": "rg.search",
+      "inputs_schema": {
+        "type": "object",
+        "properties": {
+          "pattern": { "type": "string" },
+          "path": { "type": "string" }
+        },
+        "required": ["pattern"]
+      },
+      "outputs_schema": {
+        "type": "object",
+        "properties": {
+          "matches": { "type": "array" }
+        }
+      }
+    }
+  ]
+}

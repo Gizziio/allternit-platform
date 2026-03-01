@@ -1,0 +1,65 @@
+commit 9daa4f99a7374c6ef401bcefee64f829c9bc5583
+Author: Eoj Edred <eojedredbitepubkey1@proton.me>
+Date:   Tue Jan 27 22:48:38 2026 -0600
+
+    T0006: offline law setup
+    
+    Tests: tests/acceptance/test_law_bootstrap_offline.sh (blocked: wheelhouse empty)
+    
+    Files: scripts/law_setup.sh, scripts/requirements.txt, third_party/wheels/.gitkeep, tests/acceptance/test_law_bootstrap_offline.sh
+
+diff --git a/scripts/law_setup.sh b/scripts/law_setup.sh
+new file mode 100755
+index 0000000..4716501
+--- /dev/null
++++ b/scripts/law_setup.sh
+@@ -0,0 +1,23 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++VENV_DIR=".venv-law"
++REQS="scripts/requirements.txt"
++WHEELHOUSE="third_party/wheels"
++
++if [ ! -d "$WHEELHOUSE" ]; then
++  echo "wheelhouse missing: $WHEELHOUSE" >&2
++  exit 1
++fi
++
++if [ ! -d "$VENV_DIR" ]; then
++  python3 -m venv "$VENV_DIR"
++fi
++
++# shellcheck disable=SC1091
++source "$VENV_DIR/bin/activate"
++
++python -m pip install --no-index --find-links "$WHEELHOUSE" -r "$REQS"
++
++python scripts/validate_law.py
++bash tests/acceptance/test_boot_anchors.sh
+diff --git a/scripts/requirements.txt b/scripts/requirements.txt
+index 73a3eff..7460335 100644
+--- a/scripts/requirements.txt
++++ b/scripts/requirements.txt
+@@ -1 +1,5 @@
+ jsonschema==4.21.1
++jsonschema-specifications==2023.12.1
++referencing==0.33.0
++rpds-py==0.16.2
++attrs==23.2.0
+diff --git a/tests/acceptance/test_law_bootstrap_offline.sh b/tests/acceptance/test_law_bootstrap_offline.sh
+new file mode 100755
+index 0000000..6237ad4
+--- /dev/null
++++ b/tests/acceptance/test_law_bootstrap_offline.sh
+@@ -0,0 +1,7 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++rm -rf .venv-law
++
++bash scripts/law_setup.sh
++python3 scripts/validate_law.py
+diff --git a/third_party/wheels/.gitkeep b/third_party/wheels/.gitkeep
+new file mode 100644
+index 0000000..e69de29

@@ -1,0 +1,17 @@
+{
+  "tenant_id": "summit_oic",
+  "display_name": "Summit Academy OIC",
+  "canvas": {
+    "base_url": "https://YOURDISTRICT.instructure.com",
+    "auth_mode": "api_token",
+    "scopes": ["courses:read", "modules:write", "pages:write", "assignments:write", "files:write"]
+  },
+  "storage": {
+    "artifact_store": "local_or_s3",
+    "receipt_store": "rails_db"
+  },
+  "defaults": {
+    "timezone": "America/Chicago",
+    "course_content_indexing": true
+  }
+}

@@ -1,0 +1,144 @@
+[workspace]
+members = [
+    // "a2r-agent-system-rails",
+    "0-substrate/a2r-substrate",
+    "0-substrate/canvas-protocol",
+    "0-substrate/capsule_spec",
+    "0-substrate/intent-graph-kernel",
+    "0-substrate/presentation-kernel",
+    "0-substrate/sdk/sdk-apps",
+    "0-substrate/sdk/sdk-functions",
+    "0-substrate/sdk/sdk-core",
+    "0-substrate/sdk/sdk-policy",
+    "0-substrate/sdk/sdk-transport",
+    "0-substrate/embodiment",
+    "0-substrate/embodiment/robotics",
+    "0-substrate/a2ui_types",
+    "1-kernel/a2r-engine/kernel-contracts",
+    "1-kernel/a2r-engine/kernel-compat",
+    "1-kernel/a2r-engine/tools-gateway",
+    "1-kernel/a2r-engine/runtime-local",
+    "1-kernel/a2r-engine/wasm-runtime",
+    "1-kernel/a2r-engine/history",
+    "1-kernel/a2r-engine/runtime-core",
+    "1-kernel/a2r-engine/messaging",
+    "1-kernel/a2r-engine/policy",
+    "1-kernel/compute/executor",
+    "1-kernel/compute/local-inference",
+    "1-kernel/compute/local-inference2?",
+    "1-kernel/compute/mlx-inference",
+    "1-kernel/rust/providers",
+    "1-kernel/rust/orchestration/workflows",
+    "1-kernel/rust/orchestration/model-router",
+    "1-kernel/rust/orchestration/agent-router",
+    "1-kernel/rust/orchestration/hooks",
+    "1-kernel/rust/control/context-router",
+    "1-kernel/rust/security/security-governance",
+    "1-kernel/rust/security/evals",
+    "1-kernel/rust/ops/packaging",
+    "1-kernel/rust/control/artifact-registry",
+    "1-kernel/rust/capsule",
+    "2-governance/audit-log",
+    "2-governance/policy",
+    "2-governance/rust/a2r-governor",
+    "3-adapters/rust/skills",
+    "3-adapters/bridges/a2r-webvm",
+    "3-adapters/bridges/a2r-native-bridge",
+    "3-adapters/bridges/io-daemon",
+    "4-services/ai/voice-service",
+    "4-services/ai/pattern-service",
+    "4-services/memory",
+    "4-services/memory/observation",
+    "4-services/memory/state/history",
+    "4-services/memory/state/memory",
+    "4-services/orchestration/kernel-service",
+    "4-services/orchestration/platform-orchestration-service",
+    # Note: These services are kept as libraries for dependencies
+    # but should not be run as standalone services (use unified gateway/server instead)
+    "4-services/gateway/gateway-browser",
+    "4-services/gateway/gateway-stdio",
+    "4-services/registry/framework-registry-service",
+    "4-services/registry/registry-apps",
+    "4-services/registry/registry-functions",
+    "4-services/registry/registry-server",
+    "6-apps/api",
+    "6-apps/cli"
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/a2rchitech/a2rchitech"
+
+[workspace.dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+thiserror = "1.0"
+anyhow = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+async-trait = "0.1"
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "any", "chrono", "uuid"] }
+tempfile = "3.0"
+axum = { version = "0.7", features = ["ws", "macros"] }
+tower-http = { version = "0.5", features = ["cors", "fs"] }
+reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls", "stream", "multipart"] }
+chrono = { version = "0.4", features = ["serde"] }
+blake3 = "1.5"
+redis = { version = "0.24", features = ["aio", "tokio-comp"] }
+base64 = "0.22"
+hex = "0.4"
+sha2 = "0.10"
+rand = "0.8"
+semver = { version = "1.0", features = ["serde"] }
+ed25519-dalek = { version = "2.0", features = ["std", "rand_core"] }
+wasmtime = "21.0"
+wasmtime-wasi = "21.0"
+portable-pty = "0.8"
+futures = "0.3"
+futures-util = "0.3"
+lazy_static = "1.4"
+which = "6.0"
+ring = "0.17"
+data-encoding = "2.0"
+regex = "1.0"
+tokio-stream = "0.1"
+wit-bindgen = "0.36"
+wit-component = "0.21"
+async-stream = "0.3"
+clap = { version = "4.0", features = ["derive"] }
+tracing-core = "0.1"
+tower = "0.5"
+
+a2rchitech-sdk-core = { path = "0-substrate/sdk/sdk-core" }
+a2rchitech-sdk-apps = { path = "0-substrate/sdk/sdk-apps" }
+a2rchitech-sdk-functions = { path = "0-substrate/sdk/sdk-functions" }
+a2rchitech-sdk-policy = { path = "0-substrate/sdk/sdk-policy" }
+a2rchitech-sdk-transport = { path = "0-substrate/sdk/sdk-transport" }
+
+a2rchitech-history = { path = "1-kernel/a2r-engine/history" }
+a2rchitech-messaging = { path = "1-kernel/a2r-engine/messaging" }
+a2rchitech-policy = { path = "1-kernel/a2r-engine/policy" }
+a2rchitech-runtime-core = { path = "1-kernel/a2r-engine/runtime-core" }
+a2rchitech-kernel-contracts = { path = "1-kernel/a2r-engine/kernel-contracts" }
+a2rchitech-tools-gateway = { path = "1-kernel/a2r-engine/tools-gateway" }
+
+a2rchitech-context-router = { path = "1-kernel/rust/control/context-router" }
+a2rchitech-providers = { path = "1-kernel/rust/providers" }
+a2rchitech-workflows = { path = "1-kernel/rust/orchestration/workflows" }
+a2rchitech-model-router = { path = "1-kernel/rust/orchestration/model-router" }
+a2rchitech-agent-router = { path = "1-kernel/rust/orchestration/agent-router" }
+a2rchitech-security-governance = { path = "1-kernel/rust/security/security-governance" }
+a2rchitech-embodiment = { path = "0-substrate/embodiment" }
+a2rchitech-evals = { path = "1-kernel/rust/security/evals" }
+a2rchitech-memory = { path = "4-services/memory/state/memory" }
+a2rchitech-packaging = { path = "1-kernel/rust/ops/packaging" }
+a2rchitech-artifact-registry = { path = "1-kernel/rust/control/artifact-registry" }
+a2r-capsule = { path = "1-kernel/rust/capsule" }
+a2rchitech-capsule = { package = "a2r-capsule", path = "1-kernel/rust/capsule" }
+
+a2rchitech-skills = { path = "3-adapters/rust/skills" }

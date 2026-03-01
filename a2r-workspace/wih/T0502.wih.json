@@ -1,0 +1,40 @@
+{
+  "wih_version": "v0.1",
+  "task_id": "T0502",
+  "graph_id": "graph-0001",
+  "title": "Wire ToolGateway",
+  "state": "COMPLETE",
+  "blocked_by": [
+    "T0501"
+  ],
+  "external_refs": {},
+  "preset": { "preset_id": "preset-core-dev", "preset_hash": "TBD" },
+  "resume_cursor": { "last_run_id": "", "next_step": "", "pending_checks": [] },
+  "outputs": {
+    "required_artifacts": ["capsule_runtime"],
+    "artifact_paths": ["/.a2r/artifacts/T0502/"]
+  },
+  "write_scope": {
+    "root": "/.a2r/",
+    "allowed_globs": ["services/capsule-runtime/**"]
+  },
+  "tools": {
+    "allowlist": ["fs.read", "fs.write"],
+    "pretooluse_hooks": ["WIH_VALID"]
+  },
+  "memory": { "packs": [{"pack_id": "law", "layers": ["law"], "access": "read"}] },
+  "acceptance": { "checks": ["AT-CAP-0007", "AT-CAP-0008"] },
+  "beads": {
+    "wih_version": "v0.1",
+    "task_id": "T0502",
+    "graph_id": "graph-0001",
+    "title": "Wire ToolGateway",
+    "state": "COMPLETE",
+    "blocked_by": ["T0501"],
+    "outputs": { "required_artifacts": ["capsule_runtime"], "artifact_paths": ["/.a2r/artifacts/T0502/"] },
+    "write_scope": { "root": "/.a2r/", "allowed_globs": ["services/capsule-runtime/**"] },
+    "tools": { "allowlist": ["fs.read", "fs.write"], "pretooluse_hooks": ["WIH_VALID"] },
+    "memory": { "packs": [{"pack_id": "law", "layers": ["law"], "access": "read"}] },
+    "acceptance": { "checks": ["AT-CAP-0007", "AT-CAP-0008"] }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "@a2r/gc-agents",
+  "version": "1.0.0",
+  "description": "Garbage Collection Agents - Automated code quality maintenance",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "tree-sitter": "^0.21.1",
+    "tree-sitter-typescript": "^0.21.2"
+  },
+  "keywords": ["a2r", "gc", "garbage-collection", "quality"],
+  "license": "MIT"
+}

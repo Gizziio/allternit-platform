@@ -1,0 +1,44 @@
+{
+  "id": "example.counter",
+  "name": "Message Counter",
+  "version": "1.0.0",
+  "description": "Counts messages in session and displays statistics in the sidebar",
+  "author": "A2R Team",
+  "icon": "🔢",
+  "contributions": {
+    "sidebar": [
+      {
+        "id": "counter",
+        "title": "Message Count",
+        "icon": "Hash",
+        "component": "CounterPanel",
+        "weight": 100
+      }
+    ],
+    "toolbar": [
+      {
+        "id": "count-btn",
+        "title": "Show Message Count",
+        "icon": "Calculator",
+        "command": "showCount",
+        "position": "right",
+        "weight": 10
+      }
+    ],
+    "messageActions": [
+      {
+        "id": "count-action",
+        "label": "Count This Message",
+        "icon": "Hash",
+        "when": "message.role === 'assistant'",
+        "command": "countThisMessage",
+        "group": "secondary",
+        "order": 5
+      }
+    ]
+  },
+  "permissions": ["read:messages", "read:session"],
+  "main": "./dist/index.js",
+  "homepage": "https://github.com/a2r/example-counter",
+  "license": "MIT"
+}

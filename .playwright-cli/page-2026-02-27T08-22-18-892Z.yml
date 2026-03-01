@@ -1,0 +1,118 @@
+- generic [ref=e2]:
+  - generic [ref=e11]:
+    - generic [ref=e12]:
+      - img [ref=e19] [cursor=pointer]
+      - heading "T h e A r c h i t e c t ' s D e n" [level=1] [ref=e64]:
+        - generic [ref=e65]:
+          - generic [ref=e66]:
+            - generic [ref=e67]: T
+            - generic [ref=e68]: h
+            - generic [ref=e69]: e
+          - generic [ref=e70]:
+            - generic [ref=e71]: A
+            - generic [ref=e72]: r
+            - generic [ref=e73]: c
+            - generic [ref=e74]: h
+            - generic [ref=e75]: i
+            - generic [ref=e76]: t
+            - generic [ref=e77]: e
+            - generic [ref=e78]: c
+            - generic [ref=e79]: t
+            - generic [ref=e80]: "'"
+            - generic [ref=e81]: s
+          - generic [ref=e82]:
+            - generic [ref=e83]: D
+            - generic [ref=e84]: e
+            - generic [ref=e85]: "n"
+      - generic [ref=e89]:
+        - generic [ref=e90]:
+          - generic [ref=e91]: D
+          - generic [ref=e92]: e
+          - generic [ref=e93]: s
+          - generic [ref=e94]: i
+          - generic [ref=e95]: g
+          - generic [ref=e96]: "n"
+          - generic [ref=e97]: i
+          - generic [ref=e98]: "n"
+          - generic [ref=e99]: g
+        - generic [ref=e100]:
+          - generic [ref=e101]: B
+          - generic [ref=e102]: e
+          - generic [ref=e103]: t
+          - generic [ref=e104]: t
+          - generic [ref=e105]: e
+          - generic [ref=e106]: r
+        - generic [ref=e107]:
+          - generic [ref=e108]: W
+          - generic [ref=e109]: o
+          - generic [ref=e110]: r
+          - generic [ref=e111]: k
+          - generic [ref=e112]: f
+          - generic [ref=e113]: l
+          - generic [ref=e114]: o
+          - generic [ref=e115]: w
+          - generic [ref=e116]: s
+    - generic [ref=e119]:
+      - generic [ref=e120]:
+        - button "Code" [ref=e121] [cursor=pointer]:
+          - img [ref=e122]
+          - generic [ref=e125]: Code
+        - button "Create" [ref=e126] [cursor=pointer]:
+          - img [ref=e127]
+          - generic [ref=e128]: Create
+        - button "Write" [ref=e129] [cursor=pointer]:
+          - img [ref=e130]
+          - generic [ref=e135]: Write
+        - button "Learn" [ref=e136] [cursor=pointer]:
+          - img [ref=e137]
+          - generic [ref=e139]: Learn
+        - button "A2R's choice" [ref=e140] [cursor=pointer]:
+          - img [ref=e141]
+          - generic [ref=e143]: A2R's choice
+      - generic [ref=e144]:
+        - textbox "What's brewing today?" [ref=e146]
+        - generic [ref=e147]:
+          - button [ref=e149] [cursor=pointer]:
+            - img [ref=e150]
+          - generic [ref=e151]:
+            - button "Big Pickle Extended" [ref=e217] [cursor=pointer]:
+              - generic [ref=e218]: Big Pickle
+              - generic [ref=e219]: Extended
+              - img [ref=e155]
+            - button [disabled] [ref=e157]:
+              - img [ref=e158]
+    - generic [ref=e160]:
+      - generic [ref=e161]:
+        - img [ref=e162]
+        - generic [ref=e163]: Pick a task, any task
+      - generic [ref=e164]:
+        - button "Optimize my week" [ref=e165] [cursor=pointer]:
+          - img [ref=e167]
+          - generic [ref=e171]: Optimize my week
+        - button "Organize my screenshots" [ref=e172] [cursor=pointer]:
+          - img [ref=e174]
+          - generic [ref=e178]: Organize my screenshots
+        - button "Find insights in files" [ref=e179] [cursor=pointer]:
+          - img [ref=e181]
+          - generic [ref=e184]: Find insights in files
+  - generic:
+    - generic [ref=e185]:
+      - generic [ref=e186]:
+        - button "Expand Sidebar" [ref=e187] [cursor=pointer]:
+          - img [ref=e188]
+        - button "New Chat" [ref=e190] [cursor=pointer]:
+          - img [ref=e191]
+      - button "Browser" [ref=e194] [cursor=pointer]:
+        - img [ref=e195]
+        - generic [ref=e197]: Browser
+    - generic [ref=e199]:
+      - button "Chat" [ref=e200] [cursor=pointer]:
+        - img [ref=e201]
+        - generic [ref=e203]: Chat
+      - button "Cowork" [ref=e204] [cursor=pointer]:
+        - img [ref=e205]
+        - generic [ref=e207]: Cowork
+      - button "Code" [ref=e208] [cursor=pointer]:
+        - img [ref=e209]
+        - generic [ref=e211]: Code
+  - img [ref=e214] [cursor=pointer]

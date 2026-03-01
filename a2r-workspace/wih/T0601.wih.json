@@ -1,0 +1,55 @@
+{
+  "wih_version": "v0.1",
+  "task_id": "T0601",
+  "graph_id": "graph-0001",
+  "title": "CLI Subprocess Modularity - Registry",
+  "state": "PLANNED",
+  "blocked_by": [
+    "T0600"
+  ],
+  "external_refs": {},
+  "preset": { "preset_id": "preset-core-dev", "preset_hash": "TBD" },
+  "resume_cursor": { "last_run_id": "", "next_step": "", "pending_checks": [] },
+  "outputs": {
+    "required_artifacts": ["cli_registry"],
+    "artifact_paths": ["/.a2r/artifacts/T0601/"]
+  },
+  "write_scope": {
+    "root": "/.a2r/",
+    "allowed_globs": [
+      "cli/cli_registry.json"
+    ]
+  },
+  "tools": {
+    "allowlist": ["fs.read", "fs.write"],
+    "pretooluse_hooks": ["WIH_VALID"]
+  },
+  "memory": { "packs": [{"pack_id": "law", "layers": ["law"], "access": "read"}] },
+  "acceptance": { "checks": ["AT-PROC-0002"] },
+  "beads": {
+    "wih_version": "v0.1",
+    "task_id": "T0601",
+    "graph_id": "graph-0001",
+    "title": "CLI Subprocess Modularity - Registry",
+    "state": "PLANNED",
+    "blocked_by": [
+      "T0600"
+    ],
+    "outputs": {
+      "required_artifacts": ["cli_registry"],
+      "artifact_paths": ["/.a2r/artifacts/T0601/"]
+    },
+    "write_scope": {
+      "root": "/.a2r/",
+      "allowed_globs": [
+        "cli/cli_registry.json"
+      ]
+    },
+    "tools": {
+      "allowlist": ["fs.read", "fs.write"],
+      "pretooluse_hooks": ["WIH_VALID"]
+    },
+    "memory": { "packs": [{"pack_id": "law", "layers": ["law"], "access": "read"}] },
+    "acceptance": { "checks": ["AT-PROC-0002"] }
+  }
+}

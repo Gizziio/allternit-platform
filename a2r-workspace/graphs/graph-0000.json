@@ -1,0 +1,136 @@
+{
+  "graph_id": "graph-0000",
+  "created_at": "2026-01-27T04:54:46.734472Z",
+  "title": "A2R Program Graph \u2014 Subgraphs + Governance Gates",
+  "subgraphs": [
+    {
+      "graph_id": "graph-0001",
+      "purpose": "Law\u2192Tasks\u2192Enforcement\u2192Memory bootstrap"
+    },
+    {
+      "graph_id": "graph-0002",
+      "purpose": "Gateway + Router + UI cockpit"
+    }
+  ],
+  "nodes": [
+    {
+      "task_id": "P0001",
+      "title": "Register subgraph graph-0001 (bootstrap)",
+      "blocked_by": [],
+      "wih_path": "/.a2r/wih/P0001.wih.json"
+    },
+    {
+      "task_id": "P0002",
+      "title": "Register subgraph graph-0002 (gateway/router/ui)",
+      "blocked_by": [
+        "P0001"
+      ],
+      "wih_path": "/.a2r/wih/P0002.wih.json"
+    },
+    {
+      "task_id": "P0100",
+      "title": "RCP-001 CODEBASE generator spec + CLI stub plan",
+      "blocked_by": [],
+      "wih_path": "/.a2r/wih/P0100.wih.json"
+    },
+    {
+      "task_id": "P0101",
+      "title": "CODEBASE.md regeneration job (deterministic, diffed)",
+      "blocked_by": [
+        "P0100"
+      ],
+      "wih_path": "/.a2r/wih/P0101.wih.json"
+    },
+    {
+      "task_id": "P0200",
+      "title": "ADR enforcement: require ADR IDs for cross-cutting changes",
+      "blocked_by": [],
+      "wih_path": "/.a2r/wih/P0200.wih.json"
+    },
+    {
+      "task_id": "P0201",
+      "title": "CI gates: run AcceptanceTests.md suite in pipeline",
+      "blocked_by": [
+        "P0200",
+        "P0204"
+      ],
+      "wih_path": "/.a2r/wih/P0201.wih.json"
+    },
+    {
+      "task_id": "P0202",
+      "title": "Tool registry gate in CI (schema validate registry + WIH)",
+      "blocked_by": [
+        "P0201"
+      ],
+      "wih_path": "/.a2r/wih/P0202.wih.json"
+    },
+    {
+      "task_id": "P0300",
+      "title": "Program graph runner: orchestrate subgraphs with meta-deps",
+      "blocked_by": [
+        "P0002",
+        "P0201"
+      ],
+      "wih_path": "/.a2r/wih/P0300.wih.json"
+    },
+    {
+      "task_id": "P0203",
+      "title": "Security CI fail conditions (auth bypass list, python exec)",
+      "blocked_by": [
+        "P0201"
+      ],
+      "wih_path": "/.a2r/wih/P0203.wih.json"
+    },
+    {
+      "task_id": "P0204",
+      "title": "Contract-root canon ADR (spec/Contracts; deprecate spec/1_contracts)",
+      "blocked_by": [
+        "P0200"
+      ],
+      "wih_path": "/.a2r/wih/P0204.wih.json"
+    }
+  ],
+  "edges": [
+    {
+      "from": "P0001",
+      "to": "P0002"
+    },
+    {
+      "from": "P0100",
+      "to": "P0101"
+    },
+    {
+      "from": "P0200",
+      "to": "P0201"
+    },
+    {
+      "from": "P0201",
+      "to": "P0202"
+    },
+    {
+      "from": "P0002",
+      "to": "P0300"
+    },
+    {
+      "from": "P0201",
+      "to": "P0300"
+    },
+    {
+      "from": "P0200",
+      "to": "P0204"
+    },
+    {
+      "from": "P0204",
+      "to": "P0201"
+    },
+    {
+      "from": "P0201",
+      "to": "P0203"
+    }
+  ],
+  "meta_policy": {
+    "requires_codebase_regen": true,
+    "requires_acceptance_tests": true,
+    "requires_adr_for_crosscutting": true
+  }
+}

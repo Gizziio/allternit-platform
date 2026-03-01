@@ -1,0 +1,32 @@
+[package]
+name = "a2rchitech-hooks"
+version = "0.1.0"
+edition = "2021"
+description = "A2rchitech event-driven lifecycle hooks middleware"
+
+[dependencies]
+axum = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tower-http = { workspace = true }
+uuid = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+async-trait = { workspace = true }
+sqlx = { workspace = true }
+blake3 = { workspace = true }
+reqwest = { workspace = true }
+
+
+# Layer dependencies
+a2rchitech-sdk-core = { workspace = true }
+a2rchitech-sdk-policy = { workspace = true }
+a2rchitech-sdk-transport = { workspace = true }
+a2rchitech-messaging = { workspace = true }
+a2rchitech-policy = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

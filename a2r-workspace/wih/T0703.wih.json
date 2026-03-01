@@ -1,0 +1,57 @@
+{
+  "wih_version": "v0.1",
+  "task_id": "T0703",
+  "graph_id": "graph-0001",
+  "title": "Acceptance Gates",
+  "state": "COMPLETE",
+  "blocked_by": [
+    "T0702"
+  ],
+  "external_refs": {},
+  "preset": { "preset_id": "preset-core-dev", "preset_hash": "TBD" },
+  "resume_cursor": { "last_run_id": "", "next_step": "", "pending_checks": [] },
+  "outputs": {
+    "required_artifacts": ["memory_tests"],
+    "artifact_paths": ["/.a2r/artifacts/T0703/"]
+  },
+  "write_scope": {
+    "root": "/.a2r/",
+    "allowed_globs": [
+      "tests/acceptance/test_memory_*.sh",
+      "spec/AcceptanceTests.md"
+    ]
+  },
+  "tools": {
+    "allowlist": ["fs.read", "fs.write"],
+    "pretooluse_hooks": ["WIH_VALID"]
+  },
+  "memory": { "packs": [{"pack_id": "law", "layers": ["law"], "access": "read"}] },
+  "acceptance": { "checks": ["AT-MEM-0001", "AT-MEM-0002", "AT-MEM-0003", "AT-MEM-0004", "AT-MEM-0005", "AT-MEM-0006"] },
+  "beads": {
+    "wih_version": "v0.1",
+    "task_id": "T0703",
+    "graph_id": "graph-0001",
+    "title": "Acceptance Gates",
+    "state": "COMPLETE",
+    "blocked_by": [
+      "T0702"
+    ],
+    "outputs": {
+      "required_artifacts": ["memory_tests"],
+      "artifact_paths": ["/.a2r/artifacts/T0703/"]
+    },
+    "write_scope": {
+      "root": "/.a2r/",
+      "allowed_globs": [
+        "tests/acceptance/test_memory_*.sh",
+        "spec/AcceptanceTests.md"
+      ]
+    },
+    "tools": {
+      "allowlist": ["fs.read", "fs.write"],
+      "pretooluse_hooks": ["WIH_VALID"]
+    },
+    "memory": { "packs": [{"pack_id": "law", "layers": ["law"], "access": "read"}] },
+    "acceptance": { "checks": ["AT-MEM-0001", "AT-MEM-0002", "AT-MEM-0003", "AT-MEM-0004", "AT-MEM-0005", "AT-MEM-0006"] }
+  }
+}

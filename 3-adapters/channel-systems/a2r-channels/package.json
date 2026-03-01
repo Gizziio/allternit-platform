@@ -1,0 +1,23 @@
+{
+  "name": "@a2r/channels",
+  "version": "1.0.0",
+  "description": "A2Rchitech Communication Channel Adapters",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "discord.js": "^14.14.0",
+    "@slack/web-api": "^7.0.0",
+    "@whiskeysockets/baileys": "^7.0.0-rc.9"
+  }
+}

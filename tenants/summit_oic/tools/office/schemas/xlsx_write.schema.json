@@ -1,0 +1,21 @@
+{
+  "type": "object",
+  "required": ["path", "edits", "output_path"],
+  "properties": {
+    "path": {"type": "string"},
+    "output_path": {"type": "string"},
+    "edits": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["sheet", "cell", "value"],
+        "properties": {
+          "sheet": {"type": "string"},
+          "cell": {"type": "string"},
+          "value": {}
+        }
+      }
+    },
+    "track_changes": {"type": "boolean", "default": true}
+  }
+}

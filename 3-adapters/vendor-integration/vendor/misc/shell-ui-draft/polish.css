@@ -1,0 +1,516 @@
+/**
+ * A2R Shell - Final Polish Styles
+ * Smooth transitions, refined scrollbars, selection, focus rings, and loading states
+ */
+
+/* ========================================
+   PAGE TRANSITIONS BETWEEN MODES
+   ======================================== */
+
+.mode-transition-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.mode-content {
+  position: absolute;
+  inset: 0;
+  will-change: opacity, transform;
+}
+
+.mode-enter {
+  animation: mode-enter 0.3s var(--ease-out) forwards;
+}
+
+.mode-exit {
+  animation: mode-exit 0.2s var(--ease-in) forwards;
+}
+
+@keyframes mode-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes mode-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.99);
+  }
+}
+
+/* Cross-fade transition for mode switching */
+.mode-crossfade-enter {
+  opacity: 0;
+}
+
+.mode-crossfade-enter-active {
+  opacity: 1;
+  transition: opacity 0.3s var(--ease-out);
+}
+
+.mode-crossfade-exit {
+  opacity: 1;
+}
+
+.mode-crossfade-exit-active {
+  opacity: 0;
+  transition: opacity 0.2s var(--ease-in);
+}
+
+/* ========================================
+   SCROLLBAR STYLING (Enhanced)
+   ======================================== */
+
+/* Thin scrollbar variant */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-full);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Glass scrollbar variant */
+.scrollbar-glass {
+  scrollbar-width: thin;
+  scrollbar-color: var(--glass-medium) transparent;
+}
+
+.scrollbar-glass::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scrollbar-glass::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-full);
+}
+
+.scrollbar-glass::-webkit-scrollbar-thumb {
+  background: var(--glass-medium);
+  border-radius: var(--radius-full);
+  border: 2px solid var(--bg-secondary);
+  backdrop-filter: var(--backdrop-blur-light);
+}
+
+.scrollbar-glass::-webkit-scrollbar-thumb:hover {
+  background: var(--glass-heavy);
+}
+
+/* Hidden scrollbar */
+.scrollbar-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
+/* ========================================
+   SELECTION HIGHLIGHT
+   ======================================== */
+
+::selection {
+  background-color: rgba(96, 165, 250, 0.3);
+  color: var(--text-primary);
+}
+
+::-moz-selection {
+  background-color: rgba(96, 165, 250, 0.3);
+  color: var(--text-primary);
+}
+
+/* Mode-specific selection colors */
+.selection-chat ::selection {
+  background-color: rgba(96, 165, 250, 0.3);
+}
+
+.selection-cowork ::selection {
+  background-color: rgba(167, 139, 250, 0.3);
+}
+
+.selection-code ::selection {
+  background-color: rgba(52, 211, 153, 0.3);
+}
+
+/* ========================================
+   FOCUS RING STYLES
+   ======================================== */
+
+/* Standard focus ring */
+.focus-ring:focus {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Focus ring variants by accent color */
+.focus-ring-chat:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--bg-primary), 0 0 0 4px var(--accent-chat);
+}
+
+.focus-ring-cowork:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--bg-primary), 0 0 0 4px var(--accent-cowork);
+}
+
+.focus-ring-code:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--bg-primary), 0 0 0 4px var(--accent-code);
+}
+
+/* Focus visible (keyboard only) */
+.focus-ring-visible:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Remove focus ring for mouse users */
+.focus-ring:focus:not(:focus-visible) {
+  box-shadow: none;
+}
+
+/* ========================================
+   LOADING STATES
+   ======================================== */
+
+/* Shimmer loading effect */
+.loading-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.05) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: loading-shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes loading-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Skeleton loading */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.05) 25%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.05) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+  border-radius: var(--radius-md);
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Pulse loading */
+.loading-pulse {
+  animation: loading-pulse 2s ease-in-out infinite;
+}
+
+@keyframes loading-pulse {
+  0%, 100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+/* Spinner */
+.loading-spinner {
+  animation: loading-spin 1s linear infinite;
+}
+
+@keyframes loading-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Dots loading */
+.loading-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.loading-dots > span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: loading-dots 1.4s ease-in-out infinite both;
+}
+
+.loading-dots > span:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.loading-dots > span:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes loading-dots {
+  0%, 80%, 100% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ========================================
+   APP BACKGROUND
+   ======================================== */
+
+.app-background {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: 
+    radial-gradient(ellipse at 20% 20%, rgba(96, 165, 250, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(167, 139, 250, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(52, 211, 153, 0.04) 0%, transparent 70%),
+    var(--bg-primary);
+}
+
+.app-background::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: 
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(255, 255, 255, 0.015) 2px,
+      rgba(255, 255, 255, 0.015) 4px
+    );
+  pointer-events: none;
+}
+
+/* ========================================
+   DRAWER TRANSITIONS
+   ======================================== */
+
+.drawer-enter {
+  transform: translateY(100%);
+}
+
+.drawer-enter-active {
+  transform: translateY(0);
+  transition: transform 0.3s var(--ease-spring);
+}
+
+.drawer-exit {
+  transform: translateY(0);
+}
+
+.drawer-exit-active {
+  transform: translateY(100%);
+  transition: transform 0.25s var(--ease-in);
+}
+
+.drawer-backdrop-enter {
+  opacity: 0;
+}
+
+.drawer-backdrop-enter-active {
+  opacity: 1;
+  transition: opacity 0.2s var(--ease-out);
+}
+
+.drawer-backdrop-exit {
+  opacity: 1;
+}
+
+.drawer-backdrop-exit-active {
+  opacity: 0;
+  transition: opacity 0.2s var(--ease-in);
+}
+
+/* ========================================
+   BUTTON & INTERACTION POLISH
+   ======================================== */
+
+/* Smooth button transitions */
+.btn-smooth {
+  transition: 
+    transform var(--duration-fast) var(--ease-spring),
+    background-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.btn-smooth:hover {
+  transform: translateY(-1px);
+}
+
+.btn-smooth:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Card hover lift */
+.card-lift {
+  transition: 
+    transform var(--duration-normal) var(--ease-spring),
+    box-shadow var(--duration-normal) var(--ease-out);
+}
+
+.card-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Link underline animation */
+.link-animated {
+  position: relative;
+  text-decoration: none;
+}
+
+.link-animated::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background: currentColor;
+  transition: width var(--duration-normal) var(--ease-out);
+}
+
+.link-animated:hover::after {
+  width: 100%;
+}
+
+/* ========================================
+   GLASS MORPHISM ENHANCEMENTS
+   ======================================== */
+
+.glass-card-enhanced {
+  background: var(--glass-medium);
+  border: var(--glass-border-medium);
+  backdrop-filter: var(--backdrop-blur-medium);
+  border-radius: var(--radius-xl);
+  transition: all var(--duration-normal) var(--ease-out);
+}
+
+.glass-card-enhanced:hover {
+  background: var(--glass-heavy);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Subtle border glow on hover */
+.glass-glow-hover {
+  position: relative;
+}
+
+.glass-glow-hover::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.2),
+    rgba(255, 255, 255, 0.05)
+  );
+  -webkit-mask: 
+    linear-gradient(#fff 0 0) content-box, 
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity var(--duration-normal) var(--ease-out);
+  pointer-events: none;
+}
+
+.glass-glow-hover:hover::before {
+  opacity: 1;
+}
+
+/* ========================================
+   REDUCED MOTION
+   ======================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .mode-enter,
+  .mode-exit,
+  .drawer-enter-active,
+  .drawer-exit-active,
+  .drawer-backdrop-enter-active,
+  .drawer-backdrop-exit-active {
+    animation: none;
+    transition: none;
+    transform: none;
+  }
+
+  .loading-shimmer,
+  .skeleton,
+  .loading-pulse,
+  .loading-spinner,
+  .loading-dots > span {
+    animation: none;
+  }
+
+  .btn-smooth,
+  .card-lift,
+  .glass-card-enhanced {
+    transition: none;
+  }
+
+  .btn-smooth:hover,
+  .card-lift:hover {
+    transform: none;
+  }
+}

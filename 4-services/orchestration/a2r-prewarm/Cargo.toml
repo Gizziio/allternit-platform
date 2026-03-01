@@ -1,0 +1,17 @@
+[package]
+name = "a2r-prewarm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "A2R Prewarm Service - Pool management and cold start optimization (N16)"
+
+[dependencies]
+a2r-driver-interface = { path = "../../../1-kernel/infrastructure/a2r-driver-interface" }
+serde = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+chrono = { workspace = true }
+thiserror = "1.0"
+
+[dev-dependencies]
+tokio-test = "0.4"

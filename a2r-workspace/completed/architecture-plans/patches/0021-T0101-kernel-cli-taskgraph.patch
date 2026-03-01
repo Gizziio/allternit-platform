@@ -1,0 +1,481 @@
+commit 3693170f048447623b7971f904630981e2723977
+Author: Eoj Edred <eojedredbitepubkey1@proton.me>
+Date:   Wed Jan 28 00:00:24 2026 -0600
+
+    T0101: kernel+cli taskgraph install/resume
+
+diff --git a/apps/cli/src/commands/mod.rs b/apps/cli/src/commands/mod.rs
+index 537a995..e7136bf 100644
+--- a/apps/cli/src/commands/mod.rs
++++ b/apps/cli/src/commands/mod.rs
+@@ -14,4 +14,4 @@ pub mod webvm;
+ pub mod skills;
+ pub mod marketplace;
+ pub mod brain_integration;
+-pub mod which;
++pub mod taskgraph;
+diff --git a/apps/cli/src/commands/taskgraph.rs b/apps/cli/src/commands/taskgraph.rs
+new file mode 100644
+index 0000000..9c7f658
+--- /dev/null
++++ b/apps/cli/src/commands/taskgraph.rs
+@@ -0,0 +1,34 @@
++use clap::{Args, Subcommand};
++use serde_json::json;
++
++use crate::client::KernelClient;
++
++#[derive(Args)]
++pub struct TaskGraphArgs {
++    #[command(subcommand)]
++    pub command: TaskGraphCommand,
++}
++
++#[derive(Subcommand)]
++pub enum TaskGraphCommand {
++    /// Initialize a run_state for a graph
++    Install { graph_id: String },
++    /// Resume a run from run_state + receipts
++    Resume { run_id: String },
++}
++
++pub async fn handle_taskgraph(cmd: TaskGraphCommand, client: &KernelClient) -> anyhow::Result<()> {
++    match cmd {
++        TaskGraphCommand::Install { graph_id } => {
++            let payload = json!({ "graph_id": graph_id });
++            let resp: serde_json::Value = client.post("/v1/taskgraph/install", &payload).await?;
++            println!("{}", serde_json::to_string_pretty(&resp)?);
++        }
++        TaskGraphCommand::Resume { run_id } => {
++            let payload = json!({ "run_id": run_id });
++            let resp: serde_json::Value = client.post("/v1/taskgraph/resume", &payload).await?;
++            println!("{}", serde_json::to_string_pretty(&resp)?);
++        }
++    }
++    Ok(())
++}
+diff --git a/apps/cli/src/main.rs b/apps/cli/src/main.rs
+index 834a74b..d40fda1 100644
+--- a/apps/cli/src/main.rs
++++ b/apps/cli/src/main.rs
+@@ -5,7 +5,7 @@ mod commands;
+ use clap::{Parser, Subcommand};
+ use config::ConfigManager;
+ use client::KernelClient;
+-use commands::{auth, model, run, repl, ev, cap, j, tools, daemon, tui, rlm, voice, webvm, marketplace, skills, brain_integration, which};
++use commands::{auth, model, run, repl, ev, cap, j, tools, daemon, tui, rlm, voice, webvm, marketplace, skills, brain_integration, taskgraph};
+ 
+ #[derive(Parser)]
+ #[command(name = "a2")]
+@@ -64,8 +64,8 @@ enum Commands {
+     /// Brain session management
+     Brain(brain_integration::BrainArgs),
+ 
+-    /// Check which tools are installed
+-    Which(which::WhichArgs),
++    /// Task graph operations
++    Task(taskgraph::TaskGraphArgs),
+ 
+     /// CLI configuration
+     Config {
+@@ -110,9 +110,9 @@ async fn main() -> anyhow::Result<()> {
+         Commands::Rlm(cmd) => rlm::handle_rlm(cmd).await?,
+         Commands::Voice(cmd) => voice::handle_voice(cmd.command).await?,
+         Commands::WebVM(cmd) => webvm::handle_webvm(cmd.command).await?,
+-        Commands::Marketplace(cmd) => marketplace::handle_marketplace(cmd).await?,
+-        Commands::Brain(cmd) => brain_integration::handle_brain(cmd).await?,
+-        Commands::Which(cmd) => which::handle_which(cmd).await?,
++        Commands::Marketplace(cmd) => marketplace::handle_marketplace(cmd, &client).await?,
++        Commands::Brain(cmd) => brain_integration::handle_brain(cmd.command, &client).await?,
++        Commands::Task(cmd) => taskgraph::handle_taskgraph(cmd.command, &client).await?,
+ 
+         Commands::Config { cmd } => match cmd {
+             ConfigSubcommands::Url { url } => {
+diff --git a/services/kernel/src/main.rs b/services/kernel/src/main.rs
+index 006141d..207caa3 100644
+--- a/services/kernel/src/main.rs
++++ b/services/kernel/src/main.rs
+@@ -612,6 +612,7 @@ impl MonitoringState {
+ mod brain;
+ mod gui_tools;
+ mod vision_config;
++mod taskgraph;
+ use brain::{BrainManager, BrainProvider, BrainStore, CliBrainDriver, RuntimeRegistry};
+ use brain::runtime_management::*;
+ use gui_tools::*;
+@@ -696,6 +697,16 @@ struct StartRunRequest {
+     task_id: String,
+ }
+ 
++#[derive(Deserialize)]
++struct TaskgraphInstallRequest {
++    graph_id: String,
++}
++
++#[derive(Deserialize)]
++struct TaskgraphResumeRequest {
++    run_id: String,
++}
++
+ async fn list_tasks(State(state): State<AppState>) -> Result<Json<Vec<Task>>, StatusCode> {
+     state.orchestrator_service.task_store.list_tasks().await
+         .map(Json)
+@@ -1266,6 +1277,22 @@ async fn execute_workflow(
+     Ok(Json(execution))
+ }
+ 
++async fn taskgraph_install(
++    Json(payload): Json<TaskgraphInstallRequest>,
++) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
++    taskgraph::install_run(&payload.graph_id)
++        .map(Json)
++        .map_err(|e| (StatusCode::BAD_REQUEST, e))
++}
++
++async fn taskgraph_resume(
++    Json(payload): Json<TaskgraphResumeRequest>,
++) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
++    taskgraph::resume_run(&payload.run_id)
++        .map(Json)
++        .map_err(|e| (StatusCode::BAD_REQUEST, e))
++}
++
+ async fn validate_workflow(
+     State(state): State<AppState>,
+     Json(payload): Json<WorkflowYamlRequest>,
+@@ -2074,6 +2101,8 @@ async fn create_router() -> Result<Router, anyhow::Error> {
+         .route("/v1/sessions/:id/events", get(brain::gateway::stream_brain_events::<AppState>))
+         .route("/v1/sessions/:id/input", post(brain::gateway::send_brain_input::<AppState>))
+         .route("/v1/intent/dispatch", post(dispatch_intent))
++        .route("/v1/taskgraph/install", post(taskgraph_install))
++        .route("/v1/taskgraph/resume", post(taskgraph_resume))
+         .route("/v1/capsules", get(list_capsules))
+         .route("/v1/capsules/:id", get(get_capsule))
+         .route("/v1/capsules/:id/patch", post(patch_capsule))
+diff --git a/services/kernel/src/taskgraph.rs b/services/kernel/src/taskgraph.rs
+new file mode 100644
+index 0000000..ddb407a
+--- /dev/null
++++ b/services/kernel/src/taskgraph.rs
+@@ -0,0 +1,321 @@
++use chrono::Utc;
++use serde::{Deserialize, Serialize};
++use serde_json::{json, Value};
++use std::collections::{HashMap, HashSet};
++use std::fs;
++use std::path::{Path, PathBuf};
++use uuid::Uuid;
++
++const GRAPH_DIR: &str = ".a2r/graphs";
++const RUN_STATE_DIR: &str = ".a2r/run_state";
++const RECEIPTS_DIR: &str = ".a2r/receipts";
++
++const BEADS_KEYS: [&str; 8] = [
++    "wih_version",
++    "task_id",
++    "graph_id",
++    "title",
++    "blocked_by",
++    "write_scope",
++    "tools",
++    "acceptance",
++];
++
++const STATUS_PENDING: &str = "PENDING";
++const STATUS_BLOCKED: &str = "BLOCKED";
++const STATUS_RUNNING: &str = "RUNNING";
++const STATUS_SUCCEEDED: &str = "SUCCEEDED";
++const STATUS_FAILED: &str = "FAILED";
++const STATUS_SKIPPED: &str = "SKIPPED";
++
++#[derive(Debug, Deserialize)]
++struct Graph {
++    graph_id: String,
++    nodes: Vec<GraphNode>,
++}
++
++#[derive(Debug, Deserialize)]
++struct GraphNode {
++    task_id: String,
++    #[serde(default)]
++    blocked_by: Vec<String>,
++    wih_path: String,
++}
++
++fn load_json(path: &Path) -> Result<Value, String> {
++    let data = fs::read_to_string(path).map_err(|e| format!("Failed to read {}: {}", path.display(), e))?;
++    serde_json::from_str(&data).map_err(|e| format!("Failed to parse {}: {}", path.display(), e))
++}
++
++fn load_graph(graph_id: &str) -> Result<Graph, String> {
++    let path = Path::new(GRAPH_DIR).join(format!("{}.json", graph_id));
++    let data = fs::read_to_string(&path).map_err(|e| format!("Graph not found: {} ({})", path.display(), e))?;
++    let graph: Graph = serde_json::from_str(&data).map_err(|e| format!("Failed to parse graph {}: {}", path.display(), e))?;
++    if graph.graph_id != graph_id {
++        return Err(format!("Graph id mismatch in {}", path.display()));
++    }
++    Ok(graph)
++}
++
++fn load_wih(wih_path: &str) -> Result<Value, String> {
++    let rel = wih_path.trim_start_matches('/');
++    let path = Path::new(rel);
++    if !path.exists() {
++        return Err(format!("WIH not found: {}", path.display()));
++    }
++    load_json(path)
++}
++
++fn value_as_str(value: &Value, key: &str) -> Result<String, String> {
++    value
++        .get(key)
++        .and_then(|v| v.as_str())
++        .map(|v| v.to_string())
++        .ok_or_else(|| format!("Missing or invalid {}", key))
++}
++
++fn value_as_array(value: &Value, key: &str) -> Result<Vec<String>, String> {
++    value
++        .get(key)
++        .and_then(|v| v.as_array())
++        .map(|arr| {
++            arr.iter()
++                .filter_map(|item| item.as_str().map(|s| s.to_string()))
++                .collect::<Vec<String>>()
++        })
++        .ok_or_else(|| format!("Missing or invalid {}", key))
++}
++
++fn validate_wih_node(node: &GraphNode, wih: &Value, graph_id: &str) -> Result<(), String> {
++    let task_id = value_as_str(wih, "task_id")?;
++    if task_id != node.task_id {
++        return Err(format!("WIH task_id mismatch for {}", node.task_id));
++    }
++    let wih_graph_id = value_as_str(wih, "graph_id")?;
++    if wih_graph_id != graph_id {
++        return Err(format!("WIH graph_id mismatch for {}", node.task_id));
++    }
++
++    let wih_blocked = value_as_array(wih, "blocked_by")?;
++    if wih_blocked != node.blocked_by {
++        return Err(format!("blocked_by mismatch for {}", node.task_id));
++    }
++
++    let beads = wih
++        .get("beads")
++        .and_then(|v| v.as_object())
++        .ok_or_else(|| format!("Beads envelope missing for {}", node.task_id))?;
++
++    for key in BEADS_KEYS {
++        let wih_val = wih.get(key);
++        let beads_val = beads.get(key);
++        if wih_val != beads_val {
++            return Err(format!("Beads.{} mismatch for {}", key, node.task_id));
++        }
++    }
++
++    Ok(())
++}
++
++pub fn install_run(graph_id: &str) -> Result<Value, String> {
++    let graph = load_graph(graph_id)?;
++    if graph.nodes.is_empty() {
++        return Err(format!("Graph has no nodes: {}", graph_id));
++    }
++
++    for node in &graph.nodes {
++        let wih = load_wih(&node.wih_path)?;
++        validate_wih_node(node, &wih, graph_id)?;
++    }
++
++    let run_id = Uuid::new_v4().to_string();
++    let now = Utc::now().to_rfc3339();
++
++    let mut node_states = Vec::new();
++    let mut runnable = Vec::new();
++
++    for node in &graph.nodes {
++        let status = if node.blocked_by.is_empty() {
++            runnable.push(node.task_id.clone());
++            STATUS_PENDING
++        } else {
++            STATUS_BLOCKED
++        };
++
++        node_states.push(json!({
++            "task_id": node.task_id,
++            "status": status,
++            "last_receipt_id": ""
++        }));
++    }
++
++    let mut runnable_sorted = runnable.clone();
++    runnable_sorted.sort();
++
++    let run_state = json!({
++        "run_id": run_id,
++        "graph_id": graph_id,
++        "status": "RUNNING",
++        "started_at": now,
++        "node_states": node_states,
++        "resume_cursor": {
++            "last_node": "",
++            "next_nodes": runnable_sorted
++        },
++        "receipts": [],
++        "artifacts": []
++    });
++
++    fs::create_dir_all(RUN_STATE_DIR).map_err(|e| format!("Failed to create run_state dir: {}", e))?;
++    let run_path = Path::new(RUN_STATE_DIR).join(format!("{}.json", run_id));
++    fs::write(&run_path, serde_json::to_string_pretty(&run_state).map_err(|e| e.to_string())?)
++        .map_err(|e| format!("Failed to write run_state: {}", e))?;
++
++    Ok(json!({
++        "run_id": run_id,
++        "graph_id": graph_id,
++        "run_state_path": run_path
++    }))
++}
++
++pub fn resume_run(run_id: &str) -> Result<Value, String> {
++    let run_path = Path::new(RUN_STATE_DIR).join(format!("{}.json", run_id));
++    if !run_path.exists() {
++        return Err(format!("Run state not found: {}", run_path.display()));
++    }
++
++    let mut run_state = load_json(&run_path)?;
++    let graph_id = value_as_str(&run_state, "graph_id")?;
++    let graph = load_graph(&graph_id)?;
++
++    let node_states_val = run_state
++        .get("node_states")
++        .and_then(|v| v.as_array())
++        .ok_or_else(|| format!("Run state missing node_states: {}", run_path.display()))?;
++
++    let mut state_by_task: HashMap<String, Value> = HashMap::new();
++    for state in node_states_val {
++        if let Some(task_id) = state.get("task_id").and_then(|v| v.as_str()) {
++            state_by_task.insert(task_id.to_string(), state.clone());
++        }
++    }
++
++    for node in &graph.nodes {
++        if !state_by_task.contains_key(&node.task_id) {
++            return Err(format!("Run state missing node state for {}", node.task_id));
++        }
++        let wih = load_wih(&node.wih_path)?;
++        validate_wih_node(node, &wih, &graph_id)?;
++    }
++
++    let receipt_dir = Path::new(RECEIPTS_DIR).join(run_id);
++    let mut receipt_nodes: HashSet<String> = HashSet::new();
++    let mut receipt_ids: Vec<String> = Vec::new();
++    if receipt_dir.exists() {
++        for entry in fs::read_dir(&receipt_dir).map_err(|e| format!("Failed to read receipts: {}", e))? {
++            let entry = entry.map_err(|e| format!("Failed to read receipt entry: {}", e))?;
++            if !entry.path().extension().map(|ext| ext == "json").unwrap_or(false) {
++                continue;
++            }
++            let receipt = load_json(&entry.path())?;
++            if let Some(receipt_run_id) = receipt.get("run_id").and_then(|v| v.as_str()) {
++                if receipt_run_id != run_id {
++                    return Err(format!("Receipt run_id mismatch in {}", entry.path().display()));
++                }
++            }
++            if let Some(node_id) = receipt.get("node_id").and_then(|v| v.as_str()) {
++                receipt_nodes.insert(node_id.to_string());
++            } else if let Some(task_id) = receipt.get("task_id").and_then(|v| v.as_str()) {
++                receipt_nodes.insert(task_id.to_string());
++            }
++            let receipt_id = receipt
++                .get("receipt_id")
++                .and_then(|v| v.as_str())
++                .map(|v| v.to_string())
++                .unwrap_or_else(|| {
++                    entry
++                        .path()
++                        .file_stem()
++                        .unwrap_or_default()
++                        .to_string_lossy()
++                        .to_string()
++                });
++            receipt_ids.push(receipt_id);
++        }
++    }
++
++    for state in node_states_val {
++        let status = state.get("status").and_then(|v| v.as_str()).unwrap_or("");
++        if status == STATUS_SUCCEEDED {
++            let task_id = value_as_str(state, "task_id")?;
++            if !receipt_nodes.contains(&task_id) {
++                return Err(format!("Missing receipt for completed node {}", task_id));
++            }
++        }
++    }
++
++    let mut runnable = Vec::new();
++    for node in &graph.nodes {
++        let mut state = state_by_task
++            .get(&node.task_id)
++            .cloned()
++            .unwrap_or_else(|| json!({}));
++        let status = state.get("status").and_then(|v| v.as_str()).unwrap_or(STATUS_PENDING);
++        if [STATUS_SUCCEEDED, STATUS_FAILED, STATUS_SKIPPED].contains(&status) {
++            continue;
++        }
++
++        let deps_missing: Vec<String> = node
++            .blocked_by
++            .iter()
++            .filter(|dep| !receipt_nodes.contains(*dep))
++            .cloned()
++            .collect();
++
++        if !deps_missing.is_empty() {
++            if status == STATUS_RUNNING {
++                return Err(format!("Node {} running without dependency receipts", node.task_id));
++            }
++            state["status"] = Value::String(STATUS_BLOCKED.to_string());
++        } else {
++            if status == STATUS_BLOCKED {
++                state["status"] = Value::String(STATUS_PENDING.to_string());
++            }
++            if state["status"] == Value::String(STATUS_PENDING.to_string()) {
++                runnable.push(node.task_id.clone());
++            }
++        }
++
++        run_state
++            .get_mut("node_states")
++            .and_then(|v| v.as_array_mut())
++            .ok_or_else(|| "Run state node_states missing".to_string())?
++            .iter_mut()
++            .for_each(|item| {
++                if item.get("task_id") == Some(&Value::String(node.task_id.clone())) {
++                    *item = state.clone();
++                }
++            });
++    }
++
++    run_state["receipts"] = Value::Array(receipt_ids.into_iter().map(Value::String).collect());
++    let mut resume_cursor = run_state
++        .get("resume_cursor")
++        .cloned()
++        .unwrap_or_else(|| json!({}));
++    let mut runnable_sorted = runnable.clone();
++    runnable_sorted.sort();
++    resume_cursor["next_nodes"] = Value::Array(
++        runnable_sorted.iter().cloned().map(Value::String).collect(),
++    );
++    run_state["resume_cursor"] = resume_cursor;
++
++    fs::write(&run_path, serde_json::to_string_pretty(&run_state).map_err(|e| e.to_string())?)
++        .map_err(|e| format!("Failed to write run_state: {}", e))?;
++
++    Ok(json!({
++        "run_id": run_id,
++        "graph_id": graph_id,
++        "next_nodes": runnable_sorted
++    }))
++}

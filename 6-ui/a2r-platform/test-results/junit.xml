@@ -1,0 +1,18 @@
+<testsuites id="" name="" tests="1" failures="0" skipped="0" errors="0" time="11.536669">
+<testsuite name="test-new-browser-ui.spec.ts" timestamp="2026-02-27T08:07:20.889Z" hostname="chromium" tests="1" failures="0" skipped="0" time="8.282" errors="0">
+<testcase name="test new browser UI" classname="test-new-browser-ui.spec.ts" time="8.282">
+<system-out>
+<![CDATA[Empty state exists: [33mtrue[39m
+Agent input exists: [33mtrue[39m
+Tab bar exists: [33mfalse[39m
+
+=== NEW BROWSER UI VERIFICATION ===
+✓ Browser loads from landing page
+✓ Empty state shows when no tabs
+✓ Agent input bar present at bottom
+✓ Compact tab bar at top
+]]>
+</system-out>
+</testcase>
+</testsuite>
+</testsuites>

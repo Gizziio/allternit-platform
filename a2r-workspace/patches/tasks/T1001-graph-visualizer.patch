@@ -1,0 +1,111 @@
+diff --git a/apps/ui/src/ui_registry.json b/apps/ui/src/ui_registry.json
+new file mode 100644
+index 0000000..4115449
+--- /dev/null
++++ b/apps/ui/src/ui_registry.json
+@@ -0,0 +1,104 @@
++{
++  "version": "v0.1",
++  "ui_actions": [
++    {
++      "action_id": "action-dashboard-refresh",
++      "name": "Dashboard Refresh",
++      "description": "Refresh dashboard view",
++      "gateway_route": "GET:/api/dashboard",
++      "allowed_methods": ["GET"],
++      "requires_auth": true,
++      "rate_limit": {
++        "requests_per_minute": 60
++      }
++    },
++    {
++      "action_id": "action-run-create",
++      "name": "Create Run",
++      "description": "Create a new run instance",
++      "gateway_route": "POST:/api/runs",
++      "allowed_methods": ["POST"],
++      "requires_auth": true,
++      "rate_limit": {
++        "requests_per_minute": 10
++      }
++    },
++    {
++      "action_id": "action-run-inspect",
++      "name": "Inspect Run",
++      "description": "Inspect run details",
++      "gateway_route": "GET:/api/runs/{run_id}",
++      "allowed_methods": ["GET"],
++      "requires_auth": true,
++      "rate_limit": {
++        "requests_per_minute": 120
++      }
++    },
++    {
++      "action_id": "action-graph-view",
++      "name": "View Graph",
++      "description": "View execution graph",
++      "gateway_route": "GET:/api/graphs/{graph_id}",
++      "allowed_methods": ["GET"],
++      "requires_auth": true,
++      "rate_limit": {
++        "requests_per_minute": 60
++      }
++    },
++    {
++      "action_id": "action-receipts-browse",
++      "name": "Browse Receipts",
++      "description": "Browse receipts for a run",
++      "gateway_route": "GET:/api/receipts",
++      "allowed_methods": ["GET"],
++      "requires_auth": true,
++      "rate_limit": {
++        "requests_per_minute": 240
++      }
++    },
++    {
++      "action_id": "action-capsule-launch",
++      "name": "Launch Capsule",
++      "description": "Launch a new capsule instance",
++      "gateway_route": "POST:/api/capsules/launch",
++      "allowed_methods": ["POST"],
++      "requires_auth": true,
++      "rate_limit": {
++        "requests_per_minute": 5
++      }
++    },
++    {
++      "action_id": "action-memory-promote",
++      "name": "Promote Memory",
++      "description": "Promote a memory candidate",
++      "gateway_route": "POST:/api/memory/promote",
++      "allowed_methods": ["POST"],
++      "requires_auth": true,
++      "rate_limit": {
++        "requests_per_minute": 20
++      }
++    },
++    {
++      "action_id": "action-forensics-export",
++      "name": "Export Forensics",
++      "description": "Export forensics data for a run",
++      "gateway_route": "POST:/api/forensics/export",
++      "allowed_methods": ["POST"],
++      "requires_auth": true,
++      "rate_limit": {
++        "requests_per_minute": 5
++      }
++    },
++    {
++      "action_id": "action-agent-spawn",
++      "name": "Spawn Agent",
++      "description": "Spawn a new agent instance",
++      "gateway_route": "POST:/api/agents/spawn",
++      "allowed_methods": ["POST"],
++      "requires_auth": true,
++      "rate_limit": {
++        "requests_per_minute": 10
++      }
++    }
++  ]
++}
+\ No newline at end of file

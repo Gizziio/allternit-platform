@@ -1,0 +1,17 @@
+[package]
+name = "a2rchitech-budget-metering"
+version = "0.1.0"
+edition = "2021"
+description = "Budget metering system for A2R - CPU/memory metering, quota enforcement, admission control"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true }
+chrono = { workspace = true }
+
+[dev-dependencies]
+tokio-test = "0.4"

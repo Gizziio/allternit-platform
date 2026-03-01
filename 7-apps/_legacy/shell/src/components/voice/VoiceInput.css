@@ -1,0 +1,277 @@
+/**
+ * VoiceInput Component Styles
+ */
+
+.voice-input {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.08));
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  transition: all 0.3s ease;
+}
+
+.voice-input:hover {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.12), rgba(118, 75, 162, 0.12));
+  border-color: rgba(102, 126, 234, 0.3);
+}
+
+/* Button styles */
+.voice-input__button {
+  position: relative;
+  border: none;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  box-shadow: 
+    0 4px 12px rgba(102, 126, 234, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.voice-input__button:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 
+    0 6px 20px rgba(102, 126, 234, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.voice-input__button:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.voice-input__button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Recording state */
+.voice-input__button--listening {
+  background: linear-gradient(135deg, #f5576c, #f093fb);
+  box-shadow: 
+    0 4px 20px rgba(245, 87, 108, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  animation: listening-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes listening-pulse {
+  0%, 100% {
+    box-shadow: 
+      0 4px 20px rgba(245, 87, 108, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+  50% {
+    box-shadow: 
+      0 4px 30px rgba(245, 87, 108, 0.6),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+}
+
+/* Processing state */
+.voice-input__button--processing {
+  background: linear-gradient(135deg, #11998e, #38ef7d);
+  box-shadow: 
+    0 4px 20px rgba(17, 153, 142, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* Error state */
+.voice-input__button--error {
+  background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+  box-shadow: 
+    0 4px 20px rgba(255, 107, 107, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* Pulse animation for recording */
+.voice-input__pulse {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  animation: pulse-ring 1.5s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+/* Waveform visualization */
+.voice-input__waveform {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  pointer-events: none;
+}
+
+.voice-input__wave {
+  width: 3px;
+  height: 60%;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 2px;
+  animation: wave-bounce 0.5s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
+@keyframes wave-bounce {
+  0%, 100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+/* Icon styles */
+.voice-input__icon {
+  position: relative;
+  z-index: 1;
+}
+
+.voice-input__icon--error {
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+
+/* Spinner for processing state */
+.voice-input__spinner {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Transcript display */
+.voice-input__transcript {
+  flex: 1;
+  min-width: 100px;
+  max-width: 300px;
+  font-size: 14px;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.voice-input__transcript--final {
+  color: #333;
+}
+
+.voice-input__transcript--interim {
+  color: #667eea;
+  opacity: 0.7;
+  font-style: italic;
+}
+
+.voice-input__cursor {
+  display: inline-block;
+  margin-left: 2px;
+  color: #667eea;
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Placeholder */
+.voice-input__placeholder {
+  font-size: 14px;
+  color: rgba(102, 126, 234, 0.6);
+  font-style: italic;
+}
+
+/* Unsupported warning */
+.voice-input__unsupported {
+  font-size: 12px;
+  color: rgba(255, 107, 107, 0.8);
+  padding: 4px 8px;
+  background: rgba(255, 107, 107, 0.1);
+  border-radius: 4px;
+}
+
+/* Size variants */
+.voice-input--small .voice-input__transcript {
+  font-size: 12px;
+  max-width: 200px;
+}
+
+.voice-input--large .voice-input__transcript {
+  font-size: 16px;
+  max-width: 400px;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .voice-input {
+    padding: 6px 10px;
+    gap: 8px;
+  }
+
+  .voice-input__transcript {
+    max-width: 150px;
+    font-size: 12px;
+  }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .voice-input__button,
+  .voice-input__pulse,
+  .voice-input__wave,
+  .voice-input__spinner,
+  .voice-input__cursor {
+    animation: none !important;
+  }
+}
+
+/* Focus styles for accessibility */
+.voice-input__button:focus-visible {
+  outline: 3px solid rgba(102, 126, 234, 0.5);
+  outline-offset: 2px;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .voice-input {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.15));
+    border-color: rgba(102, 126, 234, 0.3);
+  }
+
+  .voice-input__transcript {
+    color: #e0e0e0;
+  }
+
+  .voice-input__placeholder {
+    color: rgba(102, 126, 234, 0.7);
+  }
+}

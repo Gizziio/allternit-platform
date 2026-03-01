@@ -1,0 +1,189 @@
+- generic [ref=e2]:
+  - generic [ref=e174]:
+    - button "Hide Inspector" [ref=e175] [cursor=pointer]:
+      - img [ref=e176]
+      - text: Hide Inspector
+    - generic [ref=e178]:
+      - generic [ref=e182]:
+        - generic [ref=e183]:
+          - generic [ref=e184]:
+            - combobox "Code session selector" [ref=e185]:
+              - option "Code Mode Layout Stabilization" [selected]
+              - option "Approval Token Rails Pass"
+              - option "Diff Review Prototype"
+            - button "a2rchitech" [ref=e186] [cursor=pointer]:
+              - img [ref=e187]
+              - text: a2rchitech
+              - img [ref=e189]
+          - generic [ref=e191]:
+            - button "Console" [ref=e192] [cursor=pointer]:
+              - img [ref=e193]
+              - text: Console
+            - button "Preview" [ref=e195] [cursor=pointer]:
+              - img [ref=e196]
+              - text: Preview
+              - img [ref=e198]
+        - generic [ref=e201]:
+          - generic [ref=e204]:
+            - generic [ref=e206]: Hello! I am A2rchitech. How can I help?
+            - generic [ref=e207]:
+              - button "Copy" [ref=e208] [cursor=pointer]:
+                - img [ref=e209]
+                - text: Copy
+              - button "Regenerate" [ref=e211] [cursor=pointer]: Regenerate
+          - generic [ref=e213]:
+            - generic [ref=e214]:
+              - generic [ref=e215]:
+                - generic [ref=e216]:
+                  - img [ref=e217]
+                  - text: main
+                - generic [ref=e219]: .a2r/worktrees/sess_code_ui
+              - generic [ref=e220]: 1 approval pending
+            - generic [ref=e222]:
+              - button "Scaffold" [ref=e223] [cursor=pointer]:
+                - img [ref=e224]
+                - text: Scaffold
+              - button "Refactor" [ref=e226] [cursor=pointer]:
+                - img [ref=e227]
+                - text: Refactor
+              - button "Debug" [ref=e231] [cursor=pointer]:
+                - img [ref=e232]
+                - text: Debug
+              - button "Optimize" [ref=e241] [cursor=pointer]:
+                - img [ref=e242]
+                - text: Optimize
+              - button "Explore" [ref=e244] [cursor=pointer]:
+                - img [ref=e245]
+                - text: Explore
+            - generic [ref=e249]:
+              - textbox "Reply..." [ref=e251]
+              - generic [ref=e252]:
+                - button [ref=e254] [cursor=pointer]:
+                  - img [ref=e255]
+                - generic [ref=e256]:
+                  - button "Codex CLI Extended" [ref=e257] [cursor=pointer]:
+                    - generic [ref=e258]: Codex CLI
+                    - generic [ref=e259]: Extended
+                    - img [ref=e260]
+                  - button [disabled] [ref=e262]:
+                    - img [ref=e263]
+      - separator [ref=e265]
+      - generic [ref=e270]:
+        - generic [ref=e271]:
+          - generic [ref=e272]:
+            - generic [ref=e273]:
+              - generic [ref=e274]: Inspector
+              - generic [ref=e275]: Diff, patches, context, artifacts
+            - generic [ref=e276]: IDLE
+          - generic [ref=e277]:
+            - button "diff" [ref=e278] [cursor=pointer]:
+              - img [ref=e279]
+              - generic [ref=e282]: diff
+            - button "patch" [ref=e283] [cursor=pointer]:
+              - img [ref=e284]
+              - generic [ref=e286]: patch
+            - button "files" [ref=e287] [cursor=pointer]:
+              - img [ref=e288]
+              - generic [ref=e290]: files
+            - button "plan" [ref=e291] [cursor=pointer]:
+              - img [ref=e292]
+              - generic [ref=e294]: plan
+            - button "artifacts" [ref=e295] [cursor=pointer]:
+              - img [ref=e296]
+              - generic [ref=e298]: artifacts
+        - generic [ref=e300]:
+          - generic [ref=e301]:
+            - generic [ref=e302]:
+              - img [ref=e303]
+              - generic [ref=e305]:
+                - generic [ref=e306]: Review Changes
+                - generic [ref=e307]: 2 files modified
+            - generic [ref=e308]:
+              - button "Reject All" [ref=e309] [cursor=pointer]
+              - button "Apply ChangeSet" [ref=e310] [cursor=pointer]:
+                - img [ref=e311]
+                - text: Apply ChangeSet
+          - generic [ref=e313]:
+            - generic [ref=e314]:
+              - generic [ref=e315] [cursor=pointer]:
+                - img [ref=e316]
+                - img [ref=e318]
+                - text: src/views/code/CodeCanvas.tsx
+                - generic [ref=e320]: +2 -2
+              - generic [ref=e321]:
+                - generic [ref=e322]:
+                  - generic [ref=e323]: "@@ -0,0 +0,0 @@"
+                  - generic [ref=e324]:
+                    - generic [ref=e325]:
+                      - generic [ref=e326]: "0"
+                      - generic [ref=e327]: "0"
+                      - generic [ref=e328]: "- <Rocket size={32} />"
+                    - generic [ref=e329]:
+                      - generic [ref=e330]: "1"
+                      - generic [ref=e331]: "1"
+                      - generic [ref=e332]: "+ <Rocket size={32} weight=\"duotone\" />"
+                  - generic [ref=e333]:
+                    - button "Reject" [ref=e334] [cursor=pointer]:
+                      - img [ref=e335]
+                      - text: Reject
+                    - button "Accept" [ref=e337] [cursor=pointer]:
+                      - img [ref=e338]
+                      - text: Accept
+                - generic [ref=e340]:
+                  - generic [ref=e341]: "@@ -0,0 +0,0 @@"
+                  - generic [ref=e342]:
+                    - generic [ref=e343]:
+                      - generic [ref=e344]: "0"
+                      - generic [ref=e345]: "0"
+                      - generic [ref=e346]: "- color=\"blue\""
+                    - generic [ref=e347]:
+                      - generic [ref=e348]: "1"
+                      - generic [ref=e349]: "1"
+                      - generic [ref=e350]: + color="var(--accent-chat)"
+                  - generic [ref=e351]:
+                    - button "Reject" [ref=e352] [cursor=pointer]:
+                      - img [ref=e353]
+                      - text: Reject
+                    - button "Accept" [ref=e355] [cursor=pointer]:
+                      - img [ref=e356]
+                      - text: Accept
+            - generic [ref=e358]:
+              - generic [ref=e359] [cursor=pointer]:
+                - img [ref=e360]
+                - img [ref=e362]
+                - text: src/shell/ShellRail.tsx
+                - generic [ref=e364]: +1 -0
+              - generic [ref=e366]:
+                - generic [ref=e367]: "@@ -0,0 +0,0 @@"
+                - generic [ref=e369]:
+                  - generic [ref=e370]: "0"
+                  - generic [ref=e371]: "0"
+                  - generic [ref=e372]: "+ import { Code } from \"@phosphor-icons/react\";"
+                - generic [ref=e373]:
+                  - button "Reject" [ref=e374] [cursor=pointer]:
+                    - img [ref=e375]
+                    - text: Reject
+                  - button "Accept" [ref=e377] [cursor=pointer]:
+                    - img [ref=e378]
+                    - text: Accept
+  - generic:
+    - generic [ref=e138]:
+      - generic [ref=e139]:
+        - button "Expand Sidebar" [ref=e140] [cursor=pointer]:
+          - img [ref=e141]
+        - button "New Chat" [ref=e143] [cursor=pointer]:
+          - img [ref=e144]
+      - button "Browser" [ref=e147] [cursor=pointer]:
+        - img [ref=e148]
+        - generic [ref=e150]: Browser
+    - generic [ref=e152]:
+      - button "Chat" [ref=e153] [cursor=pointer]:
+        - img [ref=e154]
+        - generic [ref=e156]: Chat
+      - button "Cowork" [ref=e157] [cursor=pointer]:
+        - img [ref=e158]
+        - generic [ref=e160]: Cowork
+      - button "Code" [active] [ref=e161] [cursor=pointer]:
+        - img [ref=e162]
+        - generic [ref=e164]: Code
+  - img [ref=e167] [cursor=pointer]

@@ -1,0 +1,129 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://a2r.dev/schemas/receipt.schema.json",
+  "title": "A2R Receipt (Tool Activity)",
+  "description": "Append-only log of tool calls and results for evidence/audit",
+  "type": "object",
+  "required": ["version", "ts", "run_id", "dag_node_id", "tool", "kind", "status"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "ts": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp (RFC3339)"
+    },
+    "run_id": {
+      "type": "string",
+      "description": "Run UUID"
+    },
+    "dag_node_id": {
+      "type": "string",
+      "description": "DAG node identifier"
+    },
+    "session_id": {
+      "type": "string",
+      "description": "Session identifier"
+    },
+    "correlation_id": {
+      "type": "string",
+      "description": "Correlation ID for tracing"
+    },
+    "parent_correlation_id": {
+      "type": "string",
+      "description": "Parent correlation ID for nested calls"
+    },
+    "tool": {
+      "type": "string",
+      "description": "Tool name"
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["call", "result", "error", "cancel"],
+      "description": "Receipt entry kind"
+    },
+    "args_redacted": {
+      "type": "object",
+      "description": "Tool arguments (secrets redacted)",
+      "additionalProperties": true
+    },
+    "result_summary": {
+      "type": "string",
+      "description": "Human-readable result summary",
+      "maxLength": 1000
+    },
+    "result_schema": {
+      "type": "string",
+      "enum": ["text", "json", "diff", "file_list", "test_report", "error"],
+      "description": "Type of result data"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["ok", "fail", "partial", "timeout", "cancelled"],
+      "description": "Execution status"
+    },
+    "duration_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Execution duration in milliseconds"
+    },
+    "files_touched": {
+      "type": "array",
+      "description": "Files modified by this tool call",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string" },
+          "action": { "type": "string", "enum": ["read", "created", "modified", "deleted"] },
+          "lines_added": { "type": "integer" },
+          "lines_removed": { "type": "integer" },
+          "hash_before": { "type": "string" },
+          "hash_after": { "type": "string" }
+        }
+      }
+    },
+    "diff_refs": {
+      "type": "array",
+      "description": "References to diff artifacts",
+      "items": { "type": "string" }
+    },
+    "metrics": {
+      "type": "object",
+      "description": "Tool-specific metrics",
+      "properties": {
+        "tokens_used": { "type": "integer" },
+        "api_calls": { "type": "integer" },
+        "bytes_read": { "type": "integer" },
+        "bytes_written": { "type": "integer" }
+      }
+    },
+    "error": {
+      "type": "object",
+      "description": "Error details (when kind=error)",
+      "properties": {
+        "type": { "type": "string" },
+        "message": { "type": "string" },
+        "stack": { "type": "string" },
+        "recoverable": { "type": "boolean" },
+        "retryable": { "type": "boolean" }
+      }
+    },
+    "context": {
+      "type": "object",
+      "description": "Context at time of execution",
+      "properties": {
+        "cwd": { "type": "string" },
+        "git_commit": { "type": "string" },
+        "git_branch": { "type": "string" },
+        "env_vars_hash": { "type": "string" }
+      }
+    },
+    "tags": {
+      "type": "array",
+      "description": "Arbitrary tags for filtering",
+      "items": { "type": "string" }
+    }
+  }
+}

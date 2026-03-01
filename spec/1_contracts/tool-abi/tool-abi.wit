@@ -1,0 +1,163 @@
+/// A2rchitech Tool ABI - WebAssembly Interface Types (WIT) Definition
+///
+/// This interface defines the contract between the A2rchitech kernel and
+/// dynamically loaded WASM tools. All tools must implement the `tool` interface.
+///
+/// Version: 0.1.0
+/// Stability: Experimental
+
+package a2rchitech:tool-abi@0.1.0;
+
+/// Core types used across the tool interface.
+interface types {
+    /// Input provided to a tool execution.
+    record tool-input {
+        /// JSON-encoded parameters for the tool
+        parameters: string,
+
+        /// Session ID for context tracking
+        session-id: string,
+
+        /// Tenant/user identifier
+        tenant-id: string,
+
+        /// Optional trace ID for distributed tracing
+        trace-id: option<string>,
+
+        /// Optional idempotency key for safe retries
+        idempotency-key: option<string>,
+    }
+
+    /// Output from a successful tool execution.
+    record tool-output {
+        /// JSON-encoded result from the tool
+        result: string,
+
+        /// Execution time in milliseconds
+        execution-time-ms: u64,
+
+        /// List of side effects that occurred
+        side-effects: list<string>,
+    }
+
+    /// Errors that can occur during tool execution.
+    variant tool-error {
+        /// Input validation failed
+        validation-error(string),
+
+        /// Execution failed
+        execution-error(string),
+
+        /// Policy denied the operation
+        policy-denied(string),
+
+        /// Execution timed out
+        timeout,
+    }
+
+    /// Metadata describing a tool.
+    record tool-metadata {
+        /// Tool name (unique identifier)
+        name: string,
+
+        /// Human-readable description
+        description: string,
+
+        /// Semantic version
+        version: string,
+
+        /// JSON Schema for input parameters
+        input-schema: string,
+
+        /// JSON Schema for output
+        output-schema: string,
+
+        /// Required capabilities
+        required-capabilities: list<string>,
+
+        /// Safety tier (safe, moderate, dangerous)
+        safety-tier: string,
+
+        /// Whether the tool is idempotent
+        idempotent: bool,
+    }
+
+    /// Validation result.
+    variant validation-result {
+        /// Input is valid
+        valid,
+
+        /// Input is invalid with reason
+        invalid(string),
+    }
+}
+
+/// The main tool interface that all tools must implement.
+interface tool {
+    use types.{tool-input, tool-output, tool-error, tool-metadata, validation-result};
+
+    /// Execute the tool with the given input.
+    ///
+    /// This is the primary entry point for tool execution. The kernel
+    /// will call this function after policy checks pass.
+    execute: func(input: tool-input) -> result<tool-output, tool-error>;
+
+    /// Get metadata describing this tool.
+    ///
+    /// Returns information about the tool including its schema,
+    /// required capabilities, and safety tier.
+    describe: func() -> tool-metadata;
+
+    /// Validate input before execution.
+    ///
+    /// This allows the tool to perform validation without side effects.
+    /// The kernel may call this before execute() to fail fast.
+    validate: func(parameters: string) -> validation-result;
+}
+
+/// Host functions provided by the A2rchitech kernel.
+interface host {
+    /// Log a message to the event ledger.
+    log: func(level: string, message: string);
+
+    /// Check if a capability is granted.
+    check-capability: func(capability-type: string) -> bool;
+
+    /// Get an environment variable (if allowed by policy).
+    get-env: func(name: string) -> option<string>;
+
+    /// Get the current timestamp.
+    now: func() -> u64;
+
+    /// Generate a random UUID.
+    random-uuid: func() -> string;
+}
+
+/// The world that tools are compiled against.
+world tool-component {
+    /// Tools can use host functions
+    import host;
+
+    /// Tools must export the tool interface
+    export tool;
+}
+
+/// Extended world for tools that need more capabilities.
+world tool-component-extended {
+    /// Standard host functions
+    import host;
+
+    /// WASI filesystem (if granted)
+    import wasi:filesystem/types@0.2.0;
+    import wasi:filesystem/preopens@0.2.0;
+
+    /// WASI sockets (if granted)
+    import wasi:sockets/network@0.2.0;
+    import wasi:sockets/tcp@0.2.0;
+
+    /// WASI HTTP (if granted)
+    import wasi:http/outgoing-handler@0.2.0;
+
+    /// Tools must export the tool interface
+    export tool;
+}

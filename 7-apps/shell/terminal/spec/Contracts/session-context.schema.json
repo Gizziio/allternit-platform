@@ -1,0 +1,207 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://a2r.dev/schemas/session-context.schema.json",
+  "title": "A2R Session Context (Baton)",
+  "description": "Portable session state for handoff between runners/tools. Emitted during compaction/handoff events.",
+  "type": "object",
+  "required": [
+    "version",
+    "session_id",
+    "source_tool",
+    "workspace_path",
+    "time_start",
+    "objective",
+    "next_actions"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Schema version",
+      "const": "1.0.0"
+    },
+    "session_id": {
+      "type": "string",
+      "description": "Unique session identifier"
+    },
+    "run_id": {
+      "type": "string",
+      "description": "Current run identifier (UUID)"
+    },
+    "dag_node_id": {
+      "type": "string",
+      "description": "Current DAG node identifier"
+    },
+    "source_tool": {
+      "type": "string",
+      "description": "Tool that generated this context",
+      "enum": ["opencode", "claude_code", "codex", "copilot", "a2r_shell", "unknown"]
+    },
+    "target_tool": {
+      "type": "string",
+      "description": "Intended recipient tool for handoff",
+      "enum": ["opencode", "claude_code", "codex", "copilot", "a2r_shell", "any"]
+    },
+    "workspace_path": {
+      "type": "string",
+      "description": "Absolute path to workspace root"
+    },
+    "model": {
+      "type": "object",
+      "description": "Model configuration",
+      "properties": {
+        "provider": { "type": "string" },
+        "model_id": { "type": "string" },
+        "alias": { "type": "string" }
+      }
+    },
+    "time_start": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Session start time (RFC3339)"
+    },
+    "time_end": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Session end/compaction time (RFC3339)"
+    },
+    "objective": {
+      "type": "string",
+      "description": "Primary goal in one sentence",
+      "maxLength": 500
+    },
+    "current_plan": {
+      "type": "array",
+      "description": "Current plan bullets",
+      "items": { "type": "string" }
+    },
+    "progress_summary": {
+      "type": "array",
+      "description": "Progress bullets",
+      "items": { "type": "string" }
+    },
+    "work_completed": {
+      "type": "array",
+      "description": "Completed work items",
+      "items": { "type": "string" }
+    },
+    "decisions": {
+      "type": "array",
+      "description": "Key decisions made",
+      "items": { "type": "string" }
+    },
+    "open_todos": {
+      "type": "array",
+      "description": "Outstanding TODOs",
+      "items": {
+        "type": "object",
+        "properties": {
+          "task": { "type": "string" },
+          "priority": { "type": "string", "enum": ["high", "medium", "low"] },
+          "blocking": { "type": "boolean" }
+        }
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "description": "Current blockers",
+      "items": { "type": "string" }
+    },
+    "files_changed": {
+      "type": "array",
+      "description": "Files modified during session",
+      "items": {
+        "type": "object",
+        "required": ["path", "summary"],
+        "properties": {
+          "path": { "type": "string" },
+          "summary": { "type": "string" },
+          "action": { "type": "string", "enum": ["created", "modified", "deleted", "renamed"] },
+          "diff_ref": { "type": "string", "description": "Reference to diff artifact" }
+        }
+      }
+    },
+    "commands_executed": {
+      "type": "object",
+      "description": "Categorized commands",
+      "properties": {
+        "build": { "type": "array", "items": { "type": "string" } },
+        "test": { "type": "array", "items": { "type": "string" } },
+        "lint": { "type": "array", "items": { "type": "string" } },
+        "git": { "type": "array", "items": { "type": "string" } },
+        "other": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "errors_seen": {
+      "type": "array",
+      "description": "Errors encountered",
+      "items": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string" },
+          "tool": { "type": "string" },
+          "recoverable": { "type": "boolean" }
+        }
+      }
+    },
+    "next_actions": {
+      "type": "array",
+      "description": "Next 5 explicit actions",
+      "minItems": 1,
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "required": ["action", "description"],
+        "properties": {
+          "action": { "type": "string", "enum": ["edit", "command", "read", "test", "commit", "review"] },
+          "description": { "type": "string" },
+          "target": { "type": "string", "description": "File or command target" },
+          "estimated_tokens": { "type": "number" }
+        }
+      }
+    },
+    "references": {
+      "type": "object",
+      "description": "External references",
+      "properties": {
+        "issue_ids": { "type": "array", "items": { "type": "string" } },
+        "pr_ids": { "type": "array", "items": { "type": "string" } },
+        "ticket_ids": { "type": "array", "items": { "type": "string" } },
+        "links": { "type": "array", "items": { "type": "string", "format": "uri" } }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "description": "Pointers to evidence artifacts",
+      "properties": {
+        "receipt_offset": { "type": "number", "description": "Offset in receipt.jsonl" },
+        "state_hash": { "type": "string", "description": "Hash of state.json" },
+        "diff_refs": { "type": "array", "items": { "type": "string" } },
+        "compact_ref": { "type": "string", "description": "Path to compact file" }
+      }
+    },
+    "limits": {
+      "type": "object",
+      "description": "Usage/pressure snapshot at emission",
+      "properties": {
+        "context_ratio": { "type": "number", "minimum": 0, "maximum": 1 },
+        "quota_ratio": { "type": "number", "minimum": 0, "maximum": 1 },
+        "tokens_input": { "type": "number" },
+        "tokens_output": { "type": "number" },
+        "tokens_total": { "type": "number" },
+        "context_window": { "type": "number" },
+        "cost_estimate": { "type": "number" },
+        "throttle_count": { "type": "number" }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional metadata",
+      "properties": {
+        "compaction_count": { "type": "number" },
+        "handoff_count": { "type": "number" },
+        "original_message_count": { "type": "number" },
+        "compaction_reason": { "type": "string", "enum": ["manual", "threshold", "quota", "error"] }
+      }
+    }
+  }
+}

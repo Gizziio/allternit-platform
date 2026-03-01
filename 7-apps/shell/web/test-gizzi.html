@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Gizzi Animation Test</title>
+  <style>
+    body {
+      background: #1a1a1a;
+      color: white;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 50px;
+    }
+    .container {
+      position: relative;
+      width: 600px;
+      height: 200px;
+      border: 2px solid #444;
+      border-radius: 12px;
+      margin: 20px;
+      overflow: visible;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 10px;
+      cursor: pointer;
+      background: #d4956a;
+      border: none;
+      border-radius: 6px;
+      color: #1a1a1a;
+      font-weight: bold;
+    }
+    .info {
+      margin-top: 20px;
+      padding: 20px;
+      background: #2a2a2a;
+      border-radius: 8px;
+      max-width: 600px;
+    }
+    pre {
+      background: #111;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>Gizzi Animation Test</h1>
+  <div>
+    <button id="toggleOn">Turn Agent ON</button>
+    <button id="toggleOff">Turn Agent OFF</button>
+    <button id="toggleFast">Fast Toggle</button>
+  </div>
+  <div class="info">
+    <p>Current State: <span id="state">off-screen</span></p>
+    <p>Check console for animation state logs</p>
+  </div>
+
+  <script>
+    let animState = 'off-screen';
+    let timers = [];
+    
+    function clearTimers() {
+      timers.forEach(t => clearTimeout(t));
+      timers = [];
+    }
+    
+    function setState(newState) {
+      animState = newState;
+      document.getElementById('state').textContent = newState;
+      console.log('Animation state:', newState);
+    }
+    
+    function startEntry() {
+      clearTimers();
+      
+      // Peeking phase
+      setState('peeking');
+      
+      // Look left/right during peek
+      let peekCount = 0;
+      function doPeek() {
+        console.log('Peeking direction:', peekCount % 2 === 0 ? 'left' : 'right');
+        peekCount++;
+        if (peekCount < 4) {
+          timers.push(setTimeout(doPeek, 400));
+        }
+      }
+      doPeek();
+      
+      // Skimming in
+      timers.push(setTimeout(() => {
+        setState('skimming-in');
+        
+        // Landing
+        timers.push(setTimeout(() => {
+          setState('landing');
+          
+          // On bar
+          timers.push(setTimeout(() => {
+            setState('on-bar');
+          }, 400));
+        }, 1200));
+      }, 1600));
+    }
+    
+    function startExit() {
+      clearTimers();
+      
+      if (animState === 'peeking' || animState === 'skimming-in') {
+        // Fast exit - go behind bar
+        setState('behind-bar');
+        timers.push(setTimeout(() => {
+          setState('off-screen');
+        }, 300));
+      } else {
+        // Normal exit
+        setState('skimming-out');
+        
+        timers.push(setTimeout(() => {
+          setState('tumbling-out');
+          
+          timers.push(setTimeout(() => {
+            setState('off-screen');
+          }, 1500));
+        }, 1000));
+      }
+    }
+    
+    document.getElementById('toggleOn').addEventListener('click', () => {
+      if (animState === 'off-screen' || animState === 'behind-bar') {
+        startEntry();
+      }
+    });
+    
+    document.getElementById('toggleOff').addEventListener('click', () => {
+      if (animState !== 'off-screen') {
+        startExit();
+      }
+    });
+    
+    document.getElementById('toggleFast').addEventListener('click', () => {
+      startEntry();
+      setTimeout(() => {
+        startExit();
+      }, 500);
+    });
+    
+    console.log('Gizzi animation test loaded');
+    console.log('Animation flow:');
+    console.log('- Entry: peeking (1.6s) → skimming-in (1.2s) → landing (0.4s) → on-bar');
+    console.log('- Exit: skimming-out (1s) → tumbling-out (1.5s)');
+    console.log('- Fast toggle: peeking/skimming-in → behind-bar (0.3s)');
+  </script>
+</body>
+</html>

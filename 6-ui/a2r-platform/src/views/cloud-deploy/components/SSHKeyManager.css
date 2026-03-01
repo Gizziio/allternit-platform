@@ -1,0 +1,445 @@
+/* SSH Key Manager Styles */
+
+.ssh-key-manager {
+  background: var(--bg-primary, #1a1a2e);
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.ssh-key-manager.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  gap: 16px;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border-color, #2d2d44);
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Error Banner */
+.error-banner {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.error-banner button {
+  background: transparent;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+/* Header */
+.ssh-key-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.ssh-key-header h3 {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  color: var(--text-primary, #fff);
+}
+
+.ssh-key-header p {
+  margin: 0;
+  color: var(--text-secondary, #8b8b9a);
+  font-size: 14px;
+}
+
+.ssh-key-actions {
+  display: flex;
+  gap: 12px;
+}
+
+/* Buttons */
+.btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: transparent;
+  border: 1px solid var(--border-color, #2d2d44);
+  color: var(--text-primary, #fff);
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  background: var(--bg-hover, rgba(255, 255, 255, 0.1));
+}
+
+.btn-icon {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary, #8b8b9a);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  font-size: 16px;
+  transition: all 0.2s;
+}
+
+.btn-icon:hover {
+  background: var(--bg-hover, rgba(255, 255, 255, 0.1));
+  color: var(--text-primary, #fff);
+}
+
+.btn-icon.danger:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.empty-state h4 {
+  margin: 0 0 8px 0;
+  color: var(--text-primary, #fff);
+}
+
+.empty-state p {
+  margin: 0 0 24px 0;
+  color: var(--text-secondary, #8b8b9a);
+}
+
+/* Key List */
+.ssh-key-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ssh-key-card {
+  background: var(--bg-secondary, #16162a);
+  border: 1px solid var(--border-color, #2d2d44);
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ssh-key-card:hover {
+  border-color: var(--border-hover, #3d3d5c);
+}
+
+.ssh-key-card.selected {
+  border-color: #667eea;
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.ssh-key-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ssh-key-info {
+  flex: 1;
+}
+
+.ssh-key-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+
+.provider-badge {
+  background: var(--bg-primary, #1a1a2e);
+  color: var(--text-secondary, #8b8b9a);
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.ssh-key-fingerprint {
+  font-family: monospace;
+  font-size: 12px;
+  color: var(--text-secondary, #8b8b9a);
+  margin-bottom: 4px;
+}
+
+.ssh-key-meta {
+  font-size: 12px;
+  color: var(--text-secondary, #8b8b9a);
+}
+
+.ssh-key-controls {
+  display: flex;
+  gap: 4px;
+}
+
+/* Expanded Key View */
+.ssh-key-expanded {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color, #2d2d44);
+}
+
+.key-section {
+  margin-bottom: 16px;
+}
+
+.key-section:last-child {
+  margin-bottom: 0;
+}
+
+.key-section.warning {
+  background: rgba(249, 115, 22, 0.1);
+  border: 1px solid rgba(249, 115, 22, 0.3);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.key-section label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #8b8b9a);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.key-value {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.key-value code {
+  flex: 1;
+  background: var(--bg-primary, #1a1a2e);
+  padding: 12px;
+  border-radius: 8px;
+  font-family: monospace;
+  font-size: 12px;
+  color: var(--text-primary, #fff);
+  word-break: break-all;
+}
+
+.btn-copy, .btn-download {
+  background: var(--bg-primary, #1a1a2e);
+  border: 1px solid var(--border-color, #2d2d44);
+  color: var(--text-primary, #fff);
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.btn-copy:hover, .btn-download:hover {
+  background: var(--bg-hover, rgba(255, 255, 255, 0.1));
+}
+
+.security-notice {
+  margin: 8px 0 0 0;
+  font-size: 12px;
+  color: #f97316;
+}
+
+.instance-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.instance-list li {
+  padding: 4px 0;
+  color: var(--text-secondary, #8b8b9a);
+  font-size: 14px;
+}
+
+.instance-list li::before {
+  content: '● ';
+  color: #22c55e;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-content {
+  background: var(--bg-primary, #1a1a2e);
+  border-radius: 16px;
+  padding: 24px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow: auto;
+}
+
+.modal-content h3 {
+  margin: 0 0 8px 0;
+  color: var(--text-primary, #fff);
+}
+
+.modal-content > p {
+  margin: 0 0 24px 0;
+  color: var(--text-secondary, #8b8b9a);
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary, #fff);
+  margin-bottom: 8px;
+}
+
+.form-group input[type="text"],
+.form-group textarea {
+  width: 100%;
+  background: var(--bg-secondary, #16162a);
+  border: 1px solid var(--border-color, #2d2d44);
+  color: var(--text-primary, #fff);
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.form-group small {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-secondary, #8b8b9a);
+}
+
+.form-group small.warning {
+  color: #f97316;
+}
+
+/* Radio Group */
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.radio-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.radio-label input {
+  margin-top: 2px;
+}
+
+.radio-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.radio-text strong {
+  color: var(--text-primary, #fff);
+  font-weight: 500;
+}
+
+.radio-text small {
+  color: var(--text-secondary, #8b8b9a);
+  font-size: 12px;
+}
+
+/* Checkbox */
+.form-group.checkbox label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.form-group.checkbox input {
+  width: auto;
+}
+
+/* Modal Actions */
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border-color, #2d2d44);
+}

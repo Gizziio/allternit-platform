@@ -1,0 +1,791 @@
+commit ba4043a2c884899ac0da4ad7c6f9d60a7fc4c2c9
+Author: Eoj Edred <eojedredbitepubkey1@proton.me>
+Date:   Tue Jan 27 23:33:20 2026 -0600
+
+    T0100: install + run_state persistence scaffold
+
+diff --git a/.a2r/beads/graphs/graph-0001.json b/.a2r/beads/graphs/graph-0001.json
+index 338fd48..5054f63 100644
+--- a/.a2r/beads/graphs/graph-0001.json
++++ b/.a2r/beads/graphs/graph-0001.json
+@@ -156,6 +156,30 @@
+         "T0000"
+       ],
+       "wih_path": "/.a2r/wih/T0018.wih.json"
++    },
++    {
++      "task_id": "T0100",
++      "title": "Task parity: install + run_state persistence",
++      "blocked_by": [
++        "T0009"
++      ],
++      "wih_path": "/.a2r/wih/T0100.wih.json"
++    },
++    {
++      "task_id": "T0101",
++      "title": "Task parity: resume + blockedBy + receipt gating",
++      "blocked_by": [
++        "T0100"
++      ],
++      "wih_path": "/.a2r/wih/T0101.wih.json"
++    },
++    {
++      "task_id": "T0102",
++      "title": "Task parity: acceptance tests + CI wiring",
++      "blocked_by": [
++        "T0101"
++      ],
++      "wih_path": "/.a2r/wih/T0102.wih.json"
+     }
+   ],
+   "edges": [
+@@ -247,5 +271,18 @@
+       "from": "T0000",
+       "to": "T0018"
+     }
++    ,
++    {
++      "from": "T0009",
++      "to": "T0100"
++    },
++    {
++      "from": "T0100",
++      "to": "T0101"
++    },
++    {
++      "from": "T0101",
++      "to": "T0102"
++    }
+   ]
+-}
+\ No newline at end of file
++}
+diff --git a/.a2r/graphs/graph-0001.json b/.a2r/graphs/graph-0001.json
+index 338fd48..5054f63 100644
+--- a/.a2r/graphs/graph-0001.json
++++ b/.a2r/graphs/graph-0001.json
+@@ -156,6 +156,30 @@
+         "T0000"
+       ],
+       "wih_path": "/.a2r/wih/T0018.wih.json"
++    },
++    {
++      "task_id": "T0100",
++      "title": "Task parity: install + run_state persistence",
++      "blocked_by": [
++        "T0009"
++      ],
++      "wih_path": "/.a2r/wih/T0100.wih.json"
++    },
++    {
++      "task_id": "T0101",
++      "title": "Task parity: resume + blockedBy + receipt gating",
++      "blocked_by": [
++        "T0100"
++      ],
++      "wih_path": "/.a2r/wih/T0101.wih.json"
++    },
++    {
++      "task_id": "T0102",
++      "title": "Task parity: acceptance tests + CI wiring",
++      "blocked_by": [
++        "T0101"
++      ],
++      "wih_path": "/.a2r/wih/T0102.wih.json"
+     }
+   ],
+   "edges": [
+@@ -247,5 +271,18 @@
+       "from": "T0000",
+       "to": "T0018"
+     }
++    ,
++    {
++      "from": "T0009",
++      "to": "T0100"
++    },
++    {
++      "from": "T0100",
++      "to": "T0101"
++    },
++    {
++      "from": "T0101",
++      "to": "T0102"
++    }
+   ]
+-}
+\ No newline at end of file
++}
+diff --git a/.a2r/wih/T0100.wih.json b/.a2r/wih/T0100.wih.json
+new file mode 100644
+index 0000000..8c07c7b
+--- /dev/null
++++ b/.a2r/wih/T0100.wih.json
+@@ -0,0 +1,134 @@
++{
++  "wih_version": "v0.1",
++  "task_id": "T0100",
++  "graph_id": "graph-0001",
++  "title": "Task parity: install + run_state persistence",
++  "state": "PLANNED",
++  "blocked_by": [
++    "T0009"
++  ],
++  "external_refs": {
++    "claude_task_id": "",
++    "issue_id": "",
++    "pr_id": ""
++  },
++  "preset": {
++    "preset_id": "preset-core-dev",
++    "preset_hash": "TBD"
++  },
++  "resume_cursor": {
++    "last_run_id": "",
++    "next_step": "",
++    "pending_checks": []
++  },
++  "outputs": {
++    "required_artifacts": [
++      "run_state_install"
++    ],
++    "artifact_paths": [
++      "/.a2r/artifacts/T0100/"
++    ]
++  },
++  "write_scope": {
++    "root": "/.a2r/",
++    "allowed_globs": [
++      "/.a2r/run_state/**",
++      "/.a2r/receipts/**"
++    ]
++  },
++  "tools": {
++    "allowlist": [
++      "fs.read",
++      "fs.write"
++    ],
++    "pretooluse_hooks": [
++      "WIH_VALID",
++      "DEPS_SATISFIED",
++      "PATH_GUARDS",
++      "TOOL_REGISTRY"
++    ]
++  },
++  "memory": {
++    "packs": [
++      {
++        "pack_id": "law",
++        "layers": [
++          "law"
++        ],
++        "access": "read"
++      }
++    ]
++  },
++  "acceptance": {
++    "checks": [
++      "AT-TASK-0002"
++    ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "T0100",
++    "graph_id": "graph-0001",
++    "title": "Task parity: install + run_state persistence",
++    "state": "PLANNED",
++    "blocked_by": [
++      "T0009"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "run_state_install"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/T0100/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/run_state/**",
++        "/.a2r/receipts/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-TASK-0002"
++      ]
++    }
++  }
++}
+diff --git a/.a2r/wih/T0101.wih.json b/.a2r/wih/T0101.wih.json
+new file mode 100644
+index 0000000..4758ede
+--- /dev/null
++++ b/.a2r/wih/T0101.wih.json
+@@ -0,0 +1,140 @@
++{
++  "wih_version": "v0.1",
++  "task_id": "T0101",
++  "graph_id": "graph-0001",
++  "title": "Task parity: resume + blockedBy + receipt gating",
++  "state": "PLANNED",
++  "blocked_by": [
++    "T0100"
++  ],
++  "external_refs": {
++    "claude_task_id": "",
++    "issue_id": "",
++    "pr_id": ""
++  },
++  "preset": {
++    "preset_id": "preset-core-dev",
++    "preset_hash": "TBD"
++  },
++  "resume_cursor": {
++    "last_run_id": "",
++    "next_step": "",
++    "pending_checks": []
++  },
++  "outputs": {
++    "required_artifacts": [
++      "resume_scheduler"
++    ],
++    "artifact_paths": [
++      "/.a2r/artifacts/T0101/"
++    ]
++  },
++  "write_scope": {
++    "root": "/.a2r/",
++    "allowed_globs": [
++      "/.a2r/run_state/**",
++      "/.a2r/receipts/**"
++    ]
++  },
++  "tools": {
++    "allowlist": [
++      "fs.read",
++      "fs.write"
++    ],
++    "pretooluse_hooks": [
++      "WIH_VALID",
++      "DEPS_SATISFIED",
++      "PATH_GUARDS",
++      "TOOL_REGISTRY"
++    ]
++  },
++  "memory": {
++    "packs": [
++      {
++        "pack_id": "law",
++        "layers": [
++          "law"
++        ],
++        "access": "read"
++      }
++    ]
++  },
++  "acceptance": {
++    "checks": [
++      "AT-TASK-0001",
++      "AT-TASK-0003",
++      "AT-TASK-0004",
++      "AT-TASK-0005"
++    ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "T0101",
++    "graph_id": "graph-0001",
++    "title": "Task parity: resume + blockedBy + receipt gating",
++    "state": "PLANNED",
++    "blocked_by": [
++      "T0100"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "resume_scheduler"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/T0101/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/run_state/**",
++        "/.a2r/receipts/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-TASK-0001",
++        "AT-TASK-0003",
++        "AT-TASK-0004",
++        "AT-TASK-0005"
++      ]
++    }
++  }
++}
+diff --git a/.a2r/wih/T0102.wih.json b/.a2r/wih/T0102.wih.json
+new file mode 100644
+index 0000000..814ddda
+--- /dev/null
++++ b/.a2r/wih/T0102.wih.json
+@@ -0,0 +1,142 @@
++{
++  "wih_version": "v0.1",
++  "task_id": "T0102",
++  "graph_id": "graph-0001",
++  "title": "Task parity: acceptance tests + CI wiring",
++  "state": "PLANNED",
++  "blocked_by": [
++    "T0101"
++  ],
++  "external_refs": {
++    "claude_task_id": "",
++    "issue_id": "",
++    "pr_id": ""
++  },
++  "preset": {
++    "preset_id": "preset-core-dev",
++    "preset_hash": "TBD"
++  },
++  "resume_cursor": {
++    "last_run_id": "",
++    "next_step": "",
++    "pending_checks": []
++  },
++  "outputs": {
++    "required_artifacts": [
++      "task_parity_acceptance"
++    ],
++    "artifact_paths": [
++      "/.a2r/artifacts/T0102/"
++    ]
++  },
++  "write_scope": {
++    "root": "/.a2r/",
++    "allowed_globs": [
++      "/.a2r/run_state/**",
++      "/.a2r/receipts/**"
++    ]
++  },
++  "tools": {
++    "allowlist": [
++      "fs.read",
++      "fs.write"
++    ],
++    "pretooluse_hooks": [
++      "WIH_VALID",
++      "DEPS_SATISFIED",
++      "PATH_GUARDS",
++      "TOOL_REGISTRY"
++    ]
++  },
++  "memory": {
++    "packs": [
++      {
++        "pack_id": "law",
++        "layers": [
++          "law"
++        ],
++        "access": "read"
++      }
++    ]
++  },
++  "acceptance": {
++    "checks": [
++      "AT-TASK-0001",
++      "AT-TASK-0002",
++      "AT-TASK-0003",
++      "AT-TASK-0004",
++      "AT-TASK-0005"
++    ]
++  },
++  "beads": {
++    "wih_version": "v0.1",
++    "task_id": "T0102",
++    "graph_id": "graph-0001",
++    "title": "Task parity: acceptance tests + CI wiring",
++    "state": "PLANNED",
++    "blocked_by": [
++      "T0101"
++    ],
++    "external_refs": {
++      "claude_task_id": "",
++      "issue_id": "",
++      "pr_id": ""
++    },
++    "preset": {
++      "preset_id": "preset-core-dev",
++      "preset_hash": "TBD"
++    },
++    "resume_cursor": {
++      "last_run_id": "",
++      "next_step": "",
++      "pending_checks": []
++    },
++    "outputs": {
++      "required_artifacts": [
++        "task_parity_acceptance"
++      ],
++      "artifact_paths": [
++        "/.a2r/artifacts/T0102/"
++      ]
++    },
++    "write_scope": {
++      "root": "/.a2r/",
++      "allowed_globs": [
++        "/.a2r/run_state/**",
++        "/.a2r/receipts/**"
++      ]
++    },
++    "tools": {
++      "allowlist": [
++        "fs.read",
++        "fs.write"
++      ],
++      "pretooluse_hooks": [
++        "WIH_VALID",
++        "DEPS_SATISFIED",
++        "PATH_GUARDS",
++        "TOOL_REGISTRY"
++      ]
++    },
++    "memory": {
++      "packs": [
++        {
++          "pack_id": "law",
++          "layers": [
++            "law"
++          ],
++          "access": "read"
++        }
++      ]
++    },
++    "acceptance": {
++      "checks": [
++        "AT-TASK-0001",
++        "AT-TASK-0002",
++        "AT-TASK-0003",
++        "AT-TASK-0004",
++        "AT-TASK-0005"
++      ]
++    }
++  }
++}
+diff --git a/scripts/taskgraph.py b/scripts/taskgraph.py
+new file mode 100755
+index 0000000..1893a33
+--- /dev/null
++++ b/scripts/taskgraph.py
+@@ -0,0 +1,165 @@
++#!/usr/bin/env python3
++import argparse
++import json
++import sys
++import uuid
++from datetime import datetime, timezone
++from pathlib import Path
++
++ROOT = Path(__file__).resolve().parents[1]
++GRAPH_DIR = ROOT / ".a2r" / "graphs"
++WIH_DIR = ROOT / ".a2r" / "wih"
++RUN_STATE_DIR = ROOT / ".a2r" / "run_state"
++RECEIPTS_DIR = ROOT / ".a2r" / "receipts"
++
++BEADS_KEYS = [
++    "wih_version",
++    "task_id",
++    "graph_id",
++    "title",
++    "blocked_by",
++    "write_scope",
++    "tools",
++    "acceptance",
++]
++
++NODE_STATUS_PENDING = "PENDING"
++NODE_STATUS_BLOCKED = "BLOCKED"
++NODE_STATUS_RUNNING = "RUNNING"
++NODE_STATUS_SUCCEEDED = "SUCCEEDED"
++NODE_STATUS_FAILED = "FAILED"
++NODE_STATUS_SKIPPED = "SKIPPED"
++
++
++def fail(message: str) -> None:
++    print(f"ERROR: {message}", file=sys.stderr)
++    sys.exit(1)
++
++
++def load_json(path: Path) -> dict:
++    try:
++        return json.loads(path.read_text())
++    except Exception as exc:
++        fail(f"Failed to read {path}: {exc}")
++
++
++def load_graph(graph_id: str) -> dict:
++    graph_path = GRAPH_DIR / f"{graph_id}.json"
++    if not graph_path.exists():
++        fail(f"Graph not found: {graph_path}")
++    graph = load_json(graph_path)
++    if graph.get("graph_id") != graph_id:
++        fail(f"Graph id mismatch in {graph_path}")
++    return graph
++
++
++def load_wih(wih_path: str) -> dict:
++    rel_path = wih_path.lstrip("/")
++    path = ROOT / rel_path
++    if not path.exists():
++        fail(f"WIH not found: {path}")
++    return load_json(path)
++
++
++def validate_wih_node(node: dict, wih: dict, graph_id: str) -> None:
++    if wih.get("task_id") != node.get("task_id"):
++        fail(f"WIH task_id mismatch for {node.get('task_id')}")
++    if wih.get("graph_id") != graph_id:
++        fail(f"WIH graph_id mismatch for {node.get('task_id')}")
++
++    graph_blocked = node.get("blocked_by", [])
++    wih_blocked = wih.get("blocked_by", [])
++    if graph_blocked != wih_blocked:
++        fail(f"blocked_by mismatch for {node.get('task_id')}")
++
++    beads = wih.get("beads")
++    if not isinstance(beads, dict):
++        fail(f"Beads envelope missing for {node.get('task_id')}")
++
++    for key in BEADS_KEYS:
++        if beads.get(key) != wih.get(key):
++            fail(f"Beads.{key} mismatch for {node.get('task_id')}")
++
++
++def install_run(graph_id: str) -> dict:
++    graph = load_graph(graph_id)
++    nodes = graph.get("nodes", [])
++    if not nodes:
++        fail(f"Graph has no nodes: {graph_id}")
++
++    for node in nodes:
++        wih = load_wih(node.get("wih_path", ""))
++        validate_wih_node(node, wih, graph_id)
++
++    run_id = str(uuid.uuid4())
++    now = datetime.now(timezone.utc).isoformat()
++
++    node_states = []
++    runnable = []
++    for node in nodes:
++        blocked = node.get("blocked_by", [])
++        status = NODE_STATUS_BLOCKED if blocked else NODE_STATUS_PENDING
++        if status == NODE_STATUS_PENDING:
++            runnable.append(node.get("task_id"))
++        node_states.append({
++            "task_id": node.get("task_id"),
++            "status": status,
++            "last_receipt_id": ""
++        })
++
++    run_state = {
++        "run_id": run_id,
++        "graph_id": graph_id,
++        "status": "RUNNING",
++        "started_at": now,
++        "node_states": node_states,
++        "resume_cursor": {
++            "last_node": "",
++            "next_nodes": sorted(runnable)
++        },
++        "receipts": [],
++        "artifacts": []
++    }
++
++    RUN_STATE_DIR.mkdir(parents=True, exist_ok=True)
++    run_path = RUN_STATE_DIR / f"{run_id}.json"
++    run_path.write_text(json.dumps(run_state, indent=2))
++
++    return {
++        "run_id": run_id,
++        "graph_id": graph_id,
++        "run_state_path": str(run_path)
++    }
++
++
++def resume_run(run_id: str) -> dict:
++    raise NotImplementedError("resume not implemented")
++
++
++def main() -> None:
++    parser = argparse.ArgumentParser(description="A2R task graph runner")
++    sub = parser.add_subparsers(dest="command", required=True)
++
++    install_parser = sub.add_parser("install", help="Create run_state for a graph")
++    install_parser.add_argument("graph_id")
++
++    resume_parser = sub.add_parser("resume", help="Resume a run")
++    resume_parser.add_argument("run_id")
++
++    args = parser.parse_args()
++
++    if args.command == "install":
++        result = install_run(args.graph_id)
++        print(json.dumps(result, indent=2))
++        return
++
++    if args.command == "resume":
++        result = resume_run(args.run_id)
++        print(json.dumps(result, indent=2))
++        return
++
++    fail("Unknown command")
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/spec/Contracts/BeadsRunState.schema.json b/spec/Contracts/BeadsRunState.schema.json
+index 5369ce2..275baa1 100644
+--- a/spec/Contracts/BeadsRunState.schema.json
++++ b/spec/Contracts/BeadsRunState.schema.json
+@@ -45,7 +45,15 @@
+             "type": "string"
+           },
+           "status": {
+-            "type": "string"
++            "type": "string",
++            "enum": [
++              "PENDING",
++              "RUNNING",
++              "BLOCKED",
++              "SUCCEEDED",
++              "FAILED",
++              "SKIPPED"
++            ]
+           },
+           "last_receipt_id": {
+             "type": "string"
+diff --git a/spec/Contracts/RunState.schema.json b/spec/Contracts/RunState.schema.json
+index 6718630..7f1c174 100644
+--- a/spec/Contracts/RunState.schema.json
++++ b/spec/Contracts/RunState.schema.json
+@@ -45,7 +45,15 @@
+             "type": "string"
+           },
+           "status": {
+-            "type": "string"
++            "type": "string",
++            "enum": [
++              "PENDING",
++              "RUNNING",
++              "BLOCKED",
++              "SUCCEEDED",
++              "FAILED",
++              "SKIPPED"
++            ]
+           },
+           "last_receipt_id": {
+             "type": "string"
+diff --git a/spec/Deltas/0006-task-parity-runstate.md b/spec/Deltas/0006-task-parity-runstate.md
+new file mode 100644
+index 0000000..54809d4
+--- /dev/null
++++ b/spec/Deltas/0006-task-parity-runstate.md
+@@ -0,0 +1,20 @@
++# Delta 0006 — Task Parity RunState + Beads Execution Contract
++
++Date: 2026-01-28
++
++## Summary
++- Add Phase-1 task parity runtime (`scripts/taskgraph.py`) for `/install` and `/resume` semantics.
++- Persist run state under `/.a2r/run_state/<run_id>.json`.
++- Enforce Graph/WIH/Beads alignment at runtime before scheduling nodes.
++- Extend RunState/BeadsRunState node status enum to include task parity states.
++
++## Contracts Updated
++- `spec/Contracts/RunState.schema.json`
++- `spec/Contracts/BeadsRunState.schema.json`
++
++## Runtime Surface
++- `/install <graph_id>`: creates run_state + runnable node list.
++- `/resume <run_id>`: recomputes runnable nodes from run_state + receipts, deterministic ordering.
++
++## Acceptance Gates
++- AT-TASK-0001..0005 (blockedBy, install, resume determinism, receipt requirement, Beads mismatch failure).

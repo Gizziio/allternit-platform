@@ -1,0 +1,19 @@
+{
+  "teacher_id": "teacher-001",
+  "name": "Demo Teacher",
+  "email": "teacher@summitacademy.org",
+  "school": "Summit Academy OIC",
+  "grade_levels": ["6", "7", "8"],
+  "subjects": ["Mathematics", "Science"],
+  "preferences": {
+    "reading_level_default": "middle",
+    "include_assignments": true,
+    "auto_publish": false,
+    "timezone": "America/Chicago"
+  },
+  "demo_course": {
+    "course_id": 12345,
+    "course_name": "Demo Course - MVP Test",
+    "section": "Period 1"
+  }
+}

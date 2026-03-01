@@ -1,0 +1,81 @@
+{
+  "version": "v0.1",
+  "tools": [
+    {
+      "id": "fs.read",
+      "title": "Read file",
+      "kind": "read",
+      "safety_level": "safe",
+      "entrypoint": "kernel.tools.fs.read",
+      "inputs_schema": {
+        "type": "object",
+        "required": [
+          "path"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputs_schema": {
+        "type": "object",
+        "required": [
+          "content"
+        ],
+        "properties": {
+          "content": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "preconditions": [
+        "WIH_VALID",
+        "TASK_RUNNING"
+      ]
+    },
+    {
+      "id": "fs.write",
+      "title": "Write file (scoped)",
+      "kind": "write",
+      "safety_level": "caution",
+      "entrypoint": "kernel.tools.fs.write_scoped",
+      "inputs_schema": {
+        "type": "object",
+        "required": [
+          "path",
+          "content"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputs_schema": {
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
+      "preconditions": [
+        "WIH_VALID",
+        "TASK_RUNNING",
+        "PATH_UNDER_A2R",
+        "PATH_MATCHES_GLOBS"
+      ]
+    }
+  ]
+}

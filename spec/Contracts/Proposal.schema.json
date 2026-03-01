@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://a2rchitech.local/spec/contracts/Proposal.schema.json",
+  "title": "A2rchitech Proposal Artifact",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "proposal_id",
+    "created_at",
+    "origin",
+    "kind",
+    "title",
+    "summary",
+    "diff",
+    "checks",
+    "status"
+  ],
+  "properties": {
+    "proposal_id": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "origin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "graph_id",
+        "task_id",
+        "run_id"
+      ],
+      "properties": {
+        "graph_id": {
+          "type": "string"
+        },
+        "task_id": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        },
+        "actor": {
+          "type": "string"
+        }
+      }
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "prompt",
+        "policy",
+        "spec_delta",
+        "tool",
+        "index",
+        "memory_pack",
+        "routing_rule",
+        "ui_config"
+      ]
+    },
+    "title": {
+      "type": "string",
+      "minLength": 3
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 10
+    },
+    "diff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target",
+        "format",
+        "patch"
+      ],
+      "properties": {
+        "target": {
+          "type": "string"
+        },
+        "format": {
+          "type": "string",
+          "enum": [
+            "unified",
+            "jsonpatch",
+            "custom"
+          ]
+        },
+        "patch": {
+          "type": "string"
+        }
+      }
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required",
+        "passed"
+      ],
+      "properties": {
+        "required": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "passed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "DRAFT",
+        "SUBMITTED",
+        "AUTO_APPROVED",
+        "REJECTED",
+        "APPLIED",
+        "ROLLED_BACK"
+      ]
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "risk": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "default": "medium"
+    }
+  }
+}

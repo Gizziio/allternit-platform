@@ -1,0 +1,55 @@
+{
+  "wih_version": "v0.1",
+  "task_id": "T1000",
+  "graph_id": "graph-0001",
+  "title": "UI Shell Scaffold",
+  "state": "COMPLETE",
+  "blocked_by": [
+    "T0904"
+  ],
+  "external_refs": {},
+  "preset": { "preset_id": "preset-core-dev", "preset_hash": "TBD" },
+  "resume_cursor": { "last_run_id": "", "next_step": "", "pending_checks": [] },
+  "outputs": {
+    "required_artifacts": ["ui_shell"],
+    "artifact_paths": ["/.a2r/artifacts/T1000/"]
+  },
+  "write_scope": {
+    "root": "/.a2r/",
+    "allowed_globs": [
+      "apps/ui/**"
+    ]
+  },
+  "tools": {
+    "allowlist": ["fs.read", "fs.write"],
+    "pretooluse_hooks": ["WIH_VALID"]
+  },
+  "memory": { "packs": [{"pack_id": "law", "layers": ["law"], "access": "read"}] },
+  "acceptance": { "checks": ["AT-UI-0001", "AT-UI-0002"] },
+  "beads": {
+    "wih_version": "v0.1",
+    "task_id": "T1000",
+    "graph_id": "graph-0001",
+    "title": "UI Shell Scaffold",
+    "state": "COMPLETE",
+    "blocked_by": [
+      "T0904"
+    ],
+    "outputs": {
+      "required_artifacts": ["ui_shell"],
+      "artifact_paths": ["/.a2r/artifacts/T1000/"]
+    },
+    "write_scope": {
+      "root": "/.a2r/",
+      "allowed_globs": [
+        "apps/ui/**"
+      ]
+    },
+    "tools": {
+      "allowlist": ["fs.read", "fs.write"],
+      "pretooluse_hooks": ["WIH_VALID"]
+    },
+    "memory": { "packs": [{"pack_id": "law", "layers": ["law"], "access": "read"}] },
+    "acceptance": { "checks": ["AT-UI-0001", "AT-UI-0002"] }
+  }
+}

@@ -1,0 +1,140 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ========================================
+   A2R SHELL - EXTENDED STYLES
+   Uses design tokens from design-tokens.css
+   ======================================== */
+
+@layer base {
+  html, body, #root {
+    height: 100%;
+    width: 100%;
+  }
+
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+  }
+}
+
+@layer components {
+  /* Legacy glass utility (kept for backwards compatibility) */
+  .glass {
+    background: var(--glass-medium);
+    border: var(--glass-border-medium);
+    backdrop-filter: var(--backdrop-blur-medium);
+    -webkit-backdrop-filter: var(--backdrop-blur-medium);
+  }
+
+  .glass-light {
+    background: var(--glass-light);
+    border: var(--glass-border-light);
+  }
+
+  .glass-heavy {
+    background: var(--glass-heavy);
+    border: var(--glass-border-heavy);
+  }
+
+  /* Accent glow utilities */
+  .glow-chat {
+    box-shadow: var(--shadow-glow-chat);
+  }
+
+  .glow-cowork {
+    box-shadow: var(--shadow-glow-cowork);
+  }
+
+  .glow-code {
+    box-shadow: var(--shadow-glow-code);
+  }
+
+  /* Text accent colors */
+  .text-accent-chat {
+    color: var(--accent-chat);
+  }
+
+  .text-accent-cowork {
+    color: var(--accent-cowork);
+  }
+
+  .text-accent-code {
+    color: var(--accent-code);
+  }
+}
+
+/* ========================================
+   SCROLLBAR (uses design tokens)
+   ======================================== */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--glass-medium);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--glass-heavy);
+}
+
+/* ========================================
+   SELECTION
+   ======================================== */
+
+::selection {
+  background-color: var(--accent-chat-soft);
+  color: var(--text-primary);
+}
+
+/* ========================================
+   AGENT MAIL STYLES
+   ======================================== */
+
+/* Agent status dots */
+.status-online {
+  background: #34d399;
+  box-shadow: 0 0 8px #34d399;
+}
+
+.status-offline {
+  background: #6b7280;
+}
+
+.status-busy {
+  background: #f59e0b;
+  box-shadow: 0 0 8px #f59e0b;
+}
+
+/* Message bubbles */
+.message-sent {
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.15), rgba(167, 139, 250, 0.1));
+  align-self: flex-end;
+}
+
+.message-received {
+  background: rgba(255, 255, 255, 0.05);
+  align-self: flex-start;
+}
+
+/* Unread badge */
+.unread-badge {
+  background: #ef4444;
+  color: white;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 10px;
+}

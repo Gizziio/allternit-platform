@@ -1,0 +1,98 @@
+[
+  {
+    "id": "default",
+    "label": "Default",
+    "engine": "chatterbox",
+    "prompt": ""
+  },
+  {
+    "id": "xtts-aura",
+    "label": "Aura (XTTS)",
+    "engine": "xtts_v2",
+    "speaker_wav": "https://storage.googleapis.com/chatterbox-demo-samples/mtl_prompts/en_f1.flac",
+    "language": "en"
+  },
+  {
+    "id": "xtts-claire",
+    "label": "Claire (XTTS)",
+    "engine": "xtts_v2",
+    "speaker_wav": "https://huggingface.co/coqui/XTTS-v2/resolve/main/samples/en_sample.wav",
+    "language": "en"
+  },
+  {
+    "id": "xtts-zephyr",
+    "label": "Zephyr (XTTS)",
+    "engine": "xtts_v2",
+    "speaker_wav": "https://huggingface.co/coqui/XTTS-v2/resolve/main/samples/en_sample.wav",
+    "language": "en"
+  },
+  {
+    "id": "piper-amy",
+    "label": "Amy (Piper)",
+    "engine": "piper",
+    "model": "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/amy/medium/en_US-amy-medium.onnx"
+  },
+  {
+    "id": "piper-ryan",
+    "label": "Ryan (Piper)",
+    "engine": "piper",
+    "model": "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/ryan/medium/en_US-ryan-medium.onnx"
+  },
+  {
+    "id": "piper-alan",
+    "label": "Alan (Piper)",
+    "engine": "piper",
+    "model": "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/alan/medium/en_GB-alan-medium.onnx"
+  },
+  {
+    "id": "piper-lessac",
+    "label": "Lessac (Piper)",
+    "engine": "piper",
+    "model": "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium/en_US-lessac-medium.onnx"
+  },
+  {
+    "id": "piper-joe",
+    "label": "Joe (Piper)",
+    "engine": "piper",
+    "model": "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/joe/medium/en_US-joe-medium.onnx"
+  },
+  {
+    "id": "piper-kristin",
+    "label": "Kristin (Piper)",
+    "engine": "piper",
+    "model": "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/kristin/medium/en_US-kristin-medium.onnx"
+  },
+  {
+    "id": "xtts-luna",
+    "label": "Luna (XTTS - IT)",
+    "engine": "xtts_v2",
+    "speaker_wav": "https://storage.googleapis.com/chatterbox-demo-samples/mtl_prompts/it_m1.flac",
+    "language": "it"
+  },
+  {
+    "id": "xtts-sol",
+    "label": "Sol (XTTS - ES)",
+    "engine": "xtts_v2",
+    "speaker_wav": "https://storage.googleapis.com/chatterbox-demo-samples/mtl_prompts/es_f1.flac",
+    "language": "es"
+  },
+  {
+    "id": "xtts-nova",
+    "label": "Nova (XTTS - FR)",
+    "engine": "xtts_v2",
+    "speaker_wav": "https://storage.googleapis.com/chatterbox-demo-samples/mtl_prompts/fr_f1.flac",
+    "language": "fr"
+  },
+  {
+    "id": "neutral",
+    "label": "Neutral (CB)",
+    "engine": "chatterbox",
+    "prompt": "https://storage.googleapis.com/chatterbox-demo-samples/mtl_prompts/en_f1.flac"
+  },
+  {
+    "id": "calm",
+    "label": "Calm (CB)",
+    "engine": "chatterbox",
+    "prompt": "https://storage.googleapis.com/chatterbox-demo-samples/mtl_prompts/sv_f.flac"
+  }
+]

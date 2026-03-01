@@ -1,0 +1,317 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+    --primary: 0 0% 9%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+    --accent: 0 0% 96.1%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 0 0% 3.9%;
+    --radius: 0.5rem;
+    
+    /* A2R Theme Variables */
+    --bg-primary: #ffffff;
+    --bg-secondary: #f3f4f6;
+    --text-primary: #111827;
+    --text-secondary: #6b7280;
+    --text-tertiary: #9ca3af;
+    --border-subtle: #e5e7eb;
+    --border-strong: #d1d5db;
+    --accent-chat: #3b82f6;
+    --glass-bg-thick: rgba(255, 255, 255, 0.9);
+  }
+
+  .dark {
+    --background: 20 12% 14%;
+    --foreground: 0 0% 93%;
+    --card: 20 12% 14%;
+    --card-foreground: 0 0% 93%;
+    --popover: 20 12% 16%;
+    --popover-foreground: 0 0% 93%;
+    --primary: 0 0% 93%;
+    --primary-foreground: 20 12% 14%;
+    --secondary: 20 10% 18%;
+    --secondary-foreground: 0 0% 93%;
+    --muted: 20 10% 18%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 24 55% 56%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 20 8% 20%;
+    --input: 20 8% 20%;
+    --ring: 24 55% 56%;
+
+    /* A2R Dark Theme Variables - Warm Brown */
+    --bg-primary: #2B2520;
+    --bg-secondary: #352F29;
+    --text-primary: #ECECEC;
+    --text-secondary: #9B9B9B;
+    --text-tertiary: #6B6B6B;
+    --border-subtle: rgba(255,255,255,0.06);
+    --border-strong: rgba(255,255,255,0.12);
+    --accent-chat: #D4956A;
+    --glass-bg-thick: rgba(43, 37, 32, 0.9);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Electron draggable window regions */
+.app-region-drag {
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+
+.app-region-no-drag {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+
+/* ============================================================================
+   Markdown Content — override Tailwind Preflight list reset
+   Tailwind Preflight sets list-style: none on all ul/ol. These rules restore
+   proper bullet/number styles inside .markdown-content wrappers.
+   ============================================================================ */
+
+.markdown-content ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.markdown-content ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.markdown-content li {
+  margin-bottom: 0.25rem;
+  line-height: 1.6;
+}
+
+/* Nested lists */
+.markdown-content ul ul,
+.markdown-content ol ol,
+.markdown-content ul ol,
+.markdown-content ol ul {
+  margin-bottom: 0;
+  margin-top: 0.25rem;
+}
+
+/* ============================================================================
+   Streaming Cursor — amber bar blink inline at end of the last paragraph.
+   The cursor is rendered inside every <p> in Markdown, but CSS hides it
+   in all but the last <p>. Result: cursor appears inline with the last word.
+   ============================================================================ */
+@keyframes blink {
+  0%, 45% { opacity: 1; }
+  55%, 100% { opacity: 0; }
+}
+
+/* Hide cursor in all <p> except the very last one in the markdown block */
+.markdown-content p:not(:last-child) .a2r-stream-cursor {
+  display: none;
+}
+
+/* ============================================================================
+   Waveform Animation — 3 bars that animate during active streaming
+   ============================================================================ */
+@keyframes a2r-waveform {
+  0%, 100% { height: 4px; opacity: 0.5; }
+  50% { height: 16px; opacity: 1; }
+}
+
+.a2r-waveform-bar {
+  animation: a2r-waveform 0.7s ease-in-out infinite;
+}
+
+/* ============================================================================
+   Artifact Side Panel — slides in from the right
+   ============================================================================ */
+@keyframes a2r-panel-slidein {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ============================================================================
+   Token Fade-In — applied to Markdown paragraphs during streaming.
+   Each new <p> block fades in over 180ms so rapid token delivery feels smooth
+   rather than content popping in abruptly.
+   ============================================================================ */
+@keyframes a2r-fadein {
+  from { opacity: 0; transform: translateY(2px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+.markdown-content.is-streaming > p,
+.markdown-content.is-streaming > ul,
+.markdown-content.is-streaming > ol,
+.markdown-content.is-streaming > blockquote,
+.markdown-content.is-streaming > pre {
+  animation: a2r-fadein 0.22s ease-out both;
+}
+
+/* Respect reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .markdown-content.is-streaming > p,
+  .markdown-content.is-streaming > ul,
+  .markdown-content.is-streaming > ol,
+  .markdown-content.is-streaming > blockquote,
+  .markdown-content.is-streaming > pre {
+    animation: none;
+  }
+}
+
+/* ============================================================================
+   Markdown typography — clean sizing and spacing for chat messages
+   ============================================================================ */
+.markdown-content h1 { font-size: 1.25rem; font-weight: 700; margin: 1.2rem 0 0.6rem; line-height: 1.4; }
+.markdown-content h2 { font-size: 1.1rem;  font-weight: 700; margin: 1.1rem 0 0.5rem; line-height: 1.4; }
+.markdown-content h3 { font-size: 1rem;    font-weight: 600; margin: 1rem 0 0.4rem;   line-height: 1.4; }
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 { font-size: 0.9rem;  font-weight: 600; margin: 0.8rem 0 0.3rem; line-height: 1.4; }
+
+.markdown-content p  { margin: 0 0 0.85rem; }
+.markdown-content p:last-child { margin-bottom: 0; }
+
+.markdown-content code:not(pre code) {
+  font-size: 0.82em;
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  background: rgba(212,176,140,0.10);
+  border: 1px solid rgba(212,176,140,0.18);
+  color: rgba(212,176,140,0.9);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.markdown-content pre {
+  border-radius: 8px;
+  margin: 0.75rem 0;
+  overflow: hidden;
+}
+
+.markdown-content pre code {
+  font-size: 0.8rem;
+  line-height: 1.65;
+  padding: 0;
+  background: none;
+  border: none;
+}
+
+.markdown-content blockquote {
+  border-left: 3px solid rgba(212,176,140,0.4);
+  padding: 0.1rem 0 0.1rem 1rem;
+  margin: 0.75rem 0;
+  color: rgba(236,236,236,0.6);
+  font-style: italic;
+}
+
+.markdown-content table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  margin: 0.75rem 0;
+}
+.markdown-content th {
+  font-weight: 600;
+  text-align: left;
+  padding: 6px 12px;
+  background: rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(255,255,255,0.10);
+}
+.markdown-content td {
+  padding: 5px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.markdown-content tr:last-child td { border-bottom: none; }
+
+/* ============================================================================
+   MetaPill transition — smooth colour/opacity change when status flips
+   ============================================================================ */
+.a2r-meta-pill {
+  transition: background 0.35s ease, border-color 0.35s ease, color 0.35s ease, opacity 0.35s ease;
+}
+
+/* ============================================================================
+   Code block token colours — CSS overrides ensure ALL token types are visible
+   against the #1a1d2e dark background regardless of what the theme inlines.
+   oneDark palette with explicit fallbacks for every Prism token class.
+   ============================================================================ */
+.markdown-content pre,
+.markdown-content pre code {
+  color: #abb2bf !important;          /* base: light grey — catches plain identifiers */
+  background: #1a1d2e !important;
+}
+
+/* Core token categories */
+.markdown-content .token.keyword,
+.markdown-content .token.rule         { color: #c678dd !important; }  /* purple  */
+.markdown-content .token.function,
+.markdown-content .token.method       { color: #61afef !important; }  /* blue    */
+.markdown-content .token.string,
+.markdown-content .token.char,
+.markdown-content .token.attr-value   { color: #98c379 !important; }  /* green   */
+.markdown-content .token.number,
+.markdown-content .token.boolean,
+.markdown-content .token.constant     { color: #d19a66 !important; }  /* orange  */
+.markdown-content .token.comment,
+.markdown-content .token.prolog,
+.markdown-content .token.doctype,
+.markdown-content .token.cdata        { color: #7f848e !important; font-style: italic; }
+.markdown-content .token.operator,
+.markdown-content .token.entity,
+.markdown-content .token.url          { color: #56b6c2 !important; }  /* cyan    */
+.markdown-content .token.class-name,
+.markdown-content .token.maybe-class-name,
+.markdown-content .token.builtin      { color: #e5c07b !important; }  /* yellow  */
+.markdown-content .token.parameter,
+.markdown-content .token.variable,
+.markdown-content .token.attr-name    { color: #abb2bf !important; }  /* ensure vars visible */
+.markdown-content .token.punctuation  { color: #abb2bf !important; }
+.markdown-content .token.tag          { color: #e06c75 !important; }  /* red     */
+.markdown-content .token.selector     { color: #e06c75 !important; }
+.markdown-content .token.property     { color: #e06c75 !important; }
+.markdown-content .token.deleted      { color: #e06c75 !important; }
+.markdown-content .token.inserted     { color: #98c379 !important; }
+.markdown-content .token.important,
+.markdown-content .token.bold         { font-weight: bold; }
+.markdown-content .token.italic       { font-style: italic; }

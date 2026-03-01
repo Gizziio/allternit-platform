@@ -1,0 +1,202 @@
+/**
+ * Recording Indicator Styles
+ * 
+ * Glowing border animation for agent-controlled browser recording
+ */
+
+.recording-indicator {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 999999;
+  overflow: hidden;
+}
+
+/* Glowing border animation */
+.recording-glow-border {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 4px solid transparent;
+  border-radius: 8px;
+  animation: glow-pulse 2s ease-in-out infinite;
+  background: linear-gradient(
+    45deg,
+    rgba(255, 0, 0, 0.8),
+    rgba(255, 100, 0, 0.6),
+    rgba(255, 0, 0, 0.8),
+    rgba(255, 100, 0, 0.6)
+  );
+  background-size: 400% 400%;
+  -webkit-mask: 
+    linear-gradient(#fff 0 0) content-box, 
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: 
+    glow-pulse 2s ease-in-out infinite,
+    gradient-shift 3s linear infinite;
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    opacity: 0.6;
+    box-shadow: 
+      0 0 20px rgba(255, 0, 0, 0.5),
+      0 0 40px rgba(255, 0, 0, 0.3),
+      0 0 60px rgba(255, 0, 0, 0.2),
+      inset 0 0 20px rgba(255, 0, 0, 0.3),
+      inset 0 0 40px rgba(255, 0, 0, 0.2);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 
+      0 0 40px rgba(255, 0, 0, 0.8),
+      0 0 80px rgba(255, 0, 0, 0.5),
+      0 0 120px rgba(255, 0, 0, 0.3),
+      inset 0 0 40px rgba(255, 0, 0, 0.5),
+      inset 0 0 80px rgba(255, 0, 0, 0.3);
+  }
+}
+
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Recording content badge */
+.recording-content {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 12px 16px;
+  border: 1px solid rgba(255, 0, 0, 0.5);
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.4),
+    0 0 30px rgba(255, 0, 0, 0.3);
+  pointer-events: auto;
+  animation: slide-in 0.3s ease-out;
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Recording badge with pulsing dot */
+.recording-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 12px;
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.recording-dot {
+  width: 12px;
+  height: 12px;
+  background: #ff0000;
+  border-radius: 50%;
+  animation: dot-pulse 1s ease-in-out infinite;
+  box-shadow: 
+    0 0 10px rgba(255, 0, 0, 0.8),
+    0 0 20px rgba(255, 0, 0, 0.5);
+}
+
+@keyframes dot-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+}
+
+.recording-text {
+  color: #ff4444;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 1px;
+  text-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+}
+
+/* Recording info */
+.recording-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+  font-size: 13px;
+}
+
+.recording-timer {
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 16px;
+  min-width: 50px;
+  text-align: center;
+}
+
+.recording-frames {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+}
+
+.recording-id {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .recording-content {
+    background: rgba(10, 10, 10, 0.9);
+    border-color: rgba(255, 50, 50, 0.6);
+  }
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .recording-glow-border,
+  .recording-dot,
+  .recording-content {
+    animation: none;
+  }
+  
+  .recording-glow-border {
+    opacity: 0.8;
+    box-shadow: 
+      0 0 30px rgba(255, 0, 0, 0.6),
+      inset 0 0 30px rgba(255, 0, 0, 0.4);
+  }
+}

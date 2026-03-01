@@ -1,0 +1,148 @@
+{
+  "wih_version": "v0.1",
+  "task_id": "T0012",
+  "graph_id": "graph-0001",
+  "title": "Promotion engine: rules + checks + receipts + apply/rollback",
+  "state": "PLANNED",
+  "blocked_by": [
+    "T0011",
+    "T0009"
+  ],
+  "external_refs": {
+    "claude_task_id": "",
+    "issue_id": "",
+    "pr_id": ""
+  },
+  "preset": {
+    "preset_id": "preset-core-dev",
+    "preset_hash": "TBD"
+  },
+  "resume_cursor": {
+    "last_run_id": "",
+    "next_step": "",
+    "pending_checks": []
+  },
+  "outputs": {
+    "required_artifacts": [
+      "promotion-engine"
+    ],
+    "artifact_paths": [
+      "/.a2r/artifacts/T0012/"
+    ]
+  },
+  "write_scope": {
+    "root": "/.a2r/",
+    "allowed_globs": [
+      "/.a2r/promotions/**"
+    ]
+  },
+  "tools": {
+    "allowlist": [
+      "fs.read",
+      "fs.write"
+    ],
+    "pretooluse_hooks": [
+      "WIH_VALID",
+      "DEPS_SATISFIED",
+      "PATH_GUARDS",
+      "TOOL_REGISTRY"
+    ]
+  },
+  "memory": {
+    "packs": [
+      {
+        "pack_id": "proposal",
+        "layers": [
+          "proposal"
+        ],
+        "access": "readwrite"
+      },
+      {
+        "pack_id": "execution",
+        "layers": [
+          "execution"
+        ],
+        "access": "readwrite"
+      }
+    ]
+  },
+  "acceptance": {
+    "checks": [
+      "AT-MEM-0004"
+    ]
+  },
+  "beads": {
+    "wih_version": "v0.1",
+    "task_id": "T0012",
+    "graph_id": "graph-0001",
+    "title": "Promotion engine: rules + checks + receipts + apply/rollback",
+    "state": "PLANNED",
+    "blocked_by": [
+      "T0011",
+      "T0009"
+    ],
+    "external_refs": {
+      "claude_task_id": "",
+      "issue_id": "",
+      "pr_id": ""
+    },
+    "preset": {
+      "preset_id": "preset-core-dev",
+      "preset_hash": "TBD"
+    },
+    "resume_cursor": {
+      "last_run_id": "",
+      "next_step": "",
+      "pending_checks": []
+    },
+    "outputs": {
+      "required_artifacts": [
+        "promotion-engine"
+      ],
+      "artifact_paths": [
+        "/.a2r/artifacts/T0012/"
+      ]
+    },
+    "write_scope": {
+      "root": "/.a2r/",
+      "allowed_globs": [
+        "/.a2r/promotions/**"
+      ]
+    },
+    "tools": {
+      "allowlist": [
+        "fs.read",
+        "fs.write"
+      ],
+      "pretooluse_hooks": [
+        "WIH_VALID",
+        "DEPS_SATISFIED",
+        "PATH_GUARDS",
+        "TOOL_REGISTRY"
+      ]
+    },
+    "memory": {
+      "packs": [
+        {
+          "pack_id": "proposal",
+          "layers": [
+            "proposal"
+          ],
+          "access": "readwrite"
+        },
+        {
+          "pack_id": "execution",
+          "layers": [
+            "execution"
+          ],
+          "access": "readwrite"
+        }
+      ]
+    },
+    "acceptance": {
+      "checks": [
+        "AT-MEM-0004"
+      ]
+    }
+  }
+}

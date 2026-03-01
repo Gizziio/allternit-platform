@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://a2rchitech.local/spec/contracts/UINav.schema.json",
+  "title": "UI Navigation",
+  "type": "object",
+  "properties": {
+    "nav_id": { "type": "string" }
+  },
+  "required": ["nav_id"]
+}

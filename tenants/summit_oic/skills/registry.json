@@ -1,0 +1,37 @@
+{
+  "skills": [
+    {
+      "name": "summit.canvas.module_builder",
+      "entry": "skills/canvas/module_builder.skill.md",
+      "requires_tools": [
+        "canvas.create_module",
+        "canvas.create_page",
+        "canvas.create_assignment",
+        "canvas.add_module_item",
+        "canvas.publish_module"
+      ],
+      "forms": ["forms/module_builder.form.json"]
+    },
+    {
+      "name": "summit.canvas.course_ingestor",
+      "entry": "skills/canvas/course_ingestor.skill.md",
+      "requires_tools": [
+        "canvas.list_modules",
+        "canvas.list_courses",
+        "canvas.search_course"
+      ]
+    },
+    {
+      "name": "summit.office.excel_editor",
+      "entry": "skills/office/excel_editor.skill.md",
+      "requires_tools": ["office.xlsx_read", "office.xlsx_write"],
+      "forms": ["forms/excel_edit.form.json"]
+    },
+    {
+      "name": "summit.desktop.cowork_portal_runner",
+      "entry": "skills/desktop/cowork_portal_runner.skill.md",
+      "requires_tools": ["cowork_connect", "desktop_screenshot", "desktop_click", "desktop_type", "desktop_wait"],
+      "forms": ["forms/desktop_task.form.json"]
+    }
+  ]
+}

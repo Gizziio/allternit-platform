@@ -1,0 +1,325 @@
+/**
+ * Kernel Integration Tests
+ * 
+ * Tests the integration of kernel with storage, routing, and WIH lifecycle.
+ */
+
+import { describe, it, expect, beforeEach } from 'vitest';
+import {
+  A2RKernelImpl,
+  preToolUseRouter,
+  wihGatedRouter,
+  fileAccessRouter,
+  createCompositeRouter,
+  type WihStorage,
+  type WihItem,
+  type Receipt,
+} from '@a2r/governor';
+
+// Test storage implementation
+class TestStorage implements WihStorage {
+  private wihs = new Map<string, WihItem>();
+  private receipts = new Map<string, Receipt>();
+  private idCounters = { wih: 1, receipt: 1 };
+
+  async create(item: WihItem): Promise<WihItem> {
+    const id = `TEST-${String(this.idCounters.wih++).padStart(4, '0')}`;
+    const newItem = { ...item, id };
+    this.wihs.set(id, newItem);
+    return newItem;
+  }
+
+  async get(id: string): Promise<WihItem | null> {
+    return this.wihs.get(id) ?? null;
+  }
+
+  async update(id: string, updates: Partial<WihItem>): Promise<WihItem> {
+    const existing = this.wihs.get(id);
+    if (!existing) throw new Error('WIH not found');
+    const updated = { ...existing, ...updates };
+    this.wihs.set(id, updated);
+    return updated;
+  }
+
+  async list(): Promise<WihItem[]> {
+    return Array.from(this.wihs.values());
+  }
+
+  async createReceipt(receipt: Receipt): Promise<Receipt> {
+    const id = `RCPT-${String(this.idCounters.receipt++).padStart(4, '0')}`;
+    const newReceipt = { ...receipt, id };
+    this.receipts.set(id, newReceipt);
+    return newReceipt;
+  }
+
+  async getReceipt(id: string): Promise<Receipt | null> {
+    return this.receipts.get(id) ?? null;
+  }
+
+  // Test helpers
+  clear(): void {
+    this.wihs.clear();
+    this.receipts.clear();
+    this.idCounters = { wih: 1, receipt: 1 };
+  }
+
+  get size(): number {
+    return this.wihs.size;
+  }
+}
+
+describe('Kernel Integration', () => {
+  let storage: TestStorage;
+  let kernel: A2RKernelImpl;
+
+  beforeEach(() => {
+    storage = new TestStorage();
+    kernel = new A2RKernelImpl(storage);
+  });
+
+  describe('WIH Lifecycle', () => {
+    it('should create and retrieve WIH', async () => {
+      const wih = await kernel.createWih({
+        title: 'Test WIH',
+        description: 'Test description',
+      });
+
+      expect(wih.id).toMatch(/^TEST-\d{4}$/);
+      expect(wih.title).toBe('Test WIH');
+      expect(wih.status).toBe('draft');
+      expect(wih.version).toBe('1.0.0');
+
+      const retrieved = await kernel.getWih(wih.id);
+      expect(retrieved).toEqual(wih);
+    });
+
+    it('should update WIH status', async () => {
+      const wih = await kernel.createWih({
+        title: 'Test WIH',
+        status: 'draft',
+      });
+
+      const updated = await kernel.updateWih(wih.id, {
+        status: 'in_progress',
+      });
+
+      expect(updated.status).toBe('in_progress');
+      expect(updated.updatedAt).toBeDefined();
+    });
+
+    it('should track WIH dependencies', async () => {
+      const dep1 = await kernel.createWih({
+        title: 'Dependency 1',
+        status: 'complete',
+      });
+
+      const dep2 = await kernel.createWih({
+        title: 'Dependency 2',
+        status: 'complete',
+      });
+
+      const wih = await kernel.createWih({
+        title: 'Dependent WIH',
+        blockedBy: [dep1.id, dep2.id],
+      });
+
+      expect(wih.blockedBy).toContain(dep1.id);
+      expect(wih.blockedBy).toContain(dep2.id);
+
+      const deps = await Promise.all(
+        wih.blockedBy.map(id => kernel.getWih(id))
+      );
+
+      expect(deps.every(d => d?.status === 'complete')).toBe(true);
+    });
+  });
+
+  describe('Receipt Generation', () => {
+    it('should generate receipt for WIH', async () => {
+      const wih = await kernel.createWih({
+        title: 'Test WIH',
+      });
+
+      const receipt = await kernel.createReceipt({
+        wihId: wih.id,
+        status: 'complete',
+        attestations: [
+          { type: 'git-commit', value: 'abc123' },
+        ],
+        artifacts: [],
+      });
+
+      expect(receipt.id).toMatch(/^RCPT-\d{4}$/);
+      expect(receipt.wihId).toBe(wih.id);
+      expect(receipt.timestamp).toBeDefined();
+
+      const verified = await kernel.verifyReceipt(receipt.id);
+      expect(verified).toBe(true);
+    });
+
+    it('should link receipt to WIH', async () => {
+      const wih = await kernel.createWih({
+        title: 'Test WIH',
+      });
+
+      const receipt = await kernel.createReceipt({
+        wihId: wih.id,
+        status: 'complete',
+        attestations: [{ type: 'manual-sign', value: 'test' }],
+        artifacts: [],
+      });
+
+      await kernel.updateWih(wih.id, {
+        receiptRefs: [receipt.id],
+        status: 'complete',
+      });
+
+      const updated = await kernel.getWih(wih.id);
+      expect(updated?.receiptRefs).toContain(receipt.id);
+      expect(updated?.status).toBe('complete');
+    });
+  });
+
+  describe('Tool Routing', () => {
+    it('should allow safe tools', async () => {
+      kernel.registerPreToolUse('default', preToolUseRouter);
+
+      const result = await kernel.routeToolUse({
+        toolName: 'read_file',
+        toolParams: { path: '/test.txt' },
+        sessionId: 'test-session',
+        agentId: 'test-agent',
+        workspaceRoot: '/workspace',
+      });
+
+      expect(result.decision).toBe('allow');
+    });
+
+    it('should deny high-risk tools', async () => {
+      kernel.registerPreToolUse('default', preToolUseRouter);
+
+      const result = await kernel.routeToolUse({
+        toolName: 'deploy',
+        toolParams: {},
+        sessionId: 'test-session',
+        agentId: 'test-agent',
+        workspaceRoot: '/workspace',
+      });
+
+      expect(result.decision).toBe('delegate');
+      expect(result.delegateTo).toBe('law-layer');
+    });
+
+    it('should enforce WIH requirement', async () => {
+      kernel.registerPreToolUse('wih-gated', wihGatedRouter);
+
+      const result = await kernel.routeToolUse({
+        toolName: 'read_file',
+        toolParams: {},
+        sessionId: 'test-session',
+        agentId: 'test-agent',
+        workspaceRoot: '/workspace',
+        // No wihId provided
+      });
+
+      expect(result.decision).toBe('deny');
+      expect(result.reason).toContain('No active WIH');
+    });
+
+    it('should allow with valid WIH', async () => {
+      kernel.registerPreToolUse('wih-gated', wihGatedRouter);
+
+      const wih = await kernel.createWih({
+        title: 'Test WIH',
+        status: 'in_progress',
+      });
+
+      const result = await kernel.routeToolUse({
+        toolName: 'read_file',
+        toolParams: {},
+        sessionId: 'test-session',
+        agentId: 'test-agent',
+        workspaceRoot: '/workspace',
+        wihId: wih.id,
+      });
+
+      expect(result.decision).toBe('allow');
+    });
+  });
+
+  describe('File Access Routing', () => {
+    it('should allow valid file paths', async () => {
+      kernel.registerFileAccessCheck('default', fileAccessRouter);
+
+      const result = await kernel.routeFileAccess({
+        operation: 'read',
+        path: 'src/index.ts',
+        resolvedPath: '/workspace/src/index.ts',
+        sessionId: 'test-session',
+        agentId: 'test-agent',
+      });
+
+      expect(result.decision).toBe('allow');
+    });
+
+    it('should deny path traversal', async () => {
+      kernel.registerFileAccessCheck('default', fileAccessRouter);
+
+      const result = await kernel.routeFileAccess({
+        operation: 'read',
+        path: '../../../etc/passwd',
+        sessionId: 'test-session',
+        agentId: 'test-agent',
+      });
+
+      expect(result.decision).toBe('deny');
+      expect(result.reason).toContain('traversal');
+    });
+  });
+
+  describe('Composite Routing', () => {
+    it('should chain multiple routers', async () => {
+      const composite = createCompositeRouter(
+        preToolUseRouter,
+        wihGatedRouter
+      );
+
+      kernel.registerPreToolUse('composite', composite);
+
+      const wih = await kernel.createWih({
+        title: 'Test WIH',
+        status: 'in_progress',
+      });
+
+      const result = await kernel.routeToolUse({
+        toolName: 'read_file',
+        toolParams: {},
+        sessionId: 'test-session',
+        agentId: 'test-agent',
+        workspaceRoot: '/workspace',
+        wihId: wih.id,
+      });
+
+      expect(result.decision).toBe('allow');
+    });
+
+    it('should fail fast on deny', async () => {
+      const composite = createCompositeRouter(
+        preToolUseRouter,
+        wihGatedRouter
+      );
+
+      kernel.registerPreToolUse('composite', composite);
+
+      const result = await kernel.routeToolUse({
+        toolName: 'deploy', // High-risk tool
+        toolParams: {},
+        sessionId: 'test-session',
+        agentId: 'test-agent',
+        workspaceRoot: '/workspace',
+      });
+
+      expect(result.decision).toBe('delegate');
+    });
+  });
+});

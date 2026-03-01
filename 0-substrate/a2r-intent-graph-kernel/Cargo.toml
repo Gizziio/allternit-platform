@@ -1,0 +1,21 @@
+[package]
+name = "intent-graph-kernel"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "1.0"
+anyhow = "1.0"
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid", "json"] }
+tokio = { version = "1.0", features = ["full"] }
+tracing = "0.1"
+axum = "0.7"
+tower-http = { version = "0.5", features = ["cors"] }
+
+[dev-dependencies]
+tokio-test = "0.4"

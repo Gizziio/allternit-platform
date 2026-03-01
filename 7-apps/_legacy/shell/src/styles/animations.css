@@ -1,0 +1,220 @@
+/* Toast Animations */
+
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideInRight 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: all;
+  border-left: 4px solid var(--toast-color);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.toast.visible {
+  opacity: 1;
+}
+
+.toast-icon {
+  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--toast-color);
+}
+
+.toast-content {
+  flex: 1;
+  font-size: 0.875rem;
+  color: #1e293b;
+}
+
+.toast-action {
+  border: none;
+  background: #111827;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.toast-action:hover {
+  background: #0f172a;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 12px;
+  transition: opacity 0.2s ease;
+  opacity: 0.6;
+}
+
+.toast-close:hover {
+  opacity: 1;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+/* Synthesis Transitions */
+
+.synthesis-transition {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.synthesis-transition.idle .evidence-rail {
+  transform: translateX(0);
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.synthesis-transition.compressing .evidence-rail {
+  transform: translateX(-50%) scale(0.95);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  opacity: 0.5;
+}
+
+.synthesis-transition.revealing .canvas-placeholder {
+  opacity: 0;
+  transform: scale(0.98);
+  animation: fadeIn 0.3s cubic-bezier(0.4, 0, 1);
+}
+
+.synthesis-transition.complete .canvas-placeholder {
+  opacity: 1;
+  transform: scale(1.0);
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 1),
+              transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Canvas Switch */
+
+.canvas-switch {
+  width: 100%;
+  height: 100%;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.canvas-switch-left {
+  animation: canvasSlideLeft 0.25s ease;
+}
+
+.canvas-switch-right {
+  animation: canvasSlideRight 0.25s ease;
+}
+
+@keyframes canvasSlideLeft {
+  from {
+    transform: translateX(16px);
+    opacity: 0.85;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes canvasSlideRight {
+  from {
+    transform: translateX(-16px);
+    opacity: 0.85;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Synthesis Button */
+
+.synthesis-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+}
+
+.synthesis-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.synthesis-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.synthesis-icon {
+  font-size: 1.25rem;
+}
+
+.synthesis-label {
+  font-size: 1rem;
+}
+
+.synthesis-count {
+  font-size: 0.75rem;
+  opacity: 0.8;
+  font-weight: 400;
+}

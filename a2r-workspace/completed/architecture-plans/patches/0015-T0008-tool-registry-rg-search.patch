@@ -1,0 +1,107 @@
+commit e033f4ef4e6943f72570afb62e6932f9e6dda876
+Author: Eoj Edred <eojedredbitepubkey1@proton.me>
+Date:   Tue Jan 27 23:13:38 2026 -0600
+
+    T0008: normalize rg tool id to rg.search
+
+diff --git a/.a2r/wih/P0203.wih.json b/.a2r/wih/P0203.wih.json
+index 5fb7c36..0b8ddf2 100644
+--- a/.a2r/wih/P0203.wih.json
++++ b/.a2r/wih/P0203.wih.json
+@@ -39,7 +39,7 @@
+     "allowlist": [
+       "fs.read",
+       "fs.write",
+-      "rg"
++      "rg.search"
+     ],
+     "pretooluse_hooks": [
+       "WIH_VALID",
+@@ -106,7 +106,7 @@
+       "allowlist": [
+         "fs.read",
+         "fs.write",
+-        "rg"
++        "rg.search"
+       ],
+       "pretooluse_hooks": [
+         "WIH_VALID",
+diff --git a/.a2r/wih/T0016.wih.json b/.a2r/wih/T0016.wih.json
+index 0b1b796..21ade29 100644
+--- a/.a2r/wih/T0016.wih.json
++++ b/.a2r/wih/T0016.wih.json
+@@ -40,7 +40,7 @@
+     "allowlist": [
+       "fs.read",
+       "fs.write",
+-      "rg"
++      "rg.search"
+     ],
+     "pretooluse_hooks": [
+       "WIH_VALID",
+@@ -107,7 +107,7 @@
+       "allowlist": [
+         "fs.read",
+         "fs.write",
+-        "rg"
++        "rg.search"
+       ],
+       "pretooluse_hooks": [
+         "WIH_VALID",
+diff --git a/.a2r/wih/T0017.wih.json b/.a2r/wih/T0017.wih.json
+index c668cda..ed5cdaa 100644
+--- a/.a2r/wih/T0017.wih.json
++++ b/.a2r/wih/T0017.wih.json
+@@ -40,7 +40,7 @@
+     "allowlist": [
+       "fs.read",
+       "fs.write",
+-      "rg"
++      "rg.search"
+     ],
+     "pretooluse_hooks": [
+       "WIH_VALID",
+@@ -107,7 +107,7 @@
+       "allowlist": [
+         "fs.read",
+         "fs.write",
+-        "rg"
++        "rg.search"
+       ],
+       "pretooluse_hooks": [
+         "WIH_VALID",
+diff --git a/.a2r/wih/T0018.wih.json b/.a2r/wih/T0018.wih.json
+index c6be51b..86cb35c 100644
+--- a/.a2r/wih/T0018.wih.json
++++ b/.a2r/wih/T0018.wih.json
+@@ -43,7 +43,7 @@
+     "allowlist": [
+       "fs.read",
+       "fs.write",
+-      "rg"
++      "rg.search"
+     ],
+     "pretooluse_hooks": [
+       "WIH_VALID",
+@@ -114,7 +114,7 @@
+       "allowlist": [
+         "fs.read",
+         "fs.write",
+-        "rg"
++        "rg.search"
+       ],
+       "pretooluse_hooks": [
+         "WIH_VALID",
+diff --git a/tools/tool_registry.json b/tools/tool_registry.json
+index bfd9a2e..744c272 100644
+--- a/tools/tool_registry.json
++++ b/tools/tool_registry.json
+@@ -117,7 +117,7 @@
+       ]
+     },
+     {
+-      "id": "rg",
++      "id": "rg.search",
+       "title": "Search repository (rg)",
+       "kind": "read",
+       "safety_level": "safe",

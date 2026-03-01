@@ -1,0 +1,24 @@
+[package]
+name = "executor"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tower-http = { workspace = true }
+uuid = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+async-trait = { workspace = true }
+a2rchitech-sdk-core = { workspace = true }
+a2rchitech-sdk-functions = { workspace = true }
+a2rchitech-sdk-policy = { workspace = true }
+a2rchitech-registry-apps = { path = "../../../../4-services/registry/apps-registry" }
+a2rchitech-registry-functions = { path = "../../../../4-services/registry/functions-registry" }
+sqlx = { workspace = true }
+reqwest = { workspace = true }

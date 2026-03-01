@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+import json
+import os
+import sys
+
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+REGISTRY_PATH = os.path.join(ROOT_DIR, "infra", "gateway", "gateway_registry.json")
+OUTPUT_DIR = os.path.join(ROOT_DIR, ".a2r", "config", "gateway")
+PORTS_PATH = os.path.join(ROOT_DIR, ".a2r", "config", "ports.json")
+
+
+def generate() -> None:
+    if not os.path.exists(PORTS_PATH):
+        print(f"Error: {PORTS_PATH} not found")
+        return
+    with open(PORTS_PATH, "r") as f:
+        ports = json.load(f)
+    if not os.path.exists(REGISTRY_PATH):
+        print(f"Error: {REGISTRY_PATH} not found")
+        return
+    with open(REGISTRY_PATH, "r") as f:
+        registry = json.load(f)
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    for env in ["dev", "prod"]:
+        config = {
+            "environment": env,
+            "routes": registry["external_ingress"]["routes"],
+            "ports": ports["services"],
+        }
+        with open(os.path.join(OUTPUT_DIR, f"{env}.json"), "w") as f:
+            json.dump(config, f, indent=2)
+    print("Gateway config generated successfully")
+
+
+if __name__ == "__main__":
+    generate()

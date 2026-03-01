@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://a2rchitech.local/spec/contracts/CodeEvent.schema.json",
+  "title": "Code Event — Structured Event for Code Mode Sessions",
+  "description": "Every state change, action, approval, and receipt in a Code Mode session emits a CodeEvent. This is the single source of truth for both terminal and GUI rendering.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id",
+    "session_id",
+    "type",
+    "timestamp"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "pattern": "^evt_",
+      "description": "Unique event identifier"
+    },
+    "session_id": {
+      "type": "string",
+      "pattern": "^sess_"
+    },
+    "run_id": {
+      "type": ["string", "null"],
+      "description": "Execution run ID for receipt correlation"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "SESSION_CREATED",
+        "SESSION_TERMINATED",
+        "MODE_SET",
+        "STATE_CHANGED",
+        "PLAN_PROPOSED",
+        "PLAN_APPROVED",
+        "PLAN_REJECTED",
+        "PLAN_STEP_STARTED",
+        "PLAN_STEP_COMPLETED",
+        "PLAN_STEP_FAILED",
+        "ACTION_PROPOSED",
+        "ACTION_APPROVED",
+        "ACTION_DENIED",
+        "ACTION_EXECUTED",
+        "CHANGESET_PROPOSED",
+        "CHANGESET_APPROVED",
+        "CHANGESET_REJECTED",
+        "CHANGESET_REVISION_REQUESTED",
+        "CHANGESET_APPLIED",
+        "CHANGESET_REVERTED",
+        "CHANGESET_APPLY_FAILED",
+        "VERIFY_STARTED",
+        "VERIFY_PASSED",
+        "VERIFY_FAILED",
+        "RECEIPT_WRITTEN",
+        "CONTEXT_PACK_BUILT",
+        "AGENT_MESSAGE",
+        "USER_COMMENT",
+        "ERROR"
+      ]
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "actor": {
+      "type": "string",
+      "enum": ["agent", "user", "system", "policy_engine"],
+      "description": "Who or what triggered this event"
+    },
+    "payload": {
+      "type": "object",
+      "description": "Event-type-specific data",
+      "properties": {
+        "message": {
+          "type": "string",
+          "description": "Human-readable event description"
+        },
+        "ref_id": {
+          "type": "string",
+          "description": "Reference to related object (plan_id, changeset_id, receipt_id, etc.)"
+        },
+        "ref_type": {
+          "type": "string",
+          "enum": ["plan", "changeset", "receipt", "action", "session", "step"]
+        },
+        "from_state": {
+          "type": "string",
+          "description": "Previous state (for STATE_CHANGED events)"
+        },
+        "to_state": {
+          "type": "string",
+          "description": "New state (for STATE_CHANGED events)"
+        },
+        "mode": {
+          "type": "string",
+          "enum": ["SAFE", "DEFAULT", "AUTO", "PLAN"],
+          "description": "Mode value (for MODE_SET events)"
+        },
+        "tool": {
+          "type": "string",
+          "description": "Tool ID (for ACTION_* events)"
+        },
+        "command": {
+          "type": "string",
+          "description": "Shell command (for ACTION_* events)"
+        },
+        "risk_tier": {
+          "type": "string",
+          "enum": ["READ", "WRITE", "EXECUTE", "NETWORK", "DESTRUCTIVE"]
+        },
+        "policy_rule": {
+          "type": "string",
+          "description": "Which policy rule triggered this decision (for ACTION_APPROVED/DENIED)"
+        },
+        "approval_token": {
+          "type": "string",
+          "description": "Rails-issued approval token (for ACTION_APPROVED)"
+        },
+        "error": {
+          "type": "string",
+          "description": "Error message (for ERROR/FAILED events)"
+        },
+        "comment": {
+          "type": "string",
+          "description": "User comment text (for USER_COMMENT, CHANGESET_REVISION_REQUESTED)"
+        },
+        "file_path": {
+          "type": "string",
+          "description": "File path context (for comments anchored to diffs)"
+        },
+        "hunk_index": {
+          "type": "integer",
+          "description": "Hunk index context (for comments anchored to specific hunks)"
+        },
+        "step_id": {
+          "type": "string",
+          "description": "Plan step ID (for PLAN_STEP_* events)"
+        },
+        "receipt_id": {
+          "type": "string",
+          "description": "Receipt ID (for RECEIPT_WRITTEN events)"
+        }
+      }
+    }
+  }
+}

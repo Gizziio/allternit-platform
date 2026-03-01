@@ -1,0 +1,188 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://a2rchitech.local/spec/contracts/RunForensics.schema.json",
+  "title": "Run Forensics Export",
+  "description": "Schema for run forensics exports in the A2R system",
+  "type": "object",
+  "properties": {
+    "export_version": {
+      "type": "string",
+      "description": "Version of the export schema"
+    },
+    "export_id": {
+      "type": "string",
+      "description": "Unique identifier for the export"
+    },
+    "run_id": {
+      "type": "string",
+      "description": "ID of the run being exported"
+    },
+    "export_timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of the export"
+    },
+    "exporter_id": {
+      "type": "string",
+      "description": "ID of the entity performing the export"
+    },
+    "graph_id": {
+      "type": "string",
+      "description": "ID of the graph associated with the run"
+    },
+    "start_timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Start time of the run"
+    },
+    "end_timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "End time of the run (if completed)"
+    },
+    "run_status": {
+      "type": "string",
+      "enum": ["RUNNING", "COMPLETE", "FAILED", "ABORTED"],
+      "description": "Final status of the run"
+    },
+    "node_executions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "task_id": {
+            "type": "string"
+          },
+          "node_receipt_path": {
+            "type": "string"
+          },
+          "execution_start": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "execution_end": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["SUCCEEDED", "FAILED", "SKIPPED", "BLOCKED"]
+          }
+        },
+        "required": ["task_id", "node_receipt_path", "execution_start", "status"]
+      }
+    },
+    "receipt_collection": {
+      "type": "object",
+      "properties": {
+        "total_receipts": {
+          "type": "integer"
+        },
+        "receipt_paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tool_receipts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "subprocess_receipts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "agent_receipts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "gateway_receipts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "capsule_receipts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "cli_receipts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ui_receipts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "memory_receipts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": ["total_receipts", "receipt_paths"]
+    },
+    "memory_state": {
+      "type": "object",
+      "properties": {
+        "promoted_candidates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "active_layers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "integrity_check": {
+      "type": "object",
+      "properties": {
+        "receipt_chain_valid": {
+          "type": "boolean"
+        },
+        "hash_verification": {
+          "type": "boolean"
+        },
+        "tampering_detected": {
+          "type": "boolean"
+        },
+        "verification_details": {
+          "type": "string"
+        }
+      },
+      "required": ["receipt_chain_valid", "hash_verification", "tampering_detected"]
+    }
+  },
+  "required": [
+    "export_version",
+    "export_id",
+    "run_id",
+    "export_timestamp",
+    "exporter_id",
+    "graph_id",
+    "start_timestamp",
+    "run_status",
+    "node_executions",
+    "receipt_collection",
+    "memory_state",
+    "integrity_check"
+  ]
+}

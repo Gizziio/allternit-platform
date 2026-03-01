@@ -1,0 +1,371 @@
+# CLI Warning Cleanup DAG
+# Tracks and implements fixes for 83 compiler warnings in a2rchitech-cli
+#
+# Run: a2r dag install cli-warning-cleanup
+
+dag:
+  id: cli-warning-cleanup
+  version: "1.0.0"
+  description: "Systematic cleanup of 83 compiler warnings in CLI codebase"
+  
+  # Global configuration
+  config:
+    working_dir: "7-apps/cli"
+    priority: medium
+    
+  phases:
+    # ============================================================================
+    # Phase 1: Analysis and Documentation
+    # ============================================================================
+    - name: analyze
+      description: "Document all warnings with file locations"
+      parallel: false
+      
+      nodes:
+        - id: catalog-tui-warnings
+          name: "Catalog TUI Component Warnings"
+          description: |
+            Document all 25+ "never used" function/method warnings in:
+            - src/tui_components/blocks.rs
+            - src/tui_components/diff.rs
+            - src/tui_components/git.rs
+            - src/tui_components/history.rs
+            - src/tui_components/hooks.rs
+            - src/tui_components/input.rs
+            - src/tui_components/syntax.rs
+            
+            Output: warnings-tui.md with file:line mapping
+          worktree: cli-warning-cleanup
+          
+        - id: catalog-registry-warnings
+          name: "Catalog Command Registry Warnings"
+          description: |
+            Document 8 "never used" warnings in new command registry code:
+            - src/command_registry/mod.rs
+            - src/command_registry/discovery.rs
+            - src/command_registry/fuzzy.rs
+            
+            These will be resolved when TUI integration is complete.
+            Output: warnings-registry.md
+          worktree: cli-warning-cleanup
+          
+        - id: catalog-import-warnings
+          name: "Catalog Unused Import Warnings"
+          description: |
+            Document 15 unused import warnings:
+            - command_registry: fuzzy_match, discover_commands
+            - tui_components: DiffLineType, BlockManager, etc.
+            - Various command modules
+            
+            Output: warnings-imports.md
+          worktree: cli-warning-cleanup
+          
+        - id: catalog-field-warnings
+          name: "Catalog Unused Field Warnings"
+          description: |
+            Document 10 "never read" field warnings:
+            - TuiApp: total_tokens_sent, total_tokens_received, diff_viewer
+            - DiffFile: old_path, new_path, hunks, is_new, is_deleted
+            - DiffHunk: old_start, old_lines, new_start, new_lines
+            - DiffLine: line_type, content, old_line_num, new_line_num
+            - BlockCell: line_type, content, etc.
+            
+            Output: warnings-fields.md
+          worktree: cli-warning-cleanup
+
+    # ============================================================================
+    # Phase 2: TUI Component Cleanup (High Impact)
+    # ============================================================================
+    - name: cleanup-tui
+      description: "Clean up tui_components module warnings"
+      parallel: true
+      depends_on: [analyze]
+      
+      nodes:
+        - id: cleanup-blocks
+          name: "Clean up blocks.rs warnings"
+          description: |
+            Fix warnings in src/tui_components/blocks.rs:
+            - Remove unused BlockManager, Cell, BlockType, BlockAction
+            - Fix unused BlockAction, BlockManager, BlockType, Cell imports
+            - Fix unused display_name, icon methods
+            - Fix mismatched lifetime syntax on display_lines
+            
+            Estimate: 2-3 hours
+          worktree: cli-warning-cleanup
+          depends_on: [catalog-tui-warnings]
+          
+        - id: cleanup-diff
+          name: "Clean up diff.rs warnings"
+          description: |
+            Fix warnings in src/tui_components/diff.rs:
+            - Remove unused DiffLineType, DiffViewMode imports
+            - Remove unused Context, Added, Removed, Header, HunkHeader variants
+            - Remove unused SideBySide variant
+            - Remove unused parse_unified_diff, parse_hunk_range functions
+            - Remove unused fields from DiffFile, DiffHunk, DiffLine structs
+            
+            OR: If these are for future use, add #[allow(dead_code)]
+            
+            Estimate: 2-3 hours
+          worktree: cli-warning-cleanup
+          depends_on: [catalog-tui-warnings]
+          
+        - id: cleanup-git
+          name: "Clean up git.rs warnings"
+          description: |
+            Fix warnings in src/tui_components/git.rs:
+            - Remove unused AutoCommitMode, GitAutoCommitConfig imports
+            - Remove unused parse_git_config, check_tool_installed functions
+            - Remove unused normalize_status_short function
+            
+            Estimate: 1-2 hours
+          worktree: cli-warning-cleanup
+          depends_on: [catalog-tui-warnings]
+          
+        - id: cleanup-history
+          name: "Clean up history.rs warnings"
+          description: |
+            Fix warnings in src/tui_components/history.rs:
+            - Remove unused HistoryConfig, HistoryEntry imports
+            - Remove unused load associated function
+            
+            Estimate: 1 hour
+          worktree: cli-warning-cleanup
+          depends_on: [catalog-tui-warnings]
+          
+        - id: cleanup-hooks
+          name: "Clean up hooks.rs warnings"
+          description: |
+            Fix warnings in src/tui_components/hooks.rs:
+            - Remove unused from_key associated function
+            - Remove unused with_config, should_ask, is_auto associated items
+            
+            Estimate: 1 hour
+          worktree: cli-warning-cleanup
+          depends_on: [catalog-tui-warnings]
+          
+        - id: cleanup-input
+          name: "Clean up input.rs warnings"
+          description: |
+            Fix warnings in src/tui_components/input.rs:
+            - Remove unused InputMode import
+            
+            Estimate: 30 minutes
+          worktree: cli-warning-cleanup
+          depends_on: [catalog-tui-warnings]
+          
+        - id: cleanup-syntax
+          name: "Clean up syntax.rs warnings"
+          description: |
+            Fix warnings in src/tui_components/syntax.rs:
+            - Remove unused highlight_markdown_lines, highlight_shell methods
+            - Remove unused show_line_numbers field
+            
+            Estimate: 1 hour
+          worktree: cli-warning-cleanup
+          depends_on: [catalog-tui-warnings]
+
+    # ============================================================================
+    # Phase 3: TUI Main Module Cleanup
+    # ============================================================================
+    - name: cleanup-tui-main
+      description: "Clean up main tui.rs module warnings"
+      parallel: false
+      depends_on: [cleanup-tui]
+      
+      nodes:
+        - id: cleanup-tui-unused-fields
+          name: "Clean up TuiApp unused fields"
+          description: |
+            Fix field warnings in src/commands/tui.rs:
+            - total_tokens_sent - track and display token usage
+            - total_tokens_received - track and display token usage
+            - diff_viewer - integrate diff viewing feature
+            - show_diff - add diff toggle command
+            - syntax_highlighter - use for code blocks
+            
+            Decision needed: Implement features OR remove fields
+            
+            Estimate: 4-6 hours if implementing, 1 hour if removing
+          worktree: cli-warning-cleanup
+          
+        - id: cleanup-tui-unused-methods
+          name: "Clean up TuiApp unused methods"
+          description: |
+            Fix method warnings in src/commands/tui.rs:
+            - with_session - use for session switching
+            - to_string - remove if not needed
+            - contains - remove if not needed
+            
+            Estimate: 2 hours
+          worktree: cli-warning-cleanup
+          
+        - id: cleanup-tui-unused-vars
+          name: "Clean up TuiApp unused variables"
+          description: |
+            Fix variable warnings:
+            - thinking_badge - use in status line
+            - keywords - use for search
+            - cmd - use or remove
+            - client - use or remove
+            - i - fix blocks.rs enumerate
+            - selected_item_found - use or remove
+            
+            Estimate: 2 hours
+          worktree: cli-warning-cleanup
+
+    # ============================================================================
+    # Phase 4: Command Registry Integration
+    # ============================================================================
+    - name: integrate-registry
+      description: "Integrate command registry to resolve its warnings"
+      parallel: false
+      depends_on: [cleanup-tui-main]
+      
+      nodes:
+        - id: integrate-tui-palette
+          name: "Integrate Command Registry into TUI"
+          description: |
+            Resolve "never used" warnings in command_registry by integrating:
+            - CommandRegistry::REGISTRY - use in TUI command palette
+            - search_commands() - use for / command autocomplete
+            - get_command() - use for command execution
+            - fuzzy_match() - use for fuzzy search
+            - rank_results() - use for search ranking
+            - filter_candidates() - use for filtering
+            - discover_commands() - use for auto-discovery
+            - discover_*_commands() - use for module discovery
+            - register_external_command() - use for plugins
+            - render_sidebar() - use for sidebar rendering
+            
+            Implementation:
+            1. Replace existing slash command handling with registry
+            2. Add fuzzy search to command palette
+            3. Add command categorization to UI
+            4. Add sidebar with command shortcuts
+            
+            Estimate: 8-12 hours
+          worktree: cli-warning-cleanup
+          depends_on: [catalog-registry-warnings]
+          
+        - id: add-command-docs
+          name: "Add Command Documentation to TUI"
+          description: |
+            Use command registry to show command help:
+            - Show descriptions in command palette
+            - Add /help command with categorized commands
+            - Add command examples
+            
+            Estimate: 4 hours
+          worktree: cli-warning-cleanup
+          depends_on: [integrate-tui-palette]
+
+    # ============================================================================
+    # Phase 5: Command Module Cleanup
+    # ============================================================================
+    - name: cleanup-commands
+      description: "Clean up individual command modules"
+      parallel: true
+      depends_on: [integrate-registry]
+      
+      nodes:
+        - id: cleanup-dag-unused
+          name: "Clean up dag.rs unused code"
+          description: |
+            Fix warnings in src/commands/dag.rs:
+            - Remove unused imports
+            - Fix any unused variables
+            
+            Estimate: 1 hour
+          worktree: cli-warning-cleanup
+          
+        - id: cleanup-queue-unused
+          name: "Clean up queue.rs unused code"
+          description: |
+            Fix warnings in src/commands/queue.rs:
+            - Remove unused imports
+            - Fix any unused variables
+            
+            Estimate: 1 hour
+          worktree: cli-warning-cleanup
+          
+        - id: cleanup-logs-unused
+          name: "Clean up logs.rs unused code"
+          description: |
+            Fix warnings in src/commands/logs.rs:
+            - Remove unused imports
+            - Fix any unused variables
+            
+            Estimate: 1 hour
+          worktree: cli-warning-cleanup
+          
+        - id: cleanup-workspace-unused
+          name: "Clean up workspace.rs unused code"
+          description: |
+            Fix warnings in src/commands/workspace.rs:
+            - Remove unused imports
+            - Fix any unused variables
+            
+            Estimate: 1 hour
+          worktree: cli-warning-cleanup
+
+    # ============================================================================
+    # Phase 6: Verification
+    # ============================================================================
+    - name: verify
+      description: "Verify all warnings are resolved"
+      parallel: false
+      depends_on: [cleanup-commands]
+      
+      nodes:
+        - id: verify-warning-count
+          name: "Verify Warning Count"
+          description: |
+            Run cargo check and verify:
+            - Total warnings <= 10 (allowing for edge cases)
+            - No errors
+            - All new code is used
+            
+            If warnings > 10, create follow-up tasks.
+            
+            Command: cargo check 2>&1 | grep -c "warning:"
+            Expected: <= 10
+          worktree: cli-warning-cleanup
+          
+        - id: verify-build-pass
+          name: "Verify Build Passes"
+          description: |
+            Run full build to ensure no regressions:
+            cargo build --release
+            
+            Must complete without errors.
+          worktree: cli-warning-cleanup
+          
+        - id: verify-tests-pass
+          name: "Verify Tests Pass"
+          description: |
+            Run test suite:
+            cargo test
+            
+            All tests must pass.
+          worktree: cli-warning-cleanup
+
+  # ============================================================================
+  # Summary
+  # ============================================================================
+  summary:
+    total_nodes: 26
+    estimated_hours: 40-60
+    priority_order:
+      - Phase 1: Analysis (understanding)
+      - Phase 2: TUI Components (high impact)
+      - Phase 3: TUI Main (high impact)
+      - Phase 4: Registry Integration (resolves new code warnings)
+      - Phase 5: Command Cleanup (low impact)
+      - Phase 6: Verification (quality gate)
+
+  # Dependencies on other DAGs
+  dependencies:
+    - dag: cli-tui-improvements
+      reason: "Command registry integration depends on TUI architecture"

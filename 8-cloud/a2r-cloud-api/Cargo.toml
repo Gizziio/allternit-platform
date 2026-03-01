@@ -1,0 +1,51 @@
+[package]
+name = "a2r-cloud-api"
+version = "0.1.0"
+edition = "2021"
+description = "A2R Cloud API - Backend API for cloud deployment"
+
+[[bin]]
+name = "a2r-cloud-api"
+path = "src/main.rs"
+
+[dependencies]
+# A2R internal
+a2r-cloud-core = { path = "../a2r-cloud-core" }
+a2r-cloud-ssh = { path = "../a2r-cloud-ssh" }
+a2r-cloud-hetzner = { path = "../a2r-cloud-providers/hetzner" }
+
+# Web framework
+axum = { workspace = true, features = ["ws"] }
+tower = { workspace = true }
+tower-http = { workspace = true, features = ["cors", "trace"] }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Async runtime
+tokio = { workspace = true, features = ["full"] }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# Time
+chrono = { workspace = true }
+
+# UUID
+uuid = { workspace = true }
+
+# Database (SQLite for now)
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid"] }
+
+# WebSocket
+tokio-tungstenite = "0.21"
+futures-util = "0.3"
+
+[dev-dependencies]
+tokio-test = "0.4"

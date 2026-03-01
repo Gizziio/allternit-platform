@@ -1,0 +1,17 @@
+root=/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/7-apps/agent-shell/a2r-shell/packages/a2r-shell
+app=/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/7-apps/agent-shell/a2r-shell/packages/a2r-shell
+prompt=quick visual smoke test
+submit_mode=auto
+window_id=44410
+size=72x20
+agent=Sisyphus (Ultraworker)
+model=opencode/minimax-m2.5-free
+force_stty=false
+resize_window=true
+capture_extended=false
+sleep_after_submit_1=1
+sleep_after_submit_2=3
+sleep_after_submit_3=10
+sleep_after_submit_4=15
+sleep_after_submit_5=15
+timestamp=20260223-175758

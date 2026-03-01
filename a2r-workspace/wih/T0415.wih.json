@@ -1,0 +1,65 @@
+{
+  "wih_version": "v0.1",
+  "task_id": "T0415",
+  "graph_id": "graph-0001",
+  "title": "Gateway law: No Port Sprawl Gate",
+  "state": "RUNNING",
+  "blocked_by": [
+    "T0414"
+  ],
+  "external_refs": {},
+  "preset": { "preset_id": "preset-core-dev", "preset_hash": "TBD" },
+  "resume_cursor": { "last_run_id": "", "next_step": "", "pending_checks": [] },
+  "outputs": {
+    "required_artifacts": ["validator_update", "registry_cleanup"],
+    "artifact_paths": ["/.a2r/artifacts/T0415/"]
+  },
+  "write_scope": {
+    "root": "/.a2r/",
+    "allowed_globs": [
+      "scripts/validate_law.py",
+      "infra/gateway/gateway_registry.json",
+      "services/gateway/src/main.py",
+      "tests/acceptance/test_no_port_sprawl.sh",
+      "tests/acceptance/test_gateway_registry_no_ports.sh",
+      "tests/acceptance/ui/test_ui_denies_unknown_action.sh"
+    ]
+  },
+  "tools": {
+    "allowlist": ["fs.read", "fs.write", "rg.search"],
+    "pretooluse_hooks": ["WIH_VALID"]
+  },
+  "memory": { "packs": [{"pack_id": "law", "layers": ["law"], "access": "read"}] },
+  "acceptance": { "checks": ["AT-LAW-0005"] },
+  "beads": {
+    "wih_version": "v0.1",
+    "task_id": "T0415",
+    "graph_id": "graph-0001",
+    "title": "Gateway law: No Port Sprawl Gate",
+    "state": "RUNNING",
+    "blocked_by": [
+      "T0414"
+    ],
+    "outputs": {
+      "required_artifacts": ["validator_update", "registry_cleanup"],
+      "artifact_paths": ["/.a2r/artifacts/T0415/"]
+    },
+    "write_scope": {
+      "root": "/.a2r/",
+      "allowed_globs": [
+        "scripts/validate_law.py",
+        "infra/gateway/gateway_registry.json",
+        "services/gateway/src/main.py",
+        "tests/acceptance/test_no_port_sprawl.sh",
+        "tests/acceptance/test_gateway_registry_no_ports.sh",
+        "tests/acceptance/ui/test_ui_denies_unknown_action.sh"
+      ]
+    },
+    "tools": {
+      "allowlist": ["fs.read", "fs.write", "rg.search"],
+      "pretooluse_hooks": ["WIH_VALID"]
+    },
+    "memory": { "packs": [{"pack_id": "law", "layers": ["law"], "access": "read"}] },
+    "acceptance": { "checks": ["AT-LAW-0005"] }
+  }
+}

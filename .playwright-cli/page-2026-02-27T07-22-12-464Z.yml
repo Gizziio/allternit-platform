@@ -1,0 +1,271 @@
+- generic [ref=e2]:
+  - generic [ref=e222]:
+    - generic [ref=e226]:
+      - generic [ref=e227]:
+        - generic [ref=e228]:
+          - generic [ref=e229]: Workspace
+          - combobox "Code workspace selector" [ref=e230]:
+            - option "a2rchitech" [selected]
+            - option "summit_oic"
+        - generic [ref=e231]:
+          - generic [ref=e232]:
+            - img [ref=e233]
+            - generic [ref=e235]: main
+            - generic [ref=e236]: DIRTY
+          - generic "/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech" [ref=e237]
+          - generic [ref=e238]:
+            - generic [ref=e239]: ahead 2
+            - generic [ref=e240]: behind 0
+            - generic [ref=e241]: staged 4
+            - generic [ref=e242]: unstaged 7
+            - generic [ref=e243]: untracked 3
+      - generic [ref=e244]:
+        - generic [ref=e245]:
+          - button "Workspace Snapshot" [ref=e246] [cursor=pointer]:
+            - img [ref=e247]
+            - img [ref=e249]
+            - text: Workspace Snapshot
+          - generic [ref=e251]:
+            - generic [ref=e252]: Active session policy
+            - generic [ref=e253]:
+              - img [ref=e254]
+              - generic [ref=e256]: pol_plan
+            - generic [ref=e257]: "Anchor: /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/CODEBASE.md"
+        - generic [ref=e258]:
+          - button "Sessions 3" [ref=e259] [cursor=pointer]:
+            - img [ref=e260]
+            - img [ref=e262]
+            - text: Sessions
+            - generic [ref=e264]: "3"
+          - generic [ref=e265]:
+            - 'button "Code Mode Layout Stabilization sess_code_ui 1 PLAN PLAN_READY worktree Files: 1 Previews: 0" [ref=e266] [cursor=pointer]':
+              - generic [ref=e267]:
+                - generic [ref=e269]:
+                  - generic [ref=e270]: Code Mode Layout Stabilization
+                  - generic [ref=e271]: sess_code_ui
+                - generic [ref=e272]: "1"
+              - generic [ref=e273]:
+                - generic [ref=e274]: PLAN
+                - generic [ref=e275]: PLAN_READY
+                - generic [ref=e276]: worktree
+              - generic [ref=e277]:
+                - generic [ref=e278]: "Files: 1"
+                - generic [ref=e279]: "Previews: 0"
+            - 'button "Approval Token Rails Pass sess_policy_pass 3 DEFAULT AWAITING_APPROVAL worktree Files: 1 Previews: 0" [ref=e280] [cursor=pointer]':
+              - generic [ref=e281]:
+                - generic [ref=e283]:
+                  - generic [ref=e284]: Approval Token Rails Pass
+                  - generic [ref=e285]: sess_policy_pass
+                - generic [ref=e286]: "3"
+              - generic [ref=e287]:
+                - generic [ref=e288]: DEFAULT
+                - generic [ref=e289]: AWAITING_APPROVAL
+                - generic [ref=e290]: worktree
+              - generic [ref=e291]:
+                - generic [ref=e292]: "Files: 1"
+                - generic [ref=e293]: "Previews: 0"
+            - 'button "Diff Review Prototype sess_diff_review AUTO CHANGESET_READY sandbox Files: 2 Previews: 1" [ref=e294] [cursor=pointer]':
+              - generic [ref=e297]:
+                - generic [ref=e298]: Diff Review Prototype
+                - generic [ref=e299]: sess_diff_review
+              - generic [ref=e300]:
+                - generic [ref=e301]: AUTO
+                - generic [ref=e302]: CHANGESET_READY
+                - generic [ref=e303]: sandbox
+              - generic [ref=e304]:
+                - generic [ref=e305]: "Files: 2"
+                - generic [ref=e306]: "Previews: 1"
+        - generic [ref=e307]:
+          - button "Views" [ref=e308] [cursor=pointer]:
+            - img [ref=e309]
+            - img [ref=e311]
+            - text: Views
+          - generic [ref=e315]:
+            - button "Diff Review" [ref=e316] [cursor=pointer]:
+              - img [ref=e317]
+              - text: Diff Review
+            - button "File Tree" [ref=e319] [cursor=pointer]:
+              - img [ref=e320]
+              - text: File Tree
+            - button "Tests" [ref=e322] [cursor=pointer]:
+              - img [ref=e323]
+              - text: Tests
+            - button "PR Monitor" [ref=e325] [cursor=pointer]:
+              - img [ref=e326]
+              - text: PR Monitor
+        - generic [ref=e328]:
+          - generic [ref=e329]: Current Focus
+          - generic [ref=e330]:
+            - img [ref=e331]
+            - text: Code Mode Layout Stabilization
+          - generic [ref=e333]: 6-ui/a2r-platform/src/views/code/CodeRoot.tsx
+    - separator [ref=e334]
+    - generic [ref=e339]:
+      - generic [ref=e340]:
+        - generic [ref=e341]:
+          - generic [ref=e342]:
+            - img [ref=e343]
+            - text: ADE Canvas
+          - generic [ref=e346]: a2rchitech / PLAN / PLAN_READY
+          - generic [ref=e347]: "Active Session: Code Mode Layout Stabilization"
+        - generic [ref=e348]:
+          - button "Preview" [ref=e349] [cursor=pointer]:
+            - img [ref=e350]
+            - text: Preview
+          - button "Terminal" [ref=e352] [cursor=pointer]:
+            - img [ref=e353]
+            - text: Terminal
+          - button "HIDE INSPECTOR" [ref=e355] [cursor=pointer]
+      - generic [ref=e357]:
+        - log [ref=e358]:
+          - generic [ref=e361]:
+            - generic [ref=e363]: Hello! I am A2rchitech. How can I help?
+            - generic [ref=e364]:
+              - button "Copy" [ref=e365] [cursor=pointer]: Copy
+              - button "Regenerate" [ref=e366] [cursor=pointer]: Regenerate
+        - generic [ref=e367]:
+          - generic [ref=e370]:
+            - button "Scaffold Generate new code" [ref=e371] [cursor=pointer]:
+              - img [ref=e372]
+              - generic [ref=e375]: Scaffold
+              - generic [ref=e376]: Generate new code
+            - button "Refactor Improve existing code" [ref=e377] [cursor=pointer]:
+              - img [ref=e378]
+              - generic [ref=e382]: Refactor
+              - generic [ref=e383]: Improve existing code
+            - button "Debug Fix issues" [ref=e384] [cursor=pointer]:
+              - img [ref=e385]
+              - generic [ref=e394]: Debug
+              - generic [ref=e395]: Fix issues
+            - button "Optimize Make it faster" [ref=e396] [cursor=pointer]:
+              - img [ref=e397]
+              - generic [ref=e399]: Optimize
+              - generic [ref=e400]: Make it faster
+            - button "Explore More" [ref=e401] [cursor=pointer]:
+              - img [ref=e402]
+              - generic [ref=e405]: Explore
+              - generic [ref=e406]: More
+          - generic [ref=e408]:
+            - textbox "Describe what you want to build or modify..." [ref=e409]
+            - generic [ref=e410]:
+              - generic [ref=e411]:
+                - button [ref=e413] [cursor=pointer]:
+                  - img [ref=e414]
+                - button "Codex CLI" [ref=e415] [cursor=pointer]:
+                  - generic [ref=e416]: Codex CLI
+                  - img [ref=e417]
+                - generic [ref=e419]:
+                  - button "Click to connect"
+                  - button [ref=e420] [cursor=pointer]:
+                    - img [ref=e421]
+              - button [disabled] [ref=e424]:
+                - img [ref=e425]
+    - separator [ref=e427]
+    - generic [ref=e432]:
+      - generic [ref=e433]:
+        - button [ref=e434] [cursor=pointer]:
+          - img [ref=e435]
+        - button [ref=e438] [cursor=pointer]:
+          - img [ref=e439]
+        - button [ref=e441] [cursor=pointer]:
+          - img [ref=e442]
+        - button [ref=e444] [cursor=pointer]:
+          - img [ref=e445]
+        - button [ref=e447] [cursor=pointer]:
+          - img [ref=e448]
+      - generic [ref=e451]:
+        - generic [ref=e452]:
+          - generic [ref=e453]:
+            - img [ref=e454]
+            - generic [ref=e456]:
+              - generic [ref=e457]: Review Changes
+              - generic [ref=e458]: 2 files modified
+          - generic [ref=e459]:
+            - button "Reject All" [ref=e460] [cursor=pointer]
+            - button "Apply ChangeSet" [ref=e461] [cursor=pointer]:
+              - img [ref=e462]
+              - text: Apply ChangeSet
+        - generic [ref=e464]:
+          - generic [ref=e465]:
+            - generic [ref=e466] [cursor=pointer]:
+              - img [ref=e467]
+              - img [ref=e469]
+              - text: src/views/code/CodeCanvas.tsx
+              - generic [ref=e471]: +2 -2
+            - generic [ref=e472]:
+              - generic [ref=e473]:
+                - generic [ref=e474]: "@@ -0,0 +0,0 @@"
+                - generic [ref=e475]:
+                  - generic [ref=e476]:
+                    - generic [ref=e477]: "0"
+                    - generic [ref=e478]: "0"
+                    - generic [ref=e479]: "- <Rocket size={32} />"
+                  - generic [ref=e480]:
+                    - generic [ref=e481]: "1"
+                    - generic [ref=e482]: "1"
+                    - generic [ref=e483]: "+ <Rocket size={32} weight=\"duotone\" />"
+                - generic [ref=e484]:
+                  - button "Reject" [ref=e485] [cursor=pointer]:
+                    - img [ref=e486]
+                    - text: Reject
+                  - button "Accept" [ref=e488] [cursor=pointer]:
+                    - img [ref=e489]
+                    - text: Accept
+              - generic [ref=e491]:
+                - generic [ref=e492]: "@@ -0,0 +0,0 @@"
+                - generic [ref=e493]:
+                  - generic [ref=e494]:
+                    - generic [ref=e495]: "0"
+                    - generic [ref=e496]: "0"
+                    - generic [ref=e497]: "- color=\"blue\""
+                  - generic [ref=e498]:
+                    - generic [ref=e499]: "1"
+                    - generic [ref=e500]: "1"
+                    - generic [ref=e501]: + color="var(--accent-chat)"
+                - generic [ref=e502]:
+                  - button "Reject" [ref=e503] [cursor=pointer]:
+                    - img [ref=e504]
+                    - text: Reject
+                  - button "Accept" [ref=e506] [cursor=pointer]:
+                    - img [ref=e507]
+                    - text: Accept
+          - generic [ref=e509]:
+            - generic [ref=e510] [cursor=pointer]:
+              - img [ref=e511]
+              - img [ref=e513]
+              - text: src/shell/ShellRail.tsx
+              - generic [ref=e515]: +1 -0
+            - generic [ref=e517]:
+              - generic [ref=e518]: "@@ -0,0 +0,0 @@"
+              - generic [ref=e520]:
+                - generic [ref=e521]: "0"
+                - generic [ref=e522]: "0"
+                - generic [ref=e523]: "+ import { Code } from \"@phosphor-icons/react\";"
+              - generic [ref=e524]:
+                - button "Reject" [ref=e525] [cursor=pointer]:
+                  - img [ref=e526]
+                  - text: Reject
+                - button "Accept" [ref=e528] [cursor=pointer]:
+                  - img [ref=e529]
+                  - text: Accept
+  - generic:
+    - generic [ref=e185]:
+      - generic [ref=e186]:
+        - button "Expand Sidebar" [ref=e187] [cursor=pointer]:
+          - img [ref=e188]
+        - button "New Chat" [ref=e190] [cursor=pointer]:
+          - img [ref=e191]
+      - button "Browser" [ref=e194] [cursor=pointer]:
+        - img [ref=e195]
+        - generic [ref=e197]: Browser
+    - generic [ref=e199]:
+      - button "Chat" [ref=e200] [cursor=pointer]:
+        - img [ref=e201]
+        - generic [ref=e203]: Chat
+      - button "Cowork" [ref=e204] [cursor=pointer]:
+        - img [ref=e205]
+        - generic [ref=e207]: Cowork
+      - button "Code" [active] [ref=e208] [cursor=pointer]:
+        - img [ref=e209]
+        - generic [ref=e211]: Code
+  - img [ref=e214] [cursor=pointer]

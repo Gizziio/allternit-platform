@@ -1,0 +1,29 @@
+#!/usr/bin/env python3
+import os
+
+def generate_tree(startpath):
+    tree = []
+    for root, dirs, files in os.walk(startpath):
+        level = root.replace(startpath, "").count(os.sep)
+        if level > 3: continue
+        indent = " " * 4 * (level)
+        tree.append(f"{indent}{os.path.basename(root)}/")
+        subindent = " " * 4 * (level + 1)
+        for f in files:
+            if f in ["README.md", "package.json", "Cargo.toml"]:
+                tree.append(f"{subindent}{f}")
+    return "\n".join(tree)
+
+def main():
+    content = "# Codebase Context\n\n"
+    content += "## Directory Structure\n\n```\n"
+    content += generate_tree(".")
+    content += "\n```\n"
+    
+    with open("CODEBASE.md", "w") as f:
+        f.write(content)
+    print("CODEBASE.md generated")
+
+if __name__ == "__main__":
+    main()
+

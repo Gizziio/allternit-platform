@@ -1,0 +1,44 @@
+{
+  "contract_version": "1.0.0",
+  "skill_name": "{skill_name}",
+  "description": "One sentence description",
+  "intent": "What this skill accomplishes",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "target_paths": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Files/directories to modify"
+      },
+      "goal": {
+        "type": "string",
+        "description": "Desired end state"
+      }
+    },
+    "required": ["target_paths", "goal"]
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "report_path": { "type": "string" },
+      "changed_files": {
+        "type": "array",
+        "items": { "type": "string" }
+      }
+    }
+  },
+  "verification_steps": [
+    "Run tests",
+    "Check for regressions"
+  ],
+  "safety_rules": [
+    "Never delete without backup",
+    "Escalate if unsure"
+  ],
+  "metadata": {
+    "version": "1.0.0",
+    "author": "{agent_name}",
+    "created": "{date}"
+  }
+}
