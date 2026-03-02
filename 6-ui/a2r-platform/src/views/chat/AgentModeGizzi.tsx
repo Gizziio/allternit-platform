@@ -59,28 +59,28 @@ const SURFACE_CONFIG: Record<AgentModeSurface, {
 }> = {
   chat: {
     entrySide: 'left',
-    mascotSize: 68,
+    mascotSize: 78,
     baseEmotion: 'curious',
     selectedEmotion: 'pleased',
     peekEmotion: 'mischief',
   },
   cowork: {
     entrySide: 'right',
-    mascotSize: 64,
+    mascotSize: 74,
     baseEmotion: 'focused',
     selectedEmotion: 'proud',
     peekEmotion: 'mischief',
   },
   code: {
     entrySide: 'left',
-    mascotSize: 58,
+    mascotSize: 68,
     baseEmotion: 'alert',
     selectedEmotion: 'focused',
     peekEmotion: 'mischief',
   },
   browser: {
     entrySide: 'right',
-    mascotSize: 58,
+    mascotSize: 68,
     baseEmotion: 'curious',
     selectedEmotion: 'focused',
     peekEmotion: 'mischief',
@@ -583,11 +583,11 @@ export function AgentModeGizzi({
         };
 
       case 'pacman-trail':
-        // PACMAN TRAIL - Gizzi dropping down through vertical tokens
+        // PACMAN TRAIL - Gizzi moving RIGHT eating horizontal tokens
         return {
           x: 0,
           y: 0,
-          rotate: 360,
+          rotate: 0,
           scale: 1,
           opacity: 1,
         };
@@ -603,12 +603,12 @@ export function AgentModeGizzi({
         };
 
       case 'wheel-out':
-        // WHEEL OUT - Spin out with tire marks and dust
+        // WHEEL OUT - Spin out with tire marks and realistic smoke
         return {
-          x: -250,
-          y: 200,
-          rotate: -1080,
-          scale: 0.7,
+          x: side * 300,
+          y: 100,
+          rotate: side * 1080,
+          scale: 0.6,
           opacity: 0,
         };
 
@@ -748,8 +748,8 @@ export function AgentModeGizzi({
   // Initial position depends on entry animation type
   const initialProps = (() => {
     if (animState === 'pacman-trail') {
-      // Pacman trail: starts above, drops down through vertical tokens
-      return { opacity: 0, x: 0, y: -400, rotate: 0, scale: 0.8 };
+      // Pacman trail: starts at left, moves RIGHT eating horizontal tokens
+      return { opacity: 0, x: -200, y: 0, rotate: 0, scale: 0.8 };
     }
     if (animState === 'the-drop') {
       // The drop: starts at top of page, above viewport
@@ -826,7 +826,7 @@ export function AgentModeGizzi({
         height: 120, // Extended height for better mouse tracking
         overflow: 'visible',
         zIndex: isBehindBar ? 5 : 35, // Lower z-index when behind bar
-        pointerEvents: isVisible ? 'auto' : 'none',
+        pointerEvents: 'none',
       }}
       onMouseMove={handleMouseMove}
       onMouseEnter={() => animState === 'on-bar' && setIsHovered(true)}
@@ -838,6 +838,9 @@ export function AgentModeGizzi({
           window.clearTimeout(moveTimeoutRef.current);
           moveTimeoutRef.current = null;
         }
+        // Return Gizzi to center (home) position
+        barPositionRef.current = 0;
+        setBarPosition(0);
       }}
     >
       <AnimatePresence>
@@ -862,8 +865,19 @@ export function AgentModeGizzi({
               transition: { duration: 0 },
             }}
             transition={{
-              type: 'tween',
-              duration,
+              ...(animState === 'on-bar' 
+                ? { 
+                    // Use spring physics for smooth return to center when on-bar
+                    type: 'spring',
+                    stiffness: 80,
+                    damping: 12,
+                    mass: 0.8,
+                  }
+                : {
+                    type: 'tween',
+                    duration,
+                  }
+              ),
               ease: (() => {
                 // EXIT ANIMATIONS:
                 if (animState === 'collapse') return [0.4, 0, 0.6, 1];
@@ -1268,14 +1282,15 @@ export function AgentModeGizzi({
                     </svg>
                   </motion.div>
                 ))}
-                {/* Large token that gets swallowed */}
+                {/* Tech data packet / memory chip being uploaded */}
                 <motion.div
-                  initial={{ opacity: 0, scale: 1.5, y: -40, x: 0 }}
+                  initial={{ opacity: 0, scale: 0.8, y: -30, x: 0 }}
                   animate={{ 
                     opacity: [0, 1, 1, 0], 
-                    scale: [1.5, 1.2, 0.8, 0.3],
-                    y: [-40, -20, -5, 10],
+                    scale: [0.8, 1, 0.9, 0.6],
+                    y: [-30, -15, -5, 0],
                     x: [0, 0, 0, 0],
+                    rotate: [0, 5, -5, 0],
                   }}
                   transition={{ duration: 2, times: [0, 0.3, 0.6, 1] }}
                   style={{
@@ -1283,30 +1298,172 @@ export function AgentModeGizzi({
                     bottom: '100%',
                     left: '50%',
                     transform: 'translateX(-50%)',
-                    width: 40,
-                    height: 40,
+                    width: 48,
+                    height: 36,
                     zIndex: 55,
                     pointerEvents: 'none',
                   }}
                 >
+                  {/* Memory chip with circuit pattern */}
                   <div style={{
                     width: '100%',
                     height: '100%',
-                    borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
-                    border: '3px solid #fcd34d',
-                    boxShadow: '0 0 20px rgba(251, 191, 36, 0.8)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 20,
-                    fontWeight: 800,
-                    color: '#fff',
-                    textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                    background: 'linear-gradient(135deg, #2d3748 0%, #1a202c 50%, #171923 100%)',
+                    border: '2px solid #4a5568',
+                    borderRadius: 4,
+                    boxShadow: '0 0 20px rgba(74, 85, 104, 0.6), inset 0 1px 0 rgba(255,255,255,0.1)',
+                    position: 'relative',
+                    overflow: 'hidden',
                   }}>
-                    T
+                    {/* Circuit traces */}
+                    <div style={{
+                      position: 'absolute',
+                      top: 6,
+                      left: 6,
+                      right: 6,
+                      height: 2,
+                      background: '#48bb78',
+                      borderRadius: 1,
+                      boxShadow: '0 0 4px #48bb78',
+                    }} />
+                    <div style={{
+                      position: 'absolute',
+                      top: 6,
+                      left: 6,
+                      width: 2,
+                      height: 10,
+                      background: '#48bb78',
+                      borderRadius: 1,
+                      boxShadow: '0 0 4px #48bb78',
+                    }} />
+                    <div style={{
+                      position: 'absolute',
+                      top: 6,
+                      right: 6,
+                      width: 2,
+                      height: 10,
+                      background: '#48bb78',
+                      borderRadius: 1,
+                      boxShadow: '0 0 4px #48bb78',
+                    }} />
+                    <div style={{
+                      position: 'absolute',
+                      bottom: 6,
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      width: 20,
+                      height: 2,
+                      background: '#48bb78',
+                      borderRadius: 1,
+                      boxShadow: '0 0 4px #48bb78',
+                    }} />
+                    {/* Chip center */}
+                    <div style={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      width: 14,
+                      height: 14,
+                      background: '#1a202c',
+                      border: '1px solid #4a5568',
+                      borderRadius: 2,
+                    }} />
+                    {/* Data indicator */}
+                    <div style={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      fontSize: 7,
+                      fontWeight: 800,
+                      color: '#48bb78',
+                      fontFamily: 'monospace',
+                    }}>
+                      01
+                    </div>
+                    {/* Data transfer lines animation */}
+                    <motion.div
+                      animate={{ 
+                        opacity: [0.3, 1, 0.3],
+                        x: [-10, 10],
+                      }}
+                      transition={{ duration: 0.4, repeat: 4 }}
+                      style={{
+                        position: 'absolute',
+                        top: '35%',
+                        left: 0,
+                        width: 8,
+                        height: 1,
+                        background: '#48bb78',
+                        boxShadow: '0 0 4px #48bb78',
+                      }}
+                    />
+                    <motion.div
+                      animate={{ 
+                        opacity: [0.3, 1, 0.3],
+                        x: [10, -10],
+                      }}
+                      transition={{ duration: 0.4, repeat: 4, delay: 0.2 }}
+                      style={{
+                        position: 'absolute',
+                        bottom: '35%',
+                        right: 0,
+                        width: 8,
+                        height: 1,
+                        background: '#48bb78',
+                        boxShadow: '0 0 4px #48bb78',
+                      }}
+                    />
+                  </div>
+                  {/* Pin connectors */}
+                  <div style={{
+                    position: 'absolute',
+                    bottom: -4,
+                    left: 4,
+                    right: 4,
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                  }}>
+                    {[0, 1, 2, 3].map((i) => (
+                      <div key={i} style={{
+                        width: 4,
+                        height: 4,
+                        background: '#718096',
+                        borderRadius: '0 0 1px 1px',
+                      }} />
+                    ))}
                   </div>
                 </motion.div>
+                {/* Data bytes streaming effect */}
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <motion.div
+                    key={`byte-${i}`}
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ 
+                      opacity: [0, 1, 0],
+                      y: [-20 + i * 8, -10 + i * 4],
+                    }}
+                    transition={{ 
+                      duration: 0.4, 
+                      delay: 0.5 + i * 0.15,
+                      repeat: 2,
+                    }}
+                    style={{
+                      position: 'absolute',
+                      bottom: '110%',
+                      left: `calc(50% + ${(i - 2) * 15}px)`,
+                      fontSize: 8,
+                      fontFamily: 'monospace',
+                      fontWeight: 700,
+                      color: '#48bb78',
+                      textShadow: '0 0 4px #48bb78',
+                      zIndex: 54,
+                    }}
+                  >
+                    {['0x1A', '0xFF', '0x42', '0x7E', '0x01'][i]}
+                  </motion.div>
+                ))}
                 {/* Stationary text - does NOT rotate with Gizzi */}
                 <div
                   style={{
@@ -1537,27 +1694,27 @@ export function AgentModeGizzi({
               </>
             )}
 
-            {/* PACMAN TRAIL - Gizzi dropping down through vertical stationary tokens */}
+            {/* PACMAN TRAIL - Gizzi moving RIGHT eating horizontal tokens */}
             {animState === 'pacman-trail' && (
               <>
-                {/* 6 Stationary tokens stacked vertically - Gizzi drops through and eats them */}
-                {[-200, -150, -100, -50, 0, 50].map((yPos, i) => (
+                {/* 6 Stationary tokens arranged HORIZONTALLY to the right of center */}
+                {[40, 80, 120, 160, 200, 240].map((xPos, i) => (
                   <motion.div
                     key={i}
                     initial={{ opacity: 1, scale: 1 }}
                     animate={{
                       opacity: [1, 1, 0],
-                      scale: [1, 1, 0.5],
+                      scale: [1, 1.1, 0],
                     }}
                     transition={{
-                      duration: 0.25,
-                      delay: 0.3 + i * 0.25, // Staggered based on when Gizzi reaches each token vertically
-                      times: [0, 0.7, 1],
+                      duration: 0.3,
+                      delay: 0.4 + i * 0.28, // Staggered based on when Gizzi reaches each token
+                      times: [0, 0.6, 1],
                     }}
                     style={{
                       position: 'absolute',
-                      bottom: `calc(50% + ${yPos}px)`,
-                      left: '50%',
+                      bottom: '50%',
+                      left: `calc(50% + ${xPos}px)`,
                       width: 22,
                       height: 22,
                       marginLeft: -11,
@@ -1583,44 +1740,54 @@ export function AgentModeGizzi({
                     </span>
                   </motion.div>
                 ))}
-                {/* Chomp effect */}
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.5 }}
-                  animate={{ opacity: [0, 0.6, 0], scale: [0.5, 1.2, 1.5] }}
-                  transition={{ duration: 0.25, repeat: 3, repeatDelay: 0.4 }}
-                  style={{
-                    position: 'absolute',
-                    bottom: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, 50%) translateX(-20px)',
-                    width: 30,
-                    height: 30,
-                    borderRadius: '50%',
-                    background: `radial-gradient(circle, ${theme.accent} 0%, transparent 70%)`,
-                    pointerEvents: 'none',
-                    zIndex: 36,
-                  }}
-                />
-                {/* Score popup */}
-                <motion.div
-                  initial={{ opacity: 0, y: 0 }}
-                  animate={{ opacity: [0, 1, 0], y: -50 }}
-                  transition={{ duration: 1, delay: 1.5 }}
-                  style={{
-                    position: 'absolute',
-                    bottom: '100%',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    fontSize: 18,
-                    fontWeight: 800,
-                    color: '#fbbf24',
-                    fontFamily: 'monospace',
-                    textShadow: '0 0 10px rgba(251, 191, 36, 0.8)',
-                    zIndex: 50,
-                  }}
-                >
-                  200
-                </motion.div>
+                {/* Chomp effect at Gizzi's position */}
+                {[0, 1, 2, 3, 4, 5].map((i) => (
+                  <motion.div
+                    key={`chomp-${i}`}
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: [0, 0.7, 0], scale: [0.5, 1.3, 1.6] }}
+                    transition={{
+                      duration: 0.3,
+                      delay: 0.4 + i * 0.28,
+                      times: [0, 0.5, 1],
+                    }}
+                    style={{
+                      position: 'absolute',
+                      bottom: '50%',
+                      left: `calc(50% + ${40 + i * 40}px)`,
+                      transform: 'translate(-50%, 50%)',
+                      width: 35,
+                      height: 35,
+                      borderRadius: '50%',
+                      background: `radial-gradient(circle, ${theme.accent} 0%, transparent 70%)`,
+                      pointerEvents: 'none',
+                      zIndex: 36,
+                    }}
+                  />
+                ))}
+                {/* Score popups at each eaten token */}
+                {[0, 1, 2, 3, 4, 5].map((i) => (
+                  <motion.div
+                    key={`score-${i}`}
+                    initial={{ opacity: 0, y: 0 }}
+                    animate={{ opacity: [0, 1, 0], y: -30 }}
+                    transition={{ duration: 0.6, delay: 0.5 + i * 0.28 }}
+                    style={{
+                      position: 'absolute',
+                      bottom: '100%',
+                      left: `calc(50% + ${40 + i * 40}px)`,
+                      transform: 'translateX(-50%)',
+                      fontSize: 14,
+                      fontWeight: 800,
+                      color: '#fbbf24',
+                      fontFamily: 'monospace',
+                      textShadow: '0 0 10px rgba(251, 191, 36, 0.8)',
+                      zIndex: 50,
+                    }}
+                  >
+                    200
+                  </motion.div>
+                ))}
               </>
             )}
 
@@ -1916,10 +2083,10 @@ export function AgentModeGizzi({
             {/* WHEEL OUT - Longer tire screech marks with dust cloud */}
             {animState === 'wheel-out' && (
               <>
-                {/* Extended tire screech marks */}
+                {/* Extended tire screech marks - darker and more realistic */}
                 <motion.div
                   initial={{ opacity: 0, scaleX: 0 }}
-                  animate={{ opacity: [0, 0.9, 0.5, 0], scaleX: [0, 1, 1.5, 1.8] }}
+                  animate={{ opacity: [0, 0.95, 0.6, 0], scaleX: [0, 1, 1.6, 2] }}
                   transition={{ duration: 2.0 }}
                   style={{
                     position: 'absolute',
@@ -1927,16 +2094,17 @@ export function AgentModeGizzi({
                     left: '50%',
                     transform: 'translateX(-50%) rotate(-5deg)',
                     width: 80,
-                    height: 10,
-                    background: `repeating-linear-gradient(90deg, #1a1a1a 0px, #1a1a1a 4px, transparent 4px, transparent 8px)`,
+                    height: 12,
+                    background: `repeating-linear-gradient(90deg, #0a0a0a 0px, #0a0a0a 5px, transparent 5px, transparent 9px)`,
                     borderRadius: 2,
+                    filter: 'blur(1px)',
                     pointerEvents: 'none',
                     zIndex: 3,
                   }}
                 />
                 <motion.div
                   initial={{ opacity: 0, scaleX: 0 }}
-                  animate={{ opacity: [0, 0.9, 0.5, 0], scaleX: [0, 1, 1.5, 1.8] }}
+                  animate={{ opacity: [0, 0.9, 0.55, 0], scaleX: [0, 1, 1.5, 1.9] }}
                   transition={{ duration: 2.0, delay: 0.1 }}
                   style={{
                     position: 'absolute',
@@ -1944,17 +2112,18 @@ export function AgentModeGizzi({
                     left: '45%',
                     transform: 'translateX(-50%) rotate(-10deg)',
                     width: 70,
-                    height: 8,
-                    background: `repeating-linear-gradient(90deg, #1a1a1a 0px, #1a1a1a 3px, transparent 3px, transparent 7px)`,
+                    height: 10,
+                    background: `repeating-linear-gradient(90deg, #0d0d0d 0px, #0d0d0d 4px, transparent 4px, transparent 8px)`,
                     borderRadius: 2,
+                    filter: 'blur(0.5px)',
                     pointerEvents: 'none',
                     zIndex: 3,
                   }}
                 />
-                {/* Additional long skid mark */}
+                {/* Additional long skid mark - darker rubber */}
                 <motion.div
                   initial={{ opacity: 0, scaleX: 0 }}
-                  animate={{ opacity: [0, 0.7, 0.3, 0], scaleX: [0, 1, 1.3, 1.6] }}
+                  animate={{ opacity: [0, 0.85, 0.4, 0], scaleX: [0, 1, 1.4, 1.8] }}
                   transition={{ duration: 2.0, delay: 0.05 }}
                   style={{
                     position: 'absolute',
@@ -1962,50 +2131,106 @@ export function AgentModeGizzi({
                     left: '48%',
                     transform: 'translateX(-50%) rotate(-3deg)',
                     width: 90,
-                    height: 6,
-                    background: `repeating-linear-gradient(90deg, #2a2a2a 0px, #2a2a2a 5px, transparent 5px, transparent 10px)`,
+                    height: 8,
+                    background: `repeating-linear-gradient(90deg, #111 0px, #111 6px, transparent 6px, transparent 12px)`,
                     borderRadius: 2,
+                    filter: 'blur(0.5px)',
                     pointerEvents: 'none',
                     zIndex: 3,
                   }}
                 />
-                {/* Dust cloud */}
+                {/* Realistic smoke clouds with CSS radial gradients */}
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <motion.div
+                    key={`smoke-${i}`}
+                    initial={{ opacity: 0, scale: 0.3, x: 0 }}
+                    animate={{ 
+                      opacity: [0, 0.7 - i * 0.1, 0.4 - i * 0.05, 0], 
+                      scale: [0.3, 1.2 + i * 0.3, 1.8 + i * 0.4, 2.5 + i * 0.5],
+                      x: i % 2 === 0 ? [0, -30 - i * 10, -60 - i * 15] : [0, 25 + i * 8, 50 + i * 12],
+                      y: [0, -10 - i * 5, -25 - i * 10],
+                    }}
+                    transition={{ 
+                      duration: 2.0, 
+                      delay: i * 0.1,
+                      ease: 'easeOut',
+                    }}
+                    style={{
+                      position: 'absolute',
+                      bottom: `${10 + i * 5}%`,
+                      left: i % 2 === 0 ? `${15 + i * 5}%` : 'auto',
+                      right: i % 2 === 1 ? `${10 + i * 4}%` : 'auto',
+                      width: 50 + i * 15,
+                      height: 40 + i * 12,
+                      borderRadius: '50%',
+                      background: `radial-gradient(ellipse at center, 
+                        rgba(${60 + i * 10}, ${60 + i * 10}, ${60 + i * 10}, ${0.6 - i * 0.08}) 0%, 
+                        rgba(${40 + i * 5}, ${40 + i * 5}, ${40 + i * 5}, ${0.4 - i * 0.06}) 30%, 
+                        rgba(20, 20, 20, ${0.2 - i * 0.03}) 60%, 
+                        transparent 100%)`,
+                      filter: `blur(${4 + i}px)`,
+                      zIndex: 44 - i,
+                      pointerEvents: 'none',
+                    }}
+                  />
+                ))}
+                {/* Dense dark smoke core */}
                 <motion.div
                   initial={{ opacity: 0, scale: 0.5 }}
                   animate={{ 
-                    opacity: [0, 0.8, 0.6, 0], 
-                    scale: [0.5, 1.5, 2, 2.5],
-                    x: [0, -20, -40],
+                    opacity: [0, 0.9, 0.6, 0], 
+                    scale: [0.5, 1.8, 2.8, 3.5],
+                    x: [-10, -40, -80],
                   }}
-                  transition={{ duration: 2.0 }}
+                  transition={{ duration: 2.0, delay: 0.15 }}
                   style={{
                     position: 'absolute',
-                    bottom: '20%',
+                    bottom: '5%',
                     left: '20%',
-                    fontSize: 40,
-                    zIndex: 44,
+                    width: 70,
+                    height: 55,
+                    borderRadius: '50%',
+                    background: 'radial-gradient(ellipse at center, rgba(30,30,30,0.85) 0%, rgba(20,20,20,0.6) 25%, rgba(10,10,10,0.3) 50%, transparent 100%)',
+                    filter: 'blur(6px)',
+                    zIndex: 45,
+                    pointerEvents: 'none',
                   }}
-                >
-                  💨
-                </motion.div>
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.5 }}
-                  animate={{ 
-                    opacity: [0, 0.6, 0.4, 0], 
-                    scale: [0.5, 1.3, 1.8, 2.2],
-                    x: [0, 15, 30],
-                  }}
-                  transition={{ duration: 2.0, delay: 0.2 }}
-                  style={{
-                    position: 'absolute',
-                    bottom: '30%',
-                    right: '20%',
-                    fontSize: 32,
-                    zIndex: 43,
-                  }}
-                >
-                  💨
-                </motion.div>
+                />
+                {/* Rubber burnout particles */}
+                {[...Array(12)].map((_, i) => {
+                  const angle = (i * Math.PI * 2) / 12 + Math.random() * 0.5;
+                  const distance = 40 + Math.random() * 60;
+                  return (
+                    <motion.div
+                      key={`particle-${i}`}
+                      initial={{ opacity: 0, scale: 0, x: 0, y: 0 }}
+                      animate={{ 
+                        opacity: [0, 1, 0.8, 0], 
+                        scale: [0, 0.8, 1, 0.6],
+                        x: Math.cos(angle) * distance,
+                        y: Math.sin(angle) * distance * 0.6 - 20,
+                        rotate: Math.random() * 360,
+                      }}
+                      transition={{ 
+                        duration: 1.2, 
+                        delay: 0.3 + i * 0.05,
+                        ease: 'easeOut',
+                      }}
+                      style={{
+                        position: 'absolute',
+                        bottom: '15%',
+                        left: i % 2 === 0 ? '25%' : '75%',
+                        width: 3 + Math.random() * 4,
+                        height: 3 + Math.random() * 4,
+                        background: i % 3 === 0 ? '#1a1a1a' : i % 3 === 1 ? '#2d2d2d' : '#0f0f0f',
+                        borderRadius: '30% 70% 70% 30% / 30% 30% 70% 70%',
+                        zIndex: 46,
+                        pointerEvents: 'none',
+                      }}
+                    />
+                  );
+                })}
+                {/* SCREECH text indicator */}
                 <motion.div
                   initial={{ opacity: 0, x: 0 }}
                   animate={{ opacity: [0, 1, 0], x: [-10, 0, 10] }}
@@ -2016,17 +2241,20 @@ export function AgentModeGizzi({
                     left: '50%',
                     transform: 'translateX(-50%)',
                     padding: '4px 12px',
-                    background: '#333',
+                    background: 'rgba(30, 30, 30, 0.9)',
+                    border: '1px solid #444',
                     borderRadius: 10,
                     fontSize: 12,
                     fontWeight: 800,
-                    color: '#fff',
+                    color: '#aaa',
                     pointerEvents: 'none',
                     zIndex: 50,
                     whiteSpace: 'nowrap',
+                    fontFamily: 'monospace',
+                    letterSpacing: '0.05em',
                   }}
                 >
-                  💨 SCREECH!
+                  ▓▒░ SCREECH! ░▒▓
                 </motion.div>
               </>
             )}
@@ -2725,7 +2953,7 @@ export function AgentModeGizzi({
                 whiteSpace: 'nowrap',
               }}
             >
-              You've hit your limit · resets 8am (America/Chicago)
+              You've hit your limit · replenishes Q4 2085 (approx. 24,847 days remaining)
             </div>
           </motion.div>
         )}

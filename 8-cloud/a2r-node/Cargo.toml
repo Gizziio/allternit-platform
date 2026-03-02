@@ -52,7 +52,7 @@ chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1.6", features = ["v4", "serde"] }
 
 # Docker client
-bollard = "0.15"
+bollard = { workspace = true }
 
 # PTY support
 portable-pty = "0.8"

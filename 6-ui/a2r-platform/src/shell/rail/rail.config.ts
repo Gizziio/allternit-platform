@@ -103,6 +103,7 @@ export const RAIL_CONFIG: RailConfigSection[] = [
     defaultExpanded: false,
     collapsible: true,
     items: [
+      { id: 'chat-agent-session', label: 'Agent Sessions', icon: ChatTeardropText, payload: 'chat-agent-session' },
       { id: 'agent', label: 'Agent Studio', icon: Robot, payload: 'agent' },
       { id: 'rails', label: 'Agent System', icon: Train, payload: 'rails' },
       { id: 'registry', label: 'Agent Registry', icon: ShieldCheck, payload: 'registry' },

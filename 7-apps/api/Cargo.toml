@@ -22,6 +22,7 @@ http = "1.0"
 hyper = { version = "1.0", features = ["full"] }
 uuid = { workspace = true }
 tokio-stream = { workspace = true, features = ["sync"] }
+sha2 = { workspace = true }
 semver = { workspace = true }
 opentelemetry = { version = "0.20", features = ["trace"] }
 opentelemetry_sdk = { version = "0.20", features = ["trace", "rt-tokio"] }
@@ -31,7 +32,9 @@ utoipa = { version = "4.2", features = ["uuid", "chrono"] }
 utoipa-swagger-ui = { version = "6.0", features = ["axum"] }
 prometheus = "0.13"
 tokio-tungstenite = "0.20"
-futures-util = { version = "0.3", features = ["sink"] }
+futures-util = { workspace = true, features = ["sink"] }
+chrono = { workspace = true }
+reqwest = { workspace = true }
 lazy_static = "1.4"
 serde_yaml = "0.9"
 rand = "0.8"
@@ -57,28 +60,43 @@ a2r-ivkge-advanced = { path = "../../1-kernel/infrastructure/ivkge-advanced" }
 a2r-multimodal-streaming = { path = "../../1-kernel/infrastructure/multimodal-streaming" }
 a2r-tambo-integration = { path = "../../1-kernel/infrastructure/tambo-integration" }
 a2r-policy-tier-gating = { path = "../../2-governance/identity-access-control/policy-tier-gating" }
+a2r-firecracker-driver = { path = "../../1-kernel/execution/a2r-firecracker-driver" }
+a2r-driver-interface = { path = "../../1-kernel/infrastructure/a2r-driver-interface" }
 mcp = { path = "../../3-adapters/mcp" }
+
+# Common dependencies used across OSs
+sqlx = { workspace = true, features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid"] }
 a2r-openclaw-host = { path = "../../1-kernel/infrastructure/a2r-openclaw-host" }
 a2r_agent_system_rails = { package = "a2r-agent-system-rails", path = "../../0-substrate/a2r-agent-system-rails" }
-reqwest = { version = "0.12", features = ["json"] }
-chrono = { workspace = true }
-md5 = "0.7"
-walkdir = "2.5"
-dirs = "5.0"
-sqlx = { workspace = true, features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid"] }
-# DAG N3-N16 Runtime Services
-a2r-driver-interface = { path = "../../1-kernel/infrastructure/a2r-driver-interface" }
 a2r-process-driver = { path = "../../1-kernel/execution/a2r-process-driver" }
-a2r-firecracker-driver = { path = "../../1-kernel/execution/a2r-firecracker-driver" }
 a2rchitech-budget-metering = { path = "../../4-services/orchestration/budget-metering" }
 a2r-replay = { path = "../../2-governance/a2r-replay" }
 a2r-prewarm = { path = "../../4-services/orchestration/a2r-prewarm" }
 a2r-environment-spec = { path = "../../1-kernel/infrastructure/a2r-environment-spec" }
 mcp-client = { path = "../../crates/mcp-client" }
-# A2R Terminal
 a2r-terminal = { path = "../../2-governance/security-network/terminal" }
-# A2R Node Protocol (shared types)
 a2r-protocol = { path = "../../0-substrate/a2r-protocol" }
+walkdir = "2.5"
+dirs = "5.0"
+
+# SVG/PNG/PDF Rendering
+resvg = { version = "0.44" }
+printpdf = { version = "0.7", features = ["embedded_images"] }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif"] }
+gif = "0.13"
+base64 = { workspace = true }
+
+# Chrome Streaming Gateway dependencies
+# Note: Uses Firecracker microVMs on Linux, Docker on macOS
+bollard = { workspace = true, optional = true }
+hmac = { workspace = true }
+sha1 = { workspace = true }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+bollard = { workspace = true }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+md5 = "0.7"
 
 # JWT authentication
 jsonwebtoken = "9.3"
@@ -89,13 +107,6 @@ aws-sdk-ec2 = { version = "1.105", optional = true }
 # google-cloud-compute-v1 = "0.1"
 azure_mgmt_compute = { version = "0.21", optional = true }
 azure_identity = { version = "0.21", optional = true }
-
-# SVG/PNG/PDF Rendering
-resvg = { version = "0.44" }
-printpdf = { version = "0.7", features = ["embedded_images"] }
-image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif"] }
-gif = "0.13"
-base64 = { workspace = true }
 
 [features]
 default = []

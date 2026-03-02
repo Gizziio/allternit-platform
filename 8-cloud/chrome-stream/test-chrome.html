@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>A2R Chrome Stream - Live Test</title>
+    <style>
+        body { font-family: Arial; max-width: 1200px; margin: 0 auto; padding: 20px; background: #1a1a2e; color: #eee; }
+        h1 { color: #00d4ff; }
+        .status { padding: 15px; margin: 10px 0; border-radius: 8px; }
+        .ok { background: #0f5132; border: 1px solid #198754; }
+        .error { background: #842029; border: 1px solid #dc3545; }
+        .info { background: #0c5460; border: 1px solid #0dcaf0; }
+        button { background: #00d4ff; color: #000; border: none; padding: 10px 20px; margin: 5px; cursor: pointer; border-radius: 5px; font-weight: bold; }
+        button:hover { background: #00a8cc; }
+        #screenshot { max-width: 100%; border: 2px solid #00d4ff; border-radius: 8px; margin: 20px 0; }
+        #url { background: #16213e; padding: 10px; border-radius: 5px; font-family: monospace; }
+        #extensions { background: #16213e; padding: 15px; border-radius: 8px; margin: 20px 0; }
+        .ext { background: #0f3460; padding: 10px; margin: 5px 0; border-radius: 5px; }
+        #log { background: #000; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <h1>🚀 A2R Chrome Stream - Live Demo</h1>
+    <p>Real Google Chrome running in Docker container, controlled via API</p>
+
+    <div id="health" class="status info">Checking Chrome health...</div>
+    <div id="url" class="status info">Current URL: Loading...</div>
+
+    <h2>📸 Live Chrome Screenshot</h2>
+    <button onclick="refreshScreenshot()">🔄 Refresh Screenshot</button>
+    <button onclick="navigateTo('https://google.com')">🔍 Go to Google</button>
+    <button onclick="navigateTo('https://chrome.google.com/webstore')">🛒 Chrome Web Store</button>
+    <button onclick="navigateTo('https://github.com')">🐙 GitHub</button>
+    <img id="screenshot" src="" alt="Chrome screenshot will appear here" style="display:none;">
+
+    <h2>🧩 Installed Extensions (Power Mode)</h2>
+    <div id="extensions">Loading extensions...</div>
+
+    <h2>📋 API Activity Log</h2>
+    <div id="log"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:8081';
+        
+        function log(msg) {
+            const logEl = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            logEl.innerHTML = `[${time}] ${msg}<br>` + logEl.innerHTML;
+        }
+
+        async function checkHealth() {
+            try {
+                const resp = await fetch(`${API_BASE}/health`);
+                const data = await resp.json();
+                document.getElementById('health').className = 'status ok';
+                document.getElementById('health').innerHTML = `✅ Chrome Healthy - Version: ${data.version}`;
+                log(`Health check: ${JSON.stringify(data)}`);
+            } catch (e) {
+                document.getElementById('health').className = 'status error';
+                document.getElementById('health').innerHTML = `❌ Chrome not responding: ${e.message}`;
+                log(`Health check failed: ${e.message}`);
+            }
+        }
+
+        async function getCurrentUrl() {
+            try {
+                const resp = await fetch(`${API_BASE}/current-url`);
+                const data = await resp.json();
+                document.getElementById('url').innerHTML = `📍 Current URL: <strong>${data.url}</strong>`;
+                log(`Current URL: ${data.url}`);
+            } catch (e) {
+                log(`Get URL failed: ${e.message}`);
+            }
+        }
+
+        async function refreshScreenshot() {
+            try {
+                log('Capturing screenshot...');
+                const resp = await fetch(`${API_BASE}/screenshot`);
+                const data = await resp.json();
+                const img = document.getElementById('screenshot');
+                img.src = 'data:image/png;base64,' + data.data;
+                img.style.display = 'block';
+                log(`Screenshot captured: ${data.data.length} bytes`);
+            } catch (e) {
+                log(`Screenshot failed: ${e.message}`);
+            }
+        }
+
+        async function navigateTo(url) {
+            try {
+                log(`Navigating to: ${url}`);
+                await fetch(`${API_BASE}/navigate`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({url})
+                });
+                setTimeout(() => {
+                    getCurrentUrl();
+                    refreshScreenshot();
+                }, 2000);
+            } catch (e) {
+                log(`Navigation failed: ${e.message}`);
+            }
+        }
+
+        async function getExtensions() {
+            try {
+                const resp = await fetch(`${API_BASE}/extensions`);
+                const data = await resp.json();
+                const extDiv = document.getElementById('extensions');
+                if (data.extensions && data.extensions.length > 0) {
+                    extDiv.innerHTML = data.extensions.map(ext => 
+                        `<div class="ext">
+                            <strong>${ext.name}</strong> (v${ext.version})<br>
+                            <small>ID: ${ext.id} | Enabled: ${ext.enabled ? '✅' : '❌'}</small><br>
+                            <small>Permissions: ${ext.permissions?.slice(0,3).join(', ')}${ext.permissions?.length > 3 ? '...' : ''}</small>
+                        </div>`
+                    ).join('');
+                    log(`Extensions: ${data.extensions.length} installed (Mode: ${data.mode})`);
+                } else {
+                    extDiv.innerHTML = 'No extensions found';
+                }
+            } catch (e) {
+                log(`Get extensions failed: ${e.message}`);
+            }
+        }
+
+        // Initial load
+        checkHealth();
+        getCurrentUrl();
+        getExtensions();
+        refreshScreenshot();
+
+        // Auto-refresh
+        setInterval(checkHealth, 10000);
+        setInterval(getCurrentUrl, 5000);
+    </script>
+</body>
+</html>

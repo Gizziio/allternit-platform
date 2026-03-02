@@ -220,7 +220,7 @@ impl ControlPlaneService {
                 skill_registry.clone(),
                 workflow_engine.clone(),
                 runtime_core.session_manager.clone(),
-                pool.clone(),
+                (*sqlite_pool).clone(),
             )
             .await?,
         );
@@ -235,7 +235,7 @@ impl ControlPlaneService {
                 skill_registry.clone(),
                 workflow_engine.clone(),
                 runtime_core.session_manager.clone(),
-                pool.clone(),
+                (*sqlite_pool).clone(),
             )
             .await?,
         );

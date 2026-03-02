@@ -13,6 +13,7 @@ import type {
   A2UITab,
   MiniappTab,
   ComponentTab,
+  ChromeStreamTab,
   A2UIPayload,
   MiniappManifest,
   ProtocolParseResult,
@@ -167,6 +168,7 @@ interface BrowserStore {
   addA2UITab: (payload: A2UIPayload, title?: string, source?: string) => string;
   addMiniappTab: (manifest: MiniappManifest, capsuleId: string, entryPoint?: string) => string;
   addComponentTab: (componentId: string, title?: string, props?: Record<string, unknown>) => string;
+  addChromeStreamTab: (sessionId: string, signalingUrl: string, iceServers?: RTCIceServer[], resolution?: string) => string;
   closeTab: (id: string) => void;
   setActiveTab: (id: string) => void;
   updateTab: (id: string, updates: Partial<BrowserTab>) => void;
@@ -270,6 +272,26 @@ export const useBrowserStore = create<BrowserStore>()(
           activeTabId: newTab.id,
         }));
         return newTab.id;
+      },
+
+      addChromeStreamTab: (sessionId: string, signalingUrl: string, iceServers?: RTCIceServer[], resolution?: string) => {
+        const id = `chrome-${sessionId}`;
+        const newTab: ChromeStreamTab = {
+          id,
+          title: 'Chrome Session',
+          isActive: false,
+          contentType: 'chrome-stream',
+          sessionId,
+          signalingUrl,
+          iceServers,
+          resolution: resolution || '1920x1080',
+          streamStatus: 'connecting',
+        };
+        set((state) => ({
+          tabs: [...state.tabs.map((t) => ({ ...t, isActive: false })), newTab],
+          activeTabId: id,
+        }));
+        return id;
       },
 
       closeTab: (id: string) => {

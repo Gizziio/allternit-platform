@@ -54,7 +54,7 @@ import {
 // Types
 // ============================================================================
 
-interface LiveExecutionMonitorProps {
+export interface LiveExecutionMonitorProps {
   executionId?: string;
   dagId?: string;
   mode?: AgentMode;
@@ -62,7 +62,7 @@ interface LiveExecutionMonitorProps {
   onRestart?: () => void;
 }
 
-interface LogEntry {
+export interface LogEntry {
   id: string;
   timestamp: Date;
   level: 'debug' | 'info' | 'warn' | 'error';
@@ -71,7 +71,7 @@ interface LogEntry {
   metadata?: Record<string, unknown>;
 }
 
-interface DagNode {
+export interface DagNode {
   id: string;
   name: string;
   status: 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
@@ -82,7 +82,7 @@ interface DagNode {
   agent?: string;
 }
 
-interface DagExecution {
+export interface DagExecution {
   id: string;
   nodes: DagNode[];
   edges: { from: string; to: string }[];
@@ -90,7 +90,7 @@ interface DagExecution {
   progress: number;
 }
 
-interface WihInfo {
+export interface WihInfo {
   id: string;
   title: string;
   status: 'ready' | 'claimed' | 'in_progress' | 'completed' | 'failed';

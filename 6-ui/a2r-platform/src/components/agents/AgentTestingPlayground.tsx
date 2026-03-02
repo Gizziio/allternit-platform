@@ -54,7 +54,7 @@ import type { Agent, AgentRun, AgentTask } from '@/lib/agents/agent.types';
 // Types
 // ============================================================================
 
-interface AgentTestingPlaygroundProps {
+export interface AgentTestingPlaygroundProps {
   agent: Agent;
   mode?: AgentMode;
   onSaveTest?: (test: TestResult) => void;

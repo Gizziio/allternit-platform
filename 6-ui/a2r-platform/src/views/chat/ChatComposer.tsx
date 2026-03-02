@@ -107,6 +107,8 @@ interface ChatComposerProps {
   attachments?: ChatAttachment[];
   onRemoveAttachment?: (id: string) => void;
   onAddAttachment?: (attachment: ChatAttachment) => void;
+  /** Called when sending in agent mode - if provided, opens full agent session view instead of embedded chat */
+  onAgentSend?: (text: string) => void;
 }
 
 const CATEGORY_EMOTIONS: Record<string, { hover: GizziEmotion; select: GizziEmotion }> = {
@@ -244,6 +246,7 @@ export function ChatComposer({
   attachments: externalAttachments,
   onRemoveAttachment: externalRemoveAttachment,
   onAddAttachment: externalAddAttachment,
+  onAgentSend,
 }: ChatComposerProps) {
   const [input, setInput] = useState(inputValue);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -394,16 +397,21 @@ export function ChatComposer({
   useEffect(() => { fetchProviders(); }, [fetchProviders]);
 
   useEffect(() => {
-    if (!agentModeSurface || !agentModeEnabled || isLoadingAgents || agents.length > 0) {
+    if (!agentModeSurface || !agentModeEnabled || isLoadingAgents) {
       return;
     }
 
+    // Always fetch agents when in agent mode to ensure we have latest data
+    // Don't block on existing agents - refresh to ensure accuracy
     if (agentError && lastAgentFetchPulseRef.current === agentModePulse) {
       return;
     }
 
     lastAgentFetchPulseRef.current = agentModePulse;
-    void fetchAgents().catch(() => {});
+    void fetchAgents().catch((err) => {
+      // eslint-disable-next-line no-console
+      console.warn('[ChatComposer] Failed to fetch agents:', err);
+    });
   }, [
     agentError,
     agentModeEnabled,
@@ -414,12 +422,37 @@ export function ChatComposer({
     isLoadingAgents,
   ]);
 
+  // Re-resolve OpenClaw candidates when agents change (to update registered_agent_id)
   useEffect(() => {
-    if (!agentModeSurface || !agentModeEnabled || isLoadingOpenClawCandidates) {
+    if (!agentModeSurface || !agentModeEnabled || openClawCandidates.length === 0) {
+      return;
+    }
+
+    // Re-resolve registration status when agents list changes
+    const resolved = resolveOpenClawRegistration(openClawCandidates, agents);
+    const unregistered = resolved.filter(
+      (candidate) => !candidate.registered_agent_id,
+    );
+
+    // Only update if changed to avoid loops
+    if (unregistered.length !== openClawCandidates.length) {
+      // eslint-disable-next-line no-console
+      console.log('[ChatComposer] Re-resolved OpenClaw candidates after agents change:', unregistered.length);
+      setOpenClawCandidates(unregistered);
+    }
+  }, [agents, agentModeEnabled, agentModeSurface, openClawCandidates]);
+
+  useEffect(() => {
+    if (!agentModeSurface || !agentModeEnabled) {
       return;
     }
 
     if (typeof window === 'undefined') {
+      return;
+    }
+
+    // Skip if already loading
+    if (isLoadingOpenClawCandidates) {
       return;
     }
 
@@ -450,6 +483,7 @@ export function ChatComposer({
           return;
         }
 
+        // Auto-open dialog only if no agents are registered and none selected
         if (!hasSelectedAgent && !hasRegistryAgents && !dismissed) {
           setShowOpenClawImportDialog(true);
         }
@@ -468,7 +502,7 @@ export function ChatComposer({
   }, [
     agentModeEnabled,
     agentModeSurface,
-    agents,
+    // Note: agents is intentionally omitted here to avoid loops - we handle re-resolution in the effect above
     selectedSurfaceAgentId,
   ]);
 
@@ -524,10 +558,10 @@ export function ChatComposer({
   }, [agentModeEnabled, showAgentGuidePadding, showAgentRailGuide]);
 
   useEffect(() => {
-    if (inputValue !== undefined && inputValue !== input) {
-      setInput(inputValue);
-    }
-  }, [input, inputValue]);
+    setInput(inputValue);
+  }, [inputValue]);
+
+
 
   const allModels = useMemo(() => {
     let models: any[] = [];
@@ -604,7 +638,9 @@ export function ChatComposer({
           : agents.length > 0
             ? 'Choose an agent before sending so this surface can bind to a real agent workspace.'
             : openClawCandidates.length > 0
-              ? `Detected ${openClawCandidates.length} OpenClaw agent${openClawCandidates.length === 1 ? '' : 's'} on this machine. Import one to continue.`
+              ? openClawCandidates.length === 1 && openClawCandidates[0]?.display_name
+                ? `Found "${openClawCandidates[0].display_name}" OpenClaw agent. Import to continue.`
+                : `Detected ${openClawCandidates.length} OpenClaw agent${openClawCandidates.length === 1 ? '' : 's'} on this machine. Import one to continue.`
               : agentError === 'API_OFFLINE'
                 ? 'Agent registry is offline. Turn Agent Off or bring the gateway back to choose an agent.'
                 : 'No agents are available yet. Create one in Agent Studio first.';
@@ -656,16 +692,22 @@ export function ChatComposer({
   ]);
 
   const handleSubmit = () => {
-    if (canSubmit) {
+    if (!canSubmit) return;
+    
+    // If agent mode is enabled and onAgentSend is provided, use it to open full agent session view
+    if (agentModeEnabled && onAgentSend && agentModeSurface) {
+      onAgentSend(input);
+    } else {
       onSend(input);
-      setInput('');
-      setActiveCategory(null);
-      setShowAgentMenu(false);
-      setSlashMenuVisible(false);
-      setSlashFilter('');
-      if (!externalAttachments) {
-        setInternalAttachments([]);
-      }
+    }
+    
+    setInput('');
+    setActiveCategory(null);
+    setShowAgentMenu(false);
+    setSlashMenuVisible(false);
+    setSlashFilter('');
+    if (!externalAttachments) {
+      setInternalAttachments([]);
     }
   };
 
@@ -1309,7 +1351,7 @@ export function ChatComposer({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '6px 12px 12px 12px'
+          padding: '6px 12px 12px 12px',
         }}>
           {/* Left side: Plus button */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', position: 'relative' }}>
@@ -1763,13 +1805,12 @@ export function ChatComposer({
       </div>
 
       <Dialog open={showOpenClawImportDialog} onOpenChange={(open) => {
+        setShowOpenClawImportDialog(open);
         if (!open) {
           dismissOpenClawPrompt();
-          return;
         }
-        setShowOpenClawImportDialog(open);
       }}>
-        <DialogContent className="max-w-3xl border-0 bg-transparent p-0 shadow-none">
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
           <div
             style={{
               borderRadius: 28,

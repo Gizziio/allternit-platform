@@ -1,4 +1,5 @@
 #![allow(dead_code, unused_variables, unused_imports)]
+#[cfg(target_os = "linux")]
 //! Terminal WebSocket Handler
 //!
 //! Handles WebSocket connections for terminal sessions on nodes.

@@ -14,11 +14,12 @@ export type {
 } from '../a2ui/a2ui.types';
 
 /** Type of content being displayed in a browser tab */
-export type BrowserContentType = 
+export type BrowserContentType =
   | 'web'      // Traditional URL-based web content
   | 'a2ui'     // A2UI JSON payload rendering
   | 'miniapp'  // Miniapp manifest-based capsule
-  | 'component'; // Direct React component reference
+  | 'component' // Direct React component reference
+  | 'chrome-stream'; // Real Chrome streaming via WebRTC
 
 /** Base interface for all browser tabs */
 export interface BrowserTabBase {
@@ -57,8 +58,18 @@ export interface ComponentTab extends BrowserTabBase {
   props?: Record<string, unknown>;
 }
 
+/** Chrome stream tab - real Chrome via WebRTC */
+export interface ChromeStreamTab extends BrowserTabBase {
+  contentType: 'chrome-stream';
+  sessionId: string;
+  signalingUrl: string;
+  iceServers?: RTCIceServer[];
+  resolution: string;
+  streamStatus: 'connecting' | 'connected' | 'disconnected' | 'error';
+}
+
 /** Union type for all browser tab types */
-export type BrowserTab = WebTab | A2UITab | MiniappTab | ComponentTab;
+export type BrowserTab = WebTab | A2UITab | MiniappTab | ComponentTab | ChromeStreamTab;
 
 // ============================================================================
 // Miniapp Manifest System

@@ -43,13 +43,15 @@ import { cn } from '@/lib/utils';
 import { isElectronShell, getWebProxyUrl } from '@/lib/platform';
 
 import { useBrowserStore } from './browser.store';
-import { BrowserTab, WebTab, A2UITab, A2UIPayload } from './browser.types';
+import { BrowserTab, WebTab, A2UITab, A2UIPayload, ChromeStreamTab } from './browser.types';
 import { useBrowserAgentStore } from './browserAgent.store';
 import { BrowserAgentMode } from './browserAgent.types';
 import { A2UIRenderer } from '../a2ui/A2UIRenderer';
 import { useBrowserAutomation } from '../../integration/browser-client';
 import { useSidecarStore } from '../../stores/sidecar-store';
 import { useBrowserShortcutsStore, getFaviconUrl } from './browserShortcuts.store';
+import { ChromeStreamView } from './ChromeStreamView';
+import { useChromeSession } from './useChromeSession';
 
 // ============================================================================
 // Types & Constants
@@ -1208,6 +1210,7 @@ export function BrowserCapsuleEnhanced({
     tabs, activeTabId, addTab, closeTab, closeAllTabs, setActiveTab, updateTab,
     goBack, goForward, canGoBack, canGoForward, pushHistory,
     tabLoading, setTabLoading, duplicateTab, closeOtherTabs, closeTabsToRight,
+    addChromeStreamTab,
   } = useBrowserStore();
   
   // Override closeAllTabs to show home page
@@ -1443,28 +1446,68 @@ export function BrowserCapsuleEnhanced({
     addShortcut({ label: title, url, icon: '⭐' });
   }, [activeTab, isBookmarked, addShortcut]);
 
-  // Launch Chrome browser (opens in system Chrome)
-  const launchEmbeddedChrome = useCallback(async (url: string) => {
-    console.log('[Browser] Opening Chrome with URL:', url);
-    if (!window.chromeEmbed?.open) {
-      console.warn('Chrome API not available, opening directly...');
-      window.open(url, '_blank');
-      return;
-    }
+  // Launch Chrome browser session (creates chrome-stream tab)
+  const launchEmbeddedChrome = useCallback(async (url?: string) => {
+    console.log('[Browser] Launching Chrome session...');
     
     try {
-      const result = await window.chromeEmbed.open(url);
-      console.log('[Browser] Chrome open result:', result);
-      
-      if (!result.success) {
-        console.warn('[Browser] Failed to open Chrome, opening directly...');
-        window.open(url, '_blank');
+      // Create Chrome session via API
+      const response = await fetch('/api/v1/chrome-sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resolution: '1920x1080',
+          extension_mode: 'power',
+          initial_url: url || 'https://chromewebstore.google.com',
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to create Chrome session: ${response.status}`);
       }
+
+      const data = await response.json();
+      console.log('[Browser] Chrome session created:', data);
+
+      // Poll until session is ready
+      const pollUntilReady = async (sessionId: string, maxWait = 30000) => {
+        const startTime = Date.now();
+        while (Date.now() - startTime < maxWait) {
+          const statusResponse = await fetch(`/api/v1/chrome-sessions/${sessionId}`);
+          if (!statusResponse.ok) break;
+          
+          const statusData = await statusResponse.json();
+          if (statusData.status === 'ready') {
+            return statusData;
+          }
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+        throw new Error('Session provisioning timeout');
+      };
+
+      const sessionData = await pollUntilReady(data.session_id);
+      console.log('[Browser] Chrome session ready:', sessionData);
+
+      // Add chrome-stream tab
+      const tabId = addChromeStreamTab(
+        sessionData.session_id,
+        sessionData.signaling_url,
+        sessionData.ice_servers,
+        sessionData.resolution
+      );
+
+      console.log('[Browser] Chrome stream tab added:', tabId);
+
     } catch (err) {
-      console.error('[Browser] Error opening Chrome:', err);
-      window.open(url, '_blank');
+      console.error('[Browser] Failed to launch Chrome session:', err);
+      // Fallback: open in external Chrome
+      if (window.chromeEmbed?.open) {
+        await window.chromeEmbed.open(url || 'https://chromewebstore.google.com');
+      } else {
+        window.open(url || 'https://chromewebstore.google.com', '_blank');
+      }
     }
-  }, []);
+  }, [addChromeStreamTab]);
 
   // Close embedded Chrome
   const closeEmbeddedChrome = useCallback(async () => {
@@ -1942,6 +1985,16 @@ export function BrowserCapsuleEnhanced({
               <p style={{ fontSize: 10, fontFamily: 'monospace', color: 'rgba(212,176,140,0.2)', textTransform: 'uppercase', letterSpacing: '0.5em' }}>INITIALIZING_KERNEL...</p>
             </div>
           )
+        ) : activeTab?.contentType === 'chrome-stream' ? (
+          <ChromeStreamView
+            sessionId={(activeTab as ChromeStreamTab).sessionId}
+            signalingUrl={(activeTab as ChromeStreamTab).signalingUrl}
+            iceServers={(activeTab as ChromeStreamTab).iceServers}
+            resolution={(activeTab as ChromeStreamTab).resolution}
+            onStatusChange={(status) => {
+              updateTab(activeTabId, { streamStatus: status } as Partial<ChromeStreamTab>);
+            }}
+          />
         ) : contentMode === 'canvas' ? (
           <CanvasMode tab={activeTab?.contentType === 'a2ui' ? (activeTab as A2UITab) : undefined} />
         ) : (

@@ -87,8 +87,6 @@ exclude = [
     "8-cloud/a2r-node",
     "distribution/launcher-desktop",
     "distribution/launcher-simplified",
-    # Temporarily excluded due to missing dependencies
-    "7-apps/api",
 ]
 
 [workspace.package]
@@ -122,9 +120,14 @@ tokio-tungstenite = "0.20"
 http = "1.0"
 hyper = { version = "1.0", features = ["full"] }
 
+# Docker
+bollard = "0.15"
+
 # Crypto/Security
 base64 = "0.21"
 sha2 = "0.10"
+sha1 = "0.10"
+hmac = "0.12"
 blake3 = "1.5"
 ed25519-dalek = { version = "2.0", features = ["std", "rand_core"] }
 ring = "0.17"

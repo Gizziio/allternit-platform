@@ -548,21 +548,61 @@ function PartRenderer({ part, isLast, isStreaming, onSelectArtifact, selectedArt
       return <SourceDocumentCard part={part} />;
 
     // ==================== ERRORS ====================
-    case 'error':
+    case 'error': {
+      // Detect rate limit errors for special UI
+      const isRateLimit = part.message?.toLowerCase().includes('rate limit') || 
+                          part.message?.includes('429');
+      const isAuthError = part.message?.toLowerCase().includes('authentication') ||
+                          part.message?.toLowerCase().includes('unauthorized') ||
+                          part.message?.includes('401') ||
+                          part.message?.includes('403');
+      const isServerError = part.message?.toLowerCase().includes('server error') ||
+                            part.message?.toLowerCase().includes('502') ||
+                            part.message?.toLowerCase().includes('503') ||
+                            part.message?.toLowerCase().includes('504');
+      
+      const errorTitle = isRateLimit ? 'Rate Limit Exceeded' :
+                         isAuthError ? 'Authentication Error' :
+                         isServerError ? 'Service Unavailable' :
+                         'Error';
+      
+      const errorColor = isRateLimit ? 'text-amber-400' :
+                         isAuthError ? 'text-orange-400' :
+                         'text-destructive';
+      
+      const borderColor = isRateLimit ? 'border-amber-400/30' :
+                          isAuthError ? 'border-orange-400/30' :
+                          'border-destructive/50';
+      
+      const bgColor = isRateLimit ? 'bg-amber-400/10' :
+                      isAuthError ? 'bg-orange-400/10' :
+                      'bg-destructive/10';
+      
       return (
-        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
-          <div className="flex items-center gap-2 text-destructive font-medium mb-2">
+        <div className={cn("rounded-lg border p-4", borderColor, bgColor)}>
+          <div className={cn("flex items-center gap-2 font-medium mb-2", errorColor)}>
             <AlertCircle className="w-5 h-5" />
-            Error{part.kind && ` (${part.kind})`}
+            {errorTitle}{part.kind && ` (${part.kind})`}
           </div>
-          <p className="text-sm mb-2">{part.message}</p>
+          <p className="text-sm mb-2 text-foreground/80">{part.message}</p>
+          {isRateLimit && (
+            <p className="text-xs text-amber-400/70 mt-2">
+              💡 Tip: Wait a few seconds and try sending your message again.
+            </p>
+          )}
+          {isAuthError && (
+            <p className="text-xs text-orange-400/70 mt-2">
+              💡 Tip: Check your API key settings or sign out and back in.
+            </p>
+          )}
           {part.stackTrace && (
-            <pre className="text-xs bg-black/50 p-3 rounded overflow-x-auto text-muted-foreground">
+            <pre className="text-xs bg-black/50 p-3 rounded overflow-x-auto text-muted-foreground mt-2">
               {part.stackTrace}
             </pre>
           )}
         </div>
       );
+    }
 
     // ==================== TEST RESULTS ====================
     case 'test-results':

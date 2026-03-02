@@ -103,6 +103,8 @@ services:
       A2RCHITECH_API_TENANT: ${A2RCHITECH_API_TENANT:-default}
       A2RCHITECH_API_BOOTSTRAP_POLICY: ${A2RCHITECH_API_BOOTSTRAP_POLICY:-true}
       A2RCHITECH_API_POLICY_ENFORCE: ${A2RCHITECH_API_POLICY_ENFORCE:-true}
+      TURN_SECRET: ${TURN_SECRET:-change-this-secret-in-production}
+      TURN_REALM: ${TURN_REALM:-a2r.io}
     volumes:
       - a2r-data:/data
     healthcheck:
@@ -111,5 +113,61 @@ services:
       timeout: 3s
       retries: 5
 
+  # Chrome Streaming Gateway - Real Chrome via WebRTC
+  chrome-stream:
+    build:
+      context: ./8-cloud/chrome-stream
+      dockerfile: Dockerfile
+    profiles:
+      - chrome  # Only start with: docker-compose --profile chrome up
+    environment:
+      - A2R_SESSION_ID=${A2R_SESSION_ID:-}
+      - A2R_TENANT_ID=${A2R_TENANT_ID:-}
+      - A2R_RESOLUTION=${A2R_RESOLUTION:-1920x1080}
+      - A2R_EXTENSION_MODE=${A2R_EXTENSION_MODE:-managed}
+      - A2R_DISABLE_BACKGROUND_THROTTLING=${A2R_DISABLE_BACKGROUND_THROTTLING:-false}
+      - SELKIES_ENCODER=${SELKIES_ENCODER:-x264enc}
+    volumes:
+      - chrome-profiles:/data/chrome-profile
+      - chrome-downloads:/data/downloads
+    shm_size: 2gb
+    cap_add:
+      - SYS_ADMIN
+      - NET_ADMIN
+    security_opt:
+      - seccomp=/etc/a2r/seccomp/chrome-sandbox.json
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - chrome-egress
+
+  # coturn - WebRTC TURN server for NAT traversal
+  coturn:
+    image: coturn/coturn:latest
+    container_name: a2r-coturn
+    profiles:
+      - chrome
+    network_mode: host
+    environment:
+      - TURN_REALM=${TURN_REALM:-a2r.io}
+      - TURN_SECRET=${TURN_SECRET:-change-this-secret-in-production}
+    volumes:
+      - ./8-cloud/chrome-stream/turnserver.conf:/etc/turnserver.conf:ro
+    restart: unless-stopped
+
 volumes:
   a2r-data:
+  chrome-profiles:
+    driver: local
+  chrome-downloads:
+    driver: local
+
+networks:
+  chrome-egress:
+    driver: bridge
+    internal: false  # Allow outbound internet access

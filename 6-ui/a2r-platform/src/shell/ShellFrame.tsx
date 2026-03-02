@@ -81,6 +81,7 @@ export function ShellFrame({
           overflow: 'hidden',
           padding: '12px 0 12px 12px',
           zIndex: 1,
+          background: isImmersive ? 'transparent' : undefined,
         }}>
           {rail}
         </div>
@@ -91,7 +92,7 @@ export function ShellFrame({
         gridRow: '1',
         gridColumn: '2',
         position: 'relative',
-        overflow: 'hidden',
+        overflow: isImmersive ? 'visible' : 'hidden',
         padding: '12px',
         zIndex: 1,
       }}>

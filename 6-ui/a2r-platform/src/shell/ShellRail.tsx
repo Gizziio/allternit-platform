@@ -233,29 +233,36 @@ export function ShellRail({
     setSidecarOpen,
   ]);
 
+  const isCodeMode = mode === 'code';
+
   return (
     <div style={{ 
       width: 284, 
       height: '100%', 
       display: 'flex', 
       flexDirection: 'column', 
-      background: 'linear-gradient(180deg, rgba(24,21,20,0.98) 0%, rgba(31,27,25,0.98) 48%, rgba(20,18,18,0.98) 100%)',
-      borderRadius: 24, 
-      border: '1px solid rgba(212,176,140,0.14)',
-      boxShadow: '0 18px 48px rgba(16,12,10,0.28)',
+      background: isCodeMode 
+        ? 'transparent' 
+        : 'linear-gradient(180deg, rgba(24,21,20,0.98) 0%, rgba(31,27,25,0.98) 48%, rgba(20,18,18,0.98) 100%)',
+      borderRadius: isCodeMode ? 0 : 24, 
+      border: isCodeMode ? 'none' : '1px solid rgba(212,176,140,0.14)',
+      boxShadow: isCodeMode ? 'none' : '0 18px 48px rgba(16,12,10,0.28)',
       position: 'relative', 
-      overflow: 'hidden'
+      overflow: 'hidden',
+      outline: 'none',
     }}>
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          pointerEvents: 'none',
-          background:
-            'radial-gradient(circle at top left, rgba(217,119,87,0.14), transparent 30%), radial-gradient(circle at top right, rgba(176,141,110,0.1), transparent 32%)',
-          opacity: 0.9,
-        }}
-      />
+      {!isCodeMode && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            background:
+              'radial-gradient(circle at top left, rgba(217,119,87,0.14), transparent 30%), radial-gradient(circle at top right, rgba(176,141,110,0.1), transparent 32%)',
+            opacity: 0.9,
+          }}
+        />
+      )}
       {/* SPACER FOR FIXED CONTROLS */}
       <div style={{ height: 104 }} />
 
@@ -265,11 +272,15 @@ export function ShellRail({
           display: 'flex', 
           alignItems: 'center', 
           gap: 8, 
-          background: 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.025))', 
+          background: isCodeMode 
+            ? 'rgba(255,255,255,0.03)' 
+            : 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.025))', 
           borderRadius: 14, 
           padding: '9px 12px', 
-          border: '1px solid rgba(212,176,140,0.12)',
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)'
+          border: isCodeMode 
+            ? '1px solid rgba(255,255,255,0.06)' 
+            : '1px solid rgba(212,176,140,0.12)',
+          boxShadow: isCodeMode ? 'none' : 'inset 0 1px 0 rgba(255,255,255,0.05)'
         }}>
           <MagnifyingGlass size={16} color="#b08d6e" weight="bold" />
           <input 

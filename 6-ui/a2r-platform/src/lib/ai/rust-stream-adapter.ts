@@ -1438,14 +1438,36 @@ export function useRustStreamAdapter(
 
           const detailText = await candidate.text().catch(() => "");
           const detail = detailText.trim().slice(0, 240);
-          lastErrorMessage = detail
-            ? `${attempt.label} -> HTTP ${candidate.status}: ${candidate.statusText} - ${detail}`
-            : `${attempt.label} -> HTTP ${candidate.status}: ${candidate.statusText}`;
+          
+          // Detect specific error types for better user messages
+          if (candidate.status === 429) {
+            lastErrorMessage = "Rate limit exceeded. The AI service is temporarily unavailable. Please wait a moment and try again.";
+          } else if (candidate.status === 401 || candidate.status === 403) {
+            lastErrorMessage = "Authentication failed. Please check your API key or sign in again.";
+          } else if (candidate.status >= 500 && candidate.status < 600) {
+            lastErrorMessage = `Server error (${candidate.status}). The AI service is experiencing issues. Please try again later.`;
+          } else {
+            lastErrorMessage = detail
+              ? `${attempt.label} -> HTTP ${candidate.status}: ${candidate.statusText} - ${detail}`
+              : `${attempt.label} -> HTTP ${candidate.status}: ${candidate.statusText}`;
+          }
 
           if (candidate.status === 404) continue;
+          // Don't retry on rate limit or auth errors
+          if (candidate.status === 429 || candidate.status === 401 || candidate.status === 403) {
+            break;
+          }
           continue;
         } catch (error) {
-          lastErrorMessage = `${attempt.label} -> ${error instanceof Error ? error.message : String(error)}`;
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          // Detect network errors
+          if (errorMsg.includes('fetch') || errorMsg.includes('network') || errorMsg.includes('Failed to fetch')) {
+            lastErrorMessage = 'Network error. Please check your internet connection.';
+          } else if (errorMsg.includes('timeout') || errorMsg.includes('Timeout')) {
+            lastErrorMessage = 'Connection timed out. The service may be slow or unavailable.';
+          } else {
+            lastErrorMessage = `${attempt.label} -> ${errorMsg}`;
+          }
           continue;
         }
       }
@@ -1609,9 +1631,18 @@ export function useRustStreamAdapter(
           return;
         }
 
+        // Use clean error message if it's already a known error type, otherwise add prefix
+        const isKnownError = error.message?.includes('Rate limit') ||
+                             error.message?.includes('Authentication failed') ||
+                             error.message?.includes('Server error') ||
+                             error.message?.includes('Network error') ||
+                             error.message?.includes('Connection timed out');
+        
         const errorMessage = isTimeout 
           ? "Request timed out. The model may be taking too long to respond."
-          : `Request failed: ${error.message}`;
+          : isKnownError 
+            ? error.message 
+            : `Request failed: ${error.message}`;
         
         console.error('[rust-stream-adapter] Error:', error);
         options.onError?.(error);

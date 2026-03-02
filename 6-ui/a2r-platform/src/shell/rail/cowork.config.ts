@@ -67,6 +67,7 @@ export const COWORK_RAIL_CONFIG: RailConfigSection[] = [
       { id: 'cw-runs', label: 'Runs', icon: ClockCounterClockwise, payload: 'cowork-runs', badge: 3 },
       { id: 'cw-drafts', label: 'Drafts', icon: Note, payload: 'cowork-drafts' },
       { id: 'cw-tasks', label: 'Tasks', icon: Kanban, payload: 'cowork-tasks', badge: 7 },
+      { id: 'cowork-agent-session', label: 'Agent Tasks', icon: Robot, payload: 'cowork-agent-session' },
     ]
   },
   

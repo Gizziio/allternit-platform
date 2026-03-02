@@ -1,3 +1,4 @@
+#[cfg(target_os = "linux")]
 //! Node Job Queue
 //!
 //! Manages job queue with priority scheduling for node assignment.

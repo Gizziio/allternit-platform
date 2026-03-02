@@ -402,18 +402,99 @@ EOF
 # Start Electron Desktop App
 start_electron() {
     print_status "Starting Electron Desktop App..."
-    
+
     if [ ! -d "$DESKTOP_DIR/node_modules" ]; then
         print_status "Installing Electron dependencies..."
         (cd "$DESKTOP_DIR" && npm install)
     fi
-    
+
     (cd "$DESKTOP_DIR" && npm run dev > "$LOG_DIR/electron.log" 2>&1) &
     echo $! > "$LOG_DIR/electron.pid"
-    
+
     sleep 5
     print_success "Electron Desktop App starting..."
     RUNNING_SERVICES+=("Electron:desktop")
+}
+
+# Check Chrome Streaming Installation
+check_chrome_streaming() {
+    CHROME_DIR="$PROJECT_ROOT/8-cloud/chrome-stream"
+    
+    # Check if Chrome streaming is installed
+    if [ ! -d "$CHROME_DIR" ]; then
+        return 1
+    fi
+    
+    # Check if Docker image exists
+    if ! docker image inspect a2r/chrome-stream &> /dev/null; then
+        return 1
+    fi
+    
+    # Check if coturn is installed
+    if ! command -v turnserver &> /dev/null; then
+        return 1
+    fi
+    
+    return 0
+}
+
+# Offer to install Chrome Streaming
+offer_install_chrome() {
+    echo ""
+    echo -e "${YELLOW}╔═══════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${YELLOW}║${NC}        ${CYAN}Chrome Streaming Gateway - Not Installed${NC}          ${YELLOW}║${NC}"
+    echo -e "${YELLOW}╚═══════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    echo -e "${BLUE}Chrome Streaming enables:${NC}"
+    echo "  • Real Google Chrome in browser capsule"
+    echo "  • Full Chrome Web Store access"
+    echo "  • Native extension installation"
+    echo "  • WebRTC video streaming"
+    echo ""
+    read -p "Install Chrome Streaming now? (recommended) [Y/n] " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]] || [[ -z $REPLY ]]; then
+        echo ""
+        print_status "Running Chrome Streaming installer..."
+        if [ -f "$SCRIPT_DIR/install-chrome-streaming.sh" ]; then
+            sudo "$SCRIPT_DIR/install-chrome-streaming.sh"
+        else
+            print_error "Installer not found at: $SCRIPT_DIR/install-chrome-streaming.sh"
+            return 1
+        fi
+        print_success "Chrome Streaming installed!"
+        return 0
+    else
+        print_info "Skipping Chrome Streaming installation"
+        return 1
+    fi
+}
+
+# Start Chrome Streaming Service
+start_chrome_streaming() {
+    print_status "Starting Chrome Streaming Service..."
+
+    CHROME_DIR="$PROJECT_ROOT/8-cloud/chrome-stream"
+
+    if [ ! -d "$CHROME_DIR" ]; then
+        print_warning "Chrome streaming directory not found, skipping..."
+        return 0
+    fi
+
+    # Start coturn (TURN server for WebRTC)
+    print_status "Starting coturn (WebRTC TURN server)..."
+    if command -v turnserver &> /dev/null; then
+        turnserver -c "$CHROME_DIR/turnserver.conf" -d -f > "$LOG_DIR/coturn.log" 2>&1 &
+        echo $! > "$LOG_DIR/coturn.pid"
+        sleep 2
+        print_success "coturn started (port 3478)"
+    else
+        print_warning "coturn not installed, TURN disabled (mobile WebRTC may not work)"
+    fi
+
+    # Start Chrome session broker (API handles this)
+    print_success "Chrome Streaming Service ready (via API)"
+    RUNNING_SERVICES+=("ChromeStreaming:api")
 }
 
 # Show status
@@ -478,6 +559,9 @@ show_status() {
             Electron)
                 echo -e "    ${BLUE}🖥️  Desktop:${NC} Electron window (check dock)"
                 ;;
+            ChromeStreaming)
+                echo -e "    ${BLUE}🚀 Chrome Streaming:${NC} Available via API"
+                ;;
         esac
     done
     
@@ -522,8 +606,16 @@ main() {
     start_shell_ui
     start_electron
     
+    # Check and offer to install Chrome Streaming if not installed
+    if ! check_chrome_streaming; then
+        if offer_install_chrome; then
+            print_success "Chrome Streaming installed successfully!"
+        fi
+    fi
+    start_chrome_streaming
+
     show_status
-    
+
     # Keep running
     wait
 }

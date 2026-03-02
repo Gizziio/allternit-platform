@@ -35,6 +35,7 @@ export {
 
 // Agent Management
 export { AgentCreationWizard } from './AgentCreationWizard';
+export { AgentCreationWizardEnhanced } from './AgentCreationWizardEnhanced';
 export { AgentTestingPlayground } from './AgentTestingPlayground';
 export { SessionAnalyticsDashboard } from './SessionAnalyticsDashboard';
 export { SwarmOrchestrator } from './SwarmOrchestrator';
@@ -42,17 +43,83 @@ export { LiveExecutionMonitor } from './LiveExecutionMonitor';
 
 // Context & Tool Components
 export { AgentContextStrip } from './AgentContextStrip';
-export { ToolCallVisualization } from './ToolCallVisualization';
+export { ToolCallVisualization, useToolCallAccent } from './ToolCallVisualization';
 export { ToolConfirmation } from './ToolConfirmation';
-export { AskUserQuestion } from './AskUserQuestion';
+export { AskUserQuestion, ToolQuestionDisplay } from './AskUserQuestion';
 export { AskUserQuestionWizard } from './AskUserQuestionWizard';
 export { CronJobWizard } from './CronJobWizard';
 
-// Re-export types
+// Re-export types from individual components
 export type {
   AgentCreationWizardProps,
+} from './AgentCreationWizard';
+
+export type {
+  AgentCreationWizardProps as AgentCreationWizardEnhancedProps,
+  CharacterLayerConfig,
+  CharacterIdentity,
+  AgentSetup,
+  Temperament,
+  RoleCardConfig,
+  RoleHardBan,
+  HardBanCategory,
+  VoiceConfigLayer,
+  RelationshipConfig,
+  RelationshipPair,
+  ProgressionConfig,
+  ProgressionStatRule,
+  UnlockableAbility,
+  AvatarConfig,
+  MascotConfig,
+  MascotTemplate,
+  EyeStyle,
+  BodyShape,
+  MascotAccessory,
+  AnimationSet,
+  MascotEmotion,
+  AvatarTemplate,
+  WorkspaceDocuments,
+  AgentType,
+  ModelProvider,
+} from './AgentCreationWizardEnhanced';
+
+export type {
   AgentTestingPlaygroundProps,
+} from './AgentTestingPlayground';
+
+export type {
   SessionAnalyticsDashboardProps,
+} from './SessionAnalyticsDashboard';
+
+export type {
   SwarmOrchestratorProps,
+  SwarmConfig,
+  SwarmAgent,
+  AgentRole,
+  ExecutionMode,
+  RoutingConfig,
+  RoutingStrategy,
+  PriorityRule,
+  AgentSwarmConfig,
+  SwarmExecutionRequest,
+  SwarmExecution,
+  ExecutionStatus,
+  ExecutionResult,
+  ExecutionError,
+  ExecutionMetrics,
+  AgentExecutionMetric,
+  SwarmExecutionUpdate,
+  ValidationError,
+} from './SwarmOrchestrator';
+
+export type {
   LiveExecutionMonitorProps,
+  LogEntry,
+  DagNode,
+  DagExecution,
+  WihInfo,
 } from './LiveExecutionMonitor';
+
+export type {
+  ToolQuestionDisplayProps,
+} from './AskUserQuestion';

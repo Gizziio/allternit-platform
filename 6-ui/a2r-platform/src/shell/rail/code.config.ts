@@ -89,6 +89,7 @@ export const CODE_RAIL_CONFIG: RailConfigSection[] = [
     defaultExpanded: false,
     collapsible: true,
     items: [
+      { id: 'code-agent-session', label: 'Agent IDE', icon: Robot, payload: 'code-agent-session' },
       { id: 'cd-automations', label: 'Automations', icon: Lightning, payload: 'code-automations' },
       { id: 'cd-skills', label: 'Skills/Plugins', icon: Robot, payload: 'code-skills' },
     ]

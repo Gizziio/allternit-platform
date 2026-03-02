@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>A2R Browser - Chrome Stream Integration Test</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #1a1a2e; color: #eee; }
+        h1 { color: #00d4ff; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .panel { background: #16213e; border-radius: 12px; padding: 20px; margin: 20px 0; }
+        .btn { background: #00d4ff; color: #000; border: none; padding: 12px 24px; margin: 10px 5px; cursor: pointer; border-radius: 8px; font-weight: bold; font-size: 14px; }
+        .btn:hover { background: #00a8cc; }
+        .btn:disabled { background: #555; cursor: not-allowed; }
+        #stream-container { width: 100%; height: 600px; background: #000; border-radius: 12px; overflow: hidden; position: relative; }
+        #stream-video { width: 100%; height: 100%; object-fit: contain; }
+        #status { padding: 15px; margin: 10px 0; border-radius: 8px; font-family: monospace; }
+        .status-ok { background: #0f5132; border: 1px solid #198754; }
+        .status-error { background: #842029; border: 1px solid #dc3545; }
+        .status-info { background: #0c5460; border: 1px solid #0dcaf0; }
+        #log { background: #000; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; }
+        iframe { width: 100%; height: 100%; border: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 A2R Browser - Chrome Stream Integration</h1>
+        <p>Testing Chrome streaming integration with the A2R browser interface</p>
+
+        <div id="status" class="status-info">Initializing...</div>
+
+        <div class="panel">
+            <h2>🎮 Controls</h2>
+            <button class="btn" onclick="createChromeSession()">📺 Launch Chrome Stream</button>
+            <button class="btn" onclick="navigateChrome('https://google.com')">🔍 Go to Google</button>
+            <button class="btn" onclick="navigateChrome('https://chromewebstore.google.com')">🛒 Chrome Web Store</button>
+            <button class="btn" onclick="navigateChrome('https://github.com')">🐙 GitHub</button>
+            <button class="btn" onclick="refreshStream()">🔄 Refresh Stream</button>
+            <button class="btn" onclick="destroyChromeSession()" style="background:#dc3545;color:white;">❌ Close Session</button>
+        </div>
+
+        <div class="panel">
+            <h2>📺 Chrome Stream</h2>
+            <div id="stream-container">
+                <p style="text-align:center;padding-top:200px;color:#666;">Click "Launch Chrome Stream" to start</p>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>📊 Session Info</h2>
+            <div id="session-info">No active session</div>
+        </div>
+
+        <div class="panel">
+            <h2>📋 Activity Log</h2>
+            <div id="log"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000';
+        let currentSessionId = null;
+        let currentSignalingUrl = null;
+
+        function log(msg) {
+            const logEl = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            logEl.innerHTML = `[${time}] ${msg}<br>` + logEl.innerHTML;
+        }
+
+        function setStatus(msg, type = 'info') {
+            const el = document.getElementById('status');
+            el.className = `status-${type}`;
+            el.textContent = msg;
+            log(`Status: ${msg}`);
+        }
+
+        async function checkApiHealth() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/v1/chrome-sessions`);
+                const data = await resp.json();
+                setStatus(`API Connected - ${data.count || 0} sessions`, 'ok');
+                log('API health check passed');
+                return true;
+            } catch (e) {
+                setStatus(`API not available: ${e.message}. Make sure proxy is running.`, 'error');
+                log(`API health check failed: ${e.message}`);
+                return false;
+            }
+        }
+
+        async function createChromeSession() {
+            try {
+                setStatus('Creating Chrome session...', 'info');
+                log('Creating Chrome session...');
+
+                const response = await fetch(`${API_BASE}/api/v1/chrome-sessions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        resolution: '1920x1080',
+                        extension_mode: 'power',
+                        initial_url: 'https://chromewebstore.google.com',
+                    }),
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.error || `HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                currentSessionId = data.session_id;
+                currentSignalingUrl = data.signaling_url;
+                log(`Session created: ${data.session_id}`);
+                log(`Signaling URL: ${data.signaling_url}`);
+
+                // Poll until ready
+                await pollUntilReady(data.session_id);
+
+            } catch (e) {
+                setStatus(`Failed to create session: ${e.message}`, 'error');
+                log(`Error: ${e.message}`);
+            }
+        }
+
+        async function pollUntilReady(sessionId) {
+            setStatus('Waiting for Chrome to be ready...', 'info');
+            const startTime = Date.now();
+            const maxWait = 60000;
+
+            while (Date.now() - startTime < maxWait) {
+                await new Promise(r => setTimeout(r, 2000));
+
+                try {
+                    const resp = await fetch(`${API_BASE}/api/v1/chrome-sessions/${sessionId}`);
+                    const data = await resp.json();
+
+                    if (data.status === 'ready') {
+                        setStatus('Chrome session ready!', 'ok');
+                        updateSessionInfo(data);
+                        loadStreamIframe(data.signaling_url);
+                        return;
+                    }
+                    if (data.status === 'error') {
+                        throw new Error('Session error');
+                    }
+                    log(`Status: ${data.status}...`);
+                } catch (e) {
+                    log(`Poll error: ${e.message}`);
+                }
+            }
+            setStatus('Session provisioning timeout', 'error');
+        }
+
+        function updateSessionInfo(data) {
+            const infoEl = document.getElementById('session-info');
+            infoEl.innerHTML = `
+                <div><strong>Session ID:</strong> ${data.session_id}</div>
+                <div><strong>Status:</strong> ${data.status}</div>
+                <div><strong>Resolution:</strong> ${data.resolution}</div>
+                <div><strong>Signaling URL:</strong> <code>${data.signaling_url}</code></div>
+                <div><strong>Created:</strong> ${new Date(data.created_at).toLocaleString()}</div>
+            `;
+        }
+
+        function loadStreamIframe(signalingUrl) {
+            const container = document.getElementById('stream-container');
+            // For now, show the sidecar docs as a placeholder
+            // Real WebRTC streaming would go here
+            container.innerHTML = `
+                <iframe src="http://localhost:8081/docs" title="Chrome Stream Control"></iframe>
+            `;
+            log('Stream iframe loaded');
+        }
+
+        async function navigateChrome(url) {
+            if (!currentSessionId) {
+                setStatus('No active session. Launch Chrome first.', 'error');
+                return;
+            }
+
+            try {
+                log(`Navigating to: ${url}`);
+                const resp = await fetch(`${API_BASE}/api/v1/chrome-sessions/${currentSessionId}/navigate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url }),
+                });
+
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                setStatus(`Navigated to: ${url}`, 'ok');
+            } catch (e) {
+                setStatus(`Navigation failed: ${e.message}`, 'error');
+            }
+        }
+
+        async function refreshStream() {
+            if (currentSignalingUrl) {
+                loadStreamIframe(currentSignalingUrl);
+                log('Stream refreshed');
+            }
+        }
+
+        async function destroyChromeSession() {
+            if (!currentSessionId) return;
+
+            try {
+                log('Destroying session...');
+                const resp = await fetch(`${API_BASE}/api/v1/chrome-sessions/${currentSessionId}`, {
+                    method: 'DELETE',
+                });
+
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+                setStatus('Session closed', 'info');
+                document.getElementById('session-info').textContent = 'No active session';
+                document.getElementById('stream-container').innerHTML = '<p style="text-align:center;padding-top:200px;color:#666;">Click "Launch Chrome Stream" to start</p>';
+                currentSessionId = null;
+                currentSignalingUrl = null;
+            } catch (e) {
+                setStatus(`Failed to close: ${e.message}`, 'error');
+            }
+        }
+
+        // Initialize
+        checkApiHealth();
+    </script>
+</body>
+</html>

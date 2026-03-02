@@ -360,7 +360,7 @@ export const ThoughtTrace = memo(({ steps, isStreaming = false, isComplete = fal
             </div>
           ))}
 
-          {/* Current active step — MatrixLogo moves here to follow the trace */}
+          {/* Current active step — MatrixLogo inline with the trace */}
           <div
             style={{
               position: 'relative',
@@ -369,9 +369,22 @@ export const ThoughtTrace = memo(({ steps, isStreaming = false, isComplete = fal
               gap: '8px',
             }}
           >
-            {/* MatrixLogo replaces the dot on the active step */}
-            <div style={{ position: 'absolute', left: '-17px', top: '2px' }}>
-              <MatrixLogo state="thinking" size={14} />
+            {/* MatrixLogo inline with the timeline, replacing the dot */}
+            <div style={{ 
+              position: 'absolute', 
+              left: '-12px', 
+              top: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <MatrixLogo 
+                state={currentStep.type === 'search' ? 'thinking' : 
+                       currentStep.type === 'file-read' ? 'listening' : 
+                       currentStep.type === 'file-write' ? 'speaking' : 
+                       currentStep.type === 'command' ? 'compacting' : 'thinking'} 
+                size={8} 
+              />
             </div>
             <TimelineRow step={currentStep} active showDetail />
           </div>

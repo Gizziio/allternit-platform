@@ -1,6 +1,11 @@
 import { SkillsRegistryView } from '../views/code/SkillsRegistryView';
 import { OpenClawControlUI } from '../views/openclaw/OpenClawControlUI';
 import React, { useMemo, useReducer, useEffect, useCallback, useRef, useState } from 'react';
+// Agent Session Views
+import { ChatModeAgentSession } from '../views/agent-sessions/ChatModeAgentSession';
+import { CoworkModeAgentTasks } from '../views/agent-sessions/CoworkModeAgentTasks';
+import { CodeModeADE } from '../views/agent-sessions/CodeModeADE';
+import { BrowserModeAgentSession } from '../views/agent-sessions/BrowserModeAgentSession';
 import { ShellFrame } from './ShellFrame';
 import { ShellRail } from './ShellRail';
 import { type AppMode } from './ShellHeader';
@@ -151,7 +156,11 @@ import { ConversationMonitorOverlay } from './ConversationMonitorOverlay';
 import { useAgentSurfaceModeStore } from '../stores/agent-surface-mode.store';
 
 // Stable Chat view that handles project/no-project logic internally
-const ChatViewWrapper = React.memo(function ChatViewWrapper() {
+const ChatViewWrapper = React.memo(function ChatViewWrapper({ 
+  onOpenAgentSession 
+}: { 
+  onOpenAgentSession?: (text: string, surface: 'chat' | 'cowork' | 'code' | 'browser') => void;
+}) {
   const { activeProjectId, activeThreadId } = useChatStore();
   const embeddedChatSessionId = useEmbeddedAgentSessionStore(
     (state) => state.sessionIdBySurface.chat,
@@ -181,7 +190,7 @@ const ChatViewWrapper = React.memo(function ChatViewWrapper() {
               <ChatInputProvider>
                 <ChatModelsProvider>
                   <ModelSelectionProvider>
-                    <ChatView key={effectiveChatId} />
+                    <ChatView key={effectiveChatId} onOpenAgentSession={onOpenAgentSession} />
                   </ModelSelectionProvider>
                 </ChatModelsProvider>
               </ChatInputProvider>
@@ -875,10 +884,50 @@ function ShellAppInner() {
   }, []);
   const openNew = useCallback((viewType: ViewType) => dispatch({ type: 'OPEN_VIEW', viewType, allowNew: true }), []);
 
+  // Handle opening agent session views from chat composer
+  const handleOpenAgentSession = useCallback((text: string, surface: 'chat' | 'cowork' | 'code' | 'browser') => {
+    // Create a native agent session with the initial message
+    const selectedAgentId = useAgentSurfaceModeStore.getState().selectedAgentIdBySurface[surface];
+    const selectedAgent = selectedAgentId 
+      ? useAgentStore.getState().agents.find((agent) => agent.id === selectedAgentId) ?? null
+      : null;
+    
+    // Open the appropriate agent session view based on surface
+    switch (surface) {
+      case 'chat':
+        dispatch({ type: 'OPEN_VIEW', viewType: 'chat-agent-session' });
+        break;
+      case 'cowork':
+        dispatch({ type: 'OPEN_VIEW', viewType: 'cowork-agent-session' });
+        break;
+      case 'code':
+        dispatch({ type: 'OPEN_VIEW', viewType: 'code-agent-session' });
+        break;
+      case 'browser':
+        dispatch({ type: 'OPEN_VIEW', viewType: 'browser-agent-session' });
+        break;
+    }
+    
+    // Store the initial message for the session (can be retrieved by the view)
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.setItem('a2r-pending-agent-message', text);
+      window.sessionStorage.setItem('a2r-pending-agent-surface', surface);
+    }
+  }, []);
+
+  // Helper to get pending agent message safely
+  const getPendingAgentMessage = useCallback((): string | undefined => {
+    if (typeof window === 'undefined') return undefined;
+    const msg = window.sessionStorage.getItem('a2r-pending-agent-message');
+    // Clear after reading to prevent reuse
+    window.sessionStorage.removeItem('a2r-pending-agent-message');
+    return msg || undefined;
+  }, []);
+
   const registry = useMemo(() => createViewRegistry({
-    home: ChatViewWrapper,
-    chat: ChatViewWrapper,
-    "chat-legacy": ChatViewWrapper,
+    home: () => <ChatViewWrapper onOpenAgentSession={handleOpenAgentSession} />,
+    chat: () => <ChatViewWrapper onOpenAgentSession={handleOpenAgentSession} />,
+    "chat-legacy": () => <ChatViewWrapper onOpenAgentSession={handleOpenAgentSession} />,
     workspace: CoworkRoot,
     browser: ({ context }: { context: ViewContext }) => <BrowserPaneWrapper><BrowserCapsuleEnhanced /></BrowserPaneWrapper>,
     browserview: ({ context }: { context: ViewContext }) => <BrowserPaneWrapper><BrowserCapsuleEnhanced /></BrowserPaneWrapper>,
@@ -1041,6 +1090,35 @@ function ShellAppInner() {
     'code-threads': ({ context }: { context: ViewContext }) => <ThreadsView />,
     'code-automations': ({ context }: { context: ViewContext }) => <CodeAutomationsView />,
     'code-skills': ({ context }: { context: ViewContext }) => <SkillsView />,
+    // Agent Session Views - Full-screen agent experiences
+    'chat-agent-session': ({ context }: { context: ViewContext }) => (
+      <ChatModeAgentSession 
+        mode="chat"
+        sessionId={context.viewId}
+        context={typeof window !== 'undefined' ? window.sessionStorage.getItem('a2r-pending-agent-message') || undefined : undefined}
+        onClose={() => open('chat')}
+      />
+    ),
+    'cowork-agent-session': ({ context }: { context: ViewContext }) => (
+      <CoworkModeAgentTasks 
+        mode="cowork"
+        onClose={() => open('workspace')}
+      />
+    ),
+    'code-agent-session': ({ context }: { context: ViewContext }) => (
+      <CodeModeADE 
+        mode="code"
+        sessionId={context.viewId}
+        onClose={() => open('code')}
+      />
+    ),
+    'browser-agent-session': ({ context }: { context: ViewContext }) => (
+      <BrowserModeAgentSession 
+        mode="browser"
+        sessionId={context.viewId}
+        onClose={() => open('browser')}
+      />
+    ),
     // New document/file - open workspace view with create mode
     'new-document': ({ context }: { context: ViewContext }) => (
       <ErrorBoundary fallback={<div style={{ padding: 16, color: 'var(--text-secondary)' }}>Failed to load</div>}>
@@ -1052,7 +1130,7 @@ function ShellAppInner() {
         <CodeRoot />
       </ErrorBoundary>
     ),
-  }), [open]);
+  }), [handleOpenAgentSession, open]);
 
   const runner = useRunnerStore();
   

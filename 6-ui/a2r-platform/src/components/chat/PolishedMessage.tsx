@@ -459,10 +459,11 @@ export const PolishedMessage = memo(function PolishedMessage({
         />
       )}
 
-      {/* MatrixLogo shown below assistant messages - reflects current state */}
-      {isLast && (
-        <div style={{ marginTop: '12px' }}>
-          <MatrixLogo state={isLoading ? "thinking" : "idle"} size={24} />
+      {/* MatrixLogo shown below assistant messages - smaller and more subtle */}
+      {isLast && isLoading && (
+        <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <MatrixLogo state="thinking" size={12} />
+          <span style={{ fontSize: '11px', color: 'rgba(212,176,140,0.5)', fontWeight: 500 }}>Thinking…</span>
         </div>
       )}
 

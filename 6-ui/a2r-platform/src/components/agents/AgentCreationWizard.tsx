@@ -52,7 +52,7 @@ import type { AgentSetup } from '@/lib/agents/character.types';
 // Types
 // ============================================================================
 
-interface AgentCreationWizardProps {
+export interface AgentCreationWizardProps {
   isOpen: boolean;
   onClose: () => void;
   onCreate: (config: AgentConfig) => Promise<void>;

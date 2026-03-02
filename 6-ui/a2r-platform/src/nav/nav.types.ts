@@ -99,7 +99,12 @@ export type ViewType =
   | "cowork-documents"
   | "cowork-tables"
   | "cowork-files"
-  | "cowork-exports";
+  | "cowork-exports"
+  // Agent Session Views (full-screen agent experiences)
+  | "chat-agent-session"
+  | "cowork-agent-session"
+  | "code-agent-session"
+  | "browser-agent-session";
 
 export type ViewId = string;
 

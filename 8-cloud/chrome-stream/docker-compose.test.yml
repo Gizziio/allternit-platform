@@ -1,0 +1,64 @@
+# A2R Chrome Stream - Local Test Configuration
+# Use this for local development and testing
+
+version: '3.8'
+
+services:
+  chrome-stream:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: a2r-chrome-stream-test
+    ports:
+      - "8080:8080"  # WebRTC signaling
+      - "8081:8081"  # Sidecar control API
+    environment:
+      - A2R_SESSION_ID=test-session-001
+      - A2R_TENANT_ID=test-tenant
+      - A2R_RESOLUTION=1920x1080
+      - A2R_EXTENSION_MODE=power
+      - A2R_DISABLE_BACKGROUND_THROTTLING=false
+      - A2R_SKIP_NETWORK_ISOLATION=true  # Skip iptables for local testing
+      - SELKIES_ENCODER=x264enc
+    volumes:
+      - chrome-profile:/data/chrome-profile
+      - chrome-downloads:/data/downloads
+    shm_size: 2gb
+    cap_add:
+      - SYS_ADMIN
+      - NET_ADMIN
+    security_opt:
+      - seccomp=unconfined  # For testing; use custom seccomp in production
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Optional: coturn for WebRTC TURN testing
+  coturn:
+    image: coturn/coturn:latest
+    container_name: a2r-coturn-test
+    network_mode: host
+    environment:
+      - TURN_REALM=a2r.io
+      - TURN_SECRET=test-secret-change-in-production
+      - TLS_CERT=/etc/turnserver/cert.pem
+      - TLS_PKEY=/etc/turnserver/pkey.pem
+    volumes:
+      - ./turnserver.conf:/etc/turnserver.conf:ro
+    restart: unless-stopped
+    profiles:
+      - webrtc  # Only start with: docker-compose --profile webrtc up
+
+volumes:
+  chrome-profile:
+    driver: local
+  chrome-downloads:
+    driver: local
+
+networks:
+  default:
+    driver: bridge

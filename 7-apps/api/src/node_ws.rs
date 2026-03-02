@@ -1,4 +1,5 @@
 #![allow(dead_code, unused_variables, unused_imports)]
+#[cfg(target_os = "linux")]
 //! Node WebSocket Handler
 //!
 //! Handles WebSocket connections from A2R Nodes.

@@ -1,0 +1,25 @@
+{
+  "ExtensionSettings": {
+    "*": {
+      "installation_mode": "blocked"
+    }
+  },
+  "DefaultSearchProviderEnabled": true,
+  "DefaultSearchProviderName": "Google",
+  "DefaultSearchProviderSearchURL": "https://www.google.com/search?q={searchTerms}",
+  "IncognitoModeAvailability": 1,
+  "PasswordManagerEnabled": false,
+  "SafeBrowsingEnabled": true,
+  "SyncDisabled": true,
+  "CloudPrintProxyEnabled": false,
+  "PrintPreviewEnabled": true,
+  "DeveloperToolsAvailability": 1,
+  "URLAllowlist": [],
+  "URLBlocklist": [
+    "file:///*"
+  ],
+  "ExtensionInstallBlocklist": [
+    "*"
+  ],
+  "ExtensionInstallAllowlist": []
+}

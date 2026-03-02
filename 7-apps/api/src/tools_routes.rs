@@ -48,6 +48,13 @@ use a2rchitech_tools_gateway::{
 use mcp_client::{
     McpClient, McpTransport, ReconnectConfig, SseConfig, SseTransport, StdioConfig, StdioTransport,
 };
+use sha2::{Sha256, Digest};
+
+fn compute_hash(input: impl AsRef<[u8]>) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(input);
+    format!("{:x}", hasher.finalize())
+}
 
 // ============================================================================
 // Request/Response Types
@@ -1026,10 +1033,10 @@ async fn execute_native_tool(
 
     // === N12: Start Replay Capture ===
     let envelope = a2r_driver_interface::DeterminismEnvelope {
-        env_spec_hash: format!("{:x}", md5::compute(&env_spec.image)),
+        env_spec_hash: compute_hash(&env_spec.image),
         tool_versions: std::collections::HashMap::new(),
         policy_hash: "default".to_string(),
-        inputs_hash: format!("{:x}", md5::compute(request.parameters.to_string())),
+        inputs_hash: compute_hash(request.parameters.to_string()),
         time_frozen: false,
         seed: Some(12345),
     };
@@ -1124,7 +1131,7 @@ async fn execute_native_tool(
                         run_id,
                         "stdout",
                         String::from_utf8_lossy(stdout),
-                        format!("{:x}", md5::compute(stdout)),
+                        compute_hash(stdout),
                     );
                 }
                 if let Some(stderr) = result.stderr.as_ref() {
@@ -1132,7 +1139,7 @@ async fn execute_native_tool(
                         run_id,
                         "stderr",
                         String::from_utf8_lossy(stderr),
-                        format!("{:x}", md5::compute(stderr)),
+                        compute_hash(stderr),
                     );
                 }
                 replay.record_timestamp(run_id, "execution_complete");
@@ -1242,8 +1249,8 @@ async fn execute_native_tool(
     // === N2: Emit Receipt to Rails (Audit Trail) ===
     // Generate cryptographic receipt for this execution
     let receipt_id = format!("rcpt-{}", uuid::Uuid::new_v4().simple());
-    let tool_hash = format!("{:x}", md5::compute(&tool_id));
-    let input_hash = format!("{:x}", md5::compute(request.parameters.to_string()));
+    let tool_hash = compute_hash(&tool_id);
+    let input_hash = compute_hash(request.parameters.to_string());
 
     let receipt_record = crate::rails_client::RailsReceiptRecord {
         receipt_id: receipt_id.clone(),
@@ -1255,7 +1262,7 @@ async fn execute_native_tool(
         outputs_ref: exec_result
             .result
             .as_ref()
-            .map(|r| format!("{:x}", md5::compute(r.to_string()))),
+            .map(|r| compute_hash(r.to_string())),
         exit: Some(crate::rails_client::RailsReceiptExit {
             code: if exec_result.success {
                 Some(0)

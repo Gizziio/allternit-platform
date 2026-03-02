@@ -42,6 +42,7 @@ pub mod tui_routes;
 pub mod viz_routes;
 pub mod workflow_routes_ext;
 pub mod tools;
+pub mod chrome_session_routes;
 
 // P4 DAG Integration crate imports
 use crate::environment_routes::EnvironmentSpecLoaderWithCache;
@@ -96,18 +97,24 @@ mod config_routes;
 mod cron_routes;
 mod job_events_ws;
 mod log_routes;
+#[cfg(target_os = "linux")]
 mod node_auth;
+#[cfg(target_os = "linux")]
 mod node_job_dispatcher;
+#[cfg(target_os = "linux")]
 mod node_job_queue;
+#[cfg(target_os = "linux")]
 mod node_ws;
+mod rails_client;
 mod operator;
+
 mod provider_discovery;
 pub mod browser_recording;
 mod rails;
-mod rails_client;
 mod security;
 mod session_routes;
 mod terminal_session;
+#[cfg(target_os = "linux")]
 mod terminal_ws;
 mod voice;
 mod webvm;
@@ -116,6 +123,7 @@ mod workflow_routes;
 use crate::config_routes::create_config_routes;
 use crate::cron_routes::create_cron_routes;
 use crate::log_routes::create_log_routes;
+#[cfg(target_os = "linux")]
 use crate::node_job_queue::{
     cancel_node_job, create_node_job, get_job_queue_stats, get_node_job, list_node_jobs,
 };
@@ -373,17 +381,31 @@ pub struct AppState {
     rails_receipts: Option<Arc<a2r_agent_system_rails::ReceiptStore>>,
     /// Native Session Manager for agent sessions (OpenClaw-compatible)
     session_manager: Option<
-        Arc<tokio::sync::RwLock<a2r_openclaw_host::native_session_manager::SessionManagerService>>,
+        Arc<RwLock<a2r_openclaw_host::native_session_manager::SessionManagerService>>,
     >,
+    /// Chrome streaming sessions
+    chrome_sessions: Arc<RwLock<HashMap<String, crate::chrome_session_routes::ChromeSessionRecord>>>,
+    /// Firecracker driver for Chrome VMs (Linux only)
+    #[cfg(target_os = "linux")]
+    firecracker_driver: Option<Arc<a2r_firecracker_driver::FirecrackerDriver>>,
+    /// Docker client for Chrome containers (macOS only)
+    #[cfg(target_os = "macos")]
+    docker_client: Option<Arc<bollard::Docker>>,
+    /// TURN secret for WebRTC credentials
+    turn_secret: String,
     /// Session Sync Service for real-time updates
     session_sync: Option<Arc<a2r_openclaw_host::session_sync::SessionSyncService>>,
     /// Node registry for WebSocket connections
+    #[cfg(target_os = "linux")]
     node_registry: Arc<crate::node_ws::NodeRegistry>,
     /// Terminal session registry
+    #[cfg(target_os = "linux")]
     terminal_registry: Arc<crate::terminal_ws::TerminalSessionRegistry>,
     /// Job queue for node job scheduling
+    #[cfg(target_os = "linux")]
     job_queue: Arc<crate::node_job_queue::JobQueue>,
     /// Node authentication service
+    #[cfg(target_os = "linux")]
     node_auth: Arc<crate::node_auth::NodeAuthService>,
     /// Broadcast channel for job events to UI clients
     job_events_tx: broadcast::Sender<JobEvent>,
@@ -1216,13 +1238,16 @@ async fn main() -> anyhow::Result<()> {
     let database = init_sqlite_pool(&config.db_path).await?;
     tracing::info!("SQLite database initialized at {:?}", config.db_path);
 
-    // Initialize node WebSocket tables
+    // Initialize node WebSocket tables (Linux only)
+    #[cfg(target_os = "linux")]
     if let Err(e) = node_ws::init_node_tables(&database).await {
         tracing::warn!("Failed to initialize node tables: {}", e);
     }
 
-    // Initialize job queue
+    // Initialize job queue (Linux only)
+    #[cfg(target_os = "linux")]
     let job_queue = Arc::new(node_job_queue::JobQueue::new(database.clone()));
+    #[cfg(target_os = "linux")]
     if let Err(e) = job_queue.init().await {
         tracing::warn!("Failed to initialize job queue: {}", e);
     }
@@ -1322,15 +1347,29 @@ async fn main() -> anyhow::Result<()> {
         rails_receipts: None, // Initialized below
         // Native Session Manager for agent sessions (OpenClaw-compatible)
         session_manager: None, // Initialized below
+        // Chrome streaming sessions
+        chrome_sessions: Arc::new(RwLock::new(HashMap::new())),
+        // Firecracker driver for Chrome VMs (Linux only)
+        #[cfg(target_os = "linux")]
+        firecracker_driver: None, // Initialized below
+        // Docker client for Chrome containers (macOS only)
+        #[cfg(target_os = "macos")]
+        docker_client: None, // Initialized below
+        // TURN secret for WebRTC credentials
+        turn_secret: std::env::var("TURN_SECRET").unwrap_or_else(|_| "change-this-secret".to_string()),
         // Session Sync Service for real-time updates
         session_sync: None, // Initialized below
         // Node registry for WebSocket connections
+        #[cfg(target_os = "linux")]
         node_registry: Arc::new(crate::node_ws::NodeRegistry::new()),
         // Terminal session registry
+        #[cfg(target_os = "linux")]
         terminal_registry: Arc::new(crate::terminal_ws::TerminalSessionRegistry::new()),
         // Job queue for node job scheduling (use initialized instance)
+        #[cfg(target_os = "linux")]
         job_queue: job_queue.clone(),
         // Node authentication service
+        #[cfg(target_os = "linux")]
         node_auth: Arc::new(crate::node_auth::NodeAuthService::new()),
         // Broadcast channel for job events to UI clients (1000 event buffer)
         job_events_tx: broadcast::channel(1000).0,
@@ -1345,6 +1384,39 @@ async fn main() -> anyhow::Result<()> {
         // Execution storage - thread-safe in-memory storage for execution records
         execution_store: Arc::new(RwLock::new(HashMap::new())),
     };
+
+    // Initialize platform-specific Chrome backend
+    #[cfg(target_os = "linux")]
+    {
+        // Initialize Firecracker driver for Chrome VMs (outside async context)
+        let mut fc_config = a2r_firecracker_driver::FirecrackerConfig::default();
+        fc_config.vm_root_dir = std::path::PathBuf::from("/var/lib/a2r/firecracker-vms");
+        
+        let firecracker_driver = tokio::task::block_in_place(|| {
+            match a2r_firecracker_driver::FirecrackerDriver::with_config(fc_config) {
+                driver => {
+                    tracing::info!("Firecracker driver initialized successfully");
+                    Some(Arc::new(driver))
+                }
+            }
+        });
+        state.firecracker_driver = firecracker_driver;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        // Initialize Docker client for Chrome containers
+        match bollard::Docker::connect_with_local_defaults() {
+            Ok(docker) => {
+                tracing::info!("Docker client initialized successfully");
+                state.docker_client = Some(Arc::new(docker));
+            }
+            Err(e) => {
+                tracing::warn!("Failed to initialize Docker client: {}. Chrome streaming will be limited.", e);
+                state.docker_client = None;
+            }
+        }
+    }
 
     // Initialize Rails Gate, Ledger, and Receipts Store (N0)
     let rails_dir = std::env::current_dir()
@@ -1433,13 +1505,17 @@ async fn main() -> anyhow::Result<()> {
     let shared_state = Arc::new(state);
 
     // Start terminal session cleanup task
+    #[cfg(target_os = "linux")]
     shared_state.terminal_registry.clone().start_cleanup_task();
 
     // Start job dispatcher background task
-    crate::node_job_dispatcher::start_job_dispatcher(
-        shared_state.job_queue.clone(),
-        shared_state.node_registry.clone(),
-    );
+    #[cfg(target_os = "linux")]
+    if let (Some(job_queue), Some(node_registry)) = (shared_state.job_queue.clone(), shared_state.node_registry.clone()) {
+        crate::node_job_dispatcher::start_job_dispatcher(
+            job_queue,
+            node_registry,
+        );
+    }
 
     // Initialize Cloud Deploy state with SQLite and WebSocket support (if cloud-deploy feature enabled)
     #[cfg(feature = "cloud-deploy")]
@@ -1521,11 +1597,17 @@ async fn main() -> anyhow::Result<()> {
             "/api/v1/terminal/sessions/:id",
             get(terminal_session::get_terminal_session)
                 .delete(terminal_session::delete_terminal_session),
-        )
-        .route(
+        );
+
+    #[cfg(target_os = "linux")]
+    {
+        app = app.route(
             "/api/v1/terminal/sessions/:id/status",
             get(terminal_ws::check_session_status),
-        )
+        );
+    }
+
+    let mut app = app
         // Voice service endpoints
         .merge(create_voice_routes())
         // WebVM bridge endpoints
@@ -1577,7 +1659,9 @@ async fn main() -> anyhow::Result<()> {
         // Log management endpoints (native Rust OpenClaw)
         .merge(create_log_routes())
         // Config management endpoints (native Rust OpenClaw)
-        .merge(create_config_routes());
+        .merge(create_config_routes())
+        // Chrome Streaming Gateway endpoints
+        .merge(chrome_session_routes::chrome_session_routes());
 
     // Cloud Deploy endpoints (with SQLite, WebSocket, Hetzner integration)
     #[cfg(feature = "cloud-deploy")]
@@ -1585,43 +1669,50 @@ async fn main() -> anyhow::Result<()> {
         cloud_deploy_state.clone(),
     ));
 
+    let mut app = app;
+
+    #[cfg(target_os = "linux")]
+    {
+        app = app
+            // Node WebSocket endpoints
+            .route("/ws/nodes/:node_id", get(node_ws::node_websocket_handler))
+            .route("/api/v1/nodes", get(node_ws::list_nodes))
+            .route("/api/v1/nodes/token", post(node_ws::generate_node_token))
+            // Terminal WebSocket endpoint - MUST be before :node_id catch-all
+            .route(
+                "/api/v1/nodes/:node_id/terminal",
+                post(terminal_ws::create_terminal_session),
+            )
+            .route("/api/v1/nodes/:node_id", get(node_ws::get_node))
+            .route(
+                "/api/v1/nodes/:node_id",
+                axum::routing::delete(node_ws::delete_node_handler),
+            )
+            .route(
+                "/api/v1/nodes/:node_id/jobs",
+                post(node_ws::assign_job_to_node),
+            )
+            // Job queue endpoints
+            .route("/api/v1/jobs", post(create_node_job))
+            .route("/api/v1/jobs", get(list_node_jobs))
+            .route("/api/v1/jobs/:job_id", get(get_node_job))
+            .route("/api/v1/jobs/:job_id/cancel", post(cancel_node_job))
+            .route("/api/v1/jobs/stats", get(get_job_queue_stats))
+            .route(
+                "/ws/terminal/:session_id",
+                get(terminal_ws::terminal_websocket_handler),
+            )
+            .route(
+                "/api/v1/terminal/:session_id",
+                axum::routing::delete(terminal_ws::delete_terminal_session),
+            )
+            // Terminal file operations endpoints
+            .merge(terminal_ws::file_routes());
+    }
+
     let app = app
-        // Node WebSocket endpoints
-        .route("/ws/nodes/:node_id", get(node_ws::node_websocket_handler))
-        .route("/api/v1/nodes", get(node_ws::list_nodes))
-        .route("/api/v1/nodes/token", post(node_ws::generate_node_token))
-        // Terminal WebSocket endpoint - MUST be before :node_id catch-all
-        .route(
-            "/api/v1/nodes/:node_id/terminal",
-            post(terminal_ws::create_terminal_session),
-        )
-        .route("/api/v1/nodes/:node_id", get(node_ws::get_node))
-        .route(
-            "/api/v1/nodes/:node_id",
-            axum::routing::delete(node_ws::delete_node_handler),
-        )
-        .route(
-            "/api/v1/nodes/:node_id/jobs",
-            post(node_ws::assign_job_to_node),
-        )
-        // Job queue endpoints
-        .route("/api/v1/jobs", post(create_node_job))
-        .route("/api/v1/jobs", get(list_node_jobs))
-        .route("/api/v1/jobs/:job_id", get(get_node_job))
-        .route("/api/v1/jobs/:job_id/cancel", post(cancel_node_job))
-        .route("/api/v1/jobs/stats", get(get_job_queue_stats))
         // Job events WebSocket for real-time UI updates
         .route("/ws/jobs/events", get(job_events_ws::job_events_ws_handler))
-        .route(
-            "/ws/terminal/:session_id",
-            get(terminal_ws::terminal_websocket_handler),
-        )
-        .route(
-            "/api/v1/terminal/:session_id",
-            axum::routing::delete(terminal_ws::delete_terminal_session),
-        )
-        // Terminal file operations endpoints
-        .merge(terminal_ws::file_routes())
         // Channel endpoints (native Rust OpenClaw)
         .route("/api/v1/channels/:id/status", get(get_channel_status))
         .route("/api/v1/channels/:id/login", post(login_channel))
@@ -1639,6 +1730,9 @@ async fn main() -> anyhow::Result<()> {
             (State<Arc<AppState>>, Request),
         >(shared_state.clone(), policy_middleware))
         .with_state(shared_state.clone());
+
+    // Spawn Chrome session lifecycle manager (idle timeout, TTL, health checks)
+    chrome_session_routes::spawn_session_lifecycle_manager(shared_state.clone());
 
     let listener = tokio::net::TcpListener::bind(&config.bind_addr).await?;
     tracing::info!("API listening on {}", config.bind_addr);
@@ -1940,7 +2034,9 @@ async fn policy_middleware(
         || request_path == "/metrics"
         || request_path.starts_with("/swagger-ui")
         || request_path == "/api/chat"
-        || request_path == "/api/agent-chat";
+        || request_path == "/api/agent-chat"
+        || request_path == "/api/v1/openclaw/agents/discovery"
+        || request_path == "/api/v1/agents";
 
     // Security: Extract client IP for rate limiting and threat detection
     let client_ip = req
@@ -1978,8 +2074,8 @@ async fn policy_middleware(
             count += 1;
             entry.0.store(count, Ordering::SeqCst);
 
-            // Rate limit: 100 requests per minute per IP
-            if count > 100 {
+            // Rate limit: 5000 requests per minute per IP
+            if count > 5000 {
                 tracing::warn!("Rate limit exceeded for {}: {} requests", client_ip, count);
                 return (StatusCode::TOO_MANY_REQUESTS, "Rate limit exceeded").into_response();
             }

@@ -106,8 +106,26 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent> {
   };
   
   try {
-    const agent = await api.createAgent(apiInput as Omit<Agent, 'id'>);
-    return transformAgentFromApi(agent);
+    const maxRetries = 3;
+    let lastError: any;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        const agent = await api.createAgent(apiInput as Omit<Agent, 'id'>);
+        return transformAgentFromApi(agent);
+      } catch (error: any) {
+        lastError = error;
+        // If it's a rate limit error (429), wait and retry
+        if (error.status === 429 || (error instanceof Error && error.message.includes('429'))) {
+          const delay = Math.pow(2, attempt) * 1000;
+          console.warn(`[AgentService] Rate limited (429). Retrying in ${delay}ms... (Attempt ${attempt + 1}/${maxRetries})`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        throw error;
+      }
+    }
+    throw lastError;
   } catch (error) {
     if (shouldUseLocalAgentRegistryFallback(error)) {
       return createLocalAgent(input);

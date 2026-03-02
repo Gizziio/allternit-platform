@@ -127,12 +127,15 @@ export function ChatView({
   hideEmptyState = false, 
   mode = 'chat',
   initialMessage,
-  onInitialMessageSent
+  onInitialMessageSent,
+  onOpenAgentSession,
 }: { 
   hideEmptyState?: boolean, 
   mode?: 'chat' | 'cowork' | 'code',
   initialMessage?: string,
-  onInitialMessageSent?: () => void
+  onInitialMessageSent?: () => void,
+  /** Callback to open full agent session view instead of embedded chat */
+  onOpenAgentSession?: (text: string, surface: 'chat' | 'cowork' | 'code' | 'browser') => void;
 }) {
   const { id: chatId, isPersisted } = useChatId();
   const { createThread, threads, activeThreadId } = useChatStore();
@@ -691,6 +694,7 @@ export function ChatView({
             <div style={{ width: '100%', marginBottom: '64px' }}>
               <ChatComposer
                 onSend={handleSend}
+                onAgentSend={onOpenAgentSession ? (text) => onOpenAgentSession(text, agentSurface) : undefined}
                 isLoading={activeIsLoading}
                 placeholder="What's brewing today?"
                 variant="large"
@@ -865,6 +869,7 @@ export function ChatView({
           <div style={{ width: '100%', maxWidth: '760px', pointerEvents: 'auto', padding: '0 20px', boxSizing: 'border-box' }}>
             <ChatComposer
               onSend={handleSend}
+              onAgentSend={onOpenAgentSession ? (text) => onOpenAgentSession(text, agentSurface) : undefined}
               isLoading={activeIsLoading}
               onStop={handleStop}
               selectedModel={selectedModel}

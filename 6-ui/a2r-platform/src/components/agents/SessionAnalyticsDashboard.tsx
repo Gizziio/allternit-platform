@@ -65,7 +65,7 @@ import type { NativeSession } from '@/lib/agents';
 // Types
 // ============================================================================
 
-interface SessionAnalyticsDashboardProps {
+export interface SessionAnalyticsDashboardProps {
   sessions: NativeSession[];
   mode?: AgentMode;
   dateRange?: { start: Date; end: Date };
