@@ -2,7 +2,7 @@ import React from 'react';
 import { GlassCard } from '../design/GlassCard';
 import { tokens } from '../design/tokens';
 import { 
-  ChatTeardropText, 
+  ChatText, 
   UsersThree, 
   Browser, 
   Robot, 
@@ -15,7 +15,7 @@ import {
 export function HomeView({ onAction, context }: any) {
   console.log('[HomeView] Rendered with context:', context?.viewType, context?.viewId);
   const quickActions = [
-    { id: 'chat', label: 'New Chat', icon: ChatTeardropText, color: tokens.colors.chat.primary, desc: 'Start a fresh conversation' },
+    { id: 'chat', label: 'New Chat', icon: ChatText, color: tokens.colors.chat.primary, desc: 'Start a fresh conversation' },
     { id: 'workspace', label: 'Cowork', icon: UsersThree, color: tokens.colors.cowork.primary, desc: 'Launch collaborative workspace' },
     { id: 'browser', label: 'Browser', icon: Browser, color: '#60a5fa', desc: 'Secure agent-controlled browsing' },
     { id: 'code', label: 'Terminal', icon: Robot, color: tokens.colors.code.primary, desc: 'Open external dev environment' },

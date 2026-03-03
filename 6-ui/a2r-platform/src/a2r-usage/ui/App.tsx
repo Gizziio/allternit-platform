@@ -20,6 +20,11 @@ import { JobsView } from "@/views/code/JobsView"
 import { startJobRunner } from "@/lib/agents"
 import { ConsoleApp } from "@/a2r-usage/ui/console/ConsoleApp"
 import { DagIntegrationPage } from "@/views/DagIntegrationPage"
+// Working Surfaces
+import { ChatView } from "@/views/ChatView"
+import { CoworkRoot } from "@/views/cowork/CoworkRoot"
+import { CodeCanvas } from "@/views/code/CodeCanvas"
+import { BrowserChatPane } from "@/capsules/browser/BrowserChatPane"
 import type { PluginMeta, PluginOutput } from "@/a2r-usage/ui/lib/plugin-types"
 import { track } from "@/a2r-usage/ui/lib/analytics"
 import { getTrayIconSizePx, renderTrayBarsIcon } from "@/a2r-usage/ui/lib/tray-bars-icon"
@@ -325,6 +330,30 @@ function App() {
   useEffect(() => {
     invoke("init_panel").catch(console.error);
   }, []);
+
+  // Fetch agents on mount (for agent mode selection)
+  useEffect(() => {
+    let cancelled = false
+    const loadAgents = async () => {
+      try {
+        const { useAgentStore } = await import("@/lib/agents/agent.store")
+        // Fetch agents from registry API
+        const fetchAgents = useAgentStore.getState().fetchAgents
+        await fetchAgents()
+        if (!cancelled) {
+          console.log("[App] Agents fetched successfully")
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.warn("[App] Failed to fetch agents:", error)
+        }
+      }
+    }
+    void loadAgents()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   // Hide panel on Escape key (unless about dialog is open - it handles its own Escape)
   useEffect(() => {
@@ -861,6 +890,19 @@ function App() {
           providerIconUrl={navPlugins[0]?.iconUrl}
         />
       )
+    }
+    // Working Surfaces - Agent Sessions stay in their source surface
+    if (activeView === "chat") {
+      return <ChatView mode="chat" />;
+    }
+    if (activeView === "cowork") {
+      return <CoworkRoot />;
+    }
+    if (activeView === "code") {
+      return <CodeCanvas />;
+    }
+    if (activeView === "browser") {
+      return <BrowserChatPane />;
     }
     if (activeView === "cloud-deploy") {
       return <CloudDeployPage />;

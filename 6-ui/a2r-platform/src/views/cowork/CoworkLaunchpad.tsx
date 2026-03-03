@@ -25,7 +25,7 @@ import {
   Hammer,
   Wrench,
   Search,
-  ExternalLink,
+  ArrowUpRight,
   Download,
   ChevronRight
 } from 'lucide-react';

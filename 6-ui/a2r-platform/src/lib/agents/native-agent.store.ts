@@ -700,8 +700,16 @@ export const useNativeAgentStore = create<
             name,
             description,
             agentId: options.agentId,
+            agentName: options.agentName,
             model: options.runtimeModel,
             tags: options.tags,
+            // Send agent session fields directly for proper backend persistence
+            origin_surface: options.originSurface,
+            session_mode: options.sessionMode,
+            project_id: options.projectId,
+            workspace_scope: options.workspaceScope,
+            agent_features: options.agentFeatures,
+            // Also include in metadata for backwards compatibility
             metadata: buildAgentSessionMetadata({
               originSurface: options.originSurface,
               sessionMode: options.sessionMode,
@@ -743,6 +751,12 @@ export const useNativeAgentStore = create<
                 active: updates.isActive,
                 tags: updates.tags,
                 metadata: updates.metadata,
+                // Send agent session fields directly for proper backend persistence
+                origin_surface: (updates.metadata?.['a2r_origin_surface'] as any) || undefined,
+                session_mode: (updates.metadata?.['a2r_session_mode'] as any) || undefined,
+                project_id: (updates.metadata?.['a2r_project_id'] as any) || undefined,
+                workspace_scope: (updates.metadata?.['a2r_workspace_scope'] as any) || undefined,
+                agent_features: (updates.metadata?.['a2r_agent_features'] as any) || undefined,
               },
             );
             const updated = transformBackendSession(backendSession);

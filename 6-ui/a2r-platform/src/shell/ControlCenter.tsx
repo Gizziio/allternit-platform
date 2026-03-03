@@ -31,7 +31,7 @@ import {
   Wifi,
   Lock,
   Terminal,
-  ExternalLink,
+  ArrowUpRight,
   CheckCircle,
   AlertCircle,
   Plus,
@@ -852,7 +852,7 @@ function PlaceholderSection({
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-accent/20 text-accent hover:bg-accent/30 transition-colors text-sm"
         >
           <span>Open Cloud Deploy</span>
-          <ExternalLink className="w-4 h-4" />
+          <ArrowUpRight className="w-4 h-4" />
         </a>
       </div>
     </div>

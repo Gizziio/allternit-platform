@@ -73,7 +73,7 @@ const typeIcon: Record<PillType, React.ReactNode> = {
 // ─── State indicator ──────────────────────────────────────────────────────────
 function StateIndicator({ state }: { state: PillState }) {
   if (state === "running") {
-    return <MatrixLogo state="thinking" size={14} />;
+    return <MatrixLogo state="thinking" size={10} />;
   }
   if (state === "completed") {
     return (

@@ -1,7 +1,7 @@
 import React from 'react';
 import { GlassSurface } from '../design/GlassSurface';
 import { tokens } from '../design/tokens';
-import { ChatTeardropText, UsersThree, TerminalWindow, CaretLeft, CaretRight, SidebarSimple, Sun, Moon } from '@phosphor-icons/react';
+import { ChatText, UsersThree, TerminalWindow, CaretLeft, CaretRight, SidebarSimple, Sun, Moon } from '@phosphor-icons/react';
 
 export function FloatingModeSwitcher({ activeMode, onModeChange, onRailToggle, theme, onThemeToggle }: any) {
   return (
@@ -34,7 +34,7 @@ export function FloatingModeSwitcher({ activeMode, onModeChange, onRailToggle, t
         
         <div style={{ width: 1, height: 20, background: 'var(--border-subtle)' }} />
 
-        <ModePill active={activeMode === 'chat'} onClick={() => onModeChange('chat')} icon={ChatTeardropText} label="Chat" color={tokens.colors.chat.primary} />
+        <ModePill active={activeMode === 'chat'} onClick={() => onModeChange('chat')} icon={ChatText} label="Chat" color={tokens.colors.chat.primary} />
         <ModePill active={activeMode === 'cowork'} onClick={() => onModeChange('cowork')} icon={UsersThree} label="Cowork" color="#af52de" />
         <ModePill active={activeMode === 'code'} onClick={() => onModeChange('code')} icon={TerminalWindow} label="Code" color="#34c759" />
 

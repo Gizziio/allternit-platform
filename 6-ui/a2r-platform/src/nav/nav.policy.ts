@@ -16,6 +16,7 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   runner: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
   rails: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
   agent: { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
+  "agent-hub": { singleton: true, maxInstances: 1, allowNew: false, surface: "view", ownsTabs: false },
   
   // Mode-specific Agent Session views
   "chat-agent-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },

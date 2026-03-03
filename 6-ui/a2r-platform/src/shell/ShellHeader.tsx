@@ -4,7 +4,7 @@ import { tokens } from '../design/tokens';
 import { A2ROperatorStatus } from '../components/A2ROperatorStatus';
 import { EnvironmentSelector, EnvironmentType } from './EnvironmentSelector';
 import {
-  ChatTeardropText,
+  ChatText,
   UsersThree,
   TerminalWindow,
   CaretLeft,

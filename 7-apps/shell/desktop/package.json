@@ -14,7 +14,7 @@
   "scripts": {
     "dev": "concurrently \"npm run wait:ui && npm run dev:electron\" \"npm run dev:ui\"",
     "wait:ui": "wait-on http://localhost:5177 --timeout 60000 --interval 1000",
-    "dev:electron": "electron .",
+    "dev:electron": "electron . --remote-debugging-port=9222",
     "dev:ui": "cd ../web && pnpm dev",
     "build": "npm run build:ui && npm run build:electron",
     "build:ui": "cd ../web && pnpm build",

@@ -86,9 +86,24 @@ export interface CreateNativeAgentSessionRequest {
   name?: string;
   description?: string;
   agentId?: string;
+  agentName?: string;
   model?: string;
   tags?: string[];
   metadata?: Record<string, unknown>;
+  /** Origin surface (chat, cowork, code, browser) */
+  origin_surface?: "chat" | "cowork" | "code" | "browser";
+  /** Session mode (regular or agent) */
+  session_mode?: "regular" | "agent";
+  /** Project identifier */
+  project_id?: string;
+  /** Workspace scope path */
+  workspace_scope?: string;
+  /** Agent-specific features */
+  agent_features?: {
+    workspace?: boolean;
+    tools?: boolean;
+    automation?: boolean;
+  };
 }
 
 export interface SessionCreatedEvent extends BackendSessionSnapshot {
@@ -269,9 +284,16 @@ export const sessionApi = {
         name: options.name || "New Session",
         description: options.description,
         agent_id: options.agentId,
+        agent_name: options.agentName,
         model: options.model,
         tags: options.tags,
         metadata: options.metadata,
+        // Agent session metadata fields
+        origin_surface: options.origin_surface,
+        session_mode: options.session_mode,
+        project_id: options.project_id,
+        workspace_scope: options.workspace_scope,
+        agent_features: options.agent_features,
       }),
     });
     const data = await handleResponse<BackendSessionPayload>(response);
@@ -289,6 +311,15 @@ export const sessionApi = {
       active?: boolean;
       tags?: string[];
       metadata?: Record<string, unknown>;
+      origin_surface?: "chat" | "cowork" | "code" | "browser";
+      session_mode?: "regular" | "agent";
+      project_id?: string;
+      workspace_scope?: string;
+      agent_features?: {
+        workspace?: boolean;
+        tools?: boolean;
+        automation?: boolean;
+      };
     },
   ): Promise<BackendSession> {
     const response = await fetch(
@@ -296,7 +327,19 @@ export const sessionApi = {
       {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updates),
+        body: JSON.stringify({
+          name: updates.name,
+          description: updates.description,
+          active: updates.active,
+          tags: updates.tags,
+          metadata: updates.metadata,
+          // Agent session metadata fields
+          origin_surface: updates.origin_surface,
+          session_mode: updates.session_mode,
+          project_id: updates.project_id,
+          workspace_scope: updates.workspace_scope,
+          agent_features: updates.agent_features,
+        }),
       },
     );
     const data = await handleResponse<BackendSessionPayload>(response);

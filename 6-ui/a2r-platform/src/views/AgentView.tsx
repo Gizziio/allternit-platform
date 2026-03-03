@@ -25,6 +25,10 @@ import { useMonitorData, useMonitorShare, buildMonitorLink } from "./mail-monito
 import { MailMonitorPanel } from "./mail-monitor/MailMonitorPanel";
 import { CharacterLayerPanel } from "./agent-character/CharacterLayerPanel";
 import { CapsuleFrame } from "@/components/CapsuleFrame";
+import { AgentAvatar } from "@/components/avatar";
+import type { AvatarConfig } from "@/lib/agents/character.types";
+import { createDefaultAvatarConfig } from "@/lib/agents/character.types";
+import { AvatarCreatorStep } from "./agent-creation/AvatarCreatorStep";
 import { formatRelativeTime } from "@/lib/time";
 
 // UI Components
@@ -111,7 +115,9 @@ import {
   ThumbsUp,
   ThumbsDown,
   Gavel,
-  AppWindow
+  AppWindow,
+  Search,
+  Terminal
 } from "lucide-react";
 
 // ============================================================================
@@ -162,7 +168,7 @@ export function AgentView({ context }: AgentViewProps) {
   // Render based on view mode
   if (viewMode === 'create') {
     return (
-      <>
+      <div className="h-full w-full">
         <CreateAgentForm 
           onCancel={() => setIsCreating(false)}
           onShowForge={(name) => {
@@ -172,7 +178,7 @@ export function AgentView({ context }: AgentViewProps) {
           }}
         />
         {globalForgeVisible && (
-          <div 
+      <div 
             className="fixed inset-0 z-[100] flex items-center justify-center"
             style={{ backgroundColor: 'rgba(15, 23, 42, 0.98)' }}
           >
@@ -184,7 +190,7 @@ export function AgentView({ context }: AgentViewProps) {
             />
           </div>
         )}
-      </>
+      </div>
     );
   }
 
@@ -200,72 +206,138 @@ export function AgentView({ context }: AgentViewProps) {
         </div>
       );
     }
-    return <EditAgentForm agent={agent} onCancel={() => setIsEditing(null)} />;
+    return (
+      <div className="h-full w-full">
+        <EditAgentForm agent={agent} onCancel={() => setIsEditing(null)} />
+      </div>
+    );
   }
 
   if (viewMode === 'detail' && selectedAgentId) {
-    return <AgentDetailView agentId={selectedAgentId} />;
+    return (
+      <div className="h-full w-full">
+        <AgentDetailView agentId={selectedAgentId} />
+      </div>
+    );
   }
 
   // Default: Agent List View
   return (
-    <div className="flex h-full flex-col overflow-hidden">
-      {/* Header - Fixed with a2r branding (dark theme) */}
-      <div className="relative flex items-center justify-between p-6 border-b border-[rgba(255,255,255,0.08)] bg-gradient-to-r from-[#2A211A] to-[#1A1612] shrink-0">
-        {/* Decorative orb */}
-        <div className="absolute -right-8 -top-8 opacity-20 pointer-events-none">
-          <A2ROrb className="w-32 h-32" />
-        </div>
-        
-        <div className="relative z-10">
-          <A2RLogo size="lg" variant="horizontal" showText={true} />
-          <p className="text-[#9B9B9B] text-sm mt-1.5 font-medium">
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100%',
+      width: '100%',
+      background: STUDIO_THEME.bg,
+      overflow: 'hidden',
+      position: 'relative'
+    }}>
+      {/* Header */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '16px 24px',
+        borderBottom: `1px solid ${STUDIO_THEME.borderSubtle}`,
+        background: STUDIO_THEME.bg,
+        flexShrink: 0
+      }}>
+        <div>
+          <h1 style={{
+            fontSize: '20px',
+            fontWeight: 600,
+            color: STUDIO_THEME.textPrimary,
+            margin: 0,
+            fontFamily: 'Georgia, serif'
+          }}>
+            Agent Studio
+          </h1>
+          <p style={{
+            fontSize: '13px',
+            color: STUDIO_THEME.textSecondary,
+            margin: '4px 0 0 0'
+          }}>
             Create, manage, and orchestrate autonomous AI agents
           </p>
         </div>
         
-        <Button 
-          onClick={() => setIsCreating(true)} 
-          size="sm"
-          className="relative z-10 bg-gradient-to-r from-[#D4B08C] to-[#B08D6E] hover:from-[#C49A6C] hover:to-[#9A7B5A] text-[#1A1612] font-semibold border-0 shadow-md"
+        <button 
+          onClick={() => setIsCreating(true)}
+          style={{
+            padding: '8px 16px',
+            borderRadius: '6px',
+            background: `linear-gradient(to right, ${STUDIO_THEME.accent}, #B08D6E)`,
+            color: '#1A1612',
+            fontSize: '14px',
+            fontWeight: 600,
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}
         >
-          <Plus className="w-4 h-4 mr-2" />
+          <Plus style={{ width: 16, height: 16 }} />
           Create Agent
-        </Button>
+        </button>
       </div>
 
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-auto p-4">
+      <div style={{
+        flex: 1,
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        minHeight: 0,
+        position: 'relative'
+      }}>
         {error && error !== 'API_OFFLINE' && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
+          <Alert variant="destructive" className="mb-4 bg-red-900/50 border-red-500/50">
+            <AlertCircle className="h-4 w-4 text-red-400" />
+            <AlertDescription className="text-red-200">{error}</AlertDescription>
           </Alert>
         )}
 
         {error === 'API_OFFLINE' && (
-          <Alert className="mb-4 bg-amber-50 border-amber-200">
-            <AlertCircle className="h-4 w-4 text-amber-600" />
-            <AlertDescription className="text-amber-800">
-              API service is offline. Start it with: <code className="bg-amber-100 px-1 rounded">cd 6-apps/api && cargo run</code>
+          <Alert className="mb-4 bg-amber-900/30 border-amber-500/30">
+            <AlertCircle className="h-4 w-4 text-amber-400" />
+            <AlertDescription className="text-amber-200">
+              API service is offline. Start it with: <code className="bg-amber-900/50 px-2 py-0.5 rounded text-amber-300">cd 6-apps/api && cargo run</code>
             </AlertDescription>
           </Alert>
         )}
 
         {isLoadingAgents ? (
           <div className="flex items-center justify-center h-64">
-            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            <Loader2 className="w-8 h-8 animate-spin text-amber-400" />
           </div>
         ) : agents.length === 0 ? (
-          <EmptyAgentState onCreate={() => setIsCreating(true)} />
+          <EmptyAgentState 
+            onCreate={() => setIsCreating(true)} 
+            onCreateFromTemplate={(template) => {
+              // Store template in session storage for the create form to pick up
+              sessionStorage.setItem('agentTemplate', JSON.stringify(template));
+              setIsCreating(true);
+            }}
+          />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-            {agents.map(agent => (
-              <AgentCard 
-                key={agent.id} 
-                agent={agent} 
-                onClick={() => selectAgent(agent.id)}
-              />
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
+            gap: '16px',
+            padding: '8px'
+          }}>
+            {agents.map((agent, index) => (
+              <motion.div
+                key={agent.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05, duration: 0.3 }}
+              >
+                <AgentCard 
+                  agent={agent} 
+                  onClick={() => selectAgent(agent.id)}
+                />
+              </motion.div>
             ))}
           </div>
         )}
@@ -275,17 +347,20 @@ export function AgentView({ context }: AgentViewProps) {
 }
 
 // ============================================================================
-// Agent Card Component
+// Agent Card Component - Polished with inline styles
 // ============================================================================
 
 function AgentCard({ agent, onClick }: { agent: Agent; onClick: () => void }) {
+  const [isHovered, setIsHovered] = useState(false);
   const statusColor = getStatusColor(agent.status);
   const blueprint = parseCharacterBlueprint(agent.config);
   const setupId = blueprint?.setup || "generalist";
-  const setupMeta =
-    CHARACTER_SETUPS.find((setup) => setup.id === setupId) || null;
+  const setupMeta = CHARACTER_SETUPS.find((setup) => setup.id === setupId) || null;
   const agentCharacterStats = useAgentStore((state) => state.characterStats[agent.id]);
   const loadCharacterLayer = useAgentStore((state) => state.loadCharacterLayer);
+
+  // Get avatar config from agent config or use default
+  const avatarConfig = (agent.config?.avatar as AvatarConfig) || createDefaultAvatarConfig(setupId);
 
   useEffect(() => {
     if (!agentCharacterStats) {
@@ -293,16 +368,14 @@ function AgentCard({ agent, onClick }: { agent: Agent; onClick: () => void }) {
     }
   }, [agent.id, agentCharacterStats, loadCharacterLayer]);
   
-  // Get type icon
   const getTypeIcon = () => {
     switch (agent.type) {
-      case 'orchestrator': return <Network className="w-3.5 h-3.5" />;
-      case 'worker': return <Cog className="w-3.5 h-3.5" />;
-      default: return <Bot className="w-3.5 h-3.5" />;
+      case 'orchestrator': return <Network style={{ width: 14, height: 14 }} />;
+      case 'worker': return <Cog style={{ width: 14, height: 14 }} />;
+      default: return <Bot style={{ width: 14, height: 14 }} />;
     }
   };
   
-  // Get type label
   const getTypeLabel = () => {
     switch (agent.type) {
       case 'orchestrator': return 'Orchestrator';
@@ -315,154 +388,608 @@ function AgentCard({ agent, onClick }: { agent: Agent; onClick: () => void }) {
   const previewStatDefinitions = getSetupStatDefinitions(setupId)
     .filter((definition) => agentCharacterStats?.relevantStats.includes(definition.key))
     .slice(0, 2);
+
+  const statusColors: Record<string, string> = {
+    'online': '#22c55e',
+    'offline': '#6b7280',
+    'busy': '#f59e0b',
+    'error': '#ef4444'
+  };
   
   return (
-    <Card
-      className="cursor-pointer hover:border-[#D4B08C]/40 transition-all duration-300 bg-gradient-to-br from-[#2A211A] via-[#2A211A] to-[rgba(212,176,140,0.08)] hover:shadow-lg hover:shadow-[rgba(212,176,140,0.1)] group"
+    <motion.div
       onClick={onClick}
+      onHoverStart={() => setIsHovered(true)}
+      onHoverEnd={() => setIsHovered(false)}
+      whileHover={{ y: -4, transition: { duration: 0.2 } }}
+      style={{
+        cursor: 'pointer',
+        borderRadius: '12px',
+        border: `1px solid ${isHovered ? `${STUDIO_THEME.accent}50` : STUDIO_THEME.borderSubtle}`,
+        background: STUDIO_THEME.bgCard,
+        overflow: 'hidden',
+        boxShadow: isHovered ? '0 8px 24px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+        transition: 'all 0.3s ease'
+      }}
     >
-      <CardHeader className="p-4 pb-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            {/* Branded avatar with orb effect */}
-            <div className="relative w-10 h-10 rounded-full bg-gradient-to-br from-[#D4B08C]/10 to-[#B08D6E]/10 flex items-center justify-center shrink-0 group-hover:from-[#D4B08C]/15 group-hover:to-[#B08D6E]/15 transition-all">
-              <Bot className="w-5 h-5 text-[#D4B08C]" />
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-gradient-to-br from-[#D97757] to-[#B08D6E] border-2 border-[#2A211A]" />
+      <div style={{ padding: '16px' }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
+            {/* Avatar */}
+            <div style={{
+              width: '44px',
+              height: '44px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              position: 'relative'
+            }}>
+              <AgentAvatar 
+                config={avatarConfig}
+                size={44}
+                emotion="steady"
+                isAnimating={isHovered}
+              />
+              {/* Status indicator */}
+              <div style={{
+                position: 'absolute',
+                bottom: '-2px',
+                right: '-2px',
+                width: '14px',
+                height: '14px',
+                borderRadius: '50%',
+                background: statusColors[agent.status] || '#6b7280',
+                border: `2px solid ${STUDIO_THEME.bgCard}`
+              }} />
             </div>
-            <div className="min-w-0">
-              <CardTitle className="text-base font-semibold text-[#ECECEC] truncate group-hover:text-[#D4B08C] transition-colors">{agent.name}</CardTitle>
-              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                <BrandBadge 
-                  variant="default" 
-                  size="sm"
-                  icon={getTypeIcon()}
-                >
+            
+            {/* Name & Type */}
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <h3 style={{
+                fontSize: '16px',
+                fontWeight: 600,
+                color: isHovered ? STUDIO_THEME.accent : STUDIO_THEME.textPrimary,
+                margin: '0 0 6px 0',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                transition: 'color 0.2s ease'
+              }}>
+                {agent.name}
+              </h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                <span style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '2px 8px',
+                  borderRadius: '999px',
+                  background: `${STUDIO_THEME.accent}15`,
+                  color: STUDIO_THEME.accent,
+                  fontSize: '11px',
+                  fontWeight: 500,
+                  border: `1px solid ${STUDIO_THEME.accent}25`
+                }}>
+                  {getTypeIcon()}
                   {getTypeLabel()}
-                </BrandBadge>
+                </span>
                 {setupMeta && (
-                  <BrandBadge variant="secondary" size="sm">
+                  <span style={{
+                    padding: '2px 8px',
+                    borderRadius: '999px',
+                    background: 'rgba(255,255,255,0.06)',
+                    color: STUDIO_THEME.textSecondary,
+                    fontSize: '11px',
+                    fontWeight: 500
+                  }}>
                     {setupMeta.label}
-                  </BrandBadge>
+                  </span>
                 )}
                 {agentCharacterStats && (
-                  <>
-                    <BrandBadge variant="primary" size="sm">
-                      Lv{agentCharacterStats.level}
-                    </BrandBadge>
-                    <BrandBadge variant="default" size="sm" className="hidden sm:inline-flex">
-                      {agentCharacterStats.class}
-                    </BrandBadge>
-                  </>
+                  <span style={{
+                    padding: '2px 8px',
+                    borderRadius: '999px',
+                    background: 'rgba(59, 130, 246, 0.15)',
+                    color: '#60a5fa',
+                    fontSize: '11px',
+                    fontWeight: 500
+                  }}>
+                    Lv{agentCharacterStats.level}
+                  </span>
                 )}
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {agent.voice?.enabled && (
-              <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#B08D6E]/15">
-                <Volume2 className="w-3 h-3 text-[#D4B08C]" />
-              </div>
-            )}
-            <div className={`w-2.5 h-2.5 rounded-full ${statusColor} ring-2 ring-[#2A211A] shadow-sm`} />
-          </div>
+          
+          {/* Voice indicator */}
+          {agent.voice?.enabled && (
+            <div style={{
+              padding: '4px 8px',
+              borderRadius: '999px',
+              background: `${STUDIO_THEME.accent}15`,
+              border: `1px solid ${STUDIO_THEME.accent}25`,
+              display: 'flex',
+              alignItems: 'center'
+            }}>
+              <Volume2 style={{ width: 14, height: 14, color: STUDIO_THEME.accent }} />
+            </div>
+          )}
         </div>
-      </CardHeader>
-      <CardContent className="p-4 pt-0">
-        <p className="text-sm text-[#9B9B9B] line-clamp-2 leading-relaxed">
-          {agent.description}
+        
+        {/* Description */}
+        <p style={{
+          fontSize: '14px',
+          color: STUDIO_THEME.textSecondary,
+          margin: '12px 0 0 0',
+          lineHeight: 1.5,
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden'
+        }}>
+          {agent.description || "No description provided"}
         </p>
-        {blueprint && (
-          <div className="mt-3 rounded-lg border border-[rgba(255,255,255,0.08)] bg-gradient-to-br from-[#362B22]/50 to-[#2A211A]/30 p-2.5">
-            <div className="flex flex-wrap gap-1.5">
-              {blueprint.specialtySkills.slice(0, 2).map((skill) => (
-                <BrandBadge key={skill} variant="default" size="sm">
+        
+        {/* Skills */}
+        {blueprint && blueprint.specialtySkills.length > 0 && (
+          <div style={{
+            marginTop: '12px',
+            padding: '10px',
+            borderRadius: '8px',
+            background: 'rgba(0,0,0,0.2)',
+            border: `1px solid ${STUDIO_THEME.borderSubtle}`
+          }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {blueprint.specialtySkills.slice(0, 3).map((skill) => (
+                <span key={skill} style={{
+                  padding: '3px 10px',
+                  borderRadius: '6px',
+                  background: `${STUDIO_THEME.accent}15`,
+                  color: STUDIO_THEME.accent,
+                  fontSize: '12px',
+                  fontWeight: 500
+                }}>
                   {skill}
                   {typeof agentCharacterStats?.specialtyScores?.[skill] === "number" && (
-                    <span className="ml-0.5 text-[#9B9B9B]/70">
+                    <span style={{ marginLeft: '4px', opacity: 0.7 }}>
                       {agentCharacterStats.specialtyScores[skill]}
                     </span>
                   )}
-                </BrandBadge>
+                </span>
               ))}
-              {blueprint.specialtySkills.length > 2 && (
-                <BrandBadge variant="default" size="sm">
-                  +{blueprint.specialtySkills.length - 2}
-                </BrandBadge>
+              {blueprint.specialtySkills.length > 3 && (
+                <span style={{
+                  padding: '3px 10px',
+                  borderRadius: '6px',
+                  background: 'rgba(255,255,255,0.06)',
+                  color: STUDIO_THEME.textMuted,
+                  fontSize: '12px'
+                }}>
+                  +{blueprint.specialtySkills.length - 3}
+                </span>
               )}
             </div>
           </div>
         )}
+        
+        {/* Stats */}
         {agentCharacterStats && previewStatDefinitions.length > 0 && (
-          <div className="mt-3 space-y-2">
+          <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {previewStatDefinitions.map((definition) => (
-              <div key={definition.key} className="rounded-lg border border-[rgba(255,255,255,0.06)] bg-[#1A1612]/50 px-2.5 py-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-[#9B9B9B] font-medium">{definition.label}</span>
-                  <span className="font-semibold text-[#ECECEC]">
-                    {agentCharacterStats.stats[definition.key] ?? 0}
-                  </span>
-                </div>
+              <div key={definition.key} style={{
+                padding: '8px 10px',
+                borderRadius: '6px',
+                background: 'rgba(0,0,0,0.2)',
+                border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <span style={{ fontSize: '12px', color: STUDIO_THEME.textSecondary }}>
+                  {definition.label}
+                </span>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: STUDIO_THEME.textPrimary }}>
+                  {agentCharacterStats.stats[definition.key] ?? 0}
+                </span>
               </div>
             ))}
           </div>
         )}
-        <div className="flex flex-wrap gap-1.5 mt-4">
+        
+        {/* Capabilities */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '12px' }}>
           {agent.capabilities.slice(0, 3).map(cap => (
-            <Badge 
-              key={cap} 
-              variant="secondary" 
-              className="text-xs bg-[#362B22]/50 text-[#9B9B9B] hover:bg-[#362B22]/70 border border-[rgba(255,255,255,0.06)]"
-            >
+            <span key={cap} style={{
+              padding: '3px 10px',
+              borderRadius: '6px',
+              background: 'rgba(255,255,255,0.06)',
+              color: STUDIO_THEME.textSecondary,
+              fontSize: '12px',
+              border: `1px solid ${STUDIO_THEME.borderSubtle}`
+            }}>
               {cap}
-            </Badge>
+            </span>
           ))}
           {agent.capabilities.length > 3 && (
-            <Badge 
-              variant="outline" 
-              className="text-xs bg-transparent text-[#9B9B9B] border-[rgba(255,255,255,0.12)]"
-            >
+            <span style={{
+              padding: '3px 10px',
+              borderRadius: '6px',
+              background: 'transparent',
+              color: STUDIO_THEME.textMuted,
+              fontSize: '12px',
+              border: `1px solid ${STUDIO_THEME.borderSubtle}`
+            }}>
               +{agent.capabilities.length - 3}
-            </Badge>
+            </span>
           )}
         </div>
-      </CardContent>
-      <CardFooter className="pt-0 text-xs text-[#6E6E6E] font-medium">
-        <div className="flex items-center gap-1.5">
-          <Clock className="w-3 h-3" />
+      </div>
+      
+      {/* Footer */}
+      <div style={{
+        padding: '12px 16px',
+        borderTop: `1px solid ${STUDIO_THEME.borderSubtle}`,
+        background: 'rgba(0,0,0,0.15)'
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          fontSize: '12px',
+          color: STUDIO_THEME.textMuted
+        }}>
+          <Clock style={{ width: 14, height: 14 }} />
           Last run: {agent.lastRunAt ? formatRelativeTime(agent.lastRunAt) : 'Never'}
         </div>
-      </CardFooter>
-    </Card>
+      </div>
+    </motion.div>
   );
 }
 
 // ============================================================================
-// Empty State with a2r branding (dark theme)
+// Agent Template Types
 // ============================================================================
 
-function EmptyAgentState({ onCreate }: { onCreate: () => void }) {
+interface AgentTemplate {
+  id: string;
+  name: string;
+  description: string;
+  icon: React.ReactNode;
+  setup: AgentSetup;
+  capabilities: string[];
+  systemPrompt: string;
+  color: string;
+}
+
+const AGENT_TEMPLATES: AgentTemplate[] = [
+  {
+    id: 'code-assistant',
+    name: 'Code Assistant',
+    description: 'Expert in software development, code review, and debugging',
+    icon: <Terminal className="w-6 h-6" />,
+    setup: 'coding',
+    capabilities: ['code-generation', 'file-operations', 'terminal', 'planning', 'reasoning'],
+    systemPrompt: 'You are an expert software developer. Help users write, review, and debug code. Always follow best practices and provide clear explanations.',
+    color: '#3B82F6',
+  },
+  {
+    id: 'research-analyst',
+    name: 'Research Analyst',
+    description: 'Gathers information, analyzes data, and synthesizes reports',
+    icon: <Search className="w-6 h-6" />,
+    setup: 'research',
+    capabilities: ['web-search', 'memory', 'reasoning', 'planning', 'api-integration'],
+    systemPrompt: 'You are a thorough research analyst. Help users gather information, analyze data, and create comprehensive reports with proper citations.',
+    color: '#10B981',
+  },
+  {
+    id: 'creative-writer',
+    name: 'Creative Writer',
+    description: 'Creates engaging content, stories, and marketing copy',
+    icon: <Sparkles className="w-6 h-6" />,
+    setup: 'creative',
+    capabilities: ['planning', 'reasoning', 'memory', 'web-search'],
+    systemPrompt: 'You are a creative writer. Help users craft engaging content, stories, and copy. Be imaginative while maintaining clarity and purpose.',
+    color: '#F59E0B',
+  },
+  {
+    id: 'operations-manager',
+    name: 'Ops Manager',
+    description: 'Handles deployments, monitoring, and infrastructure tasks',
+    icon: <Settings className="w-6 h-6" />,
+    setup: 'operations',
+    capabilities: ['terminal', 'file-operations', 'planning', 'reasoning', 'database'],
+    systemPrompt: 'You are an operations manager. Help users with deployments, monitoring, and infrastructure. Prioritize safety and always confirm before making changes.',
+    color: '#EF4444',
+  },
+];
+
+// ============================================================================
+// Empty State - Matching ChatView Style
+// ============================================================================
+
+export const STUDIO_THEME = {
+  bg: '#2B2520',
+  bgCard: '#352F29',
+  textPrimary: '#ECECEC',
+  textSecondary: '#9B9B9B',
+  textMuted: '#6B6B6B',
+  accent: '#D4956A',
+  borderSubtle: 'rgba(255,255,255,0.06)',
+};
+
+interface EmptyAgentStateProps {
+  onCreate: () => void;
+  onCreateFromTemplate?: (template: AgentTemplate) => void;
+}
+
+function EmptyAgentState({ onCreate, onCreateFromTemplate }: EmptyAgentStateProps) {
+  const [showTemplates, setShowTemplates] = useState(false);
+
+  const handleTemplateClick = (template: AgentTemplate) => {
+    if (onCreateFromTemplate) {
+      onCreateFromTemplate(template);
+    } else {
+      sessionStorage.setItem('agentTemplate', JSON.stringify(template));
+      onCreate();
+    }
+  };
+
   return (
-    <div className="flex flex-col items-center justify-center h-[400px] border-2 border-dashed rounded-2xl border-[rgba(255,255,255,0.08)] bg-gradient-to-br from-[#2A211A]/50 to-[#1A1612]/30">
-      {/* Animated orb illustration */}
-      <div className="relative mb-6">
-        <A2ROrb className="w-24 h-24" />
-        <div className="absolute inset-0 flex items-center justify-center">
-          <Bot className="w-10 h-10 text-[#D4B08C]" />
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      width: '100%',
+      maxWidth: '640px',
+      minHeight: 'calc(100vh - 200px)',
+      padding: '48px 24px',
+      boxSizing: 'border-box',
+      margin: '0 auto'
+    }}>
+      {/* Logo/Icon Section */}
+      <div style={{ marginBottom: '48px', textAlign: 'center' }}>
+        <div style={{
+          width: '80px',
+          height: '80px',
+          borderRadius: '50%',
+          background: `linear-gradient(135deg, ${STUDIO_THEME.accent}20, ${STUDIO_THEME.accent}10)`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          margin: '0 auto 24px auto',
+          border: `1px solid ${STUDIO_THEME.accent}30`
+        }}>
+          <Bot style={{ width: 40, height: 40, color: STUDIO_THEME.accent }} />
+        </div>
+        
+        <h1 style={{
+          fontSize: '42px',
+          fontWeight: 500,
+          color: STUDIO_THEME.textPrimary,
+          margin: '0 0 16px 0',
+          fontFamily: 'Georgia, serif',
+          letterSpacing: '-0.02em'
+        }}>
+          Agent Studio
+        </h1>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', justifyContent: 'center', marginBottom: '32px' }}>
+          <div style={{ height: '1px', width: '32px', background: STUDIO_THEME.borderSubtle }} />
+          <p style={{
+            fontSize: '14px',
+            color: STUDIO_THEME.textSecondary,
+            margin: 0,
+            textTransform: 'uppercase',
+            letterSpacing: '0.15em'
+          }}>
+            Create & Manage AI Agents
+          </p>
+          <div style={{ height: '1px', width: '32px', background: STUDIO_THEME.borderSubtle }} />
+        </div>
+        
+        <p style={{
+          fontSize: '16px',
+          color: STUDIO_THEME.textSecondary,
+          textAlign: 'center',
+          maxWidth: '480px',
+          lineHeight: 1.6,
+          margin: '0 auto'
+        }}>
+          Create AI agents to automate tasks, assist with coding, conduct research, and more.
+        </p>
+      </div>
+
+      {/* Primary Actions */}
+      <div style={{
+        display: 'flex',
+        flexDirection: 'row',
+        gap: '12px',
+        marginBottom: '48px',
+        justifyContent: 'center'
+      }}>
+        <button 
+          onClick={onCreate}
+          style={{
+            padding: '12px 24px',
+            borderRadius: '8px',
+            background: `linear-gradient(to right, ${STUDIO_THEME.accent}, #B08D6E)`,
+            color: '#1A1612',
+            fontSize: '15px',
+            fontWeight: 600,
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+          }}
+        >
+          <Plus style={{ width: 18, height: 18 }} />
+          Create Custom Agent
+        </button>
+        
+        <button 
+          onClick={() => setShowTemplates(!showTemplates)}
+          style={{
+            padding: '12px 24px',
+            borderRadius: '8px',
+            background: 'transparent',
+            color: STUDIO_THEME.textPrimary,
+            fontSize: '15px',
+            fontWeight: 500,
+            border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+        >
+          <Sparkles style={{ width: 18, height: 18 }} />
+          {showTemplates ? 'Hide Templates' : 'Quick Start'}
+        </button>
+      </div>
+
+      {/* Templates Section */}
+      {showTemplates && (
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          style={{ width: '100%', marginBottom: '48px' }}
+        >
+          <h4 style={{
+            fontSize: '18px',
+            fontWeight: 600,
+            color: STUDIO_THEME.textPrimary,
+            marginBottom: '8px',
+            textAlign: 'center'
+          }}>
+            Choose a Template
+          </h4>
+          <p style={{
+            fontSize: '14px',
+            color: STUDIO_THEME.textSecondary,
+            textAlign: 'center',
+            marginBottom: '24px'
+          }}>
+            Start with a pre-configured agent
+          </p>
+          
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: '12px'
+          }}>
+            {AGENT_TEMPLATES.map((template) => (
+              <button
+                key={template.id}
+                onClick={() => handleTemplateClick(template)}
+                style={{
+                  padding: '16px',
+                  borderRadius: '12px',
+                  background: STUDIO_THEME.bgCard,
+                  border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px'
+                }}
+              >
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '8px',
+                  backgroundColor: `${template.color}20`,
+                  color: template.color,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  {template.icon}
+                </div>
+                <div>
+                  <h5 style={{
+                    fontSize: '15px',
+                    fontWeight: 600,
+                    color: STUDIO_THEME.textPrimary,
+                    margin: '0 0 4px 0'
+                  }}>
+                    {template.name}
+                  </h5>
+                  <p style={{
+                    fontSize: '13px',
+                    color: STUDIO_THEME.textSecondary,
+                    margin: 0,
+                    lineHeight: 1.4
+                  }}>
+                    {template.description}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Features */}
+      <div style={{
+        width: '100%',
+        borderTop: `1px solid ${STUDIO_THEME.borderSubtle}`,
+        paddingTop: '32px'
+      }}>
+        <div style={{
+          display: 'flex',
+          flexDirection: 'row',
+          gap: '24px',
+          justifyContent: 'center'
+        }}>
+          {[
+            { icon: <Cog style={{ width: 16, height: 16, color: STUDIO_THEME.accent }} />, title: 'Customizable', desc: 'Configure capabilities' },
+            { icon: <Network style={{ width: 16, height: 16, color: STUDIO_THEME.accent }} />, title: 'Multi-Agent', desc: 'Orchestrator support' },
+            { icon: <Shield style={{ width: 16, height: 16, color: STUDIO_THEME.accent }} />, title: 'Secure', desc: 'Built-in guardrails' },
+          ].map((feature, i) => (
+            <div key={i} style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '12px',
+              flex: 1
+            }}>
+              <div style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                background: `${STUDIO_THEME.accent}15`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                {feature.icon}
+              </div>
+              <div>
+                <h6 style={{
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  color: STUDIO_THEME.textPrimary,
+                  margin: '0 0 2px 0'
+                }}>
+                  {feature.title}
+                </h6>
+                <p style={{
+                  fontSize: '12px',
+                  color: STUDIO_THEME.textMuted,
+                  margin: 0
+                }}>
+                  {feature.desc}
+                </p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
-      
-      <h3 className="text-xl font-bold text-[#ECECEC] mb-2">No Agents Yet</h3>
-      <p className="text-[#9B9B9B] text-center max-w-md mb-6 leading-relaxed">
-        Create your first AI agent to start automating tasks with custom configurations, 
-        character layers, and autonomous capabilities.
-      </p>
-      <Button 
-        onClick={onCreate}
-        className="bg-gradient-to-r from-[#D4B08C] to-[#B08D6E] hover:from-[#C49A6C] hover:to-[#9A7B5A] text-[#1A1612] font-semibold border-0 shadow-lg hover:shadow-xl transition-all"
-      >
-        <Plus className="w-4 h-4 mr-2" />
-        Create Your First Agent
-      </Button>
     </div>
   );
 }
@@ -533,6 +1060,11 @@ const CREATE_FLOW_STEPS = [
     id: "character",
     label: "Character",
     description: "Setup, specialties, and policy card.",
+  },
+  {
+    id: "avatar",
+    label: "Avatar",
+    description: "Visual appearance and style.",
   },
   {
     id: "runtime",
@@ -917,9 +1449,10 @@ function buildSeedTelemetryEvents(blueprint: CreationBlueprintState): CharacterT
   return events;
 }
 
+
 function CreateAgentForm({ 
   onCancel, 
-  onShowForge 
+  onShowForge
 }: { 
   onCancel: () => void;
   onShowForge?: (agentName: string) => void;
@@ -959,6 +1492,16 @@ function CreateAgentForm({
   });
   const [cardSeed, setCardSeed] = useState<CreationCardSeedState>(setupSeedDefaults("coding"));
   const [activeStep, setActiveStep] = useState<CreateFlowStepId>("welcome");
+  
+  // Avatar state
+  const [avatarConfig, setAvatarConfig] = useState<AvatarConfig>(() => 
+    createDefaultAvatarConfig(blueprint.setup)
+  );
+  
+  // Update avatar when setup changes
+  useEffect(() => {
+    setAvatarConfig(createDefaultAvatarConfig(blueprint.setup));
+  }, [blueprint.setup]);
 
   // Voice presets state
   const [voices, setVoices] = useState<VoicePreset[]>([]);
@@ -1046,7 +1589,9 @@ function CreateAgentForm({
         ...(formData.config || {}),
         characterBlueprint: blueprint,
         characterSeed,
+        avatar: avatarConfig,
       },
+      avatar: avatarConfig,
     };
     // Show forge animation FIRST, then create agent after animation completes
     console.log('[CreateAgentForm] Showing forge animation, activeStep:', activeStep);
@@ -1234,32 +1779,204 @@ function CreateAgentForm({
   // Get icon for agent type
   const getTypeIcon = (typeId: string) => {
     switch (typeId) {
-      case 'orchestrator': return <Network className="w-5 h-5" />;
-      case 'worker': return <Cog className="w-5 h-5" />;
-      default: return <Bot className="w-5 h-5" />;
+      case 'orchestrator': return <Network style={{ width: 20, height: 20, color: STUDIO_THEME.textPrimary }} />;
+      case 'worker': return <Cog style={{ width: 20, height: 20, color: STUDIO_THEME.textPrimary }} />;
+      default: return <Bot style={{ width: 20, height: 20, color: STUDIO_THEME.textPrimary }} />;
     }
   };
 
+  // Common styles
+  const containerStyle: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    height: '100%',
+    maxHeight: '100vh',
+    padding: '24px',
+    overflow: 'auto',
+    background: STUDIO_THEME.bg,
+  };
+
+  const headerStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: '24px',
+  };
+
+  const titleStyle: React.CSSProperties = {
+    fontSize: '28px',
+    fontWeight: 500,
+    color: STUDIO_THEME.textPrimary,
+    margin: 0,
+    fontFamily: 'Georgia, serif',
+  };
+
+  const subtitleStyle: React.CSSProperties = {
+    fontSize: '14px',
+    color: STUDIO_THEME.textSecondary,
+    margin: '4px 0 0 0',
+  };
+
+  const sectionStyle = (isSelected: boolean, isCompleted: boolean): React.CSSProperties => ({
+    borderRadius: '8px',
+    border: `1px solid ${isSelected ? STUDIO_THEME.accent : isCompleted ? `${STUDIO_THEME.accent}60` : STUDIO_THEME.borderSubtle}`,
+    padding: '12px',
+    textAlign: 'left' as const,
+    transition: 'all 0.2s ease',
+    background: isSelected ? `${STUDIO_THEME.accent}15` : isCompleted ? `${STUDIO_THEME.accent}08` : STUDIO_THEME.bgCard,
+    cursor: 'pointer',
+    opacity: 1,
+  });
+
+  const stepLabelStyle = (isSelected: boolean): React.CSSProperties => ({
+    fontSize: '14px',
+    fontWeight: 500,
+    color: isSelected ? STUDIO_THEME.textPrimary : STUDIO_THEME.textSecondary,
+  });
+
+  const stepDescriptionStyle: React.CSSProperties = {
+    fontSize: '12px',
+    color: STUDIO_THEME.textMuted,
+    marginTop: '4px',
+  };
+
+  const formSectionStyle: React.CSSProperties = {
+    borderRadius: '12px',
+    border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+    background: STUDIO_THEME.bgCard,
+    padding: '24px',
+    marginBottom: '24px',
+  };
+
+  const sectionTitleStyle: React.CSSProperties = {
+    fontSize: '18px',
+    fontWeight: 600,
+    color: STUDIO_THEME.textPrimary,
+    margin: '0 0 16px 0',
+    fontFamily: 'Georgia, serif',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+  };
+
+  const sectionSubtitleStyle: React.CSSProperties = {
+    fontSize: '14px',
+    color: STUDIO_THEME.textSecondary,
+    margin: '0 0 20px 0',
+  };
+
+  const inputLabelStyle: React.CSSProperties = {
+    fontSize: '14px',
+    fontWeight: 500,
+    color: STUDIO_THEME.textPrimary,
+    marginBottom: '8px',
+    display: 'block',
+  };
+
+  const cardGridStyle: React.CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+    gap: '12px',
+  };
+
+  const typeCardStyle = (isSelected: boolean): React.CSSProperties => ({
+    borderRadius: '10px',
+    border: `1px solid ${isSelected ? STUDIO_THEME.accent : STUDIO_THEME.borderSubtle}`,
+    padding: '16px',
+    textAlign: 'left' as const,
+    transition: 'all 0.2s ease',
+    background: isSelected ? `${STUDIO_THEME.accent}10` : 'transparent',
+    cursor: 'pointer',
+  });
+
+  const badgeStyle = (isSelected: boolean): React.CSSProperties => ({
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '4px',
+    padding: '6px 12px',
+    borderRadius: '16px',
+    fontSize: '13px',
+    fontWeight: 500,
+    cursor: 'pointer',
+    border: `1px solid ${isSelected ? STUDIO_THEME.accent : STUDIO_THEME.borderSubtle}`,
+    background: isSelected ? `${STUDIO_THEME.accent}20` : 'transparent',
+    color: isSelected ? STUDIO_THEME.accent : STUDIO_THEME.textSecondary,
+    transition: 'all 0.2s ease',
+  });
+
+  const stickyFooterStyle: React.CSSProperties = {
+    position: 'sticky',
+    bottom: 0,
+    zIndex: 10,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '16px 20px',
+    background: `${STUDIO_THEME.bg}f0`,
+    backdropFilter: 'blur(10px)',
+    borderRadius: '12px',
+    border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+    marginTop: '24px',
+  };
+
+  const primaryButtonStyle: React.CSSProperties = {
+    padding: '10px 20px',
+    borderRadius: '8px',
+    background: `linear-gradient(to right, ${STUDIO_THEME.accent}, #B08D6E)`,
+    color: '#1A1612',
+    fontSize: '14px',
+    fontWeight: 600,
+    border: 'none',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+  };
+
+  const secondaryButtonStyle: React.CSSProperties = {
+    padding: '10px 20px',
+    borderRadius: '8px',
+    background: 'transparent',
+    color: STUDIO_THEME.textPrimary,
+    fontSize: '14px',
+    fontWeight: 500,
+    border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+    cursor: 'pointer',
+  };
+
+  const alertErrorStyle: React.CSSProperties = {
+    padding: '12px 16px',
+    borderRadius: '8px',
+    background: 'rgba(239, 68, 68, 0.1)',
+    border: '1px solid rgba(239, 68, 68, 0.3)',
+    color: '#ef4444',
+    marginBottom: '16px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+  };
+
   return (
-    <div className="flex h-full flex-col p-6 overflow-auto">
-      <div className="flex items-center justify-between mb-6">
+    <div style={containerStyle}>
+      <div style={headerStyle}>
         <div>
-          <h1 className="text-2xl font-bold">Create New Agent</h1>
-          <p className="text-muted-foreground">Configure your AI agent with voice, type, and capabilities</p>
+          <h1 style={titleStyle}>Create New Agent</h1>
+          <p style={subtitleStyle}>Configure your AI agent with voice, type, and capabilities</p>
         </div>
-        <Button variant="ghost" onClick={onCancel}>Cancel</Button>
+        <button onClick={onCancel} style={secondaryButtonStyle}>Cancel</button>
       </div>
 
       {error && (
-        <Alert variant="destructive" className="mb-4">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+        <div style={alertErrorStyle}>
+          <AlertCircle style={{ width: 16, height: 16 }} />
+          <span>{error}</span>
+        </div>
       )}
 
-      <form onSubmit={handleSubmit} className="max-w-4xl space-y-8">
-        <section className="rounded-lg border bg-muted/20 p-4">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+      <form onSubmit={handleSubmit} style={{ maxWidth: '900px', flex: 1, minHeight: 0 }}>
+        {/* Step Navigation */}
+        <div style={formSectionStyle}>
+          <div style={cardGridStyle}>
             {CREATE_FLOW_STEPS.map((step, idx) => {
               const selected = step.id === activeStep;
               const completed = idx < activeStepIndex && stepValidation[step.id];
@@ -1272,31 +1989,36 @@ function CreateAgentForm({
                   onClick={() => {
                     if (unlocked) setActiveStep(step.id);
                   }}
-                  className={`rounded-md border p-3 text-left transition-colors ${
-                    selected
-                      ? "border-primary bg-primary/10"
-                      : completed
-                      ? "border-primary/40 bg-primary/5"
-                      : "border-border bg-background"
-                  } ${!unlocked ? "opacity-50 cursor-not-allowed" : "hover:border-primary/40"}`}
+                  style={{
+                    ...sectionStyle(selected, completed),
+                    opacity: unlocked ? 1 : 0.5,
+                    cursor: unlocked ? 'pointer' : 'not-allowed',
+                  }}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{step.label}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={stepLabelStyle(selected)}>{step.label}</span>
                     {selected || completed ? (
-                      <CheckCircle className="h-4 w-4 text-primary" />
+                      <CheckCircle style={{ width: 16, height: 16, color: STUDIO_THEME.accent }} />
                     ) : (
-                      <Circle className="h-4 w-4 text-muted-foreground" />
+                      <Circle style={{ width: 16, height: 16, color: STUDIO_THEME.textMuted }} />
                     )}
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">{step.description}</p>
+                  <p style={stepDescriptionStyle}>{step.description}</p>
                 </button>
               );
             })}
           </div>
-          <div className="mt-3 rounded border border-border/60 bg-background px-3 py-2 text-xs text-muted-foreground">
+          <div style={{
+            marginTop: '12px',
+            padding: '10px 14px',
+            borderRadius: '6px',
+            border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+            fontSize: '12px',
+            color: STUDIO_THEME.textSecondary,
+          }}>
             Step {activeStepIndex + 1} of {CREATE_FLOW_STEPS.length}: {currentStepDescription}
           </div>
-        </section>
+        </div>
 
         <AnimatePresence mode="wait">
           <motion.div
@@ -1306,14 +2028,23 @@ function CreateAgentForm({
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.3 }}
           >
+        {/* WELCOME STEP */}
         {activeStep === "welcome" && (
-          <section className="space-y-8 py-8 relative overflow-hidden">
+          <section style={{ padding: '40px 0', position: 'relative', overflow: 'hidden' }}>
             {/* Animated Background Particles */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
               {[...Array(6)].map((_, i) => (
                 <motion.div
                   key={i}
-                  className="absolute w-2 h-2 rounded-full bg-primary/20"
+                  style={{
+                    position: 'absolute',
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: `${STUDIO_THEME.accent}30`,
+                    left: `${20 + i * 15}%`,
+                    top: `${60 + (i % 3) * 10}%`,
+                  }}
                   initial={{ 
                     x: Math.random() * 800 - 400, 
                     y: Math.random() * 600 - 300,
@@ -1330,31 +2061,45 @@ function CreateAgentForm({
                     delay: i * 0.5,
                     ease: "easeOut"
                   }}
-                  style={{
-                    left: `${20 + i * 15}%`,
-                    top: `${60 + (i % 3) * 10}%`,
-                  }}
                 />
               ))}
             </div>
 
-            <div className="text-center space-y-6 relative z-10">
+            <div style={{ textAlign: 'center', position: 'relative', zIndex: 10 }}>
               {/* Animated Icon with Orbiting Elements */}
-              <div className="relative w-32 h-32 mx-auto">
+              <div style={{ position: 'relative', width: 128, height: 128, margin: '0 auto 32px' }}>
                 {/* Orbiting dots */}
                 <motion.div
-                  className="absolute inset-0"
+                  style={{ position: 'absolute', inset: 0 }}
                   animate={{ rotate: 360 }}
                   transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
                 >
-                  <div className="absolute top-0 left-1/2 w-3 h-3 bg-blue-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.8)]" />
+                  <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: '50%',
+                    width: 12,
+                    height: 12,
+                    background: STUDIO_THEME.accent,
+                    borderRadius: '50%',
+                    boxShadow: `0 0 10px ${STUDIO_THEME.accent}80`,
+                  }} />
                 </motion.div>
                 <motion.div
-                  className="absolute inset-2"
+                  style={{ position: 'absolute', inset: 8 }}
                   animate={{ rotate: -360 }}
                   transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
                 >
-                  <div className="absolute bottom-0 left-1/2 w-2 h-2 bg-purple-500 rounded-full shadow-[0_0_10px_rgba(139,92,246,0.8)]" />
+                  <div style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: '50%',
+                    width: 8,
+                    height: 8,
+                    background: '#B08D6E',
+                    borderRadius: '50%',
+                    boxShadow: '0 0 10px rgba(176, 141, 110, 0.8)',
+                  }} />
                 </motion.div>
                 
                 {/* Main Icon */}
@@ -1367,7 +2112,17 @@ function CreateAgentForm({
                     damping: 15,
                     duration: 0.8 
                   }}
-                  className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-blue-500 via-purple-500 to-green-500 flex items-center justify-center shadow-[0_0_60px_rgba(59,130,246,0.4)]"
+                  style={{
+                    width: 96,
+                    height: 96,
+                    margin: '0 auto',
+                    borderRadius: '50%',
+                    background: `linear-gradient(135deg, ${STUDIO_THEME.accent}, #B08D6E)`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: `0 0 40px ${STUDIO_THEME.accent}40`,
+                  }}
                 >
                   <motion.div
                     animate={{ 
@@ -1380,20 +2135,30 @@ function CreateAgentForm({
                       ease: "easeInOut"
                     }}
                   >
-                    <Bot className="w-12 h-12 text-white" />
+                    <Bot style={{ width: 48, height: 48, color: '#fff' }} />
                   </motion.div>
                 </motion.div>
               </div>
 
               {/* Title with staggered animation */}
-              <div className="space-y-3">
+              <div style={{ marginBottom: '24px' }}>
                 <motion.h2 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2, duration: 0.5 }}
-                  className="text-4xl font-bold"
+                  style={{
+                    fontSize: '36px',
+                    fontWeight: 500,
+                    fontFamily: 'Georgia, serif',
+                    color: STUDIO_THEME.textPrimary,
+                    margin: '0 0 12px 0',
+                  }}
                 >
-                  <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-green-400 bg-clip-text text-transparent">
+                  <span style={{
+                    background: `linear-gradient(to right, ${STUDIO_THEME.accent}, #B08D6E)`,
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                  }}>
                     Create Your AI Agent
                   </span>
                 </motion.h2>
@@ -1401,7 +2166,13 @@ function CreateAgentForm({
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4, duration: 0.5 }}
-                  className="text-muted-foreground max-w-lg mx-auto text-lg"
+                  style={{
+                    fontSize: '16px',
+                    color: STUDIO_THEME.textSecondary,
+                    maxWidth: '480px',
+                    margin: '0 auto',
+                    lineHeight: 1.6,
+                  }}
                 >
                   Build intelligent agents that automate tasks, make decisions, and collaborate with your team.
                 </motion.p>
@@ -1410,7 +2181,15 @@ function CreateAgentForm({
 
             {/* Feature Cards with Stagger Animation */}
             <motion.div 
-              className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto relative z-10"
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                gap: '16px',
+                maxWidth: '800px',
+                margin: '0 auto 32px',
+                position: 'relative',
+                zIndex: 10,
+              }}
               initial="hidden"
               animate="visible"
               variants={{
@@ -1426,23 +2205,20 @@ function CreateAgentForm({
               {[
                 { 
                   icon: Sparkles, 
-                  color: "blue", 
                   title: "Define Personality", 
                   desc: "Configure creativity, verbosity, and temperament to match your workflow." 
                 },
                 { 
                   icon: Settings, 
-                  color: "purple", 
                   title: "Equip Tools", 
                   desc: "Grant capabilities like code generation, web search, and file operations." 
                 },
                 { 
                   icon: Network, 
-                  color: "green", 
                   title: "Deploy & Monitor", 
                   desc: "Launch your agent and track progress through checkpoints and telemetry." 
                 }
-              ].map((feature, i) => (
+              ].map((feature) => (
                 <motion.div
                   key={feature.title}
                   variants={{
@@ -1455,21 +2231,46 @@ function CreateAgentForm({
                     }
                   }}
                   whileHover={{ 
-                    scale: 1.05, 
+                    scale: 1.03, 
                     y: -5,
                     transition: { duration: 0.2 }
                   }}
-                  className="p-6 rounded-xl border bg-muted/20 space-y-3 cursor-pointer group hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10 transition-all"
+                  style={{
+                    padding: '24px',
+                    borderRadius: '12px',
+                    border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                    background: STUDIO_THEME.bgCard,
+                    cursor: 'pointer',
+                  }}
                 >
                   <motion.div 
-                    className={`w-12 h-12 rounded-full bg-${feature.color}-500/10 flex items-center justify-center group-hover:bg-${feature.color}-500/20 transition-colors`}
+                    style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: '50%',
+                      background: `${STUDIO_THEME.accent}15`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginBottom: '12px',
+                    }}
                     whileHover={{ rotate: 360 }}
                     transition={{ duration: 0.5 }}
                   >
-                    <feature.icon className={`w-6 h-6 text-${feature.color}-500`} />
+                    <feature.icon style={{ width: 24, height: 24, color: STUDIO_THEME.accent }} />
                   </motion.div>
-                  <h3 className="font-semibold text-lg">{feature.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
+                  <h3 style={{
+                    fontSize: '16px',
+                    fontWeight: 600,
+                    color: STUDIO_THEME.textPrimary,
+                    margin: '0 0 8px 0',
+                  }}>{feature.title}</h3>
+                  <p style={{
+                    fontSize: '13px',
+                    color: STUDIO_THEME.textSecondary,
+                    lineHeight: 1.5,
+                    margin: 0,
+                  }}>
                     {feature.desc}
                   </p>
                 </motion.div>
@@ -1478,37 +2279,40 @@ function CreateAgentForm({
 
             {/* CTA Button with enhanced animation */}
             <motion.div 
-              className="flex justify-center relative z-10"
+              style={{ display: 'flex', justifyContent: 'center', position: 'relative', zIndex: 10 }}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 1.2, duration: 0.5 }}
             >
-              <motion.div
+              <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                onClick={goToNextStep}
+                style={{
+                  ...primaryButtonStyle,
+                  padding: '14px 32px',
+                  fontSize: '16px',
+                }}
               >
-                <Button size="lg" onClick={goToNextStep} className="px-10 py-6 text-lg shadow-lg shadow-primary/25">
-                  <motion.span
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 1.4 }}
-                  >
-                    Get Started
-                  </motion.span>
-                  <motion.span
-                    animate={{ x: [0, 6, 0] }}
-                    transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
-                    className="ml-3"
-                  >
-                    →
-                  </motion.span>
-                </Button>
-              </motion.div>
+                <motion.span
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 1.4 }}
+                >
+                  Get Started
+                </motion.span>
+                <motion.span
+                  animate={{ x: [0, 6, 0] }}
+                  transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  →
+                </motion.span>
+              </motion.button>
             </motion.div>
 
             {/* Progress indicator */}
             <motion.div 
-              className="flex justify-center gap-2 relative z-10"
+              style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: '24px', position: 'relative', zIndex: 10 }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 1.5 }}
@@ -1516,10 +2320,14 @@ function CreateAgentForm({
               {[...Array(6)].map((_, i) => (
                 <motion.div
                   key={i}
-                  className="w-2 h-2 rounded-full bg-primary/30"
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: i === 0 ? STUDIO_THEME.accent : `${STUDIO_THEME.accent}40`,
+                  }}
                   animate={{ 
                     scale: i === 0 ? [1, 1.3, 1] : 1,
-                    backgroundColor: i === 0 ? 'rgba(59, 130, 246, 0.8)' : 'rgba(59, 130, 246, 0.3)'
                   }}
                   transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.1 }}
                 />
@@ -1528,57 +2336,73 @@ function CreateAgentForm({
           </section>
         )}
 
+        {/* IDENTITY STEP */}
         {activeStep === "identity" && (
-          <section className="space-y-6 animate-in fade-in slide-in-from-right-3 duration-300">
-            <div className="space-y-2">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-primary" />
+          <section style={formSectionStyle}>
+            <div style={{ marginBottom: '24px' }}>
+              <h2 style={sectionTitleStyle}>
+                <Sparkles style={{ width: 20, height: 20, color: STUDIO_THEME.accent }} />
                 Agent Identity
               </h2>
-              <p className="text-sm text-muted-foreground">
+              <p style={sectionSubtitleStyle}>
                 Define the ownership boundary and runtime role for this agent.
               </p>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="name">Agent Name</Label>
+            <div style={{ marginBottom: '20px' }}>
+              <label style={inputLabelStyle}>Agent Name</label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                 placeholder="e.g., Code Review Sentinel"
                 required
+                style={{
+                  background: STUDIO_THEME.bg,
+                  border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                  color: STUDIO_THEME.textPrimary,
+                }}
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+            <div style={{ marginBottom: '20px' }}>
+              <label style={inputLabelStyle}>Description</label>
               <Textarea
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
                 placeholder="What this agent owns and what it should deliver."
                 required
+                style={{
+                  background: STUDIO_THEME.bg,
+                  border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                  color: STUDIO_THEME.textPrimary,
+                  minHeight: '80px',
+                }}
               />
             </div>
 
-            <Separator />
+            <div style={{ height: 1, background: STUDIO_THEME.borderSubtle, margin: '24px 0' }} />
 
-            <div className="space-y-4">
-              <h3 className="font-semibold flex items-center gap-2">
-                <Network className="w-5 h-5 text-primary" />
+            <div style={{ marginBottom: '20px' }}>
+              <h3 style={{
+                fontSize: '16px',
+                fontWeight: 600,
+                color: STUDIO_THEME.textPrimary,
+                margin: '0 0 16px 0',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}>
+                <Network style={{ width: 18, height: 18, color: STUDIO_THEME.accent }} />
                 Agent Type
               </h3>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              <div style={cardGridStyle}>
                 {AGENT_TYPES.map((type) => (
                   <button
                     key={type.id}
                     type="button"
-                    className={`rounded-lg border p-4 text-left transition-all ${
-                      formData.type === type.id
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50"
-                    }`}
+                    style={typeCardStyle(formData.type === type.id)}
                     onClick={() =>
                       setFormData((prev) => ({
                         ...prev,
@@ -1587,29 +2411,33 @@ function CreateAgentForm({
                       }))
                     }
                   >
-                    <div className="mb-2 flex items-center gap-2">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                       {getTypeIcon(type.id)}
-                      <span className="font-medium">{type.name}</span>
+                      <span style={{ fontWeight: 500, color: STUDIO_THEME.textPrimary }}>{type.name}</span>
                       {formData.type === type.id && (
-                        <CheckCircle className="ml-auto h-4 w-4 text-primary" />
+                        <CheckCircle style={{ width: 16, height: 16, color: STUDIO_THEME.accent, marginLeft: 'auto' }} />
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground">{type.description}</p>
+                    <p style={{ fontSize: '12px', color: STUDIO_THEME.textSecondary, margin: 0 }}>{type.description}</p>
                   </button>
                 ))}
               </div>
             </div>
 
             {formData.type === "sub-agent" && (
-              <div className="space-y-2">
-                <Label htmlFor="parentAgent">Parent Orchestrator</Label>
+              <div style={{ marginTop: '20px' }}>
+                <label style={inputLabelStyle}>Parent Orchestrator</label>
                 <Select
                   value={formData.parentAgentId || ""}
                   onValueChange={(value) =>
                     setFormData((prev) => ({ ...prev, parentAgentId: value || undefined }))
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger style={{
+                    background: STUDIO_THEME.bg,
+                    border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                    color: STUDIO_THEME.textPrimary,
+                  }}>
                     <SelectValue
                       placeholder={
                         orchestrators.length === 0
@@ -1618,7 +2446,7 @@ function CreateAgentForm({
                       }
                     />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent style={{ background: STUDIO_THEME.bgCard, border: `1px solid ${STUDIO_THEME.borderSubtle}` }}>
                     {orchestrators.map((orch) => (
                       <SelectItem key={orch.id} value={orch.id}>
                         {orch.name}
@@ -1632,7 +2460,7 @@ function CreateAgentForm({
                   </SelectContent>
                 </Select>
                 {orchestrators.length === 0 && (
-                  <p className="text-xs text-amber-600">
+                  <p style={{ fontSize: '12px', color: '#f59e0b', marginTop: '8px' }}>
                     You need an orchestrator before creating a sub-agent.
                   </p>
                 )}
@@ -1641,23 +2469,26 @@ function CreateAgentForm({
           </section>
         )}
 
+        {/* PERSONALITY STEP */}
         {activeStep === "personality" && (
-          <section className="space-y-6 animate-in fade-in slide-in-from-right-3 duration-300">
-            <div className="space-y-2">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-primary" />
+          <section style={formSectionStyle}>
+            <div style={{ marginBottom: '24px' }}>
+              <h2 style={sectionTitleStyle}>
+                <Sparkles style={{ width: 20, height: 20, color: STUDIO_THEME.accent }} />
                 Personality Settings
               </h2>
-              <p className="text-sm text-muted-foreground">
+              <p style={sectionSubtitleStyle}>
                 Fine-tune how your agent thinks and communicates.
               </p>
             </div>
 
-            <div className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label>Creativity: {((formData.config as { personality?: { creativity?: number; verbosity?: number } })?.personality?.creativity ?? 50)}%</Label>
-                  <span className="text-xs text-muted-foreground">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <Label style={{ color: STUDIO_THEME.textPrimary }}>
+                    Creativity: {((formData.config as { personality?: { creativity?: number; verbosity?: number } })?.personality?.creativity ?? 50)}%
+                  </Label>
+                  <span style={{ fontSize: '12px', color: STUDIO_THEME.textSecondary }}>
                     {(((formData.config as { personality?: { creativity?: number; verbosity?: number } })?.personality?.creativity ?? 50) < 30) 
                       ? "Conservative" 
                       : (((formData.config as { personality?: { creativity?: number; verbosity?: number } })?.personality?.creativity ?? 50) > 70) 
@@ -1688,17 +2519,19 @@ function CreateAgentForm({
                   max={100}
                   step={1}
                 />
-                <p className="text-xs text-muted-foreground">
+                <p style={{ fontSize: '12px', color: STUDIO_THEME.textMuted, marginTop: '8px' }}>
                   Lower values produce more predictable responses. Higher values encourage creative problem-solving.
                 </p>
               </div>
 
-              <Separator />
+              <div style={{ height: 1, background: STUDIO_THEME.borderSubtle }} />
 
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label>Verbosity: {((formData.config as { personality?: { creativity?: number; verbosity?: number } })?.personality?.verbosity ?? 50)}%</Label>
-                  <span className="text-xs text-muted-foreground">
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <Label style={{ color: STUDIO_THEME.textPrimary }}>
+                    Verbosity: {((formData.config as { personality?: { creativity?: number; verbosity?: number } })?.personality?.verbosity ?? 50)}%
+                  </Label>
+                  <span style={{ fontSize: '12px', color: STUDIO_THEME.textSecondary }}>
                     {(((formData.config as { personality?: { creativity?: number; verbosity?: number } })?.personality?.verbosity ?? 50) < 30) 
                       ? "Concise" 
                       : (((formData.config as { personality?: { creativity?: number; verbosity?: number } })?.personality?.verbosity ?? 50) > 70) 
@@ -1729,7 +2562,7 @@ function CreateAgentForm({
                   max={100}
                   step={1}
                 />
-                <p className="text-xs text-muted-foreground">
+                <p style={{ fontSize: '12px', color: STUDIO_THEME.textMuted, marginTop: '8px' }}>
                   Controls response length. Lower values for brief answers, higher values for thorough explanations.
                 </p>
               </div>
@@ -1737,135 +2570,175 @@ function CreateAgentForm({
           </section>
         )}
 
+        {/* CHARACTER STEP */}
         {activeStep === "character" && (
-          <section className="space-y-6 animate-in fade-in slide-in-from-right-3 duration-300">
-            <div className="space-y-2">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-primary" />
-                Character Profile
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                Choose setup and specialties. Stats and level are projected from measurable telemetry signals.
-              </p>
+          <section style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div style={formSectionStyle}>
+              <div style={{ marginBottom: '24px' }}>
+                <h2 style={sectionTitleStyle}>
+                  <Sparkles style={{ width: 20, height: 20, color: STUDIO_THEME.accent }} />
+                  Character Profile
+                </h2>
+                <p style={sectionSubtitleStyle}>
+                  Choose setup and specialties. Stats and level are projected from measurable telemetry signals.
+                </p>
+              </div>
+
+              <div style={cardGridStyle}>
+                {CHARACTER_SETUPS.map((setup) => (
+                  <button
+                    key={setup.id}
+                    type="button"
+                    style={typeCardStyle(blueprint.setup === setup.id)}
+                    onClick={() => applySetupDefaults(setup.id)}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span style={{ fontWeight: 500, color: STUDIO_THEME.textPrimary }}>{setup.label}</span>
+                      {blueprint.setup === setup.id && <CheckCircle style={{ width: 16, height: 16, color: STUDIO_THEME.accent }} />}
+                    </div>
+                    <p style={{ fontSize: '12px', color: STUDIO_THEME.textSecondary, margin: '0 0 8px 0' }}>{setup.description}</p>
+                    <span style={{
+                      fontSize: '10px',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      background: `${STUDIO_THEME.accent}15`,
+                      color: STUDIO_THEME.accent,
+                    }}>
+                      class: {setup.className}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              {CHARACTER_SETUPS.map((setup) => (
-                <button
-                  key={setup.id}
-                  type="button"
-                  className={`text-left p-4 rounded-lg border transition-all ${
-                    blueprint.setup === setup.id
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-primary/50"
-                  }`}
-                  onClick={() => applySetupDefaults(setup.id)}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium">{setup.label}</span>
-                    {blueprint.setup === setup.id && <CheckCircle className="h-4 w-4 text-primary" />}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">{setup.description}</p>
-                  <Badge variant="outline" className="mt-2 text-[10px]">
-                    class: {setup.className}
-                  </Badge>
-                </button>
-              ))}
-            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+              <div style={formSectionStyle}>
+                <h3 style={{ fontSize: '16px', fontWeight: 600, color: STUDIO_THEME.textPrimary, margin: '0 0 16px 0' }}>Specialty Skills</h3>
+                <p style={{ fontSize: '13px', color: STUDIO_THEME.textSecondary, margin: '0 0 12px 0' }}>Select up to 4 specialties.</p>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <Label style={{ color: STUDIO_THEME.textPrimary }}>Specialties</Label>
+                  <span style={{
+                    fontSize: '11px',
+                    padding: '2px 8px',
+                    borderRadius: '10px',
+                    background: STUDIO_THEME.bg,
+                    color: STUDIO_THEME.textSecondary,
+                  }}>
+                    {blueprint.specialtySkills.length}/4 selected
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+                  {getSpecialtyOptions(blueprint.setup).map((skill) => {
+                    const selected = blueprint.specialtySkills.includes(skill);
+                    return (
+                      <span
+                        key={skill}
+                        style={badgeStyle(selected)}
+                        onClick={() => toggleSpecialty(skill)}
+                      >
+                        {selected && <CheckCircle style={{ width: 12, height: 12 }} />}
+                        {skill}
+                      </span>
+                    );
+                  })}
+                </div>
+                {blueprint.specialtySkills.length === 0 && (
+                  <p style={{ fontSize: '12px', color: '#f59e0b' }}>
+                    Select at least one specialty to project measurable skills.
+                  </p>
+                )}
+              </div>
 
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
-              <Card className="lg:col-span-3">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Specialty Skills</CardTitle>
-                  <CardDescription>Select up to 4 specialties.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label>Specialties</Label>
-                    <Badge variant="secondary">{blueprint.specialtySkills.length}/4 selected</Badge>
+              <div style={formSectionStyle}>
+                <h3 style={{ fontSize: '16px', fontWeight: 600, color: STUDIO_THEME.textPrimary, margin: '0 0 16px 0' }}>Projected Level</h3>
+                <p style={{ fontSize: '13px', color: STUDIO_THEME.textSecondary, margin: '0 0 12px 0' }}>Based on setup baseline + specialties.</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '13px', color: STUDIO_THEME.textSecondary }}>Class</span>
+                    <span style={{
+                      fontSize: '11px',
+                      padding: '2px 8px',
+                      borderRadius: '10px',
+                      border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                      color: STUDIO_THEME.textPrimary,
+                    }}>
+                      {projectedStats.class}
+                    </span>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {getSpecialtyOptions(blueprint.setup).map((skill) => {
-                      const selected = blueprint.specialtySkills.includes(skill);
-                      return (
-                        <Badge
-                          key={skill}
-                          variant={selected ? "default" : "outline"}
-                          className="cursor-pointer py-1.5 px-3"
-                          onClick={() => toggleSpecialty(skill)}
-                        >
-                          {selected && <CheckCircle className="w-3 h-3 mr-1" />}
-                          {skill}
-                        </Badge>
-                      );
-                    })}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '13px', color: STUDIO_THEME.textSecondary }}>Level</span>
+                    <span style={{ fontSize: '18px', fontWeight: 600, color: STUDIO_THEME.textPrimary }}>Lv {projectedStats.level}</span>
                   </div>
-                  {blueprint.specialtySkills.length === 0 && (
-                    <p className="text-xs text-amber-600">
-                      Select at least one specialty to project measurable skills.
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card className="lg:col-span-2">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Projected Level</CardTitle>
-                  <CardDescription>Based on setup baseline + specialties.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Class</span>
-                    <Badge variant="outline">{projectedStats.class}</Badge>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '13px', color: STUDIO_THEME.textSecondary }}>XP</span>
+                    <span style={{ fontSize: '13px', fontWeight: 500, color: STUDIO_THEME.textPrimary }}>{projectedStats.xp.toFixed(2)}</span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Level</span>
-                    <span className="text-lg font-semibold">Lv {projectedStats.level}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">XP</span>
-                    <span className="text-sm font-medium">{projectedStats.xp.toFixed(2)}</span>
-                  </div>
-                  <div className="space-y-2">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     {blueprint.specialtySkills.slice(0, 3).map((skill) => (
-                      <div key={skill} className="flex items-center justify-between rounded border px-2 py-1 text-xs">
-                        <span className="text-muted-foreground">{skill}</span>
-                        <span className="font-medium">{projectedStats.specialtyScores[skill] ?? 0}</span>
+                      <div key={skill} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '6px 10px',
+                        borderRadius: '6px',
+                        border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                        fontSize: '12px',
+                      }}>
+                        <span style={{ color: STUDIO_THEME.textSecondary }}>{skill}</span>
+                        <span style={{ color: STUDIO_THEME.textPrimary, fontWeight: 500 }}>{projectedStats.specialtyScores[skill] ?? 0}</span>
                       </div>
                     ))}
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Measured Setup Stats</Label>
-              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+            <div style={formSectionStyle}>
+              <h3 style={{ fontSize: '16px', fontWeight: 600, color: STUDIO_THEME.textPrimary, margin: '0 0 16px 0' }}>Measured Setup Stats</h3>
+              <div style={cardGridStyle}>
                 {setupStatDefinitions.map((definition) => {
                   const value = projectedStats.stats[definition.key] ?? 0;
                   return (
-                    <div key={definition.key} className="rounded-md border p-3">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-sm">{definition.label}</span>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-[10px]">
+                    <div key={definition.key} style={{
+                      padding: '16px',
+                      borderRadius: '8px',
+                      border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                      background: STUDIO_THEME.bg,
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <span style={{ fontWeight: 500, fontSize: '14px', color: STUDIO_THEME.textPrimary }}>{definition.label}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{
+                            fontSize: '10px',
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                            color: STUDIO_THEME.textSecondary,
+                          }}>
                             {definition.key}
-                          </Badge>
-                          <span className="text-xs font-semibold">{value}</span>
+                          </span>
+                          <span style={{ fontSize: '13px', fontWeight: 600, color: STUDIO_THEME.accent }}>{value}</span>
                         </div>
                       </div>
-                      <div className="mt-2 h-1.5 rounded-full bg-muted">
+                      <div style={{
+                        height: 6,
+                        borderRadius: '3px',
+                        background: STUDIO_THEME.bgCard,
+                        overflow: 'hidden',
+                      }}>
                         <div
-                          className="h-full rounded-full bg-primary transition-all"
-                          style={{ width: `${Math.max(4, value)}%` }}
+                          style={{
+                            height: '100%',
+                            borderRadius: '3px',
+                            background: `linear-gradient(to right, ${STUDIO_THEME.accent}, #B08D6E)`,
+                            width: `${Math.max(4, value)}%`,
+                            transition: 'width 0.3s ease',
+                          }}
                         />
                       </div>
-                      <p className="mt-2 text-xs text-muted-foreground">{definition.description}</p>
-                      <p className="text-[11px] text-muted-foreground mt-1">
+                      <p style={{ fontSize: '11px', color: STUDIO_THEME.textSecondary, margin: '8px 0 0 0' }}>{definition.description}</p>
+                      <p style={{ fontSize: '10px', color: STUDIO_THEME.textMuted, margin: '4px 0 0 0' }}>
                         Signals: {definition.signals.join(", ")}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground mt-1 font-mono break-all">
-                        Formula: {projectedFormulaByKey[definition.key] || "n/a"}
                       </p>
                     </div>
                   );
@@ -1873,19 +2746,23 @@ function CreateAgentForm({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Temperament</Label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+              <div style={formSectionStyle}>
+                <label style={inputLabelStyle}>Temperament</label>
                 <Select
                   value={blueprint.temperament}
                   onValueChange={(value) =>
                     setBlueprint((prev) => ({ ...prev, temperament: value as CreationTemperament }))
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger style={{
+                    background: STUDIO_THEME.bg,
+                    border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                    color: STUDIO_THEME.textPrimary,
+                  }}>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent style={{ background: STUDIO_THEME.bgCard, border: `1px solid ${STUDIO_THEME.borderSubtle}` }}>
                     <SelectItem value="precision">precision</SelectItem>
                     <SelectItem value="exploratory">exploratory</SelectItem>
                     <SelectItem value="systemic">systemic</SelectItem>
@@ -1893,88 +2770,139 @@ function CreateAgentForm({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>Setup Capabilities</Label>
-                <div className="rounded-md border p-3 text-sm text-muted-foreground">
+              <div style={formSectionStyle}>
+                <label style={inputLabelStyle}>Setup Capabilities</label>
+                <div style={{
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                  fontSize: '13px',
+                  color: STUDIO_THEME.textSecondary,
+                  background: STUDIO_THEME.bg,
+                }}>
                   {SETUP_CAPABILITY_PRESETS[blueprint.setup].join(", ")}
                 </div>
               </div>
             </div>
 
-            <Separator />
+            <div style={{ height: 1, background: STUDIO_THEME.borderSubtle }} />
 
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Role Domain Focus</Label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+              <div>
+                <label style={inputLabelStyle}>Role Domain Focus</label>
                 <Input
                   value={cardSeed.domainFocus}
                   onChange={(e) => setCardSeed((prev) => ({ ...prev, domainFocus: e.target.value }))}
                   placeholder="Domain ownership boundary"
+                  style={{
+                    background: STUDIO_THEME.bg,
+                    border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                    color: STUDIO_THEME.textPrimary,
+                  }}
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Voice Style</Label>
+              <div>
+                <label style={inputLabelStyle}>Voice Style</label>
                 <Input
                   value={cardSeed.voiceStyle}
                   onChange={(e) => setCardSeed((prev) => ({ ...prev, voiceStyle: e.target.value }))}
                   placeholder="Technical, direct, skeptical..."
+                  style={{
+                    background: STUDIO_THEME.bg,
+                    border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                    color: STUDIO_THEME.textPrimary,
+                  }}
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Definition of Done (one per line)</Label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+              <div>
+                <label style={inputLabelStyle}>Definition of Done (one per line)</label>
                 <Textarea
                   value={cardSeed.definitionOfDone}
                   onChange={(e) => setCardSeed((prev) => ({ ...prev, definitionOfDone: e.target.value }))}
                   rows={4}
+                  style={{
+                    background: STUDIO_THEME.bg,
+                    border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                    color: STUDIO_THEME.textPrimary,
+                  }}
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Escalation Triggers (one per line)</Label>
+              <div>
+                <label style={inputLabelStyle}>Escalation Triggers (one per line)</label>
                 <Textarea
                   value={cardSeed.escalationRules}
                   onChange={(e) => setCardSeed((prev) => ({ ...prev, escalationRules: e.target.value }))}
                   rows={4}
+                  style={{
+                    background: STUDIO_THEME.bg,
+                    border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                    color: STUDIO_THEME.textPrimary,
+                  }}
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Voice Rules (one per line)</Label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+              <div>
+                <label style={inputLabelStyle}>Voice Rules (one per line)</label>
                 <Textarea
                   value={cardSeed.voiceRules}
                   onChange={(e) => setCardSeed((prev) => ({ ...prev, voiceRules: e.target.value }))}
                   rows={4}
+                  style={{
+                    background: STUDIO_THEME.bg,
+                    border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                    color: STUDIO_THEME.textPrimary,
+                  }}
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Voice Micro-Bans (one per line)</Label>
+              <div>
+                <label style={inputLabelStyle}>Voice Micro-Bans (one per line)</label>
                 <Textarea
                   value={cardSeed.voiceMicroBans}
                   onChange={(e) => setCardSeed((prev) => ({ ...prev, voiceMicroBans: e.target.value }))}
                   rows={4}
+                  style={{
+                    background: STUDIO_THEME.bg,
+                    border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                    color: STUDIO_THEME.textPrimary,
+                  }}
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Hard Ban Categories</Label>
-                <Badge variant="secondary">{cardSeed.hardBanCategories.length} selected</Badge>
+            <div style={formSectionStyle}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <label style={inputLabelStyle}>Hard Ban Categories</label>
+                <span style={{
+                  fontSize: '11px',
+                  padding: '2px 8px',
+                  borderRadius: '10px',
+                  background: STUDIO_THEME.bg,
+                  color: STUDIO_THEME.textSecondary,
+                }}>
+                  {cardSeed.hardBanCategories.length} selected
+                </span>
               </div>
-              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+              <div style={cardGridStyle}>
                 {BAN_CATEGORY_OPTIONS.map((option) => {
                   const selected = cardSeed.hardBanCategories.includes(option.category);
                   return (
                     <button
                       key={option.category}
                       type="button"
-                      className={`rounded border p-3 text-left transition-colors ${
-                        selected ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
-                      }`}
+                      style={{
+                        padding: '12px',
+                        borderRadius: '8px',
+                        border: `1px solid ${selected ? STUDIO_THEME.accent : STUDIO_THEME.borderSubtle}`,
+                        background: selected ? `${STUDIO_THEME.accent}10` : 'transparent',
+                        textAlign: 'left' as const,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                      }}
                       onClick={() =>
                         setCardSeed((prev) => {
                           const exists = prev.hardBanCategories.includes(option.category);
@@ -1987,17 +2915,17 @@ function CreateAgentForm({
                         })
                       }
                     >
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-sm">{option.label}</span>
-                        {selected && <CheckCircle className="w-4 h-4 text-primary" />}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontWeight: 500, fontSize: '13px', color: STUDIO_THEME.textPrimary }}>{option.label}</span>
+                        {selected && <CheckCircle style={{ width: 16, height: 16, color: STUDIO_THEME.accent }} />}
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">{option.description}</p>
+                      <p style={{ fontSize: '11px', color: STUDIO_THEME.textSecondary, margin: '4px 0 0 0' }}>{option.description}</p>
                     </button>
                   );
                 })}
               </div>
               {cardSeed.hardBanCategories.length === 0 && (
-                <p className="text-xs text-amber-600">
+                <p style={{ fontSize: '12px', color: '#f59e0b', marginTop: '12px' }}>
                   Select at least one hard-ban category so tool blocking is enforceable.
                 </p>
               )}
@@ -2005,284 +2933,379 @@ function CreateAgentForm({
           </section>
         )}
 
-        {activeStep === "runtime" && (
-          <section className="space-y-6 animate-in fade-in slide-in-from-right-3 duration-300">
-            <div className="space-y-2">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <Settings className="w-5 h-5 text-primary" />
-                Runtime Configuration
+        {/* AVATAR STEP */}
+        {activeStep === "avatar" && (
+          <section style={{ minHeight: 0 }}>
+            <div style={{ marginBottom: '24px' }}>
+              <h2 style={sectionTitleStyle}>
+                <Sparkles style={{ width: 20, height: 20, color: STUDIO_THEME.accent }} />
+                Avatar Customization
               </h2>
-              <p className="text-sm text-muted-foreground">
-                Configure model, tooling, and runtime behaviors.
+              <p style={sectionSubtitleStyle}>
+                Design your agent's visual appearance and personality.
               </p>
             </div>
+            
+            <div style={{ height: '600px', minHeight: '500px' }}>
+              <AvatarCreatorStep
+                agentSetup={blueprint.setup}
+                agentTemperament={blueprint.temperament}
+                onAvatarChange={(config) => setAvatarConfig(config as AvatarConfig)}
+              />
+            </div>
+          </section>
+        )}
 
-            <section className="space-y-4">
-              <h3 className="font-semibold flex items-center gap-2">
-                <Bot className="w-5 h-5 text-primary" />
-                Model Configuration
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="model">Model</Label>
-                  <Select
-                    value={formData.model}
-                    onValueChange={(value) => setFormData((prev) => ({ ...prev, model: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {AGENT_MODELS.map((model) => (
-                        <SelectItem key={model.id} value={model.id}>
-                          {model.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+        {/* RUNTIME STEP */}
+        {activeStep === "runtime" && (
+          <section style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div style={formSectionStyle}>
+              <div style={{ marginBottom: '24px' }}>
+                <h2 style={sectionTitleStyle}>
+                  <Settings style={{ width: 20, height: 20, color: STUDIO_THEME.accent }} />
+                  Runtime Configuration
+                </h2>
+                <p style={sectionSubtitleStyle}>
+                  Configure model, tooling, and runtime behaviors.
+                </p>
+              </div>
+
+              <div style={{ marginBottom: '24px' }}>
+                <h3 style={{
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  color: STUDIO_THEME.textPrimary,
+                  margin: '0 0 16px 0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}>
+                  <Bot style={{ width: 18, height: 18, color: STUDIO_THEME.accent }} />
+                  Model Configuration
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+                  <div>
+                    <label style={inputLabelStyle}>Model</label>
+                    <Select
+                      value={formData.model}
+                      onValueChange={(value) => setFormData((prev) => ({ ...prev, model: value }))}
+                    >
+                      <SelectTrigger style={{
+                        background: STUDIO_THEME.bg,
+                        border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                        color: STUDIO_THEME.textPrimary,
+                      }}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent style={{ background: STUDIO_THEME.bgCard, border: `1px solid ${STUDIO_THEME.borderSubtle}` }}>
+                        {AGENT_MODELS.map((model) => (
+                          <SelectItem key={model.id} value={model.id}>
+                            {model.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label style={inputLabelStyle}>Provider</label>
+                    <Select
+                      value={formData.provider}
+                      onValueChange={(value) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          provider: value as CreateAgentInput["provider"],
+                        }))
+                      }
+                    >
+                      <SelectTrigger style={{
+                        background: STUDIO_THEME.bg,
+                        border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                        color: STUDIO_THEME.textPrimary,
+                      }}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent style={{ background: STUDIO_THEME.bgCard, border: `1px solid ${STUDIO_THEME.borderSubtle}` }}>
+                        <SelectItem value="openai">OpenAI</SelectItem>
+                        <SelectItem value="anthropic">Anthropic</SelectItem>
+                        <SelectItem value="local">Local</SelectItem>
+                        <SelectItem value="custom">Custom</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="provider">Provider</Label>
-                  <Select
-                    value={formData.provider}
-                    onValueChange={(value) =>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                  <div>
+                    <label style={inputLabelStyle}>Max Iterations: {formData.maxIterations}</label>
+                    <Slider
+                      value={[formData.maxIterations || 10]}
+                      onValueChange={([value]) => setFormData((prev) => ({ ...prev, maxIterations: value }))}
+                      min={1}
+                      max={50}
+                      step={1}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={inputLabelStyle}>Temperature: {formData.temperature}</label>
+                    <Slider
+                      value={[formData.temperature || 0.7]}
+                      onValueChange={([value]) => setFormData((prev) => ({ ...prev, temperature: value }))}
+                      min={0}
+                      max={2}
+                      step={0.1}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ height: 1, background: STUDIO_THEME.borderSubtle, margin: '24px 0' }} />
+
+              <div>
+                <h3 style={{
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  color: STUDIO_THEME.textPrimary,
+                  margin: '0 0 16px 0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}>
+                  <Headphones style={{ width: 18, height: 18, color: STUDIO_THEME.accent }} />
+                  Voice Settings
+                </h3>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '16px',
+                  borderRadius: '10px',
+                  border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                  marginBottom: '16px',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    {formData.voice?.enabled ? (
+                      <Volume2 style={{ width: 20, height: 20, color: '#22c55e' }} />
+                    ) : (
+                      <VolumeX style={{ width: 20, height: 20, color: STUDIO_THEME.textMuted }} />
+                    )}
+                    <div>
+                      <div style={{ fontWeight: 500, color: STUDIO_THEME.textPrimary }}>Enable Voice</div>
+                      <div style={{ fontSize: '13px', color: STUDIO_THEME.textSecondary }}>
+                        Allow this agent to speak responses using text-to-speech.
+                      </div>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={formData.voice?.enabled || false}
+                    onCheckedChange={(checked) =>
                       setFormData((prev) => ({
                         ...prev,
-                        provider: value as CreateAgentInput["provider"],
+                        voice: { voiceId: "default", ...prev.voice, enabled: checked },
                       }))
                     }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="openai">OpenAI</SelectItem>
-                      <SelectItem value="anthropic">Anthropic</SelectItem>
-                      <SelectItem value="local">Local</SelectItem>
-                      <SelectItem value="custom">Custom</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Max Iterations: {formData.maxIterations}</Label>
-                  <Slider
-                    value={[formData.maxIterations || 10]}
-                    onValueChange={([value]) => setFormData((prev) => ({ ...prev, maxIterations: value }))}
-                    min={1}
-                    max={50}
-                    step={1}
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Temperature: {formData.temperature}</Label>
-                  <Slider
-                    value={[formData.temperature || 0.7]}
-                    onValueChange={([value]) => setFormData((prev) => ({ ...prev, temperature: value }))}
-                    min={0}
-                    max={2}
-                    step={0.1}
-                  />
-                </div>
-              </div>
-            </section>
-
-            <Separator />
-
-            <section className="space-y-4">
-              <h3 className="font-semibold flex items-center gap-2">
-                <Headphones className="w-5 h-5 text-primary" />
-                Voice Settings
-              </h3>
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div className="flex items-center gap-3">
-                  {formData.voice?.enabled ? (
-                    <Volume2 className="w-5 h-5 text-green-500" />
-                  ) : (
-                    <VolumeX className="w-5 h-5 text-muted-foreground" />
-                  )}
-                  <div>
-                    <div className="font-medium">Enable Voice</div>
-                    <div className="text-sm text-muted-foreground">
-                      Allow this agent to speak responses using text-to-speech.
-                    </div>
-                  </div>
-                </div>
-                <Switch
-                  checked={formData.voice?.enabled || false}
-                  onCheckedChange={(checked) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      voice: { voiceId: "default", ...prev.voice, enabled: checked },
-                    }))
-                  }
-                />
-              </div>
-
-              {formData.voice?.enabled && (
-                <div className="space-y-4 border-l-2 border-primary/20 pl-4">
-                  <div className="space-y-2">
-                    <Label>Voice</Label>
-                    <div className="flex gap-2">
-                      <Select
-                        value={formData.voice?.voiceId || "default"}
-                        onValueChange={(value) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            voice: { enabled: true, voiceId: value, ...prev.voice },
-                          }))
-                        }
-                        disabled={voiceLoading}
-                      >
-                        <SelectTrigger className="flex-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {voices.map((voice) => (
-                            <SelectItem key={voice.id} value={voice.id}>
-                              <span className="flex items-center gap-2">
-                                <span
-                                  className={`h-2 w-2 rounded-full ${
-                                    voice.engine === "chatterbox"
-                                      ? "bg-blue-500"
-                                      : voice.engine === "xtts_v2"
-                                      ? "bg-purple-500"
-                                      : "bg-green-500"
-                                  }`}
-                                />
-                                {voice.label}
-                                {!voice.assetReady && " (download required)"}
-                              </span>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        onClick={handleVoicePreview}
-                        disabled={!formData.voice?.enabled || isPlaying}
-                      >
-                        {isPlaying ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Play className="w-4 h-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm">
-                        <div className="font-medium">Auto-Speak Responses</div>
-                        <div className="text-muted-foreground">
-                          Automatically speak all agent responses.
-                        </div>
+                {formData.voice?.enabled && (
+                  <div style={{
+                    borderLeft: `2px solid ${STUDIO_THEME.accent}40`,
+                    paddingLeft: '16px',
+                  }}>
+                    <div style={{ marginBottom: '16px' }}>
+                      <label style={inputLabelStyle}>Voice</label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <Select
+                          value={formData.voice?.voiceId || "default"}
+                          onValueChange={(value) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              voice: { enabled: true, voiceId: value, ...prev.voice },
+                            }))
+                          }
+                          disabled={voiceLoading}
+                        >
+                          <SelectTrigger style={{
+                            flex: 1,
+                            background: STUDIO_THEME.bg,
+                            border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                            color: STUDIO_THEME.textPrimary,
+                          }}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent style={{ background: STUDIO_THEME.bgCard, border: `1px solid ${STUDIO_THEME.borderSubtle}` }}>
+                            {voices.map((voice) => (
+                              <SelectItem key={voice.id} value={voice.id}>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <span
+                                    style={{
+                                      width: 8,
+                                      height: 8,
+                                      borderRadius: '50%',
+                                      background: voice.engine === "chatterbox"
+                                        ? "#3b82f6"
+                                        : voice.engine === "xtts_v2"
+                                        ? "#a855f7"
+                                        : "#22c55e",
+                                    }}
+                                  />
+                                  {voice.label}
+                                  {!voice.assetReady && " (download required)"}
+                                </span>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <button
+                          type="button"
+                          onClick={handleVoicePreview}
+                          disabled={!formData.voice?.enabled || isPlaying}
+                          style={{
+                            padding: '8px 12px',
+                            borderRadius: '8px',
+                            border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                            background: STUDIO_THEME.bg,
+                            color: STUDIO_THEME.textPrimary,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {isPlaying ? (
+                            <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />
+                          ) : (
+                            <Play style={{ width: 16, height: 16 }} />
+                          )}
+                        </button>
                       </div>
-                      <Switch
-                        checked={formData.voice?.autoSpeak || false}
-                        onCheckedChange={(checked) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            voice: { enabled: true, ...prev.voice, autoSpeak: checked },
-                          }))
-                        }
-                      />
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <div className="text-sm">
-                        <div className="font-medium">Speak on Checkpoint</div>
-                        <div className="text-muted-foreground">
-                          Voice summary when reaching checkpoints.
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: 500, color: STUDIO_THEME.textPrimary }}>Auto-Speak Responses</div>
+                          <div style={{ fontSize: '13px', color: STUDIO_THEME.textSecondary }}>Automatically speak all agent responses.</div>
                         </div>
+                        <Switch
+                          checked={formData.voice?.autoSpeak || false}
+                          onCheckedChange={(checked) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              voice: { enabled: true, ...prev.voice, autoSpeak: checked },
+                            }))
+                          }
+                        />
                       </div>
-                      <Switch
-                        checked={formData.voice?.speakOnCheckpoint || false}
-                        onCheckedChange={(checked) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            voice: { enabled: true, ...prev.voice, speakOnCheckpoint: checked },
-                          }))
-                        }
-                      />
+
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontSize: '14px', fontWeight: 500, color: STUDIO_THEME.textPrimary }}>Speak on Checkpoint</div>
+                          <div style={{ fontSize: '13px', color: STUDIO_THEME.textSecondary }}>Voice summary when reaching checkpoints.</div>
+                        </div>
+                        <Switch
+                          checked={formData.voice?.speakOnCheckpoint || false}
+                          onCheckedChange={(checked) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              voice: { enabled: true, ...prev.voice, speakOnCheckpoint: checked },
+                            }))
+                          }
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
-            </section>
-
-            <Separator />
-
-            <section className="space-y-4">
-              <h3 className="font-semibold flex items-center gap-2">
-                <Settings className="w-5 h-5 text-primary" />
-                Capabilities
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {AGENT_CAPABILITIES.map((cap) => (
-                  <Badge
-                    key={cap.id}
-                    variant={formData.capabilities?.includes(cap.id) ? "default" : "outline"}
-                    className="cursor-pointer py-1.5 px-3"
-                    onClick={() => toggleCapability(cap.id)}
-                  >
-                    {formData.capabilities?.includes(cap.id) && (
-                      <CheckCircle className="w-3 h-3 mr-1" />
-                    )}
-                    {cap.name}
-                  </Badge>
-                ))}
+                )}
               </div>
-            </section>
 
-            <Separator />
+              <div style={{ height: 1, background: STUDIO_THEME.borderSubtle, margin: '24px 0' }} />
 
-            <section className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold flex items-center gap-2">
-                  <Bot className="w-5 h-5 text-primary" />
-                  System Prompt
+              <div>
+                <h3 style={{
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  color: STUDIO_THEME.textPrimary,
+                  margin: '0 0 16px 0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}>
+                  <Settings style={{ width: 18, height: 18, color: STUDIO_THEME.accent }} />
+                  Capabilities
                 </h3>
-                <div className="flex gap-2">
-                  <input
-                    type="file"
-                    id="prompt-file"
-                    accept=".txt,.md,.prompt"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (event) => {
-                          const content = event.target?.result as string;
-                          setFormData((prev) => ({ ...prev, systemPrompt: content }));
-                        };
-                        reader.readAsText(file);
-                      }
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => document.getElementById('prompt-file')?.click()}
-                  >
-                    <Paperclip className="w-4 h-4 mr-2" />
-                    Load from File
-                  </Button>
-                  <Select
-                    value=""
-                    onValueChange={(value) => {
-                      if (value) {
-                        const templates: Record<string, string> = {
-                          'coding': `You are a senior software engineer with expertise in multiple programming languages.
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {AGENT_CAPABILITIES.map((cap) => (
+                    <span
+                      key={cap.id}
+                      style={badgeStyle(formData.capabilities?.includes(cap.id) || false)}
+                      onClick={() => toggleCapability(cap.id)}
+                    >
+                      {formData.capabilities?.includes(cap.id) && (
+                        <CheckCircle style={{ width: 12, height: 12 }} />
+                      )}
+                      {cap.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ height: 1, background: STUDIO_THEME.borderSubtle, margin: '24px 0' }} />
+
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                  <h3 style={{
+                    fontSize: '16px',
+                    fontWeight: 600,
+                    color: STUDIO_THEME.textPrimary,
+                    margin: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}>
+                    <Bot style={{ width: 18, height: 18, color: STUDIO_THEME.accent }} />
+                    System Prompt
+                  </h3>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                      type="file"
+                      id="prompt-file"
+                      accept=".txt,.md,.prompt"
+                      style={{ display: 'none' }}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            const content = event.target?.result as string;
+                            setFormData((prev) => ({ ...prev, systemPrompt: content }));
+                          };
+                          reader.readAsText(file);
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => document.getElementById('prompt-file')?.click()}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                        background: 'transparent',
+                        color: STUDIO_THEME.textPrimary,
+                        fontSize: '13px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <Paperclip style={{ width: 14, height: 14 }} />
+                      Load from File
+                    </button>
+                    <Select
+                      value=""
+                      onValueChange={(value) => {
+                        if (value) {
+                          const templates: Record<string, string> = {
+                            'coding': `You are a senior software engineer with expertise in multiple programming languages.
 
 ## Core Responsibilities:
 - Write clean, maintainable, and well-documented code
@@ -2293,7 +3316,7 @@ function CreateAgentForm({
 - Be concise but thorough
 - Provide code examples when helpful
 - Ask clarifying questions when requirements are unclear`,
-                          'creative': `You are a creative strategist and content creator.
+                            'creative': `You are a creative strategist and content creator.
 
 ## Core Responsibilities:
 - Generate innovative ideas and concepts
@@ -2304,7 +3327,7 @@ function CreateAgentForm({
 - Be imaginative and inspiring
 - Use vivid language and metaphors
 - Balance creativity with practical constraints`,
-                          'research': `You are a research analyst with expertise in data synthesis and evidence-based reasoning.
+                            'research': `You are a research analyst with expertise in data synthesis and evidence-based reasoning.
 
 ## Core Responsibilities:
 - Analyze information from multiple sources
@@ -2315,7 +3338,7 @@ function CreateAgentForm({
 - Be objective and evidence-based
 - Cite sources when possible
 - Acknowledge uncertainty and limitations`,
-                          'support': `You are a helpful customer support agent.
+                            'support': `You are a helpful customer support agent.
 
 ## Core Responsibilities:
 - Answer questions accurately and efficiently
@@ -2326,188 +3349,325 @@ function CreateAgentForm({
 - Be friendly and professional
 - Use clear, jargon-free language
 - Show empathy and patience`,
-                        };
-                        setFormData((prev) => ({ 
-                          ...prev, 
-                          systemPrompt: templates[value] || prev.systemPrompt 
-                        }));
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Load Template" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="coding">Coding Assistant</SelectItem>
-                      <SelectItem value="creative">Creative Writer</SelectItem>
-                      <SelectItem value="research">Research Analyst</SelectItem>
-                      <SelectItem value="support">Support Agent</SelectItem>
-                    </SelectContent>
-                  </Select>
+                          };
+                          setFormData((prev) => ({ 
+                            ...prev, 
+                            systemPrompt: templates[value] || prev.systemPrompt 
+                          }));
+                        }
+                      }}
+                    >
+                      <SelectTrigger style={{
+                        width: '140px',
+                        background: STUDIO_THEME.bg,
+                        border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                        color: STUDIO_THEME.textPrimary,
+                      }}>
+                        <SelectValue placeholder="Load Template" />
+                      </SelectTrigger>
+                      <SelectContent style={{ background: STUDIO_THEME.bgCard, border: `1px solid ${STUDIO_THEME.borderSubtle}` }}>
+                        <SelectItem value="coding">Coding Assistant</SelectItem>
+                        <SelectItem value="creative">Creative Writer</SelectItem>
+                        <SelectItem value="research">Research Analyst</SelectItem>
+                        <SelectItem value="support">Support Agent</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-              </div>
-              <div className="space-y-2">
                 <Textarea
                   id="systemPrompt"
                   value={formData.systemPrompt}
                   onChange={(e) => setFormData((prev) => ({ ...prev, systemPrompt: e.target.value }))}
                   placeholder="Instructions for the agent..."
                   rows={6}
-                  className="font-mono text-sm"
+                  style={{
+                    background: STUDIO_THEME.bg,
+                    border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                    color: STUDIO_THEME.textPrimary,
+                    fontFamily: 'monospace',
+                    fontSize: '13px',
+                  }}
                 />
-                <p className="text-xs text-muted-foreground">
+                <p style={{ fontSize: '12px', color: STUDIO_THEME.textMuted, marginTop: '8px' }}>
                   Define behavior constraints and runtime expectations. Load from file or choose a template to get started.
                 </p>
               </div>
-            </section>
+            </div>
           </section>
         )}
 
+        {/* REVIEW STEP */}
         {activeStep === "review" && (
-          <section className="space-y-6 animate-in fade-in slide-in-from-right-3 duration-300">
-            <div className="space-y-2">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-primary" />
-                Review and Forge
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                Final validation before creation. This summary is what gets compiled into the Character Layer.
-              </p>
-            </div>
+          <section style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div style={formSectionStyle}>
+              <div style={{ marginBottom: '24px' }}>
+                <h2 style={sectionTitleStyle}>
+                  <ShieldCheck style={{ width: 20, height: 20, color: STUDIO_THEME.accent }} />
+                  Review and Forge
+                </h2>
+                <p style={sectionSubtitleStyle}>
+                  Final validation before creation. This summary is what gets compiled into the Character Layer.
+                </p>
+              </div>
 
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-              <Card className="lg:col-span-2">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">{formData.name || "Unnamed Agent"}</CardTitle>
-                  <CardDescription>{formData.description || "No description yet."}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline">
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+                <div style={{
+                  padding: '20px',
+                  borderRadius: '12px',
+                  border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                  background: STUDIO_THEME.bg,
+                }}>
+                  <h3 style={{ fontSize: '16px', fontWeight: 600, color: STUDIO_THEME.textPrimary, margin: '0 0 8px 0' }}>
+                    {formData.name || "Unnamed Agent"}
+                  </h3>
+                  <p style={{ fontSize: '13px', color: STUDIO_THEME.textSecondary, margin: '0 0 16px 0' }}>
+                    {formData.description || "No description yet."}
+                  </p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
+                    <span style={{
+                      fontSize: '11px',
+                      padding: '4px 10px',
+                      borderRadius: '10px',
+                      border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                      color: STUDIO_THEME.textSecondary,
+                    }}>
                       {selectedTypeMeta?.name || formData.type}
-                    </Badge>
-                    {setupMeta && <Badge variant="secondary">{setupMeta.label}</Badge>}
-                    <Badge variant="outline">{projectedStats.class}</Badge>
-                    <Badge variant="outline">Lv {projectedStats.level}</Badge>
+                    </span>
+                    {setupMeta && (
+                      <span style={{
+                        fontSize: '11px',
+                        padding: '4px 10px',
+                        borderRadius: '10px',
+                        background: `${STUDIO_THEME.accent}15`,
+                        color: STUDIO_THEME.accent,
+                      }}>
+                        {setupMeta.label}
+                      </span>
+                    )}
+                    <span style={{
+                      fontSize: '11px',
+                      padding: '4px 10px',
+                      borderRadius: '10px',
+                      border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                      color: STUDIO_THEME.textSecondary,
+                    }}>
+                      {projectedStats.class}
+                    </span>
+                    <span style={{
+                      fontSize: '11px',
+                      padding: '4px 10px',
+                      borderRadius: '10px',
+                      border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                      color: STUDIO_THEME.textSecondary,
+                    }}>
+                      Lv {projectedStats.level}
+                    </span>
                   </div>
                   
                   {(() => {
                     const personality = (formData.config as { personality?: { creativity?: number; verbosity?: number } })?.personality;
                     if (!personality || (personality.creativity === undefined && personality.verbosity === undefined)) return null;
                     return (
-                      <div className="space-y-2">
-                        <Label className="text-xs uppercase tracking-wide text-muted-foreground">Personality</Label>
-                        <div className="flex flex-wrap gap-2">
+                      <div style={{ marginBottom: '16px' }}>
+                        <label style={{
+                          fontSize: '11px',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                          color: STUDIO_THEME.textMuted,
+                          marginBottom: '8px',
+                          display: 'block',
+                        }}>Personality</label>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                           {personality.creativity !== undefined && (
-                            <Badge variant="outline">Creativity: {personality.creativity}%</Badge>
+                            <span style={{
+                              fontSize: '11px',
+                              padding: '4px 10px',
+                              borderRadius: '10px',
+                              border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                              color: STUDIO_THEME.textSecondary,
+                            }}>
+                              Creativity: {personality.creativity}%
+                            </span>
                           )}
                           {personality.verbosity !== undefined && (
-                            <Badge variant="outline">Verbosity: {personality.verbosity}%</Badge>
+                            <span style={{
+                              fontSize: '11px',
+                              padding: '4px 10px',
+                              borderRadius: '10px',
+                              border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                              color: STUDIO_THEME.textSecondary,
+                            }}>
+                              Verbosity: {personality.verbosity}%
+                            </span>
                           )}
                         </div>
                       </div>
                     );
                   })()}
 
-                  <div className="space-y-2">
-                    <Label className="text-xs uppercase tracking-wide text-muted-foreground">Specialties</Label>
-                    <div className="flex flex-wrap gap-2">
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{
+                      fontSize: '11px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      color: STUDIO_THEME.textMuted,
+                      marginBottom: '8px',
+                      display: 'block',
+                    }}>Specialties</label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                       {blueprint.specialtySkills.map((skill) => (
-                        <Badge key={skill} variant="outline">
+                        <span key={skill} style={{
+                          fontSize: '11px',
+                          padding: '4px 10px',
+                          borderRadius: '10px',
+                          border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                          color: STUDIO_THEME.textSecondary,
+                        }}>
                           {skill} {projectedStats.specialtyScores[skill] ?? 0}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-xs uppercase tracking-wide text-muted-foreground">Hard Bans</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {cardSeed.hardBanCategories.map((category) => (
-                        <Badge key={category} variant="destructive">
-                          {category}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Projected Stats</CardTitle>
-                  <CardDescription>Derived from setup telemetry model.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {projectedStatEntries.map((entry) => (
-                    <div key={entry.key} className="space-y-1.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">
-                          {entry.definition?.label || entry.key} ({entry.key})
                         </span>
-                        <span className="font-medium">{entry.value}</span>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-muted">
-                        <div
-                          className="h-full rounded-full bg-primary"
-                          style={{ width: `${Math.max(4, entry.value)}%` }}
-                        />
-                      </div>
-                      <div className="text-[10px] text-muted-foreground font-mono break-all">
-                        {projectedFormulaByKey[entry.key] || ""}
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                  <div className="rounded border bg-muted/30 px-2 py-1.5 text-xs text-muted-foreground">
-                    XP {projectedStats.xp.toFixed(2)} from setup baseline + selected specialties + temperament.
                   </div>
-                </CardContent>
-              </Card>
+
+                  <div>
+                    <label style={{
+                      fontSize: '11px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                      color: STUDIO_THEME.textMuted,
+                      marginBottom: '8px',
+                      display: 'block',
+                    }}>Hard Bans</label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      {cardSeed.hardBanCategories.map((category) => (
+                        <span key={category} style={{
+                          fontSize: '11px',
+                          padding: '4px 10px',
+                          borderRadius: '10px',
+                          background: 'rgba(239, 68, 68, 0.15)',
+                          color: '#ef4444',
+                        }}>
+                          {category}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{
+                  padding: '20px',
+                  borderRadius: '12px',
+                  border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                  background: STUDIO_THEME.bg,
+                }}>
+                  <h3 style={{ fontSize: '16px', fontWeight: 600, color: STUDIO_THEME.textPrimary, margin: '0 0 8px 0' }}>Projected Stats</h3>
+                  <p style={{ fontSize: '13px', color: STUDIO_THEME.textSecondary, margin: '0 0 16px 0' }}>Derived from setup telemetry model.</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {projectedStatEntries.map((entry) => (
+                      <div key={entry.key}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <span style={{ fontSize: '12px', color: STUDIO_THEME.textSecondary }}>
+                            {entry.definition?.label || entry.key} ({entry.key})
+                          </span>
+                          <span style={{ fontSize: '13px', fontWeight: 500, color: STUDIO_THEME.textPrimary }}>{entry.value}</span>
+                        </div>
+                        <div style={{
+                          height: 6,
+                          borderRadius: '3px',
+                          background: STUDIO_THEME.bgCard,
+                          overflow: 'hidden',
+                        }}>
+                          <div
+                            style={{
+                              height: '100%',
+                              borderRadius: '3px',
+                              background: `linear-gradient(to right, ${STUDIO_THEME.accent}, #B08D6E)`,
+                              width: `${Math.max(4, entry.value)}%`,
+                            }}
+                          />
+                        </div>
+                        <div style={{ fontSize: '10px', color: STUDIO_THEME.textMuted, marginTop: '2px', fontFamily: 'monospace' }}>
+                          {projectedFormulaByKey[entry.key] || ""}
+                        </div>
+                      </div>
+                    ))}
+                    <div style={{
+                      padding: '10px',
+                      borderRadius: '6px',
+                      border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                      background: STUDIO_THEME.bgCard,
+                      fontSize: '12px',
+                      color: STUDIO_THEME.textSecondary,
+                    }}>
+                      XP {projectedStats.xp.toFixed(2)} from setup baseline + selected specialties + temperament.
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </section>
         )}
           </motion.div>
         </AnimatePresence>
 
-        <div className="sticky bottom-0 z-10 flex items-center justify-between rounded-lg border bg-background/95 p-4 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-          <div className="text-xs text-muted-foreground">
+        {/* Sticky Footer */}
+        <div style={stickyFooterStyle}>
+          <div style={{ fontSize: '12px', color: STUDIO_THEME.textSecondary }}>
             {!stepValidation[activeStep]
               ? "Complete required fields in this step to continue."
               : activeStep === "review"
               ? "All checks passed. Forge will animate and compile the character layer."
               : "Step complete. Continue to the next stage."}
           </div>
-          <div className="flex items-center gap-3">
-            <Button
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button
               type="button"
-              variant="outline"
               onClick={goToPreviousStep}
               disabled={activeStepIndex <= 0 || isCreating}
+              style={{
+                ...secondaryButtonStyle,
+                opacity: activeStepIndex <= 0 || isCreating ? 0.5 : 1,
+                cursor: activeStepIndex <= 0 || isCreating ? 'not-allowed' : 'pointer',
+              }}
             >
               Back
-            </Button>
+            </button>
             {activeStep !== "review" ? (
-              <Button
+              <button
                 type="button"
                 onClick={goToNextStep}
                 disabled={!stepValidation[activeStep] || isCreating}
+                style={{
+                  ...primaryButtonStyle,
+                  opacity: !stepValidation[activeStep] || isCreating ? 0.5 : 1,
+                  cursor: !stepValidation[activeStep] || isCreating ? 'not-allowed' : 'pointer',
+                }}
               >
                 Next: {CREATE_FLOW_STEPS[activeStepIndex + 1]?.label || "Review"}
-              </Button>
+              </button>
             ) : (
-              <Button type="submit" size="lg" disabled={isCreating || !isReadyForCreate}>
+              <button
+                type="submit"
+                disabled={isCreating || !isReadyForCreate}
+                style={{
+                  ...primaryButtonStyle,
+                  padding: '12px 24px',
+                  opacity: isCreating || !isReadyForCreate ? 0.5 : 1,
+                  cursor: isCreating || !isReadyForCreate ? 'not-allowed' : 'pointer',
+                }}
+              >
                 {isCreating ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />
                     Creating...
                   </>
                 ) : (
                   <>
-                    <Bot className="w-4 h-4 mr-2" />
+                    <Bot style={{ width: 16, height: 16 }} />
                     Create Agent
                   </>
                 )}
-              </Button>
+              </button>
             )}
           </div>
         </div>
@@ -2900,7 +4060,7 @@ function EditAgentForm({ agent, onCancel }: { agent: Agent; onCancel: () => void
 }
 
 // ============================================================================
-// Agent Detail View
+// Agent Detail View - STUDIO_THEME Styling
 // ============================================================================
 
 function AgentDetailView({ agentId }: { agentId: string }) {
@@ -2932,6 +4092,11 @@ function AgentDetailView({ agentId }: { agentId: string }) {
   } = useAgentStore();
 
   const agent = agents.find(a => a.id === agentId);
+  
+  // Get avatar config
+  const blueprint = parseCharacterBlueprint(agent?.config);
+  const setupId = blueprint?.setup || "generalist";
+  const avatarConfig = (agent?.config?.avatar as AvatarConfig) || createDefaultAvatarConfig(setupId);
   const agentRuns = runs[agentId] || [];
   const agentTasks = tasks[agentId] || [];
   const agentCheckpoints = checkpoints[agentId] || [];
@@ -2977,249 +4142,539 @@ function AgentDetailView({ agentId }: { agentId: string }) {
     }
   };
 
+  const statusColors: Record<string, string> = {
+    'online': '#22c55e',
+    'offline': '#6b7280',
+    'busy': '#f59e0b',
+    'error': '#ef4444',
+    'running': '#f59e0b',
+    'completed': '#22c55e',
+    'failed': '#ef4444',
+    'idle': '#9B9B9B',
+    'pending': '#9B9B9B',
+  };
+
   return (
-    <div className="flex h-full">
+    <div style={{ display: 'flex', height: '100%', background: STUDIO_THEME.bg }}>
       {/* Left Sidebar - Agent Info */}
-      <div className="w-80 border-r p-4 space-y-4 overflow-auto">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => selectAgent(null)}>
+      <div style={{
+        width: '320px',
+        borderRight: `1px solid ${STUDIO_THEME.borderSubtle}`,
+        padding: '16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px',
+        overflow: 'auto',
+        background: STUDIO_THEME.bg,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button
+            onClick={() => selectAgent(null)}
+            style={{
+              padding: '8px 12px',
+              borderRadius: '8px',
+              background: 'transparent',
+              border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+              color: STUDIO_THEME.textSecondary,
+              fontSize: '13px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
             ← Back
-          </Button>
+          </button>
         </div>
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <Bot className="w-6 h-6 text-primary" />
+        {/* Agent Info Card */}
+        <div style={{
+          borderRadius: '12px',
+          border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+          background: STUDIO_THEME.bgCard,
+          overflow: 'hidden',
+        }}>
+          <div style={{ padding: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <div style={{
+                width: '56px',
+                height: '56px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
+              }}>
+                <AgentAvatar 
+                  config={avatarConfig}
+                  size={56}
+                  emotion={agent.status === 'running' ? 'focused' : agent.status === 'error' ? 'skeptical' : 'steady'}
+                  isAnimating={true}
+                />
+                <div style={{
+                  position: 'absolute',
+                  bottom: '0px',
+                  right: '0px',
+                  width: '14px',
+                  height: '14px',
+                  borderRadius: '50%',
+                  background: statusColors[agent.status] || '#6b7280',
+                  border: `2px solid ${STUDIO_THEME.bgCard}`,
+                }} />
               </div>
               <div>
-                <CardTitle className="text-base">{agent.name}</CardTitle>
-                <div className="flex items-center gap-2 mt-1">
-                  <div className={`w-2 h-2 rounded-full ${getStatusColor(agent.status)}`} />
-                  <span className="text-xs text-muted-foreground capitalize">
+                <h3 style={{
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  color: STUDIO_THEME.textPrimary,
+                  margin: '0 0 4px 0',
+                  fontFamily: 'Georgia, serif',
+                }}>
+                  {agent.name}
+                </h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: statusColors[agent.status] || '#6b7280',
+                  }} />
+                  <span style={{
+                    fontSize: '12px',
+                    color: STUDIO_THEME.textSecondary,
+                    textTransform: 'capitalize',
+                  }}>
                     {agent.status}
                   </span>
                   {eventStreamConnected && (
-                    <Badge variant="outline" className="text-xs">
+                    <span style={{
+                      padding: '2px 8px',
+                      borderRadius: '999px',
+                      border: `1px solid ${STUDIO_THEME.accent}40`,
+                      color: STUDIO_THEME.accent,
+                      fontSize: '10px',
+                      fontWeight: 500,
+                    }}>
                       ● Live
-                    </Badge>
+                    </span>
                   )}
                 </div>
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
+
+            <p style={{
+              fontSize: '13px',
+              color: STUDIO_THEME.textSecondary,
+              lineHeight: 1.5,
+              marginBottom: '16px',
+            }}>
               {agent.description}
             </p>
 
-            <div className="space-y-2">
-              <Label className="text-xs">Type</Label>
-              <div className="flex items-center gap-2">
-                {agent.type === 'orchestrator' && <Network className="w-4 h-4" />}
-                {agent.type === 'sub-agent' && <Bot className="w-4 h-4" />}
-                {agent.type === 'worker' && <Cog className="w-4 h-4" />}
-                <span className="text-sm capitalize">{agent.type || 'worker'}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{
+                  fontSize: '11px',
+                  color: STUDIO_THEME.textMuted,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  display: 'block',
+                  marginBottom: '4px',
+                }}>
+                  Type
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {agent.type === 'orchestrator' && <Network style={{ width: 16, height: 16, color: STUDIO_THEME.textSecondary }} />}
+                  {agent.type === 'sub-agent' && <Bot style={{ width: 16, height: 16, color: STUDIO_THEME.textSecondary }} />}
+                  {agent.type === 'worker' && <Cog style={{ width: 16, height: 16, color: STUDIO_THEME.textSecondary }} />}
+                  <span style={{
+                    fontSize: '13px',
+                    color: STUDIO_THEME.textPrimary,
+                    textTransform: 'capitalize',
+                  }}>
+                    {agent.type || 'worker'}
+                  </span>
+                </div>
+                {agent.parentAgentId && (
+                  <div style={{
+                    fontSize: '11px',
+                    color: STUDIO_THEME.textMuted,
+                    marginTop: '4px',
+                  }}>
+                    Parent: {agents.find(a => a.id === agent.parentAgentId)?.name || agent.parentAgentId}
+                  </div>
+                )}
               </div>
-              {agent.parentAgentId && (
-                <div className="text-xs text-muted-foreground">
-                  Parent: {agents.find(a => a.id === agent.parentAgentId)?.name || agent.parentAgentId}
+
+              <div>
+                <label style={{
+                  fontSize: '11px',
+                  color: STUDIO_THEME.textMuted,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  display: 'block',
+                  marginBottom: '4px',
+                }}>
+                  Model
+                </label>
+                <div style={{ fontSize: '13px', color: STUDIO_THEME.textPrimary }}>{agent.model}</div>
+              </div>
+
+              <div>
+                <label style={{
+                  fontSize: '11px',
+                  color: STUDIO_THEME.textMuted,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  display: 'block',
+                  marginBottom: '4px',
+                }}>
+                  Temperature
+                </label>
+                <div style={{ fontSize: '13px', color: STUDIO_THEME.textPrimary }}>{agent.temperature}</div>
+              </div>
+
+              {agent.voice?.enabled && (
+                <div>
+                  <label style={{
+                    fontSize: '11px',
+                    color: STUDIO_THEME.textMuted,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    marginBottom: '4px',
+                  }}>
+                    <Volume2 style={{ width: 12, height: 12 }} />
+                    Voice
+                  </label>
+                  <div style={{ fontSize: '13px', color: STUDIO_THEME.textPrimary, marginBottom: '8px' }}>
+                    {agent.voice.voiceLabel || agent.voice.voiceId}
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                    {agent.voice.autoSpeak && (
+                      <span style={{
+                        padding: '2px 8px',
+                        borderRadius: '999px',
+                        border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                        color: STUDIO_THEME.textSecondary,
+                        fontSize: '10px',
+                      }}>
+                        Auto-speak
+                      </span>
+                    )}
+                    {agent.voice.speakOnCheckpoint && (
+                      <span style={{
+                        padding: '2px 8px',
+                        borderRadius: '999px',
+                        border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                        color: STUDIO_THEME.textSecondary,
+                        fontSize: '10px',
+                      }}>
+                        Checkpoint alerts
+                      </span>
+                    )}
+                  </div>
                 </div>
               )}
-            </div>
 
-            <div className="space-y-2">
-              <Label className="text-xs">Model</Label>
-              <div className="text-sm">{agent.model}</div>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-xs">Temperature</Label>
-              <div className="text-sm">{agent.temperature}</div>
-            </div>
-
-            {agent.voice?.enabled && (
-              <div className="space-y-2">
-                <Label className="text-xs flex items-center gap-1">
-                  <Volume2 className="w-3 h-3" />
-                  Voice
-                </Label>
-                <div className="text-sm">{agent.voice.voiceLabel || agent.voice.voiceId}</div>
-                <div className="flex flex-wrap gap-1">
-                  {agent.voice.autoSpeak && (
-                    <Badge variant="outline" className="text-[10px]">Auto-speak</Badge>
-                  )}
-                  {agent.voice.speakOnCheckpoint && (
-                    <Badge variant="outline" className="text-[10px]">Checkpoint alerts</Badge>
-                  )}
+              <div>
+                <label style={{
+                  fontSize: '11px',
+                  color: STUDIO_THEME.textMuted,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  display: 'block',
+                  marginBottom: '8px',
+                }}>
+                  Capabilities
+                </label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                  {agent.capabilities.map(cap => (
+                    <span key={cap} style={{
+                      padding: '3px 10px',
+                      borderRadius: '999px',
+                      background: `${STUDIO_THEME.accent}15`,
+                      color: STUDIO_THEME.accent,
+                      fontSize: '11px',
+                      fontWeight: 500,
+                    }}>
+                      {cap}
+                    </span>
+                  ))}
                 </div>
               </div>
-            )}
-
-            <div className="space-y-2">
-              <Label className="text-xs">Capabilities</Label>
-              <div className="flex flex-wrap gap-1">
-                {agent.capabilities.map(cap => (
-                  <Badge key={cap} variant="secondary" className="text-xs">
-                    {cap}
-                  </Badge>
-                ))}
-              </div>
             </div>
 
-            <Separator />
+            <div style={{
+              height: '1px',
+              background: STUDIO_THEME.borderSubtle,
+              margin: '16px 0',
+            }} />
 
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="flex-1"
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
                 onClick={() => setIsEditing(agentId)}
+                style={{
+                  flex: 1,
+                  padding: '10px 16px',
+                  borderRadius: '8px',
+                  background: 'transparent',
+                  border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                  color: STUDIO_THEME.textPrimary,
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                }}
               >
-                <Settings className="w-4 h-4 mr-1" />
+                <Settings style={{ width: 16, height: 16 }} />
                 Edit
-              </Button>
-              <Button 
-                variant="destructive" 
-                size="sm"
+              </button>
+              <button
                 onClick={() => setShowDeleteConfirm(true)}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: '8px',
+                  background: '#dc2626',
+                  border: 'none',
+                  color: 'white',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
               >
-                <Trash2 className="w-4 h-4" />
-              </Button>
+                <Trash2 style={{ width: 16, height: 16 }} />
+              </button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        {/* Quick Stats */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Statistics</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Total Runs</span>
-              <span>{agentRuns.length}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Checkpoints</span>
-              <span>{agentCheckpoints.length}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Commits</span>
-              <span>{agentCommits.length}</span>
-            </div>
-            {agentCharacterStats && (
-              <>
-                <Separator />
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Class</span>
-                  <span>{agentCharacterStats.class}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Level</span>
-                  <span>{agentCharacterStats.level}</span>
-                </div>
-                <div className="space-y-1 pt-1">
-                  {agentCharacterStats.relevantStats.slice(0, 4).map((statKey) => {
-                    const definition = agentCharacterStats.statDefinitions.find((item) => item.key === statKey);
-                    return (
-                      <div key={statKey} className="rounded border px-2 py-1">
-                        <div className="flex items-center justify-between text-[11px]">
-                          <span className="text-muted-foreground">{definition?.label || statKey}</span>
-                          <span className="font-medium">{agentCharacterStats.stats[statKey] ?? 0}</span>
-                        </div>
-                        {definition && (
-                          <div className="text-[10px] text-muted-foreground mt-0.5">
-                            {definition.signals.join(", ")}
+        {/* Quick Stats Card */}
+        <div style={{
+          borderRadius: '12px',
+          border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+          background: STUDIO_THEME.bgCard,
+          overflow: 'hidden',
+        }}>
+          <div style={{ padding: '16px' }}>
+            <h4 style={{
+              fontSize: '14px',
+              fontWeight: 600,
+              color: STUDIO_THEME.textPrimary,
+              margin: '0 0 12px 0',
+              fontFamily: 'Georgia, serif',
+            }}>
+              Statistics
+            </h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '13px', color: STUDIO_THEME.textSecondary }}>Total Runs</span>
+                <span style={{ fontSize: '13px', color: STUDIO_THEME.textPrimary, fontWeight: 500 }}>{agentRuns.length}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '13px', color: STUDIO_THEME.textSecondary }}>Checkpoints</span>
+                <span style={{ fontSize: '13px', color: STUDIO_THEME.textPrimary, fontWeight: 500 }}>{agentCheckpoints.length}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '13px', color: STUDIO_THEME.textSecondary }}>Commits</span>
+                <span style={{ fontSize: '13px', color: STUDIO_THEME.textPrimary, fontWeight: 500 }}>{agentCommits.length}</span>
+              </div>
+              {agentCharacterStats && (
+                <>
+                  <div style={{
+                    height: '1px',
+                    background: STUDIO_THEME.borderSubtle,
+                    margin: '8px 0',
+                  }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '13px', color: STUDIO_THEME.textSecondary }}>Class</span>
+                    <span style={{ fontSize: '13px', color: STUDIO_THEME.textPrimary, fontWeight: 500 }}>{agentCharacterStats.class}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '13px', color: STUDIO_THEME.textSecondary }}>Level</span>
+                    <span style={{ fontSize: '13px', color: STUDIO_THEME.accent, fontWeight: 600 }}>{agentCharacterStats.level}</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }}>
+                    {agentCharacterStats.relevantStats.slice(0, 4).map((statKey) => {
+                      const definition = agentCharacterStats.statDefinitions.find((item) => item.key === statKey);
+                      return (
+                        <div key={statKey} style={{
+                          borderRadius: '6px',
+                          border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                          padding: '8px 10px',
+                          background: `${STUDIO_THEME.bg}80`,
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: '11px', color: STUDIO_THEME.textMuted }}>{definition?.label || statKey}</span>
+                            <span style={{ fontSize: '12px', color: STUDIO_THEME.textPrimary, fontWeight: 500 }}>{agentCharacterStats.stats[statKey] ?? 0}</span>
                           </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="flex flex-wrap gap-1 pt-1">
-                  {Object.entries(agentCharacterStats.specialtyScores)
-                    .slice(0, 3)
-                    .map(([skill, value]) => (
-                      <Badge key={skill} variant="outline" className="text-[10px]">
-                        {skill}: {value}
-                      </Badge>
-                    ))}
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
+                          {definition && (
+                            <div style={{ fontSize: '10px', color: STUDIO_THEME.textMuted, marginTop: '2px' }}>
+                              {definition.signals.join(", ")}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '8px' }}>
+                    {Object.entries(agentCharacterStats.specialtyScores)
+                      .slice(0, 3)
+                      .map(([skill, value]) => (
+                        <span key={skill} style={{
+                          padding: '2px 8px',
+                          borderRadius: '999px',
+                          border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                          color: STUDIO_THEME.textSecondary,
+                          fontSize: '10px',
+                        }}>
+                          {skill}: {value}
+                        </span>
+                      ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, background: STUDIO_THEME.bg }}>
         {/* Execution Area - Runner Style */}
-        <div className="border-b p-4">
+        <div style={{
+          borderBottom: `1px solid ${STUDIO_THEME.borderSubtle}`,
+          padding: '16px',
+          background: STUDIO_THEME.bg,
+        }}>
           {!activeRunId || activeRun?.status !== 'running' ? (
             // Initial Input State
-            <div className="flex gap-2">
-              <div className="flex-1">
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <div style={{ flex: 1 }}>
                 <Textarea
                   value={executionInput}
                   onChange={e => setExecutionInput(e.target.value)}
                   placeholder="Enter task for the agent..."
-                  className="min-h-[80px]"
                   disabled={isExecuting}
+                  style={{
+                    minHeight: '80px',
+                    background: STUDIO_THEME.bgCard,
+                    border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                    borderRadius: '8px',
+                    padding: '12px',
+                    color: STUDIO_THEME.textPrimary,
+                    fontSize: '14px',
+                    resize: 'vertical',
+                    width: '100%',
+                  }}
                 />
-                <div style={{ marginTop: 8 }}>
+                <div style={{ marginTop: '8px' }}>
                   <VoicePresence compact />
                 </div>
               </div>
               
-              <div className="flex flex-col gap-2">
-                <Button 
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <button
                   onClick={handleStartRun}
                   disabled={isExecuting || !executionInput.trim()}
-                  className="flex-1"
+                  style={{
+                    flex: 1,
+                    padding: '12px 20px',
+                    borderRadius: '8px',
+                    background: isExecuting || !executionInput.trim() ? `${STUDIO_THEME.accent}60` : `linear-gradient(to right, ${STUDIO_THEME.accent}, #B08D6E)`,
+                    border: 'none',
+                    color: '#1A1612',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    cursor: isExecuting || !executionInput.trim() ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                  }}
                 >
                   {isExecuting ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />
                   ) : (
                     <>
-                      <Play className="w-4 h-4 mr-1" />
+                      <Play style={{ width: 16, height: 16 }} />
                       Run
                     </>
                   )}
-                </Button>
+                </button>
               </div>
             </div>
           ) : (
             // Active Run State - Runner Style
-            <div className="flex gap-4 h-[300px]">
+            <div style={{ display: 'flex', gap: '16px', height: '300px' }}>
               {/* Main Output */}
-              <div className="flex-1 flex flex-col min-w-0">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="text-sm font-medium">Task</div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={activeRun?.status === 'running' ? 'default' : 'secondary'}>
-                      {activeRun?.status === 'running' && <Loader2 className="w-3 h-3 mr-1 animate-spin inline" />}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: STUDIO_THEME.textPrimary, fontFamily: 'Georgia, serif' }}>Task</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{
+                      padding: '4px 10px',
+                      borderRadius: '999px',
+                      background: activeRun?.status === 'running' ? `${STUDIO_THEME.accent}20` : STUDIO_THEME.bgCard,
+                      color: activeRun?.status === 'running' ? STUDIO_THEME.accent : STUDIO_THEME.textSecondary,
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}>
+                      {activeRun?.status === 'running' && <Loader2 style={{ width: 12, height: 12, animation: 'spin 1s linear infinite' }} />}
                       {activeRun?.status}
-                    </Badge>
-                    <Button 
-                      variant="destructive" 
-                      size="sm"
+                    </span>
+                    <button
                       onClick={() => activeRun && cancelRun(agentId, activeRun.id)}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        background: '#dc2626',
+                        border: 'none',
+                        color: 'white',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
                     >
-                      <Square className="w-3 h-3 mr-1" />
+                      <Square style={{ width: 12, height: 12 }} />
                       Stop
-                    </Button>
+                    </button>
                   </div>
                 </div>
                 
-                <div className="p-3 rounded-lg border bg-muted/30 mb-2">
-                  <div className="text-sm">{activeRun?.input}</div>
+                <div style={{
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                  background: `${STUDIO_THEME.bgCard}80`,
+                  marginBottom: '8px',
+                }}>
+                  <div style={{ fontSize: '14px', color: STUDIO_THEME.textPrimary }}>{activeRun?.input}</div>
                 </div>
                 
-                <div className="flex-1 overflow-auto">
-                  <pre className="whitespace-pre-wrap font-mono text-sm p-3 rounded-lg border bg-muted/50 min-h-[100px]">
+                <div style={{ flex: 1, overflow: 'auto' }}>
+                  <pre style={{
+                    whiteSpace: 'pre-wrap',
+                    fontFamily: 'monospace',
+                    fontSize: '13px',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                    background: STUDIO_THEME.bgCard,
+                    minHeight: '100px',
+                    color: STUDIO_THEME.textPrimary,
+                    margin: 0,
+                  }}>
                     {activeRunOutput || '(streaming output...)'}
                   </pre>
                 </div>
@@ -3232,69 +4687,155 @@ function AgentDetailView({ agentId }: { agentId: string }) {
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="runs" className="flex-1 flex flex-col">
-          <TabsList className="mx-4 mt-4">
-            <TabsTrigger value="runs">
-              <Activity className="w-4 h-4 mr-1" />
+        <Tabs defaultValue="runs" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <TabsList style={{
+            margin: '16px 16px 0 16px',
+            background: STUDIO_THEME.bgCard,
+            border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+            borderRadius: '8px',
+            padding: '4px',
+          }}>
+            <TabsTrigger value="runs" style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '8px 12px',
+              fontSize: '13px',
+            }}>
+              <Activity style={{ width: 16, height: 16 }} />
               Runs
             </TabsTrigger>
-            <TabsTrigger value="tasks">
-              <CheckCircle className="w-4 h-4 mr-1" />
+            <TabsTrigger value="tasks" style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '8px 12px',
+              fontSize: '13px',
+            }}>
+              <CheckCircle style={{ width: 16, height: 16 }} />
               Tasks
             </TabsTrigger>
-            <TabsTrigger value="checkpoints">
-              <Save className="w-4 h-4 mr-1" />
+            <TabsTrigger value="checkpoints" style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '8px 12px',
+              fontSize: '13px',
+            }}>
+              <Save style={{ width: 16, height: 16 }} />
               Checkpoints
             </TabsTrigger>
-            <TabsTrigger value="commits">
-              <GitCommit className="w-4 h-4 mr-1" />
+            <TabsTrigger value="commits" style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '8px 12px',
+              fontSize: '13px',
+            }}>
+              <GitCommit style={{ width: 16, height: 16 }} />
               Commits
             </TabsTrigger>
-            <TabsTrigger value="queue">
-              <Clock className="w-4 h-4 mr-1" />
+            <TabsTrigger value="queue" style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '8px 12px',
+              fontSize: '13px',
+            }}>
+              <Clock style={{ width: 16, height: 16 }} />
               Queue
             </TabsTrigger>
-            <TabsTrigger value="character">
-              <Sparkles className="w-4 h-4 mr-1" />
+            <TabsTrigger value="character" style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '8px 12px',
+              fontSize: '13px',
+            }}>
+              <Sparkles style={{ width: 16, height: 16 }} />
               Character
             </TabsTrigger>
-            <TabsTrigger value="attachments">
-              <Paperclip className="w-4 h-4 mr-1" />
+            <TabsTrigger value="attachments" style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '8px 12px',
+              fontSize: '13px',
+            }}>
+              <Paperclip style={{ width: 16, height: 16 }} />
               Attachments
             </TabsTrigger>
-            <TabsTrigger value="mail">
-              <Mail className="w-4 h-4 mr-1" />
+            <TabsTrigger value="mail" style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '8px 12px',
+              fontSize: '13px',
+            }}>
+              <Mail style={{ width: 16, height: 16 }} />
               Mail
               {unreadMailCount > 0 && (
-                <Badge variant="destructive" className="ml-1 text-[10px] px-1 py-0 h-4 min-w-[16px]">
+                <span style={{
+                  marginLeft: '4px',
+                  padding: '2px 6px',
+                  borderRadius: '999px',
+                  background: '#dc2626',
+                  color: 'white',
+                  fontSize: '10px',
+                  fontWeight: 600,
+                  minWidth: '16px',
+                  textAlign: 'center',
+                }}>
                   {unreadMailCount}
-                </Badge>
+                </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="reviews">
-              <Shield className="w-4 h-4 mr-1" />
+            <TabsTrigger value="reviews" style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '8px 12px',
+              fontSize: '13px',
+            }}>
+              <Shield style={{ width: 16, height: 16 }} />
               Reviews
               {pendingReviewCount > 0 && (
-                <Badge variant="destructive" className="ml-1 text-[10px] px-1 py-0 h-4 min-w-[16px]">
+                <span style={{
+                  marginLeft: '4px',
+                  padding: '2px 6px',
+                  borderRadius: '999px',
+                  background: '#dc2626',
+                  color: 'white',
+                  fontSize: '10px',
+                  fontWeight: 600,
+                  minWidth: '16px',
+                  textAlign: 'center',
+                }}>
                   {pendingReviewCount}
-                </Badge>
+                </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="capsule">
-              <AppWindow className="w-4 h-4 mr-1" />
+            <TabsTrigger value="capsule" style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '8px 12px',
+              fontSize: '13px',
+            }}>
+              <AppWindow style={{ width: 16, height: 16 }} />
               Capsule
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="runs" className="flex-1 p-4 m-0">
+          <TabsContent value="runs" style={{ flex: 1, padding: '16px', margin: 0 }}>
             {isLoadingRuns ? (
-              <div className="flex items-center justify-center h-32">
-                <Loader2 className="w-6 h-6 animate-spin" />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '128px' }}>
+                <Loader2 style={{ width: 24, height: 24, animation: 'spin 1s linear infinite', color: STUDIO_THEME.accent }} />
               </div>
             ) : agentRuns.length === 0 ? (
               <EmptyTabState message="No runs yet. Start the agent to see execution history." />
             ) : (
-              <div className="space-y-2">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {agentRuns.map(run => (
                   <RunCard 
                     key={run.id} 
@@ -3307,15 +4848,15 @@ function AgentDetailView({ agentId }: { agentId: string }) {
             )}
           </TabsContent>
 
-          <TabsContent value="tasks" className="flex-1 p-4 m-0">
+          <TabsContent value="tasks" style={{ flex: 1, padding: '16px', margin: 0 }}>
             {isLoadingTasks ? (
-              <div className="flex items-center justify-center h-32">
-                <Loader2 className="w-6 h-6 animate-spin" />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '128px' }}>
+                <Loader2 style={{ width: 24, height: 24, animation: 'spin 1s linear infinite', color: STUDIO_THEME.accent }} />
               </div>
             ) : agentTasks.length === 0 ? (
               <EmptyTabState message="No tasks yet. Tasks appear during agent execution." />
             ) : (
-              <div className="space-y-2">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {agentTasks.map(task => (
                   <TaskCard key={task.id} task={task} />
                 ))}
@@ -3323,11 +4864,11 @@ function AgentDetailView({ agentId }: { agentId: string }) {
             )}
           </TabsContent>
 
-          <TabsContent value="checkpoints" className="flex-1 p-4 m-0">
+          <TabsContent value="checkpoints" style={{ flex: 1, padding: '16px', margin: 0 }}>
             {agentCheckpoints.length === 0 ? (
               <EmptyTabState message="No checkpoints yet. Save progress during execution." />
             ) : (
-              <div className="space-y-2">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {agentCheckpoints.map(cp => (
                   <CheckpointCard key={cp.id} checkpoint={cp} />
                 ))}
@@ -3335,11 +4876,11 @@ function AgentDetailView({ agentId }: { agentId: string }) {
             )}
           </TabsContent>
 
-          <TabsContent value="commits" className="flex-1 p-4 m-0">
+          <TabsContent value="commits" style={{ flex: 1, padding: '16px', margin: 0 }}>
             {agentCommits.length === 0 ? (
               <EmptyTabState message="No commits yet. Version changes to track progress." />
             ) : (
-              <div className="space-y-2">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {agentCommits.map(commit => (
                   <CommitCard key={commit.id} commit={commit} />
                 ))}
@@ -3347,39 +4888,62 @@ function AgentDetailView({ agentId }: { agentId: string }) {
             )}
           </TabsContent>
 
-          <TabsContent value="queue" className="flex-1 p-4 m-0">
+          <TabsContent value="queue" style={{ flex: 1, padding: '16px', margin: 0 }}>
             {queue.length === 0 ? (
               <EmptyTabState message="Queue is empty. Add tasks to process." />
             ) : (
-              <Card>
-                <CardContent className="p-4">
+              <div style={{
+                borderRadius: '12px',
+                border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                background: STUDIO_THEME.bgCard,
+                overflow: 'hidden',
+              }}>
+                <div style={{ padding: '16px' }}>
                   <Queue>
-                    <ul className="space-y-2">
+                    <ul style={{ display: 'flex', flexDirection: 'column', gap: '8px', margin: 0, padding: 0, listStyle: 'none' }}>
                       {queue.map(item => (
-                        <li key={item.id} className="flex items-center gap-2">
-                          <Badge variant={item.priority <= 2 ? "destructive" : "secondary"}>
+                        <li key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{
+                            padding: '2px 8px',
+                            borderRadius: '999px',
+                            background: item.priority <= 2 ? '#dc2626' : STUDIO_THEME.bg,
+                            color: item.priority <= 2 ? 'white' : STUDIO_THEME.textSecondary,
+                            fontSize: '11px',
+                            fontWeight: 500,
+                          }}>
                             P{item.priority}
-                          </Badge>
-                          <span className="text-sm">{item.content}</span>
-                          <Badge variant="outline" className="ml-auto">
+                          </span>
+                          <span style={{ fontSize: '13px', color: STUDIO_THEME.textPrimary, flex: 1 }}>{item.content}</span>
+                          <span style={{
+                            padding: '2px 8px',
+                            borderRadius: '999px',
+                            border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                            color: STUDIO_THEME.textSecondary,
+                            fontSize: '11px',
+                          }}>
                             {item.status}
-                          </Badge>
+                          </span>
                         </li>
                       ))}
                     </ul>
                   </Queue>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             )}
           </TabsContent>
 
-          <TabsContent value="character" className="flex-1 p-0 m-0">
+          <TabsContent value="character" style={{ flex: 1, padding: 0, margin: 0 }}>
             <CharacterLayerPanel agentId={agentId} />
           </TabsContent>
 
-          <TabsContent value="attachments" className="flex-1 p-4 m-0">
-            <Card>
-              <CardContent className="p-4">
+          <TabsContent value="attachments" style={{ flex: 1, padding: '16px', margin: 0 }}>
+            <div style={{
+              borderRadius: '12px',
+              border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+              background: STUDIO_THEME.bgCard,
+              overflow: 'hidden',
+            }}>
+              <div style={{ padding: '16px' }}>
                 <Attachments variant="list">
                   <Attachment data={{ id: "1", type: "file", filename: "requirements.pdf", mediaType: "application/pdf", url: "#" }}>
                     <AttachmentPreview />
@@ -3394,19 +4958,19 @@ function AgentDetailView({ agentId }: { agentId: string }) {
                     <AttachmentRemove />
                   </Attachment>
                 </Attachments>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </TabsContent>
 
-          <TabsContent value="mail" className="flex-1 p-4 m-0">
+          <TabsContent value="mail" style={{ flex: 1, padding: '16px', margin: 0 }}>
             <AgentMailView agentId={agentId} />
           </TabsContent>
 
-          <TabsContent value="reviews" className="flex-1 p-4 m-0">
+          <TabsContent value="reviews" style={{ flex: 1, padding: '16px', margin: 0 }}>
             <AgentReviewsView agentId={agentId} />
           </TabsContent>
 
-          <TabsContent value="capsule" className="flex-1 p-4 m-0">
+          <TabsContent value="capsule" style={{ flex: 1, padding: '16px', margin: 0 }}>
             <AgentCapsuleView agentId={agentId} />
           </TabsContent>
         </Tabs>
@@ -3414,20 +4978,55 @@ function AgentDetailView({ agentId }: { agentId: string }) {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <DialogContent>
+        <DialogContent style={{
+          background: STUDIO_THEME.bgCard,
+          border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+          borderRadius: '12px',
+        }}>
           <DialogHeader>
-            <DialogTitle>Delete Agent</DialogTitle>
-            <DialogDescription>
+            <DialogTitle style={{
+              fontFamily: 'Georgia, serif',
+              color: STUDIO_THEME.textPrimary,
+              fontSize: '18px',
+            }}>
+              Delete Agent
+            </DialogTitle>
+            <DialogDescription style={{
+              color: STUDIO_THEME.textSecondary,
+              fontSize: '14px',
+            }}>
               Are you sure you want to delete &quot;{agent.name}&quot;? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
+          <DialogFooter style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px' }}>
+            <button
+              onClick={() => setShowDeleteConfirm(false)}
+              style={{
+                padding: '10px 16px',
+                borderRadius: '8px',
+                background: 'transparent',
+                border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                color: STUDIO_THEME.textPrimary,
+                fontSize: '13px',
+                cursor: 'pointer',
+              }}
+            >
               Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
+            </button>
+            <button
+              onClick={handleDelete}
+              style={{
+                padding: '10px 16px',
+                borderRadius: '8px',
+                background: '#dc2626',
+                border: 'none',
+                color: 'white',
+                fontSize: '13px',
+                cursor: 'pointer',
+              }}
+            >
               Delete
-            </Button>
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

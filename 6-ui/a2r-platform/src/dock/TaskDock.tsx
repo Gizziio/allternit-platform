@@ -9,10 +9,10 @@ import {
   Play, 
   X, 
   Bug, 
-  Lightning, 
+  Zap, 
   ArrowUpRight,
-  DotsThreeVertical
-} from '@phosphor-icons/react';
+  MoreVertical
+} from 'lucide-react';
 
 type TaskDockVariant = 'floating' | 'panel';
 
@@ -72,7 +72,7 @@ export function TaskDock({
             justifyContent: 'center',
             boxShadow: '0 0 12px ' + tokens.colors.chat.primary + '40'
           }}>
-            <Lightning size={18} weight="fill" color="white" />
+            <Zap size={18} className="fill-white text-white" />
           </div>
           <div style={{ fontWeight: 800, fontSize: 15, letterSpacing: '-0.01em' }}>Task Dock</div>
           <div style={{ flex: 1 }} />
@@ -103,14 +103,14 @@ export function TaskDock({
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 {(t.status as string) === 'open' ? (
-                  <CircleDashed size={16} color={tokens.colors.chat.primary} weight="bold" />
+                  <CircleDashed size={16} color={tokens.colors.chat.primary} strokeWidth={2.5} />
                 ) : (
-                  <CheckCircle size={16} color={tokens.colors.code.primary} weight="fill" />
+                  <CheckCircle size={16} color={tokens.colors.code.primary} className="fill-current" />
                 )}
                 <div style={{ flex: 1, fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: textColor }}>
                   {t.title}
                 </div>
-                <DotsThreeVertical size={16} style={{ opacity: 0.4, color: mutedText }} />
+                <MoreVertical size={16} style={{ opacity: 0.4, color: mutedText }} />
               </div>
               
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -143,7 +143,7 @@ export function TaskDock({
               cursor: 'pointer'
             }}
           >
-            <ArrowUpRight size={14} />
+            <ArrowUpRight size={14} strokeWidth={2.5} />
             View Full Activity
           </button>
         )}

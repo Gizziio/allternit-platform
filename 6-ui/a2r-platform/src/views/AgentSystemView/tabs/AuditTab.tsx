@@ -23,7 +23,7 @@ import {
   User,
   Clock,
   RefreshCw,
-  ExternalLink
+  ArrowUpRight
 } from "lucide-react";
 import { useUnifiedStore } from "@/lib/agents/unified.store";
 import type { LedgerEvent, ContextPack, Receipt } from "@/lib/agents";

@@ -10,6 +10,7 @@ export type ViewType =
   // Agent views
   | "studio"
   | "agent"
+  | "agent-hub"
   | "native-agent"
   | "rails"
   | "registry"

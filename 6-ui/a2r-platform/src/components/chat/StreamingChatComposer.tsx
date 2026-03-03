@@ -464,13 +464,13 @@ export const StreamingChatComposer = memo(function StreamingChatComposer({
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '7px',
-            marginTop: '10px',
+            gap: '6px',
+            marginTop: '8px',
             opacity: 0.72,
           }}>
             <MatrixLogo
               state="thinking"
-              size={16}
+              size={12}
             />
             <span style={{
               fontSize: '11px',

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   SidebarSimple,
   NotePencil,
-  ChatTeardropText,
+  ChatText,
   UsersThree,
   TerminalWindow,
   Globe,
@@ -119,7 +119,7 @@ export function RailControls({
                 }}
               >
                 <CreateMenuButton
-                  icon={ChatTeardropText}
+                  icon={ChatText}
                   label="New Chat"
                   description="Start a regular chat thread"
                   onClick={() => {
@@ -212,7 +212,7 @@ export function RailControls({
           <ProminentModePill
             active={mode === 'chat' && !isBrowser}
             onClick={() => onModeChange('chat')}
-            icon={ChatTeardropText}
+            icon={ChatText}
             label="Chat"
             color="#D97757"
           />

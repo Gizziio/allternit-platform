@@ -44,6 +44,7 @@ export const TerminalView = lazy(() => import('./TerminalView').then(m => ({ def
 
 // Agent views
 export const AgentView = lazy(() => import('./AgentView').then(m => ({ default: m.AgentView })));
+export const AgentHub = lazy(() => import('./AgentHub').then(m => ({ default: m.AgentHub })));
 export const AgentSystemView = lazy(() => import('./AgentSystemView').then(m => ({ default: m.AgentSystemView })));
 export const NativeAgentView = lazy(() => import('./NativeAgentView').then(m => ({ default: m.NativeAgentView })));
 
@@ -99,9 +100,6 @@ export const RuntimeOperationsView = lazy(() => import('./runtime/RuntimeOperati
 export const BudgetDashboardView = lazy(() => import('./runtime/BudgetDashboardView').then(m => ({ default: m.BudgetDashboardView })));
 export const ReplayManagerView = lazy(() => import('./runtime/ReplayManagerView').then(m => ({ default: m.ReplayManagerView })));
 export const PrewarmManagerView = lazy(() => import('./runtime/PrewarmManagerView').then(m => ({ default: m.PrewarmManagerView })));
-
-// Experimental/Lab views
-export const ElementsLab = lazy(() => import('./ElementsLab').then(m => ({ default: m.ElementsLab })));
 
 // Other views
 export const RunnerView = lazy(() => import('./RunnerView').then(m => ({ default: m.RunnerView })));

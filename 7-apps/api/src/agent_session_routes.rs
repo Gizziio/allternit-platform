@@ -51,14 +51,54 @@ pub fn create_agent_session_routes() -> Router<Arc<AppState>> {
 // Types
 // ============================================================================
 
+/// Agent session surface (origin UI)
+#[derive(Debug, Deserialize, Serialize, ToSchema, Clone)]
+#[serde(rename_all = "snake_case")]
+pub enum AgentSessionSurface {
+    Chat,
+    Cowork,
+    Code,
+    Browser,
+}
+
+/// Agent session mode
+#[derive(Debug, Deserialize, Serialize, ToSchema, Clone)]
+#[serde(rename_all = "lowercase")]
+pub enum AgentSessionMode {
+    Regular,
+    Agent,
+}
+
+/// Agent session features
+#[derive(Debug, Deserialize, Serialize, ToSchema, Clone, Default)]
+pub struct AgentSessionFeatures {
+    #[serde(default)]
+    pub workspace: Option<bool>,
+    #[serde(default)]
+    pub tools: Option<bool>,
+    #[serde(default)]
+    pub automation: Option<bool>,
+}
+
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateSessionRequest {
     pub name: Option<String>,
     pub description: Option<String>,
     pub agent_id: Option<String>,
+    pub agent_name: Option<String>,
     pub model: Option<String>,
     pub tags: Option<Vec<String>>,
     pub metadata: Option<HashMap<String, serde_json::Value>>,
+    /// Origin surface (chat, cowork, code, browser)
+    pub origin_surface: Option<AgentSessionSurface>,
+    /// Session mode (regular or agent)
+    pub session_mode: Option<AgentSessionMode>,
+    /// Project identifier
+    pub project_id: Option<String>,
+    /// Workspace scope path
+    pub workspace_scope: Option<String>,
+    /// Agent-specific features
+    pub agent_features: Option<AgentSessionFeatures>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -88,6 +128,16 @@ pub struct UpdateSessionRequest {
     pub active: Option<bool>,
     pub tags: Option<Vec<String>>,
     pub metadata: Option<HashMap<String, serde_json::Value>>,
+    /// Update origin surface
+    pub origin_surface: Option<AgentSessionSurface>,
+    /// Update session mode
+    pub session_mode: Option<AgentSessionMode>,
+    /// Update project id
+    pub project_id: Option<String>,
+    /// Update workspace scope
+    pub workspace_scope: Option<String>,
+    /// Update agent features
+    pub agent_features: Option<AgentSessionFeatures>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -201,9 +251,15 @@ async fn create_session(
         name,
         description,
         agent_id,
+        agent_name,
         model,
         tags,
         metadata,
+        origin_surface,
+        session_mode,
+        project_id,
+        workspace_scope,
+        agent_features,
     } = request;
 
     let session_manager = state
@@ -217,15 +273,66 @@ async fn create_session(
         .await
         .map_err(map_session_error)?;
 
+    // Build metadata with all agent session fields
     let mut metadata_patch = metadata.unwrap_or_default();
+    
+    // Core agent identity
     if let Some(agent_id) = agent_id {
         metadata_patch.insert("a2r_agent_id".to_string(), serde_json::Value::String(agent_id));
     }
+    if let Some(agent_name) = agent_name {
+        metadata_patch.insert("a2r_agent_name".to_string(), serde_json::Value::String(agent_name));
+    }
+    
+    // Runtime model
     if let Some(model) = model {
         metadata_patch.insert(
             "a2r_runtime_model".to_string(),
             serde_json::Value::String(model),
         );
+    }
+    
+    // Session origin and mode
+    if let Some(surface) = origin_surface {
+        let surface_str = match surface {
+            AgentSessionSurface::Chat => "chat",
+            AgentSessionSurface::Cowork => "cowork",
+            AgentSessionSurface::Code => "code",
+            AgentSessionSurface::Browser => "browser",
+        };
+        metadata_patch.insert(
+            "a2r_origin_surface".to_string(),
+            serde_json::Value::String(surface_str.to_string()),
+        );
+    }
+    
+    if let Some(mode) = session_mode {
+        let mode_str = match mode {
+            AgentSessionMode::Regular => "regular",
+            AgentSessionMode::Agent => "agent",
+        };
+        metadata_patch.insert(
+            "a2r_session_mode".to_string(),
+            serde_json::Value::String(mode_str.to_string()),
+        );
+    }
+    
+    // Project and workspace context
+    if let Some(pid) = project_id {
+        metadata_patch.insert("a2r_project_id".to_string(), serde_json::Value::String(pid));
+    }
+    if let Some(scope) = workspace_scope {
+        metadata_patch.insert("a2r_workspace_scope".to_string(), serde_json::Value::String(scope));
+    }
+    
+    // Agent features
+    if let Some(features) = agent_features {
+        let features_obj = serde_json::json!({
+            "workspace": features.workspace.unwrap_or(false),
+            "tools": features.tools.unwrap_or(false),
+            "automation": features.automation.unwrap_or(false),
+        });
+        metadata_patch.insert("a2r_agent_features".to_string(), features_obj);
     }
 
     if !metadata_patch.is_empty() || tags.is_some() {
@@ -284,13 +391,70 @@ async fn update_session(
         .ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
 
     let mut manager = session_manager.write().await;
+    
+    // Merge metadata with agent session fields
+    let mut metadata_patch = request.metadata.clone().unwrap_or_default();
+    
+    // Update origin surface if provided
+    if let Some(surface) = &request.origin_surface {
+        let surface_str = match surface {
+            AgentSessionSurface::Chat => "chat",
+            AgentSessionSurface::Cowork => "cowork",
+            AgentSessionSurface::Code => "code",
+            AgentSessionSurface::Browser => "browser",
+        };
+        metadata_patch.insert(
+            "a2r_origin_surface".to_string(),
+            serde_json::Value::String(surface_str.to_string()),
+        );
+    }
+    
+    // Update session mode if provided
+    if let Some(mode) = &request.session_mode {
+        let mode_str = match mode {
+            AgentSessionMode::Regular => "regular",
+            AgentSessionMode::Agent => "agent",
+        };
+        metadata_patch.insert(
+            "a2r_session_mode".to_string(),
+            serde_json::Value::String(mode_str.to_string()),
+        );
+    }
+    
+    // Update project id if provided
+    if let Some(pid) = &request.project_id {
+        metadata_patch.insert("a2r_project_id".to_string(), serde_json::Value::String(pid.clone()));
+    }
+    
+    // Update workspace scope if provided
+    if let Some(scope) = &request.workspace_scope {
+        metadata_patch.insert("a2r_workspace_scope".to_string(), serde_json::Value::String(scope.clone()));
+    }
+    
+    // Update agent features if provided
+    if let Some(features) = &request.agent_features {
+        let features_obj = serde_json::json!({
+            "workspace": features.workspace.unwrap_or(false),
+            "tools": features.tools.unwrap_or(false),
+            "automation": features.automation.unwrap_or(false),
+        });
+        metadata_patch.insert("a2r_agent_features".to_string(), features_obj);
+    }
+    
+    // Use merged metadata or None if empty
+    let final_metadata = if metadata_patch.is_empty() {
+        request.metadata.clone()
+    } else {
+        Some(metadata_patch)
+    };
+    
     let session = manager
         .patch_session(
             &parse_session_id(&session_id),
             request.name.clone(),
             request.description.clone(),
             request.active,
-            request.metadata.clone(),
+            final_metadata,
             request.tags.clone(),
         )
         .await

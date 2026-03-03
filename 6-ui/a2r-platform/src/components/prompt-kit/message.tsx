@@ -12,15 +12,15 @@ import { Markdown } from "./markdown"
 import React from "react"
 import { 
     Copy, 
-    SpeakerHigh, 
+    Volume2, 
     ThumbsUp, 
     ThumbsDown, 
-    DotsThree, 
-    ArrowsClockwise, 
+    MoreHorizontal, 
+    RefreshCw, 
     GitBranch, 
-    Lightning,
-    CaretRight
-} from "@phosphor-icons/react"
+    Zap,
+    ChevronRight
+} from "lucide-react"
 
 export type MessageProps = {
   children: React.ReactNode
@@ -74,7 +74,7 @@ function ActionButton({ icon: Icon, tooltip, onClick }: any) {
             <Tooltip>
                 <TooltipTrigger asChild>
                     <button onClick={onClick} className="p-1 rounded hover:bg-[var(--rail-hover)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors">
-                        <Icon size={14} weight="bold" />
+                        <Icon size={14} />
                     </button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">{tooltip}</TooltipContent>
@@ -88,7 +88,7 @@ function MessageEllipsisMenu({ onAction }: any) {
         <Popover.Root>
             <Popover.Trigger asChild>
                 <button className="p-1 rounded hover:bg-[var(--rail-hover)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">
-                    <DotsThree size={16} weight="bold" />
+                    <MoreHorizontal size={16} strokeWidth={2.5} />
                 </button>
             </Popover.Trigger>
             <Popover.Portal>

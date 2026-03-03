@@ -1,4 +1,4 @@
-import { CircleHelp, Settings, Cloud } from "lucide-react"
+import { CircleHelp, Settings, Cloud, MessageSquare, Users, Code, Globe } from "lucide-react"
 import { openUrl } from "@tauri-apps/plugin-opener"
 import { invoke } from "@tauri-apps/api/core"
 
@@ -13,7 +13,7 @@ import { cn } from "@/a2r-usage/ui/lib/utils"
 import { getRelativeLuminance } from "@/a2r-usage/ui/lib/color"
 import { useDarkMode } from "@/a2r-usage/ui/hooks/use-dark-mode"
 
-type ActiveView = "home" | "console" | "settings" | "dag-integration" | string
+type ActiveView = "home" | "console" | "settings" | "dag-integration" | "chat" | "cowork" | "code" | "browser" | string
 
 interface NavPlugin {
   id: string
@@ -105,6 +105,51 @@ export function SideNav({ activeView, onViewChange, plugins }: SideNavProps) {
 
       {/* Spacer */}
       <div className="flex-1" />
+
+      {/* Working Surfaces - Conversations */}
+      <div className="mb-2 mt-2">
+        <NavButton
+          isActive={activeView === "chat"}
+          onClick={() => onViewChange("chat")}
+          aria-label="Chat"
+        >
+          <MessageSquare className="size-5" />
+        </NavButton>
+        <div className="nav-label">Chat</div>
+      </div>
+      
+      <div className="mb-2">
+        <NavButton
+          isActive={activeView === "cowork"}
+          onClick={() => onViewChange("cowork")}
+          aria-label="Cowork"
+        >
+          <Users className="size-5" />
+        </NavButton>
+        <div className="nav-label">Cowork</div>
+      </div>
+      
+      <div className="mb-2">
+        <NavButton
+          isActive={activeView === "code"}
+          onClick={() => onViewChange("code")}
+          aria-label="Code"
+        >
+          <Code className="size-5" />
+        </NavButton>
+        <div className="nav-label">Code</div>
+      </div>
+      
+      <div className="mb-2">
+        <NavButton
+          isActive={activeView === "browser"}
+          onClick={() => onViewChange("browser")}
+          aria-label="Browser"
+        >
+          <Globe className="size-5" />
+        </NavButton>
+        <div className="nav-label">Browser</div>
+      </div>
 
       {/* DAG Integration - P4 Features */}
       <NavButton

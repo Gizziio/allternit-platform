@@ -25,7 +25,7 @@ import {
   Database,
   ShieldCheck,
   Brain,
-  ChatTeardropText,
+  ChatText,
   ClockCounterClockwise,
   ArrowSquareOut,
   Plus,
@@ -110,7 +110,7 @@ export const COWORK_RAIL_CONFIG: RailConfigSection[] = [
     collapsible: true,
     items: [
       { id: 'cw-projects', label: 'Projects', icon: Toolbox, payload: 'workspace' },
-      { id: 'cw-sessions', label: 'Sessions', icon: ChatTeardropText, payload: 'chat' },
+      { id: 'cw-sessions', label: 'Sessions', icon: ChatText, payload: 'chat' },
       { id: 'cw-insights', label: 'Insights', icon: Lightbulb, payload: 'insights' },
       { id: 'cw-sources', label: 'Sources', icon: Database, payload: 'workspace' },
     ]

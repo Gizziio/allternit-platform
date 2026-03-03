@@ -1,0 +1,357 @@
+/**
+ * Agent Avatar Styles
+ * 
+ * CSS for the AgentAvatar component including animations and state styles
+ */
+
+/* ============================================================================
+   Base Container
+   ============================================================================ */
+
+.agent-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+  contain: layout style paint;
+  will-change: transform;
+  transition: transform 0.15s ease-out;
+}
+
+.agent-avatar__svg {
+  display: block;
+  overflow: visible;
+}
+
+/* ============================================================================
+   Interaction States
+   ============================================================================ */
+
+/* Hover state */
+.agent-avatar--interaction-hover {
+  transform: scale(1.05);
+}
+
+.agent-avatar--interaction-hover .agent-avatar__svg {
+  filter: brightness(1.1);
+}
+
+/* Active/Click state */
+.agent-avatar--interaction-active {
+  transform: scale(0.95);
+}
+
+/* ============================================================================
+   Emotion States
+   ============================================================================ */
+
+/* Alert - Quick energy */
+.agent-avatar--emotion-alert {
+  animation: avatar-alert 300ms ease-out;
+}
+
+@keyframes avatar-alert {
+  0% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-8px) scale(1.02); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+/* Pleased - Happy bounce */
+.agent-avatar--emotion-pleased {
+  animation: avatar-pleased 400ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes avatar-pleased {
+  0% { transform: translateY(0) scale(1); }
+  30% { transform: translateY(-12px) scale(1.05, 0.95); }
+  50% { transform: translateY(-8px) scale(0.95, 1.05); }
+  70% { transform: translateY(-10px) scale(1.02, 0.98); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+/* Curious - Head tilt */
+.agent-avatar--emotion-curious {
+  animation: avatar-curious 500ms ease-in-out;
+}
+
+@keyframes avatar-curious {
+  0% { transform: rotate(0deg); }
+  50% { transform: rotate(-8deg); }
+  100% { transform: rotate(-5deg); }
+}
+
+/* Skeptical - Lean back */
+.agent-avatar--emotion-skeptical {
+  animation: avatar-skeptical 600ms ease-in-out forwards;
+}
+
+@keyframes avatar-skeptical {
+  0% { transform: translateX(0) rotate(0deg); }
+  100% { transform: translateX(-5px) rotate(-3deg); }
+}
+
+/* Proud - Lift up */
+.agent-avatar--emotion-proud {
+  animation: avatar-proud 500ms ease-out forwards;
+}
+
+@keyframes avatar-proud {
+  0% { transform: translateY(0) scale(1); }
+  100% { transform: translateY(-3px) scale(1.02); }
+}
+
+/* Mischief - Playful sway */
+.agent-avatar--emotion-mischief {
+  animation: avatar-mischief 300ms ease-out;
+}
+
+@keyframes avatar-mischief {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-5deg); }
+  75% { transform: rotate(5deg); }
+}
+
+/* Focused - Still and steady */
+.agent-avatar--emotion-focused {
+  animation: avatar-focused 200ms ease-out forwards;
+}
+
+@keyframes avatar-focused {
+  0% { transform: scale(1); }
+  100% { transform: scale(0.98); }
+}
+
+/* Steady - Gentle idle (continuous) */
+.agent-avatar--emotion-steady.agent-avatar--animating {
+  animation: avatar-steady 4s ease-in-out infinite;
+}
+
+@keyframes avatar-steady {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+/* ============================================================================
+   Idle Animations (Personality-based)
+   ============================================================================ */
+
+/* Precision - Minimal movement */
+.agent-avatar--animating[data-personality="precision"] {
+  animation: idle-precision 4s ease-in-out infinite;
+}
+
+@keyframes idle-precision {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-1px); }
+}
+
+/* Exploratory - Curious movement */
+.agent-avatar--animating[data-personality="exploratory"] {
+  animation: idle-exploratory 6s ease-in-out infinite;
+}
+
+@keyframes idle-exploratory {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  25% { transform: translateX(-3px) rotate(-2deg); }
+  75% { transform: translateX(3px) rotate(2deg); }
+}
+
+/* Systemic - Rhythmic */
+.agent-avatar--animating[data-personality="systemic"] {
+  animation: idle-systemic 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes idle-systemic {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+/* Balanced - Natural */
+.agent-avatar--animating[data-personality="balanced"] {
+  animation: idle-balanced 4s ease-in-out infinite;
+}
+
+@keyframes idle-balanced {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-2px) rotate(-1deg); }
+  75% { transform: translateY(-2px) rotate(1deg); }
+}
+
+/* ============================================================================
+   Breathing Animation
+   ============================================================================ */
+
+.agent-avatar--animating .agent-avatar__body-layer {
+  animation: body-breathe 4s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@keyframes body-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.01); }
+}
+
+/* ============================================================================
+   Antenna Animations
+   ============================================================================ */
+
+/* Wiggle animation */
+.agent-avatar__antennas-layer[data-animation="wiggle"] {
+  animation: antenna-wiggle 0.5s ease-in-out infinite;
+  transform-origin: center top;
+}
+
+@keyframes antenna-wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-5deg); }
+  75% { transform: rotate(5deg); }
+}
+
+/* Pulse animation */
+.agent-avatar__antennas-layer[data-animation="pulse"] {
+  animation: antenna-pulse 2s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@keyframes antenna-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* Sway animation */
+.agent-avatar__antennas-layer[data-animation="sway"] {
+  animation: antenna-sway 3s ease-in-out infinite;
+  transform-origin: center top;
+}
+
+@keyframes antenna-sway {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
+}
+
+/* Bounce animation */
+.agent-avatar__antennas-layer[data-animation="bounce"] {
+  animation: antenna-bounce 0.8s ease-in-out infinite;
+  transform-origin: center top;
+}
+
+@keyframes antenna-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+/* ============================================================================
+   Eye Animations
+   ============================================================================ */
+
+/* Blink animation */
+.agent-avatar__eyes-layer[data-blink="normal"] {
+  animation: eye-blink 4s infinite;
+}
+
+.agent-avatar__eyes-layer[data-blink="slow"] {
+  animation: eye-blink 6s infinite;
+}
+
+.agent-avatar__eyes-layer[data-blink="fast"] {
+  animation: eye-blink 2s infinite;
+}
+
+.agent-avatar__eyes-layer[data-blink="never"] {
+  animation: none;
+}
+
+@keyframes eye-blink {
+  0%, 45%, 55%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.1); }
+}
+
+/* ============================================================================
+   Glow Animations
+   ============================================================================ */
+
+.agent-avatar__glow {
+  animation: glow-pulse 3s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
+}
+
+/* ============================================================================
+   Reduced Motion
+   ============================================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-avatar,
+  .agent-avatar *,
+  .agent-avatar *::before,
+  .agent-avatar *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  .agent-avatar--emotion-curious,
+  .agent-avatar--emotion-skeptical,
+  .agent-avatar--emotion-proud {
+    animation: none !important;
+  }
+  
+  .agent-avatar--interaction-hover {
+    transform: none;
+  }
+}
+
+/* ============================================================================
+   Size Variants
+   ============================================================================ */
+
+.agent-avatar--size-xs { --avatar-scale: 0.24; }
+.agent-avatar--size-sm { --avatar-scale: 0.32; }
+.agent-avatar--size-md { --avatar-scale: 0.44; }
+.agent-avatar--size-lg { --avatar-scale: 0.64; }
+.agent-avatar--size-xl { --avatar-scale: 0.8; }
+.agent-avatar--size-2xl { --avatar-scale: 1.2; }
+.agent-avatar--size-3xl { --avatar-scale: 2; }
+
+/* ============================================================================
+   Focus States (Accessibility)
+   ============================================================================ */
+
+.agent-avatar:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* ============================================================================
+   Layer Ordering
+   ============================================================================ */
+
+.agent-avatar__glow-layer { z-index: 1; }
+.agent-avatar__body-layer { z-index: 2; }
+.agent-avatar__accessories-back-layer { z-index: 3; }
+.agent-avatar__eyes-layer { z-index: 4; }
+.agent-avatar__accessories-front-layer { z-index: 5; }
+.agent-avatar__antennas-layer { z-index: 6; }
+
+/* ============================================================================
+   Transition States
+   ============================================================================ */
+
+.agent-avatar {
+  transition: 
+    transform 0.15s ease-out,
+    filter 0.15s ease-out;
+}
+
+.agent-avatar__body-layer,
+.agent-avatar__eyes-layer,
+.agent-avatar__antennas-layer {
+  transition: transform 0.3s ease-out;
+}

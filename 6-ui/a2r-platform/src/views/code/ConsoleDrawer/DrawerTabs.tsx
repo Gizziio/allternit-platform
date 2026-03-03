@@ -3,7 +3,6 @@ import {
   Terminal,
   Scroll,
   ClockCounterClockwise,
-  WarningCircle,
   Kanban,
   Robot,
   Clock,
@@ -13,6 +12,9 @@ import {
   ListDashes,
   LockKey,
   GitDiff,
+  Users,
+  Shield,
+  Warning,
 } from '@phosphor-icons/react';
 
 export type DrawerTabId = 
@@ -24,11 +26,14 @@ export type DrawerTabId =
   | 'agents' 
   | 'scheduler' 
   | 'context'
-  | 'changes'  // NEW - ChangeSet review
-  | 'receipts'  // NEW - Browser agent evidence receipts
-  | 'dag-graph'  // NEW - Placeholder
-  | 'trace'  // NEW - Placeholder
-  | 'browser-chat';  // NEW - Placeholder
+  | 'changes'
+  | 'receipts'
+  | 'dag-graph'
+  | 'trace'
+  | 'browser-chat'
+  | 'swarm'      // NEW - Multi-agent orchestration
+  | 'policy'     // NEW - Policy & governance
+  | 'security';  // NEW - Security dashboard
 
 interface DrawerTabsProps {
   activeTab: DrawerTabId;
@@ -38,18 +43,34 @@ interface DrawerTabsProps {
 export function DrawerTabs({ activeTab, onTabChange }: DrawerTabsProps) {
   return (
     <div style={{ display: 'flex', gap: 2, padding: '0 16px', borderBottom: '1px solid var(--border-subtle)', background: 'rgba(0,0,0,0.2)', flexWrap: 'wrap' }}>
+      {/* Primary Operations */}
       <Tab id="queue" label="Queue" icon={Kanban} active={activeTab === 'queue'} onClick={onTabChange} />
-      <Tab id="changes" label="Changes" icon={GitDiff} active={activeTab === 'changes'} onClick={onTabChange} />
-      <Tab id="context" label="Context" icon={Target} active={activeTab === 'context'} onClick={onTabChange} />
       <Tab id="terminal" label="Terminal" icon={Terminal} active={activeTab === 'terminal'} onClick={onTabChange} />
       <Tab id="logs" label="Logs" icon={Scroll} active={activeTab === 'logs'} onClick={onTabChange} />
+      
+      {/* Context & Changes */}
+      <Tab id="context" label="Context" icon={Target} active={activeTab === 'context'} onClick={onTabChange} />
+      <Tab id="changes" label="Changes" icon={GitDiff} active={activeTab === 'changes'} onClick={onTabChange} />
+      
+      {/* Agents & Orchestration */}
+      <Tab id="agents" label="Agents" icon={Robot} active={activeTab === 'agents'} onClick={onTabChange} />
+      <Tab id="swarm" label="Swarm" icon={Users} active={activeTab === 'swarm'} onClick={onTabChange} />
+      
+      {/* Governance & Security */}
+      <Tab id="policy" label="Policy" icon={Shield} active={activeTab === 'policy'} onClick={onTabChange} />
+      <Tab id="security" label="Security" icon={Warning} active={activeTab === 'security'} onClick={onTabChange} />
+      
+      {/* Executions & Evidence */}
       <Tab id="executions" label="Executions" icon={ClockCounterClockwise} active={activeTab === 'executions'} onClick={onTabChange} />
       <Tab id="receipts" label="Receipts" icon={LockKey} active={activeTab === 'receipts'} onClick={onTabChange} />
-      <Tab id="dag-graph" label="DAG Graph" icon={TreeStructure} active={activeTab === 'dag-graph'} onClick={onTabChange} disabled tooltip="Coming next" />
-      <Tab id="trace" label="Trace" icon={ListDashes} active={activeTab === 'trace'} onClick={onTabChange} disabled tooltip="Coming next" />
-      <Tab id="browser-chat" label="Browser Chat" icon={ChatCircle} active={activeTab === 'browser-chat'} onClick={onTabChange} disabled tooltip="Coming next" />
-      <Tab id="agents" label="Agents" icon={Robot} active={activeTab === 'agents'} onClick={onTabChange} />
+      
+      {/* Scheduling & DAG */}
       <Tab id="scheduler" label="Scheduler" icon={Clock} active={activeTab === 'scheduler'} onClick={onTabChange} />
+      <Tab id="dag-graph" label="DAG" icon={TreeStructure} active={activeTab === 'dag-graph'} onClick={onTabChange} disabled tooltip="Coming next" />
+      
+      {/* Future */}
+      <Tab id="trace" label="Trace" icon={ListDashes} active={activeTab === 'trace'} onClick={onTabChange} disabled tooltip="Coming next" />
+      <Tab id="browser-chat" label="Browser" icon={ChatCircle} active={activeTab === 'browser-chat'} onClick={onTabChange} disabled tooltip="Coming next" />
     </div>
   );
 }
@@ -88,7 +109,7 @@ function Tab({ id, label, icon: Icon, active, onClick, disabled = false, tooltip
           borderRadius: 3,
           color: 'var(--text-tertiary)',
         }}>
-          Coming next
+          Soon
         </span>
       )}
     </button>

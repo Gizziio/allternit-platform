@@ -661,11 +661,17 @@ export function ChatComposer({
       return;
     }
 
+    console.log('[ChatComposer] Starting OpenClaw agent import:', candidate.display_name);
+    const importStart = Date.now();
+    
     setImportingOpenClawAgentId(candidate.agent_id);
     setOpenClawError(null);
 
     try {
-      const created = await createAgent(buildOpenClawImportInput(candidate));
+      const input = buildOpenClawImportInput(candidate);
+      console.log('[ChatComposer] Creating agent with input:', input.name);
+      const created = await createAgent(input);
+      console.log(`[ChatComposer] Agent created in ${Date.now() - importStart}ms, ID:`, created.id);
       setSelectedSurfaceAgent(agentModeSurface, created.id);
       void loadCharacterLayer(created.id)
         .then(() => compileCharacterLayer(created.id))
@@ -675,11 +681,37 @@ export function ChatComposer({
           (item) => getRegisteredOpenClawAgentId(item, [created]) !== created.id,
         ),
       );
+      console.log(`[ChatComposer] Import completed successfully in ${Date.now() - importStart}ms`);
       closeOpenClawPrompt();
       setShowAgentMenu(false);
     } catch (error) {
-      setOpenClawError(error instanceof Error ? error.message : 'Failed to import OpenClaw agent');
+      console.error(`[ChatComposer] Import failed after ${Date.now() - importStart}ms:`, error);
+      let errorMessage = 'Failed to import OpenClaw agent';
+      
+      if (error instanceof Error) {
+        const msg = error.message;
+        
+        // Handle JSON parse errors (API returning HTML instead of JSON)
+        if (msg.includes('is not valid JSON') || msg.includes('Unexpected token')) {
+          errorMessage = 'Agent Studio API is not available. Please ensure the backend services are running and try again.';
+        } else if (msg.includes('API_OFFLINE') || msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+          errorMessage = 'Cannot connect to Agent Studio. Please check your connection and ensure the API is running.';
+        } else if (msg.includes('429') || msg.includes('rate limit') || msg.includes('Rate limit')) {
+          errorMessage = 'Rate limit exceeded. Please wait a few seconds and try again.';
+        } else if (msg.includes('409') || msg.includes('already exists') || msg.includes('duplicate')) {
+          errorMessage = 'An agent with this name already exists in Agent Studio.';
+        } else if (msg.includes('404')) {
+          errorMessage = 'Agent Studio endpoint not found. Please verify your setup.';
+        } else if (msg.includes('500') || msg.includes('Internal Server Error')) {
+          errorMessage = 'Agent Studio encountered an internal error. Please try again later.';
+        } else {
+          errorMessage = msg;
+        }
+      }
+      
+      setOpenClawError(errorMessage);
     } finally {
+      console.log(`[ChatComposer] Import handler finished in ${Date.now() - importStart}ms`);
       setImportingOpenClawAgentId(null);
     }
   }, [
@@ -1810,38 +1842,36 @@ export function ChatComposer({
           dismissOpenClawPrompt();
         }
       }}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+        <DialogContent hideCloseButton className="max-w-xl max-h-[65vh] overflow-y-auto p-0" style={{ borderRadius: 20, border: 'none', background: 'transparent', maxWidth: '580px', width: '90vw' }}>
           <div
             style={{
-              borderRadius: 28,
-              border: '1px solid rgba(233,185,137,0.14)',
+              borderRadius: 20,
+              border: '1px solid rgba(233,185,137,0.12)',
               background:
-                'linear-gradient(180deg, rgba(43,35,30,0.98) 0%, rgba(28,24,21,0.98) 100%)',
-              boxShadow: '0 28px 100px rgba(0,0,0,0.45)',
+                'linear-gradient(180deg, rgba(43,37,32,0.98) 0%, rgba(32,28,24,0.98) 100%)',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
               overflow: 'hidden',
             }}
           >
             <div
               style={{
-                padding: '22px 24px 18px',
+                padding: '18px 20px 14px',
                 background:
-                  'linear-gradient(115deg, rgba(212,149,106,0.18), rgba(93,133,171,0.06) 48%, rgba(255,255,255,0.02) 100%)',
+                  'linear-gradient(115deg, rgba(212,149,106,0.12), rgba(93,133,171,0.04) 48%, rgba(255,255,255,0.02) 100%)',
                 borderBottom: `1px solid ${THEME.inputBorder}`,
               }}
             >
               <DialogHeader>
-                <DialogTitle style={{ color: '#f5ede6', fontSize: 24, fontWeight: 700 }}>
-                  Import your OpenClaw agent
+                <DialogTitle style={{ color: '#f5ede6', fontSize: 18, fontWeight: 600 }}>
+                  Import OpenClaw Agent
                 </DialogTitle>
-                <DialogDescription style={{ color: '#b8a99b', maxWidth: 680 }}>
-                  A2R found local OpenClaw agent workspace data on this machine. Import one into
-                  Agent Studio so Agent Mode can bind this surface to a real agent instead of an
-                  empty selector.
+                <DialogDescription style={{ color: '#b8a99b', fontSize: 13, maxWidth: 480, lineHeight: 1.5 }}>
+                  Import a local OpenClaw agent to bind this surface to a real agent workspace.
                 </DialogDescription>
               </DialogHeader>
             </div>
 
-            <div style={{ padding: 24, display: 'grid', gap: 14 }}>
+            <div style={{ padding: 16, display: 'grid', gap: 12 }}>
               {openClawCandidates.length === 0 ? (
                 <div
                   style={{
@@ -1862,41 +1892,41 @@ export function ChatComposer({
                     key={candidate.agent_id}
                     style={{
                       display: 'grid',
-                      gap: 12,
-                      borderRadius: 20,
-                      border: '1px solid rgba(255,255,255,0.08)',
-                      background: 'rgba(255,255,255,0.03)',
-                      padding: 18,
+                      gap: 10,
+                      borderRadius: 14,
+                      border: '1px solid rgba(255,255,255,0.06)',
+                      background: 'rgba(255,255,255,0.02)',
+                      padding: 14,
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                           <span
                             style={{
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: 6,
+                              gap: 4,
                               borderRadius: 999,
-                              background: 'rgba(212,149,106,0.12)',
-                              border: '1px solid rgba(212,149,106,0.24)',
-                              color: '#f2c9a6',
-                              padding: '4px 9px',
-                              fontSize: 10,
-                              fontWeight: 800,
-                              letterSpacing: '0.08em',
+                              background: 'rgba(212,149,106,0.1)',
+                              border: '1px solid rgba(212,149,106,0.2)',
+                              color: '#e5b896',
+                              padding: '3px 8px',
+                              fontSize: 9,
+                              fontWeight: 700,
+                              letterSpacing: '0.06em',
                               textTransform: 'uppercase',
                             }}
                           >
-                            <Bot size={12} />
-                            OpenClaw Agent
+                            <Bot size={10} />
+                            OpenClaw
                           </span>
-                          <span style={{ color: THEME.textPrimary, fontSize: 18, fontWeight: 700 }}>
+                          <span style={{ color: THEME.textPrimary, fontSize: 15, fontWeight: 600 }}>
                             {candidate.display_name}
                           </span>
                         </div>
-                        <div style={{ marginTop: 6, color: THEME.textSecondary, fontSize: 13 }}>
-                          {candidate.primary_model || 'Model not declared'} · {candidate.session_count} recorded session{candidate.session_count === 1 ? '' : 's'}
+                        <div style={{ marginTop: 4, color: THEME.textSecondary, fontSize: 12 }}>
+                          {candidate.primary_model || 'No model'} · {candidate.session_count} session{candidate.session_count === 1 ? '' : 's'}
                         </div>
                       </div>
                       <button
@@ -1906,69 +1936,70 @@ export function ChatComposer({
                         style={{
                           flexShrink: 0,
                           borderRadius: 999,
-                          border: '1px solid rgba(212,149,106,0.28)',
+                          border: '1px solid rgba(212,149,106,0.25)',
                           background: importingOpenClawAgentId === candidate.agent_id
                             ? 'rgba(212,149,106,0.08)'
-                            : 'rgba(212,149,106,0.16)',
-                          color: '#f2c9a6',
-                          fontSize: 12,
-                          fontWeight: 800,
-                          padding: '10px 14px',
+                            : 'rgba(212,149,106,0.14)',
+                          color: '#e5b896',
+                          fontSize: 11,
+                          fontWeight: 700,
+                          padding: '8px 12px',
                           cursor: importingOpenClawAgentId === candidate.agent_id ? 'wait' : 'pointer',
+                          whiteSpace: 'nowrap',
                         }}
                       >
-                        {importingOpenClawAgentId === candidate.agent_id ? 'Importing...' : 'Import to Agent Studio'}
+                        {importingOpenClawAgentId === candidate.agent_id ? 'Importing...' : 'Import'}
                       </button>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 }}>
                       <div
                         style={{
-                          borderRadius: 14,
+                          borderRadius: 10,
                           border: `1px solid ${THEME.inputBorder}`,
-                          background: 'rgba(0,0,0,0.14)',
-                          padding: '12px 14px',
+                          background: 'rgba(0,0,0,0.1)',
+                          padding: '10px 12px',
                         }}
                       >
-                        <div style={{ color: THEME.textMuted, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                        <div style={{ color: THEME.textMuted, fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                           Workspace
                         </div>
-                        <div style={{ marginTop: 6, color: THEME.textPrimary, fontSize: 13, lineHeight: 1.5 }}>
-                          {candidate.workspace_path || 'No workspace path declared'}
+                        <div style={{ marginTop: 4, color: THEME.textPrimary, fontSize: 12, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {candidate.workspace_path || 'Not declared'}
                         </div>
                       </div>
                       <div
                         style={{
-                          borderRadius: 14,
+                          borderRadius: 10,
                           border: `1px solid ${THEME.inputBorder}`,
-                          background: 'rgba(0,0,0,0.14)',
-                          padding: '12px 14px',
+                          background: 'rgba(0,0,0,0.1)',
+                          padding: '10px 12px',
                         }}
                       >
-                        <div style={{ color: THEME.textMuted, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                          Auth Providers
+                        <div style={{ color: THEME.textMuted, fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                          Auth
                         </div>
-                        <div style={{ marginTop: 6, color: THEME.textPrimary, fontSize: 13, lineHeight: 1.5 }}>
-                          {candidate.auth_providers.length > 0 ? candidate.auth_providers.join(', ') : 'No auth profiles detected'}
+                        <div style={{ marginTop: 4, color: THEME.textPrimary, fontSize: 12, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {candidate.auth_providers.length > 0 ? candidate.auth_providers.join(', ') : 'None'}
                         </div>
                       </div>
                       <div
                         style={{
-                          borderRadius: 14,
+                          borderRadius: 10,
                           border: `1px solid ${THEME.inputBorder}`,
-                          background: 'rgba(0,0,0,0.14)',
-                          padding: '12px 14px',
+                          background: 'rgba(0,0,0,0.1)',
+                          padding: '10px 12px',
                         }}
                       >
-                        <div style={{ color: THEME.textMuted, fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                          Files Found
+                        <div style={{ color: THEME.textMuted, fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                          Files
                         </div>
-                        <div style={{ marginTop: 6, color: THEME.textPrimary, fontSize: 13, lineHeight: 1.5 }}>
-                          {candidate.files.models ? 'models.json' : 'No models.json'}
+                        <div style={{ marginTop: 4, color: THEME.textPrimary, fontSize: 12, lineHeight: 1.4 }}>
+                          {candidate.files.models ? 'models' : '—'}
                           {' · '}
-                          {candidate.files.auth_profiles ? 'auth-profiles.json' : 'No auth-profiles.json'}
+                          {candidate.files.auth_profiles ? 'auth' : '—'}
                           {' · '}
-                          {candidate.files.sessions_store ? 'sessions.json' : 'No sessions.json'}
+                          {candidate.files.sessions_store ? 'sessions' : '—'}
                         </div>
                       </div>
                     </div>
@@ -1977,13 +2008,25 @@ export function ChatComposer({
               )}
 
               {openClawError ? (
-                <div style={{ color: '#fca5a5', fontSize: 13 }}>
-                  {openClawError}
+                <div style={{ 
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: 8,
+                  padding: '12px 14px',
+                  borderRadius: 10,
+                  background: 'rgba(239,68,68,0.08)',
+                  border: '1px solid rgba(239,68,68,0.2)',
+                  color: '#fca5a5', 
+                  fontSize: 13,
+                  lineHeight: 1.5,
+                }}>
+                  <span style={{ flexShrink: 0, marginTop: 1 }}>⚠️</span>
+                  <span>{openClawError}</span>
                 </div>
               ) : null}
             </div>
 
-            <DialogFooter style={{ padding: '0 24px 24px' }}>
+            <DialogFooter style={{ padding: '0 16px 16px' }}>
               <button
                 type="button"
                 onClick={dismissOpenClawPrompt}
@@ -1993,8 +2036,8 @@ export function ChatComposer({
                   background: 'transparent',
                   color: THEME.textSecondary,
                   fontSize: 12,
-                  fontWeight: 700,
-                  padding: '10px 14px',
+                  fontWeight: 600,
+                  padding: '8px 14px',
                   cursor: 'pointer',
                 }}
               >

@@ -30,6 +30,7 @@ import {
   Plus,
   Clock,
   MessageSquare,
+  Settings,
 } from 'lucide-react';
 
 import {

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useChatStore, ChatThread } from './ChatStore';
 import { RailRowMenu } from '../../shell/rail/RailRowMenu';
 import {
-  ChatTeardropText,
+  ChatText,
   Robot,
   FolderOpen,
   FolderPlus,
@@ -105,7 +105,7 @@ export function ChatRail() {
                     {projectThreads.map((thread) => (
                       <ChatRailItem
                         key={thread.id}
-                        icon={ChatTeardropText}
+                        icon={ChatText}
                         label={thread.title}
                         isActive={activeThreadId === thread.id}
                         isNested
@@ -173,7 +173,7 @@ export function ChatRail() {
             {llmThreads.map((thread) => (
               <ChatRailItem
                 key={thread.id}
-                icon={ChatTeardropText}
+                icon={ChatText}
                 label={thread.title}
                 isActive={activeThreadId === thread.id}
                 onClick={() => setActiveThread(thread.id)}

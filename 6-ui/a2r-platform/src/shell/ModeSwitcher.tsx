@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ChatTeardropText,
+  ChatText,
   UsersThree,
   TerminalWindow,
   type Icon
@@ -23,7 +23,7 @@ const MODES: ModeConfig[] = [
   {
     id: 'chat',
     label: 'Chat',
-    icon: ChatTeardropText,
+    icon: ChatText,
     accentColor: 'var(--accent-chat)',
     accentLight: 'rgba(176, 141, 110, 0.15)',
     accentDark: '#7D5F46',

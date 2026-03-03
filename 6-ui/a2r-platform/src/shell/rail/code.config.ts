@@ -14,7 +14,7 @@
  */
 
 import {
-  ChatTeardropText,
+  ChatText,
   Code,
   Lightning,
   Robot,
@@ -54,7 +54,7 @@ export const CODE_RAIL_CONFIG: RailConfigSection[] = [
     defaultExpanded: true,
     items: [
       { id: 'cd-workspace', label: 'Workspace', icon: Code, payload: 'code' },
-      { id: 'cd-threads', label: 'Threads', icon: ChatTeardropText, payload: 'code-threads' },
+      { id: 'cd-threads', label: 'Threads', icon: ChatText, payload: 'code-threads' },
       { 
         id: 'cd-new', 
         label: 'New File', 

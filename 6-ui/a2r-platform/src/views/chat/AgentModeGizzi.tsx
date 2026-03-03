@@ -825,7 +825,7 @@ export function AgentModeGizzi({
         right: 0,
         height: 120, // Extended height for better mouse tracking
         overflow: 'visible',
-        zIndex: isBehindBar ? 5 : 35, // Lower z-index when behind bar
+        zIndex: isBehindBar ? 1 : 10, // Lower z-index so dropdowns appear above (dropdowns typically z-50+)
         pointerEvents: 'none',
       }}
       onMouseMove={handleMouseMove}
@@ -909,7 +909,7 @@ export function AgentModeGizzi({
               bottom: mascotBottom,
               left: '50%',
               marginLeft: -(config.mascotSize / 2),
-              zIndex: isInPipe ? 8 : (isBehindBar ? 5 : 30), // Gizzi behind pipe during pipe-entry
+              zIndex: isInPipe ? 2 : (isBehindBar ? 1 : 8), // Gizzi behind dropdowns (z-50+) but above composer bar
               // pointer events on when on-bar or landing - mascot is interactive!
               pointerEvents: animState === 'on-bar' || animState === 'landing' ? 'auto' : 'none',
               willChange: animState === 'on-bar' ? 'transform' : undefined,

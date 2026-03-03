@@ -302,11 +302,11 @@ export function ShellRail({
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 8px', display: 'flex', flexDirection: 'column', gap: 4 }}>
         {activeConfig.map((category) => {
           const isFolded = foldedCategories.has(category.id);
-          const isCore = category.id === 'core';
+          const isCollapsible = category.collapsible !== false;
 
           return (
             <div key={category.id} style={{ marginBottom: 4 }}>
-              {!isCore ? (
+              {isCollapsible ? (
                 <button 
                   onClick={() => toggleFold(category.id)}
                   style={{ 
@@ -544,17 +544,103 @@ const SessionsSection = memo(function SessionsSection({
   };
 
   const conversationThreads = threads.filter((thread) => !thread.projectId);
+  const [activeTab, setActiveTab] = useState<'chats' | 'agents'>('chats');
+  
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 6 }}>
-      <ConversationSurfaceHeader
-        conversationCount={conversationThreads.length}
-        agentSessionCount={nativeSessions.length}
-        projectCount={projects.length}
-        activeViewType={activeViewType}
-        onOpenHistory={onOpenHistory}
-        onOpenArchived={onOpenArchived}
-      />
+      {/* Tabs for Chats / Agent Sessions */}
+      <div style={{ 
+        display: 'flex', 
+        gap: 6, 
+        padding: '3px 8px',
+      }}>
+        <button
+          onClick={() => setActiveTab('chats')}
+          onMouseEnter={(e) => {
+            if (activeTab !== 'chats') {
+              e.currentTarget.style.color = '#d4b08c';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (activeTab !== 'chats') {
+              e.currentTarget.style.color = '#888';
+            }
+          }}
+          style={{
+            flex: 1,
+            padding: '4px 6px',
+            borderRadius: '5px',
+            border: 'none',
+            background: activeTab === 'chats' 
+              ? 'linear-gradient(135deg, rgba(217,119,87,0.18) 0%, rgba(212,176,140,0.12) 100%)' 
+              : 'transparent',
+            color: activeTab === 'chats' ? '#f0c8aa' : '#888',
+            fontSize: '10px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '3px',
+            transition: 'all 0.2s',
+            boxShadow: activeTab === 'chats' ? '0 4px 12px rgba(217,119,87,0.15)' : 'none',
+          }}
+        >
+          Chats
+          <span style={{ 
+            padding: '0px 3px', 
+            background: activeTab === 'chats' ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)', 
+            borderRadius: '2px',
+            fontSize: '9px',
+          }}>
+            {conversationThreads.length}
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveTab('agents')}
+          onMouseEnter={(e) => {
+            if (activeTab !== 'agents') {
+              e.currentTarget.style.color = '#d4b08c';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (activeTab !== 'agents') {
+              e.currentTarget.style.color = '#888';
+            }
+          }}
+          style={{
+            flex: 1,
+            padding: '4px 6px',
+            borderRadius: '5px',
+            border: 'none',
+            background: activeTab === 'agents' 
+              ? 'linear-gradient(135deg, rgba(217,119,87,0.18) 0%, rgba(212,176,140,0.12) 100%)' 
+              : 'transparent',
+            color: activeTab === 'agents' ? '#f0c8aa' : '#888',
+            fontSize: '10px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '3px',
+            transition: 'all 0.2s',
+            boxShadow: activeTab === 'agents' ? '0 4px 12px rgba(217,119,87,0.15)' : 'none',
+          }}
+        >
+          Agent Sessions
+          <span style={{ 
+            padding: '0px 3px', 
+            background: activeTab === 'agents' ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)', 
+            borderRadius: '2px',
+            fontSize: '9px',
+          }}>
+            {nativeSessions.length}
+          </span>
+        </button>
+      </div>
 
+      {/* Projects - Right under tabs */}
       <ProjectsStack
         projects={projects}
         activeProjectId={activeProjectId}
@@ -567,78 +653,91 @@ const SessionsSection = memo(function SessionsSection({
         onDeleteProject={onDeleteProject}
       />
 
-      <WorkstreamSectionLabel
-        title="Chats"
-        count={conversationThreads.length}
-        caption="Regular chat threads"
-      />
-      {conversationThreads.length > 0 ? (
-        conversationThreads.map((thread, idx) => (
-          <ThreadRailItem
-            key={getUniqueKey('thread', thread.id, idx)}
-            id={`thread-${thread.id}`}
-            thread={thread}
-            icon={thread.mode === 'agent' ? Robot : ChatTeardropText}
-            label={thread.title}
-            isActive={activeThreadId === thread.id}
-            projects={projects}
-            metaLabel={thread.mode === 'agent' ? 'Agent chat' : undefined}
-            onClick={() => {
-              onSetActiveThread(thread.id);
-              onOpenChatSurface();
-            }}
-            onRename={(newTitle: string) => onRenameThread?.(thread.id, newTitle)}
-            onDelete={() => onDeleteThread?.(thread.id)}
-            onArchive={() => onArchiveThread?.(thread.id)}
-            onMoveToProject={(projectId: string) => onMoveThreadToProject?.(thread.id, projectId)}
-          />
-        ))
-      ) : (
-        <GhostRailNotice
-          icon={ChatTeardropText}
-          title="No conversation sessions yet"
-          description="Start a chat to create the first regular session."
-          actionLabel="Open chat"
-          onClick={() => onOpen?.('chat')}
-        />
+      {/* Chats Tab */}
+      {activeTab === 'chats' && (
+        <div style={{ padding: '0 8px' }}>
+          {conversationThreads.length > 0 ? (
+            conversationThreads.map((thread, idx) => (
+              <ThreadRailItem
+                key={getUniqueKey('thread', thread.id, idx)}
+                id={`thread-${thread.id}`}
+                thread={thread}
+                icon={thread.mode === 'agent' ? Robot : ChatTeardropText}
+                label={thread.title}
+                isActive={activeThreadId === thread.id}
+                projects={projects}
+                metaLabel={thread.mode === 'agent' ? 'Agent chat' : undefined}
+                onClick={() => {
+                  onSetActiveThread(thread.id);
+                  onOpenChatSurface();
+                }}
+                onRename={(newTitle: string) => onRenameThread?.(thread.id, newTitle)}
+                onDelete={() => onDeleteThread?.(thread.id)}
+                onArchive={() => onArchiveThread?.(thread.id)}
+                onMoveToProject={(projectId: string) => onMoveThreadToProject?.(thread.id, projectId)}
+              />
+            ))
+          ) : (
+            <GhostRailNotice
+              icon={ChatTeardropText}
+              title="No conversation sessions yet"
+              description="Start a chat to create the first regular session."
+              actionLabel="Open chat"
+              onClick={() => onOpen?.('chat')}
+            />
+          )}
+        </div>
       )}
 
-      <SectionDivider />
-
-      <WorkstreamSectionLabel
-        title="Agent Sessions"
-        count={nativeSessions.length}
-        caption="Persistent operator workspaces"
-        actionLabel="New"
-        onAction={() => {
-          void onCreateNativeSession();
-        }}
-      />
-      {nativeSessions.length > 0 ? (
-        nativeSessions.map((session, idx) => (
-          <NativeSessionRailItem
-            key={getUniqueKey('native', session.id, idx)}
-            session={session}
-            isActive={
-              (activeViewType === 'native-agent' && activeNativeSessionId === session.id) ||
-              (activeViewType === 'chat' &&
-                embeddedSessionIdBySurface.chat === session.id) ||
-              (activeViewType === 'code' &&
-                embeddedSessionIdBySurface.code === session.id)
-            }
-            onClick={() => onOpenNativeSession(session)}
-          />
-        ))
-      ) : (
-        <GhostRailNotice
-          icon={Cpu}
-          title="No agent sessions yet"
-          description="Open the agent-session workspace or create a durable operator session with its own brief and canvas state."
-          actionLabel="Open agent sessions"
-          onClick={() => {
-            onOpenNativeWorkspace?.();
-          }}
-        />
+      {/* Agent Sessions Tab */}
+      {activeTab === 'agents' && (
+        <div style={{ padding: '0 8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <span style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', fontWeight: 600 }}>
+              Workspaces
+            </span>
+            <button 
+              onClick={() => onCreateNativeSession()}
+              style={{
+                padding: '4px 8px',
+                background: 'rgba(212,176,140,0.1)',
+                border: 'none',
+                borderRadius: '4px',
+                color: '#d4b08c',
+                fontSize: '11px',
+                cursor: 'pointer',
+              }}
+            >
+              + New
+            </button>
+          </div>
+          {nativeSessions.length > 0 ? (
+            nativeSessions.map((session, idx) => (
+              <NativeSessionRailItem
+                key={getUniqueKey('native', session.id, idx)}
+                session={session}
+                isActive={
+                  (activeViewType === 'native-agent' && activeNativeSessionId === session.id) ||
+                  (activeViewType === 'chat' &&
+                    embeddedSessionIdBySurface.chat === session.id) ||
+                  (activeViewType === 'code' &&
+                    embeddedSessionIdBySurface.code === session.id)
+                }
+                onClick={() => onOpenNativeSession(session)}
+              />
+            ))
+          ) : (
+            <GhostRailNotice
+              icon={Cpu}
+              title="No agent sessions yet"
+              description="Open the agent-session workspace or create a durable operator session with its own brief and canvas state."
+              actionLabel="Open agent sessions"
+              onClick={() => {
+                onOpenNativeWorkspace?.();
+              }}
+            />
+          )}
+        </div>
       )}
     </div>
   );
@@ -806,40 +905,36 @@ function ProjectsStack({
         count={projects.length}
         caption="Shared organizer"
       />
-      <div style={{ padding: '0 8px' }}>
+      <div style={{ padding: '4px' }}>
         <button
           type="button"
           onClick={onCreateProject}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = '#f0c8aa';
+            e.currentTarget.style.background = 'rgba(212,176,140,0.08)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = '#ececec';
+            e.currentTarget.style.background = 'transparent';
+          }}
           style={{
             width: '100%',
             display: 'flex',
             alignItems: 'center',
-            gap: 8,
-            padding: '7px 10px',
-            borderRadius: 12,
-            border: '1px solid rgba(212,176,140,0.16)',
-            background: 'rgba(255,255,255,0.03)',
+            gap: 10,
+            padding: '9px 12px',
+            borderRadius: 14,
+            border: 'none',
+            background: 'transparent',
             color: '#ececec',
             cursor: 'pointer',
             textAlign: 'left',
+            transition: 'all 0.2s',
+            fontWeight: 500,
           }}
         >
-          <div
-            style={{
-              width: 20,
-              height: 20,
-              borderRadius: 8,
-              background: 'rgba(255,255,255,0.06)',
-              color: '#d4b08c',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <FolderPlus size={12} weight="bold" />
-          </div>
-          <div style={{ minWidth: 0, fontSize: 12, fontWeight: 700 }}>New Project</div>
+          <FolderPlus size={18} weight="bold" color="#d4b08c" />
+          <div style={{ minWidth: 0, fontSize: 13, fontWeight: 700 }}>New Project</div>
         </button>
       </div>
 
@@ -1027,6 +1122,18 @@ function NativeSessionRailItem({
     <button
       type="button"
       onClick={onClick}
+      onMouseEnter={(e) => {
+        if (!isActive) {
+          e.currentTarget.style.borderColor = 'rgba(212,176,140,0.12)';
+          e.currentTarget.style.color = '#d4b08c';
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!isActive) {
+          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.04)';
+          e.currentTarget.style.color = '#b8b0aa';
+        }
+      }}
       style={{
         width: '100%',
         display: 'flex',
@@ -1035,14 +1142,16 @@ function NativeSessionRailItem({
         padding: '8px 10px',
         borderRadius: 14,
         border: '1px solid',
-        borderColor: isActive ? 'rgba(212,176,140,0.24)' : 'rgba(212,176,140,0.08)',
+        borderColor: isActive ? 'rgba(212,176,140,0.22)' : 'rgba(255,255,255,0.04)',
         background: isActive
-          ? 'linear-gradient(135deg, rgba(217,119,87,0.18) 0%, rgba(255,255,255,0.05) 100%)'
-          : 'linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.02))',
-        color: '#ececec',
+          ? 'linear-gradient(135deg, rgba(217,119,87,0.18) 0%, rgba(212,176,140,0.12) 100%)'
+          : 'transparent',
+        color: isActive ? '#f0c8aa' : '#b8b0aa',
         cursor: 'pointer',
         textAlign: 'left',
-        boxShadow: isActive ? '0 10px 24px rgba(24,18,16,0.18)' : 'inset 0 1px 0 rgba(255,255,255,0.04)',
+        transition: 'all 0.2s',
+        fontWeight: isActive ? 700 : 500,
+        boxShadow: isActive ? '0 4px 12px rgba(217,119,87,0.15)' : 'none',
       }}
     >
       <div
@@ -1136,6 +1245,18 @@ function RailItem({ id, icon: Icon, label, isActive, onClick }: any) {
     <button
       onClick={onClick}
       data-rail-item={id}
+      onMouseEnter={(e) => {
+        if (!isActive) {
+          e.currentTarget.style.color = '#d4b08c';
+          e.currentTarget.style.background = 'rgba(212,176,140,0.08)';
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!isActive) {
+          e.currentTarget.style.color = '#b8b0aa';
+          e.currentTarget.style.background = 'transparent';
+        }
+      }}
       style={{
         width: '100%',
         display: 'flex',
@@ -1143,17 +1264,16 @@ function RailItem({ id, icon: Icon, label, isActive, onClick }: any) {
         gap: 10,
         padding: '9px 12px',
         borderRadius: 14,
-        border: '1px solid',
-        borderColor: isActive ? 'rgba(212,176,140,0.22)' : 'rgba(255,255,255,0.04)',
+        border: 'none',
         background: isActive
-          ? 'linear-gradient(135deg, rgba(217, 119, 87, 0.16), rgba(255,255,255,0.04))'
-          : 'rgba(255,255,255,0.015)',
+          ? 'linear-gradient(135deg, rgba(217, 119, 87, 0.18) 0%, rgba(212,176,140,0.12) 100%)'
+          : 'transparent',
         color: isActive ? '#f0c8aa' : '#b8b0aa',
         cursor: 'pointer',
         textAlign: 'left',
         transition: 'all 0.2s',
         fontWeight: isActive ? 700 : 500,
-        boxShadow: isActive ? '0 8px 18px rgba(24,18,16,0.14)' : 'inset 0 1px 0 rgba(255,255,255,0.03)',
+        boxShadow: isActive ? '0 4px 12px rgba(217,119,87,0.15)' : 'none',
       }}
     >
       {Icon && <Icon size={18} weight={isActive ? 'fill' : 'bold'} />}
@@ -1175,6 +1295,7 @@ function ProjectRailItem({
 }: any) {
   const [showMenu, setShowMenu] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editTitle, setEditTitle] = useState(label);
 
   const handleRename = () => {
@@ -1196,6 +1317,21 @@ function ProjectRailItem({
       setEditTitle(label);
       setIsEditing(false);
     }
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowDeleteConfirm(true);
+    setShowMenu(false);
+  };
+
+  const confirmDelete = () => {
+    onDelete?.();
+    setShowDeleteConfirm(false);
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
   };
 
   if (isEditing) {
@@ -1235,20 +1371,30 @@ function ProjectRailItem({
 
   return (
     <div
+      onMouseEnter={(e) => {
+        if (!isActive) {
+          e.currentTarget.style.background = 'rgba(212,176,140,0.08)';
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!isActive) {
+          e.currentTarget.style.background = 'transparent';
+        }
+      }}
       style={{
         width: '100%',
         display: 'flex',
         alignItems: 'center',
         gap: 4,
         padding: '4px',
-        borderRadius: 16,
-        border: '1px solid',
-        borderColor: isActive ? 'rgba(212,176,140,0.22)' : 'rgba(255,255,255,0.04)',
+        borderRadius: 14,
+        border: 'none',
         background: isActive
-          ? 'linear-gradient(135deg, rgba(217, 119, 87, 0.16), rgba(255,255,255,0.04))'
-          : 'rgba(255,255,255,0.015)',
+          ? 'linear-gradient(135deg, rgba(217, 119, 87, 0.18) 0%, rgba(212,176,140,0.12) 100%)'
+          : 'transparent',
         position: 'relative',
-        boxShadow: isActive ? '0 8px 18px rgba(24,18,16,0.14)' : 'inset 0 1px 0 rgba(255,255,255,0.03)',
+        boxShadow: isActive ? '0 4px 12px rgba(217,119,87,0.15)' : 'none',
+        transition: 'all 0.2s',
       }}
     >
       <button
@@ -1359,11 +1505,7 @@ function ProjectRailItem({
 
               {/* Delete Option */}
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete?.();
-                  setShowMenu(false);
-                }}
+                onClick={handleDeleteClick}
                 style={{
                   width: '100%',
                   padding: '10px 14px',
@@ -1388,6 +1530,105 @@ function ProjectRailItem({
           </>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <>
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0,0,0,0.6)',
+              backdropFilter: 'blur(4px)',
+              zIndex: 10000,
+            }}
+            onClick={cancelDelete}
+          />
+          <div
+            style={{
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              background: 'linear-gradient(180deg, rgba(37,33,31,0.98), rgba(26,23,22,0.98))',
+              borderRadius: 16,
+              border: '1px solid rgba(212,176,140,0.2)',
+              padding: '24px',
+              minWidth: 320,
+              zIndex: 10001,
+              boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+            }}
+          >
+            <h3 style={{ 
+              margin: '0 0 12px 0', 
+              fontSize: 16, 
+              fontWeight: 700, 
+              color: '#f0c8aa' 
+            }}>
+              Delete Session?
+            </h3>
+            <p style={{ 
+              margin: '0 0 20px 0', 
+              fontSize: 13, 
+              color: '#9b9b9b',
+              lineHeight: 1.5 
+            }}>
+              Are you sure you want to delete &quot;{label}&quot;? This action cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                onClick={cancelDelete}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: 8,
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: 'transparent',
+                  color: '#9b9b9b',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                  e.currentTarget.style.color = '#b8b0aa';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = '#9b9b9b';
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: 8,
+                  border: 'none',
+                  background: 'linear-gradient(135deg, rgba(239,68,68,0.8) 0%, rgba(220,38,38,0.8) 100%)',
+                  color: '#fff',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 4px 12px rgba(239,68,68,0.3)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(239,68,68,0.4)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(239,68,68,0.3)';
+                  e.currentTarget.style.transform = 'none';
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -1410,6 +1651,7 @@ function ThreadRailItem({
   const [showMenu, setShowMenu] = useState(false);
   const [showProjects, setShowProjects] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editTitle, setEditTitle] = useState(label);
 
   const handleRename = () => {
@@ -1437,6 +1679,21 @@ function ThreadRailItem({
     onMoveToProject?.(projectId);
     setShowProjects(false);
     setShowMenu(false);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowDeleteConfirm(true);
+    setShowMenu(false);
+  };
+
+  const confirmDelete = () => {
+    onDelete?.();
+    setShowDeleteConfirm(false);
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
   };
 
   if (isEditing) {
@@ -1476,20 +1733,30 @@ function ThreadRailItem({
 
   return (
     <div
+      onMouseEnter={(e) => {
+        if (!isActive) {
+          e.currentTarget.style.background = 'rgba(212,176,140,0.08)';
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!isActive) {
+          e.currentTarget.style.background = 'transparent';
+        }
+      }}
       style={{
         width: '100%',
         display: 'flex',
         alignItems: 'center',
         gap: 4,
         padding: '4px',
-        borderRadius: 16,
-        border: '1px solid',
-        borderColor: isActive ? 'rgba(212,176,140,0.22)' : 'rgba(255,255,255,0.04)',
+        borderRadius: 14,
+        border: 'none',
         background: isActive
-          ? 'linear-gradient(135deg, rgba(217, 119, 87, 0.16), rgba(255,255,255,0.04))'
-          : 'rgba(255,255,255,0.015)',
+          ? 'linear-gradient(135deg, rgba(217, 119, 87, 0.18) 0%, rgba(212,176,140,0.12) 100%)'
+          : 'transparent',
         position: 'relative',
-        boxShadow: isActive ? '0 8px 18px rgba(24,18,16,0.14)' : 'inset 0 1px 0 rgba(255,255,255,0.03)',
+        boxShadow: isActive ? '0 4px 12px rgba(217,119,87,0.15)' : 'none',
+        transition: 'all 0.2s',
       }}
     >
       <button
@@ -1502,7 +1769,7 @@ function ThreadRailItem({
           alignItems: 'center',
           gap: 10,
           padding: '6px 8px',
-          borderRadius: 6,
+          borderRadius: 10,
           border: 'none',
           background: 'transparent',
           color: isActive ? '#f0c8aa' : '#b8b0aa',

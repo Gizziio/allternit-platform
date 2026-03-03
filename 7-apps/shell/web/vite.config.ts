@@ -425,7 +425,7 @@ export default defineConfig({
         rewrite: () => '/health',
       },
       '/api/v1/agents': {
-        target: 'http://127.0.0.1:3000',
+        target: 'http://127.0.0.1:3010',
         changeOrigin: true,
       },
       // Proxy chat API calls to Terminal Server (port 4096)

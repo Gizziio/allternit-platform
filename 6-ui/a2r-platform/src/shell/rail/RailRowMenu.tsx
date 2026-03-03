@@ -1,6 +1,6 @@
 import React from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { DotsThree, PencilSimple, Copy, Trash, ArrowsLeftRight, CaretRight } from '@phosphor-icons/react';
+import { MoreHorizontal, Pencil, Copy, Trash2, ArrowLeftRight, ChevronRight } from 'lucide-react';
 import { useChatStore } from '../../views/chat/ChatStore';
 
 export function RailRowMenu({ onRename, onCopy, onDelete, threadId }: any) {
@@ -13,7 +13,7 @@ export function RailRowMenu({ onRename, onCopy, onDelete, threadId }: any) {
           style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 4 }}
           onClick={e => e.stopPropagation()}
         >
-          <DotsThree size={18} weight="bold" />
+          <MoreHorizontal size={18} strokeWidth={2.5} />
         </button>
       </DropdownMenu.Trigger>
 
@@ -30,7 +30,7 @@ export function RailRowMenu({ onRename, onCopy, onDelete, threadId }: any) {
           }}
           sideOffset={5}
         >
-          <DropdownMenuItem icon={PencilSimple} label="Rename" onClick={onRename} />
+          <DropdownMenuItem icon={Pencil} label="Rename" onClick={onRename} />
           <DropdownMenuItem icon={Copy} label="Duplicate" onClick={onCopy} />
           
           {threadId && projects.length > 0 && (
@@ -43,9 +43,9 @@ export function RailRowMenu({ onRename, onCopy, onDelete, threadId }: any) {
                 }}
                 className="dropdown-item-hover"
               >
-                <ArrowsLeftRight size={16} />
+                <ArrowLeftRight size={16} />
                 Move to Project
-                <CaretRight size={14} style={{ marginLeft: 'auto' }} />
+                <ChevronRight size={14} style={{ marginLeft: 'auto' }} />
               </DropdownMenu.SubTrigger>
               <DropdownMenu.Portal>
                 <DropdownMenu.SubContent
@@ -73,7 +73,7 @@ export function RailRowMenu({ onRename, onCopy, onDelete, threadId }: any) {
           )}
 
           <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
-          <DropdownMenuItem icon={Trash} label="Delete" onClick={onDelete} color="#ef4444" />
+          <DropdownMenuItem icon={Trash2} label="Delete" onClick={onDelete} color="#ef4444" />
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>

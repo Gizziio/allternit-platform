@@ -36,6 +36,7 @@ import { RunnerView } from '../views/RunnerView';
 import { RailsView } from '../views/RailsView';
 import { AgentSystemView } from '../views/AgentSystemView';
 import { AgentView } from '../views/AgentView';
+import { AgentHub } from '../views/AgentHub';
 import { NativeAgentView } from '../views/NativeAgentView';
 import {
   getOpenClawWorkspacePathFromAgent,
@@ -57,7 +58,6 @@ import { useArtifactStore } from '../views/cowork/ArtifactStore';
 import { ToolsView } from "../views/code/ToolsView";
 import { RunReplayView } from "../views/code/RunReplayView";
 import { PromotionDashboardView } from "../views/code/PromotionDashboardView";
-import { ElementsLab } from "../views/ElementsLab";
 import { PlaygroundView } from "../views/PlaygroundView";
 import { PluginManagerPanel } from "./PluginManagerPanel";
 import { DagIntegrationPage } from "../views/DagIntegrationPage";
@@ -823,7 +823,7 @@ function ShellAppInner() {
   const active = selectActiveView(nav)!;
   const { mode: activeMode, setMode: setActiveMode } = useMode();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [isRailCollapsed, setIsRailCollapsed] = useState(true);
+  const [isRailCollapsed, setIsRailCollapsed] = useState(false);
 
   // DEBUG: Log every render of ShellAppInner
   console.log('ShellAppInner: RENDER', {
@@ -840,6 +840,28 @@ function ShellAppInner() {
   useEffect(() => {
     document.body.setAttribute('data-theme', theme);
   }, [theme]);
+
+  // Fetch agents on mount for agent mode selection
+  useEffect(() => {
+    let cancelled = false
+    const loadAgents = async () => {
+      try {
+        // Fetch agents from registry API
+        await useAgentStore.getState().fetchAgents()
+        if (!cancelled) {
+          console.log("[ShellApp] Agents fetched successfully")
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.warn("[ShellApp] Failed to fetch agents:", error)
+        }
+      }
+    }
+    void loadAgents()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   // Close the sidecar when leaving browser view so it doesn't leak into other modes
   const isBrowserView = active.viewType === 'browser' || active.viewType === 'browserview';
@@ -945,9 +967,9 @@ function ShellAppInner() {
     promotion: PromotionDashboardView,
     "models-manage": ({ context }: { context: ViewContext }) => <ModelManagementView />,
     code: CodeRoot,
-    elements: ({ context }: { context: ViewContext }) => <ElementsLab />,
     playground: ({ context }: { context: ViewContext }) => <PlaygroundView />,
-    agent: AgentView,
+    agent: AgentHub,
+    'agent-hub': AgentHub,
     "native-agent": ({ context }: { context: ViewContext }) => (
       <NativeAgentView onOpenRuntimeOps={() => open("runtime-ops")} />
     ),
@@ -1154,6 +1176,25 @@ function ShellAppInner() {
       sessionBridge.disconnect();
     };
   }, []);
+
+  // Listen for settings open events from drill-down menu
+  useEffect(() => {
+    const handleOpenSettings = () => {
+      open('settings');
+    };
+    window.addEventListener('a2r:open-settings' as any, handleOpenSettings);
+    return () => window.removeEventListener('a2r:open-settings' as any, handleOpenSettings);
+  }, [open]);
+
+  // Listen for settings close events to return to previous view
+  useEffect(() => {
+    const handleCloseSettings = () => {
+      // Navigate back to chat view when closing settings
+      open('chat');
+    };
+    window.addEventListener('a2r:close-settings' as any, handleCloseSettings);
+    return () => window.removeEventListener('a2r:close-settings' as any, handleCloseSettings);
+  }, [open]);
 
   const handleModeChange = useCallback((mode: AppMode) => {
     setActiveMode(mode);

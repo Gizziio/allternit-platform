@@ -9,6 +9,8 @@
  * - Commit: Versioned state snapshots
  */
 
+import type { AvatarConfig } from './character.types';
+
 // Agent Types
 export type AgentType = 'orchestrator' | 'sub-agent' | 'worker';
 
@@ -59,6 +61,18 @@ export interface CreateAgentInput {
   temperature?: number;
   voice?: VoiceConfig;
   config?: Record<string, unknown>;
+  avatar?: AvatarConfig;  // Agent visual avatar configuration
+}
+
+// Extended Agent with typed avatar
+export interface AgentWithAvatar extends Agent {
+  avatar?: AvatarConfig;
+}
+
+// Helper to extract avatar from agent config
+export function getAgentAvatar(agent: Agent): AvatarConfig | undefined {
+  const avatar = agent.config?.avatar as AvatarConfig | undefined;
+  return avatar;
 }
 
 // Task status

@@ -5,7 +5,7 @@ import { tokens } from '../design/tokens';
 import { 
   FolderOpen, 
   FilePlus, 
-  ChatTeardropText, 
+  ChatText, 
   Plus,
   Clock,
   ArrowSquareOut
@@ -75,7 +75,7 @@ export function ProjectView() {
                       style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', width: '100%' }}
                     >
                       <GlassCard style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
-                        <ChatTeardropText size={20} weight="duotone" color="var(--accent-chat)" />
+                        <ChatText size={20} weight="duotone" color="var(--accent-chat)" />
                         <div style={{ flex: 1 }}>
                           <div style={{ fontWeight: 700, fontSize: 15 }}>{t.title}</div>
                           <div style={{ fontSize: 12, opacity: 0.4 }}>Last active recently</div>

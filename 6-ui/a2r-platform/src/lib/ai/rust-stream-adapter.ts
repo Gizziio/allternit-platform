@@ -1440,8 +1440,10 @@ export function useRustStreamAdapter(
           const detail = detailText.trim().slice(0, 240);
           
           // Detect specific error types for better user messages
+          console.log(`[rust-stream-adapter] HTTP Error ${candidate.status}:`, detail);
           if (candidate.status === 429) {
             lastErrorMessage = "Rate limit exceeded. The AI service is temporarily unavailable. Please wait a moment and try again.";
+            console.error('[rust-stream-adapter] Rate limit detected (429)');
           } else if (candidate.status === 401 || candidate.status === 403) {
             lastErrorMessage = "Authentication failed. Please check your API key or sign in again.";
           } else if (candidate.status >= 500 && candidate.status < 600) {
@@ -1473,12 +1475,30 @@ export function useRustStreamAdapter(
       }
 
       if (!response) {
+        console.error('[rust-stream-adapter] No response, throwing error:', lastErrorMessage);
         throw new Error(
           lastErrorMessage || "Unable to reach any chat endpoint"
         );
       }
 
-      const reader = response.body?.getReader();
+      // Check if response has a body
+      if (!response.body) {
+        // Check content-type to see if it's an error response
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          try {
+            const errorData = await response.json();
+            if (errorData.error || errorData.message) {
+              throw new Error(errorData.error || errorData.message);
+            }
+          } catch (e) {
+            // If JSON parsing fails, throw generic error
+          }
+        }
+        throw new Error("The AI service returned an empty response. Please try again.");
+      }
+
+      const reader = response.body.getReader();
       if (!reader) {
         throw new Error("Response body is not readable");
       }
@@ -1622,6 +1642,7 @@ export function useRustStreamAdapter(
       finalizeAssistantMessage(receivedErrorEventRef.current ? "error" : "complete");
       options.onFinish?.();
     } catch (error) {
+      console.error('[rust-stream-adapter] Caught error in submitMessage:', error);
       if (error instanceof Error) {
         const isAbort = error.name === "AbortError";
         const isTimeout = error.name === "TimeoutError";
@@ -1648,10 +1669,17 @@ export function useRustStreamAdapter(
         options.onError?.(error);
         finalizeAssistantMessage("error");
         
+        // Create error as a proper ErrorUIPart so UnifiedMessageRenderer displays it correctly
+        const errorPart: ErrorUIPart = {
+          type: "error",
+          message: errorMessage,
+          kind: isKnownError ? "runtime" : "unknown",
+        };
+        
         const assistantError: ChatMessage = {
           id: `msg-${Date.now()}-error`,
           role: "assistant",
-          content: errorMessage,
+          content: [errorPart],
           createdAt: new Date(),
           metadata: {
             ...pendingAssistantMetadataRef.current,
@@ -1662,6 +1690,7 @@ export function useRustStreamAdapter(
             status: "error",
           },
         };
+        console.log('[rust-stream-adapter] Adding error message to chat:', assistantError);
         setMessages((prev: ChatMessage[]) => [...prev, assistantError]);
       }
     } finally {

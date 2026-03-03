@@ -1,36 +1,92 @@
 /**
- * Avatar Components
- *
- * Visual representation of agent state using A2R Visual State Protocol (AVSP).
- *
+ * Avatar Component Library
+ * 
+ * Modular SVG avatar system for AI agents.
+ * 
  * @example
  * ```tsx
- * import { Avatar, AvatarDisplay } from './Avatar';
- * import { Mood } from '@a2r/visual-state';
- *
- * // Low-level Avatar component
- * <Avatar
- *   visualState={{
- *     mood: Mood.Thinking,
- *     intensity: 7,
- *     confidence: 0.8,
- *     reliability: 0.9,
- *     timestamp: new Date(),
- *     source: 'task_processor',
- *   }}
- *   size="lg"
- *   animate
+ * import { AgentAvatar, useAvatarCreatorStore } from '@/components/avatar';
+ * 
+ * // Display an avatar
+ * <AgentAvatar 
+ *   config={avatarConfig}
+ *   emotion="pleased"
+ *   size={80}
  * />
- *
- * // High-level AvatarDisplay (recommended)
- * <AvatarDisplay agentId="agent-123" size="lg" showLabel />
+ * 
+ * // Use the creator store
+ * const { currentConfig, setEyePreset } = useAvatarCreatorStore();
  * ```
  */
 
-export { Avatar } from './Avatar';
-export type { AvatarProps } from './Avatar';
+// Main component
+export { AgentAvatar, StaticAgentAvatar, AgentAvatarSizes } from './AgentAvatar';
+export type { AgentAvatarProps } from './AgentAvatar.types';
 
-export { AvatarDisplay, AvatarDisplayInline } from './AvatarDisplay';
-export type { AvatarDisplayProps, AvatarDisplayInlineProps } from './AvatarDisplay';
+// Chat component
+export { AgentMessageAvatar } from './AgentMessageAvatar';
 
-export { default } from './Avatar';
+// Component types
+export type {
+  BodyPartProps,
+  EyesPartProps,
+  AntennasPartProps,
+  GlowPartProps,
+  AccessoryPartProps,
+  AvatarSizePreset,
+  EmotionAnimationResult,
+  ReactiveAnimationResult,
+  AvatarAnimationResult,
+} from './AgentAvatar.types';
+
+// Size utilities
+export { 
+  getAvatarSizePreset, 
+  calculateAvatarDimensions,
+  AVATAR_SIZE_PRESETS 
+} from './AgentAvatar.types';
+
+// Animation hooks
+export { useEmotionAnimation, getEmotionAnimationClass } from './hooks/useEmotionAnimation';
+export { 
+  useReactiveAnimation, 
+  useMouseTracking, 
+  useClickAnimation 
+} from './hooks/useReactiveAnimation';
+export { 
+  useAvatarAnimation, 
+  useLocomotionAnimation, 
+  useBlinkAnimation,
+  useAnimationFrame 
+} from './hooks/useAvatarAnimation';
+
+// Avatar parts (for advanced customization)
+export { Body, getBodyPositions, BODY_SHAPE_METADATA } from './parts/Body';
+export { Eyes, EYE_PRESET_METADATA, PUPIL_STYLE_METADATA } from './parts/Eyes';
+export { Antennas, ANTENNA_STYLE_METADATA, ANTENNA_ANIMATION_METADATA, TIP_DECORATION_METADATA } from './parts/Antennas';
+export { Glow, GLOW_INTENSITY_PRESETS, calculateGlowColor } from './parts/Glow';
+export { Accessories, AVAILABLE_ACCESSORIES, ACCESSORIES_BY_CATEGORY } from './parts/Accessories';
+
+// Styles
+import './AgentAvatar.styles.css';
+
+// Re-export types from character types for convenience
+export type {
+  AvatarConfig,
+  AvatarBodyShape,
+  AvatarEmotion,
+  EyePreset,
+  PupilStyle,
+  BlinkRate,
+  AntennaStyle,
+  AntennaAnimation,
+  AvatarEyeConfig,
+  AvatarAntennaConfig,
+  AvatarColorScheme,
+  AvatarPersonalityConfig,
+} from '../../lib/agents/character.types';
+
+export {
+  DEFAULT_AVATAR_CONFIG,
+  createDefaultAvatarConfig,
+} from '../../lib/agents/character.types';

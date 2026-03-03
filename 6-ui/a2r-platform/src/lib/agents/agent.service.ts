@@ -105,26 +105,35 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent> {
     config: input.config || {},
   };
   
+  console.log('[AgentService] Creating agent:', input.name);
+  const startTime = Date.now();
+  
   try {
     const maxRetries = 3;
     let lastError: any;
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
+        console.log(`[AgentService] API call attempt ${attempt + 1}/${maxRetries}...`);
         const agent = await api.createAgent(apiInput as Omit<Agent, 'id'>);
+        console.log(`[AgentService] Agent created successfully in ${Date.now() - startTime}ms`);
         return transformAgentFromApi(agent);
       } catch (error: any) {
         lastError = error;
-        // If it's a rate limit error (429), wait and retry
+        console.error(`[AgentService] Attempt ${attempt + 1} failed:`, error.status, error.message);
+        
+        // If it's a rate limit error (429), wait and retry with short backoff
         if (error.status === 429 || (error instanceof Error && error.message.includes('429'))) {
-          const delay = Math.pow(2, attempt) * 1000;
-          console.warn(`[AgentService] Rate limited (429). Retrying in ${delay}ms... (Attempt ${attempt + 1}/${maxRetries})`);
+          const delay = 500 + Math.random() * 500; // 0.5-1s delay
+          console.warn(`[AgentService] Rate limited (429). Retrying in ${Math.round(delay)}ms...`);
           await new Promise(resolve => setTimeout(resolve, delay));
           continue;
         }
+        // For other errors, throw immediately
         throw error;
       }
     }
+    console.error(`[AgentService] All ${maxRetries} attempts failed after ${Date.now() - startTime}ms`);
     throw lastError;
   } catch (error) {
     if (shouldUseLocalAgentRegistryFallback(error)) {

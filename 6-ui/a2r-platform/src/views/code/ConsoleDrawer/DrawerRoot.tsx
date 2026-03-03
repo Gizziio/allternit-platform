@@ -11,6 +11,9 @@ import { SchedulerView } from '../SchedulerView';
 import { ContextView } from './ContextView';
 import { ChangeSetReview } from '../../../components/changeset-review/ChangeSetReview';
 import { useDrawerStore } from '../../../drawers/drawer.store';
+import { SwarmMonitor } from '../../dag/SwarmMonitor';
+import { PolicyManager } from '../../dag/PolicyManager';
+import { SecurityDashboard } from '../../dag/SecurityDashboard';
 
 export function DrawerRoot() {
   const consoleDrawer = useDrawerStore((state) => state.drawers.console);
@@ -71,6 +74,9 @@ export function DrawerRoot() {
       case 'scheduler': return <SchedulerView />;
       case 'context': return <ContextView />;
       case 'receipts': return <ReceiptsView />;
+      case 'swarm': return <SwarmMonitor />;
+      case 'policy': return <PolicyManager />;
+      case 'security': return <SecurityDashboard />;
       case 'dag-graph':
       case 'trace':
       case 'browser-chat':
