@@ -126,11 +126,13 @@ async fn start_vsock_server(state: Arc<ExecutorState>) -> Result<()> {
 
     loop {
         match listener.accept() {
-            Ok((stream, peer_addr)) => {
+            Ok((mut stream, peer_addr)) => {
                 info!("New VSOCK connection from {:?}", peer_addr);
                 let state = Arc::clone(&state);
-                tokio::spawn(async move {
-                    if let Err(e) = handle_connection(stream, state).await {
+                
+                // Handle connection in blocking task since vsock is sync
+                tokio::task::spawn_blocking(move || {
+                    if let Err(e) = handle_vsock_connection_sync(&mut stream, state) {
                         error!("Connection handler error: {}", e);
                     }
                 });
@@ -140,6 +142,123 @@ async fn start_vsock_server(state: Arc<ExecutorState>) -> Result<()> {
             }
         }
     }
+}
+
+/// Handle VSOCK connection synchronously (Linux only)
+#[cfg(target_os = "linux")]
+fn handle_vsock_connection_sync(
+    stream: &mut vsock::VsockStream,
+    state: Arc<ExecutorState>,
+) -> Result<()> {
+    use std::io::{Read, Write};
+    
+    loop {
+        // Read message length (4 bytes, big-endian)
+        let mut len_bytes = [0u8; 4];
+        match stream.read_exact(&mut len_bytes) {
+            Ok(()) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
+                info!("Connection closed by peer");
+                break;
+            }
+            Err(e) => return Err(e.into()),
+        }
+        let msg_len = u32::from_be_bytes(len_bytes) as usize;
+
+        // Read message body
+        let mut msg_bytes = vec![0u8; msg_len];
+        stream.read_exact(&mut msg_bytes)?;
+
+        // Parse message
+        let message: ProtocolMessage = match serde_json::from_slice(&msg_bytes) {
+            Ok(m) => m,
+            Err(e) => {
+                error!("Failed to parse message: {}", e);
+                let error_response = ProtocolMessage::Error {
+                    error: ProtocolError::InvalidMessage,
+                    message: format!("JSON parse error: {}", e),
+                };
+                send_message_sync(stream, &error_response)?;
+                continue;
+            }
+        };
+
+        debug!("Received message: {:?}", message);
+
+        // Handle message (convert async to sync using block_on)
+        let response = match message {
+            ProtocolMessage::CommandRequest(request) => {
+                // For command execution, we need to use block_on
+                match tokio::runtime::Handle::try_current() {
+                    Ok(handle) => {
+                        handle.block_on(handle_command(request, state.clone()))
+                    }
+                    Err(_) => {
+                        ProtocolMessage::Error {
+                            error: ProtocolError::InternalError,
+                            message: "No tokio runtime available".to_string(),
+                        }
+                    }
+                }
+            }
+            ProtocolMessage::CreateSession { tenant_id, spec } => {
+                match tokio::runtime::Handle::try_current() {
+                    Ok(handle) => {
+                        handle.block_on(handle_create_session(tenant_id, spec, state.clone()))
+                    }
+                    Err(_) => {
+                        ProtocolMessage::Error {
+                            error: ProtocolError::InternalError,
+                            message: "No tokio runtime available".to_string(),
+                        }
+                    }
+                }
+            }
+            ProtocolMessage::DestroySession { session_id } => {
+                match tokio::runtime::Handle::try_current() {
+                    Ok(handle) => {
+                        handle.block_on(handle_destroy_session(session_id, state.clone()))
+                    }
+                    Err(_) => {
+                        ProtocolMessage::Error {
+                            error: ProtocolError::InternalError,
+                            message: "No tokio runtime available".to_string(),
+                        }
+                    }
+                }
+            }
+            ProtocolMessage::Heartbeat => ProtocolMessage::Heartbeat,
+            _ => {
+                ProtocolMessage::Error {
+                    error: ProtocolError::InvalidMessage,
+                    message: "Unexpected message type".to_string(),
+                }
+            }
+        };
+
+        // Send response
+        send_message_sync(stream, &response)?;
+    }
+
+    Ok(())
+}
+
+/// Send a protocol message synchronously
+#[cfg(target_os = "linux")]
+fn send_message_sync(
+    stream: &mut vsock::VsockStream,
+    message: &ProtocolMessage,
+) -> Result<()> {
+    use std::io::Write;
+    
+    let msg_bytes = serde_json::to_vec(message)?;
+    let len_bytes = (msg_bytes.len() as u32).to_be_bytes();
+
+    stream.write_all(&len_bytes)?;
+    stream.write_all(&msg_bytes)?;
+    stream.flush()?;
+
+    Ok(())
 }
 
 /// Start TCP server (for testing/development)
