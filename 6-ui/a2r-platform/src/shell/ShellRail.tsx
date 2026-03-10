@@ -1,4 +1,7 @@
 import React, { useState, useCallback, memo, useEffect } from 'react';
+import { useStoreWithEqualityFn } from 'zustand/traditional';
+import { shallow } from 'zustand/shallow';
+import { DeleteConfirmModal } from './DeleteConfirmModal';
 import { 
   CaretDown, 
   CaretRight, 
@@ -17,9 +20,11 @@ import {
   Archive,
   Cpu,
   ClockCounterClockwise,
+  CheckSquare,
 } from '@phosphor-icons/react';
 import { useChatStore, ChatThread, ChatProject } from '../views/chat/ChatStore';
 import { useArtifactStore } from '../views/cowork/ArtifactStore';
+import { useCoworkStore, Task, TaskProject } from '../views/cowork/CoworkStore';
 import { RAIL_CONFIG, type RailConfigSection } from './rail/rail.config';
 import { COWORK_RAIL_CONFIG } from './rail/cowork.config';
 import { CODE_RAIL_CONFIG } from './rail/code.config';
@@ -41,6 +46,7 @@ import {
 } from '../lib/agents/session-metadata';
 import { useAgentSurfaceModeStore } from '../stores/agent-surface-mode.store';
 import { useSidecarStore } from '../stores/sidecar-store';
+import { SettingsDrilldown } from './SettingsDrilldown';
 
 interface ShellRailProps {
   activeViewType?: string;
@@ -68,46 +74,45 @@ export function ShellRail({
   const [foldedCategories, setFoldedCategories] = useState<Set<string>>(new Set(['workspace', 'ai_vision', 'infrastructure', 'security', 'execution', 'observability', 'services']));
   const [isLoading, setIsLoading] = useState(false);
 
-  const { 
-    threads, 
-    projects, 
-    activeThreadId, 
-    activeProjectId, 
-    setActiveThread, 
-    setActiveProject, 
-    createProject,
-    renameThread,
-    deleteThread,
-    moveThreadToProject,
-    renameProject,
-    deleteProject,
-  } = useChatStore();
-  const nativeSessions = useNativeAgentStore((state) => state.sessions);
-  const activeNativeSessionId = useNativeAgentStore((state) => state.activeSessionId);
-  const fetchNativeSessions = useNativeAgentStore((state) => state.fetchSessions);
-  const createNativeSession = useNativeAgentStore((state) => state.createSession);
-  const setActiveNativeSession = useNativeAgentStore((state) => state.setActiveSession);
-  const embeddedSessionIdBySurface = useEmbeddedAgentSessionStore(
-    (state) => state.sessionIdBySurface,
-  );
-  const setEmbeddedSession = useEmbeddedAgentSessionStore(
-    (state) => state.setSurfaceSession,
-  );
-  const clearEmbeddedSession = useEmbeddedAgentSessionStore(
-    (state) => state.clearSurfaceSession,
-  );
-  const selectedAgentIdBySurface = useAgentSurfaceModeStore(
-    (state) => state.selectedAgentIdBySurface,
-  );
-  const setAgentModeEnabled = useAgentSurfaceModeStore((state) => state.setEnabled);
-  const setSelectedSurfaceAgent = useAgentSurfaceModeStore(
-    (state) => state.setSelectedAgent,
-  );
-  const agents = useAgentStore((state) => state.agents);
-  const { artifacts, activeArtifactId, setActiveArtifact } = useArtifactStore();
-  const { tabs, activeTabId, setActiveTab } = useBrowserStore();
-  const setSidecarOpen = useSidecarStore((state) => state.setOpen);
-
+  // Use useStoreWithEqualityFn with shallow for array/object selectors to avoid infinite loops in Zustand v4
+  const threads = useStoreWithEqualityFn(useChatStore, (s) => s.threads, shallow);
+  const projects = useStoreWithEqualityFn(useChatStore, (s) => s.projects, shallow);
+  const activeThreadId = useStoreWithEqualityFn(useChatStore, (s) => s.activeThreadId);
+  const activeProjectId = useStoreWithEqualityFn(useChatStore, (s) => s.activeProjectId);
+  const setActiveThread = useStoreWithEqualityFn(useChatStore, (s) => s.setActiveThread);
+  const setActiveProject = useStoreWithEqualityFn(useChatStore, (s) => s.setActiveProject);
+  const createProject = useStoreWithEqualityFn(useChatStore, (s) => s.createProject);
+  const renameThread = useStoreWithEqualityFn(useChatStore, (s) => s.renameThread);
+  const deleteThread = useStoreWithEqualityFn(useChatStore, (s) => s.deleteThread);
+  const moveThreadToProject = useStoreWithEqualityFn(useChatStore, (s) => s.moveThreadToProject);
+  const renameProject = useStoreWithEqualityFn(useChatStore, (s) => s.renameProject);
+  const deleteProject = useStoreWithEqualityFn(useChatStore, (s) => s.deleteProject);
+  
+  const nativeSessions = useStoreWithEqualityFn(useNativeAgentStore, (s) => s.sessions, shallow);
+  const activeNativeSessionId = useStoreWithEqualityFn(useNativeAgentStore, (s) => s.activeSessionId);
+  const fetchNativeSessions = useStoreWithEqualityFn(useNativeAgentStore, (s) => s.fetchSessions);
+  const createNativeSession = useStoreWithEqualityFn(useNativeAgentStore, (s) => s.createSession);
+  const setActiveNativeSession = useStoreWithEqualityFn(useNativeAgentStore, (s) => s.setActiveSession);
+  
+  const embeddedSessionIdBySurface = useStoreWithEqualityFn(useEmbeddedAgentSessionStore, (s) => s.sessionIdBySurface, shallow);
+  const setEmbeddedSession = useStoreWithEqualityFn(useEmbeddedAgentSessionStore, (s) => s.setSurfaceSession);
+  const clearEmbeddedSession = useStoreWithEqualityFn(useEmbeddedAgentSessionStore, (s) => s.clearSurfaceSession);
+  
+  const selectedAgentIdBySurface = useStoreWithEqualityFn(useAgentSurfaceModeStore, (s) => s.selectedAgentIdBySurface, shallow);
+  const setAgentModeEnabled = useStoreWithEqualityFn(useAgentSurfaceModeStore, (s) => s.setEnabled);
+  const setSelectedSurfaceAgent = useStoreWithEqualityFn(useAgentSurfaceModeStore, (s) => s.setSelectedAgent);
+  
+  const agents = useStoreWithEqualityFn(useAgentStore, (s) => s.agents, shallow);
+  const activeArtifactId = useStoreWithEqualityFn(useArtifactStore, (s) => s.activeArtifactId);
+  const setActiveArtifact = useStoreWithEqualityFn(useArtifactStore, (s) => s.setActiveArtifact);
+  const tabs = useStoreWithEqualityFn(useBrowserStore, (s) => s.tabs, shallow);
+  const activeTabId = useStoreWithEqualityFn(useBrowserStore, (s) => s.activeTabId);
+  const setActiveTab = useStoreWithEqualityFn(useBrowserStore, (s) => s.setActiveTab);
+  const setSidecarOpen = useStoreWithEqualityFn(useSidecarStore, (s) => s.setOpen);
+  
+  // Cowork store for tasks
+  const coworkStore = useCoworkStore();
+  
   const isBrowser = activeViewType === 'browser';
   const { enabledPlugins } = useFeaturePlugins();
 
@@ -177,6 +182,15 @@ export function ShellRail({
       return;
     }
     onOpen?.('chat');
+  }, [clearEmbeddedSession, onModeChange, onOpen]);
+
+  const openCoworkSurface = useCallback(() => {
+    clearEmbeddedSession('cowork');
+    if (onModeChange) {
+      onModeChange('cowork');
+      return;
+    }
+    onOpen?.('workspace');
   }, [clearEmbeddedSession, onModeChange, onOpen]);
 
   const openNativeSessionSurface = useCallback((session: NativeSession) => {
@@ -377,7 +391,7 @@ export function ShellRail({
                               sessionMode: 'agent',
                               agentId: selectedAgent?.id,
                               agentName: selectedAgent?.name,
-                              workspaceScope: getOpenClawWorkspacePathFromAgent(selectedAgent),
+                              workspaceScope: getOpenClawWorkspacePathFromAgent(selectedAgent) ?? undefined,
                               runtimeModel: selectedAgent?.model,
                               agentFeatures: {
                                 workspace: true,
@@ -390,6 +404,24 @@ export function ShellRail({
                         } catch (_error) {}
                         onOpen?.('native-agent');
                       }}
+                    />
+                  ) : category.id === 'tasks' ? (
+                    <TasksSection
+                      projects={coworkStore.projects}
+                      tasks={coworkStore.tasks}
+                      activeProjectId={coworkStore.activeProjectId}
+                      activeTaskId={coworkStore.activeTaskId}
+                      onCreateProject={() => coworkStore.createProject('New Project')}
+                      onSetActiveProject={coworkStore.setActiveProject}
+                      onSetActiveTask={coworkStore.setActiveTask}
+                      onOpenCoworkSurface={openCoworkSurface}
+                      onOpen={onOpen}
+                      onRenameTask={coworkStore.renameTask}
+                      onDeleteTask={coworkStore.deleteTask}
+                      onMoveTaskToProject={coworkStore.moveTaskToProject}
+                      onRenameProject={coworkStore.renameProject}
+                      onDeleteProject={coworkStore.deleteProject}
+                      activeViewType={activeViewType}
                     />
                   ) : (
                     category.items.map((item: any) => (
@@ -455,7 +487,63 @@ export function ShellRail({
           <div style={{ color: '#ececec', fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>User Name</div>
           <div style={{ color: '#6e6e6e', fontSize: 11, fontWeight: 500 }}>Pro Plan</div>
         </div>
-        <Gear size={18} color="#6e6e6e" weight="bold" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button
+            onClick={() => onOpen?.('products')}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = '#d4b08c';
+              e.currentTarget.style.background = 'rgba(212,176,140,0.1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = '#6e6e6e';
+              e.currentTarget.style.background = 'transparent';
+            }}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              border: 'none',
+              background: 'transparent',
+              color: '#6e6e6e',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s',
+            }}
+            title="A2R Products"
+          >
+            <Sparkle size={18} weight="bold" />
+          </button>
+          <SettingsDrilldown>
+            <button
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = '#d4b08c';
+                e.currentTarget.style.background = 'rgba(212,176,140,0.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = '#6e6e6e';
+                e.currentTarget.style.background = 'transparent';
+              }}
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 8,
+                border: 'none',
+                background: 'transparent',
+                color: '#6e6e6e',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s',
+              }}
+              title="Settings"
+            >
+              <Gear size={18} weight="bold" />
+            </button>
+          </SettingsDrilldown>
+        </div>
       </div>
     </div>
   );
@@ -742,6 +830,961 @@ const SessionsSection = memo(function SessionsSection({
     </div>
   );
 });
+
+// ============================================================================
+// Tasks Section (for Cowork mode) - Mirrors SessionsSection structure
+// ============================================================================
+
+const TasksSection = memo(function TasksSection({
+  projects,
+  tasks,
+  activeProjectId,
+  activeTaskId,
+  onCreateProject,
+  onSetActiveProject,
+  onSetActiveTask,
+  onOpenCoworkSurface,
+  onOpen,
+  onRenameTask,
+  onDeleteTask,
+  onMoveTaskToProject,
+  onRenameProject,
+  onDeleteProject,
+  activeViewType,
+}: {
+  projects: TaskProject[];
+  tasks: Task[];
+  activeProjectId: string | null;
+  activeTaskId: string | null;
+  onCreateProject: () => void;
+  onSetActiveProject: (id: string | null) => void;
+  onSetActiveTask: (id: string | null) => void;
+  onOpenCoworkSurface: () => void;
+  onOpen?: (view: string) => void;
+  onRenameTask: (id: string, title: string) => void;
+  onDeleteTask: (id: string) => void;
+  onMoveTaskToProject: (taskId: string, projectId: string | null) => void;
+  onRenameProject: (id: string, title: string) => void;
+  onDeleteProject: (id: string) => void;
+  activeViewType?: string;
+}) {
+  const seenKeys = new Set<string>();
+  const getUniqueKey = (type: string, id: string, index: number) => {
+    const baseKey = `${type}-${id}`;
+    if (seenKeys.has(baseKey)) {
+      return `${baseKey}-${index}`;
+    }
+    seenKeys.add(baseKey);
+    return baseKey;
+  };
+
+  const regularTasks = tasks.filter((task) => !task.projectId && task.mode === 'task');
+  const agentTasks = tasks.filter((task) => !task.projectId && task.mode === 'agent');
+  const [activeTab, setActiveTab] = useState<'tasks' | 'agent-tasks'>('tasks');
+  
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 6 }}>
+      {/* Tabs for Tasks / Agent Tasks */}
+      <div style={{ 
+        display: 'flex', 
+        gap: 6, 
+        padding: '3px 8px',
+      }}>
+        <button
+          onClick={() => setActiveTab('tasks')}
+          onMouseEnter={(e) => {
+            if (activeTab !== 'tasks') {
+              e.currentTarget.style.color = '#d4b08c';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (activeTab !== 'tasks') {
+              e.currentTarget.style.color = '#888';
+            }
+          }}
+          style={{
+            flex: 1,
+            padding: '4px 6px',
+            borderRadius: '5px',
+            border: 'none',
+            background: activeTab === 'tasks' 
+              ? 'linear-gradient(135deg, rgba(217,119,87,0.18) 0%, rgba(212,176,140,0.12) 100%)' 
+              : 'transparent',
+            color: activeTab === 'tasks' ? '#f0c8aa' : '#888',
+            fontSize: '10px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '3px',
+            transition: 'all 0.2s',
+            boxShadow: activeTab === 'tasks' ? '0 4px 12px rgba(217,119,87,0.15)' : 'none',
+          }}
+        >
+          Tasks
+          <span style={{ 
+            padding: '0px 3px', 
+            background: activeTab === 'tasks' ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)', 
+            borderRadius: '2px',
+            fontSize: '9px',
+          }}>
+            {regularTasks.length}
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveTab('agent-tasks')}
+          onMouseEnter={(e) => {
+            if (activeTab !== 'agent-tasks') {
+              e.currentTarget.style.color = '#d4b08c';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (activeTab !== 'agent-tasks') {
+              e.currentTarget.style.color = '#888';
+            }
+          }}
+          style={{
+            flex: 1,
+            padding: '4px 6px',
+            borderRadius: '5px',
+            border: 'none',
+            background: activeTab === 'agent-tasks' 
+              ? 'linear-gradient(135deg, rgba(217,119,87,0.18) 0%, rgba(212,176,140,0.12) 100%)' 
+              : 'transparent',
+            color: activeTab === 'agent-tasks' ? '#f0c8aa' : '#888',
+            fontSize: '10px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '3px',
+            transition: 'all 0.2s',
+            boxShadow: activeTab === 'agent-tasks' ? '0 4px 12px rgba(217,119,87,0.15)' : 'none',
+          }}
+        >
+          Agent Tasks
+          <span style={{ 
+            padding: '0px 3px', 
+            background: activeTab === 'agent-tasks' ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)', 
+            borderRadius: '2px',
+            fontSize: '9px',
+          }}>
+            {agentTasks.length}
+          </span>
+        </button>
+      </div>
+
+      {/* Projects - Right under tabs */}
+      <TaskProjectsStack
+        projects={projects}
+        activeProjectId={activeProjectId}
+        onCreateProject={onCreateProject}
+        onOpenProject={(projectId: string) => {
+          onSetActiveProject(projectId);
+          onOpenCoworkSurface();
+        }}
+        onRenameProject={onRenameProject}
+        onDeleteProject={onDeleteProject}
+      />
+
+      {/* Tasks Tab */}
+      {activeTab === 'tasks' && (
+        <div style={{ padding: '0 8px' }}>
+          {regularTasks.length > 0 ? (
+            regularTasks.map((task, idx) => (
+              <TaskRailItem
+                key={getUniqueKey('task', task.id, idx)}
+                id={`task-${task.id}`}
+                task={task}
+                icon={CheckSquare}
+                label={task.title}
+                isActive={activeTaskId === task.id}
+                projects={projects}
+                metaLabel={task.status}
+                onClick={() => {
+                  onSetActiveTask(task.id);
+                  onOpenCoworkSurface();
+                }}
+                onRename={(newTitle: string) => onRenameTask?.(task.id, newTitle)}
+                onDelete={() => onDeleteTask?.(task.id)}
+                onMoveToProject={(projectId: string) => onMoveTaskToProject?.(task.id, projectId)}
+              />
+            ))
+          ) : (
+            <GhostRailNotice
+              icon={CheckSquare}
+              title="No tasks yet"
+              description="Create a task to get started with your work."
+              actionLabel="New Task"
+              onClick={() => onOpen?.('cowork-new-task')}
+            />
+          )}
+        </div>
+      )}
+
+      {/* Agent Tasks Tab */}
+      {activeTab === 'agent-tasks' && (
+        <div style={{ padding: '0 8px' }}>
+          {agentTasks.length > 0 ? (
+            agentTasks.map((task, idx) => (
+              <TaskRailItem
+                key={getUniqueKey('agent-task', task.id, idx)}
+                id={`agent-task-${task.id}`}
+                task={task}
+                icon={Robot}
+                label={task.title}
+                isActive={activeTaskId === task.id}
+                projects={projects}
+                metaLabel="Agent task"
+                onClick={() => {
+                  onSetActiveTask(task.id);
+                  onOpenCoworkSurface();
+                }}
+                onRename={(newTitle: string) => onRenameTask?.(task.id, newTitle)}
+                onDelete={() => onDeleteTask?.(task.id)}
+                onMoveToProject={(projectId: string) => onMoveTaskToProject?.(task.id, projectId)}
+              />
+            ))
+          ) : (
+            <GhostRailNotice
+              icon={Robot}
+              title="No agent tasks yet"
+              description="Create an agent task to have AI automate your workflow."
+              actionLabel="New Agent Task"
+              onClick={() => onOpen?.('cowork-new-task')}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+});
+
+// ============================================================================
+// Task Projects Stack (mirrors ProjectsStack for chat)
+// ============================================================================
+
+function TaskProjectsStack({
+  projects,
+  activeProjectId,
+  onCreateProject,
+  onOpenProject,
+  onRenameProject,
+  onDeleteProject,
+}: {
+  projects: TaskProject[];
+  activeProjectId: string | null;
+  onCreateProject: () => void;
+  onOpenProject: (projectId: string) => void;
+  onRenameProject: (id: string, title: string) => void;
+  onDeleteProject: (id: string) => void;
+}) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <WorkstreamSectionLabel
+        title="Projects"
+        count={projects.length}
+        caption="Shared organizer"
+      />
+      <div style={{ padding: '4px' }}>
+        <button
+          type="button"
+          onClick={onCreateProject}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = '#f0c8aa';
+            e.currentTarget.style.background = 'rgba(212,176,140,0.08)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = '#ececec';
+            e.currentTarget.style.background = 'transparent';
+          }}
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            padding: '9px 12px',
+            borderRadius: 14,
+            border: 'none',
+            background: 'transparent',
+            color: '#ececec',
+            cursor: 'pointer',
+            textAlign: 'left',
+            transition: 'all 0.2s',
+            fontWeight: 500,
+          }}
+        >
+          <FolderPlus size={18} weight="bold" color="#d4b08c" />
+          <div style={{ minWidth: 0, fontSize: 13, fontWeight: 700 }}>New Project</div>
+        </button>
+      </div>
+
+      {projects.map((proj, idx) => (
+        <TaskProjectRailItem
+          key={`task-project-${proj.id}-${idx}`}
+          id={`task-project-${proj.id}`}
+          project={proj}
+          icon={FolderOpen}
+          label={proj.title}
+          isActive={activeProjectId === proj.id}
+          onClick={() => onOpenProject(proj.id)}
+          onRename={(newTitle: string) => onRenameProject(proj.id, newTitle)}
+          onDelete={() => onDeleteProject(proj.id)}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ============================================================================
+// Task Project Rail Item
+// ============================================================================
+
+function TaskProjectRailItem({
+  id,
+  project,
+  icon: Icon,
+  label,
+  isActive,
+  onClick,
+  onRename,
+  onDelete,
+}: {
+  id: string;
+  project: TaskProject;
+  icon: any;
+  label: string;
+  isActive: boolean;
+  onClick: () => void;
+  onRename?: (newTitle: string) => void;
+  onDelete?: () => void;
+}) {
+  const [showMenu, setShowMenu] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [editTitle, setEditTitle] = useState(label);
+
+  const handleRename = () => {
+    setIsEditing(true);
+    setShowMenu(false);
+  };
+
+  const handleSaveRename = () => {
+    if (editTitle.trim() && editTitle !== label) {
+      onRename?.(editTitle.trim());
+    }
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSaveRename();
+    } else if (e.key === 'Escape') {
+      setEditTitle(label);
+      setIsEditing(false);
+    }
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowDeleteConfirm(true);
+    setShowMenu(false);
+  };
+
+  const confirmDelete = () => {
+    onDelete?.();
+    setShowDeleteConfirm(false);
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
+  };
+
+  if (isEditing) {
+    return (
+      <div
+        style={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          padding: '8px 12px',
+          borderRadius: 10,
+          background: isActive ? 'rgba(217, 119, 87, 0.1)' : 'transparent',
+        }}
+      >
+        {Icon && <Icon size={18} weight={isActive ? 'fill' : 'bold'} color={isActive ? '#D97757' : '#9b9b9b'} />}
+        <input
+          type="text"
+          value={editTitle}
+          onChange={(e) => setEditTitle(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={handleSaveRename}
+          autoFocus
+          style={{
+            flex: 1,
+            fontSize: 13,
+            background: 'transparent',
+            border: 'none',
+            outline: 'none',
+            color: isActive ? '#D97757' : '#9b9b9b',
+            fontWeight: isActive ? 700 : 500,
+          }}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = isActive ? 'rgba(217, 119, 87, 0.15)' : 'rgba(255,255,255,0.04)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = isActive ? 'rgba(217, 119, 87, 0.1)' : 'transparent';
+        setShowMenu(false);
+      }}
+      data-rail-item={id}
+      style={{
+        width: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 4,
+        padding: '6px 8px',
+        borderRadius: 10,
+        background: isActive ? 'rgba(217, 119, 87, 0.1)' : 'transparent',
+        cursor: 'pointer',
+        transition: 'background 0.2s',
+      }}
+    >
+      <button
+        onClick={onClick}
+        data-rail-item={id}
+        style={{
+          flex: 1,
+          minWidth: 0,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          padding: '6px 8px',
+          borderRadius: 6,
+          border: 'none',
+          background: 'transparent',
+          color: isActive ? '#f0c8aa' : '#b8b0aa',
+          cursor: 'pointer',
+          textAlign: 'left',
+          transition: 'all 0.2s',
+          fontWeight: isActive ? 700 : 500,
+        }}
+      >
+        {Icon && <Icon size={18} weight={isActive ? 'fill' : 'bold'} />}
+        <span style={{ fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>{label}</span>
+      </button>
+
+      {/* Ellipsis Menu Button */}
+      <div style={{ position: 'relative' }}>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowMenu(!showMenu);
+          }}
+          style={{
+            width: 24,
+            height: 24,
+            borderRadius: 6,
+            border: 'none',
+            background: showMenu ? 'rgba(255,255,255,0.08)' : 'transparent',
+            color: '#8f8a86',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: 0.6,
+            transition: 'opacity 0.2s',
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+          onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
+        >
+          <DotsThree size={18} weight="bold" />
+        </button>
+
+        {/* Dropdown Menu */}
+        {showMenu && (
+          <>
+            <div
+              style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 9998,
+              }}
+              onClick={() => setShowMenu(false)}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                top: '100%',
+                right: 0,
+                marginTop: 4,
+                minWidth: 160,
+                background: 'linear-gradient(180deg, rgba(37,33,31,0.98), rgba(26,23,22,0.98))',
+                borderRadius: 14,
+                border: '1px solid rgba(212,176,140,0.14)',
+                boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
+                zIndex: 9999,
+                overflow: 'hidden',
+              }}
+            >
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRename();
+                }}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  border: 'none',
+                  background: 'transparent',
+                  color: '#9b9b9b',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  fontSize: 13,
+                  textAlign: 'left',
+                  transition: 'background 0.2s',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                <Pencil size={16} />
+                Rename
+              </button>
+
+              <div style={{ height: 1, background: '#333', margin: '4px 0' }} />
+
+              <button
+                onClick={handleDeleteClick}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  border: 'none',
+                  background: 'transparent',
+                  color: '#ef4444',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  fontSize: 13,
+                  textAlign: 'left',
+                  transition: 'background 0.2s',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239,68,68,0.1)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                <Trash size={16} />
+                Delete
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <DeleteConfirmModal
+          title="Delete Project?"
+          itemName={label}
+          itemType="project"
+          onConfirm={confirmDelete}
+          onCancel={cancelDelete}
+        />
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// Task Rail Item
+// ============================================================================
+
+function TaskRailItem({
+  id,
+  task,
+  icon: Icon,
+  label,
+  isActive,
+  projects,
+  metaLabel,
+  onClick,
+  onRename,
+  onDelete,
+  onMoveToProject,
+}: {
+  id: string;
+  task: Task;
+  icon: any;
+  label: string;
+  isActive: boolean;
+  projects: TaskProject[];
+  metaLabel?: string;
+  onClick: () => void;
+  onRename?: (newTitle: string) => void;
+  onDelete?: () => void;
+  onMoveToProject?: (projectId: string) => void;
+}) {
+  const [showMenu, setShowMenu] = useState(false);
+  const [showProjects, setShowProjects] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [editTitle, setEditTitle] = useState(label);
+
+  const handleRename = () => {
+    setIsEditing(true);
+    setShowMenu(false);
+  };
+
+  const handleSaveRename = () => {
+    if (editTitle.trim() && editTitle !== label) {
+      onRename?.(editTitle.trim());
+    }
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSaveRename();
+    } else if (e.key === 'Escape') {
+      setEditTitle(label);
+      setIsEditing(false);
+    }
+  };
+
+  const handleMoveToProject = (projectId: string) => {
+    onMoveToProject?.(projectId);
+    setShowProjects(false);
+    setShowMenu(false);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowDeleteConfirm(true);
+    setShowMenu(false);
+  };
+
+  const confirmDelete = () => {
+    onDelete?.();
+    setShowDeleteConfirm(false);
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
+  };
+
+  if (isEditing) {
+    return (
+      <div
+        style={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          padding: '8px 12px',
+          borderRadius: 10,
+          background: isActive ? 'rgba(217, 119, 87, 0.1)' : 'transparent',
+        }}
+      >
+        {Icon && <Icon size={18} weight={isActive ? 'fill' : 'bold'} color={isActive ? '#D97757' : '#9b9b9b'} />}
+        <input
+          type="text"
+          value={editTitle}
+          onChange={(e) => setEditTitle(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={handleSaveRename}
+          autoFocus
+          style={{
+            flex: 1,
+            fontSize: 13,
+            background: 'transparent',
+            border: 'none',
+            outline: 'none',
+            color: isActive ? '#D97757' : '#9b9b9b',
+            fontWeight: isActive ? 700 : 500,
+          }}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = isActive ? 'rgba(217, 119, 87, 0.15)' : 'rgba(255,255,255,0.04)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = isActive ? 'rgba(217, 119, 87, 0.1)' : 'transparent';
+        setShowMenu(false);
+      }}
+      data-rail-item={id}
+      style={{
+        width: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 4,
+        padding: '6px 8px',
+        borderRadius: 10,
+        background: isActive ? 'rgba(217, 119, 87, 0.1)' : 'transparent',
+        cursor: 'pointer',
+        transition: 'background 0.2s',
+      }}
+    >
+      <button
+        onClick={onClick}
+        data-rail-item={id}
+        style={{
+          flex: 1,
+          minWidth: 0,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          padding: '6px 8px',
+          borderRadius: 6,
+          border: 'none',
+          background: 'transparent',
+          color: isActive ? '#f0c8aa' : '#b8b0aa',
+          cursor: 'pointer',
+          textAlign: 'left',
+          transition: 'all 0.2s',
+          fontWeight: isActive ? 700 : 500,
+        }}
+      >
+        {Icon && <Icon size={18} weight={isActive ? 'fill' : 'bold'} />}
+        <span style={{ fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>{label}</span>
+        {metaLabel && (
+          <span style={{ fontSize: 10, color: '#6e6e6e', textTransform: 'capitalize' }}>
+            {metaLabel}
+          </span>
+        )}
+      </button>
+
+      {/* Ellipsis Menu Button */}
+      <div style={{ position: 'relative' }}>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowMenu(!showMenu);
+          }}
+          style={{
+            width: 24,
+            height: 24,
+            borderRadius: 6,
+            border: 'none',
+            background: showMenu ? 'rgba(255,255,255,0.08)' : 'transparent',
+            color: '#8f8a86',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: 0.6,
+            transition: 'opacity 0.2s',
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+          onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
+        >
+          <DotsThree size={18} weight="bold" />
+        </button>
+
+        {/* Dropdown Menu */}
+        {showMenu && (
+          <>
+            <div
+              style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 9998,
+              }}
+              onClick={() => setShowMenu(false)}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                top: '100%',
+                right: 0,
+                marginTop: 4,
+                minWidth: 160,
+                background: 'linear-gradient(180deg, rgba(37,33,31,0.98), rgba(26,23,22,0.98))',
+                borderRadius: 14,
+                border: '1px solid rgba(212,176,140,0.14)',
+                boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
+                zIndex: 9999,
+                overflow: 'hidden',
+              }}
+            >
+              {/* Rename Option */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRename();
+                }}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  border: 'none',
+                  background: 'transparent',
+                  color: '#9b9b9b',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  fontSize: 13,
+                  textAlign: 'left',
+                  transition: 'background 0.2s',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                <Pencil size={16} />
+                Rename
+              </button>
+
+              {/* Move to Project Option */}
+              <div style={{ position: 'relative' }}>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowProjects(!showProjects);
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    border: 'none',
+                    background: 'transparent',
+                    color: '#9b9b9b',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    fontSize: 13,
+                    textAlign: 'left',
+                    transition: 'background 0.2s',
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                >
+                  <FolderOpen size={16} />
+                  Move to Project
+                </button>
+
+                {/* Projects Submenu */}
+                {showProjects && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: '100%',
+                      marginLeft: 4,
+                      minWidth: 140,
+                      background: 'linear-gradient(180deg, rgba(37,33,31,0.98), rgba(26,23,22,0.98))',
+                      borderRadius: 14,
+                      border: '1px solid rgba(212,176,140,0.14)',
+                      boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
+                      zIndex: 10000,
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMoveToProject('');
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        border: 'none',
+                        background: 'transparent',
+                        color: '#9b9b9b',
+                        cursor: 'pointer',
+                        fontSize: 12,
+                        textAlign: 'left',
+                        transition: 'background 0.2s',
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                    >
+                      (No Project)
+                    </button>
+                    {projects.map((proj) => (
+                      <button
+                        key={proj.id}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMoveToProject(proj.id);
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '8px 12px',
+                          border: 'none',
+                          background: 'transparent',
+                          color: '#9b9b9b',
+                          cursor: 'pointer',
+                          fontSize: 12,
+                          textAlign: 'left',
+                          transition: 'background 0.2s',
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                      >
+                        {proj.title}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ height: 1, background: '#333', margin: '4px 0' }} />
+
+              {/* Delete Option */}
+              <button
+                onClick={handleDeleteClick}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  border: 'none',
+                  background: 'transparent',
+                  color: '#ef4444',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  fontSize: 13,
+                  textAlign: 'left',
+                  transition: 'background 0.2s',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239,68,68,0.1)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                <Trash size={16} />
+                Delete
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <DeleteConfirmModal
+          title="Delete Task?"
+          itemName={label}
+          itemType="task"
+          onConfirm={confirmDelete}
+          onCancel={cancelDelete}
+        />
+      )}
+    </div>
+  );
+}
 
 function SectionDivider() {
   return (
@@ -1533,101 +2576,13 @@ function ProjectRailItem({
 
       {/* Delete Confirmation Dialog */}
       {showDeleteConfirm && (
-        <>
-          <div
-            style={{
-              position: 'fixed',
-              inset: 0,
-              background: 'rgba(0,0,0,0.6)',
-              backdropFilter: 'blur(4px)',
-              zIndex: 10000,
-            }}
-            onClick={cancelDelete}
-          />
-          <div
-            style={{
-              position: 'fixed',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              background: 'linear-gradient(180deg, rgba(37,33,31,0.98), rgba(26,23,22,0.98))',
-              borderRadius: 16,
-              border: '1px solid rgba(212,176,140,0.2)',
-              padding: '24px',
-              minWidth: 320,
-              zIndex: 10001,
-              boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
-            }}
-          >
-            <h3 style={{ 
-              margin: '0 0 12px 0', 
-              fontSize: 16, 
-              fontWeight: 700, 
-              color: '#f0c8aa' 
-            }}>
-              Delete Session?
-            </h3>
-            <p style={{ 
-              margin: '0 0 20px 0', 
-              fontSize: 13, 
-              color: '#9b9b9b',
-              lineHeight: 1.5 
-            }}>
-              Are you sure you want to delete &quot;{label}&quot;? This action cannot be undone.
-            </p>
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button
-                onClick={cancelDelete}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: 8,
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  background: 'transparent',
-                  color: '#9b9b9b',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  e.currentTarget.style.color = '#b8b0aa';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.color = '#9b9b9b';
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDelete}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: 8,
-                  border: 'none',
-                  background: 'linear-gradient(135deg, rgba(239,68,68,0.8) 0%, rgba(220,38,38,0.8) 100%)',
-                  color: '#fff',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  boxShadow: '0 4px 12px rgba(239,68,68,0.3)',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(239,68,68,0.4)';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(239,68,68,0.3)';
-                  e.currentTarget.style.transform = 'none';
-                }}
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </>
+        <DeleteConfirmModal
+          title="Delete Session?"
+          itemName={label}
+          itemType="session"
+          onConfirm={confirmDelete}
+          onCancel={cancelDelete}
+        />
       )}
     </div>
   );

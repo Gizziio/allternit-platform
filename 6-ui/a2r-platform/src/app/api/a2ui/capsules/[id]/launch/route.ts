@@ -10,8 +10,24 @@ import { db } from "@/lib/db/client-sqlite";
 import { a2uiSession, a2uiCapsule } from "@/lib/db/schema-sqlite";
 import { eq, and } from "drizzle-orm";
 import { nanoid } from "nanoid";
+import type { MiniappManifest } from "@/capsules/browser/browser.types";
 
 const KERNEL_URL = process.env.NEXT_PUBLIC_KERNEL_URL || "http://127.0.0.1:3004";
+
+/**
+ * Safely parse JSON with error handling
+ * Returns null if parsing fails, logs error for debugging
+ */
+function safeJSONParse<T>(json: string | null, fieldName: string, capsuleId?: string): T | null {
+  if (!json) return null;
+  try {
+    return JSON.parse(json) as T;
+  } catch (error) {
+    console.error(`[A2UI Capsule Launch] Failed to parse ${fieldName}${capsuleId ? ` for capsule ${capsuleId}` : ''}:`, error);
+    console.error(`[A2UI Capsule Launch] Invalid JSON content:`, json.substring(0, 200));
+    return null;
+  }
+}
 
 export async function POST(
   req: NextRequest,
@@ -47,7 +63,13 @@ export async function POST(
     }
 
     // Parse manifest to get entry point
-    const manifest = JSON.parse(capsule.manifest);
+    const manifest = safeJSONParse<MiniappManifest>(capsule.manifest, 'manifest', capsuleId);
+    if (manifest === null) {
+      return NextResponse.json(
+        { error: "Capsule manifest is corrupted" },
+        { status: 500 }
+      );
+    }
     let payload;
 
     // Load payload based on entry type
@@ -56,7 +78,8 @@ export async function POST(
         if (capsule.content) {
           try {
             payload = JSON.parse(capsule.content);
-          } catch {
+          } catch (error) {
+            console.error("[A2UI Capsule Launch] Failed to parse capsule content:", error);
             return NextResponse.json(
               { error: "Invalid A2UI payload in capsule content" },
               { status: 500 }

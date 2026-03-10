@@ -154,7 +154,7 @@ export function SessionAnalyticsDashboard({
   mode = 'chat',
   dateRange,
 }: SessionAnalyticsDashboardProps) {
-  const modeColors = MODE_COLORS[mode];
+  const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.chat;
   const [selectedView, setSelectedView] = useState<'overview' | 'tools' | 'models' | 'topics'>('overview');
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
 
@@ -181,7 +181,7 @@ export function SessionAnalyticsDashboard({
     >
       {/* Header */}
       <DashboardHeader
-        modeColors={modeColors}
+        modeColors={modeColors as typeof MODE_COLORS.chat}
         selectedView={selectedView}
         setSelectedView={setSelectedView}
         timeRange={timeRange}
@@ -196,7 +196,7 @@ export function SessionAnalyticsDashboard({
           change="+12.5%"
           trend="up"
           icon={MessageSquare}
-          modeColors={modeColors}
+          modeColors={modeColors as typeof MODE_COLORS.chat}
         />
         <MetricCard
           title="Tokens Used"
@@ -204,7 +204,7 @@ export function SessionAnalyticsDashboard({
           change="+8.3%"
           trend="up"
           icon={Zap}
-          modeColors={modeColors}
+          modeColors={modeColors as typeof MODE_COLORS.chat}
         />
         <MetricCard
           title="Tool Calls"
@@ -212,7 +212,7 @@ export function SessionAnalyticsDashboard({
           change="-2.1%"
           trend="down"
           icon={Wrench}
-          modeColors={modeColors}
+          modeColors={modeColors as typeof MODE_COLORS.chat}
         />
         <MetricCard
           title="Avg Latency"
@@ -220,7 +220,7 @@ export function SessionAnalyticsDashboard({
           change="-5.4%"
           trend="down"
           icon={Clock}
-          modeColors={modeColors}
+          modeColors={modeColors as typeof MODE_COLORS.chat}
           invertTrend
         />
       </div>
@@ -232,7 +232,7 @@ export function SessionAnalyticsDashboard({
           title="Message Volume & Tokens"
           subtitle="Daily message count and token consumption"
           icon={Activity}
-          modeColors={modeColors}
+          modeColors={modeColors as typeof MODE_COLORS.chat}
         >
           <ResponsiveContainer width="100%" height={250}>
             <AreaChart data={analytics.messagesOverTime}>
@@ -288,7 +288,7 @@ export function SessionAnalyticsDashboard({
           title="Tool Usage"
           subtitle="Most frequently used tools"
           icon={Wrench}
-          modeColors={modeColors}
+          modeColors={modeColors as typeof MODE_COLORS.chat}
         >
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={analytics.toolUsage} layout="vertical">
@@ -315,7 +315,7 @@ export function SessionAnalyticsDashboard({
                   border: `1px solid ${modeColors.border}`,
                   borderRadius: RADIUS.md,
                 }}
-                formatter={(value: number) => [`${value} calls`, 'Usage']}
+                formatter={(value: number | undefined) => value !== undefined ? [`${value} calls`, 'Usage'] : ['', 'Usage']}
               />
               <Bar dataKey="count" fill={modeColors.accent} radius={[0, 4, 4, 0]} />
             </BarChart>
@@ -327,7 +327,7 @@ export function SessionAnalyticsDashboard({
           title="Activity by Hour"
           subtitle="Message distribution throughout the day"
           icon={Clock}
-          modeColors={modeColors}
+          modeColors={modeColors as typeof MODE_COLORS.chat}
         >
           <ResponsiveContainer width="100%" height={250}>
             <AreaChart data={analytics.hourlyDistribution}>
@@ -357,7 +357,7 @@ export function SessionAnalyticsDashboard({
                   border: `1px solid ${modeColors.border}`,
                   borderRadius: RADIUS.md,
                 }}
-                formatter={(value: number) => [`${value} messages`, 'Count']}
+                formatter={(value: number | undefined) => value !== undefined ? [`${value} messages`, 'Count'] : ['', 'Count']}
                 labelFormatter={(hour) => `${hour}:00 - ${hour}:59`}
               />
               <Area
@@ -376,7 +376,7 @@ export function SessionAnalyticsDashboard({
           title="Model Usage"
           subtitle="Token consumption by model"
           icon={PieChartIcon}
-          modeColors={modeColors}
+          modeColors={modeColors as typeof MODE_COLORS.chat}
         >
           <div className="flex items-center">
             <ResponsiveContainer width="50%" height={250}>
@@ -408,7 +408,7 @@ export function SessionAnalyticsDashboard({
                     border: `1px solid ${modeColors.border}`,
                     borderRadius: RADIUS.md,
                   }}
-                  formatter={(value: number) => [`${value.toLocaleString()} tokens`, 'Usage']}
+                  formatter={(value: number | undefined) => value !== undefined ? [`${value.toLocaleString()} tokens`, 'Usage'] : ['', 'Usage']}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -444,7 +444,7 @@ export function SessionAnalyticsDashboard({
           title="Response Latency"
           subtitle="Average and P95 latency over time"
           icon={TrendingUp}
-          modeColors={modeColors}
+          modeColors={modeColors as typeof MODE_COLORS.chat}
           className="lg:col-span-2"
         >
           <ResponsiveContainer width="100%" height={200}>
@@ -469,7 +469,7 @@ export function SessionAnalyticsDashboard({
                   border: `1px solid ${modeColors.border}`,
                   borderRadius: RADIUS.md,
                 }}
-                formatter={(value: number) => [`${value}ms`, '']}
+                formatter={(value: number | undefined) => value !== undefined ? [`${value}ms`, ''] : ['', '']}
               />
               <Line
                 type="monotone"
@@ -651,7 +651,7 @@ function MetricCard({
   value: string;
   change: string;
   trend: 'up' | 'down';
-  icon: React.ComponentType<{size?: number}>;
+  icon: React.ComponentType<{size?: number | string; style?: React.CSSProperties}>;
   modeColors: typeof MODE_COLORS.chat;
   invertTrend?: boolean;
 }) {
@@ -708,7 +708,7 @@ function ChartCard({
 }: {
   title: string;
   subtitle: string;
-  icon: React.ComponentType<{size?: number}>;
+  icon: React.ComponentType<{size?: number | string; style?: React.CSSProperties}>;
   children: React.ReactNode;
   modeColors: typeof MODE_COLORS.chat;
   className?: string;

@@ -323,7 +323,9 @@ export class PoolManager {
 
   /** Get selected pool */
   getSelectedPool(): PoolStatus | undefined {
-    if (!this.state.selected_pool) return undefined;
+    if (!this.state.selected_pool) {
+      throw new Error('No pool selected');
+    }
     return this.getPool(this.state.selected_pool);
   }
 

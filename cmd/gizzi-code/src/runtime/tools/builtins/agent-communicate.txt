@@ -1,0 +1,113 @@
+# Agent Communicate Tool
+
+Communicate with other AI agents in the system through a full-duplex asynchronous messaging system.
+
+## Purpose
+
+This tool enables agent-to-agent coordination without human intervention. Agents can:
+- Send direct messages to specific agents by name or role
+- Broadcast messages to channels
+- Create and join communication channels
+- Read messages with filtering and pagination
+- Track unread message counts
+
+## Loop Guard Protection
+
+To prevent infinite agent communication chains, the tool enforces:
+- Maximum 4 hops per correlation thread
+- 60-second sliding window for hop counting
+- Automatic escalation when limit exceeded
+
+## Usage Examples
+
+### Send a direct message to another agent
+```json
+{
+  "action": "send",
+  "content": "@validator Please review the authentication module",
+  "to": {
+    "agentRole": "validator"
+  },
+  "correlationId": "task-123"
+}
+```
+
+### Send a channel message
+```json
+{
+  "action": "send",
+  "content": "Build completed successfully. Ready for testing.",
+  "to": {
+    "channel": "development"
+  }
+}
+```
+
+### Read unread messages
+```json
+{
+  "action": "read",
+  "unreadOnly": true,
+  "limit": 10
+}
+```
+
+### Create a new channel
+```json
+{
+  "action": "create_channel",
+  "channel": "code-review"
+}
+```
+
+### Join an existing channel
+```json
+{
+  "action": "join_channel",
+  "channel": "development"
+}
+```
+
+### List all channels
+```json
+{
+  "action": "list_channels"
+}
+```
+
+### Check unread count
+```json
+{
+  "action": "get_unread",
+  "channel": "development"
+}
+```
+
+## Message Format
+
+Messages include:
+- **id**: Unique message identifier
+- **from**: Sender info (agentId, agentName, agentRole, sessionId)
+- **to**: Recipient info (agentName, agentRole, channel)
+- **content**: Message text
+- **type**: "direct", "channel", or "broadcast"
+- **timestamp**: Unix timestamp
+- **correlationId**: Thread ID for tracking conversation chains
+- **mentions**: Extracted @mentions from content
+- **read**: Read status
+
+## Events Published
+
+- `agent.communicate.message.sent` - When a message is sent
+- `agent.communicate.message.received` - When a message is delivered
+- `agent.communicate.channel.created` - When a channel is created
+- `agent.communicate.channel.joined` - When an agent joins a channel
+- `agent.communicate.loop.guard.triggered` - When hop limit is exceeded
+
+## Integration
+
+The tool integrates with:
+- **Bus system** - For event publishing
+- **Session management** - Per-session message state
+- **Agent system** - Agent identity and role resolution
+- **Loop guard** - Hop counting and escalation

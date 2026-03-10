@@ -78,7 +78,7 @@ function DiffHunkView({ hunk, fileChangeId, changeSetId }: { hunk: DiffHunk, fil
       }}>
         {hunk.lines.map((line, i) => (
           <div 
-            key={i} 
+            key={`${line.oldLineNumber}-${line.newLineNumber}-${line.type}-${i}`} 
             style={{ 
               display: 'flex',
               background: line.type === 'addition' ? 'rgba(52, 199, 89, 0.1)' : line.type === 'deletion' ? 'rgba(255, 59, 48, 0.1)' : 'transparent',

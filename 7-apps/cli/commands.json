@@ -1,6 +1,28 @@
 {
   "commands": [
     {
+      "name": "swarm",
+      "description": "Execute tasks with multi-agent swarm",
+      "subcommands": [
+        {
+          "name": "run",
+          "description": "Run a task with swarm agents"
+        },
+        {
+          "name": "status",
+          "description": "Show active swarm sessions"
+        },
+        {
+          "name": "dashboard",
+          "description": "Open swarm dashboard"
+        },
+        {
+          "name": "knowledge",
+          "description": "Query the swarm knowledge base"
+        }
+      ]
+    },
+    {
       "name": "up",
       "aliases": ["start"],
       "description": "Start the brain daemon"

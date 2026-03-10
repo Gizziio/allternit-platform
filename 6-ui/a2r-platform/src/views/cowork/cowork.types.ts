@@ -21,7 +21,8 @@ export type CoworkEventType =
   | 'cowork.checkpoint'
   | 'cowork.restore'
   | 'cowork.narration'
-  | 'cowork.takeover';
+  | 'cowork.takeover'
+  | 'status_change';
 
 export interface CoworkEvent {
   id: string;
@@ -239,6 +240,11 @@ export interface TakeoverEvent extends CoworkEvent {
 // Union Type
 // ============================================================================
 
+export interface StatusChangeEvent extends CoworkEvent {
+  type: 'status_change';
+  status: 'running' | 'paused' | 'error' | 'completed';
+}
+
 export type AnyCoworkEvent =
   | SessionStartEvent
   | SessionEndEvent
@@ -253,7 +259,8 @@ export type AnyCoworkEvent =
   | CheckpointEvent
   | RestoreEvent
   | NarrationEvent
-  | TakeoverEvent;
+  | TakeoverEvent
+  | StatusChangeEvent;
 
 // ============================================================================
 // Session State

@@ -173,9 +173,7 @@ export * from "./dock/TaskDock";
 export * from "./dock/ticket.model";
 export * from "./dock/ticket.store";
 
-export * from "./runner/AgentInvokeBar";
-export * from "./runner/AgentRunnerPanel";
-export * from "./runner/RunnerTraceSidebar";
+export * from "./runner/AgentRunner";
 export * from "./runner/runner.store";
 export * from "./runner/runner.types";
 
@@ -214,6 +212,7 @@ export * from "./design/controls/ActionChip";
 export * from "./design/motion/motion";
 
 export * from "./integration/a2r/legacy.bridge";
+export * from "./components/GlobalDropzone";
 
 // API Client - The canonical way to communicate with the backend
 export {

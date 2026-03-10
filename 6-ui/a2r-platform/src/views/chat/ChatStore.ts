@@ -25,6 +25,7 @@ export interface ProjectFile {
 
 export interface ChatProject {
   id: string;
+  localKey?: string;
   title: string;
   threadIds: string[];
   files: ProjectFile[];
@@ -43,6 +44,7 @@ interface ChatState {
   activeThreadId: string | null;
   sandboxMode: "read-only" | "full";
   activeProjectId: string | null;
+  activeProjectLocalKey: string | null;
   
   // OpenClaw bridge
   openclawConnected: boolean;
@@ -66,12 +68,14 @@ interface ChatState {
   createProject: (title: string) => Promise<string>;
   deleteProject: (id: string) => void;
   renameProject: (id: string, title: string) => void;
-  setActiveProject: (id: string | null) => void;
+  setActiveProject: (id: string | null, localKey?: string | null) => void;
   moveThreadToProject: (threadId: string, projectId: string | null) => void;
   addFileToProject: (projectId: string, file: Omit<ProjectFile, 'id' | 'addedAt'>) => void;
+  removeFileFromProject: (projectId: string, fileId: string) => void;
   
   addMessage: (threadId: string, role: 'user' | 'assistant', text: string) => Promise<void>;
   syncWithKernel: () => Promise<void>;
+  ensureProjectLocalKeys: () => void;
 }
 
 export const useChatStore = create<ChatState>()(
@@ -88,6 +92,7 @@ export const useChatStore = create<ChatState>()(
       activeThreadId: 'welcome',
       sandboxMode: 'read-only',
       activeProjectId: null,
+      activeProjectLocalKey: null,
       
       // OpenClaw bridge state
       openclawConnected: false,
@@ -135,7 +140,8 @@ export const useChatStore = create<ChatState>()(
             updatedAt: Date.now(),
           }, ...state.threads],
           activeThreadId: id,
-          activeProjectId: null
+          activeProjectId: null,
+          activeProjectLocalKey: null,
         }));
         return id;
       },
@@ -161,7 +167,11 @@ export const useChatStore = create<ChatState>()(
         })
       })),
 
-      setActiveThread: (id) => set({ activeThreadId: id, activeProjectId: null }),
+      setActiveThread: (id) => set({
+        activeThreadId: id,
+        activeProjectId: null,
+        activeProjectLocalKey: null,
+      }),
       
       setSandboxMode: (mode) => set({ sandboxMode: mode }),
 
@@ -174,9 +184,11 @@ export const useChatStore = create<ChatState>()(
           console.warn('[ChatStore] createProject failed, falling back to local id', error);
           id = `local-project-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
         }
+        const localKey = `project-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
         set(state => ({
-          projects: [{ id, title, threadIds: [], files: [], createdAt: Date.now() }, ...state.projects],
+          projects: [{ id, localKey, title, threadIds: [], files: [], createdAt: Date.now() }, ...state.projects],
           activeProjectId: id,
+          activeProjectLocalKey: localKey,
           activeThreadId: null
         }));
         return id;
@@ -184,14 +196,22 @@ export const useChatStore = create<ChatState>()(
 
       deleteProject: (id) => set(state => ({
         projects: state.projects.filter(p => p.id !== id),
-        activeProjectId: state.activeProjectId === id ? null : state.activeProjectId
+        activeProjectId: state.activeProjectId === id ? null : state.activeProjectId,
+        activeProjectLocalKey: state.activeProjectId === id ? null : state.activeProjectLocalKey,
       })),
 
       renameProject: (id, title) => set(state => ({
         projects: state.projects.map(p => p.id === id ? { ...p, title } : p)
       })),
 
-      setActiveProject: (id) => set({ activeProjectId: id, activeThreadId: null }),
+      setActiveProject: (id, localKey = null) => set((state) => ({
+        activeProjectId: id,
+        activeProjectLocalKey:
+          id === null
+            ? null
+            : localKey ?? state.projects.find((project) => project.id === id)?.localKey ?? null,
+        activeThreadId: null,
+      })),
 
       moveThreadToProject: (threadId, projectId) => set(state => ({
         threads: state.threads.map(t => t.id === threadId ? { ...t, projectId: projectId || undefined } : t)
@@ -201,6 +221,13 @@ export const useChatStore = create<ChatState>()(
         projects: state.projects.map(p => p.id === projectId ? {
           ...p,
           files: [...p.files, { ...file, id: Math.random().toString(36).substring(7), addedAt: Date.now() }]
+        } : p)
+      })),
+
+      removeFileFromProject: (projectId, fileId) => set(state => ({
+        projects: state.projects.map(p => p.id === projectId ? {
+          ...p,
+          files: p.files.filter(f => f.id !== fileId)
         } : p)
       })),
 
@@ -223,7 +250,39 @@ export const useChatStore = create<ChatState>()(
         }
       },
 
-      syncWithKernel: async () => {}
+      syncWithKernel: async () => {},
+
+      ensureProjectLocalKeys: () => set((state) => {
+        const normalizedProjects = state.projects.map((project, index) => {
+          if (project.localKey) return project;
+          const createdAtSeed =
+            typeof project.createdAt === 'number' ? project.createdAt : Date.now();
+          return {
+            ...project,
+            localKey: `project-${createdAtSeed}-${index}`,
+          };
+        });
+
+        const projectsChanged = normalizedProjects.some(
+          (project, index) => project.localKey !== state.projects[index]?.localKey,
+        );
+
+        const nextActiveProjectLocalKey =
+          state.activeProjectId === null
+            ? null
+            : state.activeProjectLocalKey
+              ?? normalizedProjects.find((project) => project.id === state.activeProjectId)?.localKey
+              ?? null;
+
+        if (!projectsChanged && nextActiveProjectLocalKey === state.activeProjectLocalKey) {
+          return {};
+        }
+
+        return {
+          projects: normalizedProjects,
+          activeProjectLocalKey: nextActiveProjectLocalKey,
+        };
+      }),
     }),
     { name: 'a2r-chat-storage-v5' }
   )

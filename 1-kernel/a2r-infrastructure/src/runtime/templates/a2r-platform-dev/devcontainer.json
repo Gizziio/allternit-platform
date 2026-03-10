@@ -1,0 +1,170 @@
+{
+  "name": "A2R Platform Development",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "a2r-dev",
+  "workspaceFolder": "/workspace",
+  "shutdownAction": "stopCompose",
+  "overrideCommand": false,
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20",
+      "nodeGypDependencies": true,
+      "nvmInstallPath": "/usr/local/share/nvm"
+    },
+    "ghcr.io/devcontainers/features/go:1": {
+      "version": "1.22",
+      "golangciLintVersion": "latest"
+    },
+    "ghcr.io/devcontainers/features/rust:1": {
+      "version": "latest",
+      "profile": "complete"
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "moby": true,
+      "dockerDashComposeVersion": "v2"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
+      "version": "latest",
+      "helm": "latest",
+      "minikube": "none"
+    }
+  },
+  "postCreateCommand": "bash ./scripts/setup-dev.sh",
+  "postStartCommand": "bash ./scripts/start-services.sh",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "terminal.integrated.profiles.linux": {
+          "bash": {
+            "path": "/bin/bash",
+            "icon": "terminal-bash"
+          }
+        },
+        "go.toolsManagement.autoUpdate": true,
+        "go.useLanguageServer": true,
+        "go.gopath": "/go",
+        "rust-analyzer.checkOnSave.command": "clippy",
+        "rust-analyzer.cargo.features": "all",
+        "typescript.preferences.importModuleSpecifier": "relative",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit"
+        }
+      },
+      "extensions": [
+        "golang.Go",
+        "rust-lang.rust-analyzer",
+        "tamasfe.even-better-toml",
+        "serayuzgur.crates",
+        "bradlc.vscode-tailwindcss",
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        "ms-vscode.vscode-typescript-next",
+        "dsznajder.es7-react-js-snippets",
+        "ms-azuretools.vscode-docker",
+        "ms-kubernetes-tools.vscode-kubernetes-tools",
+        "redhat.vscode-yaml",
+        "gruntfuggly.todo-tree",
+        "eamodio.gitlens",
+        "github.copilot",
+        "github.copilot-chat",
+        "streetsidesoftware.code-spell-checker",
+        "ms-vscode.test-adapter-converter",
+        "hbenl.vscode-test-explorer",
+        "connor4312.esbuild-problem-matchers",
+        "orta.vscode-jest",
+        "prisma.prisma",
+        "cweijan.vscode-database-client2",
+        "cweijan.vscode-redis-client"
+      ]
+    }
+  },
+  "forwardPorts": [
+    3000,
+    3010,
+    8080,
+    8081,
+    9000,
+    9001,
+    5432,
+    6379,
+    1025,
+    8025,
+    8000,
+    4566,
+    7233,
+    8222,
+    4222
+  ],
+  "portsAttributes": {
+    "3000": {
+      "label": "A2R Platform UI",
+      "onAutoForward": "notify"
+    },
+    "3010": {
+      "label": "A2R Platform UI (Alt)",
+      "onAutoForward": "silent"
+    },
+    "8080": {
+      "label": "A2R API Gateway",
+      "onAutoForward": "silent"
+    },
+    "8081": {
+      "label": "A2R Kernel Services",
+      "onAutoForward": "silent"
+    },
+    "9000": {
+      "label": "MinIO API",
+      "onAutoForward": "silent"
+    },
+    "9001": {
+      "label": "MinIO Console",
+      "onAutoForward": "notify"
+    },
+    "5432": {
+      "label": "PostgreSQL",
+      "onAutoForward": "silent"
+    },
+    "6379": {
+      "label": "Redis",
+      "onAutoForward": "silent"
+    },
+    "8025": {
+      "label": "Mailpit Web UI",
+      "onAutoForward": "notify"
+    },
+    "8000": {
+      "label": "ChromaDB",
+      "onAutoForward": "silent"
+    },
+    "4566": {
+      "label": "LocalStack",
+      "onAutoForward": "silent"
+    },
+    "7233": {
+      "label": "Temporal",
+      "onAutoForward": "silent"
+    },
+    "8222": {
+      "label": "NATS Monitoring",
+      "onAutoForward": "silent"
+    },
+    "4222": {
+      "label": "NATS",
+      "onAutoForward": "silent"
+    }
+  },
+  "remoteUser": "vscode",
+  "containerUser": "vscode",
+  "updateRemoteUserUID": true,
+  "mounts": [
+    "source=${localWorkspaceFolder}/.git,target=/workspace/.git,type=bind,consistency=cached",
+    "source=a2r-dev-node_modules,target=/workspace/6-ui/a2r-platform/node_modules,type=volume",
+    "source=a2r-dev-go-cache,target=/go/pkg,type=volume",
+    "source=a2r-dev-rust-cache,target=/usr/local/cargo/registry,type=volume",
+    "source=a2r-dev-pnpm-store,target=/root/.local/share/pnpm,type=volume"
+  ]
+}

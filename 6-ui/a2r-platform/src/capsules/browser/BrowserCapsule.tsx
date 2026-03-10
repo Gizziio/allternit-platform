@@ -26,6 +26,7 @@ import {
   Home,
   Star,
   AlertTriangle,
+  Beaker,
 } from 'lucide-react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -322,6 +323,20 @@ function A2UIContent({ tab }: { tab: A2UITab }) {
 
   return (
     <div className="w-full h-full overflow-auto p-4">
+      {/* Mock Data Warning Banner */}
+      {tab.isMockData && (
+        <div className="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center gap-3">
+          <Beaker className="w-5 h-5 text-amber-500 shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
+              Demo Mode
+            </p>
+            <p className="text-xs text-amber-600/80 dark:text-amber-400/70">
+              This UI was generated with mock data. The kernel is unavailable.
+            </p>
+          </div>
+        </div>
+      )}
       <A2UIRenderer
         payload={tab.payload}
         onAction={handleAction}
@@ -364,7 +379,7 @@ function MiniappContent({ tab }: { tab: MiniappTab }) {
           <webview
             src={manifest.entry.src}
             className="w-full h-full border-none"
-            allowpopups="true"
+            allowpopups={true}
           />
         </div>
       );

@@ -1,0 +1,86 @@
+import { Log } from "@/shared/util/log";
+import { Ripgrep } from "@/shared/file/ripgrep";
+import path from "path";
+
+export interface RepoMapNode {
+  path: string;
+  type: "file" | "directory";
+  symbols?: string[];
+  summary?: string;
+}
+
+export namespace RepoMap {
+  const log = Log.create({ service: "context.repo-map" });
+
+  const SYMBOL_PATTERNS: Record<string, RegExp> = {
+    ".ts": /(?:export\s+(?:default\s+)?(?:class|function|const|interface|type|enum|namespace)\s+(\w+))/g,
+    ".tsx": /(?:export\s+(?:default\s+)?(?:class|function|const|interface|type|enum|namespace)\s+(\w+))/g,
+    ".js": /(?:export\s+(?:default\s+)?(?:class|function|const|let|var)\s+(\w+))/g,
+    ".jsx": /(?:export\s+(?:default\s+)?(?:class|function|const|let|var)\s+(\w+))/g,
+    ".py": /(?:^(?:class|def)\s+(\w+))/gm,
+    ".rs": /(?:pub\s+(?:fn|struct|enum|trait|type|mod|const)\s+(\w+))/g,
+    ".go": /(?:^func\s+(?:\(\w+\s+\*?\w+\)\s+)?(\w+))/gm,
+  };
+
+  async function extractSymbols(filePath: string, root: string): Promise<string[]> {
+    const ext = path.extname(filePath);
+    const pattern = SYMBOL_PATTERNS[ext];
+    if (!pattern) return [];
+
+    try {
+      const fullPath = path.join(root, filePath);
+      const file = Bun.file(fullPath);
+      const stat = await file.stat();
+      if (stat.size > 100_000) return []; // skip large files
+      const content = await file.text();
+      const symbols: string[] = [];
+      const regex = new RegExp(pattern.source, pattern.flags);
+      let match: RegExpExecArray | null;
+      while ((match = regex.exec(content)) !== null) {
+        if (match[1]) symbols.push(match[1]);
+      }
+      return symbols;
+    } catch {
+      return [];
+    }
+  }
+
+  export async function generate(
+    root: string,
+    options?: { maxFiles?: number; symbols?: boolean },
+  ): Promise<RepoMapNode[]> {
+    log.info("Generating repository map", { root });
+    const maxFiles = options?.maxFiles ?? 500;
+    const includeSymbols = options?.symbols !== false;
+
+    const nodes: RepoMapNode[] = [];
+    const dirs = new Set<string>();
+
+    let count = 0;
+    for await (const file of Ripgrep.files({ cwd: root })) {
+      if (count >= maxFiles) break;
+      count++;
+
+      // Track parent directories
+      const parts = file.split(path.sep);
+      let dirPath = "";
+      for (let i = 0; i < parts.length - 1; i++) {
+        dirPath = dirPath ? `${dirPath}/${parts[i]}` : parts[i];
+        if (!dirs.has(dirPath)) {
+          dirs.add(dirPath);
+          nodes.push({ path: dirPath, type: "directory" });
+        }
+      }
+
+      const node: RepoMapNode = { path: file, type: "file" };
+      if (includeSymbols) {
+        const symbols = await extractSymbols(file, root);
+        if (symbols.length > 0) node.symbols = symbols;
+      }
+      nodes.push(node);
+    }
+
+    log.info("Repository map generated", { files: count, directories: dirs.size });
+    return nodes;
+  }
+}

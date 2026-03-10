@@ -171,7 +171,7 @@ function CommitRow({ commit }: { commit: Commit }) {
             </span>
             <span
               className="text-xs font-medium px-2 py-0.5 rounded-md capitalize"
-              style={status}
+              style={{ backgroundColor: status?.bg, color: status?.text }}
             >
               {commit.status}
             </span>

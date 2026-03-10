@@ -172,11 +172,26 @@ export function useWorkspace(
 
         // Load initial data
         const [wsInfo, wsTasks, wsSkills, wsIdentity, wsPolicy] = await Promise.all([
-          ws.getInfo().catch(() => null),
-          ws.listTasks().catch(() => []),
-          ws.listSkills().catch(() => []),
-          ws.getIdentity().catch(() => null),
-          ws.listPolicyRules().catch(() => []),
+          ws.getInfo().catch((err) => {
+            console.error("[useWorkspace] Failed to get workspace info:", err);
+            return null;
+          }),
+          ws.listTasks().catch((err) => {
+            console.error("[useWorkspace] Failed to list tasks:", err);
+            return [];
+          }),
+          ws.listSkills().catch((err) => {
+            console.error("[useWorkspace] Failed to list skills:", err);
+            return [];
+          }),
+          ws.getIdentity().catch((err) => {
+            console.error("[useWorkspace] Failed to get identity:", err);
+            return null;
+          }),
+          ws.listPolicyRules().catch((err) => {
+            console.error("[useWorkspace] Failed to list policy rules:", err);
+            return [];
+          }),
         ]);
 
         if (cancelled) return;

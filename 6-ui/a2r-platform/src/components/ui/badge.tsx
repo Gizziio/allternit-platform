@@ -1,36 +1,35 @@
-import * as React from "react"
-import { cva, type VariantProps } from "class-variance-authority"
+import React from 'react';
 
-import { cn } from "@/lib/utils"
-
-const badgeVariants = cva(
-  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-  {
-    variants: {
-      variant: {
-        default:
-          "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
-        secondary:
-          "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        destructive:
-          "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
-        outline: "text-foreground",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-    },
-  }
-)
-
-export interface BadgeProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof badgeVariants> {}
-
-function Badge({ className, variant, ...props }: BadgeProps) {
-  return (
-    <div className={cn(badgeVariants({ variant }), className)} {...props} />
-  )
+interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
+  variant?: 'default' | 'secondary' | 'outline' | 'destructive';
 }
 
-export { Badge, badgeVariants }
+export const Badge: React.FC<BadgeProps> = ({ 
+  children, 
+  variant = 'default',
+  style,
+  ...props 
+}) => {
+  const variantStyles = {
+    default: { background: '#d4b08c', color: '#0a0a0a' },
+    secondary: { background: 'rgba(255,255,255,0.1)', color: '#888' },
+    outline: { background: 'transparent', color: '#d4b08c', border: '1px solid #d4b08c' },
+    destructive: { background: 'rgba(239,68,68,0.2)', color: '#ef4444' },
+  };
+
+  return (
+    <span
+      style={{
+        padding: '2px 8px',
+        borderRadius: '4px',
+        fontSize: '12px',
+        fontWeight: '500',
+        ...variantStyles[variant],
+        ...style,
+      }}
+      {...props}
+    >
+      {children}
+    </span>
+  );
+};

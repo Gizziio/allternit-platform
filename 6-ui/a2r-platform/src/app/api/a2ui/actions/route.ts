@@ -9,6 +9,21 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const KERNEL_URL = process.env.NEXT_PUBLIC_KERNEL_URL || 'http://127.0.0.1:3004';
 
+/**
+ * Safely parse JSON with error handling
+ * Returns null if parsing fails, logs error for debugging
+ */
+function safeJSONParse<T>(json: string | null, fieldName: string, sessionId?: string): T | null {
+  if (!json) return null;
+  try {
+    return JSON.parse(json) as T;
+  } catch (error) {
+    console.error(`[A2UI Actions] Failed to parse ${fieldName}${sessionId ? ` for session ${sessionId}` : ''}:`, error);
+    console.error(`[A2UI Actions] Invalid JSON content:`, json.substring(0, 200));
+    return null;
+  }
+}
+
 // Helper to forward to kernel
 async function forwardToKernel(
   path: string,
@@ -88,8 +103,15 @@ export async function POST(request: NextRequest) {
       }
 
       // Parse current state
-      const currentPayload = JSON.parse(session.payload);
-      const currentDataModel = data_model || JSON.parse(session.dataModel);
+      const currentPayload = safeJSONParse<Record<string, unknown>>(session.payload, 'payload', session_id);
+      const currentDataModel = data_model || safeJSONParse<Record<string, unknown>>(session.dataModel, 'dataModel', session_id);
+
+      if (currentPayload === null || currentDataModel === null) {
+        return NextResponse.json(
+          { error: 'Session data is corrupted' },
+          { status: 500 }
+        );
+      }
 
       // Process action (simple implementation)
       let newPayload = { ...currentPayload };

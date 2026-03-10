@@ -32,7 +32,7 @@ export function ShellFrame({
   const setResizing = useSidecarStore((s) => s.setResizing);
   const dragRef = useRef<{ startX: number; startW: number } | null>(null);
 
-  const isImmersive = mode === 'cowork' || mode === 'code';
+  const isImmersive = mode === 'cowork' || mode === 'code' || mode === 'chat';
 
   const onResizeStart = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -63,7 +63,7 @@ export function ShellFrame({
       gridTemplateColumns: isRailCollapsed
         ? `0px 1fr ${sidecarOpen ? sidecarWidth + 'px' : '0px'}`
         : `284px 1fr ${sidecarOpen ? sidecarWidth + 'px' : '0px'}`,
-      gridTemplateRows: '1fr',
+      gridTemplateRows: 'minmax(0, 1fr)',
       height: '100vh',
       background: '#161616',
       color: 'var(--text-primary)',
@@ -78,6 +78,7 @@ export function ShellFrame({
           gridRow: '1',
           gridColumn: '1',
           display: 'flex',
+          minHeight: 0,
           overflow: 'hidden',
           padding: '12px 0 12px 12px',
           zIndex: 1,

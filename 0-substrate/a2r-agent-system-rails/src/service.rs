@@ -541,6 +541,20 @@ pub struct GateMutateResponse {
     pub mutation_ids: Vec<String>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GateAutolandRequest {
+    pub wih_id: String,
+    #[serde(default)]
+    pub dry_run: bool,
+    #[serde(default)]
+    pub git_commit: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GateAutolandResponse {
+    pub result: crate::gate::AutolandResult,
+}
+
 // ============================================================================
 // VAULT endpoints
 // ============================================================================
@@ -1555,6 +1569,55 @@ async fn gate_mutate(
     }
 }
 
+async fn gate_autoland(
+    State(state): State<Arc<ServiceState>>,
+    Json(request): Json<GateAutolandRequest>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let scope = EventScope {
+        wih_id: Some(request.wih_id.clone()),
+        ..Default::default()
+    };
+    ensure_policy_injected(&state, Some(scope)).await?;
+    match state.gate.autoland_wih(&request.wih_id, request.dry_run, request.git_commit).await {
+        Ok(result) => Ok((
+            StatusCode::OK,
+            Json(GateAutolandResponse { result }),
+        )),
+        Err(e) => {
+            tracing::error!("gate_autoland failed: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
+async fn gate_rollback(
+    State(state): State<Arc<ServiceState>>,
+    Json(request): Json<GateAutolandRequest>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let scope = EventScope {
+        wih_id: Some(request.wih_id.clone()),
+        ..Default::default()
+    };
+    ensure_policy_injected(&state, Some(scope)).await?;
+    match state.gate.rollback_wih(&request.wih_id).await {
+        Ok(_) => Ok((
+            StatusCode::OK,
+            Json(GateAutolandResponse { 
+                result: crate::gate::AutolandResult {
+                    success: true,
+                    dry_run: false,
+                    impact: crate::gate::AutolandImpact { modified: vec![], added: vec![], deleted: vec![] },
+                    backup_dir: None,
+                }
+            }),
+        )),
+        Err(e) => {
+            tracing::error!("gate_rollback failed: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+}
+
 // ============================================================================
 // VAULT handlers
 // ============================================================================
@@ -2103,7 +2166,7 @@ async fn receipts_verify(
     State(state): State<Arc<ServiceState>>,
     Json(req): Json<ReceiptVerifyRequest>,
 ) -> impl IntoResponse {
-    use crate::receipts::store::ReceiptVerificationResult as StoreResult;
+    
 
     // Verify receipts
     let results: Vec<ReceiptVerificationResult> = match state.receipts.verify_receipts(&req.receipt_ids) {
@@ -2208,6 +2271,8 @@ pub fn create_router(state: Arc<ServiceState>) -> Router {
         .route("/v1/gate/verify", get(gate_verify))
         .route("/v1/gate/decision", post(gate_decision))
         .route("/v1/gate/mutate", post(gate_mutate))
+        .route("/v1/gate/autoland", post(gate_autoland))
+        .route("/v1/gate/rollback", post(gate_rollback))
         // VAULT
         .route("/v1/vault/archive", post(vault_archive))
         .route("/v1/vault/status", get(vault_status))

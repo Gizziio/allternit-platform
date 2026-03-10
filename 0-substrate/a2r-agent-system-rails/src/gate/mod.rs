@@ -1,3 +1,8 @@
 pub mod gate;
+#[cfg(test)]
+pub mod tests;
 
-pub use gate::{DagMutation, Gate, GateOptions, GateResult, MutationProvenance, WihPickupOptions};
+pub use gate::{
+    AutolandImpact, AutolandResult, DagMutation, Gate, GateOptions, GateResult, MutationProvenance,
+    WihPickupOptions,
+};

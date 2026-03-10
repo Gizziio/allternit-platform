@@ -25,6 +25,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChatComposer } from '../chat/ChatComposer';
 import { CoworkTranscript } from './CoworkTranscript';
 
+// Attachment components
+import { useDropTarget, type FileWithData } from '@/components/GlobalDropzone';
+import { AttachmentPreview, AttachmentPreviewModal, type AttachmentPreviewItem } from '@/components/chat/AttachmentPreview';
+
 // AI streaming (same as Chat mode)
 import { useRustStreamAdapter, type ChatMessage } from '@/lib/ai/rust-stream-adapter';
 
@@ -67,6 +71,19 @@ const THEME = {
   accent: '#D4956A',
   borderSubtle: 'rgba(255,255,255,0.06)',
 };
+
+const MAX_COWORK_TASK_TITLE_LENGTH = 64;
+
+function buildCoworkTaskTitleFromMessage(message: string): string {
+  const normalized = message.trim().replace(/\s+/g, ' ');
+  if (!normalized) {
+    return 'New Task';
+  }
+  if (normalized.length <= MAX_COWORK_TASK_TITLE_LENGTH) {
+    return normalized;
+  }
+  return `${normalized.slice(0, MAX_COWORK_TASK_TITLE_LENGTH - 3)}...`;
+}
 
 // ============================================================================
 // Error Fallback
@@ -126,6 +143,44 @@ function CoworkRootContent() {
   
   const [showRail, setShowRail] = useState(true);
   const [initialMessage, setInitialMessage] = useState<string | null>(null);
+  
+  // Dropped files state
+  const [droppedFiles, setDroppedFiles] = useState<AttachmentPreviewItem[]>([]);
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [previewItem, setPreviewItem] = useState<AttachmentPreviewItem | null>(null);
+  
+  // Handle dropped files from global dropzone
+  const handleDroppedFiles = useCallback(async (files: FileWithData[]) => {
+    const extToType = (filename: string): AttachmentPreviewItem['type'] => {
+      const ext = filename.split('.').pop()?.toLowerCase() || '';
+      if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext)) return 'image';
+      if (['pdf'].includes(ext)) return 'document';
+      if (['docx', 'doc', 'txt', 'md'].includes(ext)) return 'document';
+      if (['ts', 'tsx', 'js', 'jsx', 'py', 'rs', 'go'].includes(ext)) return 'code';
+      if (['json'].includes(ext)) return 'json';
+      if (['csv', 'xlsx', 'xls'].includes(ext)) return 'spreadsheet';
+      return 'other';
+    };
+    
+    const newFiles: AttachmentPreviewItem[] = files.map(({ file, dataUrl, extractedText }) => ({
+      id: `cowork-drop-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: file.name,
+      type: extToType(file.name),
+      dataUrl,
+      size: file.size,
+      extractedText,
+    }));
+    
+    setDroppedFiles(prev => [...prev, ...newFiles]);
+  }, []);
+  
+  // Register as drop target for cowork
+  useDropTarget('cowork', handleDroppedFiles);
+  
+  const handlePreview = useCallback((item: AttachmentPreviewItem) => {
+    setPreviewItem(item);
+    setPreviewModalOpen(true);
+  }, []);
   const streamRef = useRef<CoworkStreamConnection | null>(null);
   const embeddedAgentSession = useEmbeddedAgentSession('cowork');
   const coworkAgentModeEnabled = useAgentSurfaceModeStore(
@@ -190,9 +245,74 @@ function CoworkRootContent() {
                       dataTestId="agent-mode-cowork-backdrop"
                     />
                     <div style={{ position: 'relative', zIndex: 1, height: '100%' }}>
-                      <div className="coworkShell">
+                      <div
+                        className="coworkShell"
+                        data-rail-collapsed={!showRail ? 'true' : 'false'}
+                      >
                         {/* Main chat area - Claude-style narrow column */}
                         <div className="coworkCenter">
+                          {/* Dropped Files Attachment Preview */}
+                          {droppedFiles.length > 0 && (
+                            <div style={{
+                              position: 'absolute',
+                              top: 16,
+                              left: '50%',
+                              transform: 'translateX(-50%)',
+                              zIndex: 100,
+                              maxWidth: '90%',
+                              background: 'rgba(43, 37, 32, 0.95)',
+                              backdropFilter: 'blur(10px)',
+                              borderRadius: 16,
+                              border: '1px solid rgba(175, 82, 222, 0.3)',
+                              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                            }}>
+                              <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                padding: '8px 12px 0',
+                                borderBottom: '1px solid rgba(255,255,255,0.06)',
+                              }}>
+                                <span style={{
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  color: '#af52de',
+                                  textTransform: 'uppercase',
+                                  letterSpacing: '0.05em',
+                                }}>
+                                  Attached Files ({droppedFiles.length})
+                                </span>
+                                <button
+                                  onClick={() => setDroppedFiles([])}
+                                  style={{
+                                    fontSize: 10,
+                                    color: 'rgba(245,240,232,0.5)',
+                                    background: 'transparent',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    padding: '2px 6px',
+                                  }}
+                                >
+                                  Clear all
+                                </button>
+                              </div>
+                              <AttachmentPreview
+                                attachments={droppedFiles}
+                                onRemove={(id) => setDroppedFiles(prev => prev.filter(f => f.id !== id))}
+                                onPreview={handlePreview}
+                                variant="detailed"
+                                maxHeight={160}
+                              />
+                            </div>
+                          )}
+                          
+                          {/* Preview Modal */}
+                          <AttachmentPreviewModal
+                            item={previewItem}
+                            isOpen={previewModalOpen}
+                            onClose={() => setPreviewModalOpen(false)}
+                          />
+                          
                           {/* Cowork Chat - Transcript + Composer integrated */}
                           <CoworkChat 
                             sessionId={session?.id || embeddedAgentSession.sessionId || 'cowork-embedded'} 
@@ -251,7 +371,7 @@ function CoworkRootContent() {
 const coworkStyles = `
 .coworkShell {
   display: grid;
-  grid-template-columns: 1fr auto 320px;
+  grid-template-columns: 1fr auto clamp(220px, 20vw, 260px);
   height: 100%;
   width: 100%;
   /* NO background - inherits from app shell */
@@ -387,6 +507,11 @@ interface CoworkChatProps {
   onInitialMessageSent?: () => void;
 }
 
+interface CoworkComposeEventDetail {
+  text?: string;
+  send?: boolean;
+}
+
 function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkChatProps) {
   const { selection: modelSelection, selectModel, startSelection, isSelecting, cancelSelection } = useModelSelection();
   const { agentModeEnabled, selectedAgentId, selectedAgent } =
@@ -410,6 +535,10 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
       ? state.messages[embeddedAgentSession.sessionId] || []
       : [],
   );
+  const activeTaskId = useCoworkStore((state) => state.activeTaskId);
+  const activeProjectId = useCoworkStore((state) => state.activeProjectId);
+  const createTask = useCoworkStore((state) => state.createTask);
+  const bindCurrentSessionToTask = useCoworkStore((state) => state.bindCurrentSessionToTask);
   const embeddedCanvasIds = useNativeAgentStore((state) =>
     embeddedAgentSession.sessionId
       ? state.sessionCanvases[embeddedAgentSession.sessionId] || []
@@ -418,6 +547,7 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasSentInitialMessage = useRef(false);
+  const [composerInputValue, setComposerInputValue] = useState('');
   
   const selectedModel = modelSelection?.profileId ?? 'big-pickle';
   const runtimeModelId = modelSelection?.modelId;
@@ -455,6 +585,20 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
   const displayIsLoading = embeddedAgentSession.isEmbedded
     ? nativeStreaming.isStreaming
     : isLoading;
+
+  const ensureTaskForMessage = useCallback((message: string) => {
+    const normalizedMessage = message.trim();
+    if (!normalizedMessage || activeTaskId) {
+      return;
+    }
+    const taskMode: 'task' | 'agent' = agentModeEnabled ? 'agent' : 'task';
+    const createdTask = createTask(
+      buildCoworkTaskTitleFromMessage(normalizedMessage),
+      taskMode,
+      activeProjectId || undefined,
+    );
+    bindCurrentSessionToTask(createdTask.id);
+  }, [activeProjectId, activeTaskId, agentModeEnabled, bindCurrentSessionToTask, createTask]);
 
   const ensureEmbeddedSession = useCallback(async () => {
     if (embeddedAgentSession.sessionId && embeddedAgentSession.isEmbedded) {
@@ -497,7 +641,13 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
   // Send initial message from launchpad on mount
   useEffect(() => {
     if (initialMessage && !hasSentInitialMessage.current) {
+      const normalizedInitialMessage = initialMessage.trim();
+      if (!normalizedInitialMessage) {
+        onInitialMessageSent?.();
+        return;
+      }
       hasSentInitialMessage.current = true;
+      ensureTaskForMessage(normalizedInitialMessage);
       if (agentModeEnabled && selectedAgentId) {
         void ensureEmbeddedSession()
           .then((nativeSessionId) => {
@@ -505,7 +655,7 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
               return;
             }
 
-            return sendNativeMessageStream(nativeSessionId, initialMessage);
+            return sendNativeMessageStream(nativeSessionId, normalizedInitialMessage);
           })
           .finally(() => {
             onInitialMessageSent?.();
@@ -521,7 +671,7 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
       });
       submitMessage({
         chatId: sessionId,
-        message: initialMessage,
+        message: normalizedInitialMessage,
         modelId: selectedModel,
         runtimeModelId,
         ...agentContext,
@@ -537,6 +687,7 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
     selectedAgent,
     selectedAgentId,
     selectedModel,
+    ensureTaskForMessage,
     sendNativeMessageStream,
     sessionId,
     submitMessage,
@@ -547,9 +698,13 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [displayMessages, displayIsLoading]);
-  
+
   const handleSend = useCallback(async (text: string) => {
-    if (!text.trim()) return;
+    const normalizedText = text.trim();
+    if (!normalizedText) return;
+    setComposerInputValue('');
+
+    ensureTaskForMessage(normalizedText);
 
     if (agentModeEnabled && !selectedAgentId) {
       console.warn('[CoworkRoot] Agent mode is enabled but no agent is selected');
@@ -559,7 +714,7 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
     if (agentModeEnabled && selectedAgentId) {
       const nativeSessionId = await ensureEmbeddedSession();
       if (nativeSessionId) {
-        await sendNativeMessageStream(nativeSessionId, text.trim());
+        await sendNativeMessageStream(nativeSessionId, normalizedText);
         return;
       }
     }
@@ -573,13 +728,14 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
     
     await submitMessage({
       chatId: sessionId,
-      message: text,
+      message: normalizedText,
       modelId: selectedModel,
       runtimeModelId,
       ...agentContext,
     });
   }, [
     agentModeEnabled,
+    ensureTaskForMessage,
     runtimeModelId,
     selectedAgent,
     selectedAgentId,
@@ -589,6 +745,29 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
     submitMessage,
     ensureEmbeddedSession,
   ]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const onComposeRequest = (event: Event) => {
+      const detail = (event as CustomEvent<CoworkComposeEventDetail>).detail;
+      const text = detail?.text?.trim();
+      if (!text) return;
+
+      if (detail?.send) {
+        setComposerInputValue('');
+        void handleSend(text);
+        return;
+      }
+
+      setComposerInputValue(text);
+    };
+
+    window.addEventListener('a2r:cowork-compose', onComposeRequest as EventListener);
+    return () => {
+      window.removeEventListener('a2r:cowork-compose', onComposeRequest as EventListener);
+    };
+  }, [handleSend]);
   
   const handleRegenerate = useCallback(() => {
     const lastUserMsg = [...displayMessages].reverse().find((m) => m.role === "user");
@@ -729,6 +908,7 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
             selectedModelDisplayName={modelSelection?.modelName || modelSelection?.modelId}
             onOpenModelPicker={startSelection}
             onSelectModel={selectModel}
+            inputValue={composerInputValue}
             placeholder="Reply..."
             showTopActions={false}
             agentModeSurface="cowork"

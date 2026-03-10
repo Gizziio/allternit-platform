@@ -19,6 +19,20 @@
 import { v4 as uuidv4 } from 'uuid';
 
 // ============================================================================
+// Helper Functions
+// ============================================================================
+
+function safeJSONParse<T>(json: string | null, defaultValue: T): T {
+  if (!json) return defaultValue;
+  try {
+    return JSON.parse(json) as T;
+  } catch (e) {
+    console.error('[AuditTrail] JSON parse error:', e);
+    return defaultValue;
+  }
+}
+
+// ============================================================================
 // Types
 // ============================================================================
 
@@ -144,6 +158,37 @@ export interface AuditQueryResult {
   hasMore: boolean;
 }
 
+/**
+ * SQLite database row representation of an audit event
+ */
+interface AuditEventRow {
+  event_id: string;
+  event_type: string;
+  timestamp: string;
+  actor_user_id: string | null;
+  actor_session_id: string;
+  actor_ip_address: string | null;
+  actor_user_agent: string | null;
+  target_type: string | null;
+  target_id: string | null;
+  target_name: string | null;
+  action_description: string;
+  action_category: string;
+  action_risk_level: string | null;
+  outcome_success: number;
+  outcome_error_code: string | null;
+  outcome_error_message: string | null;
+  outcome_metadata: string | null;
+  context_workspace_id: string | null;
+  context_prefix_id: string | null;
+  context_toolset_id: string | null;
+  context_correlation_id: string | null;
+  context_run_id: string | null;
+  compliance_law_references: string;
+  compliance_retention_days: number;
+  compliance_immutable: number;
+}
+
 // ============================================================================
 // Audit Store Interface
 // ============================================================================
@@ -167,8 +212,7 @@ export interface AuditStore {
 }
 
 // ============================================================================
-// In-Memory Store (for development)
-// TODO: Replace with persistent storage for production
+// In-Memory Store (for development/testing)
 // ============================================================================
 
 export class InMemoryAuditStore implements AuditStore {
@@ -312,6 +356,284 @@ export class InMemoryAuditStore implements AuditStore {
     this.correlationIndex.clear();
     this.runIndex.clear();
     this.actorIndex.clear();
+  }
+}
+
+// ============================================================================
+// Persistent SQLite Store (for production)
+// ============================================================================
+
+export class SQLiteAuditStore implements AuditStore {
+  private db: any; // Database connection
+  private initialized: boolean = false;
+
+  constructor(dbPath: string = process.env.AUDIT_DB_PATH || 'audit.db') {
+    // Lazy initialization - will be done on first use
+    this.db = null;
+    this.dbPath = dbPath;
+  }
+
+  private dbPath: string;
+
+  private async init(): Promise<void> {
+    if (this.initialized) return;
+    
+    try {
+      // Dynamic import to avoid issues in browser environment
+      // webpackIgnore: true prevents webpack from trying to bundle this
+      const { default: Database } = await import(/* webpackIgnore: true */ 'better-sqlite3');
+      this.db = new Database(this.dbPath);
+      
+      // Create tables if they don't exist
+      this.db.exec(`
+        CREATE TABLE IF NOT EXISTS audit_events (
+          event_id TEXT PRIMARY KEY,
+          event_type TEXT NOT NULL,
+          timestamp TEXT NOT NULL,
+          actor_user_id TEXT,
+          actor_session_id TEXT NOT NULL,
+          actor_ip_address TEXT,
+          actor_user_agent TEXT,
+          target_type TEXT,
+          target_id TEXT,
+          target_name TEXT,
+          action_description TEXT NOT NULL,
+          action_category TEXT NOT NULL,
+          action_risk_level TEXT,
+          outcome_success INTEGER NOT NULL,
+          outcome_error_code TEXT,
+          outcome_error_message TEXT,
+          outcome_metadata TEXT,
+          context_workspace_id TEXT,
+          context_prefix_id TEXT,
+          context_toolset_id TEXT,
+          context_correlation_id TEXT,
+          context_run_id TEXT,
+          compliance_law_references TEXT NOT NULL,
+          compliance_retention_days INTEGER NOT NULL,
+          compliance_immutable INTEGER NOT NULL
+        );
+        
+        CREATE INDEX IF NOT EXISTS idx_events_type ON audit_events(event_type);
+        CREATE INDEX IF NOT EXISTS idx_events_session ON audit_events(actor_session_id);
+        CREATE INDEX IF NOT EXISTS idx_events_correlation ON audit_events(context_correlation_id);
+        CREATE INDEX IF NOT EXISTS idx_events_run ON audit_events(context_run_id);
+        CREATE INDEX IF NOT EXISTS idx_events_timestamp ON audit_events(timestamp);
+        CREATE INDEX IF NOT EXISTS idx_events_target ON audit_events(target_type, target_id);
+      `);
+      
+      this.initialized = true;
+    } catch (error) {
+      console.error('Failed to initialize SQLite audit store:', error);
+      throw error;
+    }
+  }
+
+  async append(event: Omit<AuditEvent, 'event_id' | 'timestamp'>): Promise<AuditEvent> {
+    await this.init();
+    
+    const newEvent: AuditEvent = {
+      ...event,
+      event_id: 'audit_' + uuidv4(),
+      timestamp: new Date().toISOString(),
+    };
+
+    const stmt = this.db.prepare(`
+      INSERT INTO audit_events (
+        event_id, event_type, timestamp, actor_user_id, actor_session_id,
+        actor_ip_address, actor_user_agent, target_type, target_id, target_name,
+        action_description, action_category, action_risk_level, outcome_success,
+        outcome_error_code, outcome_error_message, outcome_metadata,
+        context_workspace_id, context_prefix_id, context_toolset_id,
+        context_correlation_id, context_run_id, compliance_law_references,
+        compliance_retention_days, compliance_immutable
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    stmt.run(
+      newEvent.event_id,
+      newEvent.event_type,
+      newEvent.timestamp,
+      newEvent.actor.user_id,
+      newEvent.actor.session_id,
+      newEvent.actor.ip_address,
+      newEvent.actor.user_agent,
+      newEvent.target?.type,
+      newEvent.target?.id,
+      newEvent.target?.name,
+      newEvent.action.description,
+      newEvent.action.category,
+      newEvent.action.risk_level,
+      newEvent.outcome.success ? 1 : 0,
+      newEvent.outcome.error_code,
+      newEvent.outcome.error_message,
+      JSON.stringify(newEvent.outcome.metadata),
+      newEvent.context.workspace_id,
+      newEvent.context.prefix_id,
+      newEvent.context.toolset_id,
+      newEvent.context.correlation_id,
+      newEvent.context.run_id,
+      JSON.stringify(newEvent.compliance.law_references),
+      newEvent.compliance.retention_period_days,
+      newEvent.compliance.immutable ? 1 : 0
+    );
+
+    return newEvent;
+  }
+
+  async query(params: AuditQueryParams): Promise<AuditQueryResult> {
+    await this.init();
+
+    let sql = 'SELECT * FROM audit_events WHERE 1=1';
+    const queryParams: any[] = [];
+
+    if (params.event_type) {
+      sql += ' AND event_type = ?';
+      queryParams.push(params.event_type);
+    }
+
+    if (params.actor_session_id) {
+      sql += ' AND actor_session_id = ?';
+      queryParams.push(params.actor_session_id);
+    }
+
+    if (params.actor_user_id) {
+      sql += ' AND actor_user_id = ?';
+      queryParams.push(params.actor_user_id);
+    }
+
+    if (params.target_type) {
+      sql += ' AND target_type = ?';
+      queryParams.push(params.target_type);
+    }
+
+    if (params.target_id) {
+      sql += ' AND target_id = ?';
+      queryParams.push(params.target_id);
+    }
+
+    if (params.start_time) {
+      sql += ' AND timestamp >= ?';
+      queryParams.push(params.start_time);
+    }
+
+    if (params.end_time) {
+      sql += ' AND timestamp <= ?';
+      queryParams.push(params.end_time);
+    }
+
+    if (params.correlation_id) {
+      sql += ' AND context_correlation_id = ?';
+      queryParams.push(params.correlation_id);
+    }
+
+    if (params.run_id) {
+      sql += ' AND context_run_id = ?';
+      queryParams.push(params.run_id);
+    }
+
+    // Count total
+    const countStmt = this.db.prepare(sql.replace('SELECT *', 'SELECT COUNT(*) as count'));
+    const { count: total } = countStmt.get(...queryParams);
+
+    // Sort and paginate
+    sql += ' ORDER BY timestamp DESC LIMIT ? OFFSET ?';
+    const page = params.page || 1;
+    const pageSize = params.pageSize || 50;
+    queryParams.push(pageSize, (page - 1) * pageSize);
+
+    const stmt = this.db.prepare(sql);
+    const rows = stmt.all(...queryParams);
+
+    return {
+      events: rows.map((row: AuditEventRow) => this.rowToEvent(row)),
+      total,
+      page,
+      pageSize,
+      hasMore: page * pageSize < total,
+    };
+  }
+
+  async getById(eventId: string): Promise<AuditEvent | null> {
+    await this.init();
+    const stmt = this.db.prepare('SELECT * FROM audit_events WHERE event_id = ?');
+    const row = stmt.get(eventId);
+    return row ? this.rowToEvent(row) : null;
+  }
+
+  async getByCorrelationId(correlationId: string): Promise<AuditEvent[]> {
+    await this.init();
+    const stmt = this.db.prepare('SELECT * FROM audit_events WHERE context_correlation_id = ? ORDER BY timestamp ASC');
+    const rows = stmt.all(correlationId);
+    return rows.map((row: AuditEventRow) => this.rowToEvent(row));
+  }
+
+  async getByRunId(runId: string): Promise<AuditEvent[]> {
+    await this.init();
+    const stmt = this.db.prepare('SELECT * FROM audit_events WHERE context_run_id = ? ORDER BY timestamp ASC');
+    const rows = stmt.all(runId);
+    return rows.map((row: AuditEventRow) => this.rowToEvent(row));
+  }
+
+  async getByActor(sessionId: string): Promise<AuditEvent[]> {
+    await this.init();
+    const stmt = this.db.prepare('SELECT * FROM audit_events WHERE actor_session_id = ? ORDER BY timestamp DESC');
+    const rows = stmt.all(sessionId);
+    return rows.map((row: AuditEventRow) => this.rowToEvent(row));
+  }
+
+  async exportForPeriod(start: string, end: string): Promise<AuditEvent[]> {
+    await this.init();
+    const stmt = this.db.prepare('SELECT * FROM audit_events WHERE timestamp >= ? AND timestamp <= ? ORDER BY timestamp ASC');
+    const rows = stmt.all(start, end);
+    return rows.map((row: AuditEventRow) => this.rowToEvent(row));
+  }
+
+  async clear(): Promise<void> {
+    await this.init();
+    this.db.exec('DELETE FROM audit_events');
+  }
+
+  private rowToEvent(row: AuditEventRow): AuditEvent {
+    return {
+      event_id: row.event_id,
+      event_type: row.event_type as AuditEventType,
+      timestamp: row.timestamp,
+      actor: {
+        user_id: row.actor_user_id ?? undefined,
+        session_id: row.actor_session_id,
+        ip_address: row.actor_ip_address ?? undefined,
+        user_agent: row.actor_user_agent ?? undefined,
+      },
+      target: row.target_type && row.target_id ? {
+        type: row.target_type,
+        id: row.target_id,
+        name: row.target_name ?? undefined,
+      } : undefined,
+      action: {
+        description: row.action_description,
+        category: row.action_category,
+        risk_level: row.action_risk_level as AuditSeverity ?? undefined,
+      },
+      context: {
+        workspace_id: row.context_workspace_id ?? undefined,
+        prefix_id: row.context_prefix_id ?? undefined,
+        toolset_id: row.context_toolset_id ?? undefined,
+        correlation_id: row.context_correlation_id ?? undefined,
+        run_id: row.context_run_id ?? undefined,
+      },
+      outcome: {
+        success: row.outcome_success === 1,
+        error_code: row.outcome_error_code ?? undefined,
+        error_message: row.outcome_error_message ?? undefined,
+        metadata: safeJSONParse(row.outcome_metadata, undefined),
+      },
+      compliance: {
+        law_references: safeJSONParse(row.compliance_law_references, []),
+        retention_period_days: row.compliance_retention_days,
+        immutable: row.compliance_immutable === 1,
+      },
+    };
   }
 }
 
@@ -512,7 +834,17 @@ let _auditService: AuditTrailService | null = null;
 
 export function getAuditStore(): AuditStore {
   if (!_auditStore) {
-    _auditStore = new InMemoryAuditStore();
+    // Use SQLite in production, in-memory for development
+    if (process.env.NODE_ENV === 'production' && typeof window === 'undefined') {
+      try {
+        _auditStore = new SQLiteAuditStore();
+      } catch (error) {
+        console.warn('Failed to create SQLite audit store, falling back to in-memory:', error);
+        _auditStore = new InMemoryAuditStore();
+      }
+    } else {
+      _auditStore = new InMemoryAuditStore();
+    }
   }
   return _auditStore;
 }

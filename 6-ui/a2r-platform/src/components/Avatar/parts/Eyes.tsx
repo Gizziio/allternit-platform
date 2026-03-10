@@ -55,6 +55,13 @@ const EYE_PRESETS: Record<EyePreset, {
     width: 24,
     height: 8,
   },
+  focused: {
+    name: 'Focused',
+    leftPath: 'M 38 42 C 38 38 43 36 50 36 C 57 36 62 38 62 42 C 62 46 57 48 50 48 C 43 48 38 46 38 42 Z',
+    pupilOffsetY: 0,
+    width: 24,
+    height: 12,
+  },
   curious: {
     name: 'Curious',
     leftPath: 'M 38 44 C 38 38 42 34 48 34 C 54 34 58 38 58 44 C 58 50 54 54 48 54 C 42 54 38 50 38 44 Z',
@@ -211,12 +218,12 @@ export const Eyes: React.FC<EyesProps> = ({
   isAnimating,
   lookAt,
 }) => {
-  const preset = EYE_PRESETS[config.preset];
-  const pupilStyle = PUPIL_STYLES[config.pupilStyle];
+  const preset = (config?.preset && EYE_PRESETS[config.preset]) || EYE_PRESETS['round'];
+  const pupilStyle = (config?.pupilStyle && PUPIL_STYLES[config.pupilStyle]) || PUPIL_STYLES['dot'];
   const emotionAdj = getEmotionEyeAdjustment(emotion);
   
   // Calculate scales
-  const baseScale = (config.size || 1) * (size / 100);
+  const baseScale = (config?.size || 1) * (size / 100);
   const eyeSpacing = 14 * baseScale;
   
   // Calculate pupil offset based on lookAt
@@ -229,7 +236,7 @@ export const Eyes: React.FC<EyesProps> = ({
   }, [lookAt, preset.pupilOffsetY]);
   
   // Blink animation class
-  const blinkClass = isAnimating ? `avatar-eyes--blink-${config.blinkRate}` : '';
+  const blinkClass = isAnimating ? `avatar-eyes--blink-${config?.blinkRate || 'normal'}` : '';
   
   // Render single eye
   const renderEye = (
@@ -254,12 +261,12 @@ export const Eyes: React.FC<EyesProps> = ({
         {/* Eye white/shape */}
         <path
           d={eyePath}
-          fill={config.color}
+          fill={config?.color || '#ECECEC'}
           opacity={0.9}
         />
         
         {/* Pupil */}
-        {pupilStyle.render(pupilX, pupilY, pupilR, config.color)}
+        {pupilStyle.render(pupilX, pupilY, pupilR, config?.color || '#ECECEC')}
         
         {/* Highlight/reflection */}
         <circle
@@ -276,8 +283,8 @@ export const Eyes: React.FC<EyesProps> = ({
   return (
     <g 
       className={`avatar-eyes ${blinkClass}`}
-      data-preset={config.preset}
-      data-pupil={config.pupilStyle}
+      data-preset={config?.preset || 'round'}
+      data-pupil={config?.pupilStyle || 'dot'}
       data-emotion={emotion}
       style={{
         transformOrigin: 'center',
@@ -304,6 +311,7 @@ function getEyeDescription(preset: EyePreset): string {
     round: 'Friendly and approachable',
     wide: 'Alert and attentive',
     narrow: 'Focused and intense',
+    focused: 'Intensely concentrated',
     curious: 'Questioning and inquisitive',
     pleased: 'Happy and content',
     skeptical: 'Questioning and doubtful',

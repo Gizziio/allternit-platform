@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAgentStore, useUnreadMailCount, usePendingReviewCount } from "@/lib/agents/agent.store";
 import { AGENT_CAPABILITIES, AGENT_MODELS, AGENT_TYPES } from "@/lib/agents/agent.types";
+import { agentWorkspaceService } from "@/lib/agents/agent-workspace.service";
 import type {
   Agent,
   CreateAgentInput,
@@ -25,11 +26,17 @@ import { useMonitorData, useMonitorShare, buildMonitorLink } from "./mail-monito
 import { MailMonitorPanel } from "./mail-monitor/MailMonitorPanel";
 import { CharacterLayerPanel } from "./agent-character/CharacterLayerPanel";
 import { CapsuleFrame } from "@/components/CapsuleFrame";
-import { AgentAvatar } from "@/components/avatar";
+import { AgentAvatar } from "@/components/Avatar";
 import type { AvatarConfig } from "@/lib/agents/character.types";
 import { createDefaultAvatarConfig } from "@/lib/agents/character.types";
 import { AvatarCreatorStep } from "./agent-creation/AvatarCreatorStep";
+import { AgentDashboard } from "@/components/AgentDashboard";
 import { formatRelativeTime } from "@/lib/time";
+import {
+  WorkspaceLayerConfigurator,
+  DEFAULT_LAYER_CONFIG,
+  type WorkspaceLayerConfig,
+} from "@/components/agent-workspace";
 
 // UI Components
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
@@ -117,7 +124,10 @@ import {
   Gavel,
   AppWindow,
   Search,
-  Terminal
+  Terminal,
+  X,
+  ChevronRight,
+  Layers
 } from "lucide-react";
 
 // ============================================================================
@@ -126,9 +136,12 @@ import {
 
 interface AgentViewProps {
   context?: any;
+  hideCreateButton?: boolean;
+  forceListMode?: boolean;
+  title?: string;
 }
 
-export function AgentView({ context }: AgentViewProps) {
+export function AgentView({ context, hideCreateButton = false, forceListMode = false, title = 'Agent Studio' }: AgentViewProps) {
   // Debug: Check if component renders at all
   console.log('[AgentView] Component executing', context);
   
@@ -147,6 +160,7 @@ export function AgentView({ context }: AgentViewProps) {
     setIsEditing,
     clearError,
     connectEventStream,
+    setViewMode,
   } = useAgentStore();
 
   // Fetch agents on mount
@@ -161,12 +175,25 @@ export function AgentView({ context }: AgentViewProps) {
     return cleanup;
   }, [selectedAgentId, connectEventStream]);
 
+  // If forceListMode is true and we're in create mode, switch to list view
+  // This only runs once on mount when forceListMode changes
+  useEffect(() => {
+    if (forceListMode && viewMode === 'create') {
+      setViewMode('list');
+    }
+    // Only run when forceListMode changes, not on every viewMode change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [forceListMode]);
+
   // Global forge animation state - persists across view mode changes
   const [globalForgeVisible, setGlobalForgeVisible] = useState(false);
   const [globalForgeAgentName, setGlobalForgeAgentName] = useState('');
 
+  // Debug logging
+  console.log('[AgentView] Render - viewMode:', viewMode, 'selectedAgentId:', selectedAgentId, 'forceListMode:', forceListMode);
+
   // Render based on view mode
-  if (viewMode === 'create') {
+  if (viewMode === 'create' && !forceListMode) {
     return (
       <div className="h-full w-full">
         <CreateAgentForm 
@@ -175,6 +202,10 @@ export function AgentView({ context }: AgentViewProps) {
             console.log('[AgentView] Showing global forge animation for:', name);
             setGlobalForgeAgentName(name);
             setGlobalForgeVisible(true);
+          }}
+          onComplete={() => {
+            setGlobalForgeVisible(false);
+            setIsCreating(false);
           }}
         />
         {globalForgeVisible && (
@@ -228,21 +259,52 @@ export function AgentView({ context }: AgentViewProps) {
       flexDirection: 'column',
       height: '100%',
       width: '100%',
-      background: STUDIO_THEME.bg,
+      background: 'transparent',
       overflow: 'hidden',
       position: 'relative'
-    }}>
+    }}
+    className="bg-transparent"
+    >
       {/* Header */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: 'center',
         padding: '16px 24px',
         borderBottom: `1px solid ${STUDIO_THEME.borderSubtle}`,
-        background: STUDIO_THEME.bg,
-        flexShrink: 0
-      }}>
-        <div>
+        background: 'transparent',
+        flexShrink: 0,
+        position: 'relative'
+      }}
+      className="bg-transparent"
+      >
+        {/* Create Agent Button - Left (hidden when hideCreateButton is true) */}
+        {!hideCreateButton && (
+          <button 
+            onClick={() => setIsCreating(true)}
+            style={{
+              position: 'absolute',
+              left: '24px',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              background: `linear-gradient(to right, ${STUDIO_THEME.accent}, #B08D6E)`,
+              color: '#1A1612',
+              fontSize: '14px',
+              fontWeight: 600,
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <Plus style={{ width: 16, height: 16 }} />
+            Create Agent
+          </button>
+        )}
+
+        {/* Centered Title */}
+        <div style={{ textAlign: 'center' }}>
           <h1 style={{
             fontSize: '20px',
             fontWeight: 600,
@@ -250,36 +312,16 @@ export function AgentView({ context }: AgentViewProps) {
             margin: 0,
             fontFamily: 'Georgia, serif'
           }}>
-            Agent Studio
+            {title}
           </h1>
           <p style={{
             fontSize: '13px',
             color: STUDIO_THEME.textSecondary,
             margin: '4px 0 0 0'
           }}>
-            Create, manage, and orchestrate autonomous AI agents
+            {forceListMode ? 'Browse and manage your AI agents' : 'Create, manage, and orchestrate autonomous AI agents'}
           </p>
         </div>
-        
-        <button 
-          onClick={() => setIsCreating(true)}
-          style={{
-            padding: '8px 16px',
-            borderRadius: '6px',
-            background: `linear-gradient(to right, ${STUDIO_THEME.accent}, #B08D6E)`,
-            color: '#1A1612',
-            fontSize: '14px',
-            fontWeight: 600,
-            border: 'none',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          }}
-        >
-          <Plus style={{ width: 16, height: 16 }} />
-          Create Agent
-        </button>
       </div>
 
       {/* Scrollable Content */}
@@ -335,7 +377,10 @@ export function AgentView({ context }: AgentViewProps) {
               >
                 <AgentCard 
                   agent={agent} 
-                  onClick={() => selectAgent(agent.id)}
+                  onClick={() => {
+                    console.log('[AgentView] Clicked agent:', agent.id, agent.name);
+                    selectAgent(agent.id);
+                  }}
                 />
               </motion.div>
             ))}
@@ -718,6 +763,7 @@ export const STUDIO_THEME = {
   textMuted: '#6B6B6B',
   accent: '#D4956A',
   borderSubtle: 'rgba(255,255,255,0.06)',
+  border: 'rgba(255,255,255,0.12)',
 };
 
 interface EmptyAgentStateProps {
@@ -950,8 +996,8 @@ function EmptyAgentState({ onCreate, onCreateFromTemplate }: EmptyAgentStateProp
             { icon: <Cog style={{ width: 16, height: 16, color: STUDIO_THEME.accent }} />, title: 'Customizable', desc: 'Configure capabilities' },
             { icon: <Network style={{ width: 16, height: 16, color: STUDIO_THEME.accent }} />, title: 'Multi-Agent', desc: 'Orchestrator support' },
             { icon: <Shield style={{ width: 16, height: 16, color: STUDIO_THEME.accent }} />, title: 'Secure', desc: 'Built-in guardrails' },
-          ].map((feature, i) => (
-            <div key={i} style={{
+          ].map((feature) => (
+            <div key={`feature-${feature.title}`} style={{
               display: 'flex',
               alignItems: 'flex-start',
               gap: '12px',
@@ -1070,6 +1116,11 @@ const CREATE_FLOW_STEPS = [
     id: "runtime",
     label: "Runtime",
     description: "Model, voice, capabilities, prompt.",
+  },
+  {
+    id: "workspace",
+    label: "Workspace",
+    description: "Configure 5-layer workspace structure.",
   },
   {
     id: "review",
@@ -1450,23 +1501,25 @@ function buildSeedTelemetryEvents(blueprint: CreationBlueprintState): CharacterT
 }
 
 
-function CreateAgentForm({ 
+export function CreateAgentForm({ 
   onCancel, 
-  onShowForge
+  onShowForge,
+  onComplete,
 }: { 
   onCancel: () => void;
   onShowForge?: (agentName: string) => void;
+  onComplete?: (createdAgent: Agent, workspaceCreated: boolean) => void;
 }) {
-  const { createAgent, isCreating, error, clearError, agents, recordCharacterTelemetry } = useAgentStore();
+  const { createAgent, isCreating, error, clearError, agents, recordCharacterTelemetry, setIsCreating } = useAgentStore();
   
   // Reset error and isCreating when form mounts
   useEffect(() => {
     clearError();
     const store = useAgentStore.getState();
     if (store.isCreating) {
-      useAgentStore.setState({ isCreating: false });
+      setIsCreating(false);
     }
-  }, [clearError]);
+  }, [clearError, setIsCreating]);
   
   const [formData, setFormData] = useState<CreateAgentInput>({
     name: '',
@@ -1494,13 +1547,19 @@ function CreateAgentForm({
   const [activeStep, setActiveStep] = useState<CreateFlowStepId>("welcome");
   
   // Avatar state
+  // Initialize avatar config - MUST be stable to prevent infinite loops
   const [avatarConfig, setAvatarConfig] = useState<AvatarConfig>(() => 
-    createDefaultAvatarConfig(blueprint.setup)
+    createDefaultAvatarConfig("coding")
   );
   
-  // Update avatar when setup changes
+  // Only update avatar when setup changes IF user hasn't customized it
+  // Use a ref to track if we've applied defaults
+  const avatarInitializedRef = useRef(false);
   useEffect(() => {
-    setAvatarConfig(createDefaultAvatarConfig(blueprint.setup));
+    if (!avatarInitializedRef.current) {
+      setAvatarConfig(createDefaultAvatarConfig(blueprint.setup));
+      avatarInitializedRef.current = true;
+    }
   }, [blueprint.setup]);
 
   // Voice presets state
@@ -1508,6 +1567,11 @@ function CreateAgentForm({
   const [voiceLoading, setVoiceLoading] = useState(false);
   const [previewAudio, setPreviewAudio] = useState<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isForgeQueued, setIsForgeQueued] = useState(false);
+  const [workspaceWarning, setWorkspaceWarning] = useState<string | null>(null);
+
+  // Workspace layer configuration
+  const [workspaceLayers, setWorkspaceLayers] = useState<WorkspaceLayerConfig>(DEFAULT_LAYER_CONFIG);
 
   // Fetch voices on mount
   useEffect(() => {
@@ -1537,27 +1601,29 @@ function CreateAgentForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // SAFETY: Only proceed if on review step
+    // If not on review step, just go to next step (form submit acts as "Next")
     if (activeStep !== "review") {
       if (!stepValidation[activeStep]) {
+        console.log('[CreateAgentForm] Step validation failed for:', activeStep);
         return;
       }
       const nextStep = CREATE_FLOW_STEPS[activeStepIndex + 1];
       if (nextStep) {
+        console.log('[CreateAgentForm] Advancing to step:', nextStep.id);
         setActiveStep(nextStep.id);
       }
       return;
     }
+    
+    console.log('[CreateAgentForm] Submitting from review step');
     
     // SAFETY: Check we're ready and not already creating
     if (!isReadyForCreate) {
       console.log('[CreateAgentForm] Not ready for creation');
       return;
     }
-    
-    // SAFETY: Check if animation already showing
-    if (!onShowForge) {
-      console.error('[CreateAgentForm] onShowForge not provided');
+
+    if (isForgeQueued || isCreating) {
       return;
     }
 
@@ -1593,28 +1659,70 @@ function CreateAgentForm({
       },
       avatar: avatarConfig,
     };
+    
+    console.log('[CreateAgentForm] Creating agent with payload:', { 
+      name: payload.name, 
+      type: payload.type,
+      hasAvatar: !!payload.avatar,
+      activeStep 
+    });
+    
     // Show forge animation FIRST, then create agent after animation completes
-    console.log('[CreateAgentForm] Showing forge animation, activeStep:', activeStep);
-    if (onShowForge) {
-      onShowForge(formData.name || 'Your Agent');
-    } else {
-      console.error('[CreateAgentForm] onShowForge callback missing!');
-    }
+    setWorkspaceWarning(null);
+    setIsForgeQueued(true);
+    console.log('[CreateAgentForm] Showing forge animation for:', formData.name || 'Your Agent');
+    onShowForge?.(formData.name || 'Your Agent');
     
     // Delay agent creation to let animation play (6 seconds)
     window.setTimeout(async () => {
+      let createdAgent: Agent | null = null;
+      let workspaceCreated = false;
       try {
-      const createdAgent = await createAgent(payload);
-      const seededTelemetry = buildSeedTelemetryEvents(blueprint);
-      for (const event of seededTelemetry) {
-        recordCharacterTelemetry(createdAgent.id, {
-          type: event.type,
-          runId: event.runId,
-          payload: event.payload,
-        });
-      }
-      } catch {
-        // Error handled by store
+        console.log('[CreateAgentForm] Calling createAgent service...');
+        createdAgent = await createAgent(payload);
+        console.log('[CreateAgentForm] Agent created successfully:', createdAgent.id);
+        
+        // Create agent workspace after agent is created
+        console.log('[CreateAgentForm] Creating workspace for agent:', createdAgent.id);
+        try {
+          await agentWorkspaceService.create({
+            name: createdAgent.name,
+            description: createdAgent.description,
+            type: createdAgent.type,
+            model: createdAgent.model,
+            provider: createdAgent.provider,
+            capabilities: createdAgent.capabilities,
+            systemPrompt: createdAgent.systemPrompt,
+            tools: createdAgent.tools,
+            maxIterations: createdAgent.maxIterations,
+            temperature: createdAgent.temperature,
+            config: createdAgent.config,
+            voice: createdAgent.voice,
+            avatar: avatarConfig,
+          }, 'a2r-standard', undefined, workspaceLayers);
+          workspaceCreated = true;
+          console.log('[CreateAgentForm] Workspace created successfully');
+        } catch (workspaceError) {
+          console.warn('[CreateAgentForm] Workspace creation failed, continuing with agent record:', workspaceError);
+          setWorkspaceWarning("Agent created, but workspace initialization failed. You can open Agent Registry and retry workspace setup.");
+        }
+        
+        const seededTelemetry = buildSeedTelemetryEvents(blueprint);
+        for (const event of seededTelemetry) {
+          recordCharacterTelemetry(createdAgent.id, {
+            type: event.type,
+            runId: event.runId,
+            payload: event.payload,
+          });
+        }
+
+        onComplete?.(createdAgent, workspaceCreated);
+      } catch (e) {
+        console.error('[CreateAgentForm] Failed to create agent:', e);
+        setWorkspaceWarning(`Failed to create agent: ${e instanceof Error ? e.message : 'Unknown error'}`);
+        // Error handled by store - reset forge state so user can retry
+      } finally {
+        setIsForgeQueued(false);
       }
     }, 6000);
   };
@@ -1747,13 +1855,17 @@ function CreateAgentForm({
       (formData.maxIterations || 0) > 0,
   );
   const personalityComplete = true; // Personality sliders are optional but shown
+  const avatarComplete = true; // Avatar is optional
+  const workspaceComplete = true; // Workspace layers always have valid default
   
   const stepValidation: Record<CreateFlowStepId, boolean> = {
     welcome: true,
     identity: identityComplete,
     personality: personalityComplete,
     character: characterComplete,
+    avatar: avatarComplete,
     runtime: runtimeComplete,
+    workspace: workspaceComplete,
     review: identityComplete && characterComplete && runtimeComplete,
   };
   const isReadyForCreate = stepValidation.review;
@@ -1793,14 +1905,15 @@ function CreateAgentForm({
     maxHeight: '100vh',
     padding: '24px',
     overflow: 'auto',
-    background: STUDIO_THEME.bg,
+    background: 'transparent',
   };
 
   const headerStyle: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     marginBottom: '24px',
+    position: 'relative',
   };
 
   const titleStyle: React.CSSProperties = {
@@ -1917,6 +2030,7 @@ function CreateAgentForm({
     borderRadius: '12px',
     border: `1px solid ${STUDIO_THEME.borderSubtle}`,
     marginTop: '24px',
+    gap: '12px',
   };
 
   const primaryButtonStyle: React.CSSProperties = {
@@ -1955,15 +2069,27 @@ function CreateAgentForm({
     alignItems: 'center',
     gap: '8px',
   };
+  const alertWarningStyle: React.CSSProperties = {
+    padding: '12px 16px',
+    borderRadius: '8px',
+    background: 'rgba(245, 158, 11, 0.12)',
+    border: '1px solid rgba(245, 158, 11, 0.35)',
+    color: '#fbbf24',
+    marginBottom: '16px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+  };
+  const isBusy = isCreating || isForgeQueued;
 
   return (
     <div style={containerStyle}>
       <div style={headerStyle}>
-        <div>
+        {/* Centered Title */}
+        <div style={{ textAlign: 'center' }}>
           <h1 style={titleStyle}>Create New Agent</h1>
           <p style={subtitleStyle}>Configure your AI agent with voice, type, and capabilities</p>
         </div>
-        <button onClick={onCancel} style={secondaryButtonStyle}>Cancel</button>
       </div>
 
       {error && (
@@ -1972,8 +2098,14 @@ function CreateAgentForm({
           <span>{error}</span>
         </div>
       )}
+      {workspaceWarning && (
+        <div style={alertWarningStyle}>
+          <AlertCircle style={{ width: 16, height: 16 }} />
+          <span>{workspaceWarning}</span>
+        </div>
+      )}
 
-      <form onSubmit={handleSubmit} style={{ maxWidth: '900px', flex: 1, minHeight: 0 }}>
+      <form onSubmit={handleSubmit} style={{ maxWidth: '900px', margin: '0 auto', flex: 1, minHeight: 0 }}>
         {/* Step Navigation */}
         <div style={formSectionStyle}>
           <div style={cardGridStyle}>
@@ -2035,7 +2167,7 @@ function CreateAgentForm({
             <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
               {[...Array(6)].map((_, i) => (
                 <motion.div
-                  key={i}
+                  key={`particle-${i}`}
                   style={{
                     position: 'absolute',
                     width: 8,
@@ -2317,9 +2449,9 @@ function CreateAgentForm({
               animate={{ opacity: 1 }}
               transition={{ delay: 1.5 }}
             >
-              {[...Array(6)].map((_, i) => (
+              {[...Array(7)].map((_, i) => (
                 <motion.div
-                  key={i}
+                  key={`dot-${i}`}
                   style={{
                     width: 8,
                     height: 8,
@@ -3124,7 +3256,7 @@ function CreateAgentForm({
                               voice: { enabled: true, voiceId: value, ...prev.voice },
                             }))
                           }
-                          disabled={voiceLoading}
+                          aria-disabled={voiceLoading}
                         >
                           <SelectTrigger style={{
                             flex: 1,
@@ -3396,6 +3528,55 @@ function CreateAgentForm({
           </section>
         )}
 
+        {/* WORKSPACE STEP */}
+        {activeStep === "workspace" && (
+          <section style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div style={formSectionStyle}>
+              <div style={{ marginBottom: '24px' }}>
+                <h2 style={sectionTitleStyle}>
+                  <Layers style={{ width: 20, height: 20, color: STUDIO_THEME.accent }} />
+                  Workspace Configuration
+                </h2>
+                <p style={sectionSubtitleStyle}>
+                  Choose which layers to include in your agent&apos;s workspace. Each layer adds markdown files that define how your agent operates.
+                </p>
+              </div>
+
+              <WorkspaceLayerConfigurator
+                config={workspaceLayers}
+                onChange={setWorkspaceLayers}
+                theme={{
+                  textPrimary: STUDIO_THEME.textPrimary,
+                  textSecondary: STUDIO_THEME.textSecondary,
+                  textMuted: STUDIO_THEME.textMuted,
+                  accent: STUDIO_THEME.accent,
+                  bgCard: STUDIO_THEME.bgCard,
+                  bg: STUDIO_THEME.bg,
+                  borderSubtle: STUDIO_THEME.borderSubtle,
+                }}
+              />
+
+              <div style={{ 
+                marginTop: '24px', 
+                padding: '16px', 
+                background: `${STUDIO_THEME.accent}10`,
+                borderRadius: '8px',
+                border: `1px solid ${STUDIO_THEME.accent}40`,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <Sparkles style={{ width: 16, height: 16, color: STUDIO_THEME.accent }} />
+                  <span style={{ fontSize: '14px', fontWeight: 500, color: STUDIO_THEME.textPrimary }}>
+                    What happens next?
+                  </span>
+                </div>
+                <p style={{ fontSize: '13px', color: STUDIO_THEME.textSecondary, margin: 0, lineHeight: 1.5 }}>
+                  After creation, your agent will have a workspace at <code style={{ background: STUDIO_THEME.bg, padding: '2px 4px', borderRadius: '4px' }}>agents/{'{agent-id}'}</code> with the selected layers. You can edit these files directly to refine your agent&apos;s behavior.
+                </p>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* REVIEW STEP */}
         {activeStep === "review" && (
           <section style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -3612,22 +3793,41 @@ function CreateAgentForm({
 
         {/* Sticky Footer */}
         <div style={stickyFooterStyle}>
-          <div style={{ fontSize: '12px', color: STUDIO_THEME.textSecondary }}>
+          {/* Cancel Button - Left */}
+          <button 
+            type="button"
+            onClick={onCancel}
+            disabled={isBusy}
+            style={{
+              ...secondaryButtonStyle,
+              opacity: isBusy ? 0.5 : 1,
+              cursor: isBusy ? 'not-allowed' : 'pointer',
+            }}
+          >
+            Cancel
+          </button>
+
+          {/* Status Message - Center */}
+          <div style={{ fontSize: '12px', color: STUDIO_THEME.textSecondary, flex: 1, textAlign: 'center' }}>
             {!stepValidation[activeStep]
               ? "Complete required fields in this step to continue."
+              : isForgeQueued
+              ? "Preparing forge sequence..."
               : activeStep === "review"
               ? "All checks passed. Forge will animate and compile the character layer."
               : "Step complete. Continue to the next stage."}
           </div>
+
+          {/* Back/Next Buttons - Right */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <button
               type="button"
               onClick={goToPreviousStep}
-              disabled={activeStepIndex <= 0 || isCreating}
+              disabled={activeStepIndex <= 0 || isBusy}
               style={{
                 ...secondaryButtonStyle,
-                opacity: activeStepIndex <= 0 || isCreating ? 0.5 : 1,
-                cursor: activeStepIndex <= 0 || isCreating ? 'not-allowed' : 'pointer',
+                opacity: activeStepIndex <= 0 || isBusy ? 0.5 : 1,
+                cursor: activeStepIndex <= 0 || isBusy ? 'not-allowed' : 'pointer',
               }}
             >
               Back
@@ -3636,11 +3836,11 @@ function CreateAgentForm({
               <button
                 type="button"
                 onClick={goToNextStep}
-                disabled={!stepValidation[activeStep] || isCreating}
+                disabled={!stepValidation[activeStep] || isBusy}
                 style={{
                   ...primaryButtonStyle,
-                  opacity: !stepValidation[activeStep] || isCreating ? 0.5 : 1,
-                  cursor: !stepValidation[activeStep] || isCreating ? 'not-allowed' : 'pointer',
+                  opacity: !stepValidation[activeStep] || isBusy ? 0.5 : 1,
+                  cursor: !stepValidation[activeStep] || isBusy ? 'not-allowed' : 'pointer',
                 }}
               >
                 Next: {CREATE_FLOW_STEPS[activeStepIndex + 1]?.label || "Review"}
@@ -3648,18 +3848,18 @@ function CreateAgentForm({
             ) : (
               <button
                 type="submit"
-                disabled={isCreating || !isReadyForCreate}
+                disabled={isBusy || !isReadyForCreate}
                 style={{
                   ...primaryButtonStyle,
                   padding: '12px 24px',
-                  opacity: isCreating || !isReadyForCreate ? 0.5 : 1,
-                  cursor: isCreating || !isReadyForCreate ? 'not-allowed' : 'pointer',
+                  opacity: isBusy || !isReadyForCreate ? 0.5 : 1,
+                  cursor: isBusy || !isReadyForCreate ? 'not-allowed' : 'pointer',
                 }}
               >
-                {isCreating ? (
+                {isBusy ? (
                   <>
                     <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />
-                    Creating...
+                    {isForgeQueued ? "Preparing..." : "Creating..."}
                   </>
                 ) : (
                   <>
@@ -4063,84 +4263,65 @@ function EditAgentForm({ agent, onCancel }: { agent: Agent; onCancel: () => void
 // Agent Detail View - STUDIO_THEME Styling
 // ============================================================================
 
+// ============================================================================
+// Agent Detail View - Overlay with Side-by-Side Cards
+// ============================================================================
+
 function AgentDetailView({ agentId }: { agentId: string }) {
+  console.log('[AgentDetailView] Rendering for agentId:', agentId);
+  
   const {
     agents,
-    runs,
-    tasks,
-    checkpoints,
-    commits,
-    queue,
-    activeRunId,
-    activeRunOutput,
-    isLoadingRuns,
-    isLoadingTasks,
-    isExecuting,
-    eventStreamConnected,
+    characterStats,
     selectAgent,
     setIsEditing,
     deleteAgent,
-    startRun,
-    cancelRun,
-    selectRun,
-    fetchRuns,
-    fetchTasks,
-    fetchCheckpoints,
-    fetchCommits,
-    fetchQueue,
-    characterStats,
+    eventStreamConnected,
   } = useAgentStore();
 
   const agent = agents.find(a => a.id === agentId);
+  console.log('[AgentDetailView] Found agent:', agent?.name);
   
-  // Get avatar config
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(false);
+  
+  if (!agent) {
+    console.log('[AgentDetailView] No agent found, returning null');
+    return null;
+  }
+
+  // Show full Agent Dashboard
+  if (showDashboard) {
+    console.log('[AgentDetailView] Rendering dashboard for agent:', agentId);
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.85)',
+          backdropFilter: 'blur(8px)',
+          zIndex: 100,
+          display: 'flex',
+          justifyContent: 'center',
+          padding: '24px',
+        }}
+        onClick={() => setShowDashboard(false)}
+      >
+        <AgentDashboard 
+          agentId={agentId} 
+          onClose={() => setShowDashboard(false)} 
+        />
+      </motion.div>
+    );
+  }
+
   const blueprint = parseCharacterBlueprint(agent?.config);
   const setupId = blueprint?.setup || "generalist";
   const avatarConfig = (agent?.config?.avatar as AvatarConfig) || createDefaultAvatarConfig(setupId);
-  const agentRuns = runs[agentId] || [];
-  const agentTasks = tasks[agentId] || [];
-  const agentCheckpoints = checkpoints[agentId] || [];
-  const agentCommits = commits[agentId] || [];
-  const activeRun = agentRuns.find(r => r.id === activeRunId);
   const agentCharacterStats = characterStats[agentId];
-  const unreadMailCount = useUnreadMailCount(agentId);
-  const pendingReviewCount = usePendingReviewCount(agentId);
-
-  const [executionInput, setExecutionInput] = useState('');
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  
-  // Voice state managed by VoiceProvider
-
-  useEffect(() => {
-    if (agentId) {
-      fetchRuns(agentId);
-      fetchTasks(agentId);
-      fetchCheckpoints(agentId);
-      fetchCommits(agentId);
-      fetchQueue(agentId);
-    }
-  }, [agentId, fetchRuns, fetchTasks, fetchCheckpoints, fetchCommits, fetchQueue]);
-
-  if (!agent) return null;
-
-  const handleStartRun = async () => {
-    if (!executionInput.trim()) return;
-    try {
-      await startRun(agentId, executionInput);
-      setExecutionInput('');
-    } catch {
-      // Error handled by store
-    }
-  };
-
-  const handleDelete = async () => {
-    try {
-      await deleteAgent(agentId);
-      setShowDeleteConfirm(false);
-    } catch {
-      // Error handled by store
-    }
-  };
 
   const statusColors: Record<string, string> = {
     'online': '#22c55e',
@@ -4154,51 +4335,98 @@ function AgentDetailView({ agentId }: { agentId: string }) {
     'pending': '#9B9B9B',
   };
 
-  return (
-    <div style={{ display: 'flex', height: '100%', background: STUDIO_THEME.bg }}>
-      {/* Left Sidebar - Agent Info */}
-      <div style={{
-        width: '320px',
-        borderRight: `1px solid ${STUDIO_THEME.borderSubtle}`,
-        padding: '16px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '16px',
-        overflow: 'auto',
-        background: STUDIO_THEME.bg,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button
-            onClick={() => selectAgent(null)}
-            style={{
-              padding: '8px 12px',
-              borderRadius: '8px',
-              background: 'transparent',
-              border: `1px solid ${STUDIO_THEME.borderSubtle}`,
-              color: STUDIO_THEME.textSecondary,
-              fontSize: '13px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            ← Back
-          </button>
-        </div>
+  const handleDelete = async () => {
+    try {
+      await deleteAgent(agentId);
+      setShowDeleteConfirm(false);
+      selectAgent(null);
+    } catch {
+      // Error handled by store
+    }
+  };
 
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0, 0, 0, 0.8)',
+        backdropFilter: 'blur(8px)',
+        zIndex: 100,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '24px',
+      }}
+      onClick={() => selectAgent(null)}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        transition={{ duration: 0.2 }}
+        style={{
+          display: 'flex',
+          gap: '16px',
+          maxWidth: '720px',
+          width: '100%',
+        }}
+        onClick={e => e.stopPropagation()}
+      >
         {/* Agent Info Card */}
         <div style={{
-          borderRadius: '12px',
+          flex: 1,
+          borderRadius: '16px',
           border: `1px solid ${STUDIO_THEME.borderSubtle}`,
           background: STUDIO_THEME.bgCard,
           overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
         }}>
-          <div style={{ padding: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+          {/* Header with Close */}
+          <div style={{
+            padding: '16px',
+            borderBottom: `1px solid ${STUDIO_THEME.borderSubtle}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}>
+            <span style={{
+              fontSize: '12px',
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              color: STUDIO_THEME.textMuted,
+            }}>
+              Agent Profile
+            </span>
+            <button
+              onClick={() => selectAgent(null)}
+              style={{
+                padding: '6px',
+                borderRadius: '6px',
+                background: 'transparent',
+                border: 'none',
+                color: STUDIO_THEME.textSecondary,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <X style={{ width: 18, height: 18 }} />
+            </button>
+          </div>
+
+          <div style={{ padding: '20px', flex: 1 }}>
+            {/* Avatar & Name */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
               <div style={{
-                width: '56px',
-                height: '56px',
+                width: '64px',
+                height: '64px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -4206,44 +4434,42 @@ function AgentDetailView({ agentId }: { agentId: string }) {
               }}>
                 <AgentAvatar 
                   config={avatarConfig}
-                  size={56}
+                  size={64}
                   emotion={agent.status === 'running' ? 'focused' : agent.status === 'error' ? 'skeptical' : 'steady'}
                   isAnimating={true}
                 />
                 <div style={{
                   position: 'absolute',
-                  bottom: '0px',
-                  right: '0px',
-                  width: '14px',
-                  height: '14px',
+                  bottom: '2px',
+                  right: '2px',
+                  width: '16px',
+                  height: '16px',
                   borderRadius: '50%',
                   background: statusColors[agent.status] || '#6b7280',
-                  border: `2px solid ${STUDIO_THEME.bgCard}`,
+                  border: `3px solid ${STUDIO_THEME.bgCard}`,
                 }} />
               </div>
               <div>
                 <h3 style={{
-                  fontSize: '16px',
+                  fontSize: '20px',
                   fontWeight: 600,
                   color: STUDIO_THEME.textPrimary,
-                  margin: '0 0 4px 0',
+                  margin: '0 0 6px 0',
                   fontFamily: 'Georgia, serif',
                 }}>
                   {agent.name}
                 </h3>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{
-                    width: '8px',
-                    height: '8px',
-                    borderRadius: '50%',
-                    background: statusColors[agent.status] || '#6b7280',
-                  }} />
                   <span style={{
-                    fontSize: '12px',
-                    color: STUDIO_THEME.textSecondary,
+                    padding: '3px 10px',
+                    borderRadius: '999px',
+                    background: `${STUDIO_THEME.accent}15`,
+                    color: STUDIO_THEME.accent,
+                    fontSize: '11px',
+                    fontWeight: 500,
                     textTransform: 'capitalize',
                   }}>
-                    {agent.status}
+                    {agent.type || 'worker'}
                   </span>
                   {eventStreamConnected && (
                     <span style={{
@@ -4261,158 +4487,67 @@ function AgentDetailView({ agentId }: { agentId: string }) {
               </div>
             </div>
 
+            {/* Description */}
             <p style={{
-              fontSize: '13px',
+              fontSize: '14px',
               color: STUDIO_THEME.textSecondary,
-              lineHeight: 1.5,
-              marginBottom: '16px',
+              lineHeight: 1.6,
+              marginBottom: '20px',
             }}>
               {agent.description}
             </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div>
-                <label style={{
-                  fontSize: '11px',
-                  color: STUDIO_THEME.textMuted,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  display: 'block',
-                  marginBottom: '4px',
-                }}>
-                  Type
-                </label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {agent.type === 'orchestrator' && <Network style={{ width: 16, height: 16, color: STUDIO_THEME.textSecondary }} />}
-                  {agent.type === 'sub-agent' && <Bot style={{ width: 16, height: 16, color: STUDIO_THEME.textSecondary }} />}
-                  {agent.type === 'worker' && <Cog style={{ width: 16, height: 16, color: STUDIO_THEME.textSecondary }} />}
-                  <span style={{
-                    fontSize: '13px',
-                    color: STUDIO_THEME.textPrimary,
-                    textTransform: 'capitalize',
-                  }}>
-                    {agent.type || 'worker'}
-                  </span>
-                </div>
-                {agent.parentAgentId && (
-                  <div style={{
-                    fontSize: '11px',
-                    color: STUDIO_THEME.textMuted,
-                    marginTop: '4px',
-                  }}>
-                    Parent: {agents.find(a => a.id === agent.parentAgentId)?.name || agent.parentAgentId}
-                  </div>
-                )}
+            {/* Key Info */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '12px', color: STUDIO_THEME.textMuted }}>Model</span>
+                <span style={{ fontSize: '13px', color: STUDIO_THEME.textPrimary }}>{agent.model}</span>
               </div>
-
-              <div>
-                <label style={{
-                  fontSize: '11px',
-                  color: STUDIO_THEME.textMuted,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  display: 'block',
-                  marginBottom: '4px',
-                }}>
-                  Model
-                </label>
-                <div style={{ fontSize: '13px', color: STUDIO_THEME.textPrimary }}>{agent.model}</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '12px', color: STUDIO_THEME.textMuted }}>Provider</span>
+                <span style={{ fontSize: '13px', color: STUDIO_THEME.textPrimary }}>{agent.provider}</span>
               </div>
-
-              <div>
-                <label style={{
-                  fontSize: '11px',
-                  color: STUDIO_THEME.textMuted,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  display: 'block',
-                  marginBottom: '4px',
-                }}>
-                  Temperature
-                </label>
-                <div style={{ fontSize: '13px', color: STUDIO_THEME.textPrimary }}>{agent.temperature}</div>
-              </div>
-
               {agent.voice?.enabled && (
-                <div>
-                  <label style={{
-                    fontSize: '11px',
-                    color: STUDIO_THEME.textMuted,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    marginBottom: '4px',
-                  }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '12px', color: STUDIO_THEME.textMuted, display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <Volume2 style={{ width: 12, height: 12 }} />
                     Voice
-                  </label>
-                  <div style={{ fontSize: '13px', color: STUDIO_THEME.textPrimary, marginBottom: '8px' }}>
-                    {agent.voice.voiceLabel || agent.voice.voiceId}
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                    {agent.voice.autoSpeak && (
-                      <span style={{
-                        padding: '2px 8px',
-                        borderRadius: '999px',
-                        border: `1px solid ${STUDIO_THEME.borderSubtle}`,
-                        color: STUDIO_THEME.textSecondary,
-                        fontSize: '10px',
-                      }}>
-                        Auto-speak
-                      </span>
-                    )}
-                    {agent.voice.speakOnCheckpoint && (
-                      <span style={{
-                        padding: '2px 8px',
-                        borderRadius: '999px',
-                        border: `1px solid ${STUDIO_THEME.borderSubtle}`,
-                        color: STUDIO_THEME.textSecondary,
-                        fontSize: '10px',
-                      }}>
-                        Checkpoint alerts
-                      </span>
-                    )}
-                  </div>
+                  </span>
+                  <span style={{ fontSize: '13px', color: STUDIO_THEME.textPrimary }}>{agent.voice.voiceLabel || agent.voice.voiceId}</span>
                 </div>
               )}
+            </div>
 
-              <div>
-                <label style={{
-                  fontSize: '11px',
-                  color: STUDIO_THEME.textMuted,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  display: 'block',
-                  marginBottom: '8px',
-                }}>
-                  Capabilities
-                </label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                  {agent.capabilities.map(cap => (
-                    <span key={cap} style={{
-                      padding: '3px 10px',
-                      borderRadius: '999px',
-                      background: `${STUDIO_THEME.accent}15`,
-                      color: STUDIO_THEME.accent,
-                      fontSize: '11px',
-                      fontWeight: 500,
-                    }}>
-                      {cap}
-                    </span>
-                  ))}
-                </div>
+            {/* Capabilities */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{
+                fontSize: '11px',
+                color: STUDIO_THEME.textMuted,
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                display: 'block',
+                marginBottom: '8px',
+              }}>
+                Capabilities
+              </label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                {agent.capabilities.map(cap => (
+                  <span key={cap} style={{
+                    padding: '4px 10px',
+                    borderRadius: '999px',
+                    background: `${STUDIO_THEME.accent}15`,
+                    color: STUDIO_THEME.accent,
+                    fontSize: '11px',
+                    fontWeight: 500,
+                  }}>
+                    {cap}
+                  </span>
+                ))}
               </div>
             </div>
 
-            <div style={{
-              height: '1px',
-              background: STUDIO_THEME.borderSubtle,
-              margin: '16px 0',
-            }} />
-
-            <div style={{ display: 'flex', gap: '8px' }}>
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
               <button
                 onClick={() => setIsEditing(agentId)}
                 style={{
@@ -4454,585 +4589,221 @@ function AgentDetailView({ agentId }: { agentId: string }) {
           </div>
         </div>
 
-        {/* Quick Stats Card */}
+        {/* Statistics Card */}
         <div style={{
-          borderRadius: '12px',
+          flex: 1,
+          borderRadius: '16px',
           border: `1px solid ${STUDIO_THEME.borderSubtle}`,
           background: STUDIO_THEME.bgCard,
           overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
         }}>
-          <div style={{ padding: '16px' }}>
-            <h4 style={{
-              fontSize: '14px',
+          <div style={{
+            padding: '16px',
+            borderBottom: `1px solid ${STUDIO_THEME.borderSubtle}`,
+          }}>
+            <span style={{
+              fontSize: '12px',
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              color: STUDIO_THEME.textMuted,
+            }}>
+              Character Stats
+            </span>
+          </div>
+
+          <div style={{ padding: '20px', flex: 1 }}>
+            {agentCharacterStats ? (
+              <>
+                {/* Level & Class */}
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between',
+                  marginBottom: '20px',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  background: `${STUDIO_THEME.accent}10`,
+                  border: `1px solid ${STUDIO_THEME.accent}30`,
+                }}>
+                  <div>
+                    <div style={{ fontSize: '12px', color: STUDIO_THEME.textMuted, marginBottom: '2px' }}>Class</div>
+                    <div style={{ fontSize: '14px', color: STUDIO_THEME.textPrimary, fontWeight: 600 }}>{agentCharacterStats.class}</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '12px', color: STUDIO_THEME.textMuted, marginBottom: '2px' }}>Level</div>
+                    <div style={{ fontSize: '24px', color: STUDIO_THEME.accent, fontWeight: 700 }}>{agentCharacterStats.level}</div>
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {agentCharacterStats.relevantStats.slice(0, 4).map((statKey) => {
+                    const definition = agentCharacterStats.statDefinitions.find((item) => item.key === statKey);
+                    return (
+                      <div key={statKey} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                      }}>
+                        <span style={{
+                          fontSize: '12px',
+                          color: STUDIO_THEME.textSecondary,
+                          width: '80px',
+                        }}>
+                          {definition?.label || statKey}
+                        </span>
+                        <div style={{
+                          flex: 1,
+                          height: '6px',
+                          background: 'rgba(255,255,255,0.1)',
+                          borderRadius: '3px',
+                          overflow: 'hidden',
+                        }}>
+                          <div style={{
+                            width: `${agentCharacterStats.stats[statKey]}%`,
+                            height: '100%',
+                            background: `linear-gradient(90deg, ${STUDIO_THEME.accent}, #B08D6E)`,
+                            borderRadius: '3px',
+                          }} />
+                        </div>
+                        <span style={{
+                          fontSize: '12px',
+                          color: STUDIO_THEME.textPrimary,
+                          fontWeight: 600,
+                          width: '32px',
+                          textAlign: 'right',
+                        }}>
+                          {agentCharacterStats.stats[statKey]}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                <Sparkles style={{ width: 32, height: 32, color: STUDIO_THEME.textMuted, margin: '0 auto 12px' }} />
+                <p style={{ fontSize: '13px', color: STUDIO_THEME.textSecondary }}>
+                  No character stats available
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Launch Agent Dashboard Button */}
+      <motion.button
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log('[AgentDetailView] Launch Dashboard clicked');
+          setShowDashboard(true);
+        }}
+        style={{
+          position: 'absolute',
+          bottom: '32px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          padding: '12px 24px',
+          borderRadius: '999px',
+          background: `linear-gradient(to right, ${STUDIO_THEME.accent}, #B08D6E)`,
+          border: 'none',
+          color: '#1A1612',
+          fontSize: '14px',
+          fontWeight: 600,
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+        }}
+      >
+        <Activity style={{ width: 18, height: 18 }} />
+        Launch Agent Dashboard
+        <ChevronRight style={{ width: 16, height: 16 }} />
+      </motion.button>
+
+      {/* Delete Confirmation */}
+      {showDeleteConfirm && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.9)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 101,
+        }}
+        onClick={(e) => e.stopPropagation()}
+        >
+          <div style={{
+            width: '100%',
+            maxWidth: '400px',
+            padding: '24px',
+            borderRadius: '16px',
+            background: STUDIO_THEME.bgCard,
+            border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+          }}>
+            <h3 style={{
+              fontSize: '18px',
               fontWeight: 600,
               color: STUDIO_THEME.textPrimary,
-              margin: '0 0 12px 0',
+              margin: '0 0 8px 0',
               fontFamily: 'Georgia, serif',
             }}>
-              Statistics
-            </h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '13px', color: STUDIO_THEME.textSecondary }}>Total Runs</span>
-                <span style={{ fontSize: '13px', color: STUDIO_THEME.textPrimary, fontWeight: 500 }}>{agentRuns.length}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '13px', color: STUDIO_THEME.textSecondary }}>Checkpoints</span>
-                <span style={{ fontSize: '13px', color: STUDIO_THEME.textPrimary, fontWeight: 500 }}>{agentCheckpoints.length}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '13px', color: STUDIO_THEME.textSecondary }}>Commits</span>
-                <span style={{ fontSize: '13px', color: STUDIO_THEME.textPrimary, fontWeight: 500 }}>{agentCommits.length}</span>
-              </div>
-              {agentCharacterStats && (
-                <>
-                  <div style={{
-                    height: '1px',
-                    background: STUDIO_THEME.borderSubtle,
-                    margin: '8px 0',
-                  }} />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '13px', color: STUDIO_THEME.textSecondary }}>Class</span>
-                    <span style={{ fontSize: '13px', color: STUDIO_THEME.textPrimary, fontWeight: 500 }}>{agentCharacterStats.class}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '13px', color: STUDIO_THEME.textSecondary }}>Level</span>
-                    <span style={{ fontSize: '13px', color: STUDIO_THEME.accent, fontWeight: 600 }}>{agentCharacterStats.level}</span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }}>
-                    {agentCharacterStats.relevantStats.slice(0, 4).map((statKey) => {
-                      const definition = agentCharacterStats.statDefinitions.find((item) => item.key === statKey);
-                      return (
-                        <div key={statKey} style={{
-                          borderRadius: '6px',
-                          border: `1px solid ${STUDIO_THEME.borderSubtle}`,
-                          padding: '8px 10px',
-                          background: `${STUDIO_THEME.bg}80`,
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <span style={{ fontSize: '11px', color: STUDIO_THEME.textMuted }}>{definition?.label || statKey}</span>
-                            <span style={{ fontSize: '12px', color: STUDIO_THEME.textPrimary, fontWeight: 500 }}>{agentCharacterStats.stats[statKey] ?? 0}</span>
-                          </div>
-                          {definition && (
-                            <div style={{ fontSize: '10px', color: STUDIO_THEME.textMuted, marginTop: '2px' }}>
-                              {definition.signals.join(", ")}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '8px' }}>
-                    {Object.entries(agentCharacterStats.specialtyScores)
-                      .slice(0, 3)
-                      .map(([skill, value]) => (
-                        <span key={skill} style={{
-                          padding: '2px 8px',
-                          borderRadius: '999px',
-                          border: `1px solid ${STUDIO_THEME.borderSubtle}`,
-                          color: STUDIO_THEME.textSecondary,
-                          fontSize: '10px',
-                        }}>
-                          {skill}: {value}
-                        </span>
-                      ))}
-                  </div>
-                </>
-              )}
+              Delete Agent
+            </h3>
+            <p style={{
+              fontSize: '14px',
+              color: STUDIO_THEME.textSecondary,
+              margin: '0 0 24px 0',
+            }}>
+              Are you sure you want to delete &quot;{agent.name}&quot;? This action cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: '8px',
+                  background: 'transparent',
+                  border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                  color: STUDIO_THEME.textPrimary,
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: '8px',
+                  background: '#dc2626',
+                  border: 'none',
+                  color: 'white',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                }}
+              >
+                Delete
+              </button>
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Main Content */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, background: STUDIO_THEME.bg }}>
-        {/* Execution Area - Runner Style */}
-        <div style={{
-          borderBottom: `1px solid ${STUDIO_THEME.borderSubtle}`,
-          padding: '16px',
-          background: STUDIO_THEME.bg,
-        }}>
-          {!activeRunId || activeRun?.status !== 'running' ? (
-            // Initial Input State
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <div style={{ flex: 1 }}>
-                <Textarea
-                  value={executionInput}
-                  onChange={e => setExecutionInput(e.target.value)}
-                  placeholder="Enter task for the agent..."
-                  disabled={isExecuting}
-                  style={{
-                    minHeight: '80px',
-                    background: STUDIO_THEME.bgCard,
-                    border: `1px solid ${STUDIO_THEME.borderSubtle}`,
-                    borderRadius: '8px',
-                    padding: '12px',
-                    color: STUDIO_THEME.textPrimary,
-                    fontSize: '14px',
-                    resize: 'vertical',
-                    width: '100%',
-                  }}
-                />
-                <div style={{ marginTop: '8px' }}>
-                  <VoicePresence compact />
-                </div>
-              </div>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <button
-                  onClick={handleStartRun}
-                  disabled={isExecuting || !executionInput.trim()}
-                  style={{
-                    flex: 1,
-                    padding: '12px 20px',
-                    borderRadius: '8px',
-                    background: isExecuting || !executionInput.trim() ? `${STUDIO_THEME.accent}60` : `linear-gradient(to right, ${STUDIO_THEME.accent}, #B08D6E)`,
-                    border: 'none',
-                    color: '#1A1612',
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    cursor: isExecuting || !executionInput.trim() ? 'not-allowed' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-                  }}
-                >
-                  {isExecuting ? (
-                    <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />
-                  ) : (
-                    <>
-                      <Play style={{ width: 16, height: 16 }} />
-                      Run
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          ) : (
-            // Active Run State - Runner Style
-            <div style={{ display: 'flex', gap: '16px', height: '300px' }}>
-              {/* Main Output */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <div style={{ fontSize: '14px', fontWeight: 600, color: STUDIO_THEME.textPrimary, fontFamily: 'Georgia, serif' }}>Task</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{
-                      padding: '4px 10px',
-                      borderRadius: '999px',
-                      background: activeRun?.status === 'running' ? `${STUDIO_THEME.accent}20` : STUDIO_THEME.bgCard,
-                      color: activeRun?.status === 'running' ? STUDIO_THEME.accent : STUDIO_THEME.textSecondary,
-                      fontSize: '12px',
-                      fontWeight: 500,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                    }}>
-                      {activeRun?.status === 'running' && <Loader2 style={{ width: 12, height: 12, animation: 'spin 1s linear infinite' }} />}
-                      {activeRun?.status}
-                    </span>
-                    <button
-                      onClick={() => activeRun && cancelRun(agentId, activeRun.id)}
-                      style={{
-                        padding: '6px 12px',
-                        borderRadius: '6px',
-                        background: '#dc2626',
-                        border: 'none',
-                        color: 'white',
-                        fontSize: '12px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      <Square style={{ width: 12, height: 12 }} />
-                      Stop
-                    </button>
-                  </div>
-                </div>
-                
-                <div style={{
-                  padding: '12px',
-                  borderRadius: '8px',
-                  border: `1px solid ${STUDIO_THEME.borderSubtle}`,
-                  background: `${STUDIO_THEME.bgCard}80`,
-                  marginBottom: '8px',
-                }}>
-                  <div style={{ fontSize: '14px', color: STUDIO_THEME.textPrimary }}>{activeRun?.input}</div>
-                </div>
-                
-                <div style={{ flex: 1, overflow: 'auto' }}>
-                  <pre style={{
-                    whiteSpace: 'pre-wrap',
-                    fontFamily: 'monospace',
-                    fontSize: '13px',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    border: `1px solid ${STUDIO_THEME.borderSubtle}`,
-                    background: STUDIO_THEME.bgCard,
-                    minHeight: '100px',
-                    color: STUDIO_THEME.textPrimary,
-                    margin: 0,
-                  }}>
-                    {activeRunOutput || '(streaming output...)'}
-                  </pre>
-                </div>
-              </div>
-              
-              {/* Trace Sidebar */}
-              <AgentTraceSidebar agentId={agentId} />
-            </div>
-          )}
-        </div>
-
-        {/* Tabs */}
-        <Tabs defaultValue="runs" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-          <TabsList style={{
-            margin: '16px 16px 0 16px',
-            background: STUDIO_THEME.bgCard,
-            border: `1px solid ${STUDIO_THEME.borderSubtle}`,
-            borderRadius: '8px',
-            padding: '4px',
-          }}>
-            <TabsTrigger value="runs" style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '8px 12px',
-              fontSize: '13px',
-            }}>
-              <Activity style={{ width: 16, height: 16 }} />
-              Runs
-            </TabsTrigger>
-            <TabsTrigger value="tasks" style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '8px 12px',
-              fontSize: '13px',
-            }}>
-              <CheckCircle style={{ width: 16, height: 16 }} />
-              Tasks
-            </TabsTrigger>
-            <TabsTrigger value="checkpoints" style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '8px 12px',
-              fontSize: '13px',
-            }}>
-              <Save style={{ width: 16, height: 16 }} />
-              Checkpoints
-            </TabsTrigger>
-            <TabsTrigger value="commits" style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '8px 12px',
-              fontSize: '13px',
-            }}>
-              <GitCommit style={{ width: 16, height: 16 }} />
-              Commits
-            </TabsTrigger>
-            <TabsTrigger value="queue" style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '8px 12px',
-              fontSize: '13px',
-            }}>
-              <Clock style={{ width: 16, height: 16 }} />
-              Queue
-            </TabsTrigger>
-            <TabsTrigger value="character" style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '8px 12px',
-              fontSize: '13px',
-            }}>
-              <Sparkles style={{ width: 16, height: 16 }} />
-              Character
-            </TabsTrigger>
-            <TabsTrigger value="attachments" style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '8px 12px',
-              fontSize: '13px',
-            }}>
-              <Paperclip style={{ width: 16, height: 16 }} />
-              Attachments
-            </TabsTrigger>
-            <TabsTrigger value="mail" style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '8px 12px',
-              fontSize: '13px',
-            }}>
-              <Mail style={{ width: 16, height: 16 }} />
-              Mail
-              {unreadMailCount > 0 && (
-                <span style={{
-                  marginLeft: '4px',
-                  padding: '2px 6px',
-                  borderRadius: '999px',
-                  background: '#dc2626',
-                  color: 'white',
-                  fontSize: '10px',
-                  fontWeight: 600,
-                  minWidth: '16px',
-                  textAlign: 'center',
-                }}>
-                  {unreadMailCount}
-                </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="reviews" style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '8px 12px',
-              fontSize: '13px',
-            }}>
-              <Shield style={{ width: 16, height: 16 }} />
-              Reviews
-              {pendingReviewCount > 0 && (
-                <span style={{
-                  marginLeft: '4px',
-                  padding: '2px 6px',
-                  borderRadius: '999px',
-                  background: '#dc2626',
-                  color: 'white',
-                  fontSize: '10px',
-                  fontWeight: 600,
-                  minWidth: '16px',
-                  textAlign: 'center',
-                }}>
-                  {pendingReviewCount}
-                </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="capsule" style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '8px 12px',
-              fontSize: '13px',
-            }}>
-              <AppWindow style={{ width: 16, height: 16 }} />
-              Capsule
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="runs" style={{ flex: 1, padding: '16px', margin: 0 }}>
-            {isLoadingRuns ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '128px' }}>
-                <Loader2 style={{ width: 24, height: 24, animation: 'spin 1s linear infinite', color: STUDIO_THEME.accent }} />
-              </div>
-            ) : agentRuns.length === 0 ? (
-              <EmptyTabState message="No runs yet. Start the agent to see execution history." />
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {agentRuns.map(run => (
-                  <RunCard 
-                    key={run.id} 
-                    run={run} 
-                    isActive={run.id === activeRunId}
-                    onClick={() => selectRun(run.id === activeRunId ? null : run.id)}
-                  />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="tasks" style={{ flex: 1, padding: '16px', margin: 0 }}>
-            {isLoadingTasks ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '128px' }}>
-                <Loader2 style={{ width: 24, height: 24, animation: 'spin 1s linear infinite', color: STUDIO_THEME.accent }} />
-              </div>
-            ) : agentTasks.length === 0 ? (
-              <EmptyTabState message="No tasks yet. Tasks appear during agent execution." />
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {agentTasks.map(task => (
-                  <TaskCard key={task.id} task={task} />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="checkpoints" style={{ flex: 1, padding: '16px', margin: 0 }}>
-            {agentCheckpoints.length === 0 ? (
-              <EmptyTabState message="No checkpoints yet. Save progress during execution." />
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {agentCheckpoints.map(cp => (
-                  <CheckpointCard key={cp.id} checkpoint={cp} />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="commits" style={{ flex: 1, padding: '16px', margin: 0 }}>
-            {agentCommits.length === 0 ? (
-              <EmptyTabState message="No commits yet. Version changes to track progress." />
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {agentCommits.map(commit => (
-                  <CommitCard key={commit.id} commit={commit} />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="queue" style={{ flex: 1, padding: '16px', margin: 0 }}>
-            {queue.length === 0 ? (
-              <EmptyTabState message="Queue is empty. Add tasks to process." />
-            ) : (
-              <div style={{
-                borderRadius: '12px',
-                border: `1px solid ${STUDIO_THEME.borderSubtle}`,
-                background: STUDIO_THEME.bgCard,
-                overflow: 'hidden',
-              }}>
-                <div style={{ padding: '16px' }}>
-                  <Queue>
-                    <ul style={{ display: 'flex', flexDirection: 'column', gap: '8px', margin: 0, padding: 0, listStyle: 'none' }}>
-                      {queue.map(item => (
-                        <li key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{
-                            padding: '2px 8px',
-                            borderRadius: '999px',
-                            background: item.priority <= 2 ? '#dc2626' : STUDIO_THEME.bg,
-                            color: item.priority <= 2 ? 'white' : STUDIO_THEME.textSecondary,
-                            fontSize: '11px',
-                            fontWeight: 500,
-                          }}>
-                            P{item.priority}
-                          </span>
-                          <span style={{ fontSize: '13px', color: STUDIO_THEME.textPrimary, flex: 1 }}>{item.content}</span>
-                          <span style={{
-                            padding: '2px 8px',
-                            borderRadius: '999px',
-                            border: `1px solid ${STUDIO_THEME.borderSubtle}`,
-                            color: STUDIO_THEME.textSecondary,
-                            fontSize: '11px',
-                          }}>
-                            {item.status}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </Queue>
-                </div>
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="character" style={{ flex: 1, padding: 0, margin: 0 }}>
-            <CharacterLayerPanel agentId={agentId} />
-          </TabsContent>
-
-          <TabsContent value="attachments" style={{ flex: 1, padding: '16px', margin: 0 }}>
-            <div style={{
-              borderRadius: '12px',
-              border: `1px solid ${STUDIO_THEME.borderSubtle}`,
-              background: STUDIO_THEME.bgCard,
-              overflow: 'hidden',
-            }}>
-              <div style={{ padding: '16px' }}>
-                <Attachments variant="list">
-                  <Attachment data={{ id: "1", type: "file", filename: "requirements.pdf", mediaType: "application/pdf", url: "#" }}>
-                    <AttachmentPreview />
-                    <AttachmentRemove />
-                  </Attachment>
-                  <Attachment data={{ id: "2", type: "file", filename: "data.csv", mediaType: "text/csv", url: "#" }}>
-                    <AttachmentPreview />
-                    <AttachmentRemove />
-                  </Attachment>
-                  <Attachment data={{ id: "3", type: "file", filename: "image.png", mediaType: "image/png", url: "#" }}>
-                    <AttachmentPreview />
-                    <AttachmentRemove />
-                  </Attachment>
-                </Attachments>
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="mail" style={{ flex: 1, padding: '16px', margin: 0 }}>
-            <AgentMailView agentId={agentId} />
-          </TabsContent>
-
-          <TabsContent value="reviews" style={{ flex: 1, padding: '16px', margin: 0 }}>
-            <AgentReviewsView agentId={agentId} />
-          </TabsContent>
-
-          <TabsContent value="capsule" style={{ flex: 1, padding: '16px', margin: 0 }}>
-            <AgentCapsuleView agentId={agentId} />
-          </TabsContent>
-        </Tabs>
-      </div>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <DialogContent style={{
-          background: STUDIO_THEME.bgCard,
-          border: `1px solid ${STUDIO_THEME.borderSubtle}`,
-          borderRadius: '12px',
-        }}>
-          <DialogHeader>
-            <DialogTitle style={{
-              fontFamily: 'Georgia, serif',
-              color: STUDIO_THEME.textPrimary,
-              fontSize: '18px',
-            }}>
-              Delete Agent
-            </DialogTitle>
-            <DialogDescription style={{
-              color: STUDIO_THEME.textSecondary,
-              fontSize: '14px',
-            }}>
-              Are you sure you want to delete &quot;{agent.name}&quot;? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px' }}>
-            <button
-              onClick={() => setShowDeleteConfirm(false)}
-              style={{
-                padding: '10px 16px',
-                borderRadius: '8px',
-                background: 'transparent',
-                border: `1px solid ${STUDIO_THEME.borderSubtle}`,
-                color: STUDIO_THEME.textPrimary,
-                fontSize: '13px',
-                cursor: 'pointer',
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleDelete}
-              style={{
-                padding: '10px 16px',
-                borderRadius: '8px',
-                background: '#dc2626',
-                border: 'none',
-                color: 'white',
-                fontSize: '13px',
-                cursor: 'pointer',
-              }}
-            >
-              Delete
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+      )}
+    </motion.div>
   );
 }
+
 
 // ============================================================================
 // Sub-components
@@ -5995,7 +5766,7 @@ function AgentCapsuleView({ agentId }: { agentId: string }) {
           ) : (
             <div className="space-y-1">
               {logs.map((log, i) => (
-                <div key={i} className="text-xs font-mono text-muted-foreground">
+                <div key={`log-${i}-${log.slice(0, 20)}`} className="text-xs font-mono text-muted-foreground">
                   {log}
                 </div>
               ))}

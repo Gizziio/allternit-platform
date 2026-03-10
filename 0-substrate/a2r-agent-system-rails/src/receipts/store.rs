@@ -178,9 +178,9 @@ impl ReceiptStore {
 
     /// Verify receipt integrity
     pub fn verify_receipt(&self, receipt_id: &str) -> Result<ReceiptVerificationResult> {
-        let mut errors = Vec::new();
+        let errors = Vec::new();
         let mut hash_matches = false;
-        let mut signature_valid = None;
+        let signature_valid = None;
 
         // Read receipt
         let receipt = match self.read_receipt(receipt_id)? {

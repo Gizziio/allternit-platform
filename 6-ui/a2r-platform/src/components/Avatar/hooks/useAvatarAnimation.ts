@@ -6,7 +6,7 @@
  */
 
 import { useMemo, useEffect, useRef, useState } from 'react';
-import type { AvatarConfig } from '../../../lib/agents/character.types';
+import type { AvatarConfig, BlinkRate } from '../../../lib/agents/character.types';
 
 export interface AvatarAnimationResult {
   svgStyle: React.CSSProperties;
@@ -24,7 +24,8 @@ interface AnimationPhase {
  * Generate idle animation keyframes based on personality
  */
 function generateIdleKeyframes(personality: AvatarConfig['personality']): AnimationPhase[] {
-  const { bounce, sway } = personality;
+  const bounce = personality?.bounce ?? 0.3;
+  const sway = personality?.sway ?? 0.15;
   
   // Base transforms
   const bounceAmount = -3 * bounce; // Max -3px bounce
@@ -45,7 +46,7 @@ function generateIdleKeyframes(personality: AvatarConfig['personality']): Animat
 function getAnimationDuration(personality: AvatarConfig['personality']): number {
   // More bounce = faster animation
   const baseDuration = 4000;
-  const speedFactor = 1 - (personality.bounce * 0.3);
+  const speedFactor = 1 - ((personality?.bounce ?? 0.3) * 0.3);
   return baseDuration * speedFactor;
 }
 
@@ -58,9 +59,9 @@ export function useAvatarAnimation(
   
   // Generate unique animation name based on config
   const animationName = useMemo(() => {
-    const hash = `${config.baseShape}-${config.personality.bounce}-${config.personality.sway}`;
+    const hash = `${config.baseShape ?? 'rounded'}-${config.personality?.bounce ?? 0.3}-${config.personality?.sway ?? 0.15}`;
     return `avatar-idle-${hash.replace(/[^a-zA-Z0-9]/g, '-')}`;
-  }, [config.baseShape, config.personality.bounce, config.personality.sway]);
+  }, [config.baseShape, config.personality?.bounce, config.personality?.sway]);
   
   // Create and manage CSS animation
   useEffect(() => {
@@ -112,7 +113,7 @@ export function useAvatarAnimation(
   }, [isAnimating, animationName, config.personality]);
   
   const bodyStyle = useMemo((): React.CSSProperties => {
-    if (!isAnimating || !config.personality.breathing) {
+    if (!isAnimating || !config.personality?.breathing) {
       return {};
     }
     
@@ -120,7 +121,7 @@ export function useAvatarAnimation(
       animation: `body-breathe 4s ease-in-out infinite`,
       transformOrigin: 'center',
     };
-  }, [isAnimating, config.personality.breathing]);
+  }, [isAnimating, config.personality?.breathing]);
   
   return {
     svgStyle,
@@ -204,7 +205,7 @@ export function useLocomotionAnimation(
  * Hook for blinking animation
  */
 export function useBlinkAnimation(
-  blinkRate: AvatarConfig['eyes']['blinkRate'],
+  blinkRate: BlinkRate | undefined,
   isAnimating: boolean
 ): {
   shouldBlink: boolean;

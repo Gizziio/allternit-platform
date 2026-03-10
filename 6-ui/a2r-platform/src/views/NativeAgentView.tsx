@@ -1325,7 +1325,7 @@ function ChatPanel({ sessionId }: ChatPanelProps) {
   const messages = useActiveMessages();
   const { isStreaming } = useStreamingState();
   const isLocalDraft = isLocalDraftSession(activeSession);
-  const accentColor = useToolCallAccent("chat") || "#D4956A";
+  const accentColor = (useToolCallAccent("chat") || "#D4956A") as string;
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [input, setInput] = useState("");
@@ -1362,16 +1362,16 @@ function ChatPanel({ sessionId }: ChatPanelProps) {
   return (
     <div className="flex h-full flex-col bg-transparent relative">
       {/* Tool Confirmation Overlay */}
-      <ToolConfirmation sessionId={sessionId} accentColor={accentColor!} />
+      <ToolConfirmation sessionId={sessionId || ""} accentColor={(accentColor || "#D4956A") as any} />
 
       {/* Messages Area */}
-      <ScrollArea ref={scrollRef} className="flex-1 px-5 py-4">
+      <ScrollArea className="flex-1 px-5 py-4">
         {messages.length === 0 ? (
           <EmptyChatState isLocalDraft={isLocalDraft} />
         ) : (
           <div className="space-y-4 max-w-3xl mx-auto">
             {messages.map((message) => (
-              <MessageItem key={message.id} message={message} accentColor={accentColor!} isStreaming={isStreaming} />
+              <MessageItem key={message.id} message={message} accentColor={accentColor || '#D4956A'} isStreaming={isStreaming} />
             ))}
           </div>
         )}
@@ -1379,7 +1379,7 @@ function ChatPanel({ sessionId }: ChatPanelProps) {
 
       {/* Pending Questions - Floating above input */}
       <div className="absolute bottom-[180px] left-6 right-6 z-50">
-        <ToolQuestionDisplay sessionId={sessionId} accentColor={accentColor!} />
+        <ToolQuestionDisplay sessionId={sessionId || ""} accentColor={(accentColor || "#D4956A") as any} />
       </div>
 
       {/* Input Area */}

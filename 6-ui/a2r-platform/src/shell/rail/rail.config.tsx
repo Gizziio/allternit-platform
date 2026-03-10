@@ -11,7 +11,7 @@ import {
 export interface RailConfigItem {
   id: string;
   label: string;
-  icon: React.ComponentType<{ size?: number | string; weight?: string; color?: string }>;
+  icon: React.ComponentType<{ size?: number | string; weight?: any; color?: string }>;
   payload: string;
   isAction?: boolean;
   shortcut?: string;
@@ -22,14 +22,14 @@ export interface RailConfigItem {
 export interface RailConfigSection {
   id: string;
   title: string;
-  icon?: React.ComponentType<{ size?: number | string; weight?: string; color?: string }>;
+  icon?: React.ComponentType<{ size?: number | string; weight?: any; color?: string }>;
   items: RailConfigItem[];
   isDynamic?: boolean;
   defaultExpanded?: boolean;
   collapsible?: boolean;
 }
 
-export function MatrixLogo({ size = 20 }: { size?: number }) {
+export function MatrixLogo({ size = 20 }: { size?: number | string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
       <rect x="4" y="4" width="4" height="4" fill="currentColor" />
@@ -80,7 +80,7 @@ export const RAIL_CONFIG: RailConfigSection[] = [
   },
   {
     id: 'sessions',
-    title: 'Conversations',
+    title: 'Sessions',
     icon: ChatTeardropText,
     isDynamic: true,
     defaultExpanded: true,

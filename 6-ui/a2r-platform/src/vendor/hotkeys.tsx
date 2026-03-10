@@ -8,13 +8,14 @@ export type { UseHotkeysOptions };
 // Define common platform shortcuts
 export const PLATFORM_SHORTCUTS = {
   GLOBAL: {
-    TOGGLE_AGENT_RUNNER: { keys: 'meta+j', description: 'Toggle Agent Runner' },
+    TOGGLE_AGENT_RUNNER: { keys: 'meta+shift+a', description: 'Toggle Agent Runner' },
     SEARCH: { keys: 'meta+k', description: 'Global Search' },
     NEW_CHAT: { keys: 'meta+n', description: 'New Chat' },
     TOGGLE_SIDEBAR: { keys: 'meta+b', description: 'Toggle Sidebar' },
   },
+  // Sidecar is now integrated into Agent Runner - no separate shortcut needed
   SIDECAR: {
-    TOGGLE: { keys: 'meta+shift+a', description: 'Toggle Artifact Sidecar' },
+    TOGGLE: { keys: 'meta+shift+unused', description: 'Integrated into Agent Runner' },
   },
   CHANGESET: {
     ACCEPT: { keys: 'meta+y', description: 'Accept Current Change' },
@@ -29,7 +30,7 @@ export const PLATFORM_SHORTCUTS = {
     NEXT_MESSAGE: { keys: 'ctrl+n', description: 'Next Message' },
   },
   // Legacy aliases kept for older callers/tests.
-  AGENT_RUNNER: 'meta+j',
+  AGENT_RUNNER: 'meta+shift+a',
   NAV_BACK: 'alt+left',
 };
 

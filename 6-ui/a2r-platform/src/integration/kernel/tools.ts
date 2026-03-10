@@ -1,5 +1,21 @@
 import { getKernelBridge } from './index.js';
-export async function listTools() {
+
+// Tool interface from kernel
+interface Tool {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+// Kernel bridge interface for tools (matches RuntimeBridge structure)
+interface KernelBridge {
+  plugins: {
+    getAllTools(): Tool[];
+  };
+}
+
+export async function listTools(): Promise<Tool[]> {
   const bridge = await getKernelBridge();
-  return (bridge as any).plugins.getAllTools();
+  const kernelBridge = bridge as unknown as KernelBridge;
+  return kernelBridge.plugins.getAllTools();
 }

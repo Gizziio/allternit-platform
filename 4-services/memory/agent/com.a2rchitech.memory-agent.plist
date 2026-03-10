@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Unique identifier for this service -->
+    <key>Label</key>
+    <string>com.a2rchitech.memory-agent</string>
+
+    <!-- Human-readable description -->
+    <key>LabelDescription</key>
+    <string>A2rchitech Always-On Memory Agent</string>
+
+    <!-- Program to execute -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-c</string>
+        <string>cd /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/memory &amp;&amp; /opt/homebrew/bin/pnpm run daemon start</string>
+    </array>
+
+    <!-- Working directory -->
+    <key>WorkingDirectory</key>
+    <string>/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/memory</string>
+
+    <!-- Run at login -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!-- Keep the process running -->
+    <key>KeepAlive</key>
+    <dict>
+        <!-- Restart if it exits cleanly -->
+        <key>SuccessfulExit</key>
+        <true/>
+        <!-- Restart if it crashes -->
+        <key>Crashed</key>
+        <true/>
+        <!-- Restart after network disconnect -->
+        <key>NetworkState</key>
+        <true/>
+    </dict>
+
+    <!-- Environment variables -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>NODE_ENV</key>
+        <string>production</string>
+    </dict>
+
+    <!-- Standard output log -->
+    <key>StandardOutPath</key>
+    <string>/Users/macbook/Library/Logs/a2rchitech/memory-agent.out.log</string>
+
+    <!-- Standard error log -->
+    <key>StandardErrorPath</key>
+    <string>/Users/macbook/Library/Logs/a2rchitech/memory-agent.err.log</string>
+
+    <!-- Nice value (lower priority) -->
+    <key>Nice</key>
+    <integer>10</integer>
+
+    <!-- Process limits -->
+    <key>SoftResourceLimits</key>
+    <dict>
+        <!-- Maximum number of open files -->
+        <key>NumberOfFiles</key>
+        <integer>256</integer>
+        <!-- Maximum memory (bytes) -->
+        <key>MemoryLock</key>
+        <integer>536870912</integer>
+    </dict>
+
+    <!-- Start interval (prevent rapid restarts) -->
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+
+    <!-- Launch only when network is available -->
+    <key>StartOnMount</key>
+    <false/>
+
+    <!-- Don't start multiple instances -->
+    <key>AbandonProcessGroup</key>
+    <false/>
+</dict>
+</plist>

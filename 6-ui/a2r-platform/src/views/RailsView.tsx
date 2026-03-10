@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAgentStore } from "@/lib/agents";
 import type { Agent } from "@/lib/agents";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
@@ -30,13 +30,53 @@ export function RailsView() {
   } = useAgentStore();
 
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const [isLoadingAgentData, setIsLoadingAgentData] = useState(false);
+  const [agentDataError, setAgentDataError] = useState<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => { fetchAgents(); fetchQueue(); }, [fetchAgents, fetchQueue]);
   useEffect(() => {
-    if (selectedAgentId) {
-      fetchRuns(selectedAgentId); fetchTasks(selectedAgentId); fetchCheckpoints(selectedAgentId);
-      fetchCommits(selectedAgentId); fetchMail(selectedAgentId); fetchMailThreads(selectedAgentId); fetchReviews(selectedAgentId);
+    if (!selectedAgentId) {
+      setIsLoadingAgentData(false);
+      setAgentDataError(null);
+      return;
     }
+
+    // Cancel any in-flight requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+    setIsLoadingAgentData(true);
+    setAgentDataError(null);
+
+    Promise.all([
+      fetchRuns(selectedAgentId),
+      fetchTasks(selectedAgentId),
+      fetchCheckpoints(selectedAgentId),
+      fetchCommits(selectedAgentId),
+      fetchMail(selectedAgentId),
+      fetchMailThreads(selectedAgentId),
+      fetchReviews(selectedAgentId),
+    ])
+      .then(() => {
+        if (!abortController.signal.aborted) {
+          setIsLoadingAgentData(false);
+        }
+      })
+      .catch((error) => {
+        if (!abortController.signal.aborted) {
+          console.error('[RailsView] Failed to fetch agent data:', error);
+          setAgentDataError('Failed to load agent data');
+          setIsLoadingAgentData(false);
+        }
+      });
+
+    return () => {
+      abortController.abort();
+    };
   }, [selectedAgentId, fetchRuns, fetchTasks, fetchCheckpoints, fetchCommits, fetchMail, fetchMailThreads, fetchReviews]);
 
   const allRuns = Object.values(runs).flat();

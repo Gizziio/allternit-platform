@@ -21,7 +21,7 @@ export const Suggestions = ({
     <div className={cn("flex w-max flex-nowrap items-center gap-2", className)}>
       {children}
     </div>
-    <ScrollBar className="hidden" orientation="horizontal" />
+    <ScrollBar orientation="horizontal" />
   </ScrollArea>
 );
 

@@ -165,9 +165,9 @@ export class PolicyEngine {
     if (request.capability === 'external' || request.capability === 'read') {
       if (request.target?.host) {
         const isAllowed = allowlist.some(entry => {
-          if (entry.host !== request.target!.host) return false;
-          if (entry.paths && request.target!.path) {
-            return entry.paths.some(path => request.target!.path!.startsWith(path));
+          if (!request.target?.host || entry.host !== request.target.host) return false;
+          if (entry.paths && request.target?.path) {
+            return entry.paths.some(path => request.target?.path?.startsWith(path) ?? false);
           }
           return true;
         });

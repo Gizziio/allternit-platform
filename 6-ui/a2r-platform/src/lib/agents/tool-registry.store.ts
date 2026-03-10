@@ -28,12 +28,28 @@ export interface ToolRegistryEntry extends Tool {
 }
 
 export type ToolCategory =
+  // Core
   | "file-system"
   | "web"
   | "database"
   | "api"
+  // AI & Agents
   | "ai"
+  | "retrieval-rag"
+  | "memory"
+  | "planning"
+  // Infrastructure
   | "system"
+  | "cli"
+  | "container"
+  | "cloud"
+  // Security & Observability
+  | "security"
+  | "secrets"
+  | "observability"
+  | "logging"
+  | "monitoring"
+  // Custom
   | "custom"
   | "user";
 
@@ -49,6 +65,10 @@ export interface ToolRegistryState {
   tools: Record<string, ToolRegistryEntry>; // keyed by tool ID
   sessionConfigs: Record<string, SessionToolConfig>; // keyed by sessionId
   
+  // CLI Tools
+  cliTools: Record<string, CliTool>;
+  isLoadingCliTools: boolean;
+  
   // UI State
   isLoading: boolean;
   isRegistering: boolean;
@@ -56,6 +76,29 @@ export interface ToolRegistryState {
   selectedToolId: string | null;
   filterCategory: ToolCategory | null;
   searchQuery: string;
+}
+
+// ============================================================================
+// CLI Tool Types
+// ============================================================================
+
+export interface CliTool {
+  id: string;
+  name: string;
+  description: string;
+  command: string;
+  category: 'shell' | 'file' | 'text' | 'network' | 'system' | 'dev';
+  installed: boolean;
+  version?: string;
+  source?: string;
+  tags: string[];
+}
+
+export interface CliToolExecutionResult {
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+  durationMs: number;
 }
 
 export interface ToolRegistryActions {
@@ -84,6 +127,12 @@ export interface ToolRegistryActions {
   setFilterCategory: (category: ToolCategory | null) => void;
   setSearchQuery: (query: string) => void;
   setSelectedToolId: (toolId: string | null) => void;
+  
+  // CLI Tools
+  fetchCliTools: () => Promise<void>;
+  installCliTool: (toolId: string) => Promise<void>;
+  uninstallCliTool: (toolId: string) => Promise<void>;
+  executeCliTool: (toolId: string, args: string[]) => Promise<CliToolExecutionResult>;
   
   // UI
   clearError: () => void;
@@ -184,6 +233,8 @@ async function unregisterToolFromApi(toolId: string): Promise<void> {
 const initialState: ToolRegistryState = {
   tools: {},
   sessionConfigs: {},
+  cliTools: {},
+  isLoadingCliTools: false,
   isLoading: false,
   isRegistering: false,
   error: null,
@@ -514,6 +565,116 @@ export const useToolRegistryStore = create<ToolRegistryState & ToolRegistryActio
         state.error = null;
       });
     },
+
+    // -------------------------------------------------------------------------
+    // CLI Tools
+    // -------------------------------------------------------------------------
+
+    fetchCliTools: async () => {
+      set((state) => {
+        state.isLoadingCliTools = true;
+        state.error = null;
+      });
+
+      try {
+        const response = await fetch(`${GATEWAY_BASE_URL}/api/v1/cli-tools`);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch CLI tools: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        
+        set((state) => {
+          state.cliTools = {};
+          data.tools.forEach((tool: CliTool) => {
+            state.cliTools[tool.id] = tool;
+          });
+          state.isLoadingCliTools = false;
+        });
+      } catch (error) {
+        set((state) => {
+          state.error = error instanceof Error ? error.message : "Failed to fetch CLI tools";
+          state.isLoadingCliTools = false;
+        });
+      }
+    },
+
+    installCliTool: async (toolId: string) => {
+      set((state) => {
+        state.isLoading = true;
+        state.error = null;
+      });
+
+      try {
+        const response = await fetch(`${GATEWAY_BASE_URL}/api/v1/cli-tools/${toolId}/install`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to install CLI tool: ${response.statusText}`);
+        }
+
+        set((state) => {
+          if (state.cliTools[toolId]) {
+            state.cliTools[toolId].installed = true;
+          }
+          state.isLoading = false;
+        });
+      } catch (error) {
+        set((state) => {
+          state.error = error instanceof Error ? error.message : "Failed to install CLI tool";
+          state.isLoading = false;
+        });
+        throw error;
+      }
+    },
+
+    uninstallCliTool: async (toolId: string) => {
+      set((state) => {
+        state.isLoading = true;
+        state.error = null;
+      });
+
+      try {
+        const response = await fetch(`${GATEWAY_BASE_URL}/api/v1/cli-tools/${toolId}/uninstall`, {
+          method: "DELETE",
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to uninstall CLI tool: ${response.statusText}`);
+        }
+
+        set((state) => {
+          if (state.cliTools[toolId]) {
+            state.cliTools[toolId].installed = false;
+          }
+          state.isLoading = false;
+        });
+      } catch (error) {
+        set((state) => {
+          state.error = error instanceof Error ? error.message : "Failed to uninstall CLI tool";
+          state.isLoading = false;
+        });
+        throw error;
+      }
+    },
+
+    executeCliTool: async (toolId: string, args: string[]) => {
+      const response = await fetch(`${GATEWAY_BASE_URL}/api/v1/cli-tools/${toolId}/execute`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ args, timeout: 30 }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to execute CLI tool: ${response.statusText}`);
+      }
+
+      return response.json();
+    },
   }))
 );
 
@@ -559,6 +720,38 @@ export function useToolCategories() {
   return useToolRegistryStore((state) => {
     const categories = new Set<ToolCategory>();
     Object.values(state.tools).forEach((tool) => {
+      categories.add(tool.category);
+    });
+    return Array.from(categories).sort();
+  });
+}
+
+// ============================================================================
+// CLI Tool Selectors
+// ============================================================================
+
+export function useCliTools() {
+  return useToolRegistryStore((state) => Object.values(state.cliTools));
+}
+
+export function useCliToolsByCategory(category: CliTool['category'] | null) {
+  return useToolRegistryStore((state) => {
+    const tools = Object.values(state.cliTools);
+    if (!category) return tools;
+    return tools.filter((t) => t.category === category);
+  });
+}
+
+export function useInstalledCliTools() {
+  return useToolRegistryStore((state) => 
+    Object.values(state.cliTools).filter((t) => t.installed)
+  );
+}
+
+export function useCliToolCategories() {
+  return useToolRegistryStore((state) => {
+    const categories = new Set<CliTool['category']>();
+    Object.values(state.cliTools).forEach((tool) => {
       categories.add(tool.category);
     });
     return Array.from(categories).sort();

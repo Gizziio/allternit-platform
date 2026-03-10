@@ -6,12 +6,31 @@
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Terminal } from 'xterm';
-import { FitAddon } from 'xterm-addon-fit';
-import 'xterm/css/xterm.css';
 import { workspaceClient, Pane } from '../../services/workspace/client';
 import { GlassCard } from '../../design/GlassCard';
 import { SquaresFour, Square, Plus, X } from '@phosphor-icons/react';
+
+// Dynamically import xterm only on client side
+let Terminal: typeof import('xterm').Terminal | null = null;
+let FitAddon: typeof import('xterm-addon-fit').FitAddon | null = null;
+
+async function loadXterm() {
+  if (typeof window === 'undefined') return false;
+  if (Terminal && FitAddon) return true;
+  
+  const [xterm, xtermAddon] = await Promise.all([
+    import('xterm'),
+    import('xterm-addon-fit')
+  ]);
+  
+  Terminal = xterm.Terminal;
+  FitAddon = xtermAddon.FitAddon;
+  
+  // Import CSS only on client
+  await import('xterm/css/xterm.css');
+  
+  return true;
+}
 
 type TerminalMode = 'single' | 'grid';
 
@@ -25,8 +44,8 @@ function TerminalInstance({ pane, isActive }: {
   isActive: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const termRef = useRef<Terminal | null>(null);
-  const fitAddonRef = useRef<FitAddon | null>(null);
+  const termRef = useRef<import('xterm').Terminal | null>(null);
+  const fitAddonRef = useRef<import('xterm-addon-fit').FitAddon | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
@@ -35,101 +54,117 @@ function TerminalInstance({ pane, isActive }: {
     // Check if already initialized
     if (termRef.current) return;
 
-    console.log('Initializing terminal for pane:', pane.id);
+    let mounted = true;
 
-    const term = new Terminal({
-      cursorBlink: true,
-      theme: {
-        background: '#1f2937',
-        foreground: '#f3f4f6',
-        cursor: '#f3f4f6',
-        black: '#111827',
-        red: '#ef4444',
-        green: '#10b981',
-        yellow: '#f59e0b',
-        blue: '#3b82f6',
-        magenta: '#8b5cf6',
-        cyan: '#06b6d4',
-        white: '#f3f4f6',
-        brightBlack: '#6b7280',
-        brightRed: '#f87171',
-        brightGreen: '#34d399',
-        brightYellow: '#fbbf24',
-        brightBlue: '#60a5fa',
-        brightMagenta: '#c084fc',
-        brightCyan: '#22d3ee',
-        brightWhite: '#f9fafb',
-      },
-      fontSize: 13,
-      fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace',
-      rows: 24,
-      cols: 80,
-      allowProposedApi: true,
-    });
+    async function initTerminal() {
+      const loaded = await loadXterm();
+      if (!loaded || !mounted || !containerRef.current) return;
 
-    term.open(containerRef.current);
+      console.log('Initializing terminal for pane:', pane.id);
 
-    const fitAddon = new FitAddon();
-    term.loadAddon(fitAddon);
+      const term = new Terminal!({
+        cursorBlink: true,
+        theme: {
+          background: '#1f2937',
+          foreground: '#f3f4f6',
+          cursor: '#f3f4f6',
+          black: '#111827',
+          red: '#ef4444',
+          green: '#10b981',
+          yellow: '#f59e0b',
+          blue: '#3b82f6',
+          magenta: '#8b5cf6',
+          cyan: '#06b6d4',
+          white: '#f3f4f6',
+          brightBlack: '#6b7280',
+          brightRed: '#f87171',
+          brightGreen: '#34d399',
+          brightYellow: '#fbbf24',
+          brightBlue: '#60a5fa',
+          brightMagenta: '#c084fc',
+          brightCyan: '#22d3ee',
+          brightWhite: '#f9fafb',
+        },
+        fontSize: 13,
+        fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace',
+        rows: 24,
+        cols: 80,
+        allowProposedApi: true,
+      });
 
-    // Store refs
-    termRef.current = term;
-    fitAddonRef.current = fitAddon;
+      term.open(containerRef.current!);
 
-    // Connect to workspace service
-    const wsUrl = workspaceClient.baseUrl.replace(/^http/, 'ws');
-    const encodedPaneId = encodeURIComponent(pane.id);
-    const socketUrl = `${wsUrl}/panes/${encodedPaneId}/logs`;
-    
-    console.log('Connecting WebSocket:', socketUrl);
-    
-    const socket = new WebSocket(socketUrl);
-    socketRef.current = socket;
+      const fitAddon = new FitAddon!();
+      term.loadAddon(fitAddon);
 
-    socket.onopen = () => {
-      console.log('WebSocket connected for pane:', pane.id);
-      term.writeln(`\x1b[1;32mConnected to ${pane.title || pane.id}\x1b[0m`);
-    };
+      // Store refs
+      termRef.current = term;
+      fitAddonRef.current = fitAddon;
 
-    socket.onmessage = (event) => {
-      if (typeof event.data === 'string') {
-        term.write(event.data);
-      }
-    };
+      // Connect to workspace service
+      const wsUrl = workspaceClient.baseUrl.replace(/^http/, 'ws');
+      const encodedPaneId = encodeURIComponent(pane.id);
+      const socketUrl = `${wsUrl}/panes/${encodedPaneId}/logs`;
+      
+      console.log('Connecting WebSocket:', socketUrl);
+      
+      const socket = new WebSocket(socketUrl);
+      socketRef.current = socket;
 
-    socket.onclose = (e) => {
-      console.log('WebSocket closed:', pane.id, 'code:', e.code);
-      term.writeln(`\r\n\x1b[1;31mDisconnected\x1b[0m`);
-    };
+      socket.onopen = () => {
+        console.log('WebSocket connected for pane:', pane.id);
+        term.writeln(`\x1b[1;32mConnected to ${pane.title || pane.id}\x1b[0m`);
+      };
 
-    socket.onerror = (e) => {
-      console.error('WebSocket error:', pane.id, e);
-      term.writeln('\r\n\x1b[1;31mConnection error\x1b[0m');
-    };
+      socket.onmessage = (event) => {
+        if (typeof event.data === 'string') {
+          term.write(event.data);
+        }
+      };
 
-    term.onData((data) => {
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.send(data);
-      }
-    });
+      socket.onclose = (e) => {
+        console.log('WebSocket closed:', pane.id, 'code:', e.code);
+        term.writeln(`\r\n\x1b[1;31mDisconnected\x1b[0m`);
+      };
 
-    // Fit terminal after mount
-    const fitTimeout = setTimeout(() => {
-      try {
-        fitAddon.fit();
-        console.log('Terminal fitted for pane:', pane.id);
-      } catch (e) {
-        console.warn('Fit failed:', e);
-      }
-    }, 100);
+      socket.onerror = (e) => {
+        console.error('WebSocket error:', pane.id, e);
+        term.writeln('\r\n\x1b[1;31mConnection error\x1b[0m');
+      };
+
+      term.onData((data) => {
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.send(data);
+        }
+      });
+
+      // Fit terminal after mount
+      const fitTimeout = setTimeout(() => {
+        try {
+          fitAddon.fit();
+          console.log('Terminal fitted for pane:', pane.id);
+        } catch (e) {
+          console.warn('Fit failed:', e);
+        }
+      }, 100);
+
+      return () => {
+        clearTimeout(fitTimeout);
+        socket.close();
+        term.dispose();
+      };
+    }
+
+    const cleanupPromise = initTerminal();
 
     return () => {
-      clearTimeout(fitTimeout);
-      socket.close();
-      term.dispose();
-      termRef.current = null;
-      fitAddonRef.current = null;
-      socketRef.current = null;
+      mounted = false;
+      cleanupPromise.then((cleanup) => {
+        if (cleanup) cleanup();
+        termRef.current = null;
+        fitAddonRef.current = null;
+        socketRef.current = null;
+      });
     };
   }, [pane.id, pane.title]);
 

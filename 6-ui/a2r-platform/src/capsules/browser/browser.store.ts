@@ -93,7 +93,8 @@ export function createWebTab(url: string, title?: string): WebTab {
 export function createA2UITab(
   payload: A2UIPayload,
   title: string = 'A2UI App',
-  source?: string
+  source?: string,
+  isMockData?: boolean
 ): A2UITab {
   return {
     id: `tab-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -102,6 +103,7 @@ export function createA2UITab(
     contentType: 'a2ui',
     payload,
     source,
+    isMockData,
   };
 }
 
@@ -165,7 +167,7 @@ interface BrowserStore {
   // Tab Management
   addTab: (input: string, title?: string) => string;
   addCustomTab: (tab: BrowserTab) => string;
-  addA2UITab: (payload: A2UIPayload, title?: string, source?: string) => string;
+  addA2UITab: (payload: A2UIPayload, title?: string, source?: string, isMockData?: boolean) => string;
   addMiniappTab: (manifest: MiniappManifest, capsuleId: string, entryPoint?: string) => string;
   addComponentTab: (componentId: string, title?: string, props?: Record<string, unknown>) => string;
   addChromeStreamTab: (sessionId: string, signalingUrl: string, iceServers?: RTCIceServer[], resolution?: string) => string;
@@ -247,8 +249,8 @@ export const useBrowserStore = create<BrowserStore>()(
         return tab.id;
       },
 
-      addA2UITab: (payload: A2UIPayload, title?: string, source?: string) => {
-        const newTab = createA2UITab(payload, title, source);
+      addA2UITab: (payload: A2UIPayload, title?: string, source?: string, isMockData?: boolean) => {
+        const newTab = createA2UITab(payload, title, source, isMockData);
         set((state) => ({
           tabs: [...state.tabs.map((t) => ({ ...t, isActive: false })), newTab],
           activeTabId: newTab.id,
@@ -436,7 +438,8 @@ export const useBrowserStore = create<BrowserStore>()(
             newTab = createA2UITab(
               (tab as A2UITab).payload,
               tab.title,
-              (tab as A2UITab).source
+              (tab as A2UITab).source,
+              (tab as A2UITab).isMockData
             );
             break;
           case 'miniapp':

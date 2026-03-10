@@ -1,0 +1,4 @@
+#!/usr/bin/env bun --conditions=browser
+// Gizziio Code - Terminal Interface
+
+import "../src/cli/main.ts"

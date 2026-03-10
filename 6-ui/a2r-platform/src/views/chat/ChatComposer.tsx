@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useDropTarget, type FileWithData } from '@/components/GlobalDropzone';
+import { AttachmentPreview, AttachmentPreviewModal, type AttachmentPreviewItem } from '@/components/chat/AttachmentPreview';
 import {
   Plus,
   Square,
@@ -23,8 +25,11 @@ import {
   Bot,
   Camera,
   Video,
+  Upload,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatFileSize, supportsTextExtraction, extractTextFromFile } from '@/lib/attachments/extract-text';
+import { createModuleLogger } from '@/lib/logger';
 import type { GizziAttention, GizziEmotion } from '@/components/ai-elements/GizziMascot';
 import {
   Dialog,
@@ -79,7 +84,7 @@ export interface ChatAttachment {
   id: string;
   name: string;
   dataUrl: string;
-  type: 'image' | 'screenshot' | 'gif';
+  type: 'image' | 'screenshot' | 'gif' | 'document' | 'code' | 'json' | 'spreadsheet' | 'other';
 }
 
 export interface SlashCommand {
@@ -109,6 +114,14 @@ interface ChatComposerProps {
   onAddAttachment?: (attachment: ChatAttachment) => void;
   /** Called when sending in agent mode - if provided, opens full agent session view instead of embedded chat */
   onAgentSend?: (text: string) => void;
+  /** Whether to show slash command suggestions in the composer */
+  showSlashCommands?: boolean;
+  /** Surface theme for agent mode styling */
+  surfaceTheme?: {
+    edge: string;
+    soft: string;
+    panelTint: string;
+  };
 }
 
 const CATEGORY_EMOTIONS: Record<string, { hover: GizziEmotion; select: GizziEmotion }> = {
@@ -846,6 +859,51 @@ export function ChatComposer({
     e.target.value = '';
   }, [addAttachment]);
 
+  // ── Drag & Drop file handling (Global Dropzone) ──────────────────────────
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [previewItem, setPreviewItem] = useState<AttachmentPreviewItem | null>(null);
+
+  const handleDroppedFiles = useCallback(async (files: FileWithData[]) => {
+    for (const { file, dataUrl, extractedText } of files) {
+      const isImage = file.type.startsWith('image/');
+      const ext = file.name.split('.').pop()?.toLowerCase() || '';
+      
+      // Determine file type for preview
+      let fileType: AttachmentPreviewItem['type'] = 'other';
+      if (file.type === 'image/gif' || ext === 'gif') fileType = 'gif';
+      else if (isImage) fileType = 'image';
+      else if (['pdf', 'docx', 'doc', 'txt', 'md'].includes(ext)) fileType = 'document';
+      else if (['ts', 'tsx', 'js', 'jsx', 'py', 'rs', 'go', 'java', 'cpp', 'css', 'html'].includes(ext)) fileType = 'code';
+      else if (['json'].includes(ext)) fileType = 'json';
+      else if (['csv', 'xlsx', 'xls'].includes(ext)) fileType = 'spreadsheet';
+      
+      addAttachment({
+        id: `${fileType}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        name: file.name,
+        dataUrl: dataUrl,
+        type: fileType === 'other' ? 'document' : fileType, // Default to document for unknown
+      });
+    }
+  }, [addAttachment]);
+
+  // Register as drop target for chat
+  useDropTarget('chat', handleDroppedFiles);
+
+  // Convert attachments to preview items
+  const attachmentPreviewItems: AttachmentPreviewItem[] = useMemo(() => {
+    return attachments.map(att => ({
+      id: att.id,
+      name: att.name,
+      dataUrl: att.dataUrl,
+      type: att.type as AttachmentPreviewItem['type'],
+    }));
+  }, [attachments]);
+
+  const handlePreview = useCallback((item: AttachmentPreviewItem) => {
+    setPreviewItem(item);
+    setPreviewModalOpen(true);
+  }, []);
+
   // ── Slash command execution ─────────────────────────────────────────────
   const handleSlashCommand = useCallback((cmd: SlashCommand) => {
     setSlashMenuVisible(false);
@@ -911,20 +969,21 @@ export function ChatComposer({
   }, [onAttentionChange]);
 
   return (
-    <div style={{
-      width: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      boxSizing: 'border-box',
-      position: 'relative',
-      paddingTop: 0,
-      animation: agentModeSurface && agentModeEnabled && agentModePulse ? 'a2r-agent-mode-flash 560ms ease' : undefined,
-    }}
-    onMouseLeave={() => {
-      clearAttention();
-      onInteractionSignal?.('steady');
-    }}>
+    <div 
+      style={{
+        width: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        boxSizing: 'border-box',
+        position: 'relative',
+        paddingTop: 0,
+        animation: agentModeSurface && agentModeEnabled && agentModePulse ? 'a2r-agent-mode-flash 560ms ease' : undefined,
+      }}
+      onMouseLeave={() => {
+        clearAttention();
+        onInteractionSignal?.('steady');
+      }}>
       <style>{`
         @keyframes a2r-agent-mode-sweep {
           0% { background-position: 0% 50%; }
@@ -1187,79 +1246,20 @@ export function ChatComposer({
           </div>
         )}
 
-        {/* Attachment Chips */}
-        {attachments.length > 0 && (
-          <div style={{
-            display: 'flex',
-            gap: 6,
-            padding: '10px 20px 0',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-          }}>
-            {attachments.map((att) => (
-              <div
-                key={att.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: '4px 8px 4px 4px',
-                  borderRadius: 10,
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  fontSize: 11,
-                  color: THEME.textSecondary,
-                  maxWidth: 200,
-                }}
-              >
-                {att.dataUrl.startsWith('data:image') ? (
-                  <img
-                    src={att.dataUrl}
-                    alt={att.name}
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: 6,
-                      objectFit: 'cover',
-                      flexShrink: 0,
-                    }}
-                  />
-                ) : (
-                  <div style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: 6,
-                    background: att.type === 'gif' ? 'rgba(143,199,223,0.15)' : 'rgba(212,149,106,0.15)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                  }}>
-                    {att.type === 'gif' ? <Video size={14} style={{ color: '#8fc7df' }} /> : <Camera size={14} style={{ color: THEME.accent }} />}
-                  </div>
-                )}
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: '1 1 0%' }}>
-                  {att.name}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => removeAttachment(att.id)}
-                  style={{
-                    padding: 2,
-                    border: 'none',
-                    background: 'transparent',
-                    color: THEME.textMuted,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexShrink: 0,
-                  }}
-                >
-                  <X size={12} />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+        {/* Attachment Preview Cards */}
+        <AttachmentPreview
+          attachments={attachmentPreviewItems}
+          onRemove={removeAttachment}
+          onPreview={handlePreview}
+          variant="detailed"
+        />
+        
+        {/* Preview Modal */}
+        <AttachmentPreviewModal
+          item={previewItem}
+          isOpen={previewModalOpen}
+          onClose={() => setPreviewModalOpen(false)}
+        />
 
         {/* Input Area */}
         <div style={{ padding: '16px 20px 8px 20px' }}>

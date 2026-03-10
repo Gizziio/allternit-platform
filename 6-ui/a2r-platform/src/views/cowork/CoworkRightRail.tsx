@@ -1,268 +1,447 @@
 /**
  * CoworkRightRail - Right side panel for Cowork mode
- * Shows real session data only when it exists
+ * Screenshot-matched rail: Progress / Working Folder / Context
  */
 
-import React, { memo } from 'react';
+import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useCoworkStore } from './CoworkStore';
+import type { AnyCoworkEvent } from './cowork.types';
 import {
+  CheckCircle,
+  Circle,
+  ChevronDown,
+  ChevronRight,
+  FolderOpen,
   FileText,
-  Folder,
-  Clock,
-  Activity,
+  Globe,
   Terminal,
-  Zap,
+  HardDrive,
   MessageSquare,
-  Target,
-  Cpu
+  Copy,
+  Check,
 } from 'lucide-react';
 
-// ============================================================================
-// Real Data Cards - Only render when data exists
-// ============================================================================
+type StepStatus = 'complete' | 'active' | 'pending';
 
-const MessagesCard = memo(function MessagesCard() {
-  const { session } = useCoworkStore();
-  if (!session) return null;
-  
-  const messages = session.events.filter(e => e.type === 'cowork.narration');
-  if (messages.length === 0) return null;
-  
-  const latestMessages = messages.slice(-3);
-  
-  return (
-    <div className="p-4 border-b border-white/5">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <MessageSquare className="w-4 h-4 text-white/40" />
-          <span className="text-xs font-semibold uppercase tracking-wider text-white/50">Messages</span>
-        </div>
-        <span className="text-[10px] text-white/30">{messages.length}</span>
-      </div>
-      
-      <div className="space-y-2">
-        {latestMessages.map((msg) => {
-          const isUser = (msg as any).role === 'user';
-          const text = (msg as any).text || '';
-          return (
-            <div key={msg.id} className="flex items-start gap-2 text-xs">
-              <div className={cn(
-                "w-1.5 h-1.5 rounded-full mt-1 shrink-0",
-                isUser ? "bg-blue-400" : "bg-green-400"
-              )} />
-              <span className="text-white/60 line-clamp-2">{text.slice(0, 50)}{text.length > 50 ? '...' : ''}</span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
+interface ProgressStep {
+  id: string;
+  label: string;
+  status: StepStatus;
+}
+
+interface ComposeEventDetail {
+  text: string;
+  send?: boolean;
+}
+
+// Type guards for cowork events
+import type { CommandEvent, FileEvent, ActionEvent, ToolCallEvent, CheckpointEvent, NarrationEvent } from './cowork.types';
+
+function isCommandEvent(event: AnyCoworkEvent): event is CommandEvent {
+  return event.type === 'cowork.command';
+}
+
+function isFileEvent(event: AnyCoworkEvent): event is FileEvent {
+  return event.type === 'cowork.file';
+}
+
+function isActionEvent(event: AnyCoworkEvent): event is ActionEvent {
+  return event.type === 'cowork.action';
+}
+
+function isToolCallEvent(event: AnyCoworkEvent): event is ToolCallEvent {
+  return event.type === 'cowork.tool_call';
+}
+
+function isCheckpointEvent(event: AnyCoworkEvent): event is CheckpointEvent {
+  return event.type === 'cowork.checkpoint';
+}
+
+function isNarrationEvent(event: AnyCoworkEvent): event is NarrationEvent {
+  return event.type === 'cowork.narration';
+}
+
+function shortText(value: string, max = 56): string {
+  const normalized = value.trim().replace(/\s+/g, ' ');
+  if (!normalized) return '';
+  if (normalized.length <= max) return normalized;
+  return `${normalized.slice(0, max - 3)}...`;
+}
+
+function toTitle(value: string): string {
+  if (!value) return value;
+  return `${value.charAt(0).toUpperCase()}${value.slice(1)}`;
+}
+
+function inferFolderFromPath(path?: string): string | null {
+  if (!path) return null;
+  const normalized = path.replace(/\\/g, '/').trim();
+  const index = normalized.lastIndexOf('/');
+  if (index <= 0) return null;
+  return normalized.slice(0, index);
+}
+
+function summarizeProgressEvent(event: AnyCoworkEvent): string {
+  switch (event.type) {
+    case 'cowork.command': {
+      if (!isCommandEvent(event)) return 'Ran terminal command';
+      const command = event.commands?.[0];
+      return command ? `Ran ${shortText(command, 52)}` : 'Ran terminal command';
+    }
+    case 'cowork.file': {
+      if (!isFileEvent(event)) return 'Updated workspace files';
+      const operation = toTitle(event.operation ?? 'Updated');
+      const firstFile = event.files?.[0];
+      const fileName = firstFile?.path ?? firstFile?.name;
+      return fileName ? `${operation} ${shortText(fileName, 42)}` : `${operation} workspace files`;
+    }
+    case 'cowork.action': {
+      if (!isActionEvent(event)) return 'Executed action';
+      return shortText(event.humanReadable ?? `Executed ${event.actionType ?? 'action'}`, 56);
+    }
+    case 'cowork.tool_call': {
+      if (!isToolCallEvent(event)) return 'Using tool';
+      return `Using ${shortText(event.toolName ?? 'tool', 44)}`;
+    }
+    case 'cowork.tool_result':
+      return 'Received tool results';
+    case 'cowork.checkpoint': {
+      if (!isCheckpointEvent(event)) return 'Saved checkpoint';
+      return shortText(event.label ?? 'Saved checkpoint', 56);
+    }
+    case 'cowork.narration': {
+      if (!isNarrationEvent(event)) return 'Updated analysis';
+      return event.text ? shortText(event.text, 56) : 'Updated analysis';
+    }
+    default:
+      return 'Updated session activity';
+  }
+}
+
+function dispatchCompose(text: string, send = false): void {
+  if (typeof window === 'undefined') return;
+  const detail: ComposeEventDetail = { text, send };
+  window.dispatchEvent(new CustomEvent<ComposeEventDetail>('a2r:cowork-compose', { detail }));
+}
+
+function buildProgressSteps(session: NonNullable<ReturnType<typeof useCoworkStore.getState>['session']>): ProgressStep[] {
+  const workEvents = session.events.filter((event) =>
+    event.type === 'cowork.command' ||
+    event.type === 'cowork.file' ||
+    event.type === 'cowork.action' ||
+    event.type === 'cowork.tool_call' ||
+    event.type === 'cowork.tool_result' ||
+    event.type === 'cowork.checkpoint' ||
+    event.type === 'cowork.narration',
   );
-});
 
-const CommandsCard = memo(function CommandsCard() {
-  const { session } = useCoworkStore();
-  if (!session) return null;
-  
-  const commands = session.events.filter(e => e.type === 'cowork.command');
-  if (commands.length === 0) return null;
-  
-  const latestCommands = commands.slice(-3);
-  
-  return (
-    <div className="p-4 border-b border-white/5">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <Terminal className="w-4 h-4 text-white/40" />
-          <span className="text-xs font-semibold uppercase tracking-wider text-white/50">Commands</span>
-        </div>
-        <span className="text-[10px] text-white/30">{commands.length}</span>
-      </div>
-      
-      <div className="space-y-1">
-        {latestCommands.map((cmd) => (
-          <div key={cmd.id} className="flex items-center gap-2 text-xs font-mono">
-            <span className="text-green-500">$</span>
-            <span className="text-white/50 truncate">{((cmd as any).command || '').slice(0, 35)}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-});
+  if (workEvents.length === 0) {
+    return [
+      { id: 'session-started', label: 'Session started', status: 'complete' },
+      { id: 'gathering-context', label: 'Gathering context for this task', status: 'active' },
+      { id: 'awaiting-next-step', label: 'Awaiting next actionable step', status: 'pending' },
+    ];
+  }
 
-const FilesCard = memo(function FilesCard() {
-  const { session } = useCoworkStore();
-  if (!session) return null;
-  
-  const fileEvents = session.events.filter(e => e.type === 'cowork.file');
-  if (fileEvents.length === 0) return null;
-  
-  const uniqueFiles = new Map();
-  fileEvents.forEach(event => {
-    const files = (event as any).files || [event];
-    files.forEach((file: any) => {
-      if (file.path || file.name) {
-        uniqueFiles.set(file.path || file.name, file);
-      }
-    });
+  const recent = workEvents.slice(-2).map((event, idx) => ({
+    id: `${event.id}-${idx}`,
+    label: summarizeProgressEvent(event),
+  }));
+
+  const steps: ProgressStep[] = [
+    { id: 'session-started', label: 'Session started', status: 'complete' },
+    ...recent.map((entry) => ({
+      id: entry.id,
+      label: entry.label,
+      status: 'pending' as StepStatus,
+    })),
+  ];
+
+  const ended = session.status === 'completed' || session.status === 'error';
+  return steps.map((step, index) => {
+    if (index < steps.length - 1) {
+      return { ...step, status: 'complete' as StepStatus };
+    }
+    return { ...step, status: ended ? 'complete' : 'active' };
   });
-  
-  const files = Array.from(uniqueFiles.values()).slice(0, 5);
-  
+}
+
+function collectTouchedFiles(events: AnyCoworkEvent[]): string[] {
+  const seen = new Set<string>();
+  for (const event of events) {
+    if (!isFileEvent(event)) continue;
+    for (const file of event.files) {
+      const path = file.path || file.name;
+      if (!path) continue;
+      seen.add(path);
+    }
+  }
+  return Array.from(seen.values());
+}
+
+interface RailCardProps {
+  title: string;
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}
+
+const RailCard = memo(function RailCard({ title, open, onToggle, children }: RailCardProps) {
   return (
-    <div className="p-4 border-b border-white/5">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <Folder className="w-4 h-4 text-white/40" />
-          <span className="text-xs font-semibold uppercase tracking-wider text-white/50">Files</span>
-        </div>
-        <span className="text-[10px] text-white/30">{uniqueFiles.size}</span>
-      </div>
-      
-      <div className="space-y-1">
-        {files.map((file: any, idx: number) => (
-          <div key={idx} className="flex items-center gap-2 text-xs text-white/60">
-            <FileText className="w-3.5 h-3.5 text-white/30" />
-            <span className="truncate">{file.path || file.name}</span>
-          </div>
-        ))}
-      </div>
-    </div>
+    <section className="rounded-xl border border-white/10 bg-white/[0.02] shadow-[0_0_0_1px_rgba(255,255,255,0.015)_inset]">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-3 py-2.5 text-left"
+      >
+        <span className="text-[12px] font-semibold text-white/80">{title}</span>
+        {open ? <ChevronDown className="w-4 h-4 text-white/50" /> : <ChevronRight className="w-4 h-4 text-white/50" />}
+      </button>
+      {open && <div className="px-3 pb-3">{children}</div>}
+    </section>
   );
 });
-
-const ActionsCard = memo(function ActionsCard() {
-  const { session } = useCoworkStore();
-  if (!session) return null;
-  
-  const actions = session.events.filter(e => e.type === 'cowork.action');
-  if (actions.length === 0) return null;
-  
-  const latestActions = actions.slice(-3);
-  
-  return (
-    <div className="p-4 border-b border-white/5">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <Zap className="w-4 h-4 text-white/40" />
-          <span className="text-xs font-semibold uppercase tracking-wider text-white/50">Actions</span>
-        </div>
-        <span className="text-[10px] text-white/30">{actions.length}</span>
-      </div>
-      
-      <div className="space-y-1">
-        {latestActions.map((action) => (
-          <div key={action.id} className="flex items-center gap-2 text-xs text-white/60">
-            <span className="text-white/30">•</span>
-            <span className="capitalize">{(action as any).actionType || 'action'}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-});
-
-// ============================================================================
-// Session Summary - Always shown when session exists
-// ============================================================================
-
-const SessionSummary = memo(function SessionSummary() {
-  const { session } = useCoworkStore();
-  if (!session) return null;
-  
-  const startEvent = session.events.find(e => e.type === 'cowork.session.start');
-  const task = (startEvent as any)?.context?.task || 'Working session';
-  const elapsed = Math.floor((Date.now() - session.events[0]?.timestamp) / 1000 / 60);
-  
-  const messageCount = session.events.filter(e => e.type === 'cowork.narration').length;
-  const commandCount = session.events.filter(e => e.type === 'cowork.command').length;
-  const actionCount = session.events.filter(e => e.type === 'cowork.action').length;
-  const fileCount = session.events.filter(e => e.type === 'cowork.file').length;
-  
-  const hasAnyActivity = messageCount > 0 || commandCount > 0 || actionCount > 0 || fileCount > 0;
-  
-  return (
-    <div className="p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <Clock className="w-4 h-4 text-white/40" />
-        <span className="text-xs font-semibold uppercase tracking-wider text-white/50">Session</span>
-      </div>
-      
-      <p className="text-sm text-white/70 line-clamp-2 mb-3">{task}</p>
-      
-      {hasAnyActivity ? (
-        <div className="grid grid-cols-2 gap-2 mb-3">
-          {messageCount > 0 && (
-            <div className="bg-white/5 rounded px-2 py-1.5 text-center">
-              <div className="text-lg font-semibold text-white/80">{messageCount}</div>
-              <div className="text-[10px] text-white/40 uppercase">Msgs</div>
-            </div>
-          )}
-          {commandCount > 0 && (
-            <div className="bg-white/5 rounded px-2 py-1.5 text-center">
-              <div className="text-lg font-semibold text-white/80">{commandCount}</div>
-              <div className="text-[10px] text-white/40 uppercase">Cmds</div>
-            </div>
-          )}
-          {actionCount > 0 && (
-            <div className="bg-white/5 rounded px-2 py-1.5 text-center">
-              <div className="text-lg font-semibold text-white/80">{actionCount}</div>
-              <div className="text-[10px] text-white/40 uppercase">Acts</div>
-            </div>
-          )}
-          {fileCount > 0 && (
-            <div className="bg-white/5 rounded px-2 py-1.5 text-center">
-              <div className="text-lg font-semibold text-white/80">{fileCount}</div>
-              <div className="text-[10px] text-white/40 uppercase">Files</div>
-            </div>
-          )}
-        </div>
-      ) : (
-        <p className="text-xs text-white/30 mb-3">Session started, waiting for activity...</p>
-      )}
-      
-      <div className="flex items-center gap-1 text-xs text-white/40">
-        <span>{elapsed}m elapsed</span>
-        <span className="mx-1">•</span>
-        <span className={cn(
-          "capitalize",
-          session.status === 'running' ? 'text-green-400' :
-          session.status === 'paused' ? 'text-yellow-400' :
-          session.status === 'waiting_approval' ? 'text-orange-400' :
-          'text-white/50'
-        )}>
-          {session.status}
-        </span>
-      </div>
-    </div>
-  );
-});
-
-// ============================================================================
-// Main Right Rail
-// ============================================================================
 
 export const CoworkRightRail = memo(function CoworkRightRail() {
   const { session } = useCoworkStore();
-  
+  const [openCards, setOpenCards] = useState({
+    progress: true,
+    folder: true,
+    context: true,
+  });
+  const [copiedPath, setCopiedPath] = useState<string | null>(null);
+  const [enabledConnectors, setEnabledConnectors] = useState({
+    webSearch: true,
+    filesystem: true,
+    terminal: true,
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const raw = window.localStorage.getItem('a2r-cowork-connectors');
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw) as Partial<typeof enabledConnectors>;
+      setEnabledConnectors((current) => ({ ...current, ...parsed }));
+    } catch {
+      // Ignore malformed persisted state
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem('a2r-cowork-connectors', JSON.stringify(enabledConnectors));
+  }, [enabledConnectors]);
+
+  const toggleCard = useCallback((id: keyof typeof openCards) => {
+    setOpenCards((current) => ({ ...current, [id]: !current[id] }));
+  }, []);
+
+  const toggleConnector = useCallback((id: keyof typeof enabledConnectors) => {
+    setEnabledConnectors((current) => ({ ...current, [id]: !current[id] }));
+  }, []);
+
+  const handleCopyPath = useCallback(async (path: string) => {
+    try {
+      await navigator.clipboard.writeText(path);
+      setCopiedPath(path);
+      window.setTimeout(() => setCopiedPath((value) => (value === path ? null : value)), 1200);
+    } catch {
+      // Ignore clipboard failures silently
+    }
+  }, []);
+
+  const steps = useMemo(() => (session ? buildProgressSteps(session) : []), [session]);
+  const touchedFiles = useMemo(() => (session ? collectTouchedFiles(session.events) : []), [session]);
+
+  const workingFolder = useMemo(() => {
+    if (!session) return null;
+
+    const latestCommandWithCwd = [...session.events]
+      .reverse()
+      .find((event): event is CommandEvent => 
+        isCommandEvent(event) && typeof event.cwd === 'string'
+      );
+
+    if (latestCommandWithCwd) {
+      return latestCommandWithCwd.cwd;
+    }
+
+    for (const filePath of touchedFiles) {
+      const folder = inferFolderFromPath(filePath);
+      if (folder) return folder;
+    }
+
+    return null;
+  }, [session, touchedFiles]);
+
+  const toolCalls = useMemo(
+    () => (session ? session.events.filter((event) => event.type === 'cowork.tool_call') : []),
+    [session],
+  );
+  const commandCount = useMemo(
+    () => (session ? session.events.filter((event) => event.type === 'cowork.command').length : 0),
+    [session],
+  );
+  const fileCount = useMemo(
+    () => (session ? session.events.filter((event) => event.type === 'cowork.file').length : 0),
+    [session],
+  );
+
+  const activeStep = useMemo(() => steps.find((step) => step.status === 'active'), [steps]);
+
   if (!session) return null;
-  
+
   return (
-    <div className="h-full flex flex-col overflow-hidden text-[var(--text-primary,#ececec)]">
-      {/* Header */}
-      <div className="p-4 border-b border-white/5">
-        <h3 className="text-sm font-semibold text-white/80">Session Activity</h3>
-      </div>
-      
-      {/* Data Cards - only render when they have data */}
-      <div className="flex-1 overflow-y-auto">
-        <MessagesCard />
-        <CommandsCard />
-        <ActionsCard />
-        <FilesCard />
-        <SessionSummary />
-      </div>
+    <div className="h-full overflow-y-auto p-2.5 space-y-2.5 text-[var(--text-primary,#ececec)]">
+      <RailCard title="Progress" open={openCards.progress} onToggle={() => toggleCard('progress')}>
+        <div className="space-y-2">
+          {steps.map((step, index) => {
+            const isComplete = step.status === 'complete';
+            const isActive = step.status === 'active';
+            return (
+              <div key={step.id} className="flex items-start gap-2.5">
+                <div className="mt-0.5">
+                  {isComplete ? (
+                    <CheckCircle className="w-4 h-4 text-blue-400" />
+                  ) : isActive ? (
+                    <div className="w-4 h-4 rounded-full border border-blue-400 text-[10px] leading-[14px] text-blue-300 text-center">
+                      {index + 1}
+                    </div>
+                  ) : (
+                    <Circle className="w-4 h-4 text-white/35" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div
+                    className={cn(
+                      'text-[12px] leading-4',
+                      isComplete ? 'text-white/45 line-through' : isActive ? 'text-white/80' : 'text-white/50',
+                    )}
+                  >
+                    {step.label}
+                  </div>
+                </div>
+                {isActive && (
+                  <button
+                    type="button"
+                    onClick={() => dispatchCompose(`Can you clarify this step: ${step.label}`)}
+                    title="Ask a question or recommend a change"
+                    className="mt-0.5 text-white/45 hover:text-white/80 transition-colors"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </RailCard>
+
+      <RailCard title="Working Folder" open={openCards.folder} onToggle={() => toggleCard('folder')}>
+        <div className="space-y-2.5">
+          <div className="rounded-lg border border-white/10 bg-white/[0.02] px-2.5 py-2">
+            <div className="flex items-start gap-2">
+              <FolderOpen className="w-4 h-4 text-white/55 mt-0.5 shrink-0" />
+              <div className="min-w-0">
+                <div className="text-[11px] text-white/80 truncate">{workingFolder || 'Working folder pending'}</div>
+                <div className="text-[10px] text-white/45 mt-0.5">View and open files created during this task.</div>
+              </div>
+            </div>
+          </div>
+
+          {touchedFiles.length > 0 ? (
+            <div className="space-y-1.5">
+              {touchedFiles.slice(0, 6).map((path) => {
+                const copied = copiedPath === path;
+                return (
+                  <button
+                    key={path}
+                    type="button"
+                    onClick={() => handleCopyPath(path)}
+                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md border border-white/5 bg-transparent hover:bg-white/[0.04] text-left transition-colors"
+                    title={path}
+                  >
+                    <FileText className="w-3.5 h-3.5 text-white/45 shrink-0" />
+                    <span className="flex-1 min-w-0 text-[11px] text-white/65 truncate">{path}</span>
+                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-white/35" />}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-[11px] text-white/45">No files captured for this task yet.</p>
+          )}
+        </div>
+      </RailCard>
+
+      <RailCard title="Context" open={openCards.context} onToggle={() => toggleCard('context')}>
+        <div className="space-y-2">
+          <div className="text-[10px] uppercase tracking-wide text-white/45">Connectors</div>
+
+          <button
+            type="button"
+            onClick={() => toggleConnector('webSearch')}
+            className="w-full flex items-center justify-between px-2 py-1.5 rounded-md border border-white/5 hover:bg-white/[0.04] transition-colors"
+          >
+            <span className="flex items-center gap-2 text-[12px] text-white/75">
+              <Globe className="w-3.5 h-3.5 text-white/55" />
+              Web search
+            </span>
+            <span className={cn('text-[10px]', enabledConnectors.webSearch ? 'text-blue-300' : 'text-white/35')}>
+              {enabledConnectors.webSearch ? 'On' : 'Off'}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => toggleConnector('filesystem')}
+            className="w-full flex items-center justify-between px-2 py-1.5 rounded-md border border-white/5 hover:bg-white/[0.04] transition-colors"
+          >
+            <span className="flex items-center gap-2 text-[12px] text-white/75">
+              <HardDrive className="w-3.5 h-3.5 text-white/55" />
+              Filesystem
+            </span>
+            <span className={cn('text-[10px]', enabledConnectors.filesystem ? 'text-blue-300' : 'text-white/35')}>
+              {enabledConnectors.filesystem ? `${fileCount} events` : 'Off'}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => toggleConnector('terminal')}
+            className="w-full flex items-center justify-between px-2 py-1.5 rounded-md border border-white/5 hover:bg-white/[0.04] transition-colors"
+          >
+            <span className="flex items-center gap-2 text-[12px] text-white/75">
+              <Terminal className="w-3.5 h-3.5 text-white/55" />
+              Terminal
+            </span>
+            <span className={cn('text-[10px]', enabledConnectors.terminal ? 'text-blue-300' : 'text-white/35')}>
+              {enabledConnectors.terminal ? `${commandCount} cmds` : 'Off'}
+            </span>
+          </button>
+
+          <div className="pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                const prompt = activeStep
+                  ? `Continue this step and explain the next action: ${activeStep.label}`
+                  : 'Recommend the next action for this cowork task.';
+                dispatchCompose(prompt);
+              }}
+              className="w-full text-[11px] rounded-md border border-white/10 bg-white/[0.03] px-2 py-1.5 text-white/70 hover:text-white/90 hover:bg-white/[0.06] transition-colors"
+            >
+              Ask a question or recommend a change
+            </button>
+          </div>
+
+          {toolCalls.length > 0 && (
+            <p className="text-[10px] text-white/40">Tools used: {toolCalls.length}</p>
+          )}
+        </div>
+      </RailCard>
     </div>
   );
 });

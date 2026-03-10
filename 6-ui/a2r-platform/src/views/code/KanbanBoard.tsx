@@ -468,14 +468,14 @@ function TaskCard({ wih, isActive }: { wih: WihInfo; isActive: boolean }) {
   const column = COLUMNS.find(c => c.id === wih.status);
   
   return (
-    <GlassCard 
-      hoverable
+    <div 
       style={{ 
         padding: 12, 
         cursor: 'grab', 
         border: isActive ? '1px solid var(--accent-chat)' : '1px solid var(--border-subtle)',
         background: isActive ? 'rgba(10, 132, 255, 0.05)' : 'var(--glass-bg-thick)',
-        borderLeft: `3px solid ${column?.color || '#888'}`
+        borderLeft: `3px solid ${column?.color || '#888'}`,
+        borderRadius: 8
       }}
     >
       <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8 }}>{wih.title || wih.wih_id}</div>
@@ -509,7 +509,7 @@ function TaskCard({ wih, isActive }: { wih: WihInfo; isActive: boolean }) {
           </div>
         )}
       </div>
-    </GlassCard>
+    </div>
   );
 }
 

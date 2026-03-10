@@ -19,10 +19,8 @@ import {
   ToolCall,
   ToolResult,
   CorrelationId,
-  GateCheckRequest,
-  GateCheckResponse,
-  WorkClaimResult,
 } from '../types';
+import type { GateCheckRequest, GateCheckResponse, WorkClaimResult } from './rails_api';
 
 export interface RailsHttpConfig {
   baseURL: string;
@@ -446,10 +444,11 @@ export class RailsHttpAdapter {
 
   private handleError(error: AxiosError): never {
     if (error.response) {
+      const data = error.response.data as Record<string, unknown> | undefined;
       const railsError: RailsError = {
-        code: error.response.data?.code || 'UNKNOWN_ERROR',
-        message: error.response.data?.message || error.message,
-        details: error.response.data?.details,
+        code: (data?.code as string) || 'UNKNOWN_ERROR',
+        message: (data?.message as string) || error.message,
+        details: data?.details as string | undefined,
       };
       throw railsError;
     } else if (error.request) {
@@ -467,7 +466,7 @@ export class RailsHttpAdapter {
   }
 
   private parseWorkRequest(data: unknown): WorkRequest {
-    const item = data as Record<string, unknown>;
+    const item = data as Record<string, any>;
     return {
       requestId: String(item.request_id || ''),
       dagId: String(item.dag_id || '') as DagId,
@@ -494,7 +493,7 @@ export class RailsHttpAdapter {
   }
 
   private parseLease(data: unknown): Lease {
-    const item = data as Record<string, unknown>;
+    const item = data as Record<string, any>;
     return {
       leaseId: String(item.lease_id || item.id) as LeaseId,
       wihId: String(item.wih_id) as WihId,
@@ -511,17 +510,26 @@ export class RailsHttpAdapter {
   }
 
   private parseReceipt(data: unknown): Receipt {
-    const item = data as Record<string, unknown>;
+    const item = data as Record<string, any>;
     return {
       receiptId: String(item.receipt_id || item.id) as ReceiptId,
-      kind: String(item.kind),
+      kind: String(item.kind) as Receipt['kind'],
       runId: String(item.run_id) as RunId,
       dagId: String(item.dag_id) as DagId,
       nodeId: String(item.node_id) as NodeId,
       wihId: String(item.wih_id) as WihId,
-      timestamp: String(item.timestamp || item.created_at),
+      provenance: {
+        agentId: String(item.provenance?.agent_id || ''),
+        role: String(item.provenance?.role || 'builder') as Receipt['provenance']['role'],
+        iterationId: String(item.provenance?.iteration_id || 'it_0') as Receipt['provenance']['iterationId'],
+      },
+      inputs: {
+        contextPackId: String(item.inputs?.context_pack_id || '') as Receipt['inputs']['contextPackId'],
+        policyBundleId: String(item.inputs?.policy_bundle_id || '') as Receipt['inputs']['policyBundleId'],
+      },
       payload: item.payload,
-      hash: String(item.hash),
+      createdAt: String(item.created_at || item.timestamp),
+      correlationId: String(item.correlation_id || `corr_${Date.now()}`) as CorrelationId,
     };
   }
 }

@@ -32,6 +32,21 @@ import {
   onSidecarStatusChanged,
 } from './sidecar-integration';
 
+import {
+  getVMStatus,
+  setupVM,
+  startVM,
+  stopVM,
+  restartVM,
+  executeInVM,
+  checkVMImages,
+  downloadVMImages,
+  onVMStatusChanged,
+  cleanupVM,
+  VMSetupOptions,
+  VMExecuteOptions,
+} from './vm-integration';
+
 /**
  * Electron store instance with typed schema
  */
@@ -114,6 +129,9 @@ export function registerIpcHandlers(): void {
 
   // Sidecar handlers
   registerSidecarHandlers();
+
+  // VM handlers
+  registerVMHandlers();
 }
 
 /**
@@ -472,3 +490,83 @@ function registerSidecarHandlers(): void {
 }
 
 export { store };
+
+/**
+ * VM IPC handlers for VM lifecycle management
+ */
+function registerVMHandlers(): void {
+  // Get VM status
+  ipcMain.handle(IPC_CHANNELS.VM.GET_STATUS, async () => {
+    return getVMStatus();
+  });
+
+  // Check if VM images exist
+  ipcMain.handle(IPC_CHANNELS.VM.CHECK_IMAGES, async (): Promise<boolean> => {
+    return checkVMImages();
+  });
+
+  // Download VM images
+  ipcMain.handle(IPC_CHANNELS.VM.DOWNLOAD_IMAGES, async (_, options?: VMSetupOptions): Promise<boolean> => {
+    try {
+      return await downloadVMImages(options || {});
+    } catch (error) {
+      console.error('[VM] Download failed:', error);
+      throw error;
+    }
+  });
+
+  // Setup VM (download images if needed)
+  ipcMain.handle(IPC_CHANNELS.VM.SETUP, async (_, options?: VMSetupOptions): Promise<boolean> => {
+    try {
+      return await setupVM(options || {});
+    } catch (error) {
+      console.error('[VM] Setup failed:', error);
+      throw error;
+    }
+  });
+
+  // Start VM
+  ipcMain.handle(IPC_CHANNELS.VM.START, async (): Promise<boolean> => {
+    try {
+      return await startVM();
+    } catch (error) {
+      console.error('[VM] Start failed:', error);
+      throw error;
+    }
+  });
+
+  // Stop VM
+  ipcMain.handle(IPC_CHANNELS.VM.STOP, async (): Promise<boolean> => {
+    return stopVM();
+  });
+
+  // Restart VM
+  ipcMain.handle(IPC_CHANNELS.VM.RESTART, async (): Promise<boolean> => {
+    try {
+      return await restartVM();
+    } catch (error) {
+      console.error('[VM] Restart failed:', error);
+      throw error;
+    }
+  });
+
+  // Execute command in VM
+  ipcMain.handle(IPC_CHANNELS.VM.EXECUTE, async (_, options: VMExecuteOptions) => {
+    try {
+      return await executeInVM(options);
+    } catch (error) {
+      console.error('[VM] Execute failed:', error);
+      throw error;
+    }
+  });
+
+  // Forward VM status changes to renderer
+  onVMStatusChanged((status) => {
+    const windows = BrowserWindow.getAllWindows();
+    windows.forEach((window) => {
+      if (!window.isDestroyed()) {
+        window.webContents.send(IPC_CHANNELS.VM.STATUS_CHANGED, status);
+      }
+    });
+  });
+}

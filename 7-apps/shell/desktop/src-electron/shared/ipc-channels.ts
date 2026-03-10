@@ -144,6 +144,21 @@ export const IPC_CHANNELS = {
     GET_AUTH_PASSWORD: 'sidecar:get-auth-password',
     STATUS_CHANGED: 'sidecar:status-changed',
   },
+
+  // VM Management
+  VM: {
+    GET_STATUS: 'vm:get-status',
+    START: 'vm:start',
+    STOP: 'vm:stop',
+    RESTART: 'vm:restart',
+    EXECUTE: 'vm:execute',
+    SETUP: 'vm:setup',
+    CHECK_IMAGES: 'vm:check-images',
+    DOWNLOAD_IMAGES: 'vm:download-images',
+    STATUS_CHANGED: 'vm:status-changed',
+    EXECUTION_RESULT: 'vm:execution-result',
+    SETUP_PROGRESS: 'vm:setup-progress',
+  },
 } as const;
 
 /**
@@ -163,7 +178,8 @@ export type IPCChannelValue =
   | typeof IPC_CHANNELS.POWER[keyof typeof IPC_CHANNELS.POWER]
   | typeof IPC_CHANNELS.PROTOCOL[keyof typeof IPC_CHANNELS.PROTOCOL]
   | typeof IPC_CHANNELS.UPDATE[keyof typeof IPC_CHANNELS.UPDATE]
-  | typeof IPC_CHANNELS.SIDECAR[keyof typeof IPC_CHANNELS.SIDECAR];
+  | typeof IPC_CHANNELS.SIDECAR[keyof typeof IPC_CHANNELS.SIDECAR]
+  | typeof IPC_CHANNELS.VM[keyof typeof IPC_CHANNELS.VM];
 
 /**
  * IPC channel categories for validation and organization
@@ -182,6 +198,7 @@ export const IPC_CATEGORIES = {
   PROTOCOL: Object.values(IPC_CHANNELS.PROTOCOL),
   UPDATE: Object.values(IPC_CHANNELS.UPDATE),
   SIDECAR: Object.values(IPC_CHANNELS.SIDECAR),
+  VM: Object.values(IPC_CHANNELS.VM),
 } as const;
 
 export type IPCChannelType = typeof IPC_CHANNELS;

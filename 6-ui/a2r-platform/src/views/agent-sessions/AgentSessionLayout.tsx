@@ -22,6 +22,8 @@ import {
   Monitor,
   Layout,
   Settings,
+  PanelRight,
+  MessageSquare,
 } from 'lucide-react';
 
 import {

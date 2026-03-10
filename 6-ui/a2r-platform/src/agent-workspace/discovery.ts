@@ -13,7 +13,7 @@
 import { healthCheck } from './health';
 
 // Common ports to check for local API server
-const COMMON_PORTS = [3010, 8080, 8081, 3000, 3001, 9000];
+const COMMON_PORTS = [3000, 8080, 8081, 3001, 9000];
 
 // Default health check endpoint
 const HEALTH_ENDPOINT = '/health';

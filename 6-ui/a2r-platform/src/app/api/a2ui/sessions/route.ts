@@ -10,6 +10,21 @@ import { nanoid } from 'nanoid';
 
 const KERNEL_URL = process.env.NEXT_PUBLIC_KERNEL_URL || 'http://127.0.0.1:3004';
 
+/**
+ * Safely parse JSON with error handling
+ * Returns null if parsing fails, logs error for debugging
+ */
+function safeJSONParse<T>(json: string | null, fieldName: string, sessionId?: string): T | null {
+  if (!json) return null;
+  try {
+    return JSON.parse(json) as T;
+  } catch (error) {
+    console.error(`[A2UI Session] Failed to parse ${fieldName}${sessionId ? ` for session ${sessionId}` : ''}:`, error);
+    console.error(`[A2UI Session] Invalid JSON content:`, json.substring(0, 200));
+    return null;
+  }
+}
+
 // Helper to forward to kernel
 async function forwardToKernel(
   path: string,
@@ -68,12 +83,17 @@ export async function GET(request: NextRequest) {
         .from(a2uiSession)
         .where(chatId ? eq(a2uiSession.chatId, chatId) : undefined);
       
-      // Parse stored JSON
-      const parsed = sessions.map((s: { payload: string; dataModel: string; [key: string]: unknown }) => ({
-        ...s,
-        payload: JSON.parse(s.payload),
-        dataModel: JSON.parse(s.dataModel),
-      }));
+      // Parse stored JSON with error handling
+      const parsed = sessions.map((s: { id: string; payload: string; dataModel: string; [key: string]: unknown }) => {
+        const payload = safeJSONParse<Record<string, unknown>>(s.payload, 'payload', s.id);
+        const dataModel = safeJSONParse<Record<string, unknown>>(s.dataModel, 'dataModel', s.id);
+        
+        return {
+          ...s,
+          payload: payload ?? {}, // Fallback to empty object
+          dataModel: dataModel ?? {}, // Fallback to empty object
+        };
+      });
       
       return NextResponse.json({ sessions: parsed });
     } catch (fallbackError) {
@@ -140,11 +160,21 @@ export async function POST(request: NextRequest) {
         })
         .returning();
 
+      const parsedPayload = safeJSONParse<Record<string, unknown>>(newSession.payload, 'payload', newSession.id);
+      const parsedDataModel = safeJSONParse<Record<string, unknown>>(newSession.dataModel, 'dataModel', newSession.id);
+
+      if (parsedPayload === null || parsedDataModel === null) {
+        return NextResponse.json(
+          { error: "Created session data is corrupted", sessionId: newSession.id },
+          { status: 500 }
+        );
+      }
+
       return NextResponse.json({
         id: newSession.id,
         chat_id: newSession.chatId,
-        payload: JSON.parse(newSession.payload),
-        dataModel: JSON.parse(newSession.dataModel),
+        payload: parsedPayload,
+        dataModel: parsedDataModel,
         status: newSession.status,
         created_at: newSession.createdAt,
         updated_at: newSession.updatedAt,

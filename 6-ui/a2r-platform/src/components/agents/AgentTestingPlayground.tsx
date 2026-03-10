@@ -108,7 +108,7 @@ export function AgentTestingPlayground({
   onSaveTest,
   onDeploy,
 }: AgentTestingPlaygroundProps) {
-  const modeColors = MODE_COLORS[mode];
+  const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.chat;
   const [messages, setMessages] = useState<TestMessage[]>([]);
   const [input, setInput] = useState('');
   const [isRunning, setIsRunning] = useState(false);
@@ -231,7 +231,7 @@ export function AgentTestingPlayground({
         isRunning={isRunning}
         onReset={handleReset}
         onDeploy={onDeploy}
-        modeColors={modeColors}
+        modeColors={modeColors as typeof MODE_COLORS.chat}
       />
 
       {/* Main Content */}
@@ -241,7 +241,7 @@ export function AgentTestingPlayground({
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {messages.length === 0 ? (
-              <EmptyState agent={agent} modeColors={modeColors} />
+              <EmptyState agent={agent} modeColors={modeColors as typeof MODE_COLORS.chat} />
             ) : (
               <>
                 {messages.map((message, index) => (
@@ -249,10 +249,10 @@ export function AgentTestingPlayground({
                     key={message.id}
                     message={message}
                     isLast={index === messages.length - 1}
-                    modeColors={modeColors}
+                    modeColors={modeColors as typeof MODE_COLORS.chat}
                   />
                 ))}
-                {isRunning && <TypingIndicator modeColors={modeColors} />}
+                {isRunning && <TypingIndicator modeColors={modeColors as typeof MODE_COLORS.chat} />}
                 <div ref={messagesEndRef} />
               </>
             )}
@@ -265,7 +265,7 @@ export function AgentTestingPlayground({
             isRunning={isRunning}
             onSend={handleSend}
             onKeyDown={handleKeyDown}
-            modeColors={modeColors}
+            modeColors={modeColors as typeof MODE_COLORS.chat}
           />
         </div>
 
@@ -278,7 +278,7 @@ export function AgentTestingPlayground({
           setVariables={setVariables}
           showVariables={showVariables}
           setShowVariables={setShowVariables}
-          modeColors={modeColors}
+          modeColors={modeColors as typeof MODE_COLORS.chat}
         />
       </div>
     </div>
@@ -532,10 +532,10 @@ function ToolCallDisplay({
                 color: TEXT.secondary,
               }}
             >
-              {JSON.stringify(toolCall.arguments, null, 2)}
+              {`${JSON.stringify(toolCall.arguments, null, 2)}`}
             </pre>
           </div>
-          {toolCall.result && (
+          {!!toolCall.result && (
             <div>
               <span style={{ color: TEXT.tertiary }}>Result:</span>
               <pre 
@@ -545,7 +545,7 @@ function ToolCallDisplay({
                   color: '#4ade80',
                 }}
               >
-                {JSON.stringify(toolCall.result, null, 2)}
+                {`${JSON.stringify(toolCall.result, null, 2)}`}
               </pre>
             </div>
           )}
@@ -835,7 +835,7 @@ function MetricCard({
 }: {
   label: string;
   value: string;
-  icon: React.ComponentType<{size?: number}>;
+  icon: React.ComponentType<{size?: number | string; style?: React.CSSProperties}>;
   modeColors: typeof MODE_COLORS.chat;
 }) {
   return (

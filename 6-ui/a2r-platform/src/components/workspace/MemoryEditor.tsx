@@ -298,25 +298,26 @@ function MarkdownPreview({ content }: { content: string }) {
   return (
     <div className="markdown-preview">
       {lines.map((line, i) => {
+        const lineKey = `line-${i}-${line.slice(0, 30)}`;
         if (line.startsWith('# ')) {
-          return <h1 key={i}>{line.slice(2)}</h1>;
+          return <h1 key={lineKey}>{line.slice(2)}</h1>;
         }
         if (line.startsWith('## ')) {
-          return <h2 key={i}>{line.slice(3)}</h2>;
+          return <h2 key={lineKey}>{line.slice(3)}</h2>;
         }
         if (line.startsWith('### ')) {
-          return <h3 key={i}>{line.slice(4)}</h3>;
+          return <h3 key={lineKey}>{line.slice(4)}</h3>;
         }
         if (line.startsWith('- ')) {
-          return <li key={i}>{line.slice(2)}</li>;
+          return <li key={lineKey}>{line.slice(2)}</li>;
         }
         if (line.startsWith('1. ') || line.startsWith('2. ') || line.startsWith('3. ')) {
-          return <li key={i}>{line.slice(3)}</li>;
+          return <li key={lineKey}>{line.slice(3)}</li>;
         }
         if (line.trim() === '') {
-          return <br key={i} />;
+          return <br key={`br-${i}`} />;
         }
-        return <p key={i}>{line}</p>;
+        return <p key={lineKey}>{line}</p>;
       })}
     </div>
   );

@@ -439,8 +439,10 @@ export const MarketplaceView: React.FC = () => {
                   <div
                     style={{
                       display: 'inline-block',
-                      paddingX: '6px',
-                      paddingY: '2px',
+                      paddingLeft: '6px',
+                      paddingRight: '6px',
+                      paddingTop: '2px',
+                      paddingBottom: '2px',
                       backgroundColor: 'var(--bg-secondary)',
                       borderRadius: '4px',
                       fontSize: '11px',

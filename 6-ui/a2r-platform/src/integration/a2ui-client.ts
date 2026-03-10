@@ -243,7 +243,15 @@ class A2UIApiClient {
       currentPayload?: A2UIPayload;
       dataModel?: Record<string, unknown>;
     }
-  ): Promise<{ payload: A2UIPayload; sessionId: string }> {
+  ): Promise<{
+    payload: A2UIPayload;
+    sessionId: string;
+    meta?: {
+      isMockData: boolean;
+      fallbackReason?: string;
+      agentId?: string | null;
+    };
+  }> {
     return api.post('/api/v1/a2ui/generate', {
       chat_id: chatId,
       prompt,

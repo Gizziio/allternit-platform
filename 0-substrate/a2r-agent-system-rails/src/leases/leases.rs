@@ -9,7 +9,7 @@ use sqlx::{
     Pool, Row, Sqlite,
 };
 use tokio::sync::RwLock;
-use tokio::time::{self, Interval};
+use tokio::time::{self};
 
 use crate::core::ids::create_event_id;
 use crate::core::io::ensure_dir;

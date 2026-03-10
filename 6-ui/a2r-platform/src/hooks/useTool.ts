@@ -56,9 +56,11 @@ export function useTool(toolId: string) {
       timeout = 30000,
       backoff = true,
       idempotencyKey,
-      onSuccess,
-      onError,
     } = options;
+    
+    // Callbacks are extracted separately to avoid stale closures
+    const onSuccessCallback = options.onSuccess;
+    const onErrorCallback = options.onError;
 
     // Cancel any in-progress execution
     if (abortControllerRef.current) {
@@ -156,7 +158,7 @@ export function useTool(toolId: string) {
     if (result && result.success) {
       setLastResult(result);
       setError(null);
-      onSuccess?.(result);
+      onSuccessCallback?.(result);
       setIsLoading(false);
       return result;
     }
@@ -164,7 +166,7 @@ export function useTool(toolId: string) {
     // Handle error
     const errorMessage = lastError?.message || result?.error || 'Tool execution failed';
     setError(errorMessage);
-    onError?.(lastError || new Error(errorMessage));
+    onErrorCallback?.(lastError || new Error(errorMessage));
     setIsLoading(false);
 
     return {
@@ -172,7 +174,7 @@ export function useTool(toolId: string) {
       error: errorMessage,
       execution_time_ms: Date.now() - startTime,
     };
-  }, [toolId, onSuccess, onError]);
+  }, [toolId]);
 
   /**
    * Cancel in-progress execution

@@ -33,6 +33,22 @@ export interface UseBrainChatOptions {
   onError?: (error: { code: string; message: string }) => void;
 }
 
+// Event types for brain chat stream
+interface BrainChatEvent {
+  type: string;
+  payload?: unknown;
+  delta?: {
+    type: string;
+    text?: string;
+  };
+  call_id?: string;
+  tool_id?: string;
+  args?: unknown;
+  result?: unknown;
+  error?: string;
+  message?: string;
+}
+
 export interface UseBrainChatReturn {
   messages: ChatMessage[];
   isStreaming: boolean;
@@ -45,7 +61,7 @@ export interface UseBrainChatReturn {
 
 export function useBrainChat(options: UseBrainChatOptions): UseBrainChatReturn {
   const { chatId, brainProfileId, runtimeModelId, onError } = options;
-  const { toast } = useToast();
+  const { addToast } = useToast();
   
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -100,8 +116,8 @@ export function useBrainChat(options: UseBrainChatOptions): UseBrainChatReturn {
               
             case 'content_block_delta':
               // Text streaming
-              const delta = event.delta as { type: string; text?: string };
-              if (delta.type === 'text_delta' && delta.text) {
+              const delta = (event as BrainChatEvent).delta;
+              if (delta?.type === 'text_delta' && delta.text) {
                 accumulatedContent += delta.text;
                 setMessages(prev => prev.map(msg => 
                   msg.id === assistantMessageId 
@@ -114,9 +130,9 @@ export function useBrainChat(options: UseBrainChatOptions): UseBrainChatReturn {
             case 'tool_call_start':
               // Tool call started
               const toolCall: ToolCall = {
-                id: event.call_id as string,
-                toolId: event.tool_id as string,
-                args: event.args,
+                id: (event as BrainChatEvent).call_id ?? '',
+                toolId: (event as BrainChatEvent).tool_id ?? '',
+                args: (event as BrainChatEvent).args,
                 status: 'running'
               };
               activeToolCalls.set(toolCall.id, toolCall);
@@ -132,12 +148,12 @@ export function useBrainChat(options: UseBrainChatOptions): UseBrainChatReturn {
               
             case 'tool_call_result':
               // Tool call completed
-              const callId = event.call_id as string;
+              const callId = (event as BrainChatEvent).call_id ?? '';
               const existingCall = activeToolCalls.get(callId);
               if (existingCall) {
-                existingCall.status = event.error ? 'error' : 'completed';
-                existingCall.result = event.result;
-                existingCall.error = event.error as string;
+                existingCall.status = (event as BrainChatEvent).error ? 'error' : 'completed';
+                existingCall.result = (event as BrainChatEvent).result;
+                existingCall.error = (event as BrainChatEvent).error;
                 activeToolCalls.set(callId, existingCall);
                 setCurrentToolCalls(Array.from(activeToolCalls.values()));
                 
@@ -158,14 +174,14 @@ export function useBrainChat(options: UseBrainChatOptions): UseBrainChatReturn {
               
             case 'error':
               // Error in stream
-              const errorMsg = event.message as string;
+              const errorMsg = (event as BrainChatEvent).message ?? 'Unknown error';
               setError(errorMsg);
               setIsStreaming(false);
               setIsLoading(false);
-              toast({
+              addToast({
                 title: 'Chat error',
                 description: errorMsg,
-                variant: 'destructive'
+                type: 'error'
               });
               break;
           }
@@ -175,10 +191,10 @@ export function useBrainChat(options: UseBrainChatOptions): UseBrainChatReturn {
           setIsStreaming(false);
           setIsLoading(false);
           onError?.(err);
-          toast({
+          addToast({
             title: 'Chat error',
             description: err.message,
-            variant: 'destructive'
+            type: 'error'
           });
         }
       });
@@ -189,13 +205,13 @@ export function useBrainChat(options: UseBrainChatOptions): UseBrainChatReturn {
       setIsStreaming(false);
       setIsLoading(false);
       
-      toast({
+      addToast({
         title: 'Chat error',
         description: message,
-        variant: 'destructive'
+        type: 'error'
       });
     }
-  }, [chatId, brainProfileId, runtimeModelId, isStreaming, onError, toast]);
+  }, [chatId, brainProfileId, runtimeModelId, isStreaming, onError, addToast]);
 
   const clearMessages = useCallback(() => {
     setMessages([]);

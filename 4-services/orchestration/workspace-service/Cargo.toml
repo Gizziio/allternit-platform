@@ -30,4 +30,3 @@ a2r-substrate = { path = "../../../0-substrate/a2r-substrate" }
 [dev-dependencies]
 tempfile.workspace = true
 tokio-test = "0.4"
-reqwest = { workspace = true }

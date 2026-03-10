@@ -3,6 +3,7 @@ mod client;
 mod command_registry;
 mod commands;
 mod config;
+mod desktop_connector;
 mod fast_route;
 mod tui_components;
 
@@ -10,8 +11,8 @@ use bootstrap::BootstrapContext;
 use clap::{Parser, Subcommand};
 use client::KernelClient;
 use commands::{
-    auth, brain_integration, cap, daemon, ev, j, marketplace, model, openclaw_compat, repl, rlm,
-    run, skills, status_health_sessions, taskgraph, tools, tui, voice, webvm,
+    auth, autoland, brain_integration, cap, daemon, ev, j, marketplace, model, openclaw_compat,
+    repl, rlm, run, skills, status_health_sessions, swarm, taskgraph, tools, tui, voice, vm, webvm,
 };
 use config::ConfigManager;
 
@@ -86,6 +87,8 @@ enum Commands {
 
     /// Evidence management
     Ev(ev::EvArgs),
+    /// Autonomous implementation landing
+    Autoland(autoland::AutolandArgs),
     /// Capsule operations
     Cap(cap::CapArgs),
     /// Journal interaction
@@ -116,11 +119,25 @@ enum Commands {
 
     Marketplace(marketplace::MarketplaceCmd),
 
+    /*
+    /// Memory agent operations
+    Memory {
+        #[clap(subcommand)]
+        cmd: Option<commands::memory::MemoryCommand>,
+    },
+    */
+
     /// Brain session management
     Brain(brain_integration::BrainArgs),
 
     /// Task graph operations
     Task(taskgraph::TaskGraphArgs),
+
+    /// Multi-agent swarm execution
+    Swarm(swarm::SwarmArgs),
+
+    /// VM environment management
+    Vm(vm::VmArgs),
 
     /// CLI configuration
     Config {
@@ -275,6 +292,7 @@ async fn main() -> anyhow::Result<()> {
                 Commands::Daemon(args) => daemon::handle_daemon(args.command, &client).await?,
 
                 Commands::Ev(args) => ev::handle_ev_args(args, &client).await?,
+                Commands::Autoland(args) => autoland::handle_autoland_args(args, &client).await?,
                 Commands::Cap(args) => cap::handle_cap_args(args, &client).await?,
                 Commands::J(args) => j::handle_j_args(args, &client).await?,
                 Commands::Tools(args) => tools::handle_tools_args(args, &client).await?,
@@ -289,10 +307,25 @@ async fn main() -> anyhow::Result<()> {
                 Commands::Voice(cmd) => voice::handle_voice_args(cmd).await?,
                 Commands::WebVM(cmd) => webvm::handle_webvm_args(cmd).await?,
                 Commands::Marketplace(cmd) => marketplace::handle_marketplace(cmd, &client).await?,
+                /*
+                Commands::Memory { cmd } => {
+                    let args = cmd.map(|c| {
+                        match c.action {
+                            commands::memory::MemoryAction::Query { question, limit, tenant_id, session_id } => {
+                                vec!["query".to_string(), question, "--limit".to_string(), limit.to_string()]
+                            }
+                            _ => vec![],
+                        }
+                    }).unwrap_or_default();
+                    commands::memory::handle_memory(args).await?;
+                }
+                */
                 Commands::Brain(cmd) => {
                     brain_integration::handle_brain_args(cmd, &client).await?
                 }
                 Commands::Task(cmd) => taskgraph::handle_taskgraph_args(cmd, &client).await?,
+                Commands::Swarm(args) => swarm::handle_swarm(args, &client, &config_manager).await?,
+                Commands::Vm(args) => vm::handle_vm(args).await?,
                 Commands::Config { .. } | Commands::Registry { .. } | Commands::External(_) => {
                     unreachable!()
                 }

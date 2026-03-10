@@ -5,7 +5,16 @@
 
 import React, { memo, useState } from 'react';
 import { cn } from '@/lib/utils';
-import type { AnyCoworkEvent } from './cowork.types';
+import type { 
+  AnyCoworkEvent, 
+  ActionEvent, 
+  CommandEvent, 
+  FileEvent, 
+  ObservationEvent, 
+  CheckpointEvent,
+  ToolCallEvent,
+  ToolResultEvent 
+} from './cowork.types';
 import {
   Terminal,
   FileText,
@@ -31,12 +40,46 @@ interface WorkBlockProps {
   isStreaming?: boolean;
 }
 
+interface BlockComponentProps {
+  event: AnyCoworkEvent;
+  isExpanded: boolean;
+  onToggle: () => void;
+}
+
+// ============================================================================
+// Type Guards
+// ============================================================================
+
+const isActionEvent = (event: AnyCoworkEvent): event is ActionEvent => 
+  event.type === 'cowork.action';
+
+const isCommandEvent = (event: AnyCoworkEvent): event is CommandEvent => 
+  event.type === 'cowork.command';
+
+const isFileEvent = (event: AnyCoworkEvent): event is FileEvent => 
+  event.type === 'cowork.file';
+
+const isObservationEvent = (event: AnyCoworkEvent): event is ObservationEvent => 
+  event.type === 'cowork.observation';
+
+const isCheckpointEvent = (event: AnyCoworkEvent): event is CheckpointEvent => 
+  event.type === 'cowork.checkpoint';
+
+const isToolCallEvent = (event: AnyCoworkEvent): event is ToolCallEvent => 
+  event.type === 'cowork.tool_call';
+
+const isToolResultEvent = (event: AnyCoworkEvent): event is ToolResultEvent => 
+  event.type === 'cowork.tool_result';
+
 // ============================================================================
 // Action Block (click, type, scroll)
 // ============================================================================
 
-const ActionBlock = memo(function ActionBlock({ event, isExpanded, onToggle }: any) {
-  const actionEvent = event as any;
+const ActionBlock = memo(function ActionBlock({ event, isExpanded, onToggle }: BlockComponentProps) {
+  if (!isActionEvent(event)) {
+    console.warn('[CoworkWorkBlock] Expected action event, got:', event.type);
+    return null;
+  }
   
   return (
     <div 
@@ -53,18 +96,18 @@ const ActionBlock = memo(function ActionBlock({ event, isExpanded, onToggle }: a
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-white/80">
-            {actionEvent.actionType === 'click' ? 'Clicked' :
-             actionEvent.actionType === 'type' ? 'Typed' :
-             actionEvent.actionType === 'scroll' ? 'Scrolled' : 'Action'}
+            {event.actionType === 'click' ? 'Clicked' :
+             event.actionType === 'type' ? 'Typed' :
+             event.actionType === 'scroll' ? 'Scrolled' : 'Action'}
           </span>
           <span className="text-xs text-white/40">
-            {actionEvent.target?.type === 'coordinates' ? 'at position' : 
-             actionEvent.target?.type === 'selector' ? 'on element' : ''}
+            {event.target?.type === 'coordinates' ? 'at position' : 
+             event.target?.type === 'selector' ? 'on element' : ''}
           </span>
         </div>
         {isExpanded && (
           <div className="mt-2 text-xs text-white/50 font-mono bg-black/20 p-2 rounded">
-            {JSON.stringify(actionEvent.args, null, 2)}
+            {JSON.stringify(event.args, null, 2)}
           </div>
         )}
       </div>
@@ -81,9 +124,13 @@ const ActionBlock = memo(function ActionBlock({ event, isExpanded, onToggle }: a
 // Command Block (terminal commands)
 // ============================================================================
 
-const CommandBlock = memo(function CommandBlock({ event, isExpanded, onToggle }: any) {
-  const commandEvent = event as any;
-  const commands = commandEvent.commands || [commandEvent.command];
+const CommandBlock = memo(function CommandBlock({ event, isExpanded, onToggle }: BlockComponentProps) {
+  if (!isCommandEvent(event)) {
+    console.warn('[CoworkWorkBlock] Expected command event, got:', event.type);
+    return null;
+  }
+  
+  const commands = event.commands;
   
   return (
     <div 
@@ -131,10 +178,14 @@ const CommandBlock = memo(function CommandBlock({ event, isExpanded, onToggle }:
 // File Block (read/edit files)
 // ============================================================================
 
-const FileBlock = memo(function FileBlock({ event, isExpanded, onToggle }: any) {
-  const fileEvent = event as any;
-  const files = fileEvent.files || [fileEvent];
-  const operation = fileEvent.operation || 'read'; // read, edit, create, delete
+const FileBlock = memo(function FileBlock({ event, isExpanded, onToggle }: BlockComponentProps) {
+  if (!isFileEvent(event)) {
+    console.warn('[CoworkWorkBlock] Expected file event, got:', event.type);
+    return null;
+  }
+  
+  const files = event.files;
+  const operation = event.operation;
   
   const operationConfig = {
     read: { icon: Eye, color: 'text-purple-400', bg: 'bg-purple-500/10' },
@@ -143,7 +194,7 @@ const FileBlock = memo(function FileBlock({ event, isExpanded, onToggle }: any) 
     delete: { icon: FileText, color: 'text-red-400', bg: 'bg-red-500/10' },
   };
   
-  const config = operationConfig[operation as keyof typeof operationConfig] || operationConfig.read;
+  const config = operationConfig[operation] || operationConfig.read;
   const Icon = config.icon;
   
   return (
@@ -177,11 +228,11 @@ const FileBlock = memo(function FileBlock({ event, isExpanded, onToggle }: any) 
       {isExpanded && (
         <div className="px-3 pb-3">
           <div className="space-y-1">
-            {files.map((file: any, i: number) => (
+            {files.map((file, i: number) => (
               <div key={i} className="flex items-center gap-2 text-xs text-white/60">
                 <FileText className="w-3.5 h-3.5 text-white/30" />
                 <span className="font-mono">{file.path || file.name}</span>
-                {file.changes && (
+                {file.changes !== undefined && (
                   <span className="text-white/30">({file.changes} changes)</span>
                 )}
               </div>
@@ -197,8 +248,11 @@ const FileBlock = memo(function FileBlock({ event, isExpanded, onToggle }: any) 
 // Observation Block (screenshots)
 // ============================================================================
 
-const ObservationBlock = memo(function ObservationBlock({ event, isExpanded, onToggle }: any) {
-  const obsEvent = event as any;
+const ObservationBlock = memo(function ObservationBlock({ event, isExpanded, onToggle }: BlockComponentProps) {
+  if (!isObservationEvent(event)) {
+    console.warn('[CoworkWorkBlock] Expected observation event, got:', event.type);
+    return null;
+  }
   
   return (
     <div 
@@ -216,9 +270,9 @@ const ObservationBlock = memo(function ObservationBlock({ event, isExpanded, onT
         </div>
         <div className="flex-1 min-w-0">
           <span className="text-sm font-medium text-white/80">Viewed page</span>
-          {obsEvent.metadata?.url && (
+          {event.metadata?.url && (
             <span className="text-xs text-white/40 ml-2 truncate">
-              {new URL(obsEvent.metadata.url).hostname}
+              {new URL(event.metadata.url).hostname}
             </span>
           )}
         </div>
@@ -229,10 +283,10 @@ const ObservationBlock = memo(function ObservationBlock({ event, isExpanded, onT
         )}
       </div>
       
-      {isExpanded && obsEvent.imageRef && (
+      {isExpanded && event.imageRef && (
         <div className="px-3 pb-3">
           <img 
-            src={obsEvent.imageRef} 
+            src={event.imageRef} 
             alt="Observation"
             className="w-full rounded-md border border-white/10"
           />
@@ -246,8 +300,15 @@ const ObservationBlock = memo(function ObservationBlock({ event, isExpanded, onT
 // Checkpoint Block
 // ============================================================================
 
-const CheckpointBlock = memo(function CheckpointBlock({ event }: any) {
-  const cpEvent = event as any;
+interface CheckpointBlockProps {
+  event: AnyCoworkEvent;
+}
+
+const CheckpointBlock = memo(function CheckpointBlock({ event }: CheckpointBlockProps) {
+  if (!isCheckpointEvent(event)) {
+    console.warn('[CoworkWorkBlock] Expected checkpoint event, got:', event.type);
+    return null;
+  }
   
   return (
     <div className="flex items-center gap-3 p-3 rounded-lg bg-[#1e1e1e] border border-purple-500/20">
@@ -256,7 +317,7 @@ const CheckpointBlock = memo(function CheckpointBlock({ event }: any) {
       </div>
       <div className="flex-1 min-w-0">
         <span className="text-sm font-medium text-white/80">Checkpoint saved</span>
-        <span className="text-xs text-white/40 ml-2">{cpEvent.label}</span>
+        <span className="text-xs text-white/40 ml-2">{event.label}</span>
       </div>
     </div>
   );
@@ -266,8 +327,20 @@ const CheckpointBlock = memo(function CheckpointBlock({ event }: any) {
 // Tool Block (tool calls/results)
 // ============================================================================
 
-const ToolBlock = memo(function ToolBlock({ event, isExpanded, onToggle }: any) {
-  const toolEvent = event as any;
+const ToolBlock = memo(function ToolBlock({ event, isExpanded, onToggle }: BlockComponentProps) {
+  const toolEvent = isToolCallEvent(event) 
+    ? event 
+    : isToolResultEvent(event) 
+      ? event 
+      : null;
+      
+  if (!toolEvent) {
+    console.warn('[CoworkWorkBlock] Expected tool call or result event, got:', event.type);
+    return null;
+  }
+  
+  const toolName = isToolCallEvent(event) ? event.toolName : 'tool';
+  const toolData = isToolCallEvent(event) ? event.args : (event as ToolResultEvent).result;
   
   return (
     <div 
@@ -285,7 +358,7 @@ const ToolBlock = memo(function ToolBlock({ event, isExpanded, onToggle }: any) 
         </div>
         <div className="flex-1 min-w-0">
           <span className="text-sm font-medium text-white/80">
-            Used tool: {toolEvent.toolName || 'tool'}
+            Used tool: {toolName}
           </span>
         </div>
         {isExpanded ? (
@@ -298,7 +371,7 @@ const ToolBlock = memo(function ToolBlock({ event, isExpanded, onToggle }: any) 
       {isExpanded && (
         <div className="px-3 pb-3">
           <div className="bg-black/30 rounded-md p-3 font-mono text-xs text-white/60">
-            {JSON.stringify(toolEvent.args || toolEvent.result, null, 2)}
+            {JSON.stringify(toolData, null, 2)}
           </div>
         </div>
       )}

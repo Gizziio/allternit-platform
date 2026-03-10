@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { UserButton, useUser, useAuth } from '@clerk/clerk-react';
-import { LogOut, User, Mail, CheckCircle, Shield, Sparkles } from 'lucide-react';
+import { LogOut, User, Mail, CheckCircle, Shield, Sparkles, ArrowRight } from 'lucide-react';
 import { GlassCard, GlassSurface } from '@a2r/platform';
 
 /**
@@ -52,6 +52,61 @@ export const ClerkAuthPanel: React.FC = () => {
       setError('Failed to open sign up. Please try again.');
       console.error('Sign up error:', err);
     }
+  }, []);
+
+  // Anonymous/Better Auth sign in
+  const [isAnonymousLoading, setIsAnonymousLoading] = useState(false);
+  
+  const handleAnonymousSignIn = useCallback(async () => {
+    try {
+      setIsAnonymousLoading(true);
+      setError(null);
+      
+      // Call Better Auth anonymous sign-in endpoint
+      const response = await fetch('/api/auth/sign-in/anonymous', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error('Anonymous sign-in failed');
+      }
+      
+      const data = await response.json();
+      
+      // Store anonymous session info
+      localStorage.setItem('a2r_anonymous_session', JSON.stringify({
+        userId: data.user?.id,
+        sessionId: data.session?.id,
+        isAnonymous: true,
+        createdAt: Date.now(),
+      }));
+      
+      // Reload to apply session
+      window.location.reload();
+    } catch (err) {
+      setError('Failed to start guest session. Please try again.');
+      console.error('Anonymous sign-in error:', err);
+    } finally {
+      setIsAnonymousLoading(false);
+    }
+  }, []);
+  
+  // Check if we have an anonymous session
+  const [anonymousSession, setAnonymousSession] = useState(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const stored = localStorage.getItem('a2r_anonymous_session');
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
+  
+  const handleClearAnonymous = useCallback(() => {
+    localStorage.removeItem('a2r_anonymous_session');
+    setAnonymousSession(null);
   }, []);
 
   // Dark theme colors
@@ -372,6 +427,12 @@ export const ClerkAuthPanel: React.FC = () => {
   // Not signed in - Show sign in/up options
   return (
     <div style={{ padding: '40px 32px' }}>
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
       {error && (
         <GlassSurface 
           elevation="flat"
@@ -503,6 +564,140 @@ export const ClerkAuthPanel: React.FC = () => {
             Create Account
           </button>
         </div>
+      </GlassCard>
+
+      {/* Anonymous/Guest Sign In */}
+      <GlassCard 
+        elevation="flat" 
+        blur="sm" 
+        padding="lg" 
+        rounded="lg"
+        style={{ 
+          marginBottom: '24px',
+          background: 'rgba(52, 199, 89, 0.05)',
+          borderColor: 'rgba(52, 199, 89, 0.2)'
+        }}
+      >
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '16px',
+          marginBottom: '16px'
+        }}>
+          <div style={{
+            width: '48px',
+            height: '48px',
+            borderRadius: '12px',
+            background: 'rgba(52, 199, 89, 0.15)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <Shield style={{ width: '24px', height: '24px', color: '#34c759' }} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <h4 style={{ 
+              fontSize: '14px', 
+              fontWeight: '600', 
+              color: darkTheme.textPrimary,
+              marginBottom: '4px',
+              letterSpacing: '-0.01em'
+            }}>
+              Just browsing?
+            </h4>
+            <p style={{ 
+              fontSize: '13px', 
+              color: darkTheme.textTertiary,
+              lineHeight: '1.4'
+            }}>
+              Continue as a guest without creating an account
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={handleAnonymousSignIn}
+          disabled={isAnonymousLoading}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '10px',
+            padding: '14px 24px',
+            background: 'transparent',
+            border: `1px solid #34c759`,
+            borderRadius: '8px',
+            color: '#34c759',
+            fontSize: '14px',
+            fontWeight: '600',
+            cursor: isAnonymousLoading ? 'not-allowed' : 'pointer',
+            transition: 'all 0.2s ease',
+            width: '100%',
+            opacity: isAnonymousLoading ? 0.7 : 1
+          }}
+          onMouseEnter={(e) => {
+            if (!isAnonymousLoading) {
+              e.currentTarget.style.background = 'rgba(52, 199, 89, 0.1)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent';
+          }}
+        >
+          {isAnonymousLoading ? (
+            <>
+              <div style={{
+                width: '16px',
+                height: '16px',
+                border: '2px solid #34c759',
+                borderTop: '2px solid transparent',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite'
+              }} />
+              Creating guest session...
+            </>
+          ) : (
+            <>
+              <Shield style={{ width: '18px', height: '18px' }} />
+              Continue as Guest
+              <ArrowRight style={{ width: '16px', height: '16px' }} />
+            </>
+          )}
+        </button>
+
+        {anonymousSession && (
+          <div style={{
+            marginTop: '16px',
+            padding: '12px 16px',
+            background: 'rgba(52, 199, 89, 0.1)',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <CheckCircle style={{ width: '16px', height: '16px', color: '#34c759' }} />
+              <span style={{ fontSize: '13px', color: '#34c759' }}>
+                Guest session active
+              </span>
+            </div>
+            <button
+              onClick={handleClearAnonymous}
+              style={{
+                fontSize: '12px',
+                color: darkTheme.textTertiary,
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px 8px',
+                borderRadius: '4px'
+              }}
+            >
+              Clear
+            </button>
+          </div>
+        )}
       </GlassCard>
 
       {/* Benefits */}

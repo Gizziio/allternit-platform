@@ -85,11 +85,13 @@ STEP 3: Run Acceptance Tests
 STEP 4: Check Invariants
 - Verify: no policy violations
 - Check: all acceptance.invariants hold
+- **Documentation Invariant**: Verify that `README.md`, `SPEC.md`, or `ARCHITECTURE.md` have been updated/created to reflect the structural changes.
 - Inspect: code quality metrics
 
 STEP 5: Evaluate Evidence
 - Verify: acceptance.evidence artifacts exist
 - Check: build_report.yaml present
+- **Autoland Verification**: Ensure all builder artifacts are correctly contained within `.a2r/runner/{{wih_id}}/` and not in the project root.
 - Validate: artifact hashes match
 
 STEP 6: Produce Verdict

@@ -1,0 +1,118 @@
+[package]
+name = "{{PROJECT_NAME}}"
+version = "1.0.0"
+edition = "2021"
+rust-version = "1.75"
+authors = ["Your Name <your.email@example.com>"]
+license = "MIT OR Apache-2.0"
+description = "A high-performance Rust application"
+repository = "https://github.com/yourusername/{{PROJECT_NAME}}"
+readme = "README.md"
+keywords = ["async", "tokio", "rust"]
+categories = ["command-line-utilities", "web-programming"]
+
+[dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Logging and tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "fmt"] }
+tracing-appender = "0.2"
+
+# CLI parsing
+clap = { version = "4.4", features = ["derive", "env"] }
+
+# Configuration
+config = "0.14"
+
+# HTTP client (optional)
+reqwest = { version = "0.11", features = ["json"], optional = true }
+
+# Web framework (optional) - choose one
+axum = { version = "0.7", features = ["macros"], optional = true }
+tower = { version = "0.4", features = ["full"], optional = true }
+tower-http = { version = "0.5", features = ["cors", "trace", "compression"], optional = true }
+
+# Database (optional) - choose one
+sqlx = { version = "0.7", features = ["runtime-tokio", "tls-rustls", "postgres", "uuid", "chrono"], optional = true }
+deadpool-postgres = { version = "0.12", optional = true }
+tokio-postgres = { version = "0.7", optional = true }
+
+# Redis (optional)
+redis = { version = "0.24", features = ["tokio-comp", "connection-manager"], optional = true }
+
+# Utilities
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.6", features = ["v4", "serde"] }
+once_cell = "1.19"
+
+# Metrics and monitoring (optional)
+prometheus = { version = "0.13", optional = true }
+
+# Feature flags for different project types
+[features]
+default = ["cli", "http-client"]
+cli = ["clap"]
+web = ["axum", "tower", "tower-http", "prometheus"]
+http-client = ["reqwest"]
+database = ["sqlx"]
+cache = ["redis"]
+full = ["cli", "web", "http-client", "database", "cache"]
+
+[dev-dependencies]
+# Testing utilities
+tokio-test = "0.4"
+pretty_assertions = "1.4"
+wiremock = "0.6"
+
+# Property-based testing
+proptest = "1.4"
+
+# Benchmarking
+criterion = { version = "0.5", features = ["html_reports"] }
+
+# Fake data generation
+fake = { version = "2.9", features = ["derive", "uuid", "chrono"] }
+
+# HTTP testing for web apps
+reqwest = { version = "0.11", features = ["json"] }
+
+[profile.dev]
+opt-level = 0
+debug = true
+incremental = true
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[profile.test]
+opt-level = 2
+debug = true
+
+[profile.bench]
+opt-level = 3
+debug = false
+lto = true
+
+[[bin]]
+name = "{{PROJECT_NAME}}"
+path = "src/main.rs"
+
+[[bench]]
+name = "benchmark"
+harness = false
+
+[workspace]

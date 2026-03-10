@@ -1,144 +1,98 @@
 /**
- * Cowork Mode Rail Configuration
+ * Cowork Mode Rail Configuration - Redesigned
  * 
- * Organized structure:
- * - header: Logo/brand, Mode switcher
- * - core: Main navigation
- * - workstreams: Runs, Drafts, Tasks
- * - artifacts: Docs, Tables, Files, Exports
- * - plugins: Installed, Skills, Commands, MCPs
- * - context: Projects, Sessions, Sources
- * - system: Settings
+ * Structure (mirrors Chat mode):
+ * - New Task (like New Chat)
+ * - Agent Hub (shared with Chat mode)
+ * - Cron (scheduled tasks)
+ * - Tasks (like Conversations - has Tasks & Agent Tasks tabs)
  */
 
 import { 
-  House, 
-  Files, 
-  PlugsConnected, 
-  Robot, 
-  Toolbox, 
-  Gear,
-  Note,
-  Table,
-  Kanban,
-  Globe,
-  Database,
-  ShieldCheck,
-  Brain,
-  ChatText,
-  ClockCounterClockwise,
-  ArrowSquareOut,
   Plus,
-  // Additional icons
-  FileText,
-  ChartLineUp,
-  Target,
-  Lightbulb,
+  Robot,
+  CalendarCheck,
+  Clock,
+  List,
+  Lightning,
+  CheckSquare,
 } from '@phosphor-icons/react';
 import { RailConfigSection } from './rail.config';
 
 export const COWORK_RAIL_CONFIG: RailConfigSection[] = [
-  // Core Navigation
+  // New Task - Top action (like New Chat)
   {
-    id: 'core',
-    title: 'Core',
+    id: 'new-task',
+    title: '',
     collapsible: false,
     defaultExpanded: true,
     items: [
       { 
-        id: 'cw-new', 
-        label: 'New Document', 
+        id: 'cw-new-task', 
+        label: 'New Task', 
         icon: Plus, 
-        payload: 'new-document', 
+        payload: 'cowork-new-task', 
         isAction: true,
         shortcut: '⌘N'
       },
     ]
   },
   
-  // Workstreams
+  // Agent Hub - Shared section (same as Chat mode)
   {
-    id: 'workstreams',
-    title: 'Workstreams',
-    icon: Kanban,
+    id: 'agent-hub',
+    title: 'Agent',
+    icon: Robot,
+    collapsible: false,
+    defaultExpanded: true,
+    items: [
+      { 
+        id: 'cw-agent-hub', 
+        label: 'Agent Hub', 
+        icon: Robot, 
+        payload: 'agent-hub',
+        shortcut: '⌘⇧A'
+      },
+    ]
+  },
+  
+  // Cron - Right underneath Agent Hub
+  {
+    id: 'cron',
+    title: 'Cron',
+    icon: CalendarCheck,
+    collapsible: false,
+    defaultExpanded: true,
+    items: [
+      { 
+        id: 'cw-cron', 
+        label: 'Cron', 
+        icon: CalendarCheck, 
+        payload: 'cowork-cron',
+      },
+    ]
+  },
+  
+  // Tasks Section - Mirrors Chat's Conversations exactly
+  // Has "Tasks" and "Agent Tasks" tabs
+  {
+    id: 'tasks',
+    title: 'Tasks',
+    icon: CheckSquare,
+    isDynamic: true,
     defaultExpanded: true,
     collapsible: true,
-    items: [
-      { id: 'cw-runs', label: 'Runs', icon: ClockCounterClockwise, payload: 'cowork-runs', badge: 3 },
-      { id: 'cw-drafts', label: 'Drafts', icon: Note, payload: 'cowork-drafts' },
-      { id: 'cw-tasks', label: 'Tasks', icon: Kanban, payload: 'cowork-tasks', badge: 7 },
-      { id: 'cowork-agent-session', label: 'Agent Tasks', icon: Robot, payload: 'cowork-agent-session' },
-    ]
+    items: [],
   },
-  
-  // Artifacts
-  {
-    id: 'artifacts',
-    title: 'Artifacts',
-    icon: Files,
-    defaultExpanded: true,
-    collapsible: true,
-    items: [
-      { id: 'cw-docs', label: 'Documents', icon: FileText, payload: 'cowork-documents' },
-      { id: 'cw-tables', label: 'Tables', icon: Table, payload: 'cowork-tables' },
-      { id: 'cw-files', label: 'Files', icon: Files, payload: 'cowork-files' },
-      { id: 'cw-exports', label: 'Exports', icon: ArrowSquareOut, payload: 'cowork-exports' },
-    ]
-  },
-  
-  // Plugins
-  {
-    id: 'plugins',
-    title: 'Plugins',
-    icon: PlugsConnected,
-    defaultExpanded: false,
-    collapsible: true,
-    items: [
-      { id: 'cw-installed', label: 'Installed', icon: PlugsConnected, payload: 'plugins' },
-      { id: 'cw-skills', label: 'Skills', icon: Brain, payload: 'plugins' },
-      { id: 'cw-commands', label: 'Commands', icon: ShieldCheck, payload: 'plugins' },
-      { id: 'cw-mcp', label: 'MCPs', icon: Globe, payload: 'plugins' },
-    ]
-  },
-  
-  // Context
-  {
-    id: 'context',
-    title: 'Context',
-    icon: Database,
-    defaultExpanded: false,
-    collapsible: true,
-    items: [
-      { id: 'cw-projects', label: 'Projects', icon: Toolbox, payload: 'workspace' },
-      { id: 'cw-sessions', label: 'Sessions', icon: ChatText, payload: 'chat' },
-      { id: 'cw-insights', label: 'Insights', icon: Lightbulb, payload: 'insights' },
-      { id: 'cw-sources', label: 'Sources', icon: Database, payload: 'workspace' },
-    ]
-  },
-  
-  // Analytics
-  {
-    id: 'analytics',
-    title: 'Analytics',
-    icon: ChartLineUp,
-    defaultExpanded: false,
-    collapsible: true,
-    items: [
-      { id: 'cw-activity', label: 'Activity', icon: ClockCounterClockwise, payload: 'activity' },
-      { id: 'cw-goals', label: 'Goals', icon: Target, payload: 'goals' },
-    ]
-  },
-  
-  // System
-  {
-    id: 'system',
-    title: 'Settings',
-    icon: Gear,
-    defaultExpanded: false,
-    collapsible: true,
-    items: [
-      { id: 'cw-settings', label: 'Settings', icon: Gear, payload: 'settings' },
-      { id: 'cw-openclaw', label: 'OpenClaw', icon: Robot, payload: 'openclaw' },
-    ]
-  }
 ];
+
+// Plugin categories for the full-view overlay
+export const PLUGIN_CATEGORIES = [
+  { id: 'skills', label: 'Skills', icon: Lightning },
+  { id: 'commands', label: 'Commands', icon: List },
+  { id: 'connectors', label: 'Connectors', icon: Robot },
+  { id: 'mcps', label: 'MCPs', icon: Clock },
+  { id: 'plugins', label: 'Plugins', icon: Plus },
+] as const;
+
+export type PluginCategory = typeof PLUGIN_CATEGORIES[number]['id'];

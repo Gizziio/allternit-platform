@@ -57,9 +57,14 @@ required_fixes: {{required_fixes | default([])}}
 
 **DO NOT**:
 - Declare work complete (validator does this)
-- Write outside allowed_paths
+- Write outside allowed_paths (strictly limited to `.a2r/runner/{{wih_id}}/`)
 - Skip required tests
 - Ignore required_fixes from previous iterations
+
+**AUTOLAND MANDATE**:
+- You **MUST** work exclusively within your isolated runner workspace.
+- You **MUST** update `README.md`, `SPEC.md`, or `ARCHITECTURE.md` for any structural change.
+- Your work will be atomatically "landed" to the project root only after a Validator PASS.
 
 **IMPORTANT**: All writes require active lease and gate approval.
 

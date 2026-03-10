@@ -175,7 +175,7 @@ export function LiveExecutionMonitor({
   onStop,
   onRestart,
 }: LiveExecutionMonitorProps) {
-  const modeColors = MODE_COLORS[mode];
+  const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.code;
   const [activeTab, setActiveTab] = useState<'logs' | 'dag' | 'wihs'>('logs');
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [dag, setDag] = useState<DagExecution | null>(null);
@@ -252,7 +252,7 @@ export function LiveExecutionMonitor({
         setActiveTab={setActiveTab}
         onStop={onStop}
         onRestart={onRestart}
-        modeColors={modeColors}
+        modeColors={modeColors as typeof MODE_COLORS.code}
       />
 
       {/* Tab Content */}
@@ -269,19 +269,19 @@ export function LiveExecutionMonitor({
             logsEndRef={logsEndRef}
             logsContainerRef={logsContainerRef}
             onScroll={handleScroll}
-            modeColors={modeColors}
+            modeColors={modeColors as typeof MODE_COLORS.code}
           />
         )}
         {activeTab === 'dag' && dag && (
           <DagPanel
             dag={dag}
-            modeColors={modeColors}
+            modeColors={modeColors as typeof MODE_COLORS.code}
           />
         )}
         {activeTab === 'wihs' && (
           <WihsPanel
             wihs={wihs}
-            modeColors={modeColors}
+            modeColors={modeColors as typeof MODE_COLORS.code}
           />
         )}
       </div>
@@ -664,7 +664,7 @@ function DagPanel({
                   </div>
                   <div className="text-sm flex items-center gap-3" style={{ color: TEXT.tertiary }}>
                     <span className="capitalize">{node.status}</span>
-                    {node.duration > 0 && (
+                    {node.duration && node.duration > 0 && (
                       <>
                         <span>•</span>
                         <span>{node.duration}ms</span>

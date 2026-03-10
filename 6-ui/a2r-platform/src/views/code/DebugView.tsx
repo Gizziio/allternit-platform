@@ -152,7 +152,7 @@ const VariableTreeNode: React.FC<{
       </div>
       {hasChildren && isExpanded && (
         <div>
-          {variable.children!.map((child, idx) => (
+          {(variable.children ?? []).map((child, idx) => (
             <VariableTreeNode
               key={idx}
               variable={child}

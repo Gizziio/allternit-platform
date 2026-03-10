@@ -1,6 +1,7 @@
 "use client";
 
-import type { ComponentProps, ReactNode } from "react";
+import * as React from "react";
+import { type ComponentProps, type ReactNode, forwardRef } from "react";
 
 import { useControllableState } from "@radix-ui/react-use-controllable-state";
 import { Button } from "@/components/ui/button";
@@ -108,46 +109,49 @@ export const MicSelector = ({
 
 export type MicSelectorTriggerProps = ComponentProps<typeof Button>;
 
-export const MicSelectorTrigger = ({
-  children,
-  ...props
-}: MicSelectorTriggerProps) => {
-  const { setWidth } = useContext(MicSelectorContext);
-  const ref = useRef<HTMLButtonElement>(null);
+export const MicSelectorTrigger = forwardRef<HTMLButtonElement, MicSelectorTriggerProps>(
+  function MicSelectorTriggerInner({ children, ...props }, forwardedRef) {
+    const { setWidth } = useContext(MicSelectorContext);
+    const ref = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => {
-    // Create a ResizeObserver to detect width changes
-    const resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const newWidth = (entry.target as HTMLElement).offsetWidth;
-        if (newWidth) {
-          setWidth?.(newWidth);
+    useEffect(() => {
+      // Create a ResizeObserver to detect width changes
+      const resizeObserver = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          const newWidth = (entry.target as HTMLElement).offsetWidth;
+          if (newWidth) {
+            setWidth?.(newWidth);
+          }
         }
+      });
+
+      if (ref.current) {
+        resizeObserver.observe(ref.current);
       }
-    });
 
-    if (ref.current) {
-      resizeObserver.observe(ref.current);
-    }
+      // Clean up the observer when component unmounts
+      return () => {
+        resizeObserver.disconnect();
+      };
+    }, [setWidth]);
 
-    // Clean up the observer when component unmounts
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [setWidth]);
-
-  return (
-    <PopoverTrigger asChild>
-      <Button variant="outline" {...props} ref={ref}>
-        {children}
-        <ChevronsUpDownIcon
-          className="shrink-0 text-muted-foreground"
-          size={16}
-        />
-      </Button>
-    </PopoverTrigger>
-  );
-};
+    return (
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          {...props}
+          ref={forwardedRef}
+        >
+          {children}
+          <ChevronsUpDownIcon
+            className="shrink-0 text-muted-foreground"
+            size={16}
+          />
+        </Button>
+      </PopoverTrigger>
+    );
+  }
+);
 
 export type MicSelectorContentProps = ComponentProps<typeof Command> & {
   popoverOptions?: ComponentProps<typeof PopoverContent>;

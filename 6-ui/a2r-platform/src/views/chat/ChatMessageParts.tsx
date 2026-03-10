@@ -7,7 +7,7 @@
 "use client";
 
 import React from "react";
-import type { RichContentPart, A2UIPart } from "./ChatMessageTypes";
+import type { RichContentPart, A2UIPart, ArtifactPart } from "./ChatMessageTypes";
 import { MessageA2UI } from "./ChatA2UI";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -315,12 +315,12 @@ function ArtifactRenderer({
   return (
     <Card className="hover:bg-muted/50 transition-colors cursor-pointer">
       <CardContent className="p-3 flex items-center gap-3">
-        <span className="text-2xl">{typeIcons[part.artifactType] || "📎"}</span>
+        <span className="text-2xl">{typeIcons[(part as ArtifactPart).artifactType] || "📎"}</span>
         <div className="flex-1 min-w-0">
           <div className="font-medium truncate">{part.title}</div>
-          {part.preview && (
+          {(part as ArtifactPart).preview && (
             <div className="text-sm text-muted-foreground truncate">
-              {part.preview}
+              {(part as ArtifactPart).preview}
             </div>
           )}
         </div>

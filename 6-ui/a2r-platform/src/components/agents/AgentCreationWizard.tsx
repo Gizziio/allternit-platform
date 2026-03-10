@@ -79,7 +79,7 @@ interface AgentConfig {
 
 type WizardStep = 'identity' | 'character' | 'tools' | 'review';
 
-const STEPS: { id: WizardStep; label: string; icon: React.ComponentType<{size?: number}> }[] = [
+const STEPS: { id: WizardStep; label: string; icon: React.ComponentType<{size?: number | string}> }[] = [
   { id: 'identity', label: 'Identity', icon: UserCircle },
   { id: 'character', label: 'Character', icon: Palette },
   { id: 'tools', label: 'Tools', icon: Wrench },
@@ -197,7 +197,7 @@ export function AgentCreationWizard({
         <WizardHeader 
           currentStep={currentStep} 
           progress={progress}
-          modeColors={modeColors}
+          modeColors={modeColors as typeof MODE_COLORS.chat}
           onClose={onClose}
         />
 
@@ -207,7 +207,7 @@ export function AgentCreationWizard({
           <WizardSidebar 
             steps={STEPS}
             currentStep={currentStep}
-            modeColors={modeColors}
+            modeColors={modeColors as typeof MODE_COLORS.chat}
           />
 
           {/* Main Content */}
@@ -224,27 +224,27 @@ export function AgentCreationWizard({
                   <IdentityStep 
                     config={config} 
                     updateConfig={updateConfig}
-                    modeColors={modeColors}
+                    modeColors={modeColors as typeof MODE_COLORS.chat}
                   />
                 )}
                 {currentStep === 'character' && (
                   <CharacterStep 
                     config={config} 
                     updateConfig={updateConfig}
-                    modeColors={modeColors}
+                    modeColors={modeColors as typeof MODE_COLORS.chat}
                   />
                 )}
                 {currentStep === 'tools' && (
                   <ToolsStep 
                     config={config} 
                     updateConfig={updateConfig}
-                    modeColors={modeColors}
+                    modeColors={modeColors as typeof MODE_COLORS.chat}
                   />
                 )}
                 {currentStep === 'review' && (
                   <ReviewStep 
                     config={config}
-                    modeColors={modeColors}
+                    modeColors={modeColors as typeof MODE_COLORS.chat}
                   />
                 )}
               </motion.div>
@@ -252,7 +252,7 @@ export function AgentCreationWizard({
           </div>
 
           {/* Live Preview */}
-          <AgentPreview config={config} modeColors={modeColors} />
+          <AgentPreview config={config} modeColors={modeColors as typeof MODE_COLORS.chat} />
         </div>
 
         {/* Footer */}
@@ -265,7 +265,7 @@ export function AgentCreationWizard({
           onBack={handleBack}
           onNext={handleNext}
           onCreate={handleCreate}
-          modeColors={modeColors}
+          modeColors={modeColors as typeof MODE_COLORS.chat}
         />
       </motion.div>
     </div>
@@ -324,11 +324,8 @@ function WizardHeader({
 
         <button
           onClick={onClose}
-          className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
-          style={{ 
-            color: TEXT.secondary,
-            hover: { backgroundColor: 'rgba(255,255,255,0.05)' },
-          }}
+          className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors hover:bg-white/5"
+          style={{ color: TEXT.secondary }}
         >
           ×
         </button>
@@ -410,11 +407,11 @@ function IdentityStep({
       <SectionTitle 
         title="Agent Identity" 
         subtitle="Define the basic identity and model for your agent"
-        modeColors={modeColors}
+        modeColors={modeColors as typeof MODE_COLORS.chat}
       />
 
       {/* Name Input */}
-      <FormField label="Agent Name" required modeColors={modeColors}>
+      <FormField label="Agent Name" required modeColors={modeColors as typeof MODE_COLORS.chat}>
         <input
           type="text"
           value={config.name}
@@ -431,7 +428,7 @@ function IdentityStep({
       </FormField>
 
       {/* Description */}
-      <FormField label="Description" modeColors={modeColors}>
+      <FormField label="Description" modeColors={modeColors as typeof MODE_COLORS.chat}>
         <textarea
           value={config.description}
           onChange={(e) => updateConfig('description', e.target.value)}
@@ -448,7 +445,7 @@ function IdentityStep({
       </FormField>
 
       {/* Model Selection */}
-      <FormField label="Model" required modeColors={modeColors}>
+      <FormField label="Model" required modeColors={modeColors as typeof MODE_COLORS.chat}>
         <div className="grid grid-cols-1 gap-2">
           {MODELS.map((model) => (
             <ModelCard
@@ -459,7 +456,7 @@ function IdentityStep({
                 updateConfig('model', model.id);
                 updateConfig('provider', model.provider);
               }}
-              modeColors={modeColors}
+              modeColors={modeColors as typeof MODE_COLORS.chat}
             />
           ))}
         </div>
@@ -484,11 +481,11 @@ function CharacterStep({
       <SectionTitle 
         title="Character & Behavior" 
         subtitle="Define how your agent thinks and behaves"
-        modeColors={modeColors}
+        modeColors={modeColors as typeof MODE_COLORS.chat}
       />
 
       {/* Setup Selection */}
-      <FormField label="Agent Setup" required modeColors={modeColors}>
+      <FormField label="Agent Setup" required modeColors={modeColors as typeof MODE_COLORS.chat}>
         <div className="grid grid-cols-1 gap-3">
           {CHARACTER_SETUPS.map((setup) => (
             <SetupCard
@@ -496,14 +493,14 @@ function CharacterStep({
               setup={setup}
               isSelected={config.setup === setup.id}
               onSelect={() => updateConfig('setup', setup.id)}
-              modeColors={modeColors}
+              modeColors={modeColors as typeof MODE_COLORS.chat}
             />
           ))}
         </div>
       </FormField>
 
       {/* Capabilities */}
-      <FormField label="Capabilities" modeColors={modeColors}>
+      <FormField label="Capabilities" modeColors={modeColors as typeof MODE_COLORS.chat}>
         <div className="grid grid-cols-2 gap-2">
           {CAPABILITIES.map((cap) => {
             const Icon = cap.icon;
@@ -552,7 +549,7 @@ function CharacterStep({
       {/* System Prompt */}
       <FormField 
         label="System Prompt" 
-        modeColors={modeColors}
+        modeColors={modeColors as typeof MODE_COLORS.chat}
         hint="Define the agent's personality and instructions"
       >
         <textarea
@@ -570,7 +567,7 @@ function CharacterStep({
       </FormField>
 
       {/* Temperature */}
-      <FormField label="Creativity (Temperature)" modeColors={modeColors}>
+      <FormField label="Creativity (Temperature)" modeColors={modeColors as typeof MODE_COLORS.chat}>
         <div className="px-2">
           <input
             type="range"
@@ -625,7 +622,7 @@ function ToolsStep({
       <SectionTitle 
         title="Tools & Actions" 
         subtitle="Select tools your agent can use"
-        modeColors={modeColors}
+        modeColors={modeColors as typeof MODE_COLORS.chat}
       />
 
       {Object.entries(toolsByCategory).map(([category, tools]) => (
@@ -650,7 +647,7 @@ function ToolsStep({
                       : [...config.tools, tool.id];
                     updateConfig('tools', newTools);
                   }}
-                  modeColors={modeColors}
+                  modeColors={modeColors as typeof MODE_COLORS.chat}
                 />
               );
             })}
@@ -659,7 +656,7 @@ function ToolsStep({
       ))}
 
       {/* Max Iterations */}
-      <FormField label="Max Iterations" modeColors={modeColors}>
+      <FormField label="Max Iterations" modeColors={modeColors as typeof MODE_COLORS.chat}>
         <div className="flex items-center gap-4">
           <input
             type="number"
@@ -698,7 +695,7 @@ function ReviewStep({
       <SectionTitle 
         title="Review & Create" 
         subtitle="Verify your agent configuration"
-        modeColors={modeColors}
+        modeColors={modeColors as typeof MODE_COLORS.chat}
       />
 
       <div 
@@ -832,17 +829,17 @@ function AgentPreview({
         <PreviewStat 
           label="Tools" 
           value={config.tools.length.toString()} 
-          modeColors={modeColors}
+          modeColors={modeColors as typeof MODE_COLORS.chat}
         />
         <PreviewStat 
           label="Model" 
           value={config.model.split('-')[0].toUpperCase()}
-          modeColors={modeColors}
+          modeColors={modeColors as typeof MODE_COLORS.chat}
         />
         <PreviewStat 
           label="Creativity" 
           value={`${Math.round(config.temperature * 100)}%`}
-          modeColors={modeColors}
+          modeColors={modeColors as typeof MODE_COLORS.chat}
         />
       </div>
     </div>

@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
-import { FolderTree, ChevronRight, ChevronDown, FileText, Code2, FileJson, Palette, BookOpen } from 'lucide-react';
+import React, { useCallback, useState } from 'react';
+import { FolderTree, ChevronRight, ChevronDown, FileText, Code2, FileJson, Palette, BookOpen, Upload, FileCode } from 'lucide-react';
 import GlassSurface from '@/design/GlassSurface';
+import { useDropTarget, type FileWithData } from '@/components/GlobalDropzone';
 
 interface FileNode {
   name: string;
@@ -10,6 +11,15 @@ interface FileNode {
   children?: FileNode[];
   language?: 'tsx' | 'ts' | 'json' | 'css' | 'md';
   path: string;
+}
+
+interface DroppedFile {
+  id: string;
+  name: string;
+  type: 'code' | 'document' | 'image' | 'other';
+  dataUrl: string;
+  size: number;
+  extractedText?: string;
 }
 
 const mockFileTree: FileNode[] = [
@@ -235,6 +245,33 @@ export const ExplorerView: React.FC = () => {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['src', 'src/views', 'src/shell']));
   const [selectedFile, setSelectedFile] = useState<string | null>('src/views/ChatView.tsx');
   const [filterText, setFilterText] = useState('');
+  const [droppedFiles, setDroppedFiles] = useState<DroppedFile[]>([]);
+
+  const handleDroppedFiles = useCallback(async (files: FileWithData[]) => {
+    const newFiles: DroppedFile[] = files.map(({ file, dataUrl, extractedText }) => {
+      // Determine file type
+      let fileType: DroppedFile['type'] = 'other';
+      if (file.name.match(/\.(tsx?|jsx?|json|css|html|md|py|rs|go)$/)) {
+        fileType = 'code';
+      } else if (file.type.includes('pdf') || file.name.endsWith('.docx')) {
+        fileType = 'document';
+      }
+      
+      return {
+        id: `code-drop-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        name: file.name,
+        type: fileType,
+        dataUrl,
+        size: file.size,
+        extractedText,
+      };
+    });
+    
+    setDroppedFiles(prev => [...prev, ...newFiles]);
+  }, []);
+
+  // Register as drop target for code
+  useDropTarget('code', handleDroppedFiles);
 
   const handleToggleExpand = (path: string) => {
     setExpandedFolders((prev) => {
@@ -252,6 +289,22 @@ export const ExplorerView: React.FC = () => {
     setSelectedFile(path);
   };
 
+  const getDroppedFileIcon = (file: DroppedFile) => {
+    if (file.type === 'code') {
+      return <FileCode size={16} color="#3b82f6" />;
+    }
+    if (file.type === 'document') {
+      return <FileText size={16} color="#ef4444" />;
+    }
+    return <Upload size={16} color="var(--text-secondary)" />;
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
   return (
     <GlassSurface>
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: 'var(--bg-secondary)' }}>
@@ -261,7 +314,7 @@ export const ExplorerView: React.FC = () => {
             <FolderTree size={20} color="var(--accent-primary)" />
             <div>
               <div style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>Explorer</div>
-              <div style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>Project file structure</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>Project file structure — drag & drop to upload</div>
             </div>
           </div>
 
@@ -292,6 +345,41 @@ export const ExplorerView: React.FC = () => {
             }}
           />
         </div>
+
+        {/* Dropped Files Section */}
+        {droppedFiles.length > 0 && (
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)', background: 'rgba(52,199,89,0.05)' }}>
+            <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: '8px', textTransform: 'uppercase' }}>
+              Uploaded Files
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              {droppedFiles.slice(-5).map((file) => (
+                <div
+                  key={file.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '6px 8px',
+                    borderRadius: '4px',
+                    background: 'rgba(255,255,255,0.05)',
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)';
+                  }}
+                >
+                  {getDroppedFileIcon(file)}
+                  <span style={{ fontSize: '12px', color: 'var(--text-primary)', flex: 1 }}>{file.name}</span>
+                  <span style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>{formatFileSize(file.size)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* File Tree */}
         <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>

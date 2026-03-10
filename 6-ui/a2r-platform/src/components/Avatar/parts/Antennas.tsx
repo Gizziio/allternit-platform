@@ -17,7 +17,7 @@ import type {
 
 interface AntennasProps {
   config: AvatarConfig['antennas'];
-  colors: AvatarConfig['colors'];
+  colors: AvatarConfig['colors'] | undefined;
   size: number;
   emotion?: AvatarEmotion;
   isAnimating?: boolean;
@@ -151,11 +151,11 @@ export const Antennas: React.FC<AntennasProps> = ({
   emotion,
   isAnimating,
 }) => {
-  if (config.count === 0) return null;
+  if (!config || config.count === 0) return null;
   
-  const style = ANTENNA_PATHS[config.style];
-  const positions = getAntennaPositions(config.count);
-  const tipDecoration = TIP_DECORATIONS[config.tipDecoration || 'none'];
+  const style = ANTENNA_PATHS[config?.style || 'curved'] || ANTENNA_PATHS['curved'];
+  const positions = getAntennaPositions(config?.count || 2);
+  const tipDecoration = TIP_DECORATIONS[config?.tipDecoration || 'none'];
   const scale = size / 100;
   
   // Emotion-based antenna adjustments
@@ -177,13 +177,13 @@ export const Antennas: React.FC<AntennasProps> = ({
   return (
     <g 
       className="avatar-antennas"
-      data-count={config.count}
-      data-style={config.style}
-      data-animation={isAnimating ? config.animation : 'static'}
+      data-count={config?.count || 2}
+      data-style={config?.style || 'curved'}
+      data-animation={isAnimating ? config?.animation : 'static'}
     >
       {positions.map((pos, index) => {
         const emotionTransform = getEmotionTransform(pos.angle);
-        const animationClass = isAnimating ? getAnimationClass(config.animation) : '';
+        const animationClass = isAnimating ? getAnimationClass(config?.animation || 'sway') : '';
         
         return (
           <g
@@ -197,7 +197,7 @@ export const Antennas: React.FC<AntennasProps> = ({
             {/* Antenna stem */}
             <path
               d={style.path}
-              stroke={colors.secondary}
+              stroke={colors?.secondary ?? '#8b5cf6'}
               strokeWidth={2 * scale}
               strokeLinecap="round"
               fill="none"
@@ -207,7 +207,7 @@ export const Antennas: React.FC<AntennasProps> = ({
             {tipDecoration.render(
               style.tipX,
               style.tipY,
-              colors.glow
+              colors?.glow ?? '#6366f1'
             )}
           </g>
         );

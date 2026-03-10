@@ -43,6 +43,7 @@ pub mod viz_routes;
 pub mod workflow_routes_ext;
 pub mod tools;
 pub mod chrome_session_routes;
+pub mod cli_tools_routes;
 
 // P4 DAG Integration crate imports
 use crate::environment_routes::EnvironmentSpecLoaderWithCache;
@@ -1632,6 +1633,8 @@ async fn main() -> anyhow::Result<()> {
         .merge(shell_ui::create_shell_ui_routes())
         // MCP tools integration endpoints
         .merge(tools_routes::create_tools_routes())
+        // CLI tools management endpoints
+        .merge(cli_tools_routes::cli_tools_router())
         // MCP server management with policy enforcement
         .merge(mcp_routes::create_mcp_routes(shared_state.clone()))
         // Swarm Advanced endpoints (P4.1 integration) - uses actual crate engine

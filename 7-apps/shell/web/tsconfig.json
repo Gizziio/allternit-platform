@@ -52,8 +52,10 @@
       "@/types/*": ["../../../6-ui/a2r-platform/src/types/*"],
       "@/app/*": ["../../../6-ui/a2r-platform/src/app/*"],
       "@/hooks/*": ["../../../6-ui/a2r-platform/src/hooks/*"],
+      "@/plugins/*": ["../../../6-ui/a2r-platform/src/plugins/*"],
       "@/stores/*": ["../../../6-ui/a2r-platform/src/stores/*"],
       "@/agent-workspace/*": ["../../../6-ui/a2r-platform/src/agent-workspace/*"],
+      "@/api/*": ["../../../6-ui/a2r-platform/src/api/*"],
       "@/dev/*": ["../../../6-ui/a2r-platform/src/dev/*"]
     }
   },
@@ -63,6 +65,7 @@
   ],
   "exclude": [
     "../../../6-ui/a2r-platform/src/a2r-usage/**/*",
+    "../../../6-ui/a2r-platform/src/dev-portal/**/*",
     "../../../6-ui/a2r-platform/src/**/*.test.ts",
     "../../../6-ui/a2r-platform/src/**/*.test.tsx"
   ],

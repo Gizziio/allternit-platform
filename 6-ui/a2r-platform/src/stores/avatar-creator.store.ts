@@ -652,10 +652,11 @@ export const useAvatarCreatorStore = create<AvatarCreatorState & AvatarCreatorAc
       
       addAccessory: (accessoryId) => {
         const state = get();
-        if (!state.currentConfig.accessories.includes(accessoryId)) {
+        const currentAccessories = state.currentConfig.accessories ?? [];
+        if (!currentAccessories.includes(accessoryId)) {
           const newConfig = {
             ...state.currentConfig,
-            accessories: [...state.currentConfig.accessories, accessoryId]
+            accessories: [...currentAccessories, accessoryId]
           };
           get()._addToHistory(newConfig, `Add accessory ${accessoryId}`);
           set({ currentConfig: newConfig });
@@ -664,9 +665,10 @@ export const useAvatarCreatorStore = create<AvatarCreatorState & AvatarCreatorAc
 
       removeAccessory: (accessoryId) => {
         const state = get();
+        const currentAccessories = state.currentConfig.accessories ?? [];
         const newConfig = {
           ...state.currentConfig,
-          accessories: state.currentConfig.accessories.filter(id => id !== accessoryId)
+          accessories: currentAccessories.filter(id => id !== accessoryId)
         };
         get()._addToHistory(newConfig, `Remove accessory ${accessoryId}`);
         set({ currentConfig: newConfig });
@@ -674,7 +676,8 @@ export const useAvatarCreatorStore = create<AvatarCreatorState & AvatarCreatorAc
 
       toggleAccessory: (accessoryId) => {
         const state = get();
-        const hasAccessory = state.currentConfig.accessories.includes(accessoryId);
+        const currentAccessories = state.currentConfig.accessories ?? [];
+        const hasAccessory = currentAccessories.includes(accessoryId);
         if (hasAccessory) {
           state.removeAccessory(accessoryId);
         } else {
@@ -817,15 +820,21 @@ export const useAvatarCreatorStore = create<AvatarCreatorState & AvatarCreatorAc
             switch (state.agentTemperament) {
               case 'precision':
                 defaultConfig.personality = { bounce: 0.1, sway: 0.05, breathing: true };
-                defaultConfig.eyes.blinkRate = 'slow';
+                if (defaultConfig.eyes) {
+                  defaultConfig.eyes.blinkRate = 'slow';
+                }
                 break;
               case 'exploratory':
                 defaultConfig.personality = { bounce: 0.4, sway: 0.3, breathing: true };
-                defaultConfig.eyes.preset = 'curious';
+                if (defaultConfig.eyes) {
+                  defaultConfig.eyes.preset = 'curious';
+                }
                 break;
               case 'systemic':
                 defaultConfig.personality = { bounce: 0.2, sway: 0.1, breathing: true };
-                defaultConfig.antennas.animation = 'pulse';
+                if (defaultConfig.antennas) {
+                  defaultConfig.antennas.animation = 'pulse';
+                }
                 break;
               case 'balanced':
                 defaultConfig.personality = { bounce: 0.3, sway: 0.15, breathing: true };

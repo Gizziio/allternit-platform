@@ -11,8 +11,11 @@ import {
   FileText,
   Plus,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Share2
 } from "lucide-react";
+// ShareDialog is not available - create inline or skip for now
+const ShareDialogPlaceholder = ({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) => null;
 
 import { ChatComposer } from "@/views/chat/ChatComposer";
 export { ChatComposer as NewChatInput }; // EXPORT FOR LEGACY IMPORTS
@@ -266,6 +269,11 @@ export function ChatView({
   const [launchMascotEmotion, setLaunchMascotEmotion] = useState<GizziEmotion>('steady');
   const [launchMascotAttention, setLaunchMascotAttention] = useState<GizziAttention | null>(null);
   const mascotResetTimeoutRef = useRef<number | null>(null);
+  
+  // Share dialog state (placeholder)
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const shareVisibility: 'private' | 'workspace' | 'public' = 'private';
+  const currentChatId = chatId || 'welcome';
 
   // Send initial message if provided (for Cowork mode from launchpad)
   const hasSentInitialMessage = useRef(false);
@@ -565,7 +573,7 @@ export function ChatView({
   // Get theme colors for embedded agent session styling
   const getEmbeddedChatBackground = () => {
     if (!isAgentSessionEmbedded) {
-      return hideEmptyState || mode === 'cowork' ? 'transparent' : THEME.bg;
+      return hideEmptyState || mode === 'cowork' || mode === 'chat' ? 'transparent' : THEME.bg;
     }
     // Branded embedded session styling for chat surface (amber tones)
     return 'radial-gradient(circle at top right, rgba(212,149,106,0.08), transparent 34%), linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(0,0,0,0) 18%)';
@@ -771,8 +779,53 @@ export function ChatView({
             width: '100%',
             maxWidth: '760px',
             padding: '24px 20px 180px 20px',
-            boxSizing: 'border-box'
+            boxSizing: 'border-box',
+            position: 'relative'
           }}>
+            {/* Share Button - Top Right */}
+            <button
+              onClick={() => setShareDialogOpen(true)}
+              style={{
+                position: 'absolute',
+                top: '16px',
+                right: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 14px',
+                borderRadius: '8px',
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                color: THEME.textSecondary,
+                fontSize: '13px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                zIndex: 10,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                e.currentTarget.style.color = THEME.textPrimary;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                e.currentTarget.style.color = THEME.textSecondary;
+              }}
+            >
+              <Share2 size={14} />
+              Share
+            </button>
+            
+            {/* Share Dialog - Placeholder */}
+            {shareDialogOpen && (
+              <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+                <div style={{ background: '#252525', padding: 24, borderRadius: 12 }}>
+                  <p>Share functionality coming soon</p>
+                  <button onClick={() => setShareDialogOpen(false)} style={{ marginTop: 12 }}>Close</button>
+                </div>
+              </div>
+            )}
+            
             {embeddedAgentStrip}
             {mode === 'cowork' ? (
               // Cowork mode: messages + inline work blocks
@@ -861,7 +914,7 @@ export function ChatView({
           flexDirection: 'column',
           alignItems: 'center',
           /* Cowork mode inherits global background, Chat mode uses theme gradient */
-          background: hideEmptyState || mode === 'cowork' ? 'transparent' : THEME.bgGradient,
+          background: hideEmptyState || mode === 'cowork' || mode === 'chat' ? 'transparent' : THEME.bgGradient,
           pointerEvents: 'none',
           paddingBottom: '12px',
           zIndex: 40,

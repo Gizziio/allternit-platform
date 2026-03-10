@@ -1,0 +1,105 @@
+/**
+ * Media Capture Demo
+ * 
+ * Demonstrates the verify → review → destroy workflow for media capture.
+ * 
+ * Usage:
+ * ```typescript
+ * import { runMediaCaptureDemo } from "./demo";
+ * 
+ * await runMediaCaptureDemo();
+ * ```
+ */
+
+import {
+  MediaCaptureManager,
+  MediaReviewWorkflow,
+  captureVerificationMedia,
+  runCompleteWorkflow,
+} from "./index";
+import * as path from "path";
+import * as os from "os";
+
+export async function runMediaCaptureDemo(): Promise<void> {
+  console.log("=" .repeat(60));
+  console.log("Media Capture Demo: Verify → Review → Destroy");
+  console.log("=" .repeat(60));
+  
+  // Create capture manager
+  const captureDir = path.join(os.tmpdir(), "gizzi-captures", `demo_${Date.now()}`);
+  const manager = new MediaCaptureManager(captureDir);
+  const workflow = new MediaReviewWorkflow(manager);
+  
+  // Subscribe to state changes
+  workflow.onStateChange((state) => {
+    console.log(`\n[STATE CHANGE] Phase: ${state.phase}`);
+  });
+  
+  // Phase 1: CAPTURE
+  console.log("\n📸 Phase 1: Capture");
+  console.log("-".repeat(40));
+  
+  const { capture, stop } = await captureVerificationMedia(manager, {
+    sessionId: "demo_session",
+    verificationId: `verify_${Date.now()}`,
+    captureScreenshots: true,
+    captureVideo: false,
+    screenshotInterval: 500,
+    maxDuration: 5,
+  });
+  
+  console.log(`Capture started: ${capture.id}`);
+  console.log(`Output directory: ${captureDir}`);
+  
+  // Simulate verification work
+  console.log("Running verification (simulated)...");
+  await new Promise(r => setTimeout(r, 2000));
+  
+  // Stop capture
+  await stop();
+  console.log(`\n✅ Capture complete`);
+  console.log(`Screenshots captured: ${capture.screenshots.length}`);
+  
+  // Phase 2: REVIEW
+  console.log("\n🔍 Phase 2: Review");
+  console.log("-".repeat(40));
+  
+  const result = await runCompleteWorkflow(workflow, capture.id, true, 60);
+  
+  console.log(`Workflow state: ${result.state.phase}`);
+  console.log("Waiting for human review...");
+  
+  // Simulate user reviewing
+  await new Promise(r => setTimeout(r, 1000));
+  
+  // User approves
+  console.log("\n👤 User approves the capture");
+  await result.approve("demo@example.com", "Verification looks correct");
+  
+  const finalState = await result.waitForDecision();
+  console.log(`\n✅ Review complete: ${finalState.phase}`);
+  
+  // Phase 3: CLEANUP (auto-scheduled, but can be forced)
+  console.log("\n🗑️ Phase 3: Cleanup");
+  console.log("-".repeat(40));
+  
+  console.log("Auto-cleanup scheduled in 60 seconds...");
+  console.log("Forcing immediate cleanup for demo...");
+  
+  await workflow.cleanup(capture.id);
+  
+  const afterCleanup = workflow.getState(capture.id);
+  console.log(`\n✅ Cleanup complete: ${afterCleanup?.phase}`);
+  
+  // Cleanup
+  await workflow.destroy();
+  
+  console.log("\n" + "=" .repeat(60));
+  console.log("Demo complete!");
+  console.log("=" .repeat(60));
+}
+
+// Run if executed directly
+if (require.main === module) {
+  runMediaCaptureDemo().catch(console.error);
+}

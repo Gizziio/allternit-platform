@@ -22,6 +22,7 @@ import { createInitialNavState, navReducer } from '../nav/nav.store';
 import { sessionBridge } from '../integration/session-bridge';
 import { selectActiveView } from '../nav/nav.selectors';
 import { createViewRegistry } from '../views/registry';
+import { A2rCanvasView } from '../views/A2rCanvasView';
 import { ViewHost } from '../views/ViewHost';
 import type { ViewContext, ViewType } from '../nav/nav.types';
 import { ConsoleDrawer } from '../drawers/ConsoleDrawer';
@@ -108,6 +109,8 @@ import { BudgetDashboardView } from '../views/runtime/BudgetDashboardView';
 import { ReplayManagerView } from '../views/runtime/ReplayManagerView';
 import { PrewarmManagerView } from '../views/runtime/PrewarmManagerView';
 import { RuntimeOperationsView } from '../views/runtime/RuntimeOperationsView';
+// Meta-Swarm Views
+import { MetaSwarmDashboard } from '../views/MetaSwarmDashboard';
 // Sprint 1 - History & Search views
 import { HistoryView } from '../views/HistoryView';
 import { ArchivedView } from '../views/ArchivedView';
@@ -126,10 +129,13 @@ import { MonitorView } from '../views/MonitorView';
 import { RunsView as CoworkRunsView } from '../views/cowork/RunsView';
 import { DraftsView } from '../views/cowork/DraftsView';
 import { TasksView } from '../views/cowork/TasksView';
+import { CronView } from '../views/cowork/CronView';
+import { CoworkProjectView } from '../views/cowork/CoworkProjectView';
 import { DocumentsView } from '../views/cowork/DocumentsView';
 import { TablesView } from '../views/cowork/TablesView';
 import { FilesView } from '../views/cowork/FilesView';
 import { ExportsView } from '../views/cowork/ExportsView';
+import ProductsDiscoveryView from '../views/products/ProductsDiscoveryView';
 // Sprint 5 - Code sub-views
 import { ExplorerView } from '../views/code/ExplorerView';
 import { GitView } from '../views/code/GitView';
@@ -253,6 +259,200 @@ function OpenClawErrorFallback({ error }: { error?: Error }) {
           style={{ padding: '8px 16px', background: 'var(--accent-chat)', color: 'white', borderRadius: 6, border: 'none', cursor: 'pointer' }}
         >
           Reload
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Error fallback for critical views
+ * Shows user-friendly error message with retry option
+ */
+function ViewErrorFallback({
+  viewName,
+  error,
+  reset
+}: {
+  viewName: string;
+  error?: Error;
+  reset?: () => void;
+}) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%',
+        padding: '40px',
+        textAlign: 'center',
+        background: '#1a1a1a',
+      }}
+    >
+      <div
+        style={{
+          width: '64px',
+          height: '64px',
+          borderRadius: '50%',
+          background: 'rgba(239,68,68,0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: '24px',
+        }}
+      >
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      </div>
+      <h2 style={{ fontSize: '20px', fontWeight: 600, color: '#fff', marginBottom: '8px' }}>
+        {viewName} Error
+      </h2>
+      <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', marginBottom: '24px', maxWidth: '400px' }}>
+        Something went wrong loading this view. {error?.message && `(${error.message})`}
+      </p>
+      <div style={{ display: 'flex', gap: '12px' }}>
+        {reset && (
+          <button
+            onClick={reset}
+            style={{
+              padding: '10px 20px',
+              borderRadius: '8px',
+              border: 'none',
+              background: '#d4b08c',
+              color: '#1a1a1a',
+              fontSize: '14px',
+              fontWeight: 500,
+              cursor: 'pointer',
+            }}
+          >
+            Try Again
+          </button>
+        )}
+        <button
+          onClick={() => window.location.reload()}
+          style={{
+            padding: '10px 20px',
+            borderRadius: '8px',
+            border: '1px solid rgba(255,255,255,0.2)',
+            background: 'transparent',
+            color: '#fff',
+            fontSize: '14px',
+            cursor: 'pointer',
+          }}
+        >
+          Reload Page
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Elements view placeholder
+function ElementsView() {
+  return (
+    <div style={{ 
+      display: 'flex', 
+      height: '100%', 
+      alignItems: 'center', 
+      justifyContent: 'center',
+      padding: 32,
+      background: 'var(--bg-primary)'
+    }}>
+      <div style={{ textAlign: 'center' }}>
+        <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 8, color: 'var(--text-primary)' }}>
+          Elements
+        </h2>
+        <p style={{ color: 'var(--text-secondary)' }}>
+          Component library and design system elements.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// Error fallback wrapper component for ErrorBoundary
+function ErrorFallbackWrapper({ 
+  viewName, 
+  error, 
+  reset 
+}: { 
+  viewName: string; 
+  error?: Error; 
+  reset?: () => void; 
+}) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100%',
+        padding: '40px',
+        textAlign: 'center',
+        background: '#1a1a1a',
+      }}
+    >
+      <div
+        style={{
+          width: '64px',
+          height: '64px',
+          borderRadius: '50%',
+          background: 'rgba(239,68,68,0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: '24px',
+        }}
+      >
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      </div>
+      <h2 style={{ fontSize: '20px', fontWeight: 600, color: '#fff', marginBottom: '8px' }}>
+        {viewName} Error
+      </h2>
+      <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', marginBottom: '24px', maxWidth: '400px' }}>
+        Something went wrong loading this view. {error?.message && `(${error.message})`}
+      </p>
+      <div style={{ display: 'flex', gap: '12px' }}>
+        {reset && (
+          <button
+            onClick={reset}
+            style={{
+              padding: '10px 20px',
+              borderRadius: '8px',
+              border: 'none',
+              background: '#d4b08c',
+              color: '#1a1a1a',
+              fontSize: '14px',
+              fontWeight: 500,
+              cursor: 'pointer',
+            }}
+          >
+            Try Again
+          </button>
+        )}
+        <button
+          onClick={() => window.location.reload()}
+          style={{
+            padding: '10px 20px',
+            borderRadius: '8px',
+            border: '1px solid rgba(255,255,255,0.2)',
+            background: 'transparent',
+            color: '#fff',
+            fontSize: '14px',
+            cursor: 'pointer',
+          }}
+        >
+          Reload Page
         </button>
       </div>
     </div>
@@ -953,25 +1153,214 @@ function ShellAppInner() {
     workspace: CoworkRoot,
     browser: ({ context }: { context: ViewContext }) => <BrowserPaneWrapper><BrowserCapsuleEnhanced /></BrowserPaneWrapper>,
     browserview: ({ context }: { context: ViewContext }) => <BrowserPaneWrapper><BrowserCapsuleEnhanced /></BrowserPaneWrapper>,
-    studio: AgentView,
-    marketplace: ({ context }: { context: ViewContext }) => <MarketplaceView />,
-    plugins: PluginRegistryView,
-    registry: ToolsView,
-    memory: ({ context }: { context: ViewContext }) => <SkillsRegistryView />,
-    settings: ({ context }: { context: ViewContext }) => <SettingsView />,
-    terminal: (props) => <TerminalView />,
-    monitor: ({ context }: { context: ViewContext }) => <MonitorView />,
-    runner: AgentSystemView,
-    rails: AgentSystemView,
-    "run-replay": RunReplayView,
-    promotion: PromotionDashboardView,
-    "models-manage": ({ context }: { context: ViewContext }) => <ModelManagementView />,
-    code: CodeRoot,
-    playground: ({ context }: { context: ViewContext }) => <PlaygroundView />,
-    agent: AgentHub,
-    'agent-hub': AgentHub,
+    studio: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Studio" />}
+        onError={(error, errorInfo) => {
+          console.error('[Studio] Error:', error);
+          console.error('[Studio] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <AgentView />
+      </ErrorBoundary>
+    ),
+    marketplace: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Marketplace" />}
+        onError={(error, errorInfo) => {
+          console.error('[Marketplace] Error:', error);
+          console.error('[Marketplace] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <MarketplaceView />
+      </ErrorBoundary>
+    ),
+    plugins: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Plugin Registry" />}
+        onError={(error, errorInfo) => {
+          console.error('[PluginRegistry] Error:', error);
+          console.error('[PluginRegistry] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <PluginRegistryView />
+      </ErrorBoundary>
+    ),
+    registry: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Tools Registry" />}
+        onError={(error, errorInfo) => {
+          console.error('[ToolsRegistry] Error:', error);
+          console.error('[ToolsRegistry] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <ToolsView />
+      </ErrorBoundary>
+    ),
+    memory: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Skills Registry" />}
+        onError={(error, errorInfo) => {
+          console.error('[SkillsRegistry] Error:', error);
+          console.error('[SkillsRegistry] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <SkillsRegistryView />
+      </ErrorBoundary>
+    ),
+    settings: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Settings" />}
+        onError={(error, errorInfo) => {
+          console.error('[Settings] Error:', error);
+          console.error('[Settings] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <SettingsView />
+      </ErrorBoundary>
+    ),
+    terminal: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Terminal" />}
+        onError={(error, errorInfo) => {
+          console.error('[Terminal] Error:', error);
+          console.error('[Terminal] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <TerminalView />
+      </ErrorBoundary>
+    ),
+    monitor: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Monitor" />}
+        onError={(error, errorInfo) => {
+          console.error('[Monitor] Error:', error);
+          console.error('[Monitor] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <MonitorView />
+      </ErrorBoundary>
+    ),
+    runner: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Agent Runner" />}
+        onError={(error, errorInfo) => {
+          console.error('[Runner] Error:', error);
+          console.error('[Runner] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <AgentSystemView />
+      </ErrorBoundary>
+    ),
+    rails: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Rails" />}
+        onError={(error, errorInfo) => {
+          console.error('[Rails] Error:', error);
+          console.error('[Rails] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <AgentSystemView />
+      </ErrorBoundary>
+    ),
+    "run-replay": ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Run Replay" />}
+        onError={(error, errorInfo) => {
+          console.error('[RunReplay] Error:', error);
+          console.error('[RunReplay] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <RunReplayView />
+      </ErrorBoundary>
+    ),
+    promotion: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Promotion Dashboard" />}
+        onError={(error, errorInfo) => {
+          console.error('[PromotionDashboard] Error:', error);
+          console.error('[PromotionDashboard] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <PromotionDashboardView />
+      </ErrorBoundary>
+    ),
+    "models-manage": ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Model Management" />}
+        onError={(error, errorInfo) => {
+          console.error('[ModelManagement] Error:', error);
+          console.error('[ModelManagement] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <ModelManagementView />
+      </ErrorBoundary>
+    ),
+    code: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Code Editor" />}
+        onError={(error, errorInfo) => {
+          console.error('[CodeRoot] Error:', error);
+          console.error('[CodeRoot] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <CodeRoot />
+      </ErrorBoundary>
+    ),
+    playground: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Playground" />}
+        onError={(error, errorInfo) => {
+          console.error('[Playground] Error:', error);
+          console.error('[Playground] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <PlaygroundView />
+      </ErrorBoundary>
+    ),
+    elements: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Elements" />}
+        onError={(error, errorInfo) => {
+          console.error('[Elements] Error:', error);
+          console.error('[Elements] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <ElementsView />
+      </ErrorBoundary>
+    ),
+    agent: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Agent Hub" />}
+        onError={(error, errorInfo) => {
+          console.error('[AgentHub] Error:', error);
+          console.error('[AgentHub] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <AgentHub />
+      </ErrorBoundary>
+    ),
+    'agent-hub': ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Agent Hub" />}
+        onError={(error, errorInfo) => {
+          console.error('[AgentHub] Error:', error);
+          console.error('[AgentHub] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <AgentHub />
+      </ErrorBoundary>
+    ),
     "native-agent": ({ context }: { context: ViewContext }) => (
-      <NativeAgentView onOpenRuntimeOps={() => open("runtime-ops")} />
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Native Agent" />}
+        onError={(error, errorInfo) => {
+          console.error('[NativeAgent] Error:', error);
+          console.error('[NativeAgent] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <NativeAgentView onOpenRuntimeOps={() => open("runtime-ops")} />
+      </ErrorBoundary>
     ),
     openclaw: ({ context }: { context: ViewContext }) => (
       <ErrorBoundary fallback={<OpenClawErrorFallback />}>
@@ -1033,6 +1422,14 @@ function ShellAppInner() {
         <CanvasProtocolView />
       </ErrorBoundary>
     ),
+    "a2r-canvas": ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary fallback={<div>Failed to load A2r-Canvas</div>}>
+        <A2rCanvasView
+          sourceView={(context.viewType as any) || 'chat'}
+          sessionId={context.viewId}
+        />
+      </ErrorBoundary>
+    ),
     hooks: ({ context }: { context: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load Hooks System</div>}>
         <HooksSystemView />
@@ -1060,58 +1457,502 @@ function ShellAppInner() {
       </ErrorBoundary>
     ),
     // Infrastructure views (P4 DAG tasks)
-    swarm: ({ context }: { context: ViewContext }) => <SwarmMonitor />,
-    policy: ({ context }: { context: ViewContext }) => <PolicyManager />,
-    "task-executor": ({ context }: { context: ViewContext }) => <TaskExecutor />,
-    ontology: ({ context }: { context: ViewContext }) => <OntologyViewer />,
+    swarm: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Swarm Monitor" />}
+        onError={(error, errorInfo) => {
+          console.error('[SwarmMonitor] Error:', error);
+          console.error('[SwarmMonitor] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <SwarmMonitor />
+      </ErrorBoundary>
+    ),
+    policy: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Policy Manager" />}
+        onError={(error, errorInfo) => {
+          console.error('[PolicyManager] Error:', error);
+          console.error('[PolicyManager] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <PolicyManager />
+      </ErrorBoundary>
+    ),
+    "task-executor": ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Task Executor" />}
+        onError={(error, errorInfo) => {
+          console.error('[TaskExecutor] Error:', error);
+          console.error('[TaskExecutor] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <TaskExecutor />
+      </ErrorBoundary>
+    ),
+    ontology: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Ontology Viewer" />}
+        onError={(error, errorInfo) => {
+          console.error('[OntologyViewer] Error:', error);
+          console.error('[OntologyViewer] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <OntologyViewer />
+      </ErrorBoundary>
+    ),
     // AI & Vision views (P4/P5 DAG tasks)
-    ivkge: ({ context }: { context: ViewContext }) => <IVKGEPanel />,
-    multimodal: ({ context }: { context: ViewContext }) => <MultimodalInput />,
-    tambo: ({ context }: { context: ViewContext }) => <TamboStudio />,
+    ivkge: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="IVKGE Panel" />}
+        onError={(error, errorInfo) => {
+          console.error('[IVKGEPanel] Error:', error);
+          console.error('[IVKGEPanel] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <IVKGEPanel />
+      </ErrorBoundary>
+    ),
+    multimodal: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Multimodal Input" />}
+        onError={(error, errorInfo) => {
+          console.error('[MultimodalInput] Error:', error);
+          console.error('[MultimodalInput] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <MultimodalInput />
+      </ErrorBoundary>
+    ),
+    tambo: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Tambo Studio" />}
+        onError={(error, errorInfo) => {
+          console.error('[TamboStudio] Error:', error);
+          console.error('[TamboStudio] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <TamboStudio />
+      </ErrorBoundary>
+    ),
     // Security & Governance views (P5 DAG tasks)
-    receipts: ({ context }: { context: ViewContext }) => <ReceiptsViewer />,
-    "policy-gating": ({ context }: { context: ViewContext }) => <PolicyGating />,
-    security: ({ context }: { context: ViewContext }) => <SecurityDashboard />,
-    purpose: ({ context }: { context: ViewContext }) => <PurposeBinding />,
+    receipts: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Receipts Viewer" />}
+        onError={(error, errorInfo) => {
+          console.error('[ReceiptsViewer] Error:', error);
+          console.error('[ReceiptsViewer] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <ReceiptsViewer />
+      </ErrorBoundary>
+    ),
+    "policy-gating": ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Policy Gating" />}
+        onError={(error, errorInfo) => {
+          console.error('[PolicyGating] Error:', error);
+          console.error('[PolicyGating] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <PolicyGating />
+      </ErrorBoundary>
+    ),
+    security: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Security Dashboard" />}
+        onError={(error, errorInfo) => {
+          console.error('[SecurityDashboard] Error:', error);
+          console.error('[SecurityDashboard] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <SecurityDashboard />
+      </ErrorBoundary>
+    ),
+    purpose: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Purpose Binding" />}
+        onError={(error, errorInfo) => {
+          console.error('[PurposeBinding] Error:', error);
+          console.error('[PurposeBinding] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <PurposeBinding />
+      </ErrorBoundary>
+    ),
     // Browser & Execution views (P5 DAG tasks)
-    "dag-wih": ({ context }: { context: ViewContext }) => <DAGWIH />,
-    checkpointing: ({ context }: { context: ViewContext }) => <Checkpointing />,
+    "dag-wih": ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="DAG WIH" />}
+        onError={(error, errorInfo) => {
+          console.error('[DAGWIH] Error:', error);
+          console.error('[DAGWIH] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <DAGWIH />
+      </ErrorBoundary>
+    ),
+    checkpointing: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Checkpointing" />}
+        onError={(error, errorInfo) => {
+          console.error('[Checkpointing] Error:', error);
+          console.error('[Checkpointing] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <Checkpointing />
+      </ErrorBoundary>
+    ),
     // Observability views (P4 DAG tasks)
-    observability: ({ context }: { context: ViewContext }) => <ObservabilityDashboard />,
+    observability: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Observability Dashboard" />}
+        onError={(error, errorInfo) => {
+          console.error('[ObservabilityDashboard] Error:', error);
+          console.error('[ObservabilityDashboard] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <ObservabilityDashboard />
+      </ErrorBoundary>
+    ),
     // Services views
-    directive: ({ context }: { context: ViewContext }) => <DirectiveCompiler />,
-    evaluation: ({ context }: { context: ViewContext }) => <EvaluationHarness />,
-    "gc-agents": ({ context }: { context: ViewContext }) => <GCAgents />,
+    directive: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Directive Compiler" />}
+        onError={(error, errorInfo) => {
+          console.error('[DirectiveCompiler] Error:', error);
+          console.error('[DirectiveCompiler] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <DirectiveCompiler />
+      </ErrorBoundary>
+    ),
+    evaluation: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Evaluation Harness" />}
+        onError={(error, errorInfo) => {
+          console.error('[EvaluationHarness] Error:', error);
+          console.error('[EvaluationHarness] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <EvaluationHarness />
+      </ErrorBoundary>
+    ),
+    "gc-agents": ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="GC Agents" />}
+        onError={(error, errorInfo) => {
+          console.error('[GCAgents] Error:', error);
+          console.error('[GCAgents] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <GCAgents />
+      </ErrorBoundary>
+    ),
     // Runtime Management Views (N11, N12, N16)
-    "runtime-ops": ({ context }: { context: ViewContext }) => <RuntimeOperationsView onOpenView={open} />,
-    "budget-dashboard": ({ context }: { context: ViewContext }) => <BudgetDashboardView />,
-    "replay-manager": ({ context }: { context: ViewContext }) => <ReplayManagerView />,
-    "prewarm-manager": ({ context }: { context: ViewContext }) => <PrewarmManagerView />,
+    "runtime-ops": ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Runtime Operations" />}
+        onError={(error, errorInfo) => {
+          console.error('[RuntimeOperations] Error:', error);
+          console.error('[RuntimeOperations] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <RuntimeOperationsView onOpenView={open} />
+      </ErrorBoundary>
+    ),
+    "budget-dashboard": ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Budget Dashboard" />}
+        onError={(error, errorInfo) => {
+          console.error('[BudgetDashboard] Error:', error);
+          console.error('[BudgetDashboard] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <BudgetDashboardView />
+      </ErrorBoundary>
+    ),
+    "replay-manager": ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Replay Manager" />}
+        onError={(error, errorInfo) => {
+          console.error('[ReplayManager] Error:', error);
+          console.error('[ReplayManager] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <ReplayManagerView />
+      </ErrorBoundary>
+    ),
+    "prewarm-manager": ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Prewarm Manager" />}
+        onError={(error, errorInfo) => {
+          console.error('[PrewarmManager] Error:', error);
+          console.error('[PrewarmManager] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <PrewarmManagerView />
+      </ErrorBoundary>
+    ),
     // Chat History views
-    history: ({ context }: { context: ViewContext }) => <HistoryView />,
-    archived: ({ context }: { context: ViewContext }) => <ArchivedView />,
+    history: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="History" />}
+        onError={(error, errorInfo) => {
+          console.error('[History] Error:', error);
+          console.error('[History] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <HistoryView />
+      </ErrorBoundary>
+    ),
+    archived: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Archived" />}
+        onError={(error, errorInfo) => {
+          console.error('[Archived] Error:', error);
+          console.error('[Archived] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <ArchivedView />
+      </ErrorBoundary>
+    ),
     // Global Search
-    search: ({ context }: { context: ViewContext }) => <SearchView />,
+    search: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Search" />}
+        onError={(error, errorInfo) => {
+          console.error('[Search] Error:', error);
+          console.error('[Search] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <SearchView />
+      </ErrorBoundary>
+    ),
     // Debug view
-    debug: ({ context }: { context: ViewContext }) => <DebugView />,
+    debug: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Debug" />}
+        onError={(error, errorInfo) => {
+          console.error('[Debug] Error:', error);
+          console.error('[Debug] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <DebugView />
+      </ErrorBoundary>
+    ),
     // Cowork Analytics views
-    insights: ({ context }: { context: ViewContext }) => <InsightsView />,
-    activity: ({ context }: { context: ViewContext }) => <ActivityView />,
-    goals: ({ context }: { context: ViewContext }) => <GoalsView />,
+    insights: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Insights" />}
+        onError={(error, errorInfo) => {
+          console.error('[Insights] Error:', error);
+          console.error('[Insights] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <InsightsView />
+      </ErrorBoundary>
+    ),
+    activity: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Activity" />}
+        onError={(error, errorInfo) => {
+          console.error('[Activity] Error:', error);
+          console.error('[Activity] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <ActivityView />
+      </ErrorBoundary>
+    ),
+    goals: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Goals" />}
+        onError={(error, errorInfo) => {
+          console.error('[Goals] Error:', error);
+          console.error('[Goals] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <GoalsView />
+      </ErrorBoundary>
+    ),
     // Sprint 4 - Cowork content views
-    'cowork-runs': ({ context }: { context: ViewContext }) => <CoworkRunsView />,
-    'cowork-drafts': ({ context }: { context: ViewContext }) => <DraftsView />,
-    'cowork-tasks': ({ context }: { context: ViewContext }) => <TasksView />,
-    'cowork-documents': ({ context }: { context: ViewContext }) => <DocumentsView />,
-    'cowork-tables': ({ context }: { context: ViewContext }) => <TablesView />,
-    'cowork-files': ({ context }: { context: ViewContext }) => <FilesView />,
-    'cowork-exports': ({ context }: { context: ViewContext }) => <ExportsView />,
+    'cowork-runs': ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Cowork Runs" />}
+        onError={(error, errorInfo) => {
+          console.error('[CoworkRuns] Error:', error);
+          console.error('[CoworkRuns] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <CoworkRunsView />
+      </ErrorBoundary>
+    ),
+    'cowork-drafts': ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Drafts" />}
+        onError={(error, errorInfo) => {
+          console.error('[Drafts] Error:', error);
+          console.error('[Drafts] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <DraftsView />
+      </ErrorBoundary>
+    ),
+    'cowork-tasks': ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Tasks" />}
+        onError={(error, errorInfo) => {
+          console.error('[Tasks] Error:', error);
+          console.error('[Tasks] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <TasksView />
+      </ErrorBoundary>
+    ),
+    'cowork-cron': ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Cron" />}
+        onError={(error, errorInfo) => {
+          console.error('[Cron] Error:', error);
+          console.error('[Cron] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <CronView />
+      </ErrorBoundary>
+    ),
+    'cowork-project': ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Cowork Project" />}
+        onError={(error, errorInfo) => {
+          console.error('[CoworkProject] Error:', error);
+          console.error('[CoworkProject] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <CoworkProjectView />
+      </ErrorBoundary>
+    ),
+    'cowork-documents': ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Documents" />}
+        onError={(error, errorInfo) => {
+          console.error('[Documents] Error:', error);
+          console.error('[Documents] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <DocumentsView />
+      </ErrorBoundary>
+    ),
+    'cowork-tables': ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Tables" />}
+        onError={(error, errorInfo) => {
+          console.error('[Tables] Error:', error);
+          console.error('[Tables] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <TablesView />
+      </ErrorBoundary>
+    ),
+    'cowork-files': ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Files" />}
+        onError={(error, errorInfo) => {
+          console.error('[Files] Error:', error);
+          console.error('[Files] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <FilesView />
+      </ErrorBoundary>
+    ),
+    'cowork-exports': ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Exports" />}
+        onError={(error, errorInfo) => {
+          console.error('[Exports] Error:', error);
+          console.error('[Exports] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <ExportsView />
+      </ErrorBoundary>
+    ),
+    'cowork-new-task': ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="New Task" />}
+        onError={(error, errorInfo) => {
+          console.error('[CoworkNewTask] Error:', error);
+          console.error('[CoworkNewTask] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <CoworkRoot />
+      </ErrorBoundary>
+    ),
+    products: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Products Discovery" />}
+        onError={(error, errorInfo) => {
+          console.error('[ProductsDiscovery] Error:', error);
+          console.error('[ProductsDiscovery] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <ProductsDiscoveryView />
+      </ErrorBoundary>
+    ),
     // Sprint 5 - Code sub-views
-    'code-explorer': ({ context }: { context: ViewContext }) => <ExplorerView />,
-    'code-git': ({ context }: { context: ViewContext }) => <GitView />,
-    'code-threads': ({ context }: { context: ViewContext }) => <ThreadsView />,
-    'code-automations': ({ context }: { context: ViewContext }) => <CodeAutomationsView />,
-    'code-skills': ({ context }: { context: ViewContext }) => <SkillsView />,
+    'code-explorer': ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Code Explorer" />}
+        onError={(error, errorInfo) => {
+          console.error('[CodeExplorer] Error:', error);
+          console.error('[CodeExplorer] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <ExplorerView />
+      </ErrorBoundary>
+    ),
+    'code-git': ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Git" />}
+        onError={(error, errorInfo) => {
+          console.error('[Git] Error:', error);
+          console.error('[Git] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <GitView />
+      </ErrorBoundary>
+    ),
+    'code-threads': ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Code Threads" />}
+        onError={(error, errorInfo) => {
+          console.error('[CodeThreads] Error:', error);
+          console.error('[CodeThreads] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <ThreadsView />
+      </ErrorBoundary>
+    ),
+    'code-automations': ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Code Automations" />}
+        onError={(error, errorInfo) => {
+          console.error('[CodeAutomations] Error:', error);
+          console.error('[CodeAutomations] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <CodeAutomationsView />
+      </ErrorBoundary>
+    ),
+    'code-skills': ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Code Skills" />}
+        onError={(error, errorInfo) => {
+          console.error('[CodeSkills] Error:', error);
+          console.error('[CodeSkills] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <SkillsView />
+      </ErrorBoundary>
+    ),
     // Agent Session Views - Full-screen agent experiences
     'chat-agent-session': ({ context }: { context: ViewContext }) => (
       <ChatModeAgentSession 
@@ -1288,7 +2129,7 @@ function ShellAppInner() {
                           sessionMode: 'agent',
                           agentId: selectedAgent?.id,
                           agentName: selectedAgent?.name,
-                          workspaceScope: getOpenClawWorkspacePathFromAgent(selectedAgent),
+                          workspaceScope: getOpenClawWorkspacePathFromAgent(selectedAgent) ?? undefined,
                           runtimeModel: selectedAgent?.model,
                           agentFeatures: {
                             workspace: true,
@@ -1358,6 +2199,12 @@ function ShellAppInner() {
         <PluginManagerPanel
           isOpen={pluginPanelOpen}
           onClose={() => setPluginPanelOpen(false)}
+          onOpenSettings={() => {
+            setPluginPanelOpen(false);
+            sessionStorage.setItem('a2r-settings-section', 'integrations');
+            sessionStorage.setItem('a2r-settings-tab', 'connectors');
+            open('settings');
+          }}
         />
       </SessionProvider>
       </VoiceProvider>

@@ -16,7 +16,7 @@
 import React, { Suspense, lazy } from "react";
 import { ErrorBoundary, ChatViewErrorBoundary } from "@/components/error-boundary";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
-import { Skeleton } from "@/components/ui/Skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { MessageSquare, AlertCircle, WifiOff } from "lucide-react";
 

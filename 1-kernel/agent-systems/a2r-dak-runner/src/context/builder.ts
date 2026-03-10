@@ -20,6 +20,7 @@ import {
   ReceiptId,
   ContextPackId,
   CorrelationId,
+  PolicyBundleId,
 } from '../types';
 
 export interface ContextPackInputs {
@@ -141,12 +142,12 @@ export class ContextPackBuilder {
         dagId: inputs.dagId,
         nodeId: inputs.nodeId,
         receiptRefs: inputs.receiptRefs,
-        policyBundleId: inputs.policyBundleId,
+        policyBundleId: inputs.policyBundleId as PolicyBundleId,
         planHashes: {
-          plan: planHashes.plan,
-          todo: planHashes.todo,
-          progress: planHashes.progress,
-          findings: planHashes.findings,
+          plan: planHashes.plan || '',
+          todo: planHashes.todo || '',
+          progress: planHashes.progress || '',
+          findings: planHashes.findings || '',
         },
       },
       correlationId,
@@ -293,7 +294,7 @@ export class ContextPackBuilder {
         dagId,
         nodeId,
         receiptRefs: [],
-        policyBundleId,
+        policyBundleId: policyBundleId as PolicyBundleId,
         planHashes: {},
       },
       correlationId,

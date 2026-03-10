@@ -12,7 +12,7 @@ import { createModuleLogger } from "@/lib/logger";
 
 const log = createModuleLogger("tools/steps/web-search");
 
-const A2R_OPERATOR_URL = process.env.A2R_OPERATOR_URL || "http://127.0.0.1:3010";
+const A2R_OPERATOR_URL = process.env.A2R_OPERATOR_URL || "http://127.0.0.1:3000";
 
 export type SearchProviderOptions = {
   provider: "browser-use" | "playwright" | "computer-use";

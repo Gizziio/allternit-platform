@@ -85,7 +85,7 @@ function SeededRuntimeConfigurationPanel() {
         healthy: false,
         message: "Driver not registered",
       },
-      isActive: settings.driver.driver_type === "microvm",
+      isActive: false,
     },
     {
       driver_type: "container" as const,
@@ -107,7 +107,7 @@ function SeededRuntimeConfigurationPanel() {
         healthy: false,
         message: "Driver not registered",
       },
-      isActive: settings.driver.driver_type === "container",
+      isActive: false,
     },
     {
       driver_type: "wasm" as const,
@@ -129,7 +129,7 @@ function SeededRuntimeConfigurationPanel() {
         healthy: false,
         message: "Driver not registered",
       },
-      isActive: settings.driver.driver_type === "wasm",
+      isActive: false,
     },
   ];
 
@@ -140,36 +140,9 @@ function SeededRuntimeConfigurationPanel() {
           settings={settings}
           drivers={drivers}
           onRefresh={async () => {}}
-          onResetSettings={async () => {
-            setSettings((current) => ({
-              ...current,
-              driver: {
-                ...current.driver,
-                driver_type: "process",
-                isolation_level: "limited",
-              },
-              replay: {
-                ...current.replay,
-                capture_level: "minimal",
-              },
-            }));
-          }}
-          onActivateDriver={async (driverType) => {
-            setSettings((current) => ({
-              ...current,
-              driver: {
-                ...current.driver,
-                driver_type: driverType,
-                isolation_level: driverType === "microvm" ? "maximum" : "limited",
-              },
-            }));
-          }}
-          onUpdateSettings={async (patch) => {
-            setSettings((current) => ({
-              ...current,
-              ...patch,
-            }));
-          }}
+          onResetSettings={async () => {}}
+          onActivateDriver={async () => {}}
+          onUpdateSettings={async () => {}}
           showManagementLinks
         />
       </div>

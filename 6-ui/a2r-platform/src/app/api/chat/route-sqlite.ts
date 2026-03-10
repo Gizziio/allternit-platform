@@ -156,7 +156,8 @@ function parseStructuredValue(value: unknown): unknown {
   ) {
     try {
       return JSON.parse(trimmed);
-    } catch {
+    } catch (error) {
+      console.error("[Chat] Failed to parse structured value:", error, "Value:", trimmed);
       return value;
     }
   }
@@ -197,7 +198,8 @@ function inferSourceTitle(url: string, fallback?: string): string {
   if (fallback && fallback.trim()) return fallback.trim();
   try {
     return new URL(url).hostname.replace(/^www\./, "");
-  } catch {
+  } catch (error) {
+    console.error("[Chat] Failed to infer source title from URL:", error, "URL:", url);
     return url;
   }
 }

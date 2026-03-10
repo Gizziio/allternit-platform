@@ -70,7 +70,7 @@ const generateMockResults = (query: string): SearchResult[] => {
               : category === 'Documents'
                 ? `/docs/${query.replace(/\s+/g, '-')}.pdf`
                 : `Conversation about ${query}`,
-        category: category as FilterType,
+        category: category as 'Code',
         timestamp: `${Math.floor(Math.random() * 23) + 1}m ago`,
         icon: getCategoryIcon(category),
       });

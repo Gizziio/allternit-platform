@@ -20,8 +20,6 @@ export interface PanelGroupProps {
   className?: string;
   /** Auto save panel layout to localStorage key */
   autoSaveId?: string;
-  /** Tag for debugging */
-  tag?: string;
 }
 
 /**
@@ -45,13 +43,11 @@ export function PanelGroup({
   children, 
   className,
   autoSaveId,
-  tag 
 }: PanelGroupProps) {
   return (
     <ResizablePanelGroup
       direction={direction}
       autoSaveId={autoSaveId}
-      tag={tag}
       className={cn(
         'flex h-full w-full',
         direction === 'horizontal' ? 'flex-row' : 'flex-col',

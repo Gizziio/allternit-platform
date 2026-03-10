@@ -1,0 +1,171 @@
+# =============================================================================
+# A2R Platform Development Environment - Git Ignore
+# =============================================================================
+
+# Environment files
+.env
+.env.local
+.env.*.local
+.env.production
+.env.staging
+
+# Secrets
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+secrets/
+.secrets.baseline
+
+# Dependencies
+node_modules/
+vendor/
+.gitvendor/
+
+# Build artifacts
+build/
+dist/
+out/
+target/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Go
+*.o
+*.a
+*.test
+*.prof
+vendor/
+go.sum.old
+
+# Rust
+Cargo.lock
+cargo.lock
+**/*.rs.bk
+*.rlib
+*.rmeta
+
+# Node.js / TypeScript
+.next/
+.nuxt/
+.cache/
+coverage/
+*.tsbuildinfo
+.npm
+.pnpm-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Testing
+coverage/
+.nyc_output/
+*.lcov
+
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-*
+.project
+.classpath
+.settings/
+
+# VS Code (keep settings for devcontainer)
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/tasks.json
+
+# Devcontainer
+.devcontainer/
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+*.db-wal
+*.db-shm
+
+# Infrastructure data
+.data/
+volumes/
+postgres-data/
+redis-data/
+minio-data/
+mailpit-data/
+chromadb-data/
+localstack-data/
+nats-data/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+
+# Kubernetes
+*.kubeconfig
+kubeconfig
+
+# Certificates
+certs/
+certificates/
+*.csr
+
+# Documentation builds
+docs/_build/
+site/
+
+# Air (Go hot reload)
+tmp/
+.air.toml
+
+# Compiled binaries
+bin/
+
+# Prisma
+prisma/migrations/migration_lock.toml

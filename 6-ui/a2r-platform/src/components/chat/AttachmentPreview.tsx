@@ -1,0 +1,680 @@
+'use client';
+
+import React, { useState } from 'react';
+import { 
+  X, 
+  FileText, 
+  Image as ImageIcon, 
+  FileCode, 
+  FileSpreadsheet, 
+  FileJson,
+  File as FileGeneric,
+  Film,
+  Music,
+  Download,
+  Maximize2,
+  FileType
+} from 'lucide-react';
+
+// ============================================================================
+// Types
+// ============================================================================
+
+export interface AttachmentPreviewItem {
+  id: string;
+  name: string;
+  dataUrl: string;
+  type: 'image' | 'document' | 'code' | 'spreadsheet' | 'json' | 'video' | 'audio' | 'gif' | 'screenshot' | 'other';
+  size?: number;
+  extractedText?: string;
+}
+
+interface AttachmentPreviewProps {
+  attachments: AttachmentPreviewItem[];
+  onRemove?: (id: string) => void;
+  onPreview?: (item: AttachmentPreviewItem) => void;
+  variant?: 'compact' | 'detailed' | 'grid';
+  maxHeight?: number;
+}
+
+// ============================================================================
+// File Type Helpers
+// ============================================================================
+
+function getFileCategory(filename: string, type: string): AttachmentPreviewItem['type'] {
+  const ext = filename.split('.').pop()?.toLowerCase() || '';
+  
+  if (type === 'gif' || ext === 'gif') return 'gif';
+  if (type === 'screenshot') return 'screenshot';
+  if (type.startsWith('image/') || ['png', 'jpg', 'jpeg', 'webp', 'svg'].includes(ext)) return 'image';
+  if (type.startsWith('video/') || ['mp4', 'mov', 'avi', 'webm'].includes(ext)) return 'video';
+  if (type.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'm4a'].includes(ext)) return 'audio';
+  if (ext === 'json' || type.includes('json')) return 'json';
+  if (['csv', 'xlsx', 'xls'].includes(ext)) return 'spreadsheet';
+  if (['pdf', 'docx', 'doc', 'txt', 'md'].includes(ext)) return 'document';
+  if (['ts', 'tsx', 'js', 'jsx', 'py', 'rs', 'go', 'java', 'cpp', 'c', 'h', 'css', 'html'].includes(ext)) return 'code';
+  
+  return 'other';
+}
+
+function getFileIcon(type: AttachmentPreviewItem['type']) {
+  switch (type) {
+    case 'image':
+    case 'gif':
+    case 'screenshot':
+      return ImageIcon;
+    case 'document':
+      return FileText;
+    case 'code':
+      return FileCode;
+    case 'spreadsheet':
+      return FileSpreadsheet;
+    case 'json':
+      return FileJson;
+    case 'video':
+      return Film;
+    case 'audio':
+      return Music;
+    default:
+      return FileGeneric;
+  }
+}
+
+function getFileColor(type: AttachmentPreviewItem['type']): string {
+  switch (type) {
+    case 'image':
+    case 'gif':
+    case 'screenshot':
+      return '#D4956A';
+    case 'document':
+      return '#ef4444';
+    case 'code':
+      return '#3b82f6';
+    case 'spreadsheet':
+      return '#22c55e';
+    case 'json':
+      return '#f59e0b';
+    case 'video':
+      return '#a855f7';
+    case 'audio':
+      return '#ec4899';
+    default:
+      return '#9B9B9B';
+  }
+}
+
+function formatFileSize(bytes?: number): string {
+  if (!bytes) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function getFileExtension(name: string): string {
+  return name.split('.').pop()?.toUpperCase() || 'FILE';
+}
+
+export { getFileCategory, getFileIcon, getFileColor, formatFileSize, getFileExtension };
+
+// ============================================================================
+// Components
+// ============================================================================
+
+export function AttachmentPreview({ 
+  attachments, 
+  onRemove, 
+  onPreview,
+  variant = 'detailed',
+  maxHeight = 300 
+}: AttachmentPreviewProps) {
+  if (attachments.length === 0) return null;
+
+  return (
+    <div style={{
+      padding: '12px 16px',
+      borderTop: '1px solid rgba(255,255,255,0.06)',
+    }}>
+      <div style={{
+        display: 'flex',
+        gap: 12,
+        overflowX: 'auto',
+        paddingBottom: 8,
+        maxHeight,
+      }}>
+        {attachments.map((att) => (
+          <AttachmentCard 
+            key={att.id} 
+            item={att} 
+            onRemove={onRemove}
+            onPreview={onPreview}
+            variant={variant}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+interface AttachmentCardProps {
+  item: AttachmentPreviewItem;
+  onRemove?: (id: string) => void;
+  onPreview?: (item: AttachmentPreviewItem) => void;
+  variant: 'compact' | 'detailed' | 'grid';
+}
+
+function AttachmentCard({ item, onRemove, onPreview, variant }: AttachmentCardProps) {
+  const [isHovered, setIsHovered] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  
+  const isImage = item.type === 'image' || item.type === 'gif' || item.type === 'screenshot';
+  const canPreview = isImage || item.type === 'video' || item.dataUrl.startsWith('data:image');
+  const color = getFileColor(item.type);
+  const Icon = getFileIcon(item.type);
+  const size = formatFileSize(item.size);
+  const ext = getFileExtension(item.name);
+
+  if (variant === 'compact') {
+    return (
+      <CompactCard 
+        item={item} 
+        isImage={isImage}
+        color={color}
+        Icon={Icon}
+        size={size}
+        onRemove={onRemove}
+        imageError={imageError}
+        setImageError={setImageError}
+      />
+    );
+  }
+
+  return (
+    <div
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      style={{
+        position: 'relative',
+        width: 140,
+        flexShrink: 0,
+        background: 'rgba(255,255,255,0.03)',
+        border: `1px solid ${isHovered ? color : 'rgba(255,255,255,0.08)'}`,
+        borderRadius: 12,
+        overflow: 'hidden',
+        transition: 'all 0.2s ease',
+        boxShadow: isHovered ? `0 4px 20px ${color}20` : 'none',
+      }}
+    >
+      {/* Preview Area */}
+      <div
+        style={{
+          height: 100,
+          background: isImage && !imageError 
+            ? 'transparent' 
+            : `linear-gradient(135deg, ${color}10, ${color}05)`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        {isImage && !imageError ? (
+          <img
+            src={item.dataUrl}
+            alt={item.name}
+            onError={() => setImageError(true)}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+            }}
+          />
+        ) : (
+          <div style={{ textAlign: 'center' }}>
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 12,
+                background: `${color}20`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 8px',
+              }}
+            >
+              <Icon size={24} color={color} />
+            </div>
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                color: `${color}CC`,
+                letterSpacing: '0.05em',
+              }}
+            >
+              {ext}
+            </span>
+          </div>
+        )}
+
+        {/* Hover Overlay with actions */}
+        {isHovered && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'rgba(0,0,0,0.6)',
+              backdropFilter: 'blur(2px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              animation: 'fadeIn 0.15s ease',
+            }}
+          >
+            <style>{`@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }`}</style>
+            
+            {canPreview && onPreview && (
+              <button
+                onClick={() => onPreview(item)}
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 8,
+                  border: 'none',
+                  background: 'rgba(255,255,255,0.15)',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Maximize2 size={16} />
+              </button>
+            )}
+            
+            <a
+              href={item.dataUrl}
+              download={item.name}
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 8,
+                border: 'none',
+                background: 'rgba(255,255,255,0.15)',
+                color: '#fff',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textDecoration: 'none',
+              }}
+            >
+              <Download size={16} />
+            </a>
+          </div>
+        )}
+
+        {/* Remove button */}
+        {onRemove && (
+          <button
+            onClick={() => onRemove(item.id)}
+            style={{
+              position: 'absolute',
+              top: 6,
+              right: 6,
+              width: 22,
+              height: 22,
+              borderRadius: 6,
+              border: 'none',
+              background: isHovered ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.3)',
+              color: '#fff',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: isHovered ? 1 : 0,
+              transition: 'all 0.15s',
+              zIndex: 2,
+            }}
+          >
+            <X size={12} />
+          </button>
+        )}
+
+        {/* File type badge */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 6,
+            left: 6,
+            padding: '2px 6px',
+            borderRadius: 4,
+            background: color,
+            fontSize: 9,
+            fontWeight: 700,
+            color: '#000',
+            textTransform: 'uppercase',
+          }}
+        >
+          {item.type === 'screenshot' ? 'SCREEN' : ext}
+        </div>
+      </div>
+
+      {/* Info Area */}
+      <div style={{ padding: 10 }}>
+        <p
+          style={{
+            margin: 0,
+            fontSize: 12,
+            fontWeight: 500,
+            color: 'rgba(245,240,232,0.9)',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            marginBottom: 4,
+          }}
+          title={item.name}
+        >
+          {item.name}
+        </p>
+        {size && (
+          <p style={{ margin: 0, fontSize: 10, color: 'rgba(245,240,232,0.4)' }}>
+            {size}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Compact card (horizontal layout)
+interface CompactCardProps {
+  item: AttachmentPreviewItem;
+  isImage: boolean;
+  color: string;
+  Icon: typeof FileGeneric;
+  size: string;
+  onRemove?: (id: string) => void;
+  imageError: boolean;
+  setImageError: (v: boolean) => void;
+}
+
+function CompactCard({ item, isImage, color, Icon, size, onRemove, imageError, setImageError }: CompactCardProps) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        padding: '6px 10px',
+        background: 'rgba(255,255,255,0.04)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: 10,
+        minWidth: 0,
+      }}
+    >
+      {isImage && !imageError ? (
+        <img
+          src={item.dataUrl}
+          alt={item.name}
+          onError={() => setImageError(true)}
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 6,
+            objectFit: 'cover',
+            flexShrink: 0,
+          }}
+        />
+      ) : (
+        <div
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 6,
+            background: `${color}15`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <Icon size={16} color={color} />
+        </div>
+      )}
+
+      <span
+        style={{
+          fontSize: 12,
+          color: 'rgba(245,240,232,0.8)',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          maxWidth: 120,
+        }}
+      >
+        {item.name}
+      </span>
+
+      {size && (
+        <span style={{ fontSize: 10, color: 'rgba(245,240,232,0.4)', flexShrink: 0 }}>
+          {size}
+        </span>
+      )}
+
+      {onRemove && (
+        <button
+          onClick={() => onRemove(item.id)}
+          style={{
+            padding: 2,
+            border: 'none',
+            background: 'transparent',
+            color: 'rgba(245,240,232,0.4)',
+            cursor: 'pointer',
+            display: 'flex',
+            flexShrink: 0,
+            borderRadius: 4,
+          }}
+        >
+          <X size={14} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// Full Screen Preview Modal
+// ============================================================================
+
+interface AttachmentPreviewModalProps {
+  item: AttachmentPreviewItem | null;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function AttachmentPreviewModal({ item, isOpen, onClose }: AttachmentPreviewModalProps) {
+  if (!isOpen || !item) return null;
+
+  const isImage = item.type === 'image' || item.type === 'gif' || item.type === 'screenshot';
+  const isCode = item.type === 'code' || item.type === 'json';
+  const color = getFileColor(item.type);
+  const Icon = getFileIcon(item.type);
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,0.9)',
+        backdropFilter: 'blur(10px)',
+        zIndex: 10000,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 40,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          maxWidth: '90vw',
+          maxHeight: '90vh',
+          background: '#1a1a1a',
+          borderRadius: 16,
+          overflow: 'hidden',
+          boxShadow: `0 25px 50px -12px ${color}40`,
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '16px 20px',
+            borderBottom: '1px solid rgba(255,255,255,0.08)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 10,
+                background: `${color}20`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Icon size={18} color={color} />
+            </div>
+            <div>
+              <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#fff' }}>
+                {item.name}
+              </p>
+              {item.size && (
+                <p style={{ margin: 0, fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
+                  {formatFileSize(item.size)}
+                </p>
+              )}
+            </div>
+          </div>
+          
+          <div style={{ display: 'flex', gap: 8 }}>
+            <a
+              href={item.dataUrl}
+              download={item.name}
+              style={{
+                padding: '8px 16px',
+                borderRadius: 8,
+                background: 'rgba(255,255,255,0.1)',
+                color: '#fff',
+                fontSize: 13,
+                fontWeight: 500,
+                textDecoration: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              <Download size={16} />
+              Download
+            </a>
+            <button
+              onClick={onClose}
+              style={{
+                padding: 8,
+                borderRadius: 8,
+                border: 'none',
+                background: 'transparent',
+                color: 'rgba(255,255,255,0.5)',
+                cursor: 'pointer',
+              }}
+            >
+              <X size={20} />
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div
+          style={{
+            padding: 24,
+            maxHeight: 'calc(90vh - 100px)',
+            overflow: 'auto',
+          }}
+        >
+          {isImage ? (
+            <img
+              src={item.dataUrl}
+              alt={item.name}
+              style={{
+                maxWidth: '100%',
+                maxHeight: 'calc(90vh - 150px)',
+                borderRadius: 8,
+              }}
+            />
+          ) : isCode && item.extractedText ? (
+            <pre
+              style={{
+                margin: 0,
+                padding: 20,
+                background: '#0d0d0d',
+                borderRadius: 8,
+                fontSize: 13,
+                lineHeight: 1.6,
+                color: '#e0e0e0',
+                fontFamily: "monospace",
+                maxHeight: 'calc(90vh - 200px)',
+                overflow: 'auto',
+              }}
+            >
+              <code>{item.extractedText.slice(0, 5000)}{item.extractedText.length > 5000 ? '\n\n... (truncated)' : ''}</code>
+            </pre>
+          ) : item.extractedText ? (
+            <div
+              style={{
+                padding: 20,
+                background: '#0d0d0d',
+                borderRadius: 8,
+                maxWidth: 600,
+                color: '#e0e0e0',
+                fontSize: 14,
+                lineHeight: 1.6,
+                whiteSpace: 'pre-wrap',
+              }}
+            >
+              {item.extractedText.slice(0, 3000)}{item.extractedText.length > 3000 ? '\n\n... (truncated)' : ''}
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: 40 }}>
+              <div
+                style={{
+                  width: 80,
+                  height: 80,
+                  borderRadius: 20,
+                  background: `${color}20`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 20px',
+                }}
+              >
+                <Icon size={40} color={color} />
+              </div>
+              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>
+                Preview not available for this file type
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

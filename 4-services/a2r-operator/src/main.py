@@ -386,13 +386,25 @@ class A2RRunResults(BaseModel):
 
 async def a2r_emit_event(run_id: str, event_type: str, payload: Dict[str, Any]):
     """Emit event for parallel runs"""
+    data_dict = {
+        "type": event_type,
+        "payload": payload,
+        "timestamp": datetime.now().isoformat(),
+        "variantId": payload.get("variantId")
+    }
+    data = json.dumps(data_dict)
+
+    # Persist the event to .a2r/autoland/{run_id}.jsonl for Proof of Work
+    autoland_dir = os.path.join(os.getcwd(), ".a2r", "autoland")
+    os.makedirs(autoland_dir, exist_ok=True)
+    pow_path = os.path.join(autoland_dir, f"{run_id}.jsonl")
+    try:
+        with open(pow_path, "a") as f:
+            f.write(data + "\n")
+    except Exception as e:
+        logger.error(f"Failed to persist proof of work event: {e}")
+
     if run_id in A2R_EVENT_QUEUES:
-        data = json.dumps({
-            "type": event_type,
-            "payload": payload,
-            "timestamp": datetime.now().isoformat(),
-            "variantId": payload.get("variantId")
-        })
         message = f"data: {data}\n\n"
         for queue in A2R_EVENT_QUEUES[run_id]:
             await queue.put(message)
@@ -528,6 +540,27 @@ async def a2r_stream_events(run_id: str, request: Request):
         finally:
             A2R_EVENT_QUEUES[run_id].remove(queue)
     return StreamingResponse(gen(), media_type="text/event-stream")
+
+@app.get("/v1/operator/autoland/{run_id}/proof_of_work")
+async def a2r_get_proof_of_work(run_id: str):
+    """Retrieve the stored proof of work events for an autoland run"""
+    autoland_dir = os.path.join(os.getcwd(), ".a2r", "autoland")
+    pow_path = os.path.join(autoland_dir, f"{run_id}.jsonl")
+    
+    if not os.path.exists(pow_path):
+        raise HTTPException(status_code=404, detail="Proof of work not found")
+        
+    events = []
+    with open(pow_path, "r") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                try:
+                    events.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+                    
+    return {"run_id": run_id, "events": events}
 
 @app.get("/v1/preview/{run_id}/{variant_id}")
 async def a2r_get_preview(run_id: str, variant_id: str):

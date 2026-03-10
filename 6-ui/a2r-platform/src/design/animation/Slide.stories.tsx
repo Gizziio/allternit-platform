@@ -202,7 +202,7 @@ export const Presets: Story = {
             </Slide>
           </div>
           <div style={{ overflow: 'hidden' }}>
-            <Slide key={`quick-${key}`} in={true} {...slidePresets.quick}>
+            <Slide key={`quick-${key}`} in={true} direction="up" {...slidePresets.quick}>
               <div style={{ padding: '16px', background: 'var(--bg-secondary)', borderRadius: '8px' }}>
                 Quick (fast, 50px)
               </div>

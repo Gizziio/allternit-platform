@@ -13,7 +13,7 @@ import { createModuleLogger } from "@/lib/logger";
 const log = createModuleLogger("tools/browser-retrieve-url");
 
 // Superconductor service URL (local browser-use)
-const A2R_OPERATOR_URL = process.env.A2R_OPERATOR_URL || "http://127.0.0.1:3010";
+const A2R_OPERATOR_URL = process.env.A2R_OPERATOR_URL || "http://127.0.0.1:3000";
 
 export const browserRetrieveUrl = tool({
   description: `Fetch content from a URL using our browser automation service.

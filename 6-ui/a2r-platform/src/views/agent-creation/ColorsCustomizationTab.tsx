@@ -7,7 +7,7 @@
 import React from 'react';
 import { useAvatarCreatorStore } from '../../stores/avatar-creator.store';
 import { STUDIO_THEME } from '../AgentView';
-import { SETUP_COLOR_PALETTES, PRESET_COLOR_SCHEMES } from '../../components/avatar/presets/colorPalettes';
+import { SETUP_COLOR_PALETTES, PRESET_COLOR_SCHEMES, type ColorPaletteSet } from '../../components/Avatar/presets/colorPalettes';
 
 const COLOR_LABELS: Record<string, { label: string; description: string }> = {
   primary: { label: 'Primary', description: 'Body fill color' },
@@ -27,7 +27,7 @@ export const ColorsCustomizationTab: React.FC = () => {
     agentSetup,
   } = useAvatarCreatorStore();
 
-  const { colors } = currentConfig;
+  const colors = currentConfig.colors ?? { primary: '#6366f1', secondary: '#8b5cf6', glow: '#6366f1', outline: '#1e1b4b' };
   const setup = agentSetup || 'generalist';
   const palette = SETUP_COLOR_PALETTES[setup];
 
@@ -39,10 +39,10 @@ export const ColorsCustomizationTab: React.FC = () => {
   };
 
   const currentColors: Record<string, string> = {
-    primary: colors.primary,
-    secondary: colors.secondary,
-    glow: colors.glow,
-    outline: colors.outline,
+    primary: colors.primary ?? '#6366f1',
+    secondary: colors.secondary ?? '#8b5cf6',
+    glow: colors.glow ?? '#6366f1',
+    outline: colors.outline ?? '#1e1b4b',
   };
 
   return (
@@ -110,10 +110,11 @@ export const ColorsCustomizationTab: React.FC = () => {
               gap: '6px',
             }}
           >
-            {palette[colorKey].slice(0, 8).map((color) => (
+            {((palette[colorKey as keyof ColorPaletteSet] as string[] | undefined) ?? []).slice(0, 8).map((color) => (
               <button
+                type="button"
                 key={color}
-                onClick={() => colorSetters[colorKey](color)}
+                onClick={() => colorSetters[colorKey]?.(color)}
                 style={{
                   width: '28px',
                   height: '28px',
@@ -157,12 +158,13 @@ export const ColorsCustomizationTab: React.FC = () => {
             .filter(([id]) => id.startsWith(setup))
             .map(([id, scheme]) => (
               <button
+                type="button"
                 key={id}
                 onClick={() => {
-                  setPrimaryColor(scheme.primary);
-                  setSecondaryColor(scheme.secondary);
-                  setGlowColor(scheme.glow);
-                  setOutlineColor(scheme.outline);
+                  setPrimaryColor(scheme.primary ?? '#6366f1');
+                  setSecondaryColor(scheme.secondary ?? '#8b5cf6');
+                  setGlowColor(scheme.glow ?? '#6366f1');
+                  setOutlineColor(scheme.outline ?? '#1e1b4b');
                 }}
                 style={{
                   padding: '10px',
@@ -204,6 +206,7 @@ export const ColorsCustomizationTab: React.FC = () => {
 
       {/* Randomize Button */}
       <button
+        type="button"
         onClick={randomizeColors}
         style={{
           width: '100%',

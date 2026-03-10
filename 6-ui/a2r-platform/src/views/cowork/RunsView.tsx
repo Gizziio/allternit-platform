@@ -218,7 +218,7 @@ export const RunsView: React.FC = () => {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     {run.logExcerpt.map((line, idx) => (
                       <code
-                        key={idx}
+                        key={`${run.id}-log-${idx}`}
                         style={{
                           fontSize: '12px',
                           color: 'var(--text-secondary)',

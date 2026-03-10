@@ -208,6 +208,8 @@ export function createWindowOptions(): Electron.BrowserWindowConstructorOptions 
     show: false,
     frame: false,
     titleBarStyle: 'hidden',
+    transparent: true,
+    backgroundColor: undefined,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,

@@ -1,0 +1,25 @@
+{
+  "id": "example-scrape-001",
+  "type": "python",
+  "name": "Web Scraping Example",
+  "description": "Scrape example.com and extract the page title",
+  "code": "
+import requests
+from bs4 import BeautifulSoup
+
+url = 'https://example.com'
+response = requests.get(url, timeout=30)
+response.raise_for_status()
+
+soup = BeautifulSoup(response.content, 'html.parser')
+title = soup.find('title').get_text() if soup.find('title') else 'No title found'
+
+print(f'Title: {title}')
+print(f'Status: {response.status_code}')
+print(f'Content length: {len(response.content)} bytes')
+",
+  "timeout": 60,
+  "env": {
+    "USER_AGENT": "A2R-Agent/1.0"
+  }
+}

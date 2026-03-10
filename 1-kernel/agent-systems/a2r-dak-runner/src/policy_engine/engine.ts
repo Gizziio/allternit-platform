@@ -199,7 +199,7 @@ export class PolicyEngine {
       name: 'network-policy-restrict',
       priority: 80,
       condition: (req) => {
-        if (req.context.networkPolicy !== 'none') return false;
+        if (req.context.network_policy !== 'none') return false;
         const networkTools = ['Fetch', 'WebSearch', 'WebFetch'];
         return networkTools.includes(req.tool);
       },

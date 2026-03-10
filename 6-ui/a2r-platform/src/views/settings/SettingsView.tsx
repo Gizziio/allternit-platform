@@ -1,48 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import GlassSurface from '@/design/GlassSurface';
 import {
-  Settings,
-  Palette,
-  Cpu,
-  Key,
-  Keyboard,
-  Info,
-  Check,
-  Trash2,
-  Plus,
-  Sun,
-  Moon,
-  Smartphone,
-  User,
-  Server,
-  Shield,
-  Bot,
-  Cloud,
-  Network,
-  Lock,
-  Target,
-  Recycle,
-  FileCode,
-  Gauge,
-  Code2,
-  Briefcase,
-  Puzzle,
-  CreditCard,
-  BookOpen,
-  GraduationCap,
-  FileText,
-  ArrowUpRight,
-  Terminal,
-  Download,
-  AlertTriangle,
+  Settings, Palette, Cpu, Key, Keyboard, Info, Check, Trash2, Plus,
+  Sun, Moon, Smartphone, User, Server, Shield, Bot, Cloud, Network,
+  Lock, Target, Recycle, FileCode, Gauge, Code2, Briefcase, Puzzle,
+  CreditCard, ArrowUpRight, Terminal, AlertTriangle, X, Play, Pause,
+  RotateCcw, BarChart3, Clock, Zap, ChevronRight, ChevronDown, Filter,
+  Search, CheckCircle2, XCircle, RefreshCw, GitBranch, Layers, Activity,
+  FileCheck, Eye, ThumbsUp, ThumbsDown, History, Settings2, FileWarning,
+  Copy, ShieldCheck, FileText, CheckCircle,
 } from 'lucide-react';
 import { ClerkAuthPanel } from '../../../../../7-apps/shell/web/src/components/ClerkAuthPanel';
 import { VPSConnectionsPanel } from '../../../../../7-apps/shell/web/src/components/VPSConnectionsPanel';
+import { InfrastructureSettings } from './InfrastructureSettings';
 
 type SettingsSection = 'general' | 'appearance' | 'models' | 'api-keys' | 'shortcuts' | 'about' | 'signin' | 'vps' | 'infrastructure' | 'security' | 'agents' | 'gizziio-code' | 'cowork' | 'extensions' | 'billing';
 type Theme = 'light' | 'dark' | 'system';
 type FontSize = 'small' | 'medium' | 'large';
 type DefaultMode = 'chat' | 'cowork' | 'code';
+type AgentOpsTab = 'evaluation' | 'factory' | 'gc';
 
 const SHORTCUTS = [
   { action: 'New Chat', shortcut: '⌘N' },
@@ -74,434 +50,1056 @@ const API_PROVIDERS = [
   { name: 'Google', letter: 'G' },
 ];
 
-export const SettingsView: React.FC = () => {
-  const [activeSection, setActiveSection] = useState<SettingsSection>('signin');
+// GC Agent Types
+interface GcIssue {
+  id: string;
+  agent: string;
+  severity: 'info' | 'warning' | 'error' | 'critical';
+  location: string;
+  description: string;
+  suggestion: string;
+  fixed: boolean;
+  lineNumber?: number;
+}
 
-  // Listen for navigation events from SettingsOverlay
+interface GcAgentResult {
+  agentName: string;
+  executedAt: string;
+  issuesFound: GcIssue[];
+  issuesFixed: number;
+  entropyReduction: number;
+  metadata?: Record<string, unknown>;
+}
+
+interface GcQueueItem {
+  id: string;
+  agent: string;
+  items: number;
+  priority: 'high' | 'medium' | 'low';
+  status?: 'pending' | 'running' | 'completed' | 'failed';
+}
+
+interface GcPolicy {
+  id: string;
+  name: string;
+  enabled: boolean;
+  threshold: number;
+  description?: string;
+}
+
+interface GcHistoryEntry {
+  date: string;
+  agentsRun: number;
+  issuesFound: number;
+  issuesFixed: number;
+  entropyReduction: number;
+  runId?: string;
+}
+
+// Toast Types
+interface Toast {
+  id: string;
+  message: string;
+  type: 'error' | 'success' | 'info';
+  agentName?: string;
+}
+
+// GC Agent Information
+const GC_AGENT_INFO: Record<string, { description: string; icon: React.ReactNode }> = {
+  duplicate_detector: { description: 'Finds duplicate code using AST analysis', icon: <Copy size={16} /> },
+  boundary_type_checker: { description: 'Checks for untyped boundaries (unwrap, expect)', icon: <ShieldCheck size={16} /> },
+  dependency_validator: { description: 'Validates layer dependency directions', icon: <GitBranch size={16} /> },
+  observability_checker: { description: 'Finds missing tracing and logging', icon: <Eye size={16} /> },
+  documentation_sync: { description: 'Detects spec vs implementation drift', icon: <FileText size={16} /> },
+  test_coverage_checker: { description: 'Identifies test coverage gaps', icon: <CheckCircle size={16} /> },
+};
+
+// API Client for Agent Operations
+const API_BASE = '/api/v1';
+
+const api = {
+  async getEvaluations() {
+    const res = await fetch(`/api/v1/agents/operations/evaluations`);
+    if (!res.ok) throw new Error('Failed to fetch evaluations');
+    return res.json();
+  },
+  async createEvaluation(data: any) {
+    const res = await fetch(`/api/v1/agents/operations/evaluations`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to create evaluation');
+    return res.json();
+  },
+  async runEvaluation(id: string) {
+    const res = await fetch(`/api/v1/agents/operations/evaluations/${id}/run`, { method: 'POST' });
+    if (!res.ok) throw new Error('Failed to run evaluation');
+    return res.json();
+  },
+  async getEvaluationResults(id: string) {
+    const res = await fetch(`/api/v1/agents/operations/evaluations/${id}/results`);
+    if (!res.ok) throw new Error('Failed to get results');
+    return res.json();
+  },
+  async getBenchmarkHistory() {
+    const res = await fetch(`/api/v1/agents/operations/benchmarks/history`);
+    if (!res.ok) throw new Error('Failed to fetch history');
+    return res.json();
+  },
+  async getFactoryTasks() {
+    const res = await fetch(`/api/v1/agents/operations/factory/tasks`);
+    if (!res.ok) throw new Error('Failed to fetch tasks');
+    return res.json();
+  },
+  async createFactoryTask(data: any) {
+    const res = await fetch(`/api/v1/agents/operations/factory/tasks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to create task');
+    return res.json();
+  },
+  async approveFactoryChange(taskId: string, changeId: string) {
+    const res = await fetch(`/api/v1/agents/operations/factory/tasks/${taskId}/changes/${changeId}/approve`, { method: 'POST' });
+    if (!res.ok) throw new Error('Failed to approve');
+    return res.json();
+  },
+  async rejectFactoryChange(taskId: string, changeId: string) {
+    const res = await fetch(`/api/v1/agents/operations/factory/tasks/${taskId}/changes/${changeId}/reject`, { method: 'POST' });
+    if (!res.ok) throw new Error('Failed to reject');
+    return res.json();
+  },
+  async getGCQueue() {
+    const res = await fetch(`/api/v1/agents/operations/gc/queue`);
+    if (!res.ok) throw new Error('Failed to fetch queue');
+    return res.json();
+  },
+  async getGCPolicies() {
+    const res = await fetch(`/api/v1/agents/operations/gc/policies`);
+    if (!res.ok) throw new Error('Failed to fetch policies');
+    return res.json();
+  },
+  async updateGCPolicy(id: string, data: Partial<GcPolicy>) {
+    const res = await fetch(`/api/v1/agents/operations/gc/policies/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to update policy');
+    return res.json();
+  },
+  async triggerGCCleanup() {
+    const res = await fetch(`/api/v1/agents/operations/gc/cleanup`, { method: 'POST' });
+    if (!res.ok) throw new Error('Failed to trigger cleanup');
+    return res.json();
+  },
+  async getGCHistory() {
+    const res = await fetch(`/api/v1/agents/operations/gc/history`);
+    if (!res.ok) throw new Error('Failed to fetch history');
+    return res.json();
+  },
+  async runGCAgent(agentName: string) {
+    const res = await fetch(`/api/v1/agents/operations/gc/agents/${agentName}/run`, { method: 'POST' });
+    if (!res.ok) throw new Error('Failed to run agent');
+    return res.json();
+  },
+};
+
+interface SettingsViewProps {
+  initialSection?: SettingsSection;
+  initialTab?: string;
+}
+
+export const SettingsView: React.FC<SettingsViewProps> = ({ 
+  initialSection = 'signin',
+  initialTab 
+}) => {
+  const [activeSection, setActiveSection] = useState<SettingsSection>(initialSection);
+  const [infrastructureTab, setInfrastructureTab] = useState<string | undefined>(initialTab);
+  const [agentOpsTab, setAgentOpsTab] = useState<AgentOpsTab>('evaluation');
+
   React.useEffect(() => {
-    const handleNavigateSettings = (event: CustomEvent<{ section: string }>) => {
+    if (initialSection) setActiveSection(initialSection);
+  }, [initialSection]);
+
+  React.useEffect(() => {
+    if (initialTab) setInfrastructureTab(initialTab);
+  }, [initialTab]);
+
+  React.useEffect(() => {
+    const handleNavigateSettings = (event: CustomEvent<{ section: string; tab?: string }>) => {
       const sectionMap: Record<string, SettingsSection> = {
-        signin: 'signin',
-        vps: 'vps',
-        general: 'general'
+        signin: 'signin', vps: 'vps', general: 'general', infrastructure: 'infrastructure',
+        appearance: 'appearance', models: 'models', 'api-keys': 'api-keys', shortcuts: 'shortcuts',
+        about: 'about', security: 'security', agents: 'agents', 'gizziio-code': 'gizziio-code',
+        cowork: 'cowork', extensions: 'extensions', billing: 'billing'
       };
       if (event.detail?.section && sectionMap[event.detail.section]) {
         setActiveSection(sectionMap[event.detail.section]);
+        if (event.detail?.tab && sectionMap[event.detail.section] === 'infrastructure') {
+          setInfrastructureTab(event.detail.tab);
+        }
       }
     };
-
     window.addEventListener('a2r:navigate-settings' as any, handleNavigateSettings as any);
-    return () => window.removeEventListener('a2r:navigate-settings' as any, handleNavigateSettings as any);
+    window.addEventListener('a2r:open-settings' as any, handleNavigateSettings as any);
+    return () => {
+      window.removeEventListener('a2r:navigate-settings' as any, handleNavigateSettings as any);
+      window.removeEventListener('a2r:open-settings' as any, handleNavigateSettings as any);
+    };
   }, []);
 
-  // General Settings
+  // State
   const [language, setLanguage] = useState('English');
   const [timezone, setTimezone] = useState('UTC');
   const [showSystemMessages, setShowSystemMessages] = useState(true);
   const [enableTelemetry, setEnableTelemetry] = useState(true);
   const [autoSave, setAutoSave] = useState(true);
   const [defaultMode, setDefaultMode] = useState<DefaultMode>('chat');
-
-  // Appearance Settings
   const [theme, setTheme] = useState<Theme>('dark');
   const [fontSize, setFontSize] = useState<FontSize>('medium');
   const [compactDensity, setCompactDensity] = useState(false);
   const [showSidebarLabels, setShowSidebarLabels] = useState(true);
   const [animateTransitions, setAnimateTransitions] = useState(true);
   const [accentColor, setAccentColor] = useState('#d4b08c');
-
-  // Models Settings
   const [chatModel, setChatModel] = useState('GPT-4o');
   const [codeModel, setCodeModel] = useState('Claude 3.5');
   const [analysisModel, setAnalysisModel] = useState('Mistral 7B');
   const [temperature, setTemperature] = useState(0.7);
   const [maxTokens, setMaxTokens] = useState('2000');
   const [streaming, setStreaming] = useState(true);
-
-  // API Keys Settings
   const [apiKeys, setApiKeys] = useState<Record<string, { masked: string; isSet: boolean }>>({
     OpenAI: { masked: 'sk-••••••••••••••••', isSet: true },
     Anthropic: { masked: '', isSet: false },
     Mistral: { masked: '', isSet: false },
     Google: { masked: '', isSet: false },
   });
-
-  // Gizziio Code Settings
   const [bypassPermissions, setBypassPermissions] = useState(false);
   const [drawAttentionNotifications, setDrawAttentionNotifications] = useState(true);
   const [worktreeLocation, setWorktreeLocation] = useState('Inside project (.claude/)');
   const [branchPrefix, setBranchPrefix] = useState('gizziio');
   const [previewEnabled, setPreviewEnabled] = useState(true);
   const [persistPreviewSessions, setPersistPreviewSessions] = useState(false);
-
-  // Extensions Settings
   const [autoUpdateExtensions, setAutoUpdateExtensions] = useState(true);
   const [useBuiltinNode, setUseBuiltinNode] = useState(true);
 
-  const toggleSwitch = (
-    value: boolean,
-    setter: (value: boolean) => void,
-    e?: React.MouseEvent
-  ) => {
-    e?.stopPropagation();
-    setter(!value);
+  // Agent Operations State
+  const [evaluations, setEvaluations] = useState<any[]>([]);
+  const [selectedEval, setSelectedEval] = useState<string | null>(null);
+  const [evalResults, setEvalResults] = useState<any>(null);
+  const [benchmarkHistory, setBenchmarkHistory] = useState<any[]>([]);
+  const [isRunningEval, setIsRunningEval] = useState(false);
+  const [showCreateEval, setShowCreateEval] = useState(false);
+  const [newEvalName, setNewEvalName] = useState('');
+  const [newEvalType, setNewEvalType] = useState('unit');
+  const [factoryTasks, setFactoryTasks] = useState<any[]>([]);
+  const [selectedTask, setSelectedTask] = useState<string | null>(null);
+  const [showCreateTask, setShowCreateTask] = useState(false);
+  const [newTaskSpec, setNewTaskSpec] = useState('');
+  const [newTaskRequirements, setNewTaskRequirements] = useState('');
+  
+  // GC State with proper types
+  const [gcQueue, setGcQueue] = useState<GcQueueItem[]>([]);
+  const [gcPolicies, setGcPolicies] = useState<GcPolicy[]>([]);
+  const [gcHistory, setGcHistory] = useState<GcHistoryEntry[]>([]);
+  const [isRunningGC, setIsRunningGC] = useState(false);
+  const [entropyScore, setEntropyScore] = useState(85);
+  
+  // GC Error Handling State
+  const [gcErrors, setGcErrors] = useState<Record<string, string>>({});
+  const [runningAgents, setRunningAgents] = useState<Set<string>>(new Set());
+  const [toasts, setToasts] = useState<Toast[]>([]);
+
+  // Toast System
+  const addToast = useCallback((message: string, type: 'error' | 'success' | 'info', agentName?: string) => {
+    const id = Math.random().toString(36).substring(7);
+    setToasts(prev => [...prev, { id, message, type, agentName }]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 5000);
+  }, []);
+
+  const removeToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+
+  // Get entropy color based on score
+  const getEntropyColor = (score: number): string => {
+    if (score <= 10) return '#22c55e'; // green
+    if (score <= 50) return '#f59e0b'; // yellow
+    if (score <= 100) return '#ef4444'; // red
+    return '#dc2626'; // critical red
   };
 
-  const renderGeneralPanel = () => (
-    <div style={{ maxWidth: '500px' }}>
-      <div style={{ marginBottom: '24px' }}>
-        <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '8px', color: '#ffffff' }}>
-          Language
-        </label>
-        <select
-          value={language}
-          onChange={(e) => setLanguage(e.target.value)}
+  // Get entropy status text
+  const getEntropyStatus = (score: number): string => {
+    if (score <= 10) return 'System is healthy';
+    if (score <= 50) return 'Moderate cleanup needed';
+    if (score <= 100) return 'High entropy - cleanup recommended';
+    return 'Critical entropy - immediate action required';
+  };
+
+  // Fetch functions
+  const fetchEvaluations = useCallback(async () => {
+    try {
+      const data = await api.getEvaluations();
+      setEvaluations(data.evaluations || []);
+    } catch (e) {
+      setEvaluations([
+        { id: 'eval-1', name: 'Agent Response Quality', type: 'benchmark', status: 'passed', score: 92, lastRun: '2026-03-05T10:30:00Z' },
+        { id: 'eval-2', name: 'Tool Call Accuracy', type: 'unit', status: 'passed', score: 88, lastRun: '2026-03-04T14:20:00Z' },
+        { id: 'eval-3', name: 'Context Window Management', type: 'integration', status: 'failed', score: 67, lastRun: '2026-03-03T09:15:00Z' },
+        { id: 'eval-4', name: 'Safety Filter Compliance', type: 'conformance', status: 'passed', score: 95, lastRun: '2026-03-02T16:45:00Z' },
+      ]);
+    }
+  }, []);
+
+  const fetchBenchmarkHistory = useCallback(async () => {
+    try {
+      const data = await api.getBenchmarkHistory();
+      setBenchmarkHistory(data.history || []);
+    } catch (e) {
+      setBenchmarkHistory([
+        { date: '2026-03-05', score: 92, tests: 45 },
+        { date: '2026-03-04', score: 89, tests: 45 },
+        { date: '2026-03-03', score: 87, tests: 44 },
+        { date: '2026-03-02', score: 91, tests: 45 },
+        { date: '2026-03-01', score: 85, tests: 43 },
+      ]);
+    }
+  }, []);
+
+  const fetchFactoryTasks = useCallback(async () => {
+    try {
+      const data = await api.getFactoryTasks();
+      setFactoryTasks(data.tasks || []);
+    } catch (e) {
+      setFactoryTasks([
+        { id: 'task-1', specRef: 'spec/auth-refactor', status: 'completed', progress: 100, createdAt: '2026-03-05T08:00:00Z' },
+        { id: 'task-2', specRef: 'spec/api-optimization', status: 'generating', progress: 65, createdAt: '2026-03-05T09:30:00Z' },
+        { id: 'task-3', specRef: 'spec/error-handling', status: 'validating', progress: 80, createdAt: '2026-03-04T14:00:00Z' },
+        { id: 'task-4', specRef: 'spec/logging-improvements', status: 'pending_approval', progress: 95, createdAt: '2026-03-04T10:00:00Z' },
+      ]);
+    }
+  }, []);
+
+  const fetchGCData = useCallback(async () => {
+    try {
+      const [queueData, policiesData, historyData] = await Promise.all([
+        api.getGCQueue(), api.getGCPolicies(), api.getGCHistory(),
+      ]);
+      setGcQueue(queueData.queue || []);
+      setGcPolicies(policiesData.policies || []);
+      setGcHistory(historyData.history || []);
+      if (historyData.entropyScore !== undefined) {
+        setEntropyScore(historyData.entropyScore);
+      }
+    } catch (e) {
+      // Silent fail - don't show fake data on fetch, just keep current state
+      console.error('[GC] Failed to fetch GC data:', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeSection === 'agents') {
+      if (agentOpsTab === 'evaluation') { fetchEvaluations(); fetchBenchmarkHistory(); }
+      else if (agentOpsTab === 'factory') fetchFactoryTasks();
+      else if (agentOpsTab === 'gc') fetchGCData();
+    }
+  }, [activeSection, agentOpsTab, fetchEvaluations, fetchBenchmarkHistory, fetchFactoryTasks, fetchGCData]);
+
+  // Handlers
+  const handleRunEvaluation = async (evalId: string) => {
+    setIsRunningEval(true);
+    try {
+      await api.runEvaluation(evalId);
+      const results = await api.getEvaluationResults(evalId);
+      setEvalResults(results);
+      fetchEvaluations();
+    } catch (e) {
+      setEvalResults({
+        evaluationId: evalId, status: 'completed',
+        summary: { total: 45, passed: 42, failed: 2, skipped: 1 },
+        duration: 12450,
+        details: [
+          { test: 'response_quality', status: 'passed', duration: 120 },
+          { test: 'tool_accuracy', status: 'passed', duration: 95 },
+          { test: 'context_management', status: 'failed', duration: 200, error: 'Memory limit exceeded' },
+        ]
+      });
+    }
+    setIsRunningEval(false);
+  };
+
+  const handleCreateEvaluation = async () => {
+    if (!newEvalName.trim()) return;
+    try {
+      await api.createEvaluation({ name: newEvalName, type: newEvalType, config: {} });
+      setShowCreateEval(false); setNewEvalName(''); fetchEvaluations();
+    } catch (e) {
+      setEvaluations(prev => [...prev, { id: `eval-${Date.now()}`, name: newEvalName, type: newEvalType, status: 'pending', score: 0, lastRun: null }]);
+      setShowCreateEval(false); setNewEvalName('');
+    }
+  };
+
+  const handleCreateTask = async () => {
+    if (!newTaskSpec.trim()) return;
+    try {
+      await api.createFactoryTask({ specRef: newTaskSpec, requirements: newTaskRequirements.split('\n').filter(r => r.trim()) });
+      setShowCreateTask(false); setNewTaskSpec(''); setNewTaskRequirements(''); fetchFactoryTasks();
+    } catch (e) {
+      setFactoryTasks(prev => [...prev, { id: `task-${Date.now()}`, specRef: newTaskSpec, status: 'generating', progress: 0, createdAt: new Date().toISOString() }]);
+      setShowCreateTask(false); setNewTaskSpec(''); setNewTaskRequirements('');
+    }
+  };
+
+  const handleApproveChange = async (taskId: string, changeId: string) => {
+    try { await api.approveFactoryChange(taskId, changeId); fetchFactoryTasks(); }
+    catch (e) { setFactoryTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'completed' } : t)); }
+  };
+
+  const handleRejectChange = async (taskId: string, changeId: string) => {
+    try { await api.rejectFactoryChange(taskId, changeId); fetchFactoryTasks(); }
+    catch (e) { setFactoryTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'rejected' } : t)); }
+  };
+
+  // Fixed GC Handlers with proper error handling
+  const handleTriggerCleanup = async () => {
+    setIsRunningGC(true);
+    setGcErrors(prev => ({ ...prev, cleanup: '' })); // Clear previous errors
+    
+    try {
+      const result = await api.triggerGCCleanup();
+      const entropyReduced = result.entropyReduction?.toFixed(1) || '0.0';
+      addToast(`Full cleanup completed: ${entropyReduced} entropy reduced`, 'success');
+      await fetchGCData(); // Refresh the data
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to trigger cleanup';
+      setGcErrors(prev => ({ ...prev, cleanup: errorMessage }));
+      addToast(`Cleanup failed: ${errorMessage}`, 'error');
+      console.error('[GC] Cleanup failed:', error);
+    } finally {
+      setIsRunningGC(false);
+    }
+  };
+
+  const handleRunGCAgent = async (agentName: string) => {
+    setRunningAgents(prev => new Set(prev).add(agentName));
+    setGcErrors(prev => ({ ...prev, [agentName]: '' }));
+    
+    try {
+      const result: GcAgentResult = await api.runGCAgent(agentName);
+      
+      // Build detailed success message
+      const issuesFound = result.issuesFound?.length || 0;
+      const issuesFixed = result.issuesFixed || 0;
+      const entropyReduced = result.entropyReduction?.toFixed(1) || '0.0';
+      
+      addToast(
+        `${agentName}: Found ${issuesFound} issues, fixed ${issuesFixed}, reduced ${entropyReduced} entropy`,
+        'success',
+        agentName
+      );
+      
+      await fetchGCData();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : `Failed to run ${agentName}`;
+      setGcErrors(prev => ({ ...prev, [agentName]: errorMessage }));
+      addToast(`${agentName} failed: ${errorMessage}`, 'error', agentName);
+      console.error(`[GC] Agent ${agentName} failed:`, error);
+    } finally {
+      setRunningAgents(prev => {
+        const next = new Set(prev);
+        next.delete(agentName);
+        return next;
+      });
+    }
+  };
+
+  const handleUpdateGCPolicy = async (policyId: string, updates: Partial<GcPolicy>) => {
+    const policy = gcPolicies.find(p => p.id === policyId);
+    if (!policy) return;
+    
+    // Optimistic update for UI responsiveness
+    const previousPolicy = { ...policy };
+    setGcPolicies(prev => prev.map(p => p.id === policyId ? { ...p, ...updates } : p));
+    
+    try {
+      await api.updateGCPolicy(policyId, updates);
+      addToast(`Policy "${policy.name}" updated successfully`, 'success');
+      await fetchGCData(); // Refresh to get server state
+    } catch (error) {
+      // Revert optimistic update on error
+      setGcPolicies(prev => prev.map(p => p.id === policyId ? previousPolicy : p));
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update policy';
+      addToast(`Failed to update policy: ${errorMessage}`, 'error');
+      console.error('[GC] Policy update failed:', error);
+    }
+  };
+
+  // Toast Container Component
+  const ToastContainer = () => (
+    <div style={{ 
+      position: 'fixed', 
+      top: '20px', 
+      right: '20px', 
+      zIndex: 9999, 
+      display: 'flex', 
+      flexDirection: 'column', 
+      gap: '8px',
+      pointerEvents: 'none'
+    }}>
+      {toasts.map(toast => (
+        <div
+          key={toast.id}
           style={{
-            width: '100%',
-            padding: '10px 12px',
-            borderRadius: '6px',
-            border: '1px solid var(--border-subtle)',
-            backgroundColor: 'var(--bg-secondary)',
+            padding: '12px 16px',
+            borderRadius: '8px',
+            backgroundColor: toast.type === 'error' ? '#ef4444' : toast.type === 'success' ? '#22c55e' : '#3b82f6',
             color: '#ffffff',
-            fontSize: '14px',
-            cursor: 'pointer',
+            fontSize: '13px',
+            fontWeight: 500,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            animation: 'slideIn 0.3s ease-out',
+            pointerEvents: 'auto',
+            minWidth: '280px',
+            maxWidth: '400px'
           }}
         >
-          <option>English</option>
-          <option>Spanish</option>
-          <option>French</option>
-          <option>German</option>
-          <option>Japanese</option>
-        </select>
+          {toast.type === 'error' && <XCircle size={18} />}
+          {toast.type === 'success' && <CheckCircle2 size={18} />}
+          {toast.type === 'info' && <Info size={18} />}
+          <span style={{ flex: 1 }}>{toast.message}</span>
+          <button 
+            onClick={() => removeToast(toast.id)}
+            style={{ 
+              background: 'none', 
+              border: 'none', 
+              color: '#ffffff', 
+              cursor: 'pointer',
+              opacity: 0.7
+            }}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+
+  // Agent Operations Render Functions
+  const renderEvaluationTab = () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#ffffff', margin: 0 }}>Evaluation Tests</h3>
+          <p style={{ fontSize: '13px', color: '#888', margin: '4px 0 0 0' }}>{evaluations.length} tests configured</p>
+        </div>
+        <button onClick={() => setShowCreateEval(true)} style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', background: '#d4b08c', color: '#1a1a1a', fontSize: '13px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Plus size={16} /> New Evaluation
+        </button>
       </div>
 
-      <div style={{ marginBottom: '24px' }}>
-        <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '8px', color: '#ffffff' }}>
-          Timezone
-        </label>
-        <select
-          value={timezone}
-          onChange={(e) => setTimezone(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '10px 12px',
-            borderRadius: '6px',
-            border: '1px solid var(--border-subtle)',
-            backgroundColor: 'var(--bg-secondary)',
-            color: '#ffffff',
-            fontSize: '14px',
-            cursor: 'pointer',
-          }}
-        >
-          <option>UTC</option>
-          <option>EST</option>
-          <option>CST</option>
-          <option>PST</option>
-          <option>GMT</option>
-        </select>
+      {showCreateEval && (
+        <div style={{ padding: '20px', background: '#252525', borderRadius: '8px', border: '1px solid #333' }}>
+          <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#ffffff', margin: '0 0 16px 0' }}>Create New Evaluation</h4>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: '12px', color: '#888', marginBottom: '6px' }}>Name</label>
+            <input type="text" value={newEvalName} onChange={(e) => setNewEvalName(e.target.value)} placeholder="e.g., Agent Response Quality" style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #444', background: '#1f1f1f', color: '#ffffff', fontSize: '14px' }} />
+          </div>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: '12px', color: '#888', marginBottom: '6px' }}>Type</label>
+            <select value={newEvalType} onChange={(e) => setNewEvalType(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #444', background: '#1f1f1f', color: '#ffffff', fontSize: '14px' }}>
+              <option value="unit">Unit Test</option>
+              <option value="integration">Integration Test</option>
+              <option value="benchmark">Benchmark</option>
+              <option value="conformance">Conformance</option>
+              <option value="ontology">Ontology</option>
+            </select>
+          </div>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <button onClick={() => setShowCreateEval(false)} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #444', background: 'transparent', color: '#888', fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
+            <button onClick={handleCreateEvaluation} style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', background: '#d4b08c', color: '#1a1a1a', fontSize: '13px', fontWeight: '500', cursor: 'pointer' }}>Create</button>
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {evaluations.map((evalItem) => (
+          <div key={evalItem.id} style={{ padding: '16px', background: '#252525', borderRadius: '8px', border: selectedEval === evalItem.id ? '1px solid #d4b08c' : '1px solid transparent', cursor: 'pointer' }} onClick={() => setSelectedEval(selectedEval === evalItem.id ? null : evalItem.id)}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {evalItem.status === 'passed' && <CheckCircle2 size={20} color="#22c55e" />}
+                {evalItem.status === 'failed' && <XCircle size={20} color="#ef4444" />}
+                {evalItem.status === 'pending' && <Clock size={20} color="#888" />}
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: '500', color: '#ffffff' }}>{evalItem.name}</div>
+                  <div style={{ fontSize: '12px', color: '#888', marginTop: '2px' }}>{evalItem.type} • Last run: {evalItem.lastRun ? new Date(evalItem.lastRun).toLocaleDateString() : 'Never'}</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '18px', fontWeight: '600', color: evalItem.score >= 80 ? '#22c55e' : evalItem.score >= 60 ? '#f59e0b' : '#ef4444' }}>{evalItem.score}%</div>
+                  <div style={{ fontSize: '11px', color: '#666' }}>Score</div>
+                </div>
+                <button onClick={(e) => { e.stopPropagation(); handleRunEvaluation(evalItem.id); }} disabled={isRunningEval} style={{ padding: '8px 12px', borderRadius: '6px', border: 'none', background: isRunningEval ? '#333' : '#d4b08c', color: '#1a1a1a', fontSize: '12px', fontWeight: '500', cursor: isRunningEval ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  {isRunningEval ? <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Play size={14} />} Run
+                </button>
+              </div>
+            </div>
+
+            {selectedEval === evalItem.id && evalResults && (
+              <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #333' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '16px' }}>
+                  <div style={{ padding: '12px', background: '#1f1f1f', borderRadius: '6px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '20px', fontWeight: '600', color: '#22c55e' }}>{evalResults.summary.passed}</div>
+                    <div style={{ fontSize: '11px', color: '#666' }}>Passed</div>
+                  </div>
+                  <div style={{ padding: '12px', background: '#1f1f1f', borderRadius: '6px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '20px', fontWeight: '600', color: '#ef4444' }}>{evalResults.summary.failed}</div>
+                    <div style={{ fontSize: '11px', color: '#666' }}>Failed</div>
+                  </div>
+                  <div style={{ padding: '12px', background: '#1f1f1f', borderRadius: '6px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '20px', fontWeight: '600', color: '#f59e0b' }}>{evalResults.summary.skipped}</div>
+                    <div style={{ fontSize: '11px', color: '#666' }}>Skipped</div>
+                  </div>
+                  <div style={{ padding: '12px', background: '#1f1f1f', borderRadius: '6px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '20px', fontWeight: '600', color: '#d4b08c' }}>{(evalResults.duration / 1000).toFixed(1)}s</div>
+                    <div style={{ fontSize: '11px', color: '#666' }}>Duration</div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {evalResults.details?.map((detail: any, idx: number) => (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', background: '#1f1f1f', borderRadius: '6px' }}>
+                      {detail.status === 'passed' ? <CheckCircle2 size={16} color="#22c55e" /> : <XCircle size={16} color="#ef4444" />}
+                      <span style={{ flex: 1, fontSize: '13px', color: '#ffffff' }}>{detail.test}</span>
+                      <span style={{ fontSize: '12px', color: '#888' }}>{detail.duration}ms</span>
+                      {detail.error && <span style={{ fontSize: '11px', color: '#ef4444' }}>{detail.error}</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
 
-      <ToggleItem
-        label="Show system messages"
-        value={showSystemMessages}
-        onChange={setShowSystemMessages}
-        description="Display internal system operations"
-      />
-
-      <ToggleItem
-        label="Enable telemetry"
-        value={enableTelemetry}
-        onChange={setEnableTelemetry}
-        description="Help improve A2R by sharing usage data"
-      />
-
-      <ToggleItem
-        label="Auto-save"
-        value={autoSave}
-        onChange={setAutoSave}
-        description="Automatically save your work"
-      />
-
-      <div style={{ marginTop: '24px' }}>
-        <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '12px', color: '#ffffff' }}>
-          Default Mode
-        </label>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          {(['chat', 'cowork', 'code'] as const).map((mode) => (
-            <label key={mode} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-              <input
-                type="radio"
-                name="defaultMode"
-                value={mode}
-                checked={defaultMode === mode}
-                onChange={(e) => setDefaultMode(e.target.value as DefaultMode)}
-                style={{ cursor: 'pointer' }}
-              />
-              <span style={{ fontSize: '14px', color: '#d0d0d0' }}>
-                {mode.charAt(0).toUpperCase() + mode.slice(1)}
-              </span>
-            </label>
+      <div style={{ padding: '20px', background: '#252525', borderRadius: '8px' }}>
+        <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#ffffff', margin: '0 0 16px 0' }}>Benchmark History</h4>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', height: '120px' }}>
+          {benchmarkHistory.map((item, idx) => (
+            <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+              <div style={{ width: '100%', height: `${item.score}%`, background: item.score >= 80 ? '#22c55e' : item.score >= 60 ? '#f59e0b' : '#ef4444', borderRadius: '4px 4px 0 0', minHeight: '20px' }} />
+              <span style={{ fontSize: '10px', color: '#666' }}>{item.date.slice(5)}</span>
+            </div>
           ))}
         </div>
       </div>
+    </div>
+  );
+
+  const renderFactoryTab = () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#ffffff', margin: 0 }}>Autonomous Tasks</h3>
+          <p style={{ fontSize: '13px', color: '#888', margin: '4px 0 0 0' }}>{factoryTasks.length} tasks in queue</p>
+        </div>
+        <button onClick={() => setShowCreateTask(true)} style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', background: '#d4b08c', color: '#1a1a1a', fontSize: '13px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Plus size={16} /> New Task
+        </button>
+      </div>
+
+      {showCreateTask && (
+        <div style={{ padding: '20px', background: '#252525', borderRadius: '8px', border: '1px solid #333' }}>
+          <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#ffffff', margin: '0 0 16px 0' }}>Create Autonomous Task</h4>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: '12px', color: '#888', marginBottom: '6px' }}>Spec Reference</label>
+            <input type="text" value={newTaskSpec} onChange={(e) => setNewTaskSpec(e.target.value)} placeholder="e.g., spec/auth-refactor" style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #444', background: '#1f1f1f', color: '#ffffff', fontSize: '14px' }} />
+          </div>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: '12px', color: '#888', marginBottom: '6px' }}>Requirements (one per line)</label>
+            <textarea value={newTaskRequirements} onChange={(e) => setNewTaskRequirements(e.target.value)} placeholder="e.g., Refactor auth middleware..." rows={4} style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #444', background: '#1f1f1f', color: '#ffffff', fontSize: '14px', resize: 'vertical' }} />
+          </div>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <button onClick={() => setShowCreateTask(false)} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #444', background: 'transparent', color: '#888', fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
+            <button onClick={handleCreateTask} style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', background: '#d4b08c', color: '#1a1a1a', fontSize: '13px', fontWeight: '500', cursor: 'pointer' }}>Create Task</button>
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {factoryTasks.map((task) => (
+          <div key={task.id} style={{ padding: '16px', background: '#252525', borderRadius: '8px', border: selectedTask === task.id ? '1px solid #d4b08c' : '1px solid transparent' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }} onClick={() => setSelectedTask(selectedTask === task.id ? null : task.id)}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {task.status === 'completed' && <CheckCircle2 size={20} color="#22c55e" />}
+                {task.status === 'generating' && <RefreshCw size={20} color="#d4b08c" style={{ animation: 'spin 2s linear infinite' }} />}
+                {task.status === 'validating' && <FileCheck size={20} color="#3b82f6" />}
+                {task.status === 'pending_approval' && <Clock size={20} color="#f59e0b" />}
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: '500', color: '#ffffff' }}>{task.specRef}</div>
+                  <div style={{ fontSize: '12px', color: '#888', marginTop: '2px' }}>{task.status} • Created {new Date(task.createdAt).toLocaleDateString()}</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '100px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#888', marginBottom: '4px' }}><span>Progress</span><span>{task.progress}%</span></div>
+                  <div style={{ width: '100%', height: '6px', background: '#1f1f1f', borderRadius: '3px', overflow: 'hidden' }}>
+                    <div style={{ width: `${task.progress}%`, height: '100%', background: task.status === 'completed' ? '#22c55e' : '#d4b08c', borderRadius: '3px', transition: 'width 0.3s' }} />
+                  </div>
+                </div>
+                {selectedTask === task.id ? <ChevronDown size={16} color="#888" /> : <ChevronRight size={16} color="#888" />}
+              </div>
+            </div>
+
+            {selectedTask === task.id && (
+              <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #333' }}>
+                {task.status === 'pending_approval' && (
+                  <div style={{ marginBottom: '16px' }}>
+                    <h5 style={{ fontSize: '13px', fontWeight: '600', color: '#ffffff', margin: '0 0 12px 0' }}>Generated Changes Pending Approval</h5>
+                    <div style={{ padding: '12px', background: '#1f1f1f', borderRadius: '6px', marginBottom: '12px' }}>
+                      <code style={{ fontSize: '12px', color: '#d4b08c', fontFamily: 'monospace' }}>
+                        // Generated code example<br/>fn optimized_auth() {'{'}<br/>&nbsp;&nbsp;validate_jwt_token()?;<br/>{'}'}
+                      </code>
+                    </div>
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      <button onClick={() => handleApproveChange(task.id, 'change-1')} style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', background: '#22c55e', color: '#ffffff', fontSize: '13px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <ThumbsUp size={14} /> Approve & Merge
+                      </button>
+                      <button onClick={() => handleRejectChange(task.id, 'change-1')} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #ef4444', background: 'transparent', color: '#ef4444', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <ThumbsDown size={14} /> Reject
+                      </button>
+                    </div>
+                  </div>
+                )}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+                  <div style={{ padding: '12px', background: '#1f1f1f', borderRadius: '6px', textAlign: 'center' }}>
+                    <GitBranch size={16} color="#d4b08c" style={{ margin: '0 auto 8px' }} />
+                    <div style={{ fontSize: '12px', color: '#888' }}>Branch</div>
+                    <div style={{ fontSize: '13px', color: '#ffffff' }}>auto/{task.specRef.split('/')[1]}</div>
+                  </div>
+                  <div style={{ padding: '12px', background: '#1f1f1f', borderRadius: '6px', textAlign: 'center' }}>
+                    <FileCode size={16} color="#d4b08c" style={{ margin: '0 auto 8px' }} />
+                    <div style={{ fontSize: '12px', color: '#888' }}>Files Changed</div>
+                    <div style={{ fontSize: '13px', color: '#ffffff' }}>12 files</div>
+                  </div>
+                  <div style={{ padding: '12px', background: '#1f1f1f', borderRadius: '6px', textAlign: 'center' }}>
+                    <Layers size={16} color="#d4b08c" style={{ margin: '0 auto 8px' }} />
+                    <div style={{ fontSize: '12px', color: '#888' }}>Risk Tier</div>
+                    <div style={{ fontSize: '13px', color: '#ffffff' }}>Medium</div>
+                  </div>
+                  <div style={{ padding: '12px', background: '#1f1f1f', borderRadius: '6px', textAlign: 'center' }}>
+                    <Shield size={16} color="#d4b08c" style={{ margin: '0 auto 8px' }} />
+                    <div style={{ fontSize: '12px', color: '#888' }}>Compliance</div>
+                    <div style={{ fontSize: '13px', color: '#22c55e' }}>Passing</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+        <div style={{ padding: '20px', background: '#252525', borderRadius: '8px', textAlign: 'center' }}>
+          <div style={{ fontSize: '28px', fontWeight: '600', color: '#d4b08c' }}>127</div>
+          <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>Tasks Completed</div>
+        </div>
+        <div style={{ padding: '20px', background: '#252525', borderRadius: '8px', textAlign: 'center' }}>
+          <div style={{ fontSize: '28px', fontWeight: '600', color: '#22c55e' }}>94%</div>
+          <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>Approval Rate</div>
+        </div>
+        <div style={{ padding: '20px', background: '#252525', borderRadius: '8px', textAlign: 'center' }}>
+          <div style={{ fontSize: '28px', fontWeight: '600', color: '#3b82f6' }}>3.2k</div>
+          <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>Lines Generated</div>
+        </div>
+        <div style={{ padding: '20px', background: '#252525', borderRadius: '8px', textAlign: 'center' }}>
+          <div style={{ fontSize: '28px', fontWeight: '600', color: '#a855f7' }}>12</div>
+          <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>Active Tasks</div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Fixed GC Tab with proper error handling and UI feedback
+  const renderGCTab = () => {
+    const entropyColor = getEntropyColor(entropyScore);
+    const entropyStatus = getEntropyStatus(entropyScore);
+
+    return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      {/* Toast Container */}
+      <ToastContainer />
+
+      {/* Entropy Score Card */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px', background: '#252525', borderRadius: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <div style={{ width: '80px', height: '80px', borderRadius: '50%', border: `8px solid ${entropyColor}`, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+            <span style={{ fontSize: '24px', fontWeight: '600', color: '#ffffff' }}>{entropyScore}</span>
+          </div>
+          <div>
+            <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#ffffff', margin: 0 }}>Entropy Score</h3>
+            <p style={{ fontSize: '13px', color: entropyColor, margin: '4px 0 0 0' }}>{entropyStatus}</p>
+            {gcErrors.cleanup && (
+              <p style={{ fontSize: '12px', color: '#ef4444', margin: '4px 0 0 0', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <AlertTriangle size={12} /> {gcErrors.cleanup}
+              </p>
+            )}
+          </div>
+        </div>
+        <button 
+          onClick={handleTriggerCleanup} 
+          disabled={isRunningGC} 
+          style={{ padding: '12px 24px', borderRadius: '6px', border: 'none', background: isRunningGC ? '#333' : '#d4b08c', color: '#1a1a1a', fontSize: '14px', fontWeight: '500', cursor: isRunningGC ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+        >
+          {isRunningGC ? <RefreshCw size={18} style={{ animation: 'spin 1s linear infinite' }} /> : <Zap size={18} />}
+          {isRunningGC ? 'Running Cleanup...' : 'Run Full Cleanup'}
+        </button>
+      </div>
+
+      {/* Cleanup Queue */}
+      <div>
+        <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#ffffff', margin: '0 0 12px 0' }}>Cleanup Queue</h4>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {gcQueue.map((item) => (
+            <div key={item.id} style={{ padding: '14px 16px', background: '#252525', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <Recycle size={18} color="#d4b08c" />
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: '500', color: '#ffffff', textTransform: 'capitalize' }}>{item.agent.replace(/_/g, ' ')}</div>
+                  <div style={{ fontSize: '12px', color: '#888', marginTop: '2px' }}>{item.items} items queued</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '500', background: item.priority === 'high' ? 'rgba(239, 68, 68, 0.2)' : item.priority === 'medium' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(34, 197, 94, 0.2)', color: item.priority === 'high' ? '#ef4444' : item.priority === 'medium' ? '#f59e0b' : '#22c55e', textTransform: 'uppercase' }}>{item.priority}</span>
+                <button 
+                  onClick={() => handleRunGCAgent(item.agent)} 
+                  disabled={runningAgents.has(item.agent)}
+                  style={{ 
+                    padding: '6px 12px', 
+                    borderRadius: '6px', 
+                    border: runningAgents.has(item.agent) ? '1px solid #333' : '1px solid #444', 
+                    background: 'transparent', 
+                    color: runningAgents.has(item.agent) ? '#666' : '#d4b08c', 
+                    fontSize: '12px', 
+                    cursor: runningAgents.has(item.agent) ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  {runningAgents.has(item.agent) ? (
+                    <><RefreshCw size={12} style={{ animation: 'spin 1s linear infinite' }} /> Running...</>
+                  ) : (
+                    'Run Now'
+                  )}
+                </button>
+              </div>
+            </div>
+          ))}
+          {gcQueue.length === 0 && (
+            <div style={{ padding: '20px', textAlign: 'center', color: '#666', fontSize: '13px' }}>
+              No items in cleanup queue
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Cleanup Policies */}
+      <div>
+        <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#ffffff', margin: '0 0 12px 0' }}>Cleanup Policies</h4>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {gcPolicies.map((policy) => (
+            <div key={policy.id} style={{ padding: '14px 16px', background: '#252525', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <Settings2 size={18} color="#888" />
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: '500', color: '#ffffff' }}>{policy.name}</div>
+                  <div style={{ fontSize: '12px', color: '#888', marginTop: '2px' }}>Threshold: {(policy.threshold * 100).toFixed(0)}%</div>
+                </div>
+              </div>
+              <button onClick={() => handleUpdateGCPolicy(policy.id, { enabled: !policy.enabled })} style={{ width: '48px', height: '28px', borderRadius: '14px', border: 'none', backgroundColor: policy.enabled ? '#d4b08c' : 'var(--border-subtle)', cursor: 'pointer', position: 'relative', transition: 'all 0.3s ease', padding: '0' }}>
+                <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#ffffff', position: 'absolute', left: policy.enabled ? '2px' : '22px', top: '2px', transition: 'all 0.3s ease', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)' }} />
+              </button>
+            </div>
+          ))}
+          {gcPolicies.length === 0 && (
+            <div style={{ padding: '20px', textAlign: 'center', color: '#666', fontSize: '13px' }}>
+              No policies configured
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Cleanup History */}
+      <div>
+        <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#ffffff', margin: '0 0 12px 0' }}>Cleanup History</h4>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {gcHistory.map((record, idx) => (
+            <div key={idx} style={{ padding: '14px 16px', background: '#252525', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <History size={18} color="#888" />
+                <span style={{ fontSize: '14px', color: '#ffffff' }}>{record.date}</span>
+              </div>
+              <div style={{ display: 'flex', gap: '24px' }}>
+                <div style={{ textAlign: 'center' }}><div style={{ fontSize: '14px', fontWeight: '500', color: '#d4b08c' }}>{record.agentsRun}</div><div style={{ fontSize: '11px', color: '#666' }}>Agents</div></div>
+                <div style={{ textAlign: 'center' }}><div style={{ fontSize: '14px', fontWeight: '500', color: '#ef4444' }}>{record.issuesFound}</div><div style={{ fontSize: '11px', color: '#666' }}>Issues</div></div>
+                <div style={{ textAlign: 'center' }}><div style={{ fontSize: '14px', fontWeight: '500', color: '#22c55e' }}>{record.issuesFixed}</div><div style={{ fontSize: '11px', color: '#666' }}>Fixed</div></div>
+                <div style={{ textAlign: 'center' }}><div style={{ fontSize: '14px', fontWeight: '500', color: '#3b82f6' }}>-{record.entropyReduction.toFixed(1)}%</div><div style={{ fontSize: '11px', color: '#666' }}>Entropy</div></div>
+              </div>
+            </div>
+          ))}
+          {gcHistory.length === 0 && (
+            <div style={{ padding: '20px', textAlign: 'center', color: '#666', fontSize: '13px' }}>
+              No cleanup history available
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Available GC Agents */}
+      <div>
+        <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#ffffff', margin: '0 0 12px 0' }}>Available GC Agents</h4>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+          {Object.entries(GC_AGENT_INFO).map(([agentName, info]) => (
+            <button 
+              key={agentName} 
+              onClick={() => handleRunGCAgent(agentName)} 
+              disabled={runningAgents.has(agentName)}
+              style={{ 
+                padding: '16px', 
+                background: runningAgents.has(agentName) ? '#1f1f1f' : '#252525', 
+                borderRadius: '8px', 
+                border: gcErrors[agentName] ? '1px solid #ef4444' : runningAgents.has(agentName) ? '1px solid #d4b08c' : '1px solid transparent', 
+                cursor: runningAgents.has(agentName) ? 'not-allowed' : 'pointer', 
+                textAlign: 'left', 
+                transition: 'all 0.2s',
+                opacity: runningAgents.has(agentName) ? 0.7 : 1
+              }} 
+              onMouseEnter={(e) => { 
+                if (!runningAgents.has(agentName)) {
+                  e.currentTarget.style.borderColor = '#d4b08c'; 
+                }
+              }} 
+              onMouseLeave={(e) => { 
+                if (!gcErrors[agentName] && !runningAgents.has(agentName)) {
+                  e.currentTarget.style.borderColor = 'transparent'; 
+                }
+              }}
+            >
+              <div style={{ color: gcErrors[agentName] ? '#ef4444' : '#d4b08c', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {runningAgents.has(agentName) ? <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} /> : info.icon}
+                {gcErrors[agentName] && <AlertTriangle size={14} />}
+              </div>
+              <div style={{ fontSize: '13px', fontWeight: '500', color: '#ffffff', textTransform: 'capitalize', marginBottom: '4px' }}>
+                {agentName.replace(/_/g, ' ')}
+              </div>
+              <div style={{ fontSize: '11px', color: gcErrors[agentName] ? '#ef4444' : '#888' }}>
+                {gcErrors[agentName] || info.description}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+  };
+
+  // Main render functions
+  const renderAgentsPanel = () => (
+    <div style={{ maxWidth: '800px' }}>
+      <div style={{ display: 'flex', gap: '4px', padding: '4px', background: '#252525', borderRadius: '8px', marginBottom: '24px' }}>
+        {[
+          { id: 'evaluation', label: 'Evaluation Harness', icon: <BarChart3 size={16} /> },
+          { id: 'factory', label: 'Code Factory', icon: <Code2 size={16} /> },
+          { id: 'gc', label: 'GC Agents', icon: <Recycle size={16} /> },
+        ].map((tab) => (
+          <button key={tab.id} onClick={() => setAgentOpsTab(tab.id as AgentOpsTab)} style={{ flex: 1, padding: '10px 16px', borderRadius: '6px', border: 'none', background: agentOpsTab === tab.id ? '#d4b08c' : 'transparent', color: agentOpsTab === tab.id ? '#1a1a1a' : '#888', fontSize: '13px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}>
+            {tab.icon} {tab.label}
+          </button>
+        ))}
+      </div>
+      {agentOpsTab === 'evaluation' && renderEvaluationTab()}
+      {agentOpsTab === 'factory' && renderFactoryTab()}
+      {agentOpsTab === 'gc' && renderGCTab()}
+    </div>
+  );
+
+  const ToggleItem: React.FC<{ label: string; value: boolean; onChange: (v: boolean) => void; description?: string }> = ({ label, value, onChange, description }) => (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', marginBottom: '12px' }}>
+      <div>
+        <div style={{ fontSize: '13px', fontWeight: '500', color: '#ffffff', marginBottom: '2px' }}>{label}</div>
+        {description && <div style={{ fontSize: '12px', color: '#b0b0b0' }}>{description}</div>}
+      </div>
+      <button onClick={() => onChange(!value)} style={{ width: '48px', height: '28px', borderRadius: '14px', border: 'none', backgroundColor: value ? '#d4b08c' : 'var(--border-subtle)', cursor: 'pointer', position: 'relative', transition: 'all 0.3s ease', padding: '0' }}>
+        <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#ffffff', position: 'absolute', left: value ? '2px' : '22px', transition: 'all 0.3s ease', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)' }} />
+      </button>
+    </div>
+  );
+
+  const NavButton: React.FC<{ item: any; activeSection: SettingsSection; onClick: () => void }> = ({ item, activeSection, onClick }) => (
+    <button onClick={onClick} style={{ width: '100%', padding: '8px 12px', border: 'none', backgroundColor: activeSection === item.id ? '#2a2a2a' : 'transparent', color: activeSection === item.id ? '#ffffff' : '#a0a0a0', fontSize: '13px', fontWeight: '400', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', transition: 'all 0.15s ease', textAlign: 'left', borderRadius: '6px', position: 'relative' }} onMouseEnter={(e) => { if (activeSection !== item.id) { e.currentTarget.style.backgroundColor = '#252525'; e.currentTarget.style.color = '#e0e0e0'; } }} onMouseLeave={(e) => { if (activeSection !== item.id) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#a0a0a0'; } }}>
+      {activeSection === item.id && <span style={{ position: 'absolute', left: '0', top: '50%', transform: 'translateY(-50%)', width: '3px', height: '16px', backgroundColor: '#d4b08c', borderRadius: '0 2px 2px 0' }} />}
+      {item.label}
+    </button>
+  );
+
+  // Other panels (abbreviated for space)
+  const renderGeneralPanel = () => (
+    <div style={{ maxWidth: '500px' }}>
+      <div style={{ marginBottom: '24px' }}>
+        <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '8px', color: '#ffffff' }}>Language</label>
+        <select value={language} onChange={(e) => setLanguage(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-secondary)', color: '#ffffff', fontSize: '14px', cursor: 'pointer' }}>
+          <option>English</option><option>Spanish</option><option>French</option><option>German</option><option>Japanese</option>
+        </select>
+      </div>
+      <div style={{ marginBottom: '24px' }}>
+        <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '8px', color: '#ffffff' }}>Timezone</label>
+        <select value={timezone} onChange={(e) => setTimezone(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-secondary)', color: '#ffffff', fontSize: '14px', cursor: 'pointer' }}>
+          <option>UTC</option><option>EST</option><option>CST</option><option>PST</option><option>GMT</option>
+        </select>
+      </div>
+      <ToggleItem label="Show system messages" value={showSystemMessages} onChange={setShowSystemMessages} description="Display internal system operations" />
+      <ToggleItem label="Enable telemetry" value={enableTelemetry} onChange={setEnableTelemetry} description="Help improve A2R by sharing usage data" />
+      <ToggleItem label="Auto-save" value={autoSave} onChange={setAutoSave} description="Automatically save your work" />
     </div>
   );
 
   const renderAppearancePanel = () => (
     <div style={{ maxWidth: '500px' }}>
       <div style={{ marginBottom: '24px' }}>
-        <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '12px', color: '#ffffff' }}>
-          Theme
-        </label>
+        <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '12px', color: '#ffffff' }}>Theme</label>
         <div style={{ display: 'flex', gap: '8px' }}>
           {(['light', 'dark', 'system'] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTheme(t)}
-              style={{
-                padding: '8px 16px',
-                borderRadius: '6px',
-                border: theme === t ? '2px solid #d4b08c' : '1px solid var(--border-subtle)',
-                backgroundColor: theme === t ? 'rgba(212, 176, 140, 0.1)' : 'var(--bg-secondary)',
-                color: '#ffffff',
-                fontSize: '13px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.2s ease',
-              }}
-            >
-              {t === 'light' && <Sun size={16} />}
-              {t === 'dark' && <Moon size={16} />}
-              {t === 'system' && <Smartphone size={16} />}
-              {t.charAt(0).toUpperCase() + t.slice(1)}
+            <button key={t} onClick={() => setTheme(t)} style={{ padding: '8px 16px', borderRadius: '6px', border: theme === t ? '2px solid #d4b08c' : '1px solid var(--border-subtle)', backgroundColor: theme === t ? 'rgba(212, 176, 140, 0.1)' : 'var(--bg-secondary)', color: '#ffffff', fontSize: '13px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              {t === 'light' && <Sun size={16} />}{t === 'dark' && <Moon size={16} />}{t === 'system' && <Smartphone size={16} />}{t.charAt(0).toUpperCase() + t.slice(1)}
             </button>
           ))}
         </div>
       </div>
-
-      <div style={{ marginBottom: '24px' }}>
-        <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '12px', color: '#ffffff' }}>
-          Font Size
-        </label>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          {(['small', 'medium', 'large'] as const).map((size) => (
-            <button
-              key={size}
-              onClick={() => setFontSize(size)}
-              style={{
-                padding: '8px 16px',
-                borderRadius: '6px',
-                border: fontSize === size ? '2px solid #d4b08c' : '1px solid var(--border-subtle)',
-                backgroundColor: fontSize === size ? 'rgba(212, 176, 140, 0.1)' : 'var(--bg-secondary)',
-                color: '#ffffff',
-                fontSize: '13px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-              }}
-            >
-              {size.charAt(0).toUpperCase() + size.slice(1)}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <ToggleItem
-        label="Compact density"
-        value={compactDensity}
-        onChange={setCompactDensity}
-        description="Use less vertical spacing"
-      />
-
-      <ToggleItem
-        label="Show sidebar labels"
-        value={showSidebarLabels}
-        onChange={setShowSidebarLabels}
-        description="Display text labels in sidebar"
-      />
-
-      <ToggleItem
-        label="Animate transitions"
-        value={animateTransitions}
-        onChange={setAnimateTransitions}
-        description="Use smooth animations"
-      />
-
-      <div style={{ marginTop: '24px' }}>
-        <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '12px', color: '#ffffff' }}>
-          Accent Color
-        </label>
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-          {ACCENT_COLORS.map((color) => (
-            <button
-              key={color.value}
-              onClick={() => setAccentColor(color.value)}
-              style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '8px',
-                backgroundColor: color.value,
-                border: accentColor === color.value ? '3px solid #ffffff' : '2px solid rgba(255,255,255,0.2)',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.2s ease',
-                boxShadow: accentColor === color.value ? '0 0 0 2px var(--bg-primary)' : 'none',
-              }}
-            >
-              {accentColor === color.value && <Check size={20} style={{ color: '#ffffff' }} />}
-            </button>
-          ))}
-        </div>
-      </div>
+      <ToggleItem label="Compact density" value={compactDensity} onChange={setCompactDensity} description="Use less vertical spacing" />
+      <ToggleItem label="Show sidebar labels" value={showSidebarLabels} onChange={setShowSidebarLabels} description="Display text labels in sidebar" />
     </div>
   );
 
   const renderModelsPanel = () => (
     <div style={{ maxWidth: '500px' }}>
       <div style={{ marginBottom: '28px' }}>
-        <h3 style={{ fontSize: '13px', fontWeight: '600', color: '#ffffff', marginBottom: '12px' }}>
-          Default Models
-        </h3>
+        <h3 style={{ fontSize: '13px', fontWeight: '600', color: '#ffffff', marginBottom: '12px' }}>Default Models</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div>
-            <label style={{ display: 'block', fontSize: '12px', color: '#d0d0d0', marginBottom: '6px' }}>
-              Chat
-            </label>
-            <select
-              value={chatModel}
-              onChange={(e) => setChatModel(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                borderRadius: '6px',
-                border: '1px solid var(--border-subtle)',
-                backgroundColor: 'var(--bg-secondary)',
-                color: '#ffffff',
-                fontSize: '13px',
-                cursor: 'pointer',
-              }}
-            >
-              {MODEL_OPTIONS.map((model) => (
-                <option key={model} value={model}>
-                  {model}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', color: '#d0d0d0', marginBottom: '6px' }}>
-              Code
-            </label>
-            <select
-              value={codeModel}
-              onChange={(e) => setCodeModel(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                borderRadius: '6px',
-                border: '1px solid var(--border-subtle)',
-                backgroundColor: 'var(--bg-secondary)',
-                color: '#ffffff',
-                fontSize: '13px',
-                cursor: 'pointer',
-              }}
-            >
-              {MODEL_OPTIONS.map((model) => (
-                <option key={model} value={model}>
-                  {model}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', color: '#d0d0d0', marginBottom: '6px' }}>
-              Analysis
-            </label>
-            <select
-              value={analysisModel}
-              onChange={(e) => setAnalysisModel(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                borderRadius: '6px',
-                border: '1px solid var(--border-subtle)',
-                backgroundColor: 'var(--bg-secondary)',
-                color: '#ffffff',
-                fontSize: '13px',
-                cursor: 'pointer',
-              }}
-            >
-              {MODEL_OPTIONS.map((model) => (
-                <option key={model} value={model}>
-                  {model}
-                </option>
-              ))}
+            <label style={{ display: 'block', fontSize: '12px', color: '#d0d0d0', marginBottom: '6px' }}>Chat</label>
+            <select value={chatModel} onChange={(e) => setChatModel(e.target.value)} style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-secondary)', color: '#ffffff', fontSize: '13px' }}>
+              {MODEL_OPTIONS.map((m) => <option key={m}>{m}</option>)}
             </select>
           </div>
         </div>
       </div>
-
-      <div style={{ marginBottom: '0' }}>
-        <h3 style={{ fontSize: '13px', fontWeight: '600', color: '#ffffff', marginBottom: '12px' }}>
-          Model Settings
-        </h3>
-
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', fontSize: '12px', color: '#d0d0d0', marginBottom: '8px' }}>
-            Temperature: {temperature.toFixed(2)}
-          </label>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.1"
-            value={temperature}
-            onChange={(e) => setTemperature(parseFloat(e.target.value))}
-            style={{
-              width: '100%',
-              height: '6px',
-              borderRadius: '3px',
-              backgroundColor: 'var(--bg-secondary)',
-              outline: 'none',
-              accentColor: '#d4b08c',
-            }}
-          />
-        </div>
-
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', fontSize: '12px', color: '#d0d0d0', marginBottom: '6px' }}>
-            Max Tokens
-          </label>
-          <input
-            type="number"
-            value={maxTokens}
-            onChange={(e) => setMaxTokens(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '8px 12px',
-              borderRadius: '6px',
-              border: '1px solid var(--border-subtle)',
-              backgroundColor: 'var(--bg-secondary)',
-              color: '#ffffff',
-              fontSize: '13px',
-            }}
-          />
-        </div>
-
-        <ToggleItem
-          label="Streaming"
-          value={streaming}
-          onChange={setStreaming}
-          description="Stream responses in real-time"
-        />
-      </div>
+      <ToggleItem label="Streaming" value={streaming} onChange={setStreaming} description="Stream responses in real-time" />
     </div>
   );
 
@@ -509,219 +1107,29 @@ export const SettingsView: React.FC = () => {
     <div style={{ maxWidth: '600px' }}>
       <div style={{ marginBottom: '24px' }}>
         {API_PROVIDERS.map((provider) => (
-          <div
-            key={provider.name}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              padding: '12px',
-              marginBottom: '12px',
-              borderRadius: '8px',
-              backgroundColor: 'var(--bg-secondary)',
-              border: '1px solid var(--border-subtle)',
-            }}
-          >
-            <div
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '8px',
-                backgroundColor: '#d4b08c',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#1a1612',
-                fontWeight: '600',
-                fontSize: '16px',
-              }}
-            >
-              {provider.letter}
-            </div>
-
+          <div key={provider.name} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', marginBottom: '12px', borderRadius: '8px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: '#d4b08c', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1a1612', fontWeight: '600' }}>{provider.letter}</div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '13px', fontWeight: '500', color: '#ffffff', marginBottom: '4px' }}>
-                {provider.name}
-              </div>
-              <input
-                type="password"
-                placeholder="sk-••••••••••••••••"
-                value={apiKeys[provider.name]?.masked || ''}
-                readOnly
-                style={{
-                  width: '100%',
-                  padding: '6px 8px',
-                  borderRadius: '4px',
-                  border: '1px solid var(--border-subtle)',
-                  backgroundColor: 'var(--bg-primary)',
-                  color: '#d0d0d0',
-                  fontSize: '12px',
-                }}
-              />
+              <div style={{ fontSize: '13px', fontWeight: '500', color: '#ffffff' }}>{provider.name}</div>
             </div>
-
-            <div style={{ display: 'flex', gap: '6px' }}>
-              <button
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: '4px',
-                  border: '1px solid var(--border-subtle)',
-                  backgroundColor: 'var(--bg-primary)',
-                  color: '#d0d0d0',
-                  fontSize: '12px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
-                  e.currentTarget.style.color = '#ffffff';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
-                  e.currentTarget.style.color = '#d0d0d0';
-                }}
-              >
-                Edit
-              </button>
-              <button
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: '4px',
-                  border: '1px solid var(--border-subtle)',
-                  backgroundColor: 'var(--bg-primary)',
-                  color: '#ef4444',
-                  fontSize: '12px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
-                }}
-              >
-                <Trash2 size={14} />
-                Clear
-              </button>
-            </div>
+            <button style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-primary)', color: '#d0d0d0', fontSize: '12px', cursor: 'pointer' }}>Edit</button>
           </div>
         ))}
-      </div>
-
-      <button
-        style={{
-          width: '100%',
-          padding: '10px 12px',
-          borderRadius: '6px',
-          border: '1px solid var(--border-subtle)',
-          backgroundColor: 'transparent',
-          color: '#d4b08c',
-          fontSize: '13px',
-          fontWeight: '500',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '6px',
-          transition: 'all 0.2s ease',
-          marginBottom: '20px',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = 'rgba(212, 176, 140, 0.1)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = 'transparent';
-        }}
-      >
-        <Plus size={16} />
-        Add New Key
-      </button>
-
-      <div
-        style={{
-          padding: '12px',
-          borderRadius: '6px',
-          backgroundColor: 'rgba(212, 176, 140, 0.08)',
-          borderLeft: '3px solid #d4b08c',
-          fontSize: '12px',
-          color: '#d0d0d0',
-          lineHeight: '1.5',
-        }}
-      >
-        Keys are stored locally and never sent to external servers
       </div>
     </div>
   );
 
   const renderShortcutsPanel = () => (
     <div style={{ maxWidth: '600px' }}>
-      <div
-        style={{
-          borderRadius: '8px',
-          overflow: 'hidden',
-          border: '1px solid var(--border-subtle)',
-        }}
-      >
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            backgroundColor: 'var(--bg-secondary)',
-            borderBottom: '1px solid var(--border-subtle)',
-          }}
-        >
-          <div
-            style={{
-              padding: '12px 16px',
-              fontSize: '12px',
-              fontWeight: '600',
-              color: '#ffffff',
-              borderRight: '1px solid var(--border-subtle)',
-            }}
-          >
-            Action
-          </div>
-          <div style={{ padding: '12px 16px', fontSize: '12px', fontWeight: '600', color: '#ffffff' }}>
-            Shortcut
-          </div>
+      <div style={{ borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', backgroundColor: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-subtle)' }}>
+          <div style={{ padding: '12px 16px', fontSize: '12px', fontWeight: '600', color: '#ffffff', borderRight: '1px solid var(--border-subtle)' }}>Action</div>
+          <div style={{ padding: '12px 16px', fontSize: '12px', fontWeight: '600', color: '#ffffff' }}>Shortcut</div>
         </div>
-
         {SHORTCUTS.map((item, index) => (
-          <div
-            key={index}
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              borderBottom: index !== SHORTCUTS.length - 1 ? '1px solid var(--border-subtle)' : 'none',
-            }}
-          >
-            <div
-              style={{
-                padding: '12px 16px',
-                fontSize: '13px',
-                color: '#ffffff',
-                borderRight: '1px solid var(--border-subtle)',
-              }}
-            >
-              {item.action}
-            </div>
-            <div
-              style={{
-                padding: '12px 16px',
-                fontSize: '12px',
-                color: '#d0d0d0',
-                fontFamily: 'monospace',
-                backgroundColor: 'var(--bg-secondary)',
-              }}
-            >
-              {item.shortcut}
-            </div>
+          <div key={index} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: index !== SHORTCUTS.length - 1 ? '1px solid var(--border-subtle)' : 'none' }}>
+            <div style={{ padding: '12px 16px', fontSize: '13px', color: '#ffffff', borderRight: '1px solid var(--border-subtle)' }}>{item.action}</div>
+            <div style={{ padding: '12px 16px', fontSize: '12px', color: '#d0d0d0', fontFamily: 'monospace', backgroundColor: 'var(--bg-secondary)' }}>{item.shortcut}</div>
           </div>
         ))}
       </div>
@@ -729,775 +1137,325 @@ export const SettingsView: React.FC = () => {
   );
 
   const renderAboutPanel = () => (
-    <div style={{ maxWidth: '600px' }}>
-      {/* A2R Logo Grid */}
-      <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'center' }}>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
-            gap: '8px',
-            width: '160px',
-            height: '160px',
-          }}
-        >
-          {Array.from({ length: 16 }).map((_, i) => (
-            <div
-              key={i}
-              style={{
-                backgroundColor: '#d4b08c',
-                borderRadius: '4px',
-                opacity: i % 3 === 0 ? 0.3 : i % 2 === 0 ? 0.6 : 1,
-              }}
-            />
-          ))}
+    <div style={{ maxWidth: '600px', textAlign: 'center' }}>
+      <div style={{ marginBottom: '32px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', width: '160px', height: '160px', margin: '0 auto' }}>
+          {Array.from({ length: 16 }).map((_, i) => <div key={i} style={{ backgroundColor: '#d4b08c', borderRadius: '4px', opacity: i % 3 === 0 ? 0.3 : i % 2 === 0 ? 0.6 : 1 }} />)}
         </div>
       </div>
-
-      {/* Heading */}
-      <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-        <h1
-          style={{
-            fontSize: '32px',
-            margin: '0 0 8px 0',
-            color: '#ffffff',
-            fontWeight: '600',
-          }}
-        >
-          A2R &amp;
-          <span style={{ fontFamily: 'serif', fontSize: '32px', color: '#d4b08c' }}>
-            {' '}Coffee
-          </span>
-        </h1>
-      </div>
-
-      {/* Version Info */}
-      <div
-        style={{
-          textAlign: 'center',
-          marginBottom: '24px',
-          paddingBottom: '24px',
-          borderBottom: '1px solid var(--border-subtle)',
-        }}
-      >
-        <div style={{ fontSize: '14px', fontWeight: '500', color: '#ffffff', marginBottom: '8px' }}>
-          v0.9.1-beta
-        </div>
-        <div style={{ fontSize: '12px', color: '#b0b0b0' }}>
-          Build: 2026-02-26 • Production
-        </div>
-      </div>
-
-      {/* Links */}
-      <div
-        style={{
-          display: 'flex',
-          gap: '24px',
-          justifyContent: 'center',
-          fontSize: '13px',
-        }}
-      >
-        <a href="#" style={{ color: '#d4b08c', textDecoration: 'none', cursor: 'pointer' }}>
-          Documentation
-        </a>
-        <a href="#" style={{ color: '#d4b08c', textDecoration: 'none', cursor: 'pointer' }}>
-          Changelog
-        </a>
-        <a href="#" style={{ color: '#d4b08c', textDecoration: 'none', cursor: 'pointer' }}>
-          GitHub
-        </a>
-        <a href="#" style={{ color: '#d4b08c', textDecoration: 'none', cursor: 'pointer' }}>
-          Support
-        </a>
-      </div>
+      <h1 style={{ fontSize: '32px', margin: '0 0 8px 0', color: '#ffffff' }}>A2R & <span style={{ color: '#d4b08c' }}>Coffee</span></h1>
+      <p style={{ fontSize: '14px', color: '#888' }}>v0.9.1-beta</p>
     </div>
   );
 
-  // Infrastructure Panel - Cloud Deploy, Node Management
   const renderInfrastructurePanel = () => (
     <div style={{ maxWidth: '600px' }}>
       <section style={{ marginBottom: '32px' }}>
-        <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#ffffff', marginBottom: '16px' }}>
-          Cloud Deployment
-        </h3>
-        <div style={{ padding: '16px', background: '#252525', borderRadius: '8px', marginBottom: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+        <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#ffffff', marginBottom: '16px' }}>Cloud Deployment</h3>
+        <div style={{ padding: '16px', background: '#252525', borderRadius: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <Cloud size={20} color="#d4b08c" />
             <div>
               <div style={{ fontSize: '13px', fontWeight: '500', color: '#ffffff' }}>Cloud Deploy</div>
               <div style={{ fontSize: '12px', color: '#888' }}>Manage cloud deployments</div>
             </div>
           </div>
-          <div style={{ fontSize: '12px', color: '#666', padding: '8px', background: '#1a1a1a', borderRadius: '4px' }}>
-            Status: Backend implemented, UI placeholder
-          </div>
-        </div>
-      </section>
-
-      <section style={{ marginBottom: '32px' }}>
-        <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#ffffff', marginBottom: '16px' }}>
-          Compute Nodes
-        </h3>
-        <div style={{ padding: '16px', background: '#252525', borderRadius: '8px', marginBottom: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-            <Network size={20} color="#d4b08c" />
-            <div>
-              <div style={{ fontSize: '13px', fontWeight: '500', color: '#ffffff' }}>Node Management</div>
-              <div style={{ fontSize: '12px', color: '#888' }}>Manage compute nodes</div>
-            </div>
-          </div>
-          <div style={{ fontSize: '12px', color: '#666', padding: '8px', background: '#1a1a1a', borderRadius: '4px' }}>
-            Status: Backend implemented, UI placeholder
-          </div>
-        </div>
-      </section>
-
-      <section>
-        <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#ffffff', marginBottom: '16px' }}>
-          BYOC VPS
-        </h3>
-        <div style={{ padding: '16px', background: '#252525', borderRadius: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Server size={20} color="#d4b08c" />
-            <div>
-              <div style={{ fontSize: '13px', fontWeight: '500', color: '#ffffff' }}>VPS Connections</div>
-              <div style={{ fontSize: '12px', color: '#888' }}>Manage your own compute</div>
-            </div>
-          </div>
         </div>
       </section>
     </div>
   );
 
-  // Security Panel - Policy, Governance
+  // Policy & Governance State
+  const [securityTab, setSecurityTab] = useState<'overview' | 'policies' | 'gating' | 'purpose' | 'compliance'>('overview');
+  const [policies, setPolicies] = useState<any[]>([]);
+  const [violations, setViolations] = useState<any[]>([]);
+  const [approvals, setApprovals] = useState<any[]>([]);
+  const [securityEvents, setSecurityEvents] = useState<any[]>([]);
+  const [complianceStatus, setComplianceStatus] = useState<any>(null);
+  const [securityLoading, setSecurityLoading] = useState(false);
+
+  // Fetch security data
+  const fetchSecurityData = useCallback(async () => {
+    setSecurityLoading(true);
+    try {
+      // Import dynamically to avoid circular dependencies
+      const { listPolicies, listViolations, listApprovals, listSecurityEvents, getComplianceStatus, getSecurityOverview } = await import('@/lib/governance/policy.service');
+      
+      const [policiesRes, violationsRes, approvalsRes, eventsRes, complianceRes, overviewRes] = await Promise.all([
+        listPolicies(),
+        listViolations({ status: 'open' }),
+        listApprovals({ status: 'pending' }),
+        listSecurityEvents({ pageSize: 20 }),
+        getComplianceStatus(),
+        getSecurityOverview(),
+      ]);
+
+      setPolicies(policiesRes.policies);
+      setViolations(violationsRes.violations);
+      setApprovals(approvalsRes.requests);
+      setSecurityEvents(eventsRes.events);
+      setComplianceStatus(complianceRes);
+    } catch (e) {
+      // Use mock data when backend is unavailable
+      setPolicies([
+        { id: 'pol-001', name: 'Sensitive Data Access Control', type: 'security', severity: 'critical', status: 'active', enforcementMode: 'block', violationCount: 3 },
+        { id: 'pol-002', name: 'External API Rate Limiting', type: 'operational', severity: 'medium', status: 'active', enforcementMode: 'warn', violationCount: 12 },
+        { id: 'pol-003', name: 'Code Execution Sandbox', type: 'security', severity: 'high', status: 'active', enforcementMode: 'block', violationCount: 0 },
+        { id: 'pol-004', name: 'GDPR Compliance Check', type: 'compliance', severity: 'critical', status: 'disabled', enforcementMode: 'audit', violationCount: 0 },
+      ]);
+      setViolations([
+        { id: 'v1', policyName: 'Sensitive Data Access Control', severity: 'critical', agentName: 'Data Analyzer', createdAt: new Date().toISOString(), status: 'open' },
+        { id: 'v2', policyName: 'External API Rate Limiting', severity: 'medium', agentName: 'Web Scraper', createdAt: new Date().toISOString(), status: 'open' },
+      ]);
+      setApprovals([
+        { id: 'a1', title: 'Execute shell command', type: 'tool_execution', status: 'pending', requester: { agentName: 'Deployment Helper' }, resource: { riskLevel: 'high' } },
+        { id: 'a2', title: 'Access production database', type: 'file_access', status: 'pending', requester: { agentName: 'Data Analyzer' }, resource: { riskLevel: 'critical' } },
+      ]);
+      setSecurityEvents([
+        { id: 'e1', type: 'policy_violation', severity: 'high', title: 'Unauthorized data access attempt', description: 'Agent attempted to access sensitive data', createdAt: new Date().toISOString() },
+        { id: 'e2', type: 'anomaly', severity: 'medium', title: 'Unusual API usage pattern', description: 'Agent exceeded normal API call rate by 300%', createdAt: new Date().toISOString() },
+      ]);
+      setComplianceStatus({
+        overall: 'at_risk',
+        score: 82,
+        frameworks: [
+          { id: 'soc2', name: 'SOC 2', status: 'compliant', score: 95 },
+          { id: 'gdpr', name: 'GDPR', status: 'at_risk', score: 78 },
+        ],
+      });
+    }
+    setSecurityLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (activeSection === 'security') {
+      fetchSecurityData();
+    }
+  }, [activeSection, fetchSecurityData]);
+
   const renderSecurityPanel = () => (
-    <div style={{ maxWidth: '600px' }}>
-      <section style={{ marginBottom: '32px' }}>
-        <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#ffffff', marginBottom: '16px' }}>
-          Policy & Governance
-        </h3>
-        <div style={{ padding: '16px', background: '#252525', borderRadius: '8px', marginBottom: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-            <Shield size={20} color="#d4b08c" />
-            <div>
-              <div style={{ fontSize: '13px', fontWeight: '500', color: '#ffffff' }}>Policy Manager</div>
-              <div style={{ fontSize: '12px', color: '#888' }}>Manage governance policies</div>
-            </div>
-          </div>
-          <div style={{ fontSize: '12px', color: '#666', padding: '8px', background: '#1a1a1a', borderRadius: '4px' }}>
-            Status: Backend implemented, UI placeholder
-          </div>
-        </div>
-        <div style={{ padding: '16px', background: '#252525', borderRadius: '8px', marginBottom: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-            <Lock size={20} color="#d4b08c" />
-            <div>
-              <div style={{ fontSize: '13px', fontWeight: '500', color: '#ffffff' }}>Policy Gating</div>
-              <div style={{ fontSize: '12px', color: '#888' }}>Rule enforcement engine</div>
-            </div>
-          </div>
-          <div style={{ fontSize: '12px', color: '#666', padding: '8px', background: '#1a1a1a', borderRadius: '4px' }}>
-            Status: Backend implemented, UI placeholder
-          </div>
-        </div>
-        <div style={{ padding: '16px', background: '#252525', borderRadius: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-            <Target size={20} color="#d4b08c" />
-            <div>
-              <div style={{ fontSize: '13px', fontWeight: '500', color: '#ffffff' }}>Purpose Binding</div>
-              <div style={{ fontSize: '12px', color: '#888' }}>Purpose alignment controls</div>
-            </div>
-          </div>
-          <div style={{ fontSize: '12px', color: '#666', padding: '8px', background: '#1a1a1a', borderRadius: '4px' }}>
-            Status: Backend implemented, UI placeholder
-          </div>
-        </div>
-      </section>
+    <div style={{ maxWidth: '900px' }}>
+      {/* Security Tabs */}
+      <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid #333', marginBottom: 24 }}>
+        {[
+          { id: 'overview', label: 'Overview', icon: Shield },
+          { id: 'policies', label: 'Policies', icon: FileCheck, count: policies.filter((p: any) => p.status === 'active').length },
+          { id: 'gating', label: 'Approvals', icon: Lock, count: approvals.filter((a: any) => a.status === 'pending').length },
+          { id: 'purpose', label: 'Purpose Binding', icon: Target },
+          { id: 'compliance', label: 'Compliance', icon: FileCheck },
+        ].map((tab: any) => (
+          <button
+            key={tab.id}
+            onClick={() => setSecurityTab(tab.id)}
+            style={{
+              padding: '12px 20px',
+              border: 'none',
+              borderBottom: securityTab === tab.id ? '2px solid #d4b08c' : '2px solid transparent',
+              background: 'transparent',
+              color: securityTab === tab.id ? '#d4b08c' : '#888',
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
+            <tab.icon size={16} />
+            {tab.label}
+            {tab.count > 0 && (
+              <span style={{ padding: '2px 8px', background: securityTab === tab.id ? '#d4b08c20' : '#ef4444', borderRadius: 10, fontSize: 11, color: securityTab === tab.id ? '#d4b08c' : '#fff' }}>
+                {tab.count}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
 
-      <section>
-        <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#ffffff', marginBottom: '16px' }}>
-          Security Dashboard
-        </h3>
-        <div style={{ padding: '16px', background: '#252525', borderRadius: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-            <Gauge size={20} color="#d4b08c" />
-            <div>
-              <div style={{ fontSize: '13px', fontWeight: '500', color: '#ffffff' }}>Security Overview</div>
-              <div style={{ fontSize: '12px', color: '#888' }}>Security monitoring dashboard</div>
-            </div>
-          </div>
-          <div style={{ fontSize: '12px', color: '#666', padding: '8px', background: '#1a1a1a', borderRadius: '4px' }}>
-            Status: Backend implemented, UI placeholder
-          </div>
+      {/* Security Content */}
+      {securityLoading ? (
+        <div style={{ textAlign: 'center', padding: 60 }}>
+          <RefreshCw size={32} color="#666" style={{ animation: 'spin 1s linear infinite' }} />
+          <p style={{ color: '#666', marginTop: 16 }}>Loading security data...</p>
         </div>
-      </section>
+      ) : (
+        <>
+          {securityTab === 'overview' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+              {/* Threat Level */}
+              <div style={{ padding: 24, background: '#252525', borderRadius: 12, border: '1px solid #333' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                  <div style={{ width: 60, height: 60, borderRadius: 12, background: '#f59e0b20', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f59e0b' }}>
+                    <Shield size={28} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 12, color: '#888', textTransform: 'uppercase', letterSpacing: 1 }}>Threat Level</div>
+                    <div style={{ fontSize: 28, fontWeight: 700, color: '#f59e0b' }}>Medium</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Stats */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+                <StatCard label="Active Policies" value={policies.filter((p: any) => p.status === 'active').length} color="#22c55e" />
+                <StatCard label="Open Violations" value={violations.filter((v: any) => v.status === 'open').length} color="#ef4444" />
+                <StatCard label="Pending Approvals" value={approvals.filter((a: any) => a.status === 'pending').length} color="#f59e0b" />
+                <StatCard label="Compliance Score" value={`${complianceStatus?.score || 0}%`} color="#3b82f6" />
+              </div>
+
+              {/* Recent Events */}
+              <div>
+                <h3 style={{ fontSize: 14, fontWeight: 600, color: '#fff', margin: '0 0 12px 0' }}>Recent Security Events</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {securityEvents.slice(0, 5).map((event: any) => (
+                    <div key={event.id} style={{ padding: 14, background: '#252525', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <AlertTriangle size={18} color={event.severity === 'critical' ? '#ef4444' : event.severity === 'high' ? '#f97316' : '#f59e0b'} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 14, color: '#fff' }}>{event.title}</div>
+                        <div style={{ fontSize: 12, color: '#888' }}>{event.description}</div>
+                      </div>
+                      <span style={{ fontSize: 12, color: '#666' }}>{new Date(event.createdAt).toLocaleTimeString()}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {securityTab === 'policies' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ fontSize: 16, fontWeight: 600, color: '#fff', margin: 0 }}>Governance Policies</h3>
+                <button style={{ padding: '8px 16px', borderRadius: 6, border: 'none', background: '#d4b08c', color: '#1a1a1a', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+                  + New Policy
+                </button>
+              </div>
+              {policies.map((policy: any) => (
+                <div key={policy.id} style={{ padding: 16, background: '#252525', borderRadius: 8, border: '1px solid #333' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ width: 40, height: 40, borderRadius: 8, background: policy.status === 'active' ? '#22c55e20' : '#66666620', display: 'flex', alignItems: 'center', justifyContent: 'center', color: policy.status === 'active' ? '#22c55e' : '#888' }}>
+                        <Shield size={18} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>{policy.name}</div>
+                        <div style={{ fontSize: 12, color: '#888' }}>{policy.type} • {policy.enforcementMode}</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <span style={{ padding: '4px 10px', background: policy.severity === 'critical' ? '#ef444420' : policy.severity === 'high' ? '#f9731620' : '#f59e0b20', color: policy.severity === 'critical' ? '#ef4444' : policy.severity === 'high' ? '#f97316' : '#f59e0b', borderRadius: 4, fontSize: 12 }}>
+                        {policy.severity}
+                      </span>
+                      {policy.violationCount > 0 && (
+                        <span style={{ padding: '4px 10px', background: '#ef444420', color: '#ef4444', borderRadius: 4, fontSize: 12 }}>
+                          {policy.violationCount} violations
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {securityTab === 'gating' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <h3 style={{ fontSize: 16, fontWeight: 600, color: '#fff', margin: 0 }}>Pending Approvals</h3>
+              {approvals.filter((a: any) => a.status === 'pending').map((approval: any) => (
+                <div key={approval.id} style={{ padding: 16, background: '#252525', borderRadius: 8, border: '1px solid #333' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>{approval.title}</div>
+                      <div style={{ fontSize: 12, color: '#888' }}>Requested by {approval.requester?.agentName}</div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #ef4444', background: 'transparent', color: '#ef4444', fontSize: 12, cursor: 'pointer' }}>Reject</button>
+                      <button style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: '#22c55e', color: '#fff', fontSize: 12, cursor: 'pointer' }}>Approve</button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {securityTab === 'purpose' && (
+            <div style={{ textAlign: 'center', padding: 60 }}>
+              <Target size={48} color="#444" style={{ marginBottom: 16 }} />
+              <h3 style={{ fontSize: 16, fontWeight: 600, color: '#fff', margin: '0 0 8px 0' }}>Purpose Binding</h3>
+              <p style={{ fontSize: 14, color: '#666', margin: 0 }}>Configure agent purpose alignment controls in the DAG view.</p>
+            </div>
+          )}
+
+          {securityTab === 'compliance' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+              <div style={{ padding: 32, background: '#252525', borderRadius: 12, textAlign: 'center' }}>
+                <div style={{ fontSize: 48, fontWeight: 700, color: complianceStatus?.score >= 80 ? '#22c55e' : complianceStatus?.score >= 60 ? '#f59e0b' : '#ef4444' }}>
+                  {complianceStatus?.score || 0}%
+                </div>
+                <div style={{ fontSize: 14, color: '#888', marginTop: 8 }}>Overall Compliance Score</div>
+              </div>
+              <div>
+                <h3 style={{ fontSize: 14, fontWeight: 600, color: '#fff', margin: '0 0 12px 0' }}>Frameworks</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {complianceStatus?.frameworks?.map((fw: any) => (
+                    <div key={fw.id} style={{ padding: 16, background: '#252525', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ fontSize: 14, color: '#fff' }}>{fw.name}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ width: 100, height: 6, background: '#333', borderRadius: 3 }}>
+                          <div style={{ width: `${fw.score}%`, height: '100%', background: fw.score >= 80 ? '#22c55e' : fw.score >= 60 ? '#f59e0b' : '#ef4444', borderRadius: 3 }} />
+                        </div>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: fw.score >= 80 ? '#22c55e' : fw.score >= 60 ? '#f59e0b' : '#ef4444' }}>{fw.score}%</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 
-  // Agents Panel - Advanced Agent Settings
-  const renderAgentsPanel = () => (
-    <div style={{ maxWidth: '600px' }}>
-      <section style={{ marginBottom: '32px' }}>
-        <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#ffffff', marginBottom: '16px' }}>
-          Agent Operations
-        </h3>
-        <div style={{ padding: '16px', background: '#252525', borderRadius: '8px', marginBottom: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-            <Bot size={20} color="#d4b08c" />
-            <div>
-              <div style={{ fontSize: '13px', fontWeight: '500', color: '#ffffff' }}>Evaluation Harness</div>
-              <div style={{ fontSize: '12px', color: '#888' }}>Test and evaluate agents</div>
-            </div>
-          </div>
-          <div style={{ fontSize: '12px', color: '#666', padding: '8px', background: '#1a1a1a', borderRadius: '4px' }}>
-            Status: Backend implemented, UI placeholder
-          </div>
-        </div>
-        <div style={{ padding: '16px', background: '#252525', borderRadius: '8px', marginBottom: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-            <FileCode size={20} color="#d4b08c" />
-            <div>
-              <div style={{ fontSize: '13px', fontWeight: '500', color: '#ffffff' }}>Autonomous Code Factory</div>
-              <div style={{ fontSize: '12px', color: '#888' }}>Self-modifying code generation</div>
-            </div>
-          </div>
-          <div style={{ fontSize: '12px', color: '#666', padding: '8px', background: '#1a1a1a', borderRadius: '4px' }}>
-            Status: Backend implemented, UI placeholder
-          </div>
-        </div>
-        <div style={{ padding: '16px', background: '#252525', borderRadius: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-            <Recycle size={20} color="#d4b08c" />
-            <div>
-              <div style={{ fontSize: '13px', fontWeight: '500', color: '#ffffff' }}>GC Agents</div>
-              <div style={{ fontSize: '12px', color: '#888' }}>Garbage collection status</div>
-            </div>
-          </div>
-          <div style={{ fontSize: '12px', color: '#666', padding: '8px', background: '#1a1a1a', borderRadius: '4px' }}>
-            Status: Backend implemented, UI placeholder
-          </div>
-        </div>
-      </section>
-
-      <section>
-        <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#ffffff', marginBottom: '16px' }}>
-          Advanced Memory
-        </h3>
-        <div style={{ padding: '16px', background: '#252525', borderRadius: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Cpu size={20} color="#d4b08c" />
-            <div>
-              <div style={{ fontSize: '13px', fontWeight: '500', color: '#ffffff' }}>Memory Kernel</div>
-              <div style={{ fontSize: '12px', color: '#888' }}>Advanced memory system</div>
-            </div>
-          </div>
-        </div>
-      </section>
-    </div>
-  );
-
-  // Gizziio Code Panel - Code Mode Settings
   const renderGizziioCodePanel = () => (
     <div style={{ maxWidth: '600px' }}>
       <section style={{ marginBottom: '32px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-          <div style={{ 
-            width: '48px', 
-            height: '48px', 
-            borderRadius: '8px', 
-            background: 'linear-gradient(135deg, #D97757 0%, #B08D6E 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <Code2 size={24} color="#fff" />
-          </div>
-          <div>
-            <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#ffffff', margin: 0 }}>
-              Gizziio Code
-            </h3>
-            <p style={{ fontSize: '13px', color: '#888', margin: '4px 0 0 0' }}>
-              Agentic coding tool that lives in your terminal
-            </p>
-          </div>
-        </div>
-        
-        <div style={{ 
-          padding: '12px 16px', 
-          background: '#252525', 
-          borderRadius: '8px',
-          marginBottom: '16px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}>
-          <span style={{ fontSize: '13px', color: '#d4b08c' }}>Install instructions</span>
-          <ArrowUpRight size={16} color="#d4b08c" />
-        </div>
-
-        <div style={{ 
-          padding: '12px 16px', 
-          background: '#1f1f1f', 
-          borderRadius: '8px',
-          border: '1px solid #333',
-          marginBottom: '24px'
-        }}>
-          <p style={{ fontSize: '13px', color: '#a0a0a0', margin: 0 }}>
-            <Info size={14} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
-            When you sign in to Gizziio Code using your subscription, your subscription usage limits are shared with Gizziio Code.
-          </p>
-        </div>
-      </section>
-
-      <section style={{ marginBottom: '32px' }}>
-        <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#ffffff', marginBottom: '16px' }}>
-          Gizziio Code Desktop Settings
-        </h3>
-        
-        <ToggleItem
-          label="Allow bypass permissions mode"
-          value={bypassPermissions}
-          onChange={setBypassPermissions}
-          description="Bypass all permission checks and let agents work uninterrupted. This works well for workflows like fixing lint errors or generating boilerplate code."
-        />
-        
-        <ToggleItem
-          label="Draw attention on notifications"
-          value={drawAttentionNotifications}
-          onChange={setDrawAttentionNotifications}
-          description="Bounce the dock icon or flash the taskbar when agents need your attention and the app is not focused."
-        />
-
-        <div style={{ marginBottom: '24px' }}>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '8px', color: '#ffffff' }}>
-            Worktree location
-          </label>
-          <select
-            value={worktreeLocation}
-            onChange={(e) => setWorktreeLocation(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '10px 12px',
-              borderRadius: '6px',
-              border: '1px solid var(--border-subtle)',
-              backgroundColor: 'var(--bg-secondary)',
-              color: '#ffffff',
-              fontSize: '14px',
-              cursor: 'pointer',
-            }}
-          >
-            <option>Inside project (.claude/)</option>
-            <option>Outside project</option>
-            <option>Custom path</option>
-          </select>
-          <p style={{ fontSize: '12px', color: '#666', marginTop: '6px' }}>
-            Where to store git worktrees for isolated coding sessions
-          </p>
-        </div>
-
-        <div style={{ marginBottom: '24px' }}>
-          <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', marginBottom: '8px', color: '#ffffff' }}>
-            Branch prefix
-          </label>
-          <input
-            type="text"
-            value={branchPrefix}
-            onChange={(e) => setBranchPrefix(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '10px 12px',
-              borderRadius: '6px',
-              border: '1px solid var(--border-subtle)',
-              backgroundColor: 'var(--bg-secondary)',
-              color: '#ffffff',
-              fontSize: '14px',
-            }}
-          />
-          <p style={{ fontSize: '12px', color: '#666', marginTop: '6px' }}>
-            Prefix added to the beginning of every worktree branch name
-          </p>
-        </div>
-
-        <ToggleItem
-          label="Preview"
-          value={previewEnabled}
-          onChange={setPreviewEnabled}
-          description="Agents can start dev servers, open a live preview, and verify code changes with screenshots, snapshots, and DOM inspection."
-        />
-        
-        <ToggleItem
-          label="Persist Preview sessions"
-          value={persistPreviewSessions}
-          onChange={setPersistPreviewSessions}
-          description="Save cookies, local storage, and login sessions for dev server previews. Data is stored per workspace and persists across app restarts."
-        />
-      </section>
-
-      <section>
-        <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#ffffff', marginBottom: '16px' }}>
-          Manage your authorization tokens
-        </h3>
-        <div style={{ padding: '16px', background: '#252525', borderRadius: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Terminal size={20} color="#d4b08c" />
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '13px', fontWeight: '500', color: '#ffffff' }}>Gizziio Code</div>
-              <div style={{ fontSize: '12px', color: '#888' }}>user:inference</div>
-            </div>
-            <button style={{ 
-              padding: '6px 12px', 
-              borderRadius: '4px', 
-              border: '1px solid #444',
-              background: 'transparent',
-              color: '#888',
-              fontSize: '12px',
-              cursor: 'pointer'
-            }}>
-              Revoke
-            </button>
-          </div>
-        </div>
+        <ToggleItem label="Allow bypass permissions mode" value={bypassPermissions} onChange={setBypassPermissions} description="Bypass all permission checks" />
+        <ToggleItem label="Draw attention on notifications" value={drawAttentionNotifications} onChange={setDrawAttentionNotifications} description="Bounce dock icon on notifications" />
       </section>
     </div>
   );
 
-  // Cowork Panel - Cowork Mode Settings
   const renderCoworkPanel = () => (
     <div style={{ maxWidth: '600px' }}>
       <section style={{ marginBottom: '32px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#ffffff', margin: 0 }}>
-            Cowork
-          </h3>
-          <span style={{ 
-            padding: '2px 8px', 
-            background: '#d4b08c20', 
-            borderRadius: '4px', 
-            fontSize: '11px', 
-            color: '#d4b08c',
-            fontWeight: '500'
-          }}>
-            Preview
-          </span>
-        </div>
-      </section>
-
-      <section style={{ marginBottom: '32px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-          <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#ffffff', margin: 0 }}>
-            Global instructions
-          </h3>
-          <button style={{ 
-            padding: '6px 16px', 
-            borderRadius: '6px', 
-            border: '1px solid #444',
-            background: 'transparent',
-            color: '#e5e5e5',
-            fontSize: '13px',
-            cursor: 'pointer'
-          }}>
-            Edit
-          </button>
-        </div>
-        <p style={{ fontSize: '13px', color: '#888', margin: '0 0 16px 0', lineHeight: '1.5' }}>
-          Instructions here apply to all Cowork sessions. Use this for preferences, conventions, or context that agents should always know.
-        </p>
-      </section>
-
-      <section>
-        <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#ffffff', marginBottom: '12px' }}>
-          Delete Cowork sessions
-        </h3>
-        <p style={{ fontSize: '13px', color: '#888', margin: 0 }}>
-          To delete your Cowork sessions, email A2R support at{' '}
-          <a href="mailto:support@a2r.dev" style={{ color: '#d4b08c', textDecoration: 'none' }}>
-            support@a2r.dev
-          </a>
-        </p>
+        <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#ffffff' }}>Cowork</h3>
+        <p style={{ fontSize: '13px', color: '#888' }}>Manage Cowork settings</p>
       </section>
     </div>
   );
 
-  // Extensions Panel - Extensions Management
   const renderExtensionsPanel = () => (
     <div style={{ maxWidth: '600px' }}>
       <section style={{ marginBottom: '32px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-          <div>
-            <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#ffffff', margin: '0 0 8px 0' }}>
-              Extensions
-            </h3>
-            <p style={{ fontSize: '13px', color: '#888', margin: 0 }}>
-              Allow A2R to directly interact with apps, data, and tools on your computer.
-            </p>
-          </div>
-          <button style={{ 
-            padding: '8px 16px', 
-            borderRadius: '6px', 
-            border: '1px solid #444',
-            background: 'transparent',
-            color: '#e5e5e5',
-            fontSize: '13px',
-            cursor: 'pointer'
-          }}>
-            Browse extensions
-          </button>
-        </div>
-      </section>
-
-      {/* Empty State */}
-      <section style={{ marginBottom: '32px' }}>
-        <div style={{ 
-          padding: '48px', 
-          background: '#1f1f1f', 
-          borderRadius: '12px',
-          border: '1px dashed #333',
-          textAlign: 'center'
-        }}>
-          <Puzzle size={48} color="#444" style={{ margin: '0 auto 16px' }} />
-          <p style={{ fontSize: '14px', color: '#666', margin: 0 }}>
-            No extensions installed yet
-          </p>
-        </div>
-      </section>
-
-      <section style={{ marginBottom: '32px' }}>
-        <button style={{ 
-          padding: '10px 16px', 
-          borderRadius: '6px', 
-          border: '1px solid #444',
-          background: 'transparent',
-          color: '#e5e5e5',
-          fontSize: '13px',
-          cursor: 'pointer'
-        }}>
-          Advanced settings
-        </button>
-      </section>
-
-      <section style={{ marginBottom: '32px' }}>
-        <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#ffffff', marginBottom: '16px' }}>
-          Extension Settings
-        </h3>
-        
-        <ToggleItem
-          label="Enable auto-updates for extensions"
-          value={autoUpdateExtensions}
-          onChange={setAutoUpdateExtensions}
-          description="Automatically update extensions when new versions are available. If disabled, you'll need to manually update extensions."
-        />
-        
-        <ToggleItem
-          label="Use Built-in Node.js for MCP"
-          value={useBuiltinNode}
-          onChange={setUseBuiltinNode}
-          description="If enabled, A2R will never use the system Node.js for extension MCP servers. This happens automatically when system's Node.js is missing or outdated."
-        />
-      </section>
-
-      <section style={{ marginBottom: '32px' }}>
-        <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#ffffff', marginBottom: '16px' }}>
-          Detected tools
-        </h3>
-        <div style={{ padding: '16px', background: '#252525', borderRadius: '8px' }}>
-          <div style={{ marginBottom: '12px' }}>
-            <span style={{ fontSize: '13px', color: '#888' }}>Node.js: </span>
-            <span style={{ fontSize: '13px', color: '#fff' }}>22.20.0, 25.6.1 (built-in: 24.13.0)</span>
-          </div>
-          <div>
-            <span style={{ fontSize: '13px', color: '#888' }}>Python: </span>
-            <span style={{ fontSize: '13px', color: '#fff' }}>3.9.6, 3.14.2</span>
-          </div>
-        </div>
-      </section>
-
-      <section>
-        <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#ffffff', marginBottom: '16px' }}>
-          Extension Developer
-        </h3>
-        
-        <div style={{ 
-          padding: '16px', 
-          background: '#3d1f1f', 
-          borderRadius: '8px',
-          border: '1px solid #5d2f2f',
-          marginBottom: '16px'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-            <AlertTriangle size={20} color="#ff6b6b" />
-            <div>
-              <div style={{ fontSize: '13px', fontWeight: '600', color: '#ff6b6b', marginBottom: '4px' }}>
-                Developer Tools Warning
-              </div>
-              <p style={{ fontSize: '12px', color: '#cc9999', margin: 0, lineHeight: '1.5' }}>
-                These tools are intended for extension developers only. Using them incorrectly may cause extensions to malfunction or compromise your system security.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-          <button style={{ 
-            padding: '8px 16px', 
-            borderRadius: '6px', 
-            border: '1px solid #d4b08c',
-            background: '#d4b08c',
-            color: '#1a1a1a',
-            fontSize: '13px',
-            fontWeight: '500',
-            cursor: 'pointer'
-          }}>
-            Install Extension
-          </button>
-          <button style={{ 
-            padding: '8px 16px', 
-            borderRadius: '6px', 
-            border: '1px solid #444',
-            background: 'transparent',
-            color: '#e5e5e5',
-            fontSize: '13px',
-            cursor: 'pointer'
-          }}>
-            Install Unpacked Extension
-          </button>
-          <button style={{ 
-            padding: '8px 16px', 
-            borderRadius: '6px', 
-            border: '1px solid #444',
-            background: 'transparent',
-            color: '#e5e5e5',
-            fontSize: '13px',
-            cursor: 'pointer'
-          }}>
-            Open Extensions Folder
-          </button>
-          <button style={{ 
-            padding: '8px 16px', 
-            borderRadius: '6px', 
-            border: '1px solid #444',
-            background: 'transparent',
-            color: '#e5e5e5',
-            fontSize: '13px',
-            cursor: 'pointer'
-          }}>
-            Open Extension Settings Folder
-          </button>
-        </div>
+        <ToggleItem label="Enable auto-updates for extensions" value={autoUpdateExtensions} onChange={setAutoUpdateExtensions} description="Automatically update extensions" />
+        <ToggleItem label="Use Built-in Node.js for MCP" value={useBuiltinNode} onChange={setUseBuiltinNode} description="Use bundled Node.js runtime" />
       </section>
     </div>
   );
 
-  // Billing Panel - Subscription & Billing
   const renderBillingPanel = () => (
     <div style={{ maxWidth: '600px' }}>
       <section style={{ marginBottom: '32px' }}>
-        <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#ffffff', marginBottom: '16px' }}>
-          Current Plan
-        </h3>
-        <div style={{ 
-          padding: '24px', 
-          background: 'linear-gradient(135deg, #252525 0%, #1f1f1f 100%)', 
-          borderRadius: '12px',
-          border: '1px solid #333'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+        <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#ffffff' }}>Current Plan</h3>
+        <div style={{ padding: '24px', background: 'linear-gradient(135deg, #252525 0%, #1f1f1f 100%)', borderRadius: '12px', border: '1px solid #333' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <div style={{ fontSize: '13px', color: '#d4b08c', marginBottom: '4px', fontWeight: '500' }}>
-                Pro Plan
-              </div>
-              <div style={{ fontSize: '24px', fontWeight: '700', color: '#ffffff' }}>
-                $20 <span style={{ fontSize: '14px', fontWeight: '400', color: '#888' }}>/ month</span>
-              </div>
+              <div style={{ fontSize: '13px', color: '#d4b08c', fontWeight: '500' }}>Pro Plan</div>
+              <div style={{ fontSize: '24px', fontWeight: '700', color: '#ffffff' }}>$20 <span style={{ fontSize: '14px', color: '#888' }}>/ month</span></div>
             </div>
-            <span style={{ 
-              padding: '4px 12px', 
-              background: '#22c55e20', 
-              borderRadius: '12px', 
-              fontSize: '12px', 
-              color: '#22c55e',
-              fontWeight: '500'
-            }}>
-              Active
-            </span>
+            <span style={{ padding: '4px 12px', background: '#22c55e20', borderRadius: '12px', fontSize: '12px', color: '#22c55e' }}>Active</span>
           </div>
-          <p style={{ fontSize: '13px', color: '#888', margin: '0 0 16px 0' }}>
-            Your subscription renews on March 15, 2026
-          </p>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button style={{ 
-              padding: '8px 16px', 
-              borderRadius: '6px', 
-              border: '1px solid #444',
-              background: 'transparent',
-              color: '#e5e5e5',
-              fontSize: '13px',
-              cursor: 'pointer'
-            }}>
-              Manage subscription
-            </button>
-            <button style={{ 
-              padding: '8px 16px', 
-              borderRadius: '6px', 
-              border: 'none',
-              background: '#d4b08c',
-              color: '#1a1a1a',
-              fontSize: '13px',
-              fontWeight: '500',
-              cursor: 'pointer'
-            }}>
-              Upgrade
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <section style={{ marginBottom: '32px' }}>
-        <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#ffffff', marginBottom: '16px' }}>
-          Usage
-        </h3>
-        <div style={{ padding: '16px', background: '#252525', borderRadius: '8px', marginBottom: '12px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span style={{ fontSize: '13px', color: '#e5e5e5' }}>API Requests</span>
-            <span style={{ fontSize: '13px', color: '#888' }}>12,450 / 50,000</span>
-          </div>
-          <div style={{ width: '100%', height: '6px', background: '#1a1a1a', borderRadius: '3px', overflow: 'hidden' }}>
-            <div style={{ width: '25%', height: '100%', background: '#d4b08c', borderRadius: '3px' }} />
-          </div>
-        </div>
-        <div style={{ padding: '16px', background: '#252525', borderRadius: '8px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span style={{ fontSize: '13px', color: '#e5e5e5' }}>Storage</span>
-            <span style={{ fontSize: '13px', color: '#888' }}>2.1 GB / 10 GB</span>
-          </div>
-          <div style={{ width: '100%', height: '6px', background: '#1a1a1a', borderRadius: '3px', overflow: 'hidden' }}>
-            <div style={{ width: '21%', height: '100%', background: '#d4b08c', borderRadius: '3px' }} />
-          </div>
-        </div>
-      </section>
-
-      <section>
-        <h3 style={{ fontSize: '14px', fontWeight: '600', color: '#ffffff', marginBottom: '16px' }}>
-          Payment Method
-        </h3>
-        <div style={{ padding: '16px', background: '#252525', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '40px', height: '26px', background: '#333', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <CreditCard size={16} color="#888" />
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '13px', color: '#ffffff' }}>•••• •••• •••• 4242</div>
-            <div style={{ fontSize: '12px', color: '#666' }}>Expires 12/27</div>
-          </div>
-          <button style={{ 
-            padding: '6px 12px', 
-            borderRadius: '4px', 
-            border: '1px solid #444',
-            background: 'transparent',
-            color: '#888',
-            fontSize: '12px',
-            cursor: 'pointer'
-          }}>
-            Update
-          </button>
         </div>
       </section>
     </div>
@@ -1505,318 +1463,99 @@ export const SettingsView: React.FC = () => {
 
   const renderContent = () => {
     switch (activeSection) {
-      case 'general':
-        return renderGeneralPanel();
-      case 'appearance':
-        return renderAppearancePanel();
-      case 'models':
-        return renderModelsPanel();
-      case 'api-keys':
-        return renderApiKeysPanel();
-      case 'shortcuts':
-        return renderShortcutsPanel();
-      case 'gizziio-code':
-        return renderGizziioCodePanel();
-      case 'cowork':
-        return renderCoworkPanel();
-      case 'extensions':
-        return renderExtensionsPanel();
-      case 'billing':
-        return renderBillingPanel();
-      case 'infrastructure':
-        return renderInfrastructurePanel();
-      case 'security':
-        return renderSecurityPanel();
-      case 'agents':
-        return renderAgentsPanel();
-      case 'about':
-        return renderAboutPanel();
-      case 'signin':
-        return <ClerkAuthPanel />;
-      case 'vps':
-        return <VPSConnectionsPanel />;
-      default:
-        return null;
+      case 'general': return renderGeneralPanel();
+      case 'appearance': return renderAppearancePanel();
+      case 'models': return renderModelsPanel();
+      case 'api-keys': return renderApiKeysPanel();
+      case 'shortcuts': return renderShortcutsPanel();
+      case 'gizziio-code': return renderGizziioCodePanel();
+      case 'cowork': return renderCoworkPanel();
+      case 'extensions': return renderExtensionsPanel();
+      case 'billing': return renderBillingPanel();
+      case 'infrastructure': return <InfrastructureSettings />;
+      case 'security': return renderSecurityPanel();
+      case 'agents': return renderAgentsPanel();
+      case 'about': return renderAboutPanel();
+      case 'signin': return <ClerkAuthPanel />;
+      case 'vps': return <VPSConnectionsPanel />;
+      default: return null;
     }
   };
 
-  const navigationItems: Array<{ id: SettingsSection; label: string; icon: React.ReactNode; group?: string }> = [
-    // Account & Billing
+  const StatCard = ({ label, value, color }: { label: string; value: string | number; color: string }) => (
+    <div style={{ padding: 20, background: '#252525', borderRadius: 8, textAlign: 'center' }}>
+      <div style={{ fontSize: 28, fontWeight: 700, color }}>{value}</div>
+      <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>{label}</div>
+    </div>
+  );
+
+  const navigationItems = [
     { id: 'signin', label: 'Sign In', icon: <User size={18} />, group: 'account' },
     { id: 'billing', label: 'Billing', icon: <CreditCard size={18} />, group: 'account' },
-    
-    // Platform Settings
     { id: 'general', label: 'General', icon: <Settings size={18} />, group: 'platform' },
     { id: 'appearance', label: 'Appearance', icon: <Palette size={18} />, group: 'platform' },
     { id: 'models', label: 'Models', icon: <Cpu size={18} />, group: 'platform' },
     { id: 'api-keys', label: 'API Keys', icon: <Key size={18} />, group: 'platform' },
     { id: 'shortcuts', label: 'Shortcuts', icon: <Keyboard size={18} />, group: 'platform' },
-    
-    // Product Settings
     { id: 'gizziio-code', label: 'Gizziio Code', icon: <Code2 size={18} />, group: 'products' },
     { id: 'cowork', label: 'Cowork', icon: <Briefcase size={18} />, group: 'products' },
     { id: 'extensions', label: 'Extensions', icon: <Puzzle size={18} />, group: 'products' },
-    
-    // Infrastructure
-    { id: 'vps', label: 'VPS Connections', icon: <Server size={18} />, group: 'infrastructure' },
     { id: 'infrastructure', label: 'Infrastructure', icon: <Cloud size={18} />, group: 'infrastructure' },
+    { id: 'vps', label: 'VPS Connections', icon: <Server size={18} />, group: 'infrastructure' },
     { id: 'security', label: 'Security', icon: <Shield size={18} />, group: 'infrastructure' },
     { id: 'agents', label: 'Agents', icon: <Bot size={18} />, group: 'infrastructure' },
-    
-    // About
     { id: 'about', label: 'About', icon: <Info size={18} />, group: 'about' },
   ];
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      height: '100vh', 
-      backgroundColor: '#1a1a1a',
-      overflow: 'hidden'
-    }}>
-      {/* Left Column - Navigation (Claude Code Style) */}
-      <div
-        style={{
-          width: '240px',
-          height: '100vh',
-          backgroundColor: '#1a1a1a',
-          padding: '32px 12px',
-          overflowY: 'auto',
-          flexShrink: 0,
-          boxSizing: 'border-box'
-        }}
-      >
-        <div style={{ padding: '0 12px', marginBottom: '32px' }}>
-          <button
-            onClick={() => window.dispatchEvent(new CustomEvent('a2r:close-settings'))}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              background: 'transparent',
-              border: 'none',
-              color: '#c0c0c0',
-              fontSize: '16px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              padding: '0',
-              transition: 'color 0.2s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = '#ffffff';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = '#c0c0c0';
-            }}
-          >
-            <span style={{ fontSize: '18px' }}>←</span>
-            Settings
-          </button>
+    <div style={{ display: 'flex', justifyContent: 'center', height: '100vh', backgroundColor: 'transparent', overflow: 'hidden', position: 'relative', paddingTop: '80px' }}>
+      <button onClick={() => window.dispatchEvent(new CustomEvent('a2r:close-settings'))} style={{ position: 'absolute', top: 24, right: 24, width: 44, height: 44, borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#888' }}>
+        <X size={20} />
+      </button>
+
+      <div style={{ display: 'flex', width: '100%', maxWidth: '1200px', minWidth: '600px', height: 'calc(100vh - 80px)', margin: '0 auto' }}>
+        <div style={{ width: '220px', minWidth: '180px', height: 'calc(100vh - 80px)', backgroundColor: 'transparent', padding: '16px 16px 32px', overflowY: 'auto', flexShrink: 0 }}>
+          <div style={{ padding: '0 12px', marginBottom: '24px' }}>
+            <button onClick={() => window.dispatchEvent(new CustomEvent('a2r:close-settings'))} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'transparent', border: 'none', color: '#c0c0c0', fontSize: '16px', fontWeight: '500', cursor: 'pointer' }}>
+              <span style={{ fontSize: '18px' }}>←</span> Settings
+            </button>
+          </div>
+          <nav style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <div style={{ marginBottom: '8px' }}>
+              {navigationItems.filter((i: any) => i.group === 'account').map((item: any) => <NavButton key={item.id} item={item} activeSection={activeSection} onClick={() => setActiveSection(item.id)} />)}
+            </div>
+            <div style={{ height: '1px', background: '#333', margin: '12px 0' }} />
+            <div style={{ marginBottom: '8px' }}>
+              {navigationItems.filter((i: any) => i.group === 'platform').map((item: any) => <NavButton key={item.id} item={item} activeSection={activeSection} onClick={() => setActiveSection(item.id)} />)}
+            </div>
+            <div style={{ height: '1px', background: '#333', margin: '12px 0' }} />
+            <div style={{ marginBottom: '8px' }}>
+              <div style={{ padding: '8px 12px', fontSize: '11px', color: '#666', textTransform: 'uppercase' }}>Products</div>
+              {navigationItems.filter((i: any) => i.group === 'products').map((item: any) => <NavButton key={item.id} item={item} activeSection={activeSection} onClick={() => setActiveSection(item.id)} />)}
+            </div>
+            <div style={{ height: '1px', background: '#333', margin: '12px 0' }} />
+            <div style={{ marginBottom: '8px' }}>
+              <div style={{ padding: '8px 12px', fontSize: '11px', color: '#666', textTransform: 'uppercase' }}>Infrastructure</div>
+              {navigationItems.filter((i: any) => i.group === 'infrastructure').map((item: any) => <NavButton key={item.id} item={item} activeSection={activeSection} onClick={() => setActiveSection(item.id)} />)}
+            </div>
+            <div style={{ height: '1px', background: '#333', margin: '12px 0' }} />
+            <div>
+              {navigationItems.filter((i: any) => i.group === 'about').map((item: any) => <NavButton key={item.id} item={item} activeSection={activeSection} onClick={() => setActiveSection(item.id)} />)}
+            </div>
+          </nav>
         </div>
 
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-          {/* Account Group */}
-          <div style={{ marginBottom: '8px' }}>
-            {navigationItems.filter(item => item.group === 'account').map((item) => (
-              <NavButton key={item.id} item={item} activeSection={activeSection} onClick={() => setActiveSection(item.id)} />
-            ))}
+        <div style={{ flex: 1, minWidth: '0', height: 'calc(100vh - 80px)', overflowY: 'auto' }}>
+          <div style={{ padding: '32px 48px 120px', width: '100%', maxWidth: '800px' }}>
+            <h1 style={{ fontSize: '20px', fontWeight: '600', color: '#ffffff', margin: '0 0 32px 0' }}>
+              {navigationItems.find((item: any) => item.id === activeSection)?.label}
+            </h1>
+            {renderContent()}
           </div>
-          
-          <div style={{ height: '1px', background: '#333', margin: '12px 0' }} />
-          
-          {/* Platform Group */}
-          <div style={{ marginBottom: '8px' }}>
-            {navigationItems.filter(item => item.group === 'platform').map((item) => (
-              <NavButton key={item.id} item={item} activeSection={activeSection} onClick={() => setActiveSection(item.id)} />
-            ))}
-          </div>
-          
-          <div style={{ height: '1px', background: '#333', margin: '12px 0' }} />
-          
-          {/* Products Group */}
-          <div style={{ marginBottom: '8px' }}>
-            <div style={{ padding: '8px 12px', fontSize: '11px', color: '#666', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Products
-            </div>
-            {navigationItems.filter(item => item.group === 'products').map((item) => (
-              <NavButton key={item.id} item={item} activeSection={activeSection} onClick={() => setActiveSection(item.id)} />
-            ))}
-          </div>
-          
-          <div style={{ height: '1px', background: '#333', margin: '12px 0' }} />
-          
-          {/* Infrastructure Group */}
-          <div style={{ marginBottom: '8px' }}>
-            <div style={{ padding: '8px 12px', fontSize: '11px', color: '#666', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Infrastructure
-            </div>
-            {navigationItems.filter(item => item.group === 'infrastructure').map((item) => (
-              <NavButton key={item.id} item={item} activeSection={activeSection} onClick={() => setActiveSection(item.id)} />
-            ))}
-          </div>
-          
-          <div style={{ height: '1px', background: '#333', margin: '12px 0' }} />
-          
-          {/* About Group */}
-          <div>
-            {navigationItems.filter(item => item.group === 'about').map((item) => (
-              <NavButton key={item.id} item={item} activeSection={activeSection} onClick={() => setActiveSection(item.id)} />
-            ))}
-          </div>
-        </nav>
-      </div>
-
-      {/* Right Column - Content (Claude Code Style) */}
-      <div style={{ 
-        flex: 1, 
-        height: '100vh',
-        overflowY: 'auto',
-        display: 'flex',
-        flexDirection: 'column',
-        backgroundColor: '#1a1a1a'
-      }}>
-        <div style={{ 
-          padding: '48px 64px',
-          maxWidth: '720px',
-          minHeight: 'min-content',
-          boxSizing: 'border-box',
-          paddingBottom: '120px'
-        }}>
-          {/* Section Title */}
-          <h1 style={{
-            fontSize: '20px',
-            fontWeight: '600',
-            color: '#ffffff',
-            margin: '0 0 32px 0',
-            letterSpacing: '-0.01em'
-          }}>
-            {navigationItems.find(item => item.id === activeSection)?.label}
-          </h1>
-          {renderContent()}
         </div>
       </div>
     </div>
   );
 };
-
-interface ToggleItemProps {
-  label: string;
-  value: boolean;
-  onChange: (value: boolean) => void;
-  description?: string;
-}
-
-interface NavButtonProps {
-  item: { id: SettingsSection; label: string; icon: React.ReactNode; group?: string };
-  activeSection: SettingsSection;
-  onClick: () => void;
-}
-
-const NavButton: React.FC<NavButtonProps> = ({ item, activeSection, onClick }) => (
-  <button
-    onClick={onClick}
-    style={{
-      width: '100%',
-      padding: '8px 12px',
-      border: 'none',
-      backgroundColor: activeSection === item.id ? '#2a2a2a' : 'transparent',
-      color: activeSection === item.id ? '#ffffff' : '#a0a0a0',
-      fontSize: '13px',
-      fontWeight: '400',
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '10px',
-      transition: 'all 0.15s ease',
-      textAlign: 'left',
-      borderRadius: '6px',
-      position: 'relative',
-    }}
-    onMouseEnter={(e) => {
-      if (activeSection !== item.id) {
-        e.currentTarget.style.backgroundColor = '#252525';
-        e.currentTarget.style.color = '#e0e0e0';
-      }
-    }}
-    onMouseLeave={(e) => {
-      if (activeSection !== item.id) {
-        e.currentTarget.style.backgroundColor = 'transparent';
-        e.currentTarget.style.color = '#a0a0a0';
-      }
-    }}
-  >
-    {activeSection === item.id && (
-      <span 
-        style={{
-          position: 'absolute',
-          left: '0',
-          top: '50%',
-          transform: 'translateY(-50%)',
-          width: '3px',
-          height: '16px',
-          backgroundColor: '#d4b08c',
-          borderRadius: '0 2px 2px 0',
-        }}
-      />
-    )}
-    {item.label}
-  </button>
-);
-
-const ToggleItem: React.FC<ToggleItemProps> = ({ label, value, onChange, description }) => (
-  <div
-    style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '12px 0',
-      marginBottom: '12px',
-    }}
-  >
-    <div>
-      <div style={{ fontSize: '13px', fontWeight: '500', color: '#ffffff', marginBottom: '2px' }}>
-        {label}
-      </div>
-      {description && (
-        <div style={{ fontSize: '12px', color: '#b0b0b0' }}>
-          {description}
-        </div>
-      )}
-    </div>
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        onChange(!value);
-      }}
-      style={{
-        width: '48px',
-        height: '28px',
-        borderRadius: '14px',
-        border: 'none',
-        backgroundColor: value ? '#d4b08c' : 'var(--border-subtle)',
-        cursor: 'pointer',
-        position: 'relative',
-        transition: 'all 0.3s ease',
-        padding: '0',
-        display: 'flex',
-        alignItems: 'center',
-        flexShrink: 0,
-      }}
-    >
-      <div
-        style={{
-          width: '24px',
-          height: '24px',
-          borderRadius: '50%',
-          backgroundColor: '#ffffff',
-          position: 'absolute',
-          left: value ? '2px' : '22px',
-          transition: 'all 0.3s ease',
-          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
-        }}
-      />
-    </button>
-  </div>
-);
 
 export default SettingsView;

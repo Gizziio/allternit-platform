@@ -10,6 +10,21 @@ import { db } from "@/lib/db/client-sqlite";
 import { a2uiSession } from "@/lib/db/schema-sqlite";
 import { eq, and } from "drizzle-orm";
 
+/**
+ * Safely parse JSON with error handling
+ * Returns null if parsing fails, logs error for debugging
+ */
+function safeJSONParse<T>(json: string | null, fieldName: string, sessionId?: string): T | null {
+  if (!json) return null;
+  try {
+    return JSON.parse(json) as T;
+  } catch (error) {
+    console.error(`[A2UI Session Data] Failed to parse ${fieldName}${sessionId ? ` for session ${sessionId}` : ''}:`, error);
+    console.error(`[A2UI Session Data] Invalid JSON content:`, json.substring(0, 200));
+    return null;
+  }
+}
+
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -41,7 +56,13 @@ export async function PATCH(
     }
 
     // Merge or replace data model
-    const currentDataModel = JSON.parse(record.dataModel);
+    const currentDataModel = safeJSONParse<Record<string, unknown>>(record.dataModel, 'dataModel', sessionId);
+    if (currentDataModel === null) {
+      return NextResponse.json(
+        { error: "Session data is corrupted" },
+        { status: 500 }
+      );
+    }
     const newDataModel = merge
       ? { ...currentDataModel, ...data_model }
       : data_model;

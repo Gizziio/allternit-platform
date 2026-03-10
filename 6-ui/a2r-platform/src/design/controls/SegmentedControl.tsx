@@ -1,7 +1,18 @@
 import React from 'react';
 import { tokens } from '../tokens';
 
-export function SegmentedControl({ options, value, onChange }: any) {
+interface Option {
+  value: string;
+  label: string;
+}
+
+interface SegmentedControlProps {
+  options: Option[];
+  value: string;
+  onChange: (value: string) => void;
+}
+
+export function SegmentedControl({ options, value, onChange }: SegmentedControlProps) {
   return (
     <div style={{
       display: 'flex',
@@ -11,7 +22,7 @@ export function SegmentedControl({ options, value, onChange }: any) {
       gap: 2,
       border: '1px solid rgba(255, 255, 255, 0.1)',
     }}>
-      {options.map((opt: any) => (
+      {options.map((opt) => (
         <button
           key={opt.value}
           onClick={() => onChange(opt.value)}

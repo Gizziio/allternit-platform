@@ -60,7 +60,7 @@ export function ProviderModelSelector({
   className,
   onLaunchTerminal
 }: ProviderModelSelectorProps) {
-  const { toast } = useToast();
+  const { addToast } = useToast();
   const {
     getProviderState,
     refreshModels,
@@ -91,18 +91,19 @@ export function ProviderModelSelector({
 
   const handleRefresh = useCallback(async () => {
     await refreshModels(providerId, profileId);
-    toast({
+    addToast({
       title: "Models refreshed",
-      description: `Updated ${providerName} model list from runtime`
+      description: `Updated ${providerName} model list from runtime`,
+      type: "success" as const
     });
-  }, [providerId, profileId, providerName, refreshModels, toast]);
+  }, [providerId, profileId, providerName, refreshModels, addToast]);
 
   const handleAuthenticate = useCallback(async () => {
     if (!authProfileId) {
-      toast({
+      addToast({
         title: "Auth not available",
         description: "No auth profile configured for this provider",
-        variant: "destructive"
+        type: "error"
       });
       return;
     }
@@ -121,9 +122,10 @@ export function ProviderModelSelector({
           const newState = getProviderState(providerId);
           if (newState.auth?.status === 'ok') {
             clearInterval(pollInterval);
-            toast({
+            addToast({
               title: "Authentication successful",
-              description: `${providerName} is now unlocked`
+              description: `${providerName} is now unlocked`,
+              type: "success"
             });
           }
         }, 3000);
@@ -132,15 +134,15 @@ export function ProviderModelSelector({
         setTimeout(() => clearInterval(pollInterval), 5 * 60 * 1000);
       }
     } catch (err) {
-      toast({
+      addToast({
         title: "Auth failed",
         description: err instanceof Error ? err.message : "Failed to start auth session",
-        variant: "destructive"
+        type: "error" as const
       });
     } finally {
       setIsCreatingSession(false);
     }
-  }, [authProfileId, createAuthSession, onLaunchTerminal, providerId, providerName, refreshAuthStatus, getProviderState, toast]);
+  }, [authProfileId, createAuthSession, onLaunchTerminal, providerId, providerName, refreshAuthStatus, getProviderState, addToast]);
 
   const handleValidateFreeform = useCallback(async () => {
     if (!freeformModelId.trim()) return;
@@ -154,9 +156,10 @@ export function ProviderModelSelector({
       
       if (result.valid) {
         onChange(freeformModelId);
-        toast({
+        addToast({
           title: "Model validated",
-          description: `"${freeformModelId}" is valid`
+          description: `"${freeformModelId}" is valid`,
+          type: "success" as const
         });
       } else {
         setValidationError(result.message || "Invalid model ID");
@@ -169,7 +172,7 @@ export function ProviderModelSelector({
     } finally {
       setIsValidating(false);
     }
-  }, [freeformModelId, providerId, profileId, validateModelId, onChange, toast]);
+  }, [freeformModelId, providerId, profileId, validateModelId, onChange, addToast]);
 
   // Locked state
   if (isLocked) {

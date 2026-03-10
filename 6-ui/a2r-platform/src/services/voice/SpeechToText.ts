@@ -64,8 +64,10 @@ export interface SpeechRecognition extends EventTarget {
   continuous: boolean;
   interimResults: boolean;
   lang: string;
+  maxAlternatives: number;
   start(): void;
   stop(): void;
+  abort(): void;
   onstart: ((ev: Event) => void) | null;
   onend: ((ev: Event) => void) | null;
   onresult: ((ev: SpeechRecognitionEvent) => void) | null;
@@ -80,6 +82,7 @@ export interface SpeechRecognitionEvent extends Event {
 
 export interface SpeechRecognitionResultList {
   readonly length: number;
+  item(index: number): SpeechRecognitionResult;
   [index: number]: SpeechRecognitionResult;
 }
 

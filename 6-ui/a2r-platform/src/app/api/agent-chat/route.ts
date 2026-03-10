@@ -80,7 +80,8 @@ function extractMessageText(messagePayload: unknown): string {
 
     try {
       return JSON.stringify(messagePayload);
-    } catch {
+    } catch (error) {
+      console.error("[Agent Chat] Failed to stringify message payload:", error);
       return String(messagePayload);
     }
   }
@@ -242,8 +243,8 @@ export async function POST(req: NextRequest) {
           streamClosed = true;
           try {
             controller.close();
-          } catch {
-            // no-op
+          } catch (error) {
+            console.error("[Agent Chat] Failed to close stream controller:", error);
           }
         };
 
@@ -251,8 +252,8 @@ export async function POST(req: NextRequest) {
           if (!socket) return;
           try {
             socket.close(1000, "done");
-          } catch {
-            // no-op
+          } catch (error) {
+            console.error("[Agent Chat] Failed to close WebSocket:", error);
           }
           socket = null;
         };
@@ -429,7 +430,8 @@ export async function POST(req: NextRequest) {
           let parsed: unknown;
           try {
             parsed = JSON.parse(rawText);
-          } catch {
+          } catch (error) {
+            console.error("[Agent Chat] Failed to parse frame JSON:", error, "Raw text:", rawText);
             return;
           }
 

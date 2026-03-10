@@ -513,7 +513,7 @@ function AgentPopup({ open, onClose }: { open: boolean; onClose: () => void }) {
     if (!open) return;
     let cancelled = false;
     const check = () => {
-      fetch('http://localhost:3010/health', { mode: 'no-cors' })
+      fetch('http://localhost:3000/health', { mode: 'no-cors' })
         .then(() => { if (!cancelled) setOperatorOk(true); })
         .catch(() => { if (!cancelled) setOperatorOk(false); });
     };
@@ -1730,7 +1730,7 @@ export function BrowserCapsuleEnhanced({
               await window.chromeEmbed.launch('https://chromewebstore.google.com');
             } else {
               // Fallback: navigate in current browser
-              updateTab(activeTabId, { url: 'https://chromewebstore.google.com' } as Partial<WebTab>);
+              updateTab(activeTabId!, { url: 'https://chromewebstore.google.com' } as Partial<WebTab>);
             }
           }}>
             <Globe style={{ width: 16, height: 16 }} />
@@ -1992,7 +1992,7 @@ export function BrowserCapsuleEnhanced({
             iceServers={(activeTab as ChromeStreamTab).iceServers}
             resolution={(activeTab as ChromeStreamTab).resolution}
             onStatusChange={(status) => {
-              updateTab(activeTabId, { streamStatus: status } as Partial<ChromeStreamTab>);
+              updateTab(activeTabId!, { streamStatus: status } as Partial<ChromeStreamTab>);
             }}
           />
         ) : contentMode === 'canvas' ? (

@@ -378,11 +378,11 @@ export class RailsAdapter {
       requiredEvidence: Array.isArray(item.required_evidence) ? item.required_evidence : [],
       leaseRequired: Boolean(item.lease_required),
       leaseScope: {
-        allowedPaths: Array.isArray(item.lease_scope?.allowed_paths) 
-          ? item.lease_scope.allowed_paths 
+        allowedPaths: Array.isArray((item.lease_scope as Record<string, unknown>)?.allowed_paths)
+          ? (item.lease_scope as Record<string, unknown>).allowed_paths as string[]
           : [],
-        allowedTools: Array.isArray(item.lease_scope?.allowed_tools)
-          ? item.lease_scope.allowed_tools
+        allowedTools: Array.isArray((item.lease_scope as Record<string, unknown>)?.allowed_tools)
+          ? (item.lease_scope as Record<string, unknown>).allowed_tools as string[]
           : [],
       },
       createdAt: String(item.created_at || new Date().toISOString()),

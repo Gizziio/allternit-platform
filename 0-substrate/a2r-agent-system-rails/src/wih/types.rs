@@ -11,6 +11,8 @@ pub struct LoopPolicy {
     pub acceptance_refs: Vec<String>,
     pub required_evidence: Vec<String>,
     pub escalate_on_max_iterations: bool,
+    /// Whether to automatically land the implementation on a PASS status
+    pub autoland_on_pass: bool,
 }
 
 impl Default for LoopPolicy {
@@ -24,6 +26,7 @@ impl Default for LoopPolicy {
             acceptance_refs: Vec::new(),
             required_evidence: vec!["receipt.tool_calls".to_string()],
             escalate_on_max_iterations: true,
+            autoland_on_pass: false,
         }
     }
 }

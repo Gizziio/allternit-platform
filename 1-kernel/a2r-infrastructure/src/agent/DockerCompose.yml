@@ -1,0 +1,396 @@
+#
+# A2R Node Agent - Docker Compose Configuration
+# 
+# This compose file defines the complete A2R agent stack:
+# - Main A2R agent container
+# - Traefik reverse proxy
+# - Redis for caching and session storage
+# - Promtail for log shipping
+#
+
+version: '3.8'
+
+services:
+  # Main A2R Agent Service
+  a2r-agent:
+    image: a2r/agent:${A2R_VERSION:-latest}
+    container_name: a2r-agent
+    restart: unless-stopped
+    
+    ports:
+      - "8080:8080"  # Main API port
+      - "9090:9090"  # Metrics port
+    
+    volumes:
+      # Configuration
+      - type: bind
+        source: /etc/a2r/config.json
+        target: /app/config.json
+        read_only: true
+      
+      # Data directories
+      - type: bind
+        source: /opt/a2r/data
+        target: /app/data
+      
+      # Log directory
+      - type: bind
+        source: /var/log/a2r
+        target: /app/logs
+      
+      # Docker socket for container management
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+        read_only: true
+      
+      # Temporary directory
+      - type: tmpfs
+        target: /tmp
+        tmpfs:
+          size: 1G
+    
+    environment:
+      # Core settings
+      - NODE_ENV=production
+      - A2R_CONFIG_PATH=/app/config.json
+      - A2R_DATA_DIR=/app/data
+      - A2R_LOG_DIR=/app/logs
+      
+      # Server settings
+      - A2R_SERVER_ID=${A2R_SERVER_ID:-unknown}
+      - A2R_API_PORT=8080
+      - A2R_METRICS_PORT=9090
+      
+      # Logging
+      - A2R_LOG_LEVEL=${A2R_LOG_LEVEL:-info}
+      - A2R_LOG_FORMAT=json
+      
+      # Feature flags
+      - A2R_AUTO_UPDATE=${A2R_AUTO_UPDATE:-true}
+      - A2R_HEALTH_CHECKS=${A2R_HEALTH_CHECKS:-true}
+      - A2R_METRICS_ENABLED=${A2R_METRICS_ENABLED:-true}
+    
+    networks:
+      - a2r-network
+    
+    depends_on:
+      redis:
+        condition: service_healthy
+      traefik:
+        condition: service_started
+    
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+      
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    
+    labels:
+      # Traefik labels
+      - "traefik.enable=true"
+      - "traefik.http.routers.a2r-agent.rule=PathPrefix(\`/api\`) || PathPrefix(\`/ws\`)"
+      - "traefik.http.routers.a2r-agent.entrypoints=web,websecure"
+      - "traefik.http.routers.a2r-agent.service=a2r-agent"
+      - "traefik.http.services.a2r-agent.loadbalancer.server.port=8080"
+      - "traefik.http.services.a2r-agent.loadbalancer.healthcheck.path=/health"
+      - "traefik.http.services.a2r-agent.loadbalancer.healthcheck.interval=10s"
+      
+      # Prometheus metrics
+      - "prometheus-job=a2r-agent"
+      - "prometheus-port=9090"
+
+  # Traefik Reverse Proxy
+  traefik:
+    image: traefik:v3.0
+    container_name: a2r-traefik
+    restart: unless-stopped
+    
+    command:
+      # API and dashboard
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
+      
+      # Entry points
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.traefik.address=:8081"
+      
+      # Providers
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=a2r-network"
+      
+      # Logging
+      - "--log.level=${TRAEFIK_LOG_LEVEL:-INFO}"
+      - "--log.format=json"
+      - "--accesslog=true"
+      - "--accesslog.format=json"
+      
+      # Metrics
+      - "--metrics.prometheus=true"
+      - "--metrics.prometheus.buckets=0.1,0.3,1.2,5.0"
+      
+      # Ping
+      - "--ping=true"
+      
+      # Global settings
+      - "--global.checknewversion=false"
+      - "--global.sendanonymoususage=false"
+    
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8081:8081"  # Traefik dashboard (internal only)
+    
+    volumes:
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+        read_only: true
+      
+      # Optional: TLS certificates
+      - type: bind
+        source: /opt/a2r/certs
+        target: /certs
+        read_only: true
+    
+    networks:
+      - a2r-network
+    
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8081/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik-dashboard.rule=Host(\`traefik.localhost\`)"
+      - "traefik.http.routers.traefik-dashboard.entrypoints=traefik"
+      - "traefik.http.routers.traefik-dashboard.service=api@internal"
+
+  # Redis Cache and Session Store
+  redis:
+    image: redis:7-alpine
+    container_name: a2r-redis
+    restart: unless-stopped
+    
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+      --requirepass ${REDIS_PASSWORD:-a2r-redis-password}
+    
+    volumes:
+      - type: volume
+        source: redis-data
+        target: /data
+    
+    networks:
+      - a2r-network
+    
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+    
+    labels:
+      - "traefik.enable=false"
+
+  # Promtail - Log Shipping
+  promtail:
+    image: grafana/promtail:latest
+    container_name: a2r-promtail
+    restart: unless-stopped
+    
+    command: -config.file=/etc/promtail/config.yml
+    
+    volumes:
+      - type: bind
+        source: /var/log/a2r
+        target: /var/log/a2r
+        read_only: true
+      
+      - type: bind
+        source: /var/log
+        target: /var/log/host
+        read_only: true
+      
+      - type: bind
+        source: /opt/a2r/config/promtail.yml
+        target: /etc/promtail/config.yml
+        read_only: true
+      
+      # Docker logs
+      - type: bind
+        source: /var/lib/docker/containers
+        target: /var/lib/docker/containers
+        read_only: true
+    
+    environment:
+      - HOSTNAME=${A2R_SERVER_ID:-a2r-node}
+    
+    networks:
+      - a2r-network
+    
+    depends_on:
+      - a2r-agent
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+        reservations:
+          cpus: '0.05'
+          memory: 32M
+    
+    labels:
+      - "traefik.enable=false"
+      - "logging=promtail"
+
+  # Optional: Node Exporter for host metrics
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: a2r-node-exporter
+    restart: unless-stopped
+    
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    
+    volumes:
+      - type: bind
+        source: /proc
+        target: /host/proc
+        read_only: true
+      - type: bind
+        source: /sys
+        target: /host/sys
+        read_only: true
+      - type: bind
+        source: /
+        target: /rootfs
+        read_only: true
+    
+    networks:
+      - a2r-network
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 64M
+    
+    labels:
+      - "traefik.enable=false"
+
+  # Optional: cAdvisor for container metrics
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: a2r-cadvisor
+    restart: unless-stopped
+    
+    privileged: true
+    
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    
+    volumes:
+      - type: bind
+        source: /
+        target: /rootfs
+        read_only: true
+      - type: bind
+        source: /var/run
+        target: /var/run
+        read_only: true
+      - type: bind
+        source: /sys
+        target: /sys
+        read_only: true
+      - type: bind
+        source: /var/lib/docker
+        target: /var/lib/docker
+        read_only: true
+      - type: bind
+        source: /dev/disk
+        target: /dev/disk
+        read_only: true
+    
+    networks:
+      - a2r-network
+    
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+    
+    labels:
+      - "traefik.enable=false"
+
+# Networks
+networks:
+  a2r-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${A2R_DOCKER_SUBNET:-172.20.0.0/16}
+          gateway: 172.20.0.1
+    driver_opts:
+      com.docker.network.bridge.name: a2r-br0
+
+# Volumes
+volumes:
+  redis-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/a2r/data/redis

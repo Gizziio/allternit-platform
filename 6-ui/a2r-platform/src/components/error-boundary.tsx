@@ -355,7 +355,7 @@ interface ErrorReport {
 export function reportError(error: Error, errorInfo?: ErrorInfo, componentName?: string | null) {
   const report: ErrorReport = {
     error,
-    componentStack: errorInfo?.componentStack,
+    componentStack: errorInfo?.componentStack ?? undefined,
     componentName: componentName ?? undefined,
     timestamp: new Date().toISOString(),
     url: typeof window !== 'undefined' ? window.location.href : '',

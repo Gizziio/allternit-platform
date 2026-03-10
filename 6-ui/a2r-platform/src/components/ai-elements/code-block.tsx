@@ -501,22 +501,26 @@ export const CodeBlockLanguageSelector = (
   props: CodeBlockLanguageSelectorProps
 ) => <Select {...props} />;
 
-export type CodeBlockLanguageSelectorTriggerProps = ComponentProps<
-  typeof SelectTrigger
->;
+export type CodeBlockLanguageSelectorTriggerProps = {
+  className?: string;
+  children?: React.ReactNode;
+  value?: string;
+};
 
 export const CodeBlockLanguageSelectorTrigger = ({
   className,
-  ...props
+  children,
+  value,
 }: CodeBlockLanguageSelectorTriggerProps) => (
   <SelectTrigger
     className={cn(
       "h-7 border-none bg-transparent px-2 text-xs shadow-none",
       className
     )}
-    size="sm"
-    {...props}
-  />
+    value={value}
+  >
+    {children}
+  </SelectTrigger>
 );
 
 export type CodeBlockLanguageSelectorValueProps = ComponentProps<
@@ -527,21 +531,34 @@ export const CodeBlockLanguageSelectorValue = (
   props: CodeBlockLanguageSelectorValueProps
 ) => <SelectValue {...props} />;
 
-export type CodeBlockLanguageSelectorContentProps = ComponentProps<
-  typeof SelectContent
->;
+export type CodeBlockLanguageSelectorContentProps = {
+  children?: React.ReactNode;
+  className?: string;
+};
 
 export const CodeBlockLanguageSelectorContent = ({
-  align = "end",
-  ...props
+  children,
+  className,
 }: CodeBlockLanguageSelectorContentProps) => (
-  <SelectContent align={align} {...props} />
+  <SelectContent align="end" className={className}>
+    {children}
+  </SelectContent>
 );
 
-export type CodeBlockLanguageSelectorItemProps = ComponentProps<
-  typeof SelectItem
->;
+export type CodeBlockLanguageSelectorItemProps = {
+  value: string;
+  children?: React.ReactNode;
+  className?: string;
+  disabled?: boolean;
+};
 
-export const CodeBlockLanguageSelectorItem = (
-  props: CodeBlockLanguageSelectorItemProps
-) => <SelectItem {...props} />;
+export const CodeBlockLanguageSelectorItem = ({
+  value,
+  children,
+  className,
+  disabled,
+}: CodeBlockLanguageSelectorItemProps) => (
+  <SelectItem value={value} className={className} disabled={disabled}>
+    {children}
+  </SelectItem>
+);

@@ -19,7 +19,9 @@ import {
     RefreshCw, 
     GitBranch, 
     Zap,
-    ChevronRight
+    ChevronRight,
+    Volume2 as SpeakerHigh,
+    RefreshCw as ArrowsClockwise
 } from "lucide-react"
 
 export type MessageProps = {
@@ -54,7 +56,7 @@ const Message = ({ children, role, modelName, className, onAction, ...props }: M
                 )}
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     <ActionButton icon={Copy} tooltip="Copy" onClick={() => onAction?.("copy")} />
-                    <ActionButton icon={SpeakerHigh} tooltip="Speak" onClick={() => onAction?.("speak")} />
+                    <ActionButton icon={Volume2} tooltip="Speak" onClick={() => onAction?.("speak")} />
                     <div className="w-px h-3 bg-[var(--border-subtle)] mx-1" />
                     <ActionButton icon={ThumbsUp} tooltip="Helpful" onClick={() => onAction?.("rate-up")} />
                     <ActionButton icon={ThumbsDown} tooltip="Not helpful" onClick={() => onAction?.("rate-down")} />
@@ -100,7 +102,7 @@ function MessageEllipsisMenu({ onAction }: any) {
                     <MenuEntry label="Think Harder" onClick={() => onAction?.("retry-harder")} />
                     <MenuEntry label="Ultra Think" onClick={() => onAction?.("retry-ultra")} />
                     <div className="h-px bg-[var(--border-subtle)] my-1" />
-                    <MenuEntry icon={ArrowsClockwise} label="Switch Model & Retry" onClick={() => onAction?.("retry-switch")} />
+                    <MenuEntry icon={RefreshCw} label="Switch Model & Retry" onClick={() => onAction?.("retry-switch")} />
                 </Popover.Content>
             </Popover.Portal>
         </Popover.Root>

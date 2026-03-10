@@ -227,11 +227,12 @@ export class RalphNoStopScheduler extends EventEmitter {
 
     try {
       // Build ContextPack (LAW-AUT-002: Deterministic Rehydration)
-      const contextPack = await this.contextPackBuilder.buildAndSeal({
-        dagId: node.dagId,
-        nodeId: node.nodeId,
-        wihId: node.wihId,
-      });
+      const contextPack = await this.contextPackBuilder.buildMinimal(
+        node.wihId,
+        node.dagId,
+        node.nodeId,
+        `pb_scheduler_${Date.now()}`
+      );
 
       // Create execution request
       const request: NodeExecutionRequest = {
@@ -242,8 +243,8 @@ export class RalphNoStopScheduler extends EventEmitter {
         baseContextPack: contextPack,
         basePolicyBundle: {
           role: 'builder',
-          executionMode: node.executionMode,
-        },
+          execution_mode: node.executionMode,
+        } as any,
         planFiles: {
           planPath: `.a2r/work/dags/${node.dagId}/plan.md`,
           todoPath: `.a2r/work/dags/${node.dagId}/todo.md`,

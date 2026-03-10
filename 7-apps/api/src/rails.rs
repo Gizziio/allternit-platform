@@ -522,6 +522,36 @@ impl RailsClient {
         handle_response(response).await
     }
 
+    pub async fn gate_autoland(
+        &self,
+        request: GateAutolandRequest,
+    ) -> Result<GateAutolandResponse, RailsError> {
+        let response = self
+            .http_client
+            .post(format!("{}/v1/gate/autoland", self.base_url))
+            .json(&request)
+            .send()
+            .await
+            .map_err(|e| RailsError::Http(e.to_string()))?;
+
+        handle_response(response).await
+    }
+
+    pub async fn gate_rollback(
+        &self,
+        request: GateAutolandRequest,
+    ) -> Result<GateAutolandResponse, RailsError> {
+        let response = self
+            .http_client
+            .post(format!("{}/v1/gate/rollback", self.base_url))
+            .json(&request)
+            .send()
+            .await
+            .map_err(|e| RailsError::Http(e.to_string()))?;
+
+        handle_response(response).await
+    }
+
     // ============================================================================
     // VAULT
     // ============================================================================
@@ -898,6 +928,20 @@ pub struct GateMutateResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GateAutolandRequest {
+    pub wih_id: String,
+    #[serde(default)]
+    pub dry_run: bool,
+    #[serde(default)]
+    pub git_commit: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GateAutolandResponse {
+    pub result: serde_json::Value,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VaultArchiveRequest {
     pub wih_id: String,
 }
@@ -994,6 +1038,8 @@ pub fn create_rails_routes() -> Router<Arc<crate::AppState>> {
         .route("/api/v1/rails/gate/verify", get(gate_verify_handler))
         .route("/api/v1/rails/gate/decision", post(gate_decision_handler))
         .route("/api/v1/rails/gate/mutate", post(gate_mutate_handler))
+        .route("/api/v1/rails/gate/autoland", post(gate_autoland_handler))
+        .route("/api/v1/rails/gate/rollback", post(gate_rollback_handler))
         // VAULT
         .route("/api/v1/rails/vault/archive", post(vault_archive_handler))
         .route("/api/v1/rails/vault/status", get(vault_status_handler))
@@ -1325,6 +1371,26 @@ async fn gate_mutate_handler(
 ) -> Result<impl IntoResponse, StatusCode> {
     let client = RailsClient::from_env();
     match client.gate_mutate(request).await {
+        Ok(response) => Ok((StatusCode::OK, Json(response))),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+async fn gate_autoland_handler(
+    Json(request): Json<GateAutolandRequest>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let client = RailsClient::from_env();
+    match client.gate_autoland(request).await {
+        Ok(response) => Ok((StatusCode::OK, Json(response))),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+async fn gate_rollback_handler(
+    Json(request): Json<GateAutolandRequest>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let client = RailsClient::from_env();
+    match client.gate_rollback(request).await {
         Ok(response) => Ok((StatusCode::OK, Json(response))),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }

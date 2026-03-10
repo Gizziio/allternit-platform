@@ -274,29 +274,37 @@ export const CoworkControls = memo(function CoworkControls() {
               </div>
               <div>
                 <div className="text-sm font-medium text-white/80">
-                  Approval Required: {pendingApprovals[0].summary}
+                  Approval Required: {pendingApprovals[0]?.summary}
                 </div>
                 <div className="text-xs text-white/50">
-                  {pendingApprovals[0].details.consequence}
+                  {pendingApprovals[0]?.details?.consequence}
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => sendControl({ 
-                  type: 'reject', 
-                  actionId: pendingApprovals[0].actionId,
-                  note: 'User rejected'
-                })}
+                onClick={() => {
+                  const firstApproval = pendingApprovals[0];
+                  if (!firstApproval) return;
+                  sendControl({ 
+                    type: 'reject', 
+                    actionId: firstApproval.actionId,
+                    note: 'User rejected'
+                  });
+                }}
                 className="px-4 py-2 rounded-md bg-white/5 text-white/60 hover:bg-white/10 font-medium text-sm transition-colors"
               >
                 Reject
               </button>
               <button
-                onClick={() => sendControl({ 
-                  type: 'approve', 
-                  actionId: pendingApprovals[0].actionId 
-                })}
+                onClick={() => {
+                  const firstApproval = pendingApprovals[0];
+                  if (!firstApproval) return;
+                  sendControl({ 
+                    type: 'approve', 
+                    actionId: firstApproval.actionId 
+                  });
+                }}
                 className="px-4 py-2 rounded-md bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 font-medium text-sm transition-colors"
               >
                 Approve

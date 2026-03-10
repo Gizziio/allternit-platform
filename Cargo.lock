@@ -201,6 +201,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "a2r-guest-agent-protocol"
+version = "1.1.0"
+dependencies = [
+ "chrono",
+ "serde",
+ "serde_json",
+ "serde_test",
+ "thiserror 1.0.69",
+ "uuid",
+]
+
+[[package]]
 name = "a2r-ivkge-advanced"
 version = "0.1.0"
 dependencies = [
@@ -540,6 +552,59 @@ dependencies = [
 ]
 
 [[package]]
+name = "a2r-vm-executor"
+version = "1.1.0"
+dependencies = [
+ "a2r-guest-agent-protocol",
+ "anyhow",
+ "async-trait",
+ "bytes 1.11.1",
+ "chrono",
+ "dirs",
+ "futures 0.3.32",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-stream",
+ "tokio-test",
+ "tokio-util",
+ "toml 0.8.23",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+ "vsock",
+]
+
+[[package]]
+name = "a2r-vm-image-builder"
+version = "1.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "dirs",
+ "flate2",
+ "futures 0.3.32",
+ "hex",
+ "indicatif",
+ "reqwest 0.11.27",
+ "semver 1.0.27",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tar",
+ "tempfile",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-test",
+ "tokio-util",
+ "toml 0.8.23",
+ "tracing",
+ "tracing-subscriber",
+ "zstd 0.13.3",
+]
+
+[[package]]
 name = "a2rchitech-agent-router"
 version = "0.1.0"
 dependencies = [
@@ -710,6 +775,7 @@ dependencies = [
  "futures-util",
  "indicatif",
  "marketplace",
+ "rand 0.8.5",
  "ratatui",
  "reqwest 0.11.27",
  "ring",
@@ -724,6 +790,7 @@ dependencies = [
  "tokio-stream",
  "tracing",
  "urlencoding",
+ "uuid",
  "voice-service",
  "webvm-service",
 ]
@@ -5416,6 +5483,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "memoffset"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "488016bfae457b036d996092f6cb448677611ce4449e970ceaf42695203f218a"
+dependencies = [
+ "autocfg",
+]
+
+[[package]]
 name = "metrics"
 version = "0.22.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5775,7 +5851,7 @@ dependencies = [
  "bitflags 1.3.2",
  "cfg-if 1.0.4",
  "libc",
- "memoffset",
+ "memoffset 0.6.5",
  "pin-utils",
 ]
 
@@ -5788,6 +5864,19 @@ dependencies = [
  "bitflags 2.11.0",
  "cfg-if 1.0.4",
  "libc",
+]
+
+[[package]]
+name = "nix"
+version = "0.31.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5d6d0705320c1e6ba1d912b5e37cf18071b6c2e9b7fa8215a1e8a7651966f5d3"
+dependencies = [
+ "bitflags 2.11.0",
+ "cfg-if 1.0.4",
+ "cfg_aliases",
+ "libc",
+ "memoffset 0.9.1",
 ]
 
 [[package]]
@@ -8254,6 +8343,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_test"
+version = "1.0.177"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f901ee573cab6b3060453d2d5f0bae4e6d628c23c0a962ff9b5f1d7c8d4f1ed"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "serde_urlencoded"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -10240,6 +10338,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c3082ca00d5a5ef149bb8b555a72ae84c9c59f7250f013ac822ac2e49b19c64"
 
 [[package]]
+name = "vsock"
+version = "0.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b82aeb12ad864eb8cd26a6c21175d0bdc66d398584ee6c93c76964c3bcfc78ff"
+dependencies = [
+ "libc",
+ "nix 0.31.2",
+]
+
+[[package]]
 name = "waker-fn"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -11009,6 +11117,28 @@ dependencies = [
  "serde_json",
  "unicode-xid",
  "wasmparser",
+]
+
+[[package]]
+name = "workspace-service"
+version = "0.1.0"
+dependencies = [
+ "a2r-substrate",
+ "anyhow",
+ "axum",
+ "chrono",
+ "futures 0.3.32",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-stream",
+ "tokio-test",
+ "tower-http 0.6.8",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]

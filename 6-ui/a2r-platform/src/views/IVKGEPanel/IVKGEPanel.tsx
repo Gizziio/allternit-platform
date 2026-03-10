@@ -232,12 +232,8 @@ export function IVKGEPanel() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="upload">Upload</TabsTrigger>
-          <TabsTrigger value="results" disabled={!extraction}>
-            Results
-          </TabsTrigger>
-          <TabsTrigger value="ambiguities" disabled={!extraction?.ambiguity_report}>
-            Ambiguities
-          </TabsTrigger>
+          {(TabsTrigger as any)({ value: "results", disabled: !extraction, children: "Results" })}
+          {(TabsTrigger as any)({ value: "ambiguities", disabled: !extraction?.ambiguity_report, children: "Ambiguities" })},
         </TabsList>
 
         {/* Upload Tab */}

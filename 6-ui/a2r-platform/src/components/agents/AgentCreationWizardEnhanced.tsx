@@ -83,6 +83,37 @@ import type { AgentCreationWizardProps as BaseAgentCreationWizardProps } from '.
 // Comprehensive Types - ALL Agent Aspects
 // ============================================================================
 
+export interface ModelOption {
+  id: string;
+  name: string;
+  provider: string;
+  description?: string;
+}
+
+export interface ToolOption {
+  id: string;
+  name: string;
+  description?: string;
+  category?: string;
+}
+
+export interface AgentConfig {
+  name: string;
+  description: string;
+  type: AgentType;
+  model: string;
+  provider: ModelProvider;
+  capabilities: string[];
+  systemPrompt: string;
+  tools: string[];
+  maxIterations: number;
+  temperature: number;
+  config?: {
+    characterLayer?: CharacterLayerConfig;
+    workspaceDocuments?: WorkspaceDocuments | null;
+  };
+}
+
 export interface AgentCreationWizardProps extends BaseAgentCreationWizardProps {
   /** Enable comprehensive character layer configuration */
   enableCharacterLayer?: boolean;
@@ -96,6 +127,16 @@ export interface AgentCreationWizardProps extends BaseAgentCreationWizardProps {
   onWorkspaceDocumentsGenerated?: (docs: WorkspaceDocuments) => void;
   /** Available avatar templates */
   avatarTemplates?: AvatarTemplate[];
+  /** Callback when agent is created */
+  onCreateAgent?: (config: AgentConfig) => void | Promise<void>;
+  /** Callback when wizard is cancelled */
+  onCancel?: () => void;
+  /** Available models for selection */
+  availableModels?: string[] | ModelOption[];
+  /** Available tools for selection */
+  availableTools?: string[] | ToolOption[];
+  /** Additional CSS class names */
+  className?: string;
 }
 
 /** Complete Character Layer Configuration */
@@ -757,7 +798,7 @@ export function AgentCreationWizardEnhanced({
   onWorkspaceDocumentsGenerated,
   className,
 }: AgentCreationWizardProps) {
-  const modeColors = MODE_COLORS.chat;
+  const modeColors = MODE_COLORS.chat as typeof MODE_COLORS.chat;
   
   // Wizard State
   const [currentStep, setCurrentStep] = useState(0);
@@ -825,7 +866,7 @@ export function AgentCreationWizardEnhanced({
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      await onCreateAgent({
+      await onCreateAgent?.({
         name,
         description,
         type: agentType,
@@ -932,7 +973,7 @@ export function AgentCreationWizardEnhanced({
                   setModel={setModel}
                   provider={provider}
                   setProvider={setProvider}
-                  availableModels={availableModels}
+                  availableModels={availableModels as string[]}
                   modeColors={modeColors}
                 />
               )}
@@ -975,6 +1016,8 @@ export function AgentCreationWizardEnhanced({
                 <AdvancedStep
                   config={characterConfig}
                   setConfig={setCharacterConfig}
+                  capabilities={capabilities}
+                  setCapabilities={setCapabilities}
                   modeColors={modeColors}
                 />
               )}
@@ -983,15 +1026,13 @@ export function AgentCreationWizardEnhanced({
                 <ToolsStep
                   selectedTools={selectedTools}
                   setSelectedTools={setSelectedTools}
-                  capabilities={capabilities}
-                  setCapabilities={setCapabilities}
                   systemPrompt={systemPrompt}
                   setSystemPrompt={setSystemPrompt}
                   temperature={temperature}
                   setTemperature={setTemperature}
                   maxIterations={maxIterations}
                   setMaxIterations={setMaxIterations}
-                  availableTools={availableTools}
+                  availableTools={availableTools as string[]}
                   modeColors={modeColors}
                 />
               )}
@@ -1004,12 +1045,10 @@ export function AgentCreationWizardEnhanced({
                   model={model}
                   characterConfig={characterConfig}
                   selectedTools={selectedTools}
-                  capabilities={capabilities}
                   systemPrompt={systemPrompt}
                   temperature={temperature}
                   maxIterations={maxIterations}
-                  workspaceDocs={workspaceDocs}
-                  enableWorkspacePreview={enableWorkspacePreview}
+                  workspaceDocs={workspaceDocs ?? ({} as WorkspaceDocuments)}
                   modeColors={modeColors}
                 />
               )}
@@ -1043,6 +1082,205 @@ export function AgentCreationWizardEnhanced({
         onTogglePreview={() => setShowPreview(!showPreview)}
         modeColors={modeColors}
       />
+    </div>
+  );
+}
+
+// ============================================================================
+// Sub-Component Definitions
+// ============================================================================
+
+interface WizardHeaderProps {
+  steps: { id: string; label: string; icon: React.ElementType }[];
+  currentStep: number;
+  onClose?: () => void;
+  modeColors: typeof MODE_COLORS.chat;
+}
+
+function WizardHeader({ steps, currentStep, onClose, modeColors }: WizardHeaderProps) {
+  return (
+    <div className="px-6 py-4 border-b flex items-center justify-between" style={{ borderColor: modeColors.border }}>
+      <div className="flex items-center gap-3">
+        <div className="p-2 rounded-lg" style={{ background: modeColors.soft }}>
+          <Sparkles size={20} style={{ color: modeColors.accent }} />
+        </div>
+        <div>
+          <h2 className="text-lg font-semibold" style={{ color: TEXT.primary }}>Create Agent</h2>
+          <p className="text-sm" style={{ color: TEXT.secondary }}>
+            Step {currentStep + 1} of {steps.length}: {steps[currentStep]?.label}
+          </p>
+        </div>
+      </div>
+      {onClose && (
+        <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/5 transition-colors">
+          <X size={20} style={{ color: TEXT.tertiary }} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+interface WizardFooterProps {
+  currentStep: number;
+  totalSteps: number;
+  canProceed: boolean;
+  isSubmitting: boolean;
+  onBack: () => void;
+  onNext: () => void;
+  onSubmit: () => void;
+  showPreview: boolean;
+  onTogglePreview: () => void;
+  modeColors: typeof MODE_COLORS.chat;
+}
+
+function WizardFooter({
+  currentStep,
+  totalSteps,
+  canProceed,
+  isSubmitting,
+  onBack,
+  onNext,
+  onSubmit,
+  showPreview,
+  onTogglePreview,
+  modeColors,
+}: WizardFooterProps) {
+  const isLastStep = currentStep === totalSteps - 1;
+  
+  return (
+    <div className="px-6 py-4 border-t flex items-center justify-between" style={{ borderColor: modeColors.border }}>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onTogglePreview}
+          className="px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+          style={{ 
+            background: showPreview ? modeColors.soft : 'rgba(255,255,255,0.05)',
+            color: showPreview ? modeColors.accent : TEXT.secondary,
+          }}
+        >
+          {showPreview ? 'Hide Preview' : 'Show Preview'}
+        </button>
+      </div>
+      
+      <div className="flex items-center gap-3">
+        {currentStep > 0 && (
+          <button
+            onClick={onBack}
+            className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            style={{ color: TEXT.secondary }}
+          >
+            Back
+          </button>
+        )}
+        
+        {isLastStep ? (
+          <button
+            onClick={onSubmit}
+            disabled={!canProceed || isSubmitting}
+            className="px-6 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50"
+            style={{ 
+              background: modeColors.accent,
+              color: '#1A1612',
+            }}
+          >
+            {isSubmitting ? 'Creating...' : 'Create Agent'}
+          </button>
+        ) : (
+          <button
+            onClick={onNext}
+            disabled={!canProceed}
+            className="px-6 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-50"
+            style={{ 
+              background: modeColors.accent,
+              color: '#1A1612',
+            }}
+          >
+            Next
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface AdvancedStepProps {
+  config: CharacterLayerConfig;
+  setConfig: (config: CharacterLayerConfig) => void;
+  capabilities: string[];
+  setCapabilities: (caps: string[]) => void;
+  modeColors: typeof MODE_COLORS.chat;
+}
+
+function AdvancedStep({ config, setConfig, capabilities, setCapabilities, modeColors }: AdvancedStepProps) {
+  return (
+    <div className="max-w-2xl mx-auto space-y-8">
+      <div>
+        <h2 className="text-2xl font-semibold mb-2" style={{ color: TEXT.primary }}>Advanced Configuration</h2>
+        <p style={{ color: TEXT.secondary }}>Fine-tune your agent's behavior and capabilities</p>
+      </div>
+      
+      {/* Relationships */}
+      <FormField label="Default Relationship Settings">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs mb-1 block" style={{ color: TEXT.tertiary }}>Initial Affinity</label>
+            <input
+              type="range"
+              min={-1}
+              max={1}
+              step={0.1}
+              value={config.relationships.defaults.initialAffinity}
+              onChange={(e) => setConfig({
+                ...config,
+                relationships: {
+                  ...config.relationships,
+                  defaults: { ...config.relationships.defaults, initialAffinity: parseFloat(e.target.value) }
+                }
+              })}
+              className="w-full"
+            />
+          </div>
+          <div>
+            <label className="text-xs mb-1 block" style={{ color: TEXT.tertiary }}>Trust Curve</label>
+            <select
+              value={config.relationships.defaults.trustCurve}
+              onChange={(e) => setConfig({
+                ...config,
+                relationships: {
+                  ...config.relationships,
+                  defaults: { ...config.relationships.defaults, trustCurve: e.target.value as 'linear' | 'exponential' | 'logarithmic' }
+                }
+              })}
+              className="w-full px-3 py-2 rounded-lg"
+              style={{ background: 'rgba(0,0,0,0.3)', border: `1px solid ${modeColors.border}`, color: TEXT.primary }}
+            >
+              <option value="linear">Linear</option>
+              <option value="exponential">Exponential</option>
+              <option value="logarithmic">Logarithmic</option>
+            </select>
+          </div>
+        </div>
+      </FormField>
+      
+      {/* Progression Stats */}
+      <FormField label="Relevant Stats">
+        <TagInput
+          tags={config.progression.relevantStats}
+          onChange={(stats) => setConfig({ ...config, progression: { ...config.progression, relevantStats: stats } })}
+          placeholder="Add stats (e.g., efficiency, quality)..."
+          modeColors={modeColors}
+        />
+      </FormField>
+      
+      {/* Capabilities */}
+      <FormField label="Agent Capabilities">
+        <TagInput
+          tags={capabilities}
+          onChange={setCapabilities}
+          placeholder="Add capabilities..."
+          modeColors={modeColors}
+        />
+      </FormField>
     </div>
   );
 }
@@ -2021,5 +2259,3 @@ function TagInput({ tags, onChange, placeholder, modeColors }: {
     </div>
   );
 }
-
-export default AgentCreationWizardEnhanced;

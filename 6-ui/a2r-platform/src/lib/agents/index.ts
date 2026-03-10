@@ -37,6 +37,9 @@ export type {
   SendMailInput,
   GateReview,
   GateDecision,
+  AgentStatus,
+  AgentWorkspace,
+  AgentWorkspaceLayers,
 } from "./agent.types";
 
 export type {
@@ -64,6 +67,23 @@ export { AGENT_CAPABILITIES, AGENT_MODELS, AGENT_TYPES } from "./agent.types";
 
 export * from "./agent.service";
 export * from "./character.service";
+
+// Workspace Service
+export { agentWorkspaceService } from "./agent-workspace.service";
+export type {
+  WorkspaceTemplate,
+} from "./agent-templates";
+// Note: TemplateVariable is also exported from unified.store.ts - using that one
+export {
+  GIZZI_TEMPLATE,
+  A2R_STANDARD_TEMPLATE,
+  A2R_MINIMAL_TEMPLATE,
+  WORKSPACE_TEMPLATES,
+  listTemplates,
+  getTemplate,
+  substituteTemplateVariables,
+  buildVariablesFromInput,
+} from "./agent-templates";
 export { railsApi } from "./rails.service";
 export {
   API_BASE_URL,
@@ -147,7 +167,7 @@ export {
   type AgentInfo,
   type SystemHealth,
   type PromptTemplate,
-  type TemplateVariable,
+  // Note: TemplateVariable is exported from agent-templates.ts
   type ToolSnapshot,
   type SnapshotStats,
   type LogEntry,
@@ -332,9 +352,7 @@ export type {
   SwarmRun,
   SwarmMessage,
 
-  // Workflows
-  AgentWorkflow,
-  WorkflowStep,
+  // Note: AgentWorkflow and WorkflowStep are exported from agent-templates.specialist.ts
   WorkflowBranch,
   WorkflowExpression,
   WorkflowVariable,
@@ -451,3 +469,40 @@ export {
   type SessionSyncEvent,
   type SessionUpdatedEvent,
 } from "./native-agent-api";
+
+// ============================================================================
+// Specialist Templates (Agency-Agents Inspired)
+// ============================================================================
+
+export {
+  SPECIALIST_TEMPLATES,
+  getTemplateById,
+  getTemplatesByCategory,
+  searchTemplates,
+  getBuiltInTemplates,
+  createAgentFromTemplate,
+  type SpecialistTemplate,
+  type AgentCategory,
+  // Note: AgentWorkflow and WorkflowStep are exported from agent-templates.specialist.ts
+  type TechnicalDeliverable,
+  type SuccessMetric,
+} from './agent-templates.specialist';
+
+// ============================================================================
+// Import/Export Service
+// ============================================================================
+
+export {
+  exportAgent,
+  exportAgentToString,
+  downloadAgentFile,
+  importAgentFromString,
+  importAgentFromObject,
+  importAgentFromFile,
+  validateAgentConfig,
+  getSupportedVersions,
+  getCurrentVersion,
+  migrateExportData,
+  type AgentExportData,
+  type AgentImportResult,
+} from './agent-template-io';

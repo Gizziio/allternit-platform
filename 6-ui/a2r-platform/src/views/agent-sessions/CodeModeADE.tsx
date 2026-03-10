@@ -43,7 +43,7 @@ export function CodeModeADE({
   onClose,
 }: CodeModeADEProps) {
   const mode = 'code';
-  const modeColors = MODE_COLORS[mode];
+  const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.code;
   
   const [activeTab, setActiveTab] = useState<'orchestration' | 'swarms' | 'output'>('orchestration');
   const [isOrchestrating, setIsOrchestrating] = useState(false);
@@ -138,7 +138,7 @@ function OrchestrationComputer({
   activeTab: string; 
   onTabChange: (tab: any) => void;
 }) {
-  const modeColors = MODE_COLORS[mode];
+  const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.code;
   
   return (
     <div className="flex flex-col h-full bg-black/40">
@@ -160,7 +160,7 @@ function OrchestrationComputer({
 }
 
 function TabButton({ label, active, onClick, mode }: { label: string; active: boolean; onClick: () => void; mode: 'code' }) {
-  const modeColors = MODE_COLORS[mode];
+  const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.code;
   return (
     <button
       onClick={onClick}
@@ -192,7 +192,7 @@ function SystemStat({ label, value, icon: Icon, mode }: { label: string, value: 
 }
 
 function OrchestrationView({ mode }: { mode: 'code' }) {
-  const modeColors = MODE_COLORS[mode];
+  const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.code;
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -212,7 +212,7 @@ function OrchestrationView({ mode }: { mode: 'code' }) {
 }
 
 function AgentNode({ name, role, status, mode }: { name: string, role: string, status: string, mode: 'code' }) {
-  const modeColors = MODE_COLORS[mode];
+  const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.code;
   return (
     <div className="p-3 rounded-lg border border-white/5 bg-white/2 flex items-center justify-between">
        <div className="flex items-center gap-3">

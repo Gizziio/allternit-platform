@@ -6,7 +6,8 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch, useSelector, type TypedUseSelectorHook } from 'react-redux';
+import type { ThunkDispatch } from '@reduxjs/toolkit';
 import type { Capsule, CapsuleEvent } from '../store/slices/mcpAppsSlice';
 import {
   fetchCapsule,
@@ -52,9 +53,13 @@ export interface UseCapsuleReturn {
   reconnect: () => void;
 }
 
+// Type for the Redux dispatch that includes thunks
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AppDispatch = ThunkDispatch<any, any, any>;
+
 export function useCapsule(options: UseCapsuleOptions = {}): UseCapsuleReturn {
   const { capsuleId, autoConnect = true } = options;
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -136,7 +141,7 @@ export function useCapsule(options: UseCapsuleOptions = {}): UseCapsuleReturn {
   // Actions
   const create = useCallback(
     async (request: CreateCapsuleRequest): Promise<Capsule> => {
-      const result = await dispatch(createCapsule(request) as any);
+      const result = await dispatch(createCapsule(request));
       if (createCapsule.fulfilled.match(result)) {
         return result.payload;
       }
@@ -147,7 +152,7 @@ export function useCapsule(options: UseCapsuleOptions = {}): UseCapsuleReturn {
 
   const remove = useCallback(
     async (id: string): Promise<void> => {
-      await dispatch(deleteCapsule(id) as any);
+      await dispatch(deleteCapsule(id));
     },
     [dispatch]
   );
@@ -162,7 +167,7 @@ export function useCapsule(options: UseCapsuleOptions = {}): UseCapsuleReturn {
   const setState = useCallback(
     async (state: 'pending' | 'active' | 'error' | 'closed'): Promise<void> => {
       if (!capsuleId) return;
-      await dispatch(updateCapsuleState({ id: capsuleId, state }) as any);
+      await dispatch(updateCapsuleState({ id: capsuleId, state }));
     },
     [dispatch, capsuleId]
   );
@@ -170,14 +175,14 @@ export function useCapsule(options: UseCapsuleOptions = {}): UseCapsuleReturn {
   const sendEvent = useCallback(
     async (eventType: string, payload?: unknown): Promise<void> => {
       if (!capsuleId) return;
-      await dispatch(sendCapsuleEvent({ id: capsuleId, event_type: eventType, payload }) as any);
+      await dispatch(sendCapsuleEvent({ id: capsuleId, event_type: eventType, payload }));
     },
     [dispatch, capsuleId]
   );
 
   const refresh = useCallback(async (): Promise<void> => {
     if (!capsuleId) return;
-    await dispatch(fetchCapsule(capsuleId) as any);
+    await dispatch(fetchCapsule(capsuleId));
   }, [dispatch, capsuleId]);
 
   const reconnect = useCallback((): void => {

@@ -5,6 +5,10 @@ edition = "2021"
 license = "MIT"
 publish = false
 
+[lib]
+name = "a2r_agent_system_rails"
+path = "src/lib.rs"
+
 [[bin]]
 name = "a2r-rails"
 path = "src/bin/a2r-rails.rs"

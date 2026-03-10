@@ -306,7 +306,7 @@ export function TamboStudio() {
                 value={spec.layout_type}
                 onValueChange={(value) => setSpec(prev => ({ ...prev, layout_type: value }))}
               >
-                <SelectTrigger id="layout-type">
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -322,7 +322,7 @@ export function TamboStudio() {
                 value={spec.style_theme}
                 onValueChange={(value) => setSpec(prev => ({ ...prev, style_theme: value }))}
               >
-                <SelectTrigger id="theme">
+                <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

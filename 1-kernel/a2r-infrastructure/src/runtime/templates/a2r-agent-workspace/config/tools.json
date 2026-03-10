@@ -1,0 +1,540 @@
+{
+  "schema_version": "1.0.0",
+  "last_updated": "2024-01-15",
+  "agent_workspace": {
+    "id": "a2r-agent-workspace",
+    "version": "1.0.0",
+    "description": "Isolated execution environment for AI agents"
+  },
+  "categories": {
+    "browsers": {
+      "description": "Web browsers for automation and scraping",
+      "tools": {
+        "chromium": {
+          "name": "Chromium",
+          "version": "120.0+",
+          "description": "Open-source web browser for automation",
+          "command": "chromium",
+          "headless_command": "chromium --headless --disable-gpu",
+          "playwright_browser": "chromium",
+          "capabilities": [
+            "headless_execution",
+            "devtools_protocol",
+            "screenshot",
+            "pdf_generation",
+            "mobile_emulation",
+            "network_interception"
+          ],
+          "profile_path": "/home/agent/.config/chromium",
+          "security": {
+            "sandbox": true,
+            "isolate_sites": true,
+            "disable_extensions": true
+          }
+        },
+        "firefox": {
+          "name": "Firefox",
+          "version": "121.0+",
+          "description": "Mozilla Firefox browser",
+          "command": "firefox",
+          "headless_command": "firefox --headless",
+          "playwright_browser": "firefox",
+          "capabilities": [
+            "headless_execution",
+            "devtools_protocol",
+            "screenshot",
+            "pdf_generation",
+            "mobile_emulation",
+            "network_interception"
+          ],
+          "profile_path": "/home/agent/.config/firefox",
+          "security": {
+            "sandbox": true,
+            "isolate_sites": true,
+            "disable_extensions": true
+          }
+        },
+        "webkit": {
+          "name": "WebKit",
+          "version": "17.4+",
+          "description": "WebKit browser via Playwright",
+          "playwright_browser": "webkit",
+          "capabilities": [
+            "headless_execution",
+            "screenshot",
+            "mobile_emulation"
+          ],
+          "security": {
+            "sandbox": true
+          }
+        }
+      }
+    },
+    "automation": {
+      "description": "Browser automation and testing frameworks",
+      "tools": {
+        "playwright": {
+          "name": "Playwright",
+          "version": "1.40.0",
+          "type": "node",
+          "description": "Cross-browser automation library",
+          "languages": ["JavaScript", "TypeScript", "Python"],
+          "commands": {
+            "test": "npx playwright test",
+            "codegen": "npx playwright codegen",
+            "install": "npx playwright install"
+          },
+          "browsers": ["chromium", "firefox", "webkit"],
+          "features": [
+            "auto-wait",
+            "network_interception",
+            "screenshots",
+            "pdf_generation",
+            "mobile_emulation",
+            "geolocation",
+            "permissions",
+            "har_recording"
+          ]
+        },
+        "puppeteer": {
+          "name": "Puppeteer",
+          "version": "21.6.0",
+          "type": "node",
+          "description": "Chrome DevTools Protocol library",
+          "languages": ["JavaScript", "TypeScript"],
+          "capabilities": [
+            "page_interaction",
+            "screenshot",
+            "pdf_generation",
+            "network_monitoring",
+            "performance_metrics"
+          ]
+        },
+        "selenium": {
+          "name": "Selenium",
+          "version": "4.16.0",
+          "type": "python",
+          "description": "WebDriver-based browser automation",
+          "languages": ["Python", "JavaScript", "Java", "C#", "Ruby"],
+          "python_package": "selenium"
+        }
+      }
+    },
+    "scraping": {
+      "description": "Web scraping and HTML parsing tools",
+      "tools": {
+        "beautifulsoup": {
+          "name": "BeautifulSoup",
+          "version": "4.12.2",
+          "type": "python",
+          "description": "HTML/XML parsing library",
+          "python_package": "beautifulsoup4",
+          "parser": "lxml",
+          "features": [
+            "html_parsing",
+            "css_selectors",
+            "tree_traversal",
+            "encoding_detection"
+          ]
+        },
+        "scrapy": {
+          "name": "Scrapy",
+          "version": "2.11.0",
+          "type": "python",
+          "description": "Web crawling framework",
+          "python_package": "scrapy",
+          "features": [
+            "async_crawling",
+            "xpath_selectors",
+            "item_pipelines",
+            "middleware",
+            "distributed_crawling"
+          ]
+        },
+        "requests": {
+          "name": "Requests",
+          "version": "2.31.0",
+          "type": "python",
+          "description": "HTTP library for Python",
+          "python_package": "requests",
+          "features": [
+            "http_methods",
+            "cookies",
+            "sessions",
+            "ssl_verification",
+            "proxy_support"
+          ]
+        },
+        "httpx": {
+          "name": "HTTPX",
+          "version": "0.25.2",
+          "type": "python",
+          "description": "Async HTTP client",
+          "python_package": "httpx",
+          "features": [
+            "async_await",
+            "http2",
+            "streaming",
+            "connection_pooling"
+          ]
+        },
+        "cheerio": {
+          "name": "Cheerio",
+          "version": "1.0.0",
+          "type": "node",
+          "description": "Server-side HTML parsing",
+          "npm_package": "cheerio",
+          "features": [
+            "jquery_like_syntax",
+            "css_selectors",
+            "manipulation"
+          ]
+        }
+      }
+    },
+    "data_processing": {
+      "description": "Data manipulation and analysis tools",
+      "tools": {
+        "pandas": {
+          "name": "Pandas",
+          "version": "2.1.4",
+          "type": "python",
+          "description": "Data analysis and manipulation",
+          "python_package": "pandas",
+          "features": [
+            "dataframes",
+            "csv_io",
+            "excel_io",
+            "sql_io",
+            "json_io",
+            "parquet_io",
+            "data_cleaning",
+            "aggregation",
+            "merging",
+            "time_series"
+          ]
+        },
+        "numpy": {
+          "name": "NumPy",
+          "version": "1.26.0",
+          "type": "python",
+          "description": "Numerical computing",
+          "python_package": "numpy",
+          "features": [
+            "arrays",
+            "mathematical_functions",
+            "linear_algebra",
+            "fourier_transform",
+            "random_sampling"
+          ]
+        },
+        "polars": {
+          "name": "Polars",
+          "version": "0.20.0",
+          "type": "python",
+          "description": "Fast DataFrame library",
+          "python_package": "polars",
+          "features": [
+            "lazy_evaluation",
+            "multi_threading",
+            "query_optimization",
+            "streaming"
+          ]
+        }
+      }
+    },
+    "document_processing": {
+      "description": "Document parsing and conversion",
+      "tools": {
+        "pandoc": {
+          "name": "Pandoc",
+          "version": "2.19.2",
+          "type": "cli",
+          "description": "Universal document converter",
+          "command": "pandoc",
+          "formats": {
+            "input": ["markdown", "html", "docx", "pdf", "rst", "txt", "json"],
+            "output": ["html", "pdf", "docx", "markdown", "rst", "json", "epub"]
+          }
+        },
+        "pypdf": {
+          "name": "PyPDF",
+          "version": "3.17.0",
+          "type": "python",
+          "description": "PDF manipulation library",
+          "python_package": "pypdf",
+          "features": [
+            "read_pdf",
+            "extract_text",
+            "merge_pdf",
+            "split_pdf",
+            "rotate_pages"
+          ]
+        },
+        "pdfplumber": {
+          "name": "pdfplumber",
+          "version": "0.10.0",
+          "type": "python",
+          "description": "PDF text and table extraction",
+          "python_package": "pdfplumber",
+          "features": [
+            "extract_text",
+            "extract_tables",
+            "visual_debugging"
+          ]
+        },
+        "python_docx": {
+          "name": "python-docx",
+          "version": "1.1.0",
+          "type": "python",
+          "description": "Word document processing",
+          "python_package": "python-docx",
+          "features": [
+            "create_documents",
+            "edit_documents",
+            "extract_text",
+            "formatting"
+          ]
+        },
+        "markdown": {
+          "name": "Markdown",
+          "version": "3.5.0",
+          "type": "python",
+          "description": "Markdown parser and converter",
+          "python_package": "markdown",
+          "features": [
+            "parse_markdown",
+            "extensions",
+            "html_output"
+          ]
+        }
+      }
+    },
+    "media_processing": {
+      "description": "Image and video processing",
+      "tools": {
+        "imagemagick": {
+          "name": "ImageMagick",
+          "version": "6.9.11",
+          "type": "cli",
+          "description": "Image manipulation suite",
+          "command": "convert",
+          "features": [
+            "format_conversion",
+            "resizing",
+            "cropping",
+            "filters",
+            "compositing",
+            "text_annotation"
+          ]
+        },
+        "ffmpeg": {
+          "name": "FFmpeg",
+          "version": "4.4.2",
+          "type": "cli",
+          "description": "Video and audio processing",
+          "command": "ffmpeg",
+          "features": [
+            "format_conversion",
+            "encoding",
+            "streaming",
+            "filtering",
+            "screenshots"
+          ]
+        },
+        "pillow": {
+          "name": "Pillow",
+          "version": "10.1.0",
+          "type": "python",
+          "description": "Python Imaging Library",
+          "python_package": "pillow",
+          "features": [
+            "image_opening",
+            "format_conversion",
+            "filtering",
+            "drawing",
+            "text_rendering"
+          ]
+        },
+        "opencv": {
+          "name": "OpenCV",
+          "version": "4.8.1",
+          "type": "python",
+          "description": "Computer vision library",
+          "python_package": "opencv-python-headless",
+          "features": [
+            "image_processing",
+            "video_capture",
+            "object_detection",
+            "face_detection",
+            "edge_detection"
+          ]
+        }
+      }
+    },
+    "vector_database": {
+      "description": "Vector storage and similarity search",
+      "tools": {
+        "chromadb": {
+          "name": "ChromaDB",
+          "version": "0.4.22",
+          "type": "python",
+          "description": "Vector database for embeddings",
+          "python_package": "chromadb",
+          "server_url": "http://vector-db:8000",
+          "features": [
+            "embeddings_storage",
+            "similarity_search",
+            "metadata_filtering",
+            "persistence",
+            "multi_tenant"
+          ],
+          "collections": [
+            "agent_memory",
+            "task_context",
+            "documents",
+            "embeddings"
+          ]
+        }
+      }
+    },
+    "system_utilities": {
+      "description": "System and shell utilities",
+      "tools": {
+        "curl": {
+          "name": "curl",
+          "version": "7.81.0",
+          "type": "cli",
+          "description": "Command-line HTTP client",
+          "command": "curl",
+          "features": [
+            "http_requests",
+            "ftp",
+            "cookies",
+            "authentication",
+            "proxy_support"
+          ]
+        },
+        "wget": {
+          "name": "wget",
+          "version": "1.21.2",
+          "type": "cli",
+          "description": "Network downloader",
+          "command": "wget",
+          "features": [
+            "recursive_download",
+            "resume_support",
+            "mirror_website"
+          ]
+        },
+        "git": {
+          "name": "Git",
+          "version": "2.34.1",
+          "type": "cli",
+          "description": "Version control system",
+          "command": "git",
+          "features": [
+            "clone",
+            "fetch",
+            "checkout",
+            "commit",
+            "push",
+            "pull",
+            "branch"
+          ]
+        },
+        "jq": {
+          "name": "jq",
+          "version": "1.6",
+          "type": "cli",
+          "description": "JSON processor",
+          "command": "jq",
+          "features": [
+            "json_parsing",
+            "filtering",
+            "transformation",
+            "querying"
+          ]
+        },
+        "ripgrep": {
+          "name": "ripgrep",
+          "version": "13.0.0",
+          "type": "cli",
+          "description": "Fast text search",
+          "command": "rg",
+          "features": [
+            "regex_search",
+            "recursive_search",
+            "file_type_filtering",
+            "parallel_search"
+          ]
+        }
+      }
+    },
+    "runtimes": {
+      "description": "Programming language runtimes",
+      "tools": {
+        "nodejs": {
+          "name": "Node.js",
+          "version": "20.11.0",
+          "type": "runtime",
+          "command": "node",
+          "package_manager": "npm",
+          "features": [
+            "javascript_execution",
+            "es_modules",
+            "async_await",
+            "streams",
+            "http_server"
+          ]
+        },
+        "python": {
+          "name": "Python",
+          "version": "3.11.6",
+          "type": "runtime",
+          "command": "python3.11",
+          "package_manager": "pip",
+          "features": [
+            "script_execution",
+            "async_await",
+            "type_hints",
+            "data_classes",
+            "pattern_matching"
+          ]
+        },
+        "deno": {
+          "name": "Deno",
+          "version": "1.39.0",
+          "type": "runtime",
+          "command": "deno",
+          "description": "Secure JavaScript/TypeScript runtime",
+          "features": [
+            "typescript_native",
+            "security_sandbox",
+            "built_in_formatter",
+            "dependency_inspector",
+            "web_compatibility"
+          ]
+        }
+      }
+    }
+  },
+  "aliases": {
+    "bs4": "beautifulsoup",
+    "bs": "beautifulsoup",
+    "requests_html": "requests-html",
+    "pd": "pandas",
+    "np": "numpy",
+    "cv2": "opencv",
+    "pil": "pillow",
+    "pw": "playwright",
+    "pptr": "puppeteer"
+  },
+  "default_tools": [
+    "playwright",
+    "beautifulsoup",
+    "requests",
+    "pandas",
+    "numpy"
+  ]
+}

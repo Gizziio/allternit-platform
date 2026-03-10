@@ -83,14 +83,32 @@ impl ImageDownloader {
             _ => arch,
         };
 
-        // Download metadata first
-        let metadata_url = format!("{}/version-{}-{}.json", base_url, self.version, arch_str);
-        let metadata = self.download_metadata(&metadata_url).await?;
+        // Try to download metadata - first try arch-specific, then generic
+        let metadata = match self.try_download_metadata(&base_url, arch_str).await {
+            Ok(m) => m,
+            Err(e) => {
+                warn!("Failed to download arch-specific metadata: {}", e);
+                // Fall back to generic metadata (for backwards compatibility)
+                let generic_url = format!("{}/version-{}.json", base_url, self.version);
+                match self.download_metadata(&generic_url).await {
+                    Ok(m) => m,
+                    Err(_) => {
+                        // Also try amd64 suffix for x86_64
+                        let amd64_url = format!("{}/version-{}-amd64.json", base_url, self.version);
+                        self.download_metadata(&amd64_url).await
+                            .context("Failed to download metadata. The images may not exist for this version.")?
+                    }
+                }
+            }
+        };
 
-        // Download kernel
+        // Download kernel - try arch-specific first, then generic
         let kernel_file = self.output_dir.join(format!("vmlinux-{}-a2r", metadata.kernel_version));
-        let kernel_url = format!("{}/vmlinux-{}-a2r-{}", base_url, metadata.kernel_version, arch_str);
-        self.download_file(&kernel_url, &kernel_file, "Linux kernel").await?;
+        let kernel_urls = [
+            format!("{}/vmlinux-{}-a2r-{}", base_url, metadata.kernel_version, arch_str),
+            format!("{}/vmlinux-{}-a2r", base_url, metadata.kernel_version),
+        ];
+        self.download_file_with_fallback(&kernel_urls, &kernel_file, "Linux kernel").await?;
 
         if verify {
             self.verify_checksum(&kernel_file, &metadata.checksums.vmlinux_sha256)?;
@@ -98,8 +116,11 @@ impl ImageDownloader {
 
         // Download initrd
         let initrd_file = self.output_dir.join(format!("initrd.img-{}-a2r", metadata.kernel_version));
-        let initrd_url = format!("{}/initrd.img-{}-a2r-{}", base_url, metadata.kernel_version, arch_str);
-        self.download_file(&initrd_url, &initrd_file, "Initial ramdisk").await?;
+        let initrd_urls = [
+            format!("{}/initrd.img-{}-a2r-{}", base_url, metadata.kernel_version, arch_str),
+            format!("{}/initrd.img-{}-a2r", base_url, metadata.kernel_version),
+        ];
+        self.download_file_with_fallback(&initrd_urls, &initrd_file, "Initial ramdisk").await?;
 
         if verify {
             self.verify_checksum(&initrd_file, &metadata.checksums.initrd_sha256)?;
@@ -107,17 +128,21 @@ impl ImageDownloader {
 
         // Download rootfs
         let rootfs_file = self.output_dir.join(format!("ubuntu-22.04-a2r-v{}.ext4.zst", self.version));
-        let rootfs_url = format!("{}/ubuntu-22.04-a2r-v{}-{}.ext4.zst", base_url, self.version, arch_str);
-        self.download_file(&rootfs_url, &rootfs_file, "Root filesystem").await?;
-
-        if verify {
-            self.verify_checksum(&rootfs_file, &metadata.checksums.rootfs_sha256)?;
-        }
+        let rootfs_urls = [
+            format!("{}/ubuntu-22.04-a2r-v{}-{}.ext4.zst", base_url, self.version, arch_str),
+            format!("{}/ubuntu-22.04-a2r-v{}.ext4.zst", base_url, self.version),
+        ];
+        self.download_file_with_fallback(&rootfs_urls, &rootfs_file, "Root filesystem").await?;
 
         // Decompress rootfs if needed
         let final_rootfs = self.output_dir.join(format!("ubuntu-22.04-a2r-v{}.ext4", self.version));
         if !final_rootfs.exists() {
             self.decompress_zstd(&rootfs_file, &final_rootfs).await?;
+        }
+        
+        // Verify checksum of decompressed file
+        if verify {
+            self.verify_checksum(&final_rootfs, &metadata.checksums.rootfs_sha256)?;
         }
 
         // Write version file
@@ -126,6 +151,42 @@ impl ImageDownloader {
 
         info!("All files downloaded to {}", self.output_dir.display());
         Ok(())
+    }
+
+    /// Try to download metadata for a specific architecture
+    async fn try_download_metadata(&self, base_url: &str, arch_str: &str) -> Result<ImageMetadata> {
+        let metadata_url = format!("{}/version-{}-{}.json", base_url, self.version, arch_str);
+        match self.download_metadata(&metadata_url).await {
+            Ok(m) => Ok(m),
+            Err(e) => {
+                // If it's a 404, try the generic version
+                if e.to_string().contains("404") {
+                    let generic_url = format!("{}/version-{}.json", base_url, self.version);
+                    self.download_metadata(&generic_url).await
+                } else {
+                    Err(e)
+                }
+            }
+        }
+    }
+
+    /// Download a file trying multiple URLs
+    async fn download_file_with_fallback(&self, urls: &[String], path: &Path, description: &str) -> Result<()> {
+        let mut last_error = None;
+        
+        for (i, url) in urls.iter().enumerate() {
+            match self.download_file(url, path, description).await {
+                Ok(_) => return Ok(()),
+                Err(e) => {
+                    if i < urls.len() - 1 {
+                        debug!("Failed to download from {}: {}, trying fallback", url, e);
+                    }
+                    last_error = Some(e);
+                }
+            }
+        }
+        
+        Err(last_error.unwrap_or_else(|| anyhow::anyhow!("No URLs provided")))
     }
 
     /// Check for available updates

@@ -8,7 +8,6 @@ import {
   Clock,
   Target,
   TreeStructure,
-  ChatCircle,
   ListDashes,
   LockKey,
   GitDiff,
@@ -30,7 +29,6 @@ export type DrawerTabId =
   | 'receipts'
   | 'dag-graph'
   | 'trace'
-  | 'browser-chat'
   | 'swarm'      // NEW - Multi-agent orchestration
   | 'policy'     // NEW - Policy & governance
   | 'security';  // NEW - Security dashboard
@@ -66,11 +64,10 @@ export function DrawerTabs({ activeTab, onTabChange }: DrawerTabsProps) {
       
       {/* Scheduling & DAG */}
       <Tab id="scheduler" label="Scheduler" icon={Clock} active={activeTab === 'scheduler'} onClick={onTabChange} />
-      <Tab id="dag-graph" label="DAG" icon={TreeStructure} active={activeTab === 'dag-graph'} onClick={onTabChange} disabled tooltip="Coming next" />
+      <Tab id="dag-graph" label="DAG" icon={TreeStructure} active={activeTab === 'dag-graph'} onClick={onTabChange} />
       
-      {/* Future */}
-      <Tab id="trace" label="Trace" icon={ListDashes} active={activeTab === 'trace'} onClick={onTabChange} disabled tooltip="Coming next" />
-      <Tab id="browser-chat" label="Browser" icon={ChatCircle} active={activeTab === 'browser-chat'} onClick={onTabChange} disabled tooltip="Coming next" />
+      {/* Execution Trace */}
+      <Tab id="trace" label="Trace" icon={ListDashes} active={activeTab === 'trace'} onClick={onTabChange} />
     </div>
   );
 }

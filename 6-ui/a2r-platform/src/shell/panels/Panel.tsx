@@ -273,7 +273,7 @@ function Icon({ name, size = 'md', className }: IconProps) {
     lg: 20,
   };
 
-  const IconComponent = (LucideIcons as Record<string, React.ComponentType<{ size?: number; className?: string }>>)[
+  const IconComponent = ((LucideIcons as unknown) as Record<string, React.ComponentType<{ size?: number; className?: string }>>)[
     name
       .split('-')
       .map(part => part.charAt(0).toUpperCase() + part.slice(1))

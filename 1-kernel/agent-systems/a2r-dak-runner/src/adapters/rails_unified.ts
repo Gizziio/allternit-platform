@@ -19,10 +19,8 @@ import {
   ReceiptId,
   ToolCall,
   ToolResult,
-  GateCheckRequest,
-  GateCheckResponse,
-  WorkClaimResult,
 } from '../types';
+import type { GateCheckRequest, GateCheckResponse, WorkClaimResult } from './rails_api';
 
 export interface UnifiedRailsConfig extends RailsConfig {
   http?: RailsHttpConfig;
@@ -52,7 +50,7 @@ export class RailsUnifiedAdapter {
       this.httpAdapter = new RailsHttpAdapter(config.http);
     }
 
-    this.useHttp = this.config.preferHttp && !!this.httpAdapter;
+    this.useHttp = !!(this.config.preferHttp && this.httpAdapter);
   }
 
   // ============================================================================
@@ -124,7 +122,7 @@ export class RailsUnifiedAdapter {
           tools: [],
           ttlSeconds,
         });
-        return { success: true, lease };
+        return { success: true, lease } as WorkClaimResult;
       },
       () => this.cliAdapter.claimWork(dagId, nodeId, wihId, agentId, paths, ttlSeconds)
     );

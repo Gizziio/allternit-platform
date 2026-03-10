@@ -1,0 +1,74 @@
+{
+  "id": "python-ml",
+  "name": "Python Machine Learning",
+  "description": "Python 3.12 environment with PyTorch, Jupyter, and common ML libraries",
+  "version": "1.0.0",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+  "features": [
+    "ghcr.io/devcontainers/features/nvidia-cuda:1",
+    "ghcr.io/devcontainers/features/github-cli:1",
+    "ghcr.io/devcontainers/features/docker-in-docker:2"
+  ],
+  "ports": [8888, 6006, 5000, 8501],
+  "postCreateCommand": "pip install -r requirements.txt && pip install jupyterlab tensorboard streamlit",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-toolsai.jupyter",
+        "ms-toolsai.vscode-jupyter-cell-tags",
+        "ms-toolsai.vscode-jupyter-slideshow",
+        "ms-python.black-formatter",
+        "ms-python.isort",
+        "njpwerner.autodocstring"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.linting.enabled": true,
+        "python.linting.pylintEnabled": true,
+        "python.formatting.provider": "black",
+        "python.formatting.blackPath": "/usr/local/bin/black",
+        "editor.formatOnSave": true,
+        "jupyter.askKernelRestart": false,
+        "jupyter.interactiveWindow.creationMode": "perFile"
+      }
+    }
+  },
+  "variables": {
+    "PYTHONPATH": {
+      "default": "/workspace",
+      "description": "Python module search path"
+    },
+    "JUPYTER_ENABLE_LAB": {
+      "default": "yes",
+      "description": "Enable JupyterLab"
+    }
+  },
+  "dockerfile": null,
+  "buildContext": null,
+  "mounts": [
+    {
+      "type": "volume",
+      "source": "pip-cache",
+      "target": "/root/.cache/pip"
+    },
+    {
+      "type": "volume",
+      "source": "jupyter-data",
+      "target": "/root/.local/share/jupyter"
+    }
+  ],
+  "containerEnv": {
+    "PYTHONPATH": "/workspace",
+    "PYTHONDONTWRITEBYTECODE": "1",
+    "PYTHONUNBUFFERED": "1",
+    "JUPYTER_ENABLE_LAB": "yes",
+    "PYTORCH_ENABLE_MPS_FALLBACK": "1"
+  },
+  "remoteUser": "vscode",
+  "runArgs": [
+    "--gpus",
+    "all"
+  ]
+}

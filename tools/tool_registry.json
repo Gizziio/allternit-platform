@@ -2,6 +2,38 @@
   "version": "v0.1",
   "tools": [
     {
+      "id": "autoland",
+      "title": "A2R Autoland",
+      "kind": "write",
+      "safety_level": "critical",
+      "entrypoint": "tools/autoland/mod.ts",
+      "inputs_schema": {
+        "type": "object",
+        "required": [
+          "wih_id"
+        ],
+        "properties": {
+          "wih_id": {
+            "type": "string",
+            "description": "The ID of the WIH (Implementation Run) to land."
+          }
+        }
+      },
+      "outputs_schema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          }
+        }
+      },
+      "preconditions": [
+        "WIH_VALID",
+        "TASK_RUNNING",
+        "WIH_CLOSED_PASS"
+      ]
+    },
+    {
       "id": "canvas.list.courses",
       "title": "Canvas List Courses",
       "kind": "read",

@@ -80,6 +80,8 @@ interface GatewayJob {
 // ============================================================================
 
 const AGENT_CONTROL_API = "/api/agent-control";
+const CRON_REST_API_BASE = "/a2r-api/cron";
+const LOCAL_JOBS_STORAGE_KEY = "a2r-scheduled-jobs";
 
 /**
  * Call the agent-control API with proper error handling
@@ -108,6 +110,256 @@ async function callAgentControl<T>(
   return data.payload as T;
 }
 
+interface CronRestJob {
+  id: string;
+  name?: string;
+  description?: string;
+  schedule?: string;
+  enabled?: boolean;
+  command?: string;
+  created_at?: string;
+  updated_at?: string;
+  last_run?: string;
+  next_run?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  lastRun?: string;
+  nextRun?: string;
+  metadata?: Record<string, unknown>;
+}
+
+interface CronRestListResponse {
+  jobs?: CronRestJob[];
+}
+
+function isStorageAvailable(): boolean {
+  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
+}
+
+function readLocalJobs(): ScheduledJobConfig[] {
+  if (!isStorageAvailable()) return [];
+  try {
+    const raw = window.localStorage.getItem(LOCAL_JOBS_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed as ScheduledJobConfig[];
+  } catch {
+    return [];
+  }
+}
+
+function writeLocalJobs(jobs: ScheduledJobConfig[]): void {
+  if (!isStorageAvailable()) return;
+  try {
+    window.localStorage.setItem(LOCAL_JOBS_STORAGE_KEY, JSON.stringify(jobs));
+  } catch {
+    // Ignore local persistence errors
+  }
+}
+
+async function readErrorBody(response: Response): Promise<string> {
+  const candidate = response as unknown as {
+    text?: () => Promise<string>;
+    json?: () => Promise<unknown>;
+  };
+
+  if (typeof candidate.text === "function") {
+    try {
+      return await candidate.text();
+    } catch {
+      // fall through
+    }
+  }
+  if (typeof candidate.json === "function") {
+    try {
+      return JSON.stringify(await candidate.json());
+    } catch {
+      // fall through
+    }
+  }
+  return "";
+}
+
+async function parseJsonResponse<T>(response: Response, label: string): Promise<T> {
+  const candidate = response as unknown as {
+    text?: () => Promise<string>;
+    json?: () => Promise<unknown>;
+  };
+
+  if (typeof candidate.text === "function") {
+    const raw = await candidate.text();
+    try {
+      return (raw ? JSON.parse(raw) : {}) as T;
+    } catch {
+      throw new Error(`${label} returned non-JSON response`);
+    }
+  }
+
+  if (typeof candidate.json === "function") {
+    return (await candidate.json()) as T;
+  }
+
+  throw new Error(`${label} response body is not readable`);
+}
+
+function mapCronRestJob(job: CronRestJob): ScheduledJobConfig {
+  const metadata = (job.metadata ?? {}) as Record<string, unknown>;
+  return {
+    id: job.id,
+    name: job.name || "Scheduled job",
+    description: job.description || "",
+    schedule: job.schedule || "0 0 * * *",
+    taskType: "custom-task",
+    parameters: {},
+    prompt: typeof metadata.prompt === "string" ? metadata.prompt : "",
+    enabled: job.enabled !== false,
+    maxRetries: typeof metadata.maxRetries === "number" ? metadata.maxRetries : 3,
+    timeout: typeof metadata.timeout === "number" ? metadata.timeout : 30,
+    notifyOnSuccess: metadata.notifyOnSuccess === true,
+    notifyOnFailure: metadata.notifyOnFailure !== false,
+    createdAt: job.createdAt || job.created_at,
+    updatedAt: job.updatedAt || job.updated_at,
+    lastRunAt: job.lastRun || job.last_run,
+    nextRunAt: job.nextRun || job.next_run,
+    runCount: 0,
+    lastError: undefined,
+  };
+}
+
+async function listScheduledJobsViaRest(): Promise<ScheduledJobConfig[]> {
+  const response = await fetch(CRON_REST_API_BASE, { method: "GET" });
+  if (!response.ok) {
+    const detail = await readErrorBody(response);
+    throw new Error(`Cron REST list failed (${response.status})${detail ? `: ${detail}` : ""}`);
+  }
+  const data = await parseJsonResponse<CronRestListResponse | CronRestJob[]>(
+    response,
+    "Cron REST list",
+  );
+  const jobs = Array.isArray(data) ? data : data.jobs || [];
+  return jobs.map(mapCronRestJob);
+}
+
+async function createScheduledJobViaRest(config: CronJobConfig): Promise<ScheduledJobConfig> {
+  const response = await fetch(CRON_REST_API_BASE, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: config.name,
+      description: config.description,
+      schedule: config.schedule,
+      // Rust cron API requires a command string; keep task type as command identity.
+      command: config.taskType || "custom-task",
+      arguments: config.parameters,
+      enabled: config.enabled,
+      metadata: {
+        prompt: config.prompt,
+        maxRetries: config.maxRetries,
+        timeout: config.timeout,
+        notifyOnSuccess: config.notifyOnSuccess,
+        notifyOnFailure: config.notifyOnFailure,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const detail = await readErrorBody(response);
+    throw new Error(`Cron REST create failed (${response.status})${detail ? `: ${detail}` : ""}`);
+  }
+
+  const created = await parseJsonResponse<{ id?: string }>(response, "Cron REST create");
+  return {
+    ...config,
+    id: created.id || `job-${Date.now()}`,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    runCount: 0,
+  };
+}
+
+function createScheduledJobLocally(config: CronJobConfig): ScheduledJobConfig {
+  const localJob: ScheduledJobConfig = {
+    ...config,
+    id: `job-local-${Date.now()}`,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    runCount: 0,
+  };
+  const existing = readLocalJobs();
+  writeLocalJobs([localJob, ...existing.filter((job) => job.id !== localJob.id)]);
+  return localJob;
+}
+
+async function deleteScheduledJobViaRest(jobId: string): Promise<void> {
+  const response = await fetch(`${CRON_REST_API_BASE}/${encodeURIComponent(jobId)}`, {
+    method: "DELETE",
+  });
+  if (!response.ok && response.status !== 204 && response.status !== 404) {
+    const detail = await readErrorBody(response);
+    throw new Error(`Cron REST delete failed (${response.status})${detail ? `: ${detail}` : ""}`);
+  }
+}
+
+function deleteScheduledJobLocally(jobId: string): void {
+  const next = readLocalJobs().filter((job) => job.id !== jobId);
+  writeLocalJobs(next);
+}
+
+async function runScheduledJobNowViaRest(jobId: string): Promise<JobExecution> {
+  const response = await fetch(`${CRON_REST_API_BASE}/${encodeURIComponent(jobId)}/run`, {
+    method: "POST",
+  });
+  if (!response.ok) {
+    const detail = await readErrorBody(response);
+    throw new Error(`Cron REST run failed (${response.status})${detail ? `: ${detail}` : ""}`);
+  }
+
+  const data = await parseJsonResponse<{
+    status?: string;
+    job_id?: string;
+    success?: boolean;
+    started_at?: string;
+    completed_at?: string;
+    output?: string;
+    error?: string;
+  }>(response, "Cron REST run");
+
+  const startedAt = data.started_at || new Date().toISOString();
+  return {
+    executionId: `${jobId}-${Date.now()}`,
+    jobId: data.job_id || jobId,
+    status: data.success === false ? "failed" : "completed",
+    startedAt,
+    completedAt: data.completed_at || new Date().toISOString(),
+    output: data.output,
+    error: data.error,
+  };
+}
+
+function runScheduledJobLocally(jobId: string): JobExecution {
+  const now = new Date().toISOString();
+  const jobs = readLocalJobs();
+  const next = jobs.map((job) => {
+    if (job.id !== jobId) return job;
+    return {
+      ...job,
+      lastRunAt: now,
+      runCount: (job.runCount || 0) + 1,
+      updatedAt: now,
+    };
+  });
+  writeLocalJobs(next);
+  return {
+    executionId: `${jobId}-local-${Date.now()}`,
+    jobId,
+    status: "completed",
+    startedAt: now,
+    completedAt: now,
+    output: "Executed locally (offline fallback).",
+  };
+}
+
 // ============================================================================
 // Service Functions
 // ============================================================================
@@ -118,34 +370,44 @@ async function callAgentControl<T>(
 export async function createScheduledJob(
   config: CronJobConfig
 ): Promise<ScheduledJobConfig> {
-  // First, create a session template for this job
-  const sessionTemplate = await createJobSessionTemplate(config);
-  
-  // Then register with the cron system via Gateway API
-  const jobId = `job-${Date.now()}`;
-  
-  await callAgentControl("cron.update", {
-    jobId,
-    name: config.name,
-    description: config.description,
-    schedule: config.schedule,
-    enabled: config.enabled,
-    sessionTemplateId: sessionTemplate.id,
-    config: {
-      maxRetries: config.maxRetries,
-      timeout: config.timeout,
-      notifyOnSuccess: config.notifyOnSuccess,
-      notifyOnFailure: config.notifyOnFailure,
-    },
-  });
+  try {
+    // First, create a session template for this job
+    const sessionTemplate = await createJobSessionTemplate(config);
+    
+    // Then register with the cron system via Gateway API
+    const jobId = `job-${Date.now()}`;
+    
+    await callAgentControl("cron.update", {
+      jobId,
+      name: config.name,
+      description: config.description,
+      schedule: config.schedule,
+      enabled: config.enabled,
+      sessionTemplateId: sessionTemplate.id,
+      config: {
+        maxRetries: config.maxRetries,
+        timeout: config.timeout,
+        notifyOnSuccess: config.notifyOnSuccess,
+        notifyOnFailure: config.notifyOnFailure,
+      },
+    });
 
-  return {
-    ...config,
-    id: jobId,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    runCount: 0,
-  };
+    return {
+      ...config,
+      id: jobId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      runCount: 0,
+    };
+  } catch (primaryError) {
+    console.warn("[ScheduledJobs] Gateway create failed, falling back to REST:", primaryError);
+    try {
+      return await createScheduledJobViaRest(config);
+    } catch (restError) {
+      console.warn("[ScheduledJobs] REST create failed, falling back to local storage:", restError);
+      return createScheduledJobLocally(config);
+    }
+  }
 }
 
 /**
@@ -176,9 +438,14 @@ export async function listScheduledJobs(): Promise<ScheduledJobConfig[]> {
       runCount: job.runCount || 0,
       lastError: job.lastError,
     }));
-  } catch (error) {
-    console.error("[ScheduledJobs] Failed to list jobs:", error);
-    throw new Error("Failed to fetch scheduled jobs from server");
+  } catch (gatewayError) {
+    console.warn("[ScheduledJobs] Gateway list failed, falling back to REST:", gatewayError);
+    try {
+      return await listScheduledJobsViaRest();
+    } catch (restError) {
+      console.warn("[ScheduledJobs] REST list failed, falling back to local storage:", restError);
+      return readLocalJobs();
+    }
   }
 }
 
@@ -189,15 +456,44 @@ export async function updateScheduledJob(
   jobId: string,
   updates: Partial<CronJobConfig>
 ): Promise<ScheduledJobConfig> {
-  await callAgentControl("cron.update", {
-    jobId,
-    ...updates,
-  });
+  try {
+    await callAgentControl("cron.update", {
+      jobId,
+      ...updates,
+    });
+  } catch (gatewayError) {
+    // Minimal REST fallback for enabled toggles only.
+    const onlyEnabledUpdate =
+      Object.keys(updates).length === 1 && typeof updates.enabled === "boolean";
+    if (onlyEnabledUpdate) {
+      const endpoint = updates.enabled ? "enable" : "disable";
+      try {
+        await fetch(`${CRON_REST_API_BASE}/${encodeURIComponent(jobId)}/${endpoint}`, {
+          method: "POST",
+        });
+      } catch (restError) {
+        console.warn("[ScheduledJobs] REST update failed, falling back to local storage:", restError);
+        const next = readLocalJobs().map((job) =>
+          job.id === jobId ? { ...job, ...updates, updatedAt: new Date().toISOString() } : job
+        );
+        writeLocalJobs(next);
+      }
+    } else {
+      const next = readLocalJobs().map((job) =>
+        job.id === jobId ? { ...job, ...updates, updatedAt: new Date().toISOString() } : job
+      );
+      writeLocalJobs(next);
+    }
+    if (gatewayError) {
+      console.warn("[ScheduledJobs] Gateway update failed:", gatewayError);
+    }
+  }
 
-  // Fetch the updated job to return current state
   const jobs = await listScheduledJobs();
   const updated = jobs.find((j) => j.id === jobId);
   if (!updated) {
+    const local = readLocalJobs().find((j) => j.id === jobId);
+    if (local) return local;
     throw new Error("Job not found after update");
   }
   return updated;
@@ -207,18 +503,38 @@ export async function updateScheduledJob(
  * Delete a scheduled job
  */
 export async function deleteScheduledJob(jobId: string): Promise<void> {
-  await callAgentControl("cron.update", {
-    jobId,
-    enabled: false,
-    deleted: true,
-  });
+  try {
+    await callAgentControl("cron.update", {
+      jobId,
+      enabled: false,
+      deleted: true,
+    });
+  } catch (gatewayError) {
+    console.warn("[ScheduledJobs] Gateway delete failed, falling back to REST:", gatewayError);
+    try {
+      await deleteScheduledJobViaRest(jobId);
+    } catch (restError) {
+      console.warn("[ScheduledJobs] REST delete failed, falling back to local storage:", restError);
+      deleteScheduledJobLocally(jobId);
+    }
+  }
 }
 
 /**
  * Run a scheduled job immediately (manual trigger)
  */
 export async function runScheduledJobNow(jobId: string): Promise<JobExecution> {
-  return await callAgentControl<JobExecution>("cron.run", { jobId });
+  try {
+    return await callAgentControl<JobExecution>("cron.run", { jobId });
+  } catch (gatewayError) {
+    console.warn("[ScheduledJobs] Gateway run failed, falling back to REST:", gatewayError);
+    try {
+      return await runScheduledJobNowViaRest(jobId);
+    } catch (restError) {
+      console.warn("[ScheduledJobs] REST run failed, falling back to local storage:", restError);
+      return runScheduledJobLocally(jobId);
+    }
+  }
 }
 
 /**

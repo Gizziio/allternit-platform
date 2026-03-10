@@ -14,6 +14,8 @@ import { useDrawerStore } from '../../../drawers/drawer.store';
 import { SwarmMonitor } from '../../dag/SwarmMonitor';
 import { PolicyManager } from '../../dag/PolicyManager';
 import { SecurityDashboard } from '../../dag/SecurityDashboard';
+import { KanbanDAG } from '../KanbanDAG';
+import { RunTraceView } from '../runtime/RunTraceView';
 
 export function DrawerRoot() {
   const consoleDrawer = useDrawerStore((state) => state.drawers.console);
@@ -73,21 +75,12 @@ export function DrawerRoot() {
       case 'agents': return <OrchestrationView />;
       case 'scheduler': return <SchedulerView />;
       case 'context': return <ContextView />;
-      case 'receipts': return <ReceiptsView />;
+      case 'receipts': return <div style={{ padding: 20 }}>Receipts View (Coming Soon)</div>;
       case 'swarm': return <SwarmMonitor />;
       case 'policy': return <PolicyManager />;
       case 'security': return <SecurityDashboard />;
-      case 'dag-graph':
-      case 'trace':
-      case 'browser-chat':
-        return (
-          <div className="flex items-center justify-center h-full text-muted-foreground">
-            <div className="text-center">
-              <p className="text-sm font-medium">Coming next</p>
-              <p className="text-xs mt-1">This tab is under development</p>
-            </div>
-          </div>
-        );
+      case 'dag-graph': return <KanbanDAG />;
+      case 'trace': return <RunTraceView />;
       default: return null;
     }
   };

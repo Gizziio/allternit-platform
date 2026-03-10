@@ -152,13 +152,13 @@ export function BrowserView() {
       <div className="h-14 flex items-center gap-4 px-4 bg-[#1A1612] border-b border-[#D4B08C]/10 z-10 shadow-lg">
         {/* Navigation Buttons */}
         <div className="flex items-center gap-1">
-          <GlassIconButton size="xs" border="none" hover="scale" className="text-[#9B9B9B] hover:text-[#D4B08C]">
+          <GlassIconButton size="xs" className="text-[#9B9B9B] hover:text-[#D4B08C]">
             <ChevronLeft className="w-4 h-4" />
           </GlassIconButton>
-          <GlassIconButton size="xs" border="none" hover="scale" className="text-[#9B9B9B] hover:text-[#D4B08C]">
+          <GlassIconButton size="xs" className="text-[#9B9B9B] hover:text-[#D4B08C]">
             <ChevronRight className="w-4 h-4" />
           </GlassIconButton>
-          <GlassIconButton size="xs" border="none" hover="scale" className="text-[#D4B08C]/60 hover:text-[#D4B08C]">
+          <GlassIconButton size="xs" className="text-[#D4B08C]/60 hover:text-[#D4B08C]">
             <RefreshCw className="w-3.5 h-3.5" />
           </GlassIconButton>
         </div>
@@ -231,7 +231,7 @@ export function BrowserView() {
             <webview
               src={(activeTab as WebTab).url}
               className="w-full h-full"
-              allowpopups="true"
+              allowpopups={true}
               style={{ width: '100%', height: '100%', border: 'none' }}
             />
             

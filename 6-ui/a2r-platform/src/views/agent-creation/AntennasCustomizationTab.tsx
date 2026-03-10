@@ -10,7 +10,7 @@ import {
   ANTENNA_STYLE_METADATA, 
   ANTENNA_ANIMATION_METADATA, 
   TIP_DECORATION_METADATA 
-} from '../../components/avatar';
+} from '../../components/Avatar';
 import { STUDIO_THEME } from '../AgentView';
 import type { AntennaStyle, AntennaAnimation } from '../../lib/agents/character.types';
 
@@ -49,7 +49,7 @@ export const AntennasCustomizationTab: React.FC = () => {
     randomizeAntennas,
   } = useAvatarCreatorStore();
 
-  const { antennas } = currentConfig;
+  const antennas = currentConfig.antennas ?? { count: 2, style: 'curved', animation: 'sway', tipDecoration: 'none' };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -63,7 +63,7 @@ export const AntennasCustomizationTab: React.FC = () => {
             marginBottom: '12px',
           }}
         >
-          Antenna Count: {antennas.count}
+          Antenna Count: {antennas?.count ?? 0}
         </h4>
         
         <div
@@ -74,6 +74,7 @@ export const AntennasCustomizationTab: React.FC = () => {
         >
           {[0, 1, 2, 3].map((count) => (
             <button
+              type="button"
               key={count}
               onClick={() => setAntennaCount(count as 0 | 1 | 2 | 3)}
               style={{
@@ -81,13 +82,13 @@ export const AntennasCustomizationTab: React.FC = () => {
                 padding: '12px',
                 borderRadius: '8px',
                 border: '2px solid',
-                borderColor: antennas.count === count 
+                borderColor: antennas?.count === count 
                   ? STUDIO_THEME.accent 
                   : STUDIO_THEME.border,
-                backgroundColor: antennas.count === count 
+                backgroundColor: antennas?.count === count 
                   ? `${STUDIO_THEME.accent}15`
                   : STUDIO_THEME.bg,
-                color: antennas.count === count 
+                color: antennas?.count === count 
                   ? STUDIO_THEME.accent 
                   : STUDIO_THEME.textPrimary,
                 fontSize: '18px',
@@ -101,7 +102,7 @@ export const AntennasCustomizationTab: React.FC = () => {
           ))}
         </div>
         
-        {antennas.count === 0 && (
+        {(antennas?.count ?? 0) === 0 && (
           <p
             style={{
               fontSize: '12px',
@@ -115,7 +116,7 @@ export const AntennasCustomizationTab: React.FC = () => {
         )}
       </div>
 
-      {antennas.count > 0 && (
+      {(antennas?.count ?? 0) > 0 && (
         <>
           {/* Antenna Style */}
           <div>
@@ -137,6 +138,7 @@ export const AntennasCustomizationTab: React.FC = () => {
                 Style
               </h4>
               <button
+                type="button"
                 onClick={randomizeAntennas}
                 style={{
                   padding: '4px 10px',
@@ -160,10 +162,11 @@ export const AntennasCustomizationTab: React.FC = () => {
               }}
             >
               {Object.entries(ANTENNA_STYLE_METADATA).map(([id, meta]) => {
-                const isSelected = antennas.style === id;
+                const isSelected = antennas?.style === id;
                 
                 return (
                   <button
+                    type="button"
                     key={id}
                     onClick={() => setAntennaStyle(id as AntennaStyle)}
                     style={{
@@ -226,10 +229,11 @@ export const AntennasCustomizationTab: React.FC = () => {
               }}
             >
               {Object.entries(ANTENNA_ANIMATION_METADATA).map(([id, meta]) => {
-                const isSelected = antennas.animation === id;
+                const isSelected = antennas?.animation === id;
                 
                 return (
                   <button
+                    type="button"
                     key={id}
                     onClick={() => setAntennaAnimation(id as AntennaAnimation)}
                     style={{
@@ -291,10 +295,11 @@ export const AntennasCustomizationTab: React.FC = () => {
               }}
             >
               {Object.entries(TIP_DECORATION_METADATA).map(([id, meta]) => {
-                const isSelected = antennas.tipDecoration === id;
+                const isSelected = antennas?.tipDecoration === id;
                 
                 return (
                   <button
+                    type="button"
                     key={id}
                     onClick={() => setAntennaTip(id as "none" | "ball" | "glow" | "star" | "diamond")}
                     style={{

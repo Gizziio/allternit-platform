@@ -55,6 +55,7 @@ export type ViewType =
   | "a2r-ix"
   | "form-surfaces"
   | "canvas"
+  | "a2r-canvas"  // A2r-Canvas viewer (Sparkpages equivalent)
   | "hooks"
   // P4 UI Views
   | "evolution"
@@ -97,15 +98,20 @@ export type ViewType =
   | "cowork-runs"
   | "cowork-drafts"
   | "cowork-tasks"
+  | "cowork-cron"
+  | "cowork-project"
   | "cowork-documents"
   | "cowork-tables"
   | "cowork-files"
   | "cowork-exports"
+  | "cowork-new-task"
   // Agent Session Views (full-screen agent experiences)
   | "chat-agent-session"
   | "cowork-agent-session"
   | "code-agent-session"
-  | "browser-agent-session";
+  | "browser-agent-session"
+  // Product Discovery
+  | "products";
 
 export type ViewId = string;
 

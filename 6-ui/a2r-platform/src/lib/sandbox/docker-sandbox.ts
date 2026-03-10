@@ -180,10 +180,11 @@ export async function executeInSandbox({
     });
     
     const executionPromise = (async () => {
-      await container!.start();
+      if (!container) throw new Error('Container not initialized');
+      await container.start();
       
       // Wait for container to finish
-      const stream = await container!.logs({
+      const stream = await container.logs({
         follow: true,
         stdout: true,
         stderr: true,
@@ -202,7 +203,7 @@ export async function executeInSandbox({
         }
       });
       
-      await container!.wait();
+      await container.wait();
       return output;
     })();
     

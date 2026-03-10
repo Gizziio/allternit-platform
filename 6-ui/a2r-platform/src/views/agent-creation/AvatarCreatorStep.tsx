@@ -18,8 +18,8 @@ import {
   Wand2,
 } from 'lucide-react';
 import { useAvatarCreatorStore, AVATAR_TEMPLATES, type CreatorTab } from '../../stores/avatar-creator.store';
-import { AgentAvatar } from '../../components/avatar';
-import { AvatarPreview } from '../../components/avatar/AvatarPreview';
+import { AgentAvatar } from '../../components/Avatar';
+import { AvatarPreview } from '../../components/Avatar/AvatarPreview';
 import { STUDIO_THEME } from '../AgentView';
 import type { AgentSetup } from '../../lib/agents/character.types';
 
@@ -136,6 +136,7 @@ export const AvatarCreatorStep: React.FC<AvatarCreatorStepProps> = ({
           >
             {AVATAR_TEMPLATES.map((template) => (
               <button
+                type="button"
                 key={template.id}
                 onClick={() => {
                   applyTemplate(template);
@@ -183,6 +184,7 @@ export const AvatarCreatorStep: React.FC<AvatarCreatorStepProps> = ({
           }}
         >
           <button
+            type="button"
             onClick={handleUndo}
             disabled={!canUndo()}
             style={{
@@ -205,6 +207,7 @@ export const AvatarCreatorStep: React.FC<AvatarCreatorStepProps> = ({
           </button>
           
           <button
+            type="button"
             onClick={handleRedo}
             disabled={!canRedo()}
             style={{
@@ -227,6 +230,7 @@ export const AvatarCreatorStep: React.FC<AvatarCreatorStepProps> = ({
           </button>
           
           <button
+            type="button"
             onClick={handleReset}
             style={{
               padding: '10px',
@@ -269,7 +273,6 @@ export const AvatarCreatorStep: React.FC<AvatarCreatorStepProps> = ({
           backgroundColor: STUDIO_THEME.bgCard,
           borderRadius: '12px',
           border: `1px solid ${STUDIO_THEME.border}`,
-          overflow: 'hidden',
         }}
       >
         {/* Tab Navigation */}
@@ -282,6 +285,7 @@ export const AvatarCreatorStep: React.FC<AvatarCreatorStepProps> = ({
         >
           {TABS.map((tab) => (
             <button
+              type="button"
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               style={{
@@ -331,6 +335,7 @@ export const AvatarCreatorStep: React.FC<AvatarCreatorStepProps> = ({
         {/* Randomize Button */}
         <div style={{ padding: '0 16px 16px' }}>
           <button
+            type="button"
             onClick={handleRandomize}
             style={{
               width: '100%',

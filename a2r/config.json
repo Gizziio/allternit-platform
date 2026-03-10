@@ -1,0 +1,16 @@
+{
+  "moa": {
+    "enabled": true,
+    "router_model": "gemini-2.5-flash",
+    "default_models": {
+      "text": "anthropic:claude-3-7-sonnet",
+      "code": "anthropic:claude-3-7-sonnet",
+      "image": "replicate:flux-1.1",
+      "audio": "elevenlabs:turbo",
+      "video": "kling:1.5",
+      "search": "gemini-2.5-flash"
+    },
+    "max_parallel_tasks": 5,
+    "timeout_seconds": 300
+  }
+}

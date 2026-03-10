@@ -86,6 +86,21 @@ const EMOTION_CONFIG: Record<AvatarEmotion, {
     glowIntensity: 0.9,
     glowPulse: true,
   },
+  narrow: {
+    duration: 300,
+    easing: 'ease-out',
+    containerTransform: 'scale(0.98)',
+    eyeTransform: 'scaleY(0.7)',
+    glowIntensity: 0.4,
+    glowPulse: false,
+  },
+  sleepy: {
+    duration: 2000,
+    easing: 'ease-in-out',
+    bodyTransform: 'translateY(-1px)',
+    glowIntensity: 0.3,
+    glowPulse: true,
+  },
 };
 
 export function useEmotionAnimation(
@@ -112,8 +127,8 @@ export function useEmotionAnimation(
     const config = EMOTION_CONFIG[emotion];
     
     // Apply personality modifiers
-    const bounceMultiplier = personality.bounce || 0.3;
-    const swayMultiplier = personality.sway || 0.15;
+    const bounceMultiplier = personality?.bounce ?? 0.3;
+    const swayMultiplier = personality?.sway ?? 0.15;
     
     // Build container style
     const containerStyle: React.CSSProperties = {
@@ -132,7 +147,7 @@ export function useEmotionAnimation(
       }
       
       // Add idle sway for certain emotions
-      if (emotion === 'exploratory' || emotion === 'mischief') {
+      if (emotion === 'curious' || emotion === 'mischief') {
         const swayAmount = 2 * swayMultiplier;
         transform += ` rotate(${swayAmount}deg)`;
       }
@@ -145,9 +160,9 @@ export function useEmotionAnimation(
       bodyTransform: config.bodyTransform || '',
       eyeTransform: config.eyeTransform || '',
       glowIntensity: config.glowIntensity,
-      glowPulse: config.glowPulse && personality.breathing,
+      glowPulse: config.glowPulse && (personality?.breathing ?? false),
     };
-  }, [emotion, personality.bounce, personality.sway, personality.breathing]);
+  }, [emotion, personality?.bounce, personality?.sway, personality?.breathing]);
   
   return result;
 }

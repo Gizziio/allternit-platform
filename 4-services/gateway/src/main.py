@@ -28,13 +28,38 @@ import sys
 import json
 import logging
 import time
-from typing import Optional, Dict, Any
+from pydantic import BaseModel, Field
+from typing import Optional, Dict, Any, List
 from fastapi import FastAPI, Request, HTTPException, Response
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
 import uvicorn
 from starlette.middleware.base import BaseHTTPMiddleware
+
+# =============================================================================
+# Memory API Models
+# =============================================================================
+
+class MemoryQueryRequest(BaseModel):
+    question: str
+    max_results: int = Field(default=10, ge=1, le=100)
+    tenant_id: Optional[str] = None
+    session_id: Optional[str] = None
+
+class MemoryIngestRequest(BaseModel):
+    content: str
+    source: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+    tenant_id: Optional[str] = None
+    session_id: Optional[str] = None
+
+class MemoryBulkIngestItem(BaseModel):
+    content: str
+    source: Optional[str] = None
+
+class MemoryBulkIngestRequest(BaseModel):
+    items: List[MemoryBulkIngestItem]
 
 # Configure logging
 logging.basicConfig(
@@ -55,6 +80,7 @@ VOICE_URL = os.environ.get("VOICE_URL", "http://127.0.0.1:8001")
 WEBVM_URL = os.environ.get("WEBVM_URL", "http://127.0.0.1:8002")
 RAILS_URL = os.environ.get("RAILS_URL", "http://127.0.0.1:3011")
 OPERATOR_URL = os.environ.get("OPERATOR_URL", "http://127.0.0.1:3010")
+MEMORY_URL = os.environ.get("MEMORY_URL", "http://127.0.0.1:3201")
 CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "http://localhost:5177,http://127.0.0.1:5177").split(",")
 
 logger.info(f"Gateway Configuration:")
@@ -65,6 +91,7 @@ logger.info(f"  Voice URL: {VOICE_URL}")
 logger.info(f"  WebVM URL: {WEBVM_URL}")
 logger.info(f"  Operator URL: {OPERATOR_URL}")
 logger.info(f"  Rails URL: {RAILS_URL}")
+logger.info(f"  Memory URL: {MEMORY_URL}")
 logger.info(f"  CORS Origins: {CORS_ORIGINS}")
 
 # =============================================================================
@@ -425,6 +452,216 @@ async def proxy(request: Request, path: str):
         raise HTTPException(
             status_code=500,
             detail={"error": "Internal gateway error", "code": "GATEWAY_ERROR"}
+        )
+
+
+# =============================================================================
+# Memory API Routes
+# =============================================================================
+
+@app.get("/api/v1/memory/health")
+async def memory_health():
+    """Check memory agent health"""
+    try:
+        response = await http_client.get(f"{MEMORY_URL}/health", timeout=5.0)
+        return response.json()
+    except httpx.ConnectError:
+        raise HTTPException(
+            status_code=503,
+            detail={"error": "Memory service unavailable", "code": "MEMORY_UNAVAILABLE"}
+        )
+
+@app.get("/api/v1/memory/stats")
+async def memory_stats():
+    """Get memory statistics"""
+    try:
+        response = await http_client.get(f"{MEMORY_URL}/stats", timeout=5.0)
+        return response.json()
+    except httpx.ConnectError:
+        raise HTTPException(
+            status_code=503,
+            detail={"error": "Memory service unavailable", "code": "MEMORY_UNAVAILABLE"}
+        )
+
+@app.post("/api/v1/memory/query")
+async def memory_query(request: MemoryQueryRequest):
+    """Query the memory agent for historical context"""
+    try:
+        payload = {
+            "question": request.question,
+            "max_results": request.max_results,
+        }
+        if request.tenant_id:
+            payload["tenant_id"] = request.tenant_id
+        if request.session_id:
+            payload["session_id"] = request.session_id
+            
+        response = await http_client.post(
+            f"{MEMORY_URL}/api/query",
+            json=payload,
+            timeout=30.0
+        )
+        return response.json()
+    except httpx.TimeoutException:
+        raise HTTPException(
+            status_code=504,
+            detail={"error": "Memory query timeout", "code": "MEMORY_TIMEOUT"}
+        )
+    except httpx.ConnectError:
+        raise HTTPException(
+            status_code=503,
+            detail={"error": "Memory service unavailable", "code": "MEMORY_UNAVAILABLE"}
+        )
+
+@app.post("/api/v1/memory/ingest")
+async def memory_ingest(request: MemoryIngestRequest):
+    """Ingest content into memory"""
+    try:
+        payload = {
+            "content": request.content,
+            "source": request.source,
+        }
+        if request.metadata:
+            payload["metadata"] = request.metadata
+        if request.tenant_id:
+            payload["tenant_id"] = request.tenant_id
+        if request.session_id:
+            payload["session_id"] = request.session_id
+            
+        response = await http_client.post(
+            f"{MEMORY_URL}/api/ingest",
+            json=payload,
+            timeout=30.0
+        )
+        return response.json()
+    except httpx.TimeoutException:
+        raise HTTPException(
+            status_code=504,
+            detail={"error": "Memory ingest timeout", "code": "MEMORY_TIMEOUT"}
+        )
+    except httpx.ConnectError:
+        raise HTTPException(
+            status_code=503,
+            detail={"error": "Memory service unavailable", "code": "MEMORY_UNAVAILABLE"}
+        )
+
+@app.post("/api/v1/memory/ingest/bulk")
+async def memory_ingest_bulk(request: MemoryBulkIngestRequest):
+    """Bulk ingest multiple items"""
+    try:
+        payload = {
+            "items": [
+                {"content": item.content, "source": item.source}
+                for item in request.items
+            ]
+        }
+        
+        response = await http_client.post(
+            f"{MEMORY_URL}/api/ingest/bulk",
+            json=payload,
+            timeout=60.0
+        )
+        return response.json()
+    except httpx.TimeoutException:
+        raise HTTPException(
+            status_code=504,
+            detail={"error": "Bulk ingest timeout", "code": "MEMORY_TIMEOUT"}
+        )
+    except httpx.ConnectError:
+        raise HTTPException(
+            status_code=503,
+            detail={"error": "Memory service unavailable", "code": "MEMORY_UNAVAILABLE"}
+        )
+
+@app.get("/api/v1/memory/search")
+async def memory_search(q: str, limit: int = 20):
+    """Search memories"""
+    try:
+        response = await http_client.get(
+            f"{MEMORY_URL}/api/search",
+            params={"q": q, "limit": limit},
+            timeout=10.0
+        )
+        return response.json()
+    except httpx.TimeoutException:
+        raise HTTPException(
+            status_code=504,
+            detail={"error": "Search timeout", "code": "MEMORY_TIMEOUT"}
+        )
+    except httpx.ConnectError:
+        raise HTTPException(
+            status_code=503,
+            detail={"error": "Memory service unavailable", "code": "MEMORY_UNAVAILABLE"}
+        )
+
+@app.get("/api/v1/memory/recent")
+async def memory_recent(limit: int = 10):
+    """Get recent memories"""
+    try:
+        response = await http_client.get(
+            f"{MEMORY_URL}/api/recent",
+            params={"limit": limit},
+            timeout=10.0
+        )
+        return response.json()
+    except httpx.ConnectError:
+        raise HTTPException(
+            status_code=503,
+            detail={"error": "Memory service unavailable", "code": "MEMORY_UNAVAILABLE"}
+        )
+
+@app.get("/api/v1/memory/insights")
+async def memory_insights():
+    """Get all insights"""
+    try:
+        response = await http_client.get(f"{MEMORY_URL}/api/insights", timeout=10.0)
+        return response.json()
+    except httpx.ConnectError:
+        raise HTTPException(
+            status_code=503,
+            detail={"error": "Memory service unavailable", "code": "MEMORY_UNAVAILABLE"}
+        )
+
+@app.post("/api/v1/memory/consolidate")
+async def memory_consolidate():
+    """Trigger manual consolidation"""
+    try:
+        response = await http_client.post(
+            f"{MEMORY_URL}/api/consolidate",
+            timeout=60.0
+        )
+        return response.json()
+    except httpx.TimeoutException:
+        raise HTTPException(
+            status_code=504,
+            detail={"error": "Consolidation timeout", "code": "MEMORY_TIMEOUT"}
+        )
+    except httpx.ConnectError:
+        raise HTTPException(
+            status_code=503,
+            detail={"error": "Memory service unavailable", "code": "MEMORY_UNAVAILABLE"}
+        )
+
+@app.delete("/api/v1/memory/{memory_id}")
+async def memory_delete(memory_id: str):
+    """Delete a memory"""
+    try:
+        response = await http_client.delete(
+            f"{MEMORY_URL}/api/memory/{memory_id}",
+            timeout=10.0
+        )
+        return response.json()
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 404:
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "Memory not found", "code": "NOT_FOUND"}
+            )
+        raise
+    except httpx.ConnectError:
+        raise HTTPException(
+            status_code=503,
+            detail={"error": "Memory service unavailable", "code": "MEMORY_UNAVAILABLE"}
         )
 
 

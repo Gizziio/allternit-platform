@@ -8,7 +8,7 @@ use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
-    routing::{get, post},
+    routing::{delete, get, head, post},
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
@@ -217,6 +217,13 @@ pub fn create_tui_routes() -> Router<Arc<crate::AppState>> {
         .route("/api/v1/file/list", get(list_files))
         .route("/api/v1/file/read", get(read_file))
         .route("/api/v1/file/status", get(get_file_status))
+        // Extended filesystem endpoints (Plugin Manager)
+        .route("/api/v1/files/list", get(list_files_v2))
+        .route("/api/v1/files/read", get(read_file_v2))
+        .route("/api/v1/files/write", post(write_file_v2))
+        .route("/api/v1/files/delete", delete(delete_file_v2))
+        .route("/api/v1/files/exists", head(exists_file_v2).get(exists_file_v2))
+        .route("/api/v1/files/mkdir", post(mkdir_v2))
 }
 
 // ============================================================================
@@ -594,13 +601,33 @@ async fn find_files(
 #[derive(Deserialize)]
 struct FileListQuery {
     path: Option<String>,
+    details: Option<bool>,
 }
 
 async fn list_files(
     State(_state): State<Arc<AppState>>,
-    Query(_query): Query<FileListQuery>,
+    Query(query): Query<FileListQuery>,
 ) -> Json<Vec<serde_json::Value>> {
-    Json(vec![])
+    let requested = query.path.unwrap_or_else(|| ".".to_string());
+    let dir_path = resolve_input_path(&requested);
+
+    let entries = match collect_directory_entries(&dir_path, query.details.unwrap_or(false)) {
+        Ok(items) => items,
+        Err(_) => return Json(vec![]),
+    };
+
+    Json(
+        entries
+            .into_iter()
+            .map(|entry| {
+                serde_json::json!({
+                    "name": entry.name,
+                    "path": entry.path,
+                    "type": entry.kind,
+                })
+            })
+            .collect(),
+    )
 }
 
 #[derive(Deserialize)]
@@ -610,11 +637,255 @@ struct FileReadQuery {
 
 async fn read_file(
     State(_state): State<Arc<AppState>>,
-    Query(_query): Query<FileReadQuery>,
+    Query(query): Query<FileReadQuery>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    Err(StatusCode::NOT_IMPLEMENTED)
+    let requested = resolve_input_path(&query.path);
+    let content = read_file_content(&requested)?;
+
+    Ok(Json(serde_json::json!({
+      "path": requested.to_string_lossy(),
+      "content": content,
+    })))
 }
 
 async fn get_file_status(State(_state): State<Arc<AppState>>) -> Json<Vec<serde_json::Value>> {
-    Json(vec![])
+    Json(vec![
+        serde_json::json!({
+            "endpoint": "/api/v1/file/list",
+            "status": "ready"
+        }),
+        serde_json::json!({
+            "endpoint": "/api/v1/file/read",
+            "status": "ready"
+        }),
+        serde_json::json!({
+            "endpoint": "/api/v1/files/*",
+            "status": "ready"
+        }),
+    ])
+}
+
+#[derive(Debug, Serialize)]
+struct FileListEntry {
+    name: String,
+    path: String,
+    #[serde(rename = "type")]
+    kind: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    size: Option<u64>,
+    #[serde(rename = "modifiedAt", skip_serializing_if = "Option::is_none")]
+    modified_at: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct FileListResponse {
+    path: String,
+    entries: Vec<FileListEntry>,
+}
+
+#[derive(Debug, Deserialize)]
+struct FileWriteRequest {
+    path: String,
+    content: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct FilePathQuery {
+    path: String,
+}
+
+fn expand_tilde(input: &str) -> String {
+    if input == "~" {
+        if let Ok(home) = std::env::var("HOME") {
+            return home;
+        }
+        return input.to_string();
+    }
+
+    if let Some(rest) = input.strip_prefix("~/") {
+        if let Ok(home) = std::env::var("HOME") {
+            return PathBuf::from(home).join(rest).to_string_lossy().to_string();
+        }
+    }
+
+    input.to_string()
+}
+
+fn resolve_input_path(input: &str) -> PathBuf {
+    let trimmed = input.trim();
+    let raw = if trimmed.is_empty() { "." } else { trimmed };
+    let expanded = expand_tilde(raw);
+    let path = PathBuf::from(expanded);
+
+    if path.is_absolute() {
+        path
+    } else {
+        std::env::current_dir()
+            .unwrap_or_else(|_| PathBuf::from("."))
+            .join(path)
+    }
+}
+
+fn collect_directory_entries(
+    dir_path: &PathBuf,
+    include_details: bool,
+) -> Result<Vec<FileListEntry>, StatusCode> {
+    let metadata = fs::metadata(dir_path).map_err(|err| match err.kind() {
+        std::io::ErrorKind::NotFound => StatusCode::NOT_FOUND,
+        _ => StatusCode::INTERNAL_SERVER_ERROR,
+    })?;
+
+    if !metadata.is_dir() {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    let mut entries = Vec::new();
+    let iter = fs::read_dir(dir_path).map_err(|err| match err.kind() {
+        std::io::ErrorKind::NotFound => StatusCode::NOT_FOUND,
+        _ => StatusCode::INTERNAL_SERVER_ERROR,
+    })?;
+
+    for item in iter {
+        let entry = item.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let path = entry.path();
+        let name = entry.file_name().to_string_lossy().to_string();
+        let entry_metadata = entry.metadata().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let is_dir = entry_metadata.is_dir();
+        let modified_at = if include_details {
+            entry_metadata
+                .modified()
+                .ok()
+                .map(|time| chrono::DateTime::<chrono::Utc>::from(time).to_rfc3339())
+        } else {
+            None
+        };
+
+        entries.push(FileListEntry {
+            name,
+            path: path.to_string_lossy().to_string(),
+            kind: if is_dir { "directory" } else { "file" }.to_string(),
+            size: if include_details && !is_dir {
+                Some(entry_metadata.len())
+            } else {
+                None
+            },
+            modified_at,
+        });
+    }
+
+    entries.sort_by(|a, b| match (a.kind.as_str(), b.kind.as_str()) {
+        ("directory", "file") => std::cmp::Ordering::Less,
+        ("file", "directory") => std::cmp::Ordering::Greater,
+        _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
+    });
+
+    Ok(entries)
+}
+
+fn read_file_content(path: &PathBuf) -> Result<String, StatusCode> {
+    let metadata = fs::metadata(path).map_err(|err| match err.kind() {
+        std::io::ErrorKind::NotFound => StatusCode::NOT_FOUND,
+        _ => StatusCode::INTERNAL_SERVER_ERROR,
+    })?;
+
+    if metadata.is_dir() {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    let bytes = fs::read(path).map_err(|err| match err.kind() {
+        std::io::ErrorKind::NotFound => StatusCode::NOT_FOUND,
+        _ => StatusCode::INTERNAL_SERVER_ERROR,
+    })?;
+
+    Ok(String::from_utf8_lossy(&bytes).to_string())
+}
+
+async fn list_files_v2(
+    State(_state): State<Arc<AppState>>,
+    Query(query): Query<FileListQuery>,
+) -> Result<Json<FileListResponse>, StatusCode> {
+    let requested = query.path.unwrap_or_else(|| ".".to_string());
+    let dir_path = resolve_input_path(&requested);
+    let entries = collect_directory_entries(&dir_path, query.details.unwrap_or(true))?;
+
+    Ok(Json(FileListResponse {
+        path: dir_path.to_string_lossy().to_string(),
+        entries,
+    }))
+}
+
+async fn read_file_v2(
+    State(_state): State<Arc<AppState>>,
+    Query(query): Query<FileReadQuery>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let requested = resolve_input_path(&query.path);
+    let content = read_file_content(&requested)?;
+
+    Ok(Json(serde_json::json!({
+      "path": requested.to_string_lossy(),
+      "content": content,
+    })))
+}
+
+async fn write_file_v2(
+    State(_state): State<Arc<AppState>>,
+    Json(body): Json<FileWriteRequest>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let target_path = resolve_input_path(&body.path);
+    if let Some(parent) = target_path.parent() {
+        fs::create_dir_all(parent).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    }
+    fs::write(&target_path, body.content).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(serde_json::json!({
+      "ok": true,
+      "path": target_path.to_string_lossy(),
+    })))
+}
+
+async fn delete_file_v2(
+    State(_state): State<Arc<AppState>>,
+    Query(query): Query<FilePathQuery>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let target_path = resolve_input_path(&query.path);
+    let metadata = fs::metadata(&target_path).map_err(|err| match err.kind() {
+        std::io::ErrorKind::NotFound => StatusCode::NOT_FOUND,
+        _ => StatusCode::INTERNAL_SERVER_ERROR,
+    })?;
+
+    if metadata.is_dir() {
+        fs::remove_dir_all(&target_path).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    } else {
+        fs::remove_file(&target_path).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    }
+
+    Ok(Json(serde_json::json!({
+      "ok": true,
+      "path": target_path.to_string_lossy(),
+    })))
+}
+
+async fn mkdir_v2(
+    State(_state): State<Arc<AppState>>,
+    Query(query): Query<FilePathQuery>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let target_path = resolve_input_path(&query.path);
+    fs::create_dir_all(&target_path).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(serde_json::json!({
+      "ok": true,
+      "path": target_path.to_string_lossy(),
+    })))
+}
+
+async fn exists_file_v2(
+    State(_state): State<Arc<AppState>>,
+    Query(query): Query<FilePathQuery>,
+) -> Result<StatusCode, StatusCode> {
+    let target_path = resolve_input_path(&query.path);
+    if target_path.exists() {
+        Ok(StatusCode::OK)
+    } else {
+        Err(StatusCode::NOT_FOUND)
+    }
 }

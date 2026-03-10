@@ -13,6 +13,22 @@ import { nanoid } from "nanoid";
 
 const KERNEL_URL = process.env.NEXT_PUBLIC_KERNEL_URL || "http://127.0.0.1:3004";
 
+// ============================================================================
+// Types
+// ============================================================================
+
+interface GenerateResponse {
+  sessionId: string;
+  payload: Record<string, unknown>;
+  dataModel: Record<string, unknown>;
+  createdAt: Date;
+  meta: {
+    isMockData: boolean;
+    fallbackReason?: string;
+    agentId?: string | null;
+  };
+}
+
 export async function POST(req: NextRequest) {
   try {
     const session = await auth.api.getSession({ headers: req.headers });
@@ -43,8 +59,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Request agent to generate A2UI payload via kernel
-    let generatedPayload;
-    let agentResponse;
+    let generatedPayload: Record<string, unknown>;
+    let agentResponse: { payload?: Record<string, unknown>; agent_id?: string | null } | undefined;
+    let usedMockFallback = false;
+    let fallbackReason: string | undefined;
 
     try {
       const kernelResponse = await fetch(`${KERNEL_URL}/v1/a2ui/generate`, {
@@ -61,16 +79,21 @@ export async function POST(req: NextRequest) {
       });
 
       if (kernelResponse.ok) {
-        agentResponse = await kernelResponse.json();
-        generatedPayload = agentResponse.payload;
+        const kernelData = await kernelResponse.json();
+        agentResponse = kernelData;
+        generatedPayload = kernelData.payload;
       } else {
         // Kernel doesn't have A2UI generation endpoint - use mock for development
-        console.log(`[A2UI Generate] Kernel A2UI generate not available, using mock`);
+        fallbackReason = `Kernel returned ${kernelResponse.status} ${kernelResponse.statusText}`;
+        console.warn(`[A2UI Generate] ${fallbackReason}, falling back to mock data`);
+        usedMockFallback = true;
         generatedPayload = mockGenerateA2UI(prompt, context);
       }
     } catch (kernelError) {
       // Kernel not available - use mock for development
-      console.log(`[A2UI Generate] Kernel not available, using mock`);
+      fallbackReason = kernelError instanceof Error ? kernelError.message : "Kernel connection failed";
+      console.warn(`[A2UI Generate] Kernel unavailable (${fallbackReason}), falling back to mock data`);
+      usedMockFallback = true;
       generatedPayload = mockGenerateA2UI(prompt, context);
     }
 
@@ -102,14 +125,21 @@ export async function POST(req: NextRequest) {
       })
       .returning();
 
-    console.log(`[A2UI Generate] Created session ${sessionId} for chat ${chat_id}`);
+    console.log(`[A2UI Generate] Created session ${sessionId} for chat ${chat_id}${usedMockFallback ? " (MOCK MODE)" : ""}`);
 
-    return NextResponse.json({
+    const response: GenerateResponse = {
       sessionId: newSession.id,
       payload: generatedPayload,
       dataModel: context.dataModel || {},
       createdAt: newSession.createdAt,
-    });
+      meta: {
+        isMockData: usedMockFallback,
+        fallbackReason: usedMockFallback ? fallbackReason : undefined,
+        agentId: agentResponse?.agent_id || null,
+      },
+    };
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error("[A2UI Generate] POST error:", error);
     return NextResponse.json(

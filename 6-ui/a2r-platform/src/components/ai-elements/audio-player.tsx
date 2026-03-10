@@ -118,9 +118,8 @@ export const AudioPlayerPlayButton = ({
   className,
   ...props
 }: AudioPlayerPlayButtonProps) => (
-  <Button asChild size="sm" variant="outline">
+  <Button size="sm" variant="outline" className={cn("bg-transparent", className)}>
     <MediaPlayButton
-      className={cn("bg-transparent", className)}
       data-slot="audio-player-play-button"
       {...props}
     />
@@ -133,9 +132,10 @@ export type AudioPlayerSeekBackwardButtonProps = ComponentProps<
 
 export const AudioPlayerSeekBackwardButton = ({
   seekOffset = 10,
+  className,
   ...props
 }: AudioPlayerSeekBackwardButtonProps) => (
-  <Button asChild size="sm" variant="outline">
+  <Button size="sm" variant="outline" className={className}>
     <MediaSeekBackwardButton
       data-slot="audio-player-seek-backward-button"
       seekOffset={seekOffset}
@@ -150,9 +150,10 @@ export type AudioPlayerSeekForwardButtonProps = ComponentProps<
 
 export const AudioPlayerSeekForwardButton = ({
   seekOffset = 10,
+  className,
   ...props
 }: AudioPlayerSeekForwardButtonProps) => (
-  <Button asChild size="sm" variant="outline">
+  <Button size="sm" variant="outline" className={className}>
     <MediaSeekForwardButton
       data-slot="audio-player-seek-forward-button"
       seekOffset={seekOffset}

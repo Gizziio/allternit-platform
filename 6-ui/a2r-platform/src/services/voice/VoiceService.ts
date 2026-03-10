@@ -138,7 +138,10 @@ class VoiceService {
     // Auto-check health periodically (quiet by default to avoid console spam)
     setInterval(() => {
       if (this.shouldRetryHealthCheck()) {
-        this.checkHealth({ quiet: true, force: true }).catch(() => {});
+        this.checkHealth({ quiet: true, force: true }).catch((error) => {
+          console.warn('[VoiceService] Health check failed:', error);
+          this.emit({ type: 'error', error: 'Health check failed' });
+        });
       }
     }, this.healthCheckInterval);
   }
@@ -496,7 +499,10 @@ class VoiceService {
     }
 
     if (this.audioContext.state === 'suspended') {
-      this.audioContext.resume().catch(() => {});
+      this.audioContext.resume().catch((error) => {
+        console.warn('[VoiceService] AudioContext resume failed:', error);
+        this.emit({ type: 'error', error: 'Failed to resume audio context' });
+      });
     }
 
     if (!this.analyserNode) {
@@ -552,15 +558,27 @@ class VoiceService {
     this.stopEnergyAnalysis();
     
     if (this.mediaSource) {
-      try { this.mediaSource.disconnect(); } catch {}
+      try { 
+        this.mediaSource.disconnect(); 
+      } catch (error) {
+        console.debug('[VoiceService] MediaSource disconnect failed:', error);
+      }
       this.mediaSource = null;
     }
     if (this.analyserNode) {
-      try { this.analyserNode.disconnect(); } catch {}
+      try { 
+        this.analyserNode.disconnect(); 
+      } catch (error) {
+        console.debug('[VoiceService] AnalyserNode disconnect failed:', error);
+      }
       this.analyserNode = null;
     }
     if (this.audioContext) {
-      try { this.audioContext.close(); } catch {}
+      try { 
+        this.audioContext.close(); 
+      } catch (error) {
+        console.debug('[VoiceService] AudioContext close failed:', error);
+      }
       this.audioContext = null;
     }
   }

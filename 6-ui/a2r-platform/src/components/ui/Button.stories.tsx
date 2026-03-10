@@ -25,11 +25,11 @@ const meta: Meta<typeof Button> = {
   argTypes: {
     variant: {
       control: 'select',
-      options: ['primary', 'secondary', 'ghost', 'destructive'],
+      options: ['default', 'secondary', 'outline', 'ghost', 'destructive'],
     },
     size: {
       control: 'select',
-      options: ['sm', 'md', 'lg'],
+      options: ['sm', 'default', 'lg', 'icon'],
     },
   },
 };
@@ -42,8 +42,8 @@ type Story = StoryObj<typeof Button>;
  */
 export const Primary: Story = {
   args: {
-    variant: 'primary',
-    size: 'md',
+    variant: 'default',
+    size: 'default',
     children: 'Click me',
   },
   play: async ({ canvasElement }) => {
@@ -64,7 +64,7 @@ export const Primary: Story = {
 export const Secondary: Story = {
   args: {
     variant: 'secondary',
-    size: 'md',
+    size: 'default',
     children: 'Secondary Action',
   },
 };
@@ -76,7 +76,7 @@ export const Sizes: Story = {
   render: () => (
     <div className="flex gap-2 items-center">
       <Button size="sm">Small</Button>
-      <Button size="md">Medium</Button>
+      <Button size="default">Default</Button>
       <Button size="lg">Large</Button>
     </div>
   ),
@@ -94,8 +94,8 @@ export const Sizes: Story = {
  */
 export const Loading: Story = {
   args: {
-    variant: 'primary',
-    loading: true,
+    variant: 'default',
+    disabled: true,
     children: 'Loading...',
   },
 };

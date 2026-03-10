@@ -313,7 +313,7 @@ export const CoworkViewport = memo(function CoworkViewport() {
             {/* OCR overlay */}
             {showOcr && displayObservation.ocr?.regions.map((region, idx) => (
               <OcrRegion
-                key={idx}
+                key={`ocr-region-${idx}`}
                 region={region}
                 scale={1}
               />

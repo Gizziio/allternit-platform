@@ -48,17 +48,22 @@ export interface ToolCall {
   tool: string;
   args: Record<string, unknown>;
   correlationId: CorrelationId;
+  intendedPaths?: string[];
 }
 
 export interface ToolResult {
   success: boolean;
   output?: unknown;
+  stdout?: string;
+  stderr?: string;
+  exitCode?: number;
   error?: {
     message: string;
     code: string;
     stderr?: string;
   };
   affectedPaths?: string[];
+  producedHashes?: string[];
 }
 
 // Hook events (Claude parity)
@@ -198,17 +203,6 @@ export interface WorkRequest {
   correlationId: CorrelationId;
 }
 
-// Policy from policy bundle
-export interface PolicyConstraints {
-  allowedTools: string[];
-  forbiddenTools: string[];
-  writeScope: {
-    mode: 'run_scoped' | 'lease_scoped';
-    allowedGlobs: string[];
-    forbiddenGlobs: string[];
-  };
-  networkPolicy: 'none' | 'restricted' | 'full';
-  receiptsRequired: boolean;
-  maxFixCycles: number;
-  requireValidator: boolean;
-}
+// PolicyConstraints is defined in policy/bundle-builder.ts (snake_case fields)
+// Re-export for convenience
+export type { PolicyConstraints } from '../policy/bundle-builder';

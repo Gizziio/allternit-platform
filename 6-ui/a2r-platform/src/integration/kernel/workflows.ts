@@ -1,5 +1,4 @@
-import { getKernelBridge } from './index.js';
-import { execFacade } from '../execution/exec.facade.js';
+import { api } from '../api-client';
 
 export interface WorkflowStep {
   tool: string;
@@ -48,11 +47,10 @@ export async function runWorkflow(workflowId: string) {
   const workflow = PREDEFINED_WORKFLOWS.find(w => w.id === workflowId);
   if (!workflow) throw new Error('Workflow not found');
 
-  // Start a run via the facade to trigger the bridge
-  const runId = await execFacade.startRun({
-    agentId: 'workflow-orchestrator',
-    input: 'Executing Workflow: ' + workflow.name
+  // Use API client to run workflow
+  const result = await api.runWorkflow(workflowId, {
+    steps: workflow.steps
   });
 
-  return runId;
+  return result.run_id;
 }

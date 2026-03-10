@@ -8,6 +8,21 @@ import { db } from "@/lib/db/client-sqlite";
 import { a2uiSession } from "@/lib/db/schema-sqlite";
 import { eq, and } from "drizzle-orm";
 
+/**
+ * Safely parse JSON with error handling
+ * Returns null if parsing fails, logs error for debugging
+ */
+function safeJSONParse<T>(json: string | null, fieldName: string, sessionId?: string): T | null {
+  if (!json) return null;
+  try {
+    return JSON.parse(json) as T;
+  } catch (error) {
+    console.error(`[A2UI Session] Failed to parse ${fieldName}${sessionId ? ` for session ${sessionId}` : ''}:`, error);
+    console.error(`[A2UI Session] Invalid JSON content:`, json.substring(0, 200));
+    return null;
+  }
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -27,13 +42,23 @@ export async function GET(
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
+    const payload = safeJSONParse<Record<string, unknown>>(record.payload, 'payload', record.id);
+    const dataModel = safeJSONParse<Record<string, unknown>>(record.dataModel, 'dataModel', record.id);
+
+    if (payload === null || dataModel === null) {
+      return NextResponse.json(
+        { error: "Session data is corrupted", sessionId: record.id },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({
       id: record.id,
       chatId: record.chatId,
       messageId: record.messageId,
       agentId: record.agentId,
-      payload: JSON.parse(record.payload),
-      dataModel: JSON.parse(record.dataModel),
+      payload,
+      dataModel,
       status: record.status,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
@@ -70,11 +95,21 @@ export async function PATCH(
       return NextResponse.json({ error: "Session not found" }, { status: 404 });
     }
 
+    const payload = safeJSONParse<Record<string, unknown>>(updated.payload, 'payload', updated.id);
+    const dataModel = safeJSONParse<Record<string, unknown>>(updated.dataModel, 'dataModel', updated.id);
+
+    if (payload === null || dataModel === null) {
+      return NextResponse.json(
+        { error: "Updated session data is corrupted", sessionId: updated.id },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({
       id: updated.id,
       chatId: updated.chatId,
-      payload: JSON.parse(updated.payload),
-      dataModel: JSON.parse(updated.dataModel),
+      payload,
+      dataModel,
       status: updated.status,
       updatedAt: updated.updatedAt,
     });

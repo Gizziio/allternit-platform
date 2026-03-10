@@ -33,12 +33,45 @@ import type {
   CoworkSessionStatus,
 } from './cowork.types';
 
+export interface Task {
+  id: string;
+  title: string;
+  mode: 'agent' | 'task';
+  projectId?: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'archived';
+  createdAt: string;
+  updatedAt: string;
+  scheduledAt?: string;
+  recurring?: boolean;
+  description?: string;
+}
+
+export interface TaskProject {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface CoworkState {
   // Current active session
   session: CoworkSession | null;
   
   // History of past sessions
   sessionHistory: CoworkSession[];
+  
+  // Tasks
+  tasks: Task[];
+  activeTaskId: string | null;
+  taskSessions: Record<string, CoworkSession>;
+  
+  // Projects
+  projects: TaskProject[];
+  activeProjectId: string | null;
+  
+  // Active tab state
+  activeTab: 'tasks' | 'agent-tasks';
+  setActiveTab: (tab: 'tasks' | 'agent-tasks') => void;
   
   // UI state
   selectedEventId: string | null;
@@ -52,6 +85,21 @@ interface CoworkState {
   endSession: (reason: 'completed' | 'error' | 'user_terminated', summary?: string) => void;
   addEvent: (event: AnyCoworkEvent) => void;
   sendControl: (action: CoworkControlAction) => void;
+  
+  // Task CRUD
+  createTask: (title: string, mode?: 'agent' | 'task', projectId?: string) => Task;
+  deleteTask: (id: string) => void;
+  renameTask: (id: string, title: string) => void;
+  updateTaskStatus: (id: string, status: Task['status']) => void;
+  
+  // Project CRUD
+  createProject: (title: string) => TaskProject;
+  deleteProject: (id: string) => void;
+  renameProject: (id: string, title: string) => void;
+  moveTaskToProject: (taskId: string, projectId: string | null) => void;
+  setActiveTask: (id: string | null) => void;
+  setActiveProject: (id: string | null) => void;
+  bindCurrentSessionToTask: (taskId: string) => void;
   
   // Selection
   selectEvent: (eventId: string | null) => void;
@@ -73,6 +121,17 @@ function generateId(): string {
   return `cowork_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function snapshotActiveTaskSession(
+  taskSessions: Record<string, CoworkSession>,
+  activeTaskId: string | null,
+  session: CoworkSession | null,
+): Record<string, CoworkSession> {
+  if (!activeTaskId || !session) {
+    return taskSessions;
+  }
+  return { ...taskSessions, [activeTaskId]: session };
+}
+
 export const useCoworkStore = create<CoworkState>()(
   persist(
     (set, get) => ({
@@ -84,6 +143,187 @@ export const useCoworkStore = create<CoworkState>()(
       viewportZoom: 1,
       showOcr: false,
       showLabels: true,
+      
+      // Tasks initial state
+      tasks: [
+        {
+          id: 'task-1',
+          title: 'Review quarterly report',
+          mode: 'task',
+          status: 'pending',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'task-2',
+          title: 'Analyze competitor data',
+          mode: 'agent',
+          status: 'in_progress',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+      activeTaskId: null,
+      taskSessions: {},
+      
+      // Projects initial state
+      projects: [
+        {
+          id: 'proj-1',
+          title: 'Q4 Planning',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ],
+      activeProjectId: null,
+      
+      // Active tab initial state
+      activeTab: 'tasks',
+      setActiveTab: (tab) => set({ activeTab: tab }),
+      
+      // Task CRUD
+      createTask: (title, mode = 'task', projectId) => {
+        const task: Task = {
+          id: `task-${Date.now()}`,
+          title,
+          mode,
+          projectId,
+          status: 'pending',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        set((state) => ({ tasks: [...state.tasks, task] }));
+        return task;
+      },
+      
+      deleteTask: (id) => {
+        set((state) => {
+          const { [id]: _removed, ...remainingTaskSessions } = state.taskSessions;
+          const deletingActiveTask = state.activeTaskId === id;
+          return {
+            tasks: state.tasks.filter((t) => t.id !== id),
+            activeTaskId: deletingActiveTask ? null : state.activeTaskId,
+            session: deletingActiveTask ? null : state.session,
+            selectedEventId: deletingActiveTask ? null : state.selectedEventId,
+            taskSessions: remainingTaskSessions,
+          };
+        });
+      },
+      
+      renameTask: (id, title) => {
+        set((state) => ({
+          tasks: state.tasks.map((t) =>
+            t.id === id ? { ...t, title, updatedAt: new Date().toISOString() } : t
+          ),
+        }));
+      },
+      
+      updateTaskStatus: (id, status) => {
+        set((state) => ({
+          tasks: state.tasks.map((t) =>
+            t.id === id ? { ...t, status, updatedAt: new Date().toISOString() } : t
+          ),
+        }));
+      },
+      
+      // Project CRUD
+      createProject: (title) => {
+        const project: TaskProject = {
+          id: `proj-${Date.now()}`,
+          title,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        set((state) => ({ projects: [...state.projects, project] }));
+        return project;
+      },
+      
+      deleteProject: (id) => {
+        set((state) => ({
+          projects: state.projects.filter((p) => p.id !== id),
+          tasks: state.tasks.map((t) =>
+            t.projectId === id ? { ...t, projectId: undefined } : t
+          ),
+          activeProjectId: state.activeProjectId === id ? null : state.activeProjectId,
+        }));
+      },
+      
+      renameProject: (id, title) => {
+        set((state) => ({
+          projects: state.projects.map((p) =>
+            p.id === id ? { ...p, title, updatedAt: new Date().toISOString() } : p
+          ),
+        }));
+      },
+      
+      moveTaskToProject: (taskId, projectId) => {
+        set((state) => ({
+          tasks: state.tasks.map((t) =>
+            t.id === taskId ? { ...t, projectId: projectId || undefined, updatedAt: new Date().toISOString() } : t
+          ),
+        }));
+      },
+      
+      setActiveTask: (id) =>
+        set((state) => {
+          const taskSessions = snapshotActiveTaskSession(
+            state.taskSessions,
+            state.activeTaskId,
+            state.session,
+          );
+
+          if (!id) {
+            return {
+              activeTaskId: null,
+              session: null,
+              selectedEventId: null,
+              taskSessions,
+            };
+          }
+
+          return {
+            activeTaskId: id,
+            activeProjectId: null,
+            session: taskSessions[id] ?? null,
+            selectedEventId: null,
+            taskSessions,
+          };
+        }),
+      setActiveProject: (id) =>
+        set((state) => {
+          const taskSessions = snapshotActiveTaskSession(
+            state.taskSessions,
+            state.activeTaskId,
+            state.session,
+          );
+
+          if (!id) {
+            return {
+              activeProjectId: null,
+              taskSessions,
+            };
+          }
+
+          return {
+            activeProjectId: id,
+            activeTaskId: null,
+            session: null,
+            selectedEventId: null,
+            taskSessions,
+          };
+        }),
+      bindCurrentSessionToTask: (taskId) =>
+        set((state) => {
+          const taskSessions = state.session
+            ? { ...state.taskSessions, [taskId]: state.session }
+            : state.taskSessions;
+          return {
+            activeTaskId: taskId,
+            activeProjectId: null,
+            session: state.session ?? taskSessions[taskId] ?? null,
+            taskSessions,
+          };
+        }),
       
       // Start a new Cowork session
       startSession: (viewportType, task) => {
@@ -111,7 +351,22 @@ export const useCoworkStore = create<CoworkState>()(
           },
         };
         
-        set({ session, selectedEventId: null });
+        set((state) => {
+          const existingTaskSessions = snapshotActiveTaskSession(
+            state.taskSessions,
+            state.activeTaskId,
+            state.session,
+          );
+          const taskSessions = state.activeTaskId
+            ? { ...existingTaskSessions, [state.activeTaskId]: session }
+            : existingTaskSessions;
+
+          return {
+            session,
+            selectedEventId: null,
+            taskSessions,
+          };
+        });
         return sessionId;
       },
       
@@ -135,10 +390,16 @@ export const useCoworkStore = create<CoworkState>()(
           events: [...session.events, endEvent],
         };
         
-        set(state => ({
-          session: null,
-          sessionHistory: [endedSession, ...state.sessionHistory],
-        }));
+        set((state) => {
+          const taskSessions = state.activeTaskId
+            ? { ...state.taskSessions, [state.activeTaskId]: endedSession }
+            : state.taskSessions;
+          return {
+            session: null,
+            sessionHistory: [endedSession, ...state.sessionHistory],
+            taskSessions,
+          };
+        });
       },
       
       // Add an event to the current session
@@ -198,8 +459,14 @@ export const useCoworkStore = create<CoworkState>()(
             updates.takeover = { active: true, startedAt: Date.now() };
           }
           
+          const nextSession = { ...session, ...updates };
+          const taskSessions = state.activeTaskId
+            ? { ...state.taskSessions, [state.activeTaskId]: nextSession }
+            : state.taskSessions;
+
           return {
-            session: { ...session, ...updates },
+            session: nextSession,
+            taskSessions,
           };
         });
       },
@@ -211,13 +478,34 @@ export const useCoworkStore = create<CoworkState>()(
         
         switch (action.type) {
           case 'pause':
-            set({ session: { ...session, status: 'paused' } });
+            set((state) => {
+              if (!state.session) return state;
+              const nextSession = { ...state.session, status: 'paused' as CoworkSessionStatus };
+              const taskSessions = state.activeTaskId
+                ? { ...state.taskSessions, [state.activeTaskId]: nextSession }
+                : state.taskSessions;
+              return { session: nextSession, taskSessions };
+            });
             break;
           case 'resume':
-            set({ session: { ...session, status: 'running' } });
+            set((state) => {
+              if (!state.session) return state;
+              const nextSession = { ...state.session, status: 'running' as CoworkSessionStatus };
+              const taskSessions = state.activeTaskId
+                ? { ...state.taskSessions, [state.activeTaskId]: nextSession }
+                : state.taskSessions;
+              return { session: nextSession, taskSessions };
+            });
             break;
           case 'step':
-            set({ session: { ...session, status: 'running' } });
+            set((state) => {
+              if (!state.session) return state;
+              const nextSession = { ...state.session, status: 'running' as CoworkSessionStatus };
+              const taskSessions = state.activeTaskId
+                ? { ...state.taskSessions, [state.activeTaskId]: nextSession }
+                : state.taskSessions;
+              return { session: nextSession, taskSessions };
+            });
             // In real implementation, this would trigger one action then pause
             break;
           case 'stop':
@@ -233,12 +521,20 @@ export const useCoworkStore = create<CoworkState>()(
             } as AnyCoworkEvent);
             break;
           case 'release_takeover':
-            set({ 
-              session: { 
-                ...session, 
+            set((state) => {
+              if (!state.session) return state;
+              const nextSession: CoworkSession = {
+                ...state.session,
                 status: 'running',
                 takeover: { active: false },
-              } 
+              };
+              const taskSessions = state.activeTaskId
+                ? { ...state.taskSessions, [state.activeTaskId]: nextSession }
+                : state.taskSessions;
+              return {
+                session: nextSession,
+                taskSessions,
+              };
             });
             break;
           case 'approve':
@@ -320,23 +616,54 @@ export function connectCoworkStream(
   onError: (error: Error) => void,
   onStatusChange?: (status: CoworkSessionStatus) => void
 ): CoworkStreamConnection {
-  // TODO: Replace with actual WebSocket/SSE connection to backend
-  // const ws = new WebSocket(`wss://api.a2r.local/v1/cowork/${sessionId}/stream`);
+  // Use EventSource for SSE connection to backend
+  const eventSource = new EventSource(`/api/cowork/${sessionId}/stream`);
   
-  // For now, return a stub that logs the expected integration point
-  console.warn('[CoworkStream] Backend connection not implemented. Expected:');
-  console.warn('  - WebSocket: wss://api.a2r.local/v1/cowork/${sessionId}/stream');
-  console.warn('  - Events: observation, action, approval_request, checkpoint, etc.');
-  console.warn('  - Controls: pause, resume, step, approve, reject, takeover');
+  eventSource.onopen = () => {
+    console.log('[CoworkStream] Connected to session:', sessionId);
+    onStatusChange?.('running');
+  };
+  
+  eventSource.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data) as AnyCoworkEvent;
+      onEvent(data);
+      
+      // Update status based on event type
+      if (data.type === 'status_change' && onStatusChange) {
+        onStatusChange((data as any).status);
+      }
+    } catch (e) {
+      console.error('[CoworkStream] Failed to parse event:', e);
+    }
+  };
+  
+  eventSource.onerror = (error) => {
+    console.error('[CoworkStream] Connection error:', error);
+    onError(new Error('Cowork stream connection failed'));
+    onStatusChange?.('error');
+  };
   
   return {
-    sendControl: (action) => {
-      console.log('[CoworkStream] Control action:', action);
-      // TODO: Send control action to backend
+    sendControl: async (action) => {
+      try {
+        const response = await fetch(`/api/cowork/${sessionId}/control`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(action),
+        });
+        if (!response.ok) {
+          throw new Error(`Control action failed: ${response.status}`);
+        }
+      } catch (e) {
+        console.error('[CoworkStream] Control action failed:', e);
+        throw e;
+      }
     },
     disconnect: () => {
       console.log('[CoworkStream] Disconnecting from session:', sessionId);
-      // TODO: Close WebSocket connection
+      eventSource.close();
+      onStatusChange?.('paused');
     },
   };
 }

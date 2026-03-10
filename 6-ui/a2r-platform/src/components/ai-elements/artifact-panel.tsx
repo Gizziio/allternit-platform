@@ -22,10 +22,39 @@ import {
   Globe,
   ChevronRight,
   GitBranch,
+  AlertTriangle,
 } from "lucide-react";
 import { Markdown } from "./markdown";
 import { CodeBlock } from "./code-block";
 import type { BundledLanguage } from "shiki";
+import DOMPurify from 'dompurify';
+
+// ─── Sanitization helper ─────────────────────────────────────────────────────
+
+/**
+ * Sanitize HTML/SVG content to prevent XSS attacks
+ * Configured to allow SVG elements while blocking scripts
+ */
+const sanitizeContent = (dirty: string): string => {
+  if (typeof window === 'undefined') return dirty; // SSR safety
+  
+  return DOMPurify.sanitize(dirty, {
+    USE_PROFILES: { svg: true, svgFilters: true },
+    ADD_TAGS: ['svg', 'path', 'circle', 'rect', 'line', 'polyline', 'polygon', 
+               'ellipse', 'g', 'defs', 'use', 'text', 'tspan', 'tref',
+               'marker', 'linearGradient', 'radialGradient', 'stop',
+               'pattern', 'clipPath', 'mask', 'filter'],
+    ADD_ATTR: ['viewBox', 'preserveAspectRatio', 'cx', 'cy', 'r', 'rx', 'ry',
+               'x', 'y', 'x1', 'y1', 'x2', 'y2', 'width', 'height',
+               'transform', 'fill', 'stroke', 'stroke-width', 'stroke-linecap',
+               'stroke-linejoin', 'opacity', 'd', 'points', 'marker-end',
+               'marker-start', 'marker-mid', 'gradientUnits', 'gradientTransform',
+               'offset', 'stop-color', 'stop-opacity', 'clip-path', 'mask',
+               'filter', 'xmlns', 'xmlns:xlink', 'version'],
+    FORBID_ATTR: ['onload', 'onerror', 'onclick', 'onmouseover', 'onmouseout',
+                  'onfocus', 'onblur', 'onchange', 'onsubmit', 'onreset'],
+  });
+};
 
 // ─── Shared types ────────────────────────────────────────────────────────────
 
@@ -225,12 +254,22 @@ interface ArtifactSidePanelProps {
 
 export function ArtifactSidePanel({ artifact, onClose }: ArtifactSidePanelProps) {
   const [isCopied, setIsCopied] = useState(false);
+  const [copyError, setCopyError] = useState(false);
 
   const handleCopy = useCallback(async () => {
     if (!artifact?.content) return;
-    await navigator.clipboard.writeText(artifact.content).catch(() => {});
-    setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 2000);
+    
+    try {
+      await navigator.clipboard.writeText(artifact.content);
+      setIsCopied(true);
+      setCopyError(false);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (error) {
+      console.error('[ArtifactPanel] Failed to copy to clipboard:', error);
+      setCopyError(true);
+      setIsCopied(false);
+      setTimeout(() => setCopyError(false), 3000);
+    }
   }, [artifact]);
 
   if (!artifact) return null;
@@ -301,7 +340,7 @@ export function ArtifactSidePanel({ artifact, onClose }: ArtifactSidePanelProps)
           {artifact.content && (
             <button
               onClick={handleCopy}
-              title="Copy content"
+              title={copyError ? "Failed to copy" : "Copy content"}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -309,16 +348,35 @@ export function ArtifactSidePanel({ artifact, onClose }: ArtifactSidePanelProps)
                 padding: "5px 10px",
                 borderRadius: "7px",
                 border: "1px solid rgba(255,255,255,0.09)",
-                background: isCopied ? "rgba(74,222,128,0.10)" : "rgba(255,255,255,0.04)",
-                color: isCopied ? "rgba(74,222,128,0.9)" : "rgba(255,255,255,0.5)",
+                background: copyError 
+                  ? "rgba(239,68,68,0.15)" 
+                  : isCopied 
+                    ? "rgba(74,222,128,0.10)" 
+                    : "rgba(255,255,255,0.04)",
+                color: copyError 
+                  ? "rgba(239,68,68,0.9)" 
+                  : isCopied 
+                    ? "rgba(74,222,128,0.9)" 
+                    : "rgba(255,255,255,0.5)",
                 cursor: "pointer",
                 fontSize: "12px",
                 fontWeight: 500,
                 transition: "all 0.15s ease",
               }}
             >
-              {isCopied ? <Check size={13} /> : <Copy size={13} />}
-              {isCopied ? "Copied!" : "Copy"}
+              {copyError ? (
+                <>
+                  <AlertTriangle size={13} /> Failed
+                </>
+              ) : isCopied ? (
+                <>
+                  <Check size={13} /> Copied!
+                </>
+              ) : (
+                <>
+                  <Copy size={13} /> Copy
+                </>
+              )}
             </button>
           )}
           <button
@@ -399,11 +457,11 @@ function ArtifactContent({ artifact }: { artifact: SelectedArtifact }) {
 
   // ── SVG: rendered inline ──
   if (kind === "svg" && content) {
+    const sanitizedSvg = sanitizeContent(content);
     return (
       <div
         style={{ padding: "24px", display: "flex", justifyContent: "center" }}
-        // biome-ignore lint/security/noDangerouslySetInnerHtml: SVG from AI
-        dangerouslySetInnerHTML={{ __html: content }}
+        dangerouslySetInnerHTML={{ __html: sanitizedSvg }}
       />
     );
   }
@@ -524,8 +582,7 @@ function MermaidRenderer({ content }: { content: string }) {
   return (
     <div
       style={{ padding: "24px", display: "flex", justifyContent: "center", overflowX: "auto" }}
-      // biome-ignore lint/security/noDangerouslySetInnerHtml: Mermaid-generated SVG
-      dangerouslySetInnerHTML={{ __html: svg }}
+      dangerouslySetInnerHTML={{ __html: sanitizeContent(svg) }}
     />
   );
 }

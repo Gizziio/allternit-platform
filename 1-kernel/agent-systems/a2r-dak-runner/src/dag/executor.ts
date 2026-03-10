@@ -22,6 +22,7 @@ import { WorkerManager } from '../workers/manager';
 import { ObservabilityLogger } from '../observability/events';
 import { RailsAdapter } from '../adapters/rails_api';
 import { LeaseManager } from '../lease/manager';
+import { DagId, NodeId, WihId, RunId } from '../types';
 
 export interface DagExecutorConfig {
   dag: DagDefinition;
@@ -215,10 +216,10 @@ export class DagExecutor extends EventEmitter {
     try {
       // Use Ralph loop for execution
       const ralphResult = await this.config.ralphLoop.executeNode({
-        dagId: this.context.dag_id,
-        nodeId: node.id,
-        wihId: wih.work_item_id,
-        runId: this.context.run_id,
+        dagId: this.context.dag_id as DagId,
+        nodeId: node.id as NodeId,
+        wihId: wih.work_item_id as WihId,
+        runId: this.context.run_id as RunId,
         baseContextPack: null as any, // Would be built from WIH
         basePolicyBundle: null as any, // Would be built from WIH
         planFiles: {
@@ -381,11 +382,11 @@ export class DagExecutor extends EventEmitter {
     try {
       // Claim work via Rails adapter
       const claimResult = await this.config.railsAdapter.claimWork(
-        this.context.dag_id,
-        node.id,
-        wih.work_item_id,
+        this.context.dag_id as DagId,
+        node.id as NodeId,
+        wih.work_item_id as WihId,
         `executor:${this.context.run_id}`,
-        wih.scope?.allowed_paths || ['.'],
+        (wih as any).scope?.allowed_paths || ['.'],
         900 // 15 minutes default
       );
 

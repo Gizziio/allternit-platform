@@ -14,7 +14,7 @@ import { HookRuntime, createHookRuntime } from '../hooks/runtime';
 import { ToolRegistry, getToolRegistry } from '../tools/registry';
 import { ToolEnforcement, createToolEnforcement } from '../tools/enforce';
 import { PolicyEngine, createPolicyEngine } from '../policy_engine/engine';
-import { PolicyBundleBuilder, createPolicyBundle } from '../policy/bundle-builder';
+import { PolicyBundleBuilder, createPolicyBundle, type PolicyBundle } from '../policy/bundle-builder';
 import { ContextPackBuilder, createContextPackBuilder } from '../context/builder';
 import { PlanManager, createPlanManager } from '../plan/manager';
 import { WorkerManager, createWorkerManager } from '../workers/manager';
@@ -30,7 +30,7 @@ import {
   ExecutionMode,
   WorkRequest,
   ContextPack,
-  PolicyBundle,
+  PolicyBundleId,
   ToolCall,
   ToolResult,
   ReceiptId,
@@ -82,7 +82,7 @@ export class AgentRunner {
     this.toolRegistry = getToolRegistry();
     this.policyEngine = createPolicyEngine();
     this.policyBundleBuilder = new PolicyBundleBuilder();
-    this.contextPackBuilder = createContextPackBuilder(config.projectPath);
+    this.contextPackBuilder = createContextPackBuilder({ basePath: config.projectPath });
     this.planManager = createPlanManager(`${config.outputDir}/plans`);
     this.workerManager = createWorkerManager();
     this.railsAdapter = createRailsAdapter({
@@ -173,7 +173,7 @@ export class AgentRunner {
           nodeId: request.nodeId,
           role: request.role,
           contextPackId: contextPack.contextPackId,
-          policyBundleId: policyBundle.bundle_id,
+          policyBundleId: policyBundle.bundle_id as PolicyBundleId,
         },
         this.createGateChecker(),
         this.createToolExecutor(),
@@ -387,7 +387,7 @@ export class AgentRunner {
           },
           inputs: {
             contextPackId: this.context.contextPack!.contextPackId,
-            policyBundleId: this.context.policyBundle!.bundle_id,
+            policyBundleId: this.context.policyBundle!.bundle_id as PolicyBundleId,
           },
           payload,
           createdAt: new Date().toISOString(),

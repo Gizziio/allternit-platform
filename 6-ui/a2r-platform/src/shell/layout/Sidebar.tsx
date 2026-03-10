@@ -467,10 +467,10 @@ function SidebarNavItem({
         </div>
       )}
 
-      {/* Nested items */}
+      {/* Nested items - using optional chaining with fallback to empty array */}
       {hasChildren && isExpanded && isOpen && (
         <ul className="mt-1 space-y-1">
-          {item.children!.map((child, childIndex) => (
+          {(item.children ?? []).map((child, childIndex) => (
             <SidebarNavItem
               key={child.id}
               item={child}
@@ -678,9 +678,10 @@ function MobileNavItem({
         )}
       </button>
 
+      {/* Using optional chaining with fallback to empty array */}
       {hasChildren && isExpanded && (
         <ul className="mt-1 space-y-1">
-          {item.children!.map(child => (
+          {(item.children ?? []).map(child => (
             <MobileNavItem
               key={child.id}
               item={child}

@@ -276,6 +276,8 @@ function platformAliasPlugin(): Plugin {
     '@/stores': resolve(platformSrc, 'stores'),
     '@/agent-workspace': resolve(platformSrc, 'agent-workspace'),
     '@/dev': resolve(platformSrc, 'dev'),
+    '@/plugins': resolve(platformSrc, 'plugins'),
+    '@/api': resolve(platformSrc, 'api'),
   };
 
   function resolveWithExtensions(basePath: string): string | null {
@@ -408,69 +410,28 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/a2r-api/, '/api/v1'),
       },
-      // Proxy Gateway API v1 calls to Terminal Server (fallback since Gateway not running)
-      '/api/v1/providers': {
-        target: 'http://127.0.0.1:4096',
-        changeOrigin: true,
-        rewrite: () => '/provider',
-      },
-      '/api/v1/sessions': {
-        target: 'http://127.0.0.1:4096',
-        changeOrigin: true,
-        rewrite: () => '/session',
-      },
-      '/api/v1/providers/auth/status': {
-        target: 'http://127.0.0.1:4096',
-        changeOrigin: true,
-        rewrite: () => '/health',
-      },
-      '/api/v1/agents': {
-        target: 'http://127.0.0.1:3010',
+      // Proxy Gateway API v1 calls to Core API (port 3000)
+      '/api/v1': {
+        target: 'http://127.0.0.1:3000',
         changeOrigin: true,
       },
-      // Proxy chat API calls to Terminal Server (port 4096)
+      // Proxy agents endpoint to Core API
+      '/api/agents': {
+        target: 'http://127.0.0.1:3000',
+        changeOrigin: true,
+      },
+      // Proxy chat API calls to Core API
       '/api/chat': {
-        target: 'http://127.0.0.1:4096',
+        target: 'http://127.0.0.1:3000',
         changeOrigin: true,
-        rewrite: (path) => {
-          // Map /api/chat?chatId=xxx to /session/xxx/message for Terminal Server
-          const url = new URL(path, 'http://localhost');
-          const chatId = url.searchParams.get('chatId');
-          if (chatId) {
-            return `/session/${chatId}/message`;
-          }
-          return path;
-        },
-        configure: (proxy, _options) => {
-          proxy.on('error', (err, _req, _res) => {
-            console.log('[Vite Proxy] Chat Error:', err);
-          });
-          proxy.on('proxyReq', (proxyReq, req, _res) => {
-            console.log('[Vite Proxy] Chat Request:', req.method, req.url, '->', proxyReq.path);
-          });
-          proxy.on('proxyRes', (proxyRes, req, _res) => {
-            console.log('[Vite Proxy] Chat Response:', proxyRes.statusCode, req.url);
-          });
-        },
       },
-      // Proxy session management calls to Terminal Server
+      // Proxy session management calls to Core API
       '/session': {
-        target: 'http://127.0.0.1:4096',
+        target: 'http://127.0.0.1:3000',
         changeOrigin: true,
-        configure: (proxy, _options) => {
-          proxy.on('error', (err, _req, _res) => {
-            console.log('[Vite Proxy] Session Error:', err);
-          });
-          proxy.on('proxyReq', (proxyReq, req, _res) => {
-            console.log('[Vite Proxy] Session Request:', req.method, req.url, '->', proxyReq.path);
-          });
-          proxy.on('proxyRes', (proxyRes, req, _res) => {
-            console.log('[Vite Proxy] Session Response:', proxyRes.statusCode, req.url);
-          });
-        },
       },
       '/web-proxy': {
-        target: 'http://127.0.0.1:4096',
+        target: 'http://127.0.0.1:3000',
         changeOrigin: true,
       },
       '/health': {

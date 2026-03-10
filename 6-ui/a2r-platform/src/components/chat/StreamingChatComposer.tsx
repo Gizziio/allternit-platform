@@ -10,9 +10,13 @@ import { MatrixLogo } from "@/components/ai-elements/MatrixLogo";
 import { UnifiedMessageRenderer } from "@/components/ai-elements/UnifiedMessageRenderer";
 import { parseStructuredContent } from "@/lib/ai/rust-stream-adapter-extended";
 import { Shimmer } from "@/components/ai-elements/shimmer";
-import { Copy, RefreshCw, ThumbsUp, ThumbsDown, Check, Clock3, Link2, Package, Sparkles, Wrench } from "lucide-react";
+import { Copy, RefreshCw, ThumbsUp, ThumbsDown, Check, Clock3, Link2, Package, Sparkles, Wrench, GitBranch, RotateCcw } from "lucide-react";
 import type { ChatMessage } from "@/lib/ai/rust-stream-adapter";
 import type { ExtendedUIPart } from "@/lib/ai/rust-stream-adapter-extended";
+import { useMessageTree } from "@/providers/message-tree-provider";
+
+import { ForkButton } from "./ForkButton";
+import { BranchIndicator } from "./BranchIndicator";
 
 // ============================================================================
 // Types
@@ -26,6 +30,9 @@ interface StreamingChatComposerProps {
   onFeedback?: (type: 'up' | 'down') => void;
   onSelectArtifact?: (artifact: import('@/components/ai-elements/artifact-panel').SelectedArtifact) => void;
   selectedArtifactTitle?: string;
+  // Resumable stream support
+  conversationId?: string;
+  onResumeStream?: (messageId: string, checkpoint: { content: string; timestamp: number }) => void;
 }
 
 // ============================================================================
@@ -321,10 +328,23 @@ export const StreamingChatComposer = memo(function StreamingChatComposer({
   onFeedback,
   onSelectArtifact,
   selectedArtifactTitle,
+  conversationId,
+  onResumeStream,
 }: StreamingChatComposerProps) {
   const [copied, setCopied] = useState(false);
+  const { getMessageSiblingInfo, navigateToSibling, forkMessage } = useMessageTree();
   
   const isAssistant = message.role === 'assistant';
+  
+  // Get sibling info for branching
+  const siblingInfo = useMemo(() => {
+    if (!isAssistant) return null;
+    return getMessageSiblingInfo(message.id);
+  }, [isAssistant, message.id, getMessageSiblingInfo]);
+  
+  const hasSiblings = siblingInfo && siblingInfo.siblings.length > 1;
+  const siblingIndex = siblingInfo?.siblingIndex ?? 0;
+  const totalSiblings = siblingInfo?.siblings.length ?? 1;
   const messageStatus = (isLoading && isLast)
     ? "streaming"
     : (message.metadata?.status ?? "complete");
@@ -482,6 +502,37 @@ export const StreamingChatComposer = memo(function StreamingChatComposer({
             </span>
           </div>
         )}
+
+        {/* Branching UI - show if message has siblings or can be forked */}
+        {(hasSiblings || isLast) && !isLoading && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            marginTop: '16px',
+            padding: '8px 0',
+            borderTop: '1px solid rgba(255,255,255,0.06)',
+          }}>
+            {/* Branch navigation indicator */}
+            {hasSiblings && (
+              <BranchIndicator
+                currentIndex={siblingIndex}
+                siblingCount={totalSiblings}
+                onNavigate={(direction) => navigateToSibling(message.id, direction)}
+              />
+            )}
+            
+            {/* Fork button for creating branches */}
+            {isLast && (
+              <ForkButton
+                onFork={() => { void forkMessage(message.id); }}
+                disabled={isLoading}
+              />
+            )}
+          </div>
+        )}
+
+
 
         {/* Action buttons */}
         {!isLoading && fullText && (

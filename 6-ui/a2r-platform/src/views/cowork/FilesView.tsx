@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { FolderOpen, ChevronRight, List, Grid3x3 } from 'lucide-react';
+import React, { useCallback, useState } from 'react';
+import { FolderOpen, ChevronRight, List, Grid3x3, Upload, FileText, Image as ImageIcon } from 'lucide-react';
 import GlassSurface from '@/design/GlassSurface';
+import { useDropTarget, type FileWithData } from '@/components/GlobalDropzone';
+import { AttachmentPreview, AttachmentPreviewModal, type AttachmentPreviewItem } from '@/components/chat/AttachmentPreview';
 
 interface FileNode {
   id: string;
@@ -17,6 +19,15 @@ interface Folder {
   name: string;
   expanded: boolean;
   children: FileNode[];
+}
+
+interface DroppedFile {
+  id: string;
+  name: string;
+  type: 'image' | 'document' | 'other';
+  dataUrl: string;
+  size: number;
+  extractedText?: string;
 }
 
 const mockFileTree: Folder[] = [
@@ -61,6 +72,9 @@ export const FilesView: React.FC = () => {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['root-docs']));
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [currentPath, setCurrentPath] = useState<string[]>(['workspace']);
+  const [droppedFiles, setDroppedFiles] = useState<AttachmentPreviewItem[]>([]);
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [previewItem, setPreviewItem] = useState<AttachmentPreviewItem | null>(null);
 
   const toggleFolder = (folderId: string) => {
     const newExpanded = new Set(expandedFolders);
@@ -70,6 +84,43 @@ export const FilesView: React.FC = () => {
       newExpanded.add(folderId);
     }
     setExpandedFolders(newExpanded);
+  };
+
+  const handleDroppedFiles = useCallback(async (files: FileWithData[]) => {
+    const extToType = (filename: string): AttachmentPreviewItem['type'] => {
+      const ext = filename.split('.').pop()?.toLowerCase() || '';
+      if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext)) return 'image';
+      if (['pdf'].includes(ext)) return 'document';
+      if (['docx', 'doc', 'txt', 'md'].includes(ext)) return 'document';
+      if (['ts', 'tsx', 'js', 'jsx', 'py', 'rs', 'go'].includes(ext)) return 'code';
+      if (['json'].includes(ext)) return 'json';
+      if (['csv', 'xlsx', 'xls'].includes(ext)) return 'spreadsheet';
+      return 'other';
+    };
+    
+    const newFiles: AttachmentPreviewItem[] = files.map(({ file, dataUrl, extractedText }) => ({
+      id: `drop-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: file.name,
+      type: extToType(file.name),
+      dataUrl,
+      size: file.size,
+      extractedText,
+    }));
+    setDroppedFiles(prev => [...prev, ...newFiles]);
+  }, []);
+  
+  const handlePreview = useCallback((item: AttachmentPreviewItem) => {
+    setPreviewItem(item);
+    setPreviewModalOpen(true);
+  }, []);
+
+  // Register as drop target for cowork files
+  useDropTarget('cowork', handleDroppedFiles);
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   const getFileIcon = (fileType: string) => {
@@ -99,21 +150,43 @@ export const FilesView: React.FC = () => {
     );
   };
 
+  const getDroppedFileIcon = (file: DroppedFile) => {
+    if (file.type === 'image') {
+      return (
+        <div style={{ width: 32, height: 32, borderRadius: 4, overflow: 'hidden' }}>
+          <img src={file.dataUrl} alt={file.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        </div>
+      );
+    }
+    if (file.type === 'document') {
+      return (
+        <div style={{
+          width: 32, height: 32, borderRadius: 4,
+          background: 'rgba(239, 68, 68, 0.1)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <FileText size={16} color="#ef4444" />
+        </div>
+      );
+    }
+    return getFileIcon('FILE');
+  };
+
   return (
-    <div style={{ padding: 'var(--spacing-lg)' }}>
+    <div style={{ padding: 'var(--spacing-lg)', position: 'relative' }}>
       {/* Header */}
       <div style={{ marginBottom: 'var(--spacing-lg)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', marginBottom: 'var(--spacing-md)' }}>
           <FolderOpen size={24} color="#af52de" />
           <h1 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '24px', fontWeight: 600 }}>Files</h1>
         </div>
-        <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '14px' }}>Workspace file storage</p>
+        <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '14px' }}>Workspace file storage — drag and drop files to upload</p>
       </div>
 
       {/* Breadcrumb Navigation */}
       <div style={{ marginBottom: 'var(--spacing-lg)', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', color: 'var(--text-secondary)' }}>
         {currentPath.map((segment, idx) => (
-          <React.Fragment key={idx}>
+          <React.Fragment key={`${segment}-${idx}`}>
             {idx > 0 && <span>/</span>}
             <button
               onClick={() => setCurrentPath(currentPath.slice(0, idx + 1))}
@@ -254,6 +327,29 @@ export const FilesView: React.FC = () => {
               Grid
             </button>
           </div>
+
+          {/* Dropped Files Section */}
+          {droppedFiles.length > 0 && (
+            <div style={{ marginBottom: 'var(--spacing-lg)' }}>
+              <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                Recently Uploaded ({droppedFiles.length})
+              </h3>
+              <AttachmentPreview
+                attachments={droppedFiles}
+                onRemove={(id) => setDroppedFiles(prev => prev.filter(f => f.id !== id))}
+                onPreview={handlePreview}
+                variant="detailed"
+                maxHeight={200}
+              />
+              
+              {/* Preview Modal */}
+              <AttachmentPreviewModal
+                item={previewItem}
+                isOpen={previewModalOpen}
+                onClose={() => setPreviewModalOpen(false)}
+              />
+            </div>
+          )}
 
           {/* Files Display */}
           {viewMode === 'list' ? (

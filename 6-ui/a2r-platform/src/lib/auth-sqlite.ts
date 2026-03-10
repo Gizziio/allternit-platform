@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
+import { anonymous } from "better-auth/plugins";
 import { db } from "./db/client-sqlite";
 import { schema } from "./db/schema-sqlite";
 
@@ -31,7 +32,16 @@ export const auth = betterAuth({
       : undefined,
   },
 
-  plugins: [nextCookies()],
+  plugins: [
+    nextCookies(),
+    anonymous({
+      // Allow anonymous users to convert to permanent accounts
+      onLinkAccount: async (data: any) => {
+        const email = data.user?.email || data.newUser?.user?.email;
+        console.log("Anonymous account linked to:", email);
+      },
+    }),
+  ],
 });
 
 export type Session = typeof auth.$Infer.Session;

@@ -31,24 +31,23 @@ export function NodesView({ initialTab = 'nodes' }: NodesViewProps = {}) {
   const [nodeToDelete, setNodeToDelete] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState(initialTab);
   const [terminalNodeId, setTerminalNodeId] = useState<string | null>(null);
-  const { toast } = useToast();
+  const { addToast } = useToast();
 
   const handleDelete = useCallback(async (nodeId: string) => {
     const success = await deleteNode(nodeId);
     if (success) {
-      toast({
+      (addToast as any)({
         title: 'Node removed',
         description: 'The node has been successfully removed.',
       });
     } else {
-      toast({
+      (addToast as any)({
         title: 'Error',
         description: 'Failed to remove node. Please try again.',
-        variant: 'destructive',
       });
     }
     setNodeToDelete(null);
-  }, [deleteNode, toast]);
+  }, [deleteNode, addToast]);
 
   const handleTerminal = useCallback((nodeId: string) => {
     setTerminalNodeId(nodeId);
@@ -81,21 +80,21 @@ export function NodesView({ initialTab = 'nodes' }: NodesViewProps = {}) {
                 <Server className="h-4 w-4" />
                 Nodes ({nodes.length})
               </TabsTrigger>
-              <TabsTrigger value="terminal" className="gap-2" disabled={!terminalNodeId}>
-                <Terminal className="h-4 w-4" />
-                Terminal
-                {terminalNodeId && (
-                  <button
-                    onClick={(e) => {
+              {(TabsTrigger as any)({ value: "terminal", className: "gap-2", disabled: !terminalNodeId, children: [
+                <Terminal key="icon" className="h-4 w-4" />,
+                " Terminal",
+                terminalNodeId && (
+                  <span key="close"
+                    onClick={(e: any) => {
                       e.stopPropagation();
                       handleCloseTerminal();
                     }}
                     className="ml-1 p-0.5 hover:bg-muted rounded"
                   >
                     <X className="h-3 w-3" />
-                  </button>
-                )}
-              </TabsTrigger>
+                  </span>
+                )
+              ]})}
               <TabsTrigger value="deploy" className="gap-2">
                 <Cloud className="h-4 w-4" />
                 Deploy New

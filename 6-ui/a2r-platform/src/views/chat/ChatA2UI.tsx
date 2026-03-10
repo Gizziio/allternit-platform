@@ -12,7 +12,8 @@ import type { A2UIPayload } from "@/capsules/a2ui/a2ui.types";
 import { useBrowserStore } from "@/capsules/browser/browser.store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Maximize2, X, RefreshCw } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ExternalLink, Maximize2, X, RefreshCw, Beaker } from "lucide-react";
 
 // ============================================================================
 // Types
@@ -23,6 +24,7 @@ export interface ChatA2UIPart {
   payload: A2UIPayload;
   title?: string;
   source?: string; // Agent ID that generated this
+  isMockData?: boolean; // True if this UI was generated using mock data
   actions?: Array<{
     label: string;
     action: string;
@@ -127,6 +129,12 @@ export function MessageA2UI({ part, messageId, onAction }: MessageA2UIProps) {
               <span className="text-xs text-muted-foreground font-normal">
                 via {part.source}
               </span>
+            )}
+            {part.isMockData && (
+              <Badge variant="secondary" className="text-xs bg-amber-500/20 text-amber-700 hover:bg-amber-500/30 border-amber-500/30">
+                <Beaker className="w-3 h-3 mr-1" />
+                Demo
+              </Badge>
             )}
           </CardTitle>
           <div className="flex items-center gap-1">

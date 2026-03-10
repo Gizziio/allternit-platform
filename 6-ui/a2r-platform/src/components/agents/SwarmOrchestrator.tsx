@@ -697,7 +697,7 @@ const SwarmOrchestratorInner: React.FC<SwarmOrchestratorProps> = ({
   canExecute = true,
   className,
 }) => {
-  const modeColors = MODE_COLORS[mode];
+  const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.chat;
   const componentId = useId();
   
   // ReactFlow hooks
@@ -1260,7 +1260,7 @@ const SwarmOrchestratorInner: React.FC<SwarmOrchestratorProps> = ({
         onShowValidation={() => setShowValidationPanel(true)}
         canEdit={canEdit}
         canExecute={canExecute}
-        modeColors={modeColors}
+        modeColors={modeColors as typeof MODE_COLORS.chat}
       />
 
       {/* Main Content */}
@@ -1273,7 +1273,7 @@ const SwarmOrchestratorInner: React.FC<SwarmOrchestratorProps> = ({
               onAddAgent={handleAddAgent}
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
-              modeColors={modeColors}
+              modeColors={modeColors as typeof MODE_COLORS.chat}
             />
           )}
         </AnimatePresence>
@@ -1398,7 +1398,7 @@ const SwarmOrchestratorInner: React.FC<SwarmOrchestratorProps> = ({
                   );
                   setSelectedNode(null);
                 }}
-                modeColors={modeColors}
+                modeColors={modeColors as typeof MODE_COLORS.chat}
               />
             )}
           </AnimatePresence>
@@ -1409,7 +1409,7 @@ const SwarmOrchestratorInner: React.FC<SwarmOrchestratorProps> = ({
               <ValidationPanel
                 errors={validationErrors}
                 onClose={() => setShowValidationPanel(false)}
-                modeColors={modeColors}
+                modeColors={modeColors as typeof MODE_COLORS.chat}
               />
             )}
           </AnimatePresence>
@@ -1425,7 +1425,7 @@ const SwarmOrchestratorInner: React.FC<SwarmOrchestratorProps> = ({
                 executionMode,
                 routingStrategy,
               }}
-              modeColors={modeColors}
+              modeColors={modeColors as typeof MODE_COLORS.chat}
             />
           )}
         </AnimatePresence>
@@ -1443,7 +1443,7 @@ const SwarmOrchestratorInner: React.FC<SwarmOrchestratorProps> = ({
           setRoutingConfig={setRoutingConfig}
           onClose={() => setActiveTab('design')}
           canEdit={canEdit}
-          modeColors={modeColors}
+          modeColors={modeColors as typeof MODE_COLORS.chat}
         />
       )}
 
@@ -1453,7 +1453,7 @@ const SwarmOrchestratorInner: React.FC<SwarmOrchestratorProps> = ({
           executionHistory={executionHistory}
           nodes={nodes}
           onClose={() => setActiveTab('design')}
-          modeColors={modeColors}
+          modeColors={modeColors as typeof MODE_COLORS.chat}
         />
       )}
     </div>
@@ -2622,13 +2622,13 @@ function MonitoringPanel({
                   label="Active Agents"
                   value={currentExecution.activeAgents.length.toString()}
                   icon={Users}
-                  modeColors={modeColors}
+                  modeColors={modeColors as typeof MODE_COLORS.chat}
                 />
                 <MetricCard
                   label="Messages"
                   value={currentExecution.messagesExchanged.toString()}
                   icon={MessageSquare}
-                  modeColors={modeColors}
+                  modeColors={modeColors as typeof MODE_COLORS.chat}
                 />
                 <MetricCard
                   label="Duration"
@@ -2640,13 +2640,13 @@ function MonitoringPanel({
                       : '0s'
                   }
                   icon={Clock}
-                  modeColors={modeColors}
+                  modeColors={modeColors as typeof MODE_COLORS.chat}
                 />
                 <MetricCard
                   label="Current Stage"
                   value={currentExecution.currentStage || 'idle'}
                   icon={Layers}
-                  modeColors={modeColors}
+                  modeColors={modeColors as typeof MODE_COLORS.chat}
                 />
               </div>
             </div>
@@ -2721,25 +2721,25 @@ function MonitoringPanel({
                     label="Total Duration"
                     value={formatDuration(currentExecution.metrics.totalDuration)}
                     icon={Clock}
-                    modeColors={modeColors}
+                    modeColors={modeColors as typeof MODE_COLORS.chat}
                   />
                   <MetricCard
                     label="Avg Latency"
                     value={`${Math.round(currentExecution.metrics.averageLatency)}ms`}
                     icon={TrendingUp}
-                    modeColors={modeColors}
+                    modeColors={modeColors as typeof MODE_COLORS.chat}
                   />
                   <MetricCard
                     label="Tokens Used"
                     value={currentExecution.metrics.tokensUsed.toLocaleString()}
                     icon={Zap}
-                    modeColors={modeColors}
+                    modeColors={modeColors as typeof MODE_COLORS.chat}
                   />
                   <MetricCard
                     label="Est. Cost"
                     value={`$${currentExecution.metrics.costEstimate.toFixed(4)}`}
                     icon={Target}
-                    modeColors={modeColors}
+                    modeColors={modeColors as typeof MODE_COLORS.chat}
                   />
                 </div>
               </div>
@@ -2824,29 +2824,29 @@ function PropertiesPanel({
         <InfoCard
           label="Agents"
           value={nodeCount.toString()}
-          modeColors={modeColors}
+          modeColors={modeColors as typeof MODE_COLORS.chat}
         />
         <InfoCard
           label="Connections"
           value={edgeCount.toString()}
-          modeColors={modeColors}
+          modeColors={modeColors as typeof MODE_COLORS.chat}
         />
         <InfoCard
           label="Execution"
           value={executionModeConfig.label}
           subvalue={executionModeConfig.description}
-          modeColors={modeColors}
+          modeColors={modeColors as typeof MODE_COLORS.chat}
         />
         <InfoCard
           label="Routing"
           value={routingConfig.label}
           subvalue={routingConfig.description}
-          modeColors={modeColors}
+          modeColors={modeColors as typeof MODE_COLORS.chat}
         />
         <InfoCard
           label="Est. Latency"
           value={`~${Math.max(500, nodeCount * 200)}ms`}
-          modeColors={modeColors}
+          modeColors={modeColors as typeof MODE_COLORS.chat}
         />
       </div>
 

@@ -40,7 +40,7 @@ const DEFAULT_DIMENSIONS: Record<WindowType, { width: number; height: number; mi
   main: { width: 1280, height: 850, minWidth: 800, minHeight: 600 },
   settings: { width: 800, height: 600, minWidth: 600, minHeight: 400 },
   about: { width: 400, height: 300, minWidth: 400, minHeight: 300 },
-  popout: { width: 600, height: 400, minWidth: 400, minHeight: 300 },
+  popout: { width: 700, height: 400, minWidth: 400, minHeight: 300 },
 };
 
 /** Development server URL */
@@ -241,12 +241,13 @@ async function createPopoutWindow(options: CreateWindowOptions): Promise<Browser
  * Create a special Agent Runner window (compact/expanded floating window)
  */
 export async function createAgentRunnerWindow(): Promise<BrowserWindow> {
-  const COMPACT_SIZE = { width: 720, height: 213 };
-  const { x, y } = getCenterPosition(COMPACT_SIZE.width, COMPACT_SIZE.height);
+  // Window sized for chat session (compact input bar mode)
+  const WINDOW_SIZE = { width: 560, height: 180 };
+  const { x, y } = getCenterPosition(WINDOW_SIZE.width, WINDOW_SIZE.height);
 
   const window = new BrowserWindow({
-    width: COMPACT_SIZE.width,
-    height: COMPACT_SIZE.height,
+    width: WINDOW_SIZE.width,
+    height: WINDOW_SIZE.height,
     x,
     y,
     frame: false,

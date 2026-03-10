@@ -1,0 +1,54 @@
+- generic [ref=e1]:
+  - generic [ref=e4]:
+    - heading "Connect GIZZI Terminal" [level=1] [ref=e5]
+    - paragraph [ref=e7]: Sign in with Clerk in the dialog. After authentication, this page will send your session token back to GIZZI Terminal automatically.
+    - button "Open Clerk Sign In" [ref=e8] [cursor=pointer]
+  - dialog [ref=e11]:
+    - generic [ref=e13]:
+      - generic [ref=e14]:
+        - button "Close modal" [active] [ref=e15] [cursor=pointer]:
+          - img [ref=e16]
+        - generic [ref=e19]:
+          - heading "Sign in to Gizziio" [level=1] [ref=e20]
+          - paragraph [ref=e21]: Welcome back! Please sign in to continue
+        - generic [ref=e22]:
+          - generic [ref=e24]:
+            - button "Sign in with Apple" [ref=e25] [cursor=pointer]:
+              - img "Sign in with Apple" [ref=e26]
+            - button "Sign in with GitHub" [ref=e27] [cursor=pointer]:
+              - img "Sign in with GitHub" [ref=e28]
+            - button "Sign in with Google" [ref=e29] [cursor=pointer]:
+              - img "Sign in with Google" [ref=e30]
+          - paragraph [ref=e33]: or
+          - generic [ref=e35]:
+            - generic [ref=e36]:
+              - generic [ref=e39]:
+                - generic [ref=e41]: Email address
+                - textbox "Email address" [ref=e42]:
+                  - /placeholder: Enter your email address
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic: Password
+                    - generic:
+                      - textbox "Password":
+                        - /placeholder: Enter your password
+                      - button "Show password":
+                        - img
+            - button "Continue" [ref=e45] [cursor=pointer]:
+              - generic [ref=e46]:
+                - text: Continue
+                - img [ref=e47]
+      - generic [ref=e49]:
+        - generic [ref=e50]:
+          - generic [ref=e51]: Don’t have an account?
+          - link "Sign up" [ref=e52] [cursor=pointer]:
+            - /url: http://127.0.0.1:5177/CLERK-ROUTER/VIRTUAL/sign-up
+        - generic [ref=e54]:
+          - generic [ref=e56]:
+            - paragraph [ref=e57]: Secured by
+            - link "Clerk logo" [ref=e58] [cursor=pointer]:
+              - /url: https://go.clerk.com/components
+              - img [ref=e59]
+          - paragraph [ref=e64]: Development mode

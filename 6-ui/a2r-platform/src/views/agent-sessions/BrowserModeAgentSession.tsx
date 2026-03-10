@@ -40,7 +40,7 @@ export function BrowserModeAgentSession({
   onClose,
 }: BrowserModeAgentSessionProps) {
   const mode = 'browser';
-  const modeColors = MODE_COLORS[mode];
+  const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.browser;
   
   const [url, setUrl] = useState(initialUrl);
   const [isNavigating, setIsNavigating] = useState(false);
@@ -153,7 +153,7 @@ function BrowserComputer({
   activeTab: string; 
   onTabChange: (tab: any) => void;
 }) {
-  const modeColors = MODE_COLORS[mode];
+  const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.browser;
   
   return (
     <div className="flex flex-col h-full bg-black/40">
@@ -215,7 +215,7 @@ function BrowserComputer({
 }
 
 function TabButton({ label, active, onClick, mode }: { label: string; active: boolean; onClick: () => void; mode: 'browser' }) {
-  const modeColors = MODE_COLORS[mode];
+  const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.browser;
   return (
     <button
       onClick={onClick}

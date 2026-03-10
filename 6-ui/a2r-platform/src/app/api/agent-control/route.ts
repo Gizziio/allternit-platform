@@ -118,8 +118,8 @@ async function callGatewayMethod(options: {
       if (socket) {
         try {
           socket.close(1000, "done");
-        } catch {
-          // no-op
+        } catch (error) {
+          console.error("[Agent Control] Failed to close WebSocket:", error);
         }
         socket = null;
       }
@@ -206,7 +206,8 @@ async function callGatewayMethod(options: {
       let parsed: unknown;
       try {
         parsed = JSON.parse(String(event.data ?? ""));
-      } catch {
+      } catch (error) {
+        console.error("[Agent Control] Failed to parse WebSocket message:", error);
         return;
       }
 
@@ -217,6 +218,7 @@ async function callGatewayMethod(options: {
           try {
             sendConnect();
           } catch (error) {
+            console.error("[Agent Control] Failed to send connect request:", error);
             finish(error instanceof Error ? error : new Error(String(error)));
           }
         }
@@ -235,6 +237,7 @@ async function callGatewayMethod(options: {
         try {
           sendMethodCall();
         } catch (error) {
+          console.error("[Agent Control] Failed to send method call:", error);
           finish(error instanceof Error ? error : new Error(String(error)));
         }
         return;

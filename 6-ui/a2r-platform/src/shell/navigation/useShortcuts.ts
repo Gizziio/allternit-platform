@@ -122,7 +122,8 @@ export function useShortcut(
 ) {
   const hotkeyString = useMemo(() => {
     if (Array.isArray(key)) {
-      return key.map(shortcutToHotkey).join(',');
+      // key is string[], where each element is a shortcut key (e.g., 'mod+k')
+      return key.map((k) => shortcutToHotkey(k.split(' '))).join(',');
     }
     return shortcutToHotkey(key.split(' '));
   }, [key]);
@@ -293,14 +294,15 @@ export function useGlobalShortcut(
     [callback, options?.allowInInputs]
   );
 
-  useShortcut(key, wrappedCallback, {
+  useShortcut(key, wrappedCallback as () => void, {
     ...options,
     preventDefault: options?.preventDefault ?? true,
   });
 }
 
 // Re-export from react-hotkeys-hook for convenience
-export { useReactHotkeys, UseHotkeysOptions };
+export type { UseHotkeysOptions };
+export { useReactHotkeys };
 
 // Default export
 export default useShortcuts;

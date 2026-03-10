@@ -236,3 +236,7 @@ export type { UnifiedRailsConfig } from './adapters/rails_unified';
 // Lease Management (Priority 1)
 export { LeaseManager, createLeaseManager } from './lease/manager';
 export type { LeaseManagerConfig, ManagedLease, LeaseManagerEvents } from './lease/manager';
+
+// No-Stop Scheduler
+export { RalphNoStopScheduler, createRalphNoStopScheduler } from './loop/no-stop-scheduler';
+export type { SchedulerConfig, ReadyNode, SchedulerStats } from './loop/no-stop-scheduler';

@@ -179,7 +179,7 @@ export function A2ROperatorStatus() {
             style={{ borderTop: '1px solid var(--border-subtle)' }}
           >
             <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-              Port: <span className="font-mono" style={{ color: 'var(--text-secondary)' }}>3010</span>
+              Port: <span className="font-mono" style={{ color: 'var(--text-secondary)' }}>3000</span>
             </p>
           </div>
         </div>

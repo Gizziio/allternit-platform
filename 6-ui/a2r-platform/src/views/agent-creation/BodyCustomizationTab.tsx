@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { useAvatarCreatorStore } from '../../stores/avatar-creator.store';
-import { BODY_SHAPE_METADATA } from '../../components/avatar';
+import { BODY_SHAPE_METADATA } from '../../components/Avatar';
 import { STUDIO_THEME } from '../AgentView';
 import type { AvatarBodyShape } from '../../lib/agents/character.types';
 
@@ -48,6 +48,7 @@ export const BodyCustomizationTab: React.FC = () => {
             
             return (
               <button
+                type="button"
                 key={shape.id}
                 onClick={() => setBaseShape(shape.id)}
                 style={{
@@ -108,13 +109,13 @@ export const BodyCustomizationTab: React.FC = () => {
           Selected Shape
         </h5>
         <p style={{ fontSize: '13px', color: STUDIO_THEME.textPrimary, marginBottom: '4px' }}>
-          {BODY_SHAPE_METADATA[currentConfig.baseShape].name}
+          {currentConfig.baseShape ? BODY_SHAPE_METADATA[currentConfig.baseShape]?.name : 'Unknown'}
         </p>
         <p style={{ fontSize: '12px', color: STUDIO_THEME.textSecondary }}>
-          {BODY_SHAPE_METADATA[currentConfig.baseShape].description}
+          {currentConfig.baseShape ? BODY_SHAPE_METADATA[currentConfig.baseShape]?.description : ''}
         </p>
         <p style={{ fontSize: '11px', color: STUDIO_THEME.accent, marginTop: '8px' }}>
-          Best for: {BODY_SHAPE_METADATA[currentConfig.baseShape].idealSetup} agents
+          Best for: {currentConfig.baseShape ? BODY_SHAPE_METADATA[currentConfig.baseShape]?.idealSetup : 'general'} agents
         </p>
       </div>
     </div>

@@ -36,6 +36,9 @@ export {
 // Agent Management
 export { AgentCreationWizard } from './AgentCreationWizard';
 export { AgentCreationWizardEnhanced } from './AgentCreationWizardEnhanced';
+export { AgentCreationWizardWithTemplates } from './AgentCreationWizardWithTemplates';
+export { AgentHubModal } from './AgentHubModal';
+export { AgentSelectorWizard } from './AgentSelectorWizard';
 export { AgentTestingPlayground } from './AgentTestingPlayground';
 export { SessionAnalyticsDashboard } from './SessionAnalyticsDashboard';
 export { SwarmOrchestrator } from './SwarmOrchestrator';
@@ -53,6 +56,18 @@ export { CronJobWizard } from './CronJobWizard';
 export type {
   AgentCreationWizardProps,
 } from './AgentCreationWizard';
+
+export type {
+  AgentCreationWizardWithTemplatesProps,
+} from './AgentCreationWizardWithTemplates';
+
+export type {
+  AgentHubModalProps,
+} from './AgentHubModal';
+
+export type {
+  AgentSelectorWizardProps,
+} from './AgentSelectorWizard';
 
 export type {
   AgentCreationWizardProps as AgentCreationWizardEnhancedProps,

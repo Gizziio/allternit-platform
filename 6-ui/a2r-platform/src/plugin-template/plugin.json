@@ -1,0 +1,162 @@
+{
+  "_comment": "A2R Plugin Manifest - This file defines your plugin for the A2R Platform",
+  "$schema": "https://schemas.a2r.dev/plugin.json",
+  
+  "// ============ REQUIRED FIELDS ============": "",
+  
+  "// Unique identifier for your plugin": "",
+  "// Rules: lowercase, kebab-case, no spaces, unique across marketplace": "",
+  "id": "{{PLUGIN_ID}}",
+  
+  "// Human-readable display name": "",
+  "// Rules: Title Case, max 50 characters": "",
+  "name": "{{PLUGIN_NAME}}",
+  
+  "// Plugin version following Semantic Versioning": "",
+  "// Format: MAJOR.MINOR.PATCH (e.g., 1.0.0)": "",
+  "version": "1.0.0",
+  
+  "// Short description of what your plugin does": "",
+  "// Rules: Max 200 characters, no markdown": "",
+  "description": "{{PLUGIN_DESCRIPTION}}",
+  
+  "// Plugin author information": "",
+  "// Format: Name <email@example.com> or just Name": "",
+  "author": "{{AUTHOR_NAME}} <{{AUTHOR_EMAIL}}>",
+  
+  "// ============ OPTIONAL FIELDS ============": "",
+  
+  "// Entry point for your plugin code": "",
+  "// Default: 'src/index.js' if not specified": "",
+  "entry": "src/index.js",
+  
+  "// Icon for your plugin (displayed in marketplace and UI)": "",
+  "// Can be: relative path, URL, or data URI": "",
+  "icon": "assets/icon.svg",
+  
+  "// Plugin category for marketplace organization": "",
+  "// Available: 'productivity', 'developer', 'design', 'data', 'automation', 'integration', 'utility', 'other'": "",
+  "category": "productivity",
+  
+  "// Tags for search and discovery": "",
+  "// Max 10 tags, lowercase, no spaces": "",
+  "tags": ["example", "template"],
+  
+  "// Minimum A2R Platform version required": "",
+  "// Format: SemVer string": "",
+  "minPlatformVersion": "2.0.0",
+  
+  "// Maximum A2R Platform version supported": "",
+  "// Leave empty for no upper bound": "",
+  "maxPlatformVersion": "",
+  
+  "// ============ PERMISSIONS ============": "",
+  
+  "// Permissions your plugin requires": "",
+  "// Available permissions:": "",
+  "// - 'storage': Access to plugin storage": "",
+  "// - 'network': Make HTTP/HTTPS requests": "",
+  "// - 'filesystem': Read/write local files": "",
+  "// - 'clipboard': Access clipboard": "",
+  "// - 'notifications': Show notifications": "",
+  "// - 'clipboard': Access clipboard": "",
+  "// - 'webview': Create webview panels": "",
+  "// - 'commands': Register custom commands": "",
+  "// - 'events': Listen to platform events": "",
+  "permissions": ["storage"],
+  
+  "// ============ DEPENDENCIES ============": "",
+  
+  "// Other A2R plugins this plugin depends on": "",
+  "// Format: { "plugin-id": "version-range" }": "",
+  "dependencies": {},
+  
+  "// Node.js/npm dependencies (for bundled plugins)": "",
+  "// These are resolved at build time": "",
+  "bundledDependencies": {},
+  
+  "// ============ CONFIGURATION ============": "",
+  
+  "// Settings schema for plugin configuration": "",
+  "// Users can configure these in Settings > Plugins": "",
+  "settings": {
+    "exampleSetting": {
+      "type": "string",
+      "title": "Example Setting",
+      "description": "This is an example setting",
+      "default": "default value",
+      "enum": ["option1", "option2", "option3"]
+    },
+    "enableFeature": {
+      "type": "boolean",
+      "title": "Enable Feature",
+      "description": "Toggle this feature on/off",
+      "default": true
+    }
+  },
+  
+  "// ============ METADATA ============": "",
+  
+  "// SPDX license identifier": "",
+  "// See: https://spdx.org/licenses/": "",
+  "license": "MIT",
+  
+  "// Git repository URL": "",
+  "repository": "https://github.com/{{GITHUB_USERNAME}}/{{REPO_NAME}}",
+  
+  "// Plugin homepage URL": "",
+  "homepage": "https://github.com/{{GITHUB_USERNAME}}/{{REPO_NAME}}#readme",
+  
+  "// Bug report URL": "",
+  "bugs": "https://github.com/{{GITHUB_USERNAME}}/{{REPO_NAME}}/issues",
+  
+  "// Keywords for search": "",
+  "keywords": ["a2r", "plugin", "example"],
+  
+  "// Contributing guidelines URL": "",
+  "contributing": "https://github.com/{{GITHUB_USERNAME}}/{{REPO_NAME}}/blob/main/CONTRIBUTING.md",
+  
+  "// Changelog URL": "",
+  "changelog": "https://github.com/{{GITHUB_USERNAME}}/{{REPO_NAME}}/blob/main/CHANGELOG.md",
+  
+  "// ============ FEATURES ============": "",
+  
+  "// Features to activate in the platform": "",
+  "// Available features:": "",
+  "// - 'sidebar': Add to sidebar": "",
+  "// - 'command-palette': Add commands": "",
+  "// - 'context-menu': Add context menu items": "",
+  "// - 'status-bar': Add status bar item": "",
+  "// - 'settings': Custom settings panel": "",
+  "features": ["sidebar", "command-palette"],
+  
+  "// ============ ASSETS ============": "",
+  
+  "// Screenshots for marketplace listing": "",
+  "screenshots": [
+    {
+      "path": "assets/screenshot-1.png",
+      "caption": "Main interface"
+    }
+  ],
+  
+  "// Demo video URL": "",
+  "demoVideo": "",
+  
+  "// ============ ADVANCED ============": "",
+  
+  "// Enable development mode (load unpacked)": "",
+  "devMode": false,
+  
+  "// Hot reload in development": "",
+  "hotReload": false,
+  
+  "// Webpack/Vite config override": "",
+  "buildConfig": null,
+  
+  "// Custom CSS to inject": "",
+  "styles": [],
+  
+  "// External scripts to load": "",
+  "scripts": []
+}

@@ -50,11 +50,13 @@ outputs: ["execution_plan.json", "file_manifest.json"]
 - Create: Nodes for each task
 - Add: Edges for dependencies
 - Insert: Gates at validation points
+- **Autoland Protocol**: Set `autoland_on_pass: true` for all `builder` tasks that involve structural code changes.
 - Validate: Against dag.schema.v1.json
 
 ### STEP 5: Emit Plan
 - Write: execution_plan.json
 - Write: file_manifest.json
+- **Landing Standard**: Ensure all `builder` nodes specify an isolated workspace in `.a2r/runner/` and never write directly to the project root.
 - Emit: PlanCreated hook
 
 ## Report

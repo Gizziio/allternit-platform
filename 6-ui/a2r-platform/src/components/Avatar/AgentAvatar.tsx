@@ -17,6 +17,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { AvatarConfig, AvatarEmotion } from '../../lib/agents/character.types';
+import { DEFAULT_AVATAR_CONFIG } from '../../lib/agents/character.types';
 import type { AgentAvatarProps } from './AgentAvatar.types';
 import { calculateAvatarDimensions } from './AgentAvatar.types';
 import { Body } from './parts/Body';
@@ -35,7 +36,7 @@ const DEFAULT_SIZE = 80;
 const DEFAULT_EMOTION: AvatarEmotion = 'steady';
 
 export const AgentAvatar: React.FC<AgentAvatarProps> = ({
-  config,
+  config: configProp,
   emotion = DEFAULT_EMOTION,
   size = DEFAULT_SIZE,
   isAnimating = true,
@@ -46,6 +47,9 @@ export const AgentAvatar: React.FC<AgentAvatarProps> = ({
   showGlow = true,
   lookAt = null,
 }) => {
+  // Use default config if none provided
+  const config = configProp ?? DEFAULT_AVATAR_CONFIG;
+  
   // Refs
   const containerRef = useRef<HTMLDivElement>(null);
   
@@ -172,7 +176,7 @@ export const AgentAvatar: React.FC<AgentAvatarProps> = ({
       >
         <defs>
           {/* Glow filter */}
-          <filter id={`glow-${config.colors.glow.replace('#', '')}`} x="-50%" y="-50%" width="200%" height="200%">
+          <filter id={`glow-${config.colors?.glow?.replace('#', '') ?? 'default'}`} x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur stdDeviation="4" result="coloredBlur" />
             <feMerge>
               <feMergeNode in="coloredBlur" />
@@ -181,10 +185,10 @@ export const AgentAvatar: React.FC<AgentAvatarProps> = ({
           </filter>
           
           {/* Clip path for body */}
-          <clipPath id={`body-clip-${config.baseShape}`}>
+          <clipPath id={`body-clip-${config.baseShape ?? 'rounded'}`}>
             <Body 
-              shape={config.baseShape}
-              colors={config.colors}
+              shape={config.baseShape ?? 'round'}
+              colors={config.colors ?? { primary: '#6366f1', secondary: '#8b5cf6', glow: '#6366f1', outline: '#1e1b4b' }}
               size={100}
               renderForClipPath
             />
@@ -194,18 +198,18 @@ export const AgentAvatar: React.FC<AgentAvatarProps> = ({
         {/* Glow layer */}
         {showGlow && (
           <Glow
-            color={config.colors.glow}
+            color={config.colors?.glow ?? '#6366f1'}
             size={100}
             intensity={getGlowIntensity()}
-            pulse={isAnimating && config.personality.breathing}
+            pulse={isAnimating && (config.personality?.breathing ?? false)}
           />
         )}
         
         {/* Body layer */}
         <g className="agent-avatar__body-layer">
           <Body
-            shape={config.baseShape}
-            colors={config.colors}
+            shape={config.baseShape ?? 'round'}
+            colors={config.colors ?? { primary: '#6366f1', secondary: '#8b5cf6', glow: '#6366f1', outline: '#1e1b4b' }}
             size={100}
             emotion={currentEmotion}
             isAnimating={isAnimating}
@@ -215,9 +219,9 @@ export const AgentAvatar: React.FC<AgentAvatarProps> = ({
         {/* Accessories layer (behind eyes) */}
         <g className="agent-avatar__accessories-back-layer">
           <Accessories
-            accessories={config.accessories}
+            accessories={config.accessories ?? []}
             layer="back"
-            colors={config.colors}
+            colors={config.colors ?? { primary: '#6366f1', secondary: '#8b5cf6', glow: '#6366f1', outline: '#1e1b4b' }}
             size={100}
           />
         </g>
@@ -236,9 +240,9 @@ export const AgentAvatar: React.FC<AgentAvatarProps> = ({
         {/* Accessories layer (front) */}
         <g className="agent-avatar__accessories-front-layer">
           <Accessories
-            accessories={config.accessories}
+            accessories={config.accessories ?? []}
             layer="front"
-            colors={config.colors}
+            colors={config.colors ?? { primary: '#6366f1', secondary: '#8b5cf6', glow: '#6366f1', outline: '#1e1b4b' }}
             size={100}
           />
         </g>

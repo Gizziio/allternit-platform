@@ -253,7 +253,7 @@ export function SwarmDashboard() {
       </div>
 
       {/* Tabs for different views */}
-      <Tabs defaultValue="circuit-breakers" className="space-y-4">
+      <Tabs value="circuit-breakers">
         <TabsList>
           <TabsTrigger value="circuit-breakers">
             Circuit Breakers

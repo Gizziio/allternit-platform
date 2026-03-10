@@ -131,7 +131,7 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps & 
       'disabled:cursor-not-allowed',
       'disabled:pointer-events-none',
       // Variant styles
-      buttonVariants[buttonVariant],
+      ...buttonVariants[buttonVariant],
       // Shape
       shapeVariants[shape],
       // Size (based on icon size)

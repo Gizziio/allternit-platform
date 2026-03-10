@@ -18,7 +18,7 @@ export type GlassVariant = 'default' | 'primary' | 'success' | 'warning' | 'dang
 export type GlassHover = boolean | 'lift' | 'glow' | 'scale';
 export type GlassBorder = boolean | 'subtle' | 'glow' | 'accent';
 export type GlassBlur = 'none' | 'sm' | 'md' | 'lg' | 'xl';
-export type GlassOpacity = 'low' | 'medium' | 'high';
+export type GlassOpacity = 'none' | 'low' | 'medium' | 'high';
 export type GlassPadding = 'none' | 'sm' | 'md' | 'lg' | 'xl';
 export type GlassRounded = 'none' | 'sm' | 'md' | 'lg' | 'xl' | 'full';
 export type GlassTransition = 'fast' | 'normal' | 'slow';
@@ -117,10 +117,10 @@ export const paddingValues: Record<GlassPadding, string> = {
 
 export const roundedValues: Record<GlassRounded, string> = {
   none: '0',
-  sm: `${tokens?.radii?.sm || '4px'}`,
-  md: `${tokens?.radii?.md || '8px'}`,
-  lg: `${tokens?.radii?.lg || '12px'}`,
-  xl: `${tokens?.radii?.xl || '16px'}`,
+  sm: `${tokens?.radius?.sm || '4px'}`,
+  md: `${tokens?.radius?.md || '8px'}`,
+  lg: `${tokens?.radius?.lg || '12px'}`,
+  xl: `${tokens?.radius?.xl || '16px'}`,
   full: '9999px',
 };
 

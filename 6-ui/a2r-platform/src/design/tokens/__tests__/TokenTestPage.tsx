@@ -17,6 +17,7 @@ import {
   semantic,
   neutral,
   fontSize,
+  fontSizePx,
   fontWeight,
   spacing,
   elevation,
@@ -259,7 +260,7 @@ const TypographySection: React.FC<{ isDark: boolean }> = ({ isDark }) => {
               {key.toUpperCase()} Typography
             </span>
             <span style={{ fontSize: fontSize.xs, color: neutral[500] }}>
-              {value} ({tokens.typography.fontSizePx[key as keyof typeof fontSizePx]}px)
+              {value} ({fontSizePx[key as keyof typeof fontSizePx]}px)
             </span>
           </div>
         ))}

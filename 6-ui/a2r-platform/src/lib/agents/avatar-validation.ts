@@ -13,7 +13,7 @@ const AvatarBodyShapeSchema = z.enum(['round', 'square', 'hex', 'diamond', 'clou
 
 // Eye preset validation
 const EyePresetSchema = z.enum([
-  'round', 'wide', 'narrow', 'curious', 'pleased', 
+  'round', 'wide', 'narrow', 'focused', 'curious', 'pleased', 
   'skeptical', 'mischief', 'proud', 'dizzy', 'sleepy', 'starry', 'pixel'
 ]) as z.ZodType<EyePreset>;
 

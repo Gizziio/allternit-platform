@@ -16,6 +16,7 @@ pub mod intent_graph;
 pub mod journal_ledger;
 pub mod llm;
 pub mod memory_maintenance_daemon;
+pub mod moa;  // Mixture of Agents Orchestrator
 pub mod orchestrator;
 pub mod orchestrator_v0;
 pub mod patterns;
@@ -40,7 +41,7 @@ pub use context_manager::*;
 pub use contract_verifier::*;
 pub use directive_compiler::*;
 pub use intent_dispatcher::*;
+pub use moa::*;  // Export MoA types
 
 // Minimal AppState for library-only handlers (bin provides full AppState).
-#[derive(Clone, Default)]
 pub struct AppState;

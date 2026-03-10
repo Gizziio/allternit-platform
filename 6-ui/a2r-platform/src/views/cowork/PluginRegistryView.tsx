@@ -1,15 +1,22 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { GlassCard } from '../../design/GlassCard';
 import { Command, Brain, Globe } from '@phosphor-icons/react';
 import { useTelemetryProviders } from '@/lib/telemetry/useTelemetryProviders';
 
 export function PluginRegistryView() {
   const { providers, loading, error, refresh } = useTelemetryProviders();
+  const [activeOverrides, setActiveOverrides] = useState<Record<string, boolean>>({});
+  const [selectedProvider, setSelectedProvider] = useState<any | null>(null);
 
   const sortedProviders = useMemo(
-    () => providers.sort((a, b) => a.name.localeCompare(b.name)),
+    () => [...providers].sort((a, b) => a.name.localeCompare(b.name)),
     [providers]
   );
+
+  const resolveActive = (provider: any) => {
+    const override = activeOverrides[provider.id];
+    return override === undefined ? provider.active : override;
+  };
 
   return (
     <div style={{ padding: 32, maxWidth: 1100, margin: '0 auto' }}>
@@ -47,9 +54,67 @@ export function PluginRegistryView() {
         }}
       >
         {sortedProviders.map((provider) => (
-          <ProviderCard key={provider.id} provider={provider} active={provider.active} />
+          <ProviderCard
+            key={provider.id}
+            provider={provider}
+            active={resolveActive(provider)}
+            onToggle={() =>
+              setActiveOverrides((prev) => ({
+                ...prev,
+                [provider.id]: !resolveActive(provider),
+              }))
+            }
+            onShowDetails={() => setSelectedProvider(provider)}
+          />
         ))}
       </div>
+
+      {selectedProvider && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => setSelectedProvider(null)}
+        >
+          <GlassCard
+            style={{ width: 560, maxWidth: '90vw', padding: 24, borderRadius: 16 }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>{selectedProvider.name}</h2>
+            <p style={{ marginTop: 12, lineHeight: 1.6, color: '#cbd5f5' }}>
+              {selectedProvider.description || 'No provider description available.'}
+            </p>
+            <div style={{ marginTop: 16, fontSize: 13, opacity: 0.75 }}>
+              Provider ID: {selectedProvider.id}
+            </div>
+            <div style={{ marginTop: 8, fontSize: 13, opacity: 0.75 }}>
+              Last updated: {new Date(selectedProvider.lastUpdated || Date.now()).toLocaleString()}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 24 }}>
+              <button
+                onClick={() => setSelectedProvider(null)}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: 10,
+                  border: '1px solid rgba(148,163,184,0.4)',
+                  background: 'transparent',
+                  color: '#f1f5f9',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </GlassCard>
+        </div>
+      )}
     </div>
   );
 }
@@ -57,9 +122,13 @@ export function PluginRegistryView() {
 function ProviderCard({
   provider,
   active,
+  onToggle,
+  onShowDetails,
 }: {
   provider: any;
   active: boolean;
+  onToggle: () => void;
+  onShowDetails: () => void;
 }) {
   const Icon = active ? Globe : Brain;
   return (
@@ -103,7 +172,7 @@ function ProviderCard({
 
       <div style={{ display: 'flex', gap: 8 }}>
         <button
-          disabled
+          onClick={onToggle}
           style={{
             flex: 1,
             padding: '10px 0',
@@ -112,13 +181,14 @@ function ProviderCard({
             background: active ? '#111827' : '#10b981',
             color: active ? '#f3f4f6' : '#fff',
             fontWeight: 600,
-            cursor: 'not-allowed',
-            opacity: 0.6,
+            cursor: 'pointer',
+            opacity: 1,
           }}
         >
-          {active ? 'Active' : 'Inactive'}
+          {active ? 'Deactivate' : 'Activate'}
         </button>
         <button
+          onClick={onShowDetails}
           style={{
             flex: 1,
             padding: '10px 0',

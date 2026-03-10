@@ -1826,5 +1826,22 @@ The **Task Executor** (`1-kernel/compute/executor/`) is a specialized service fo
 
 ---
 
-*Document generated: 2026-02-06*  
+## 7. Autoland Protocol (Safe Implementation Runs)
+
+The Autoland Protocol provides a secure and autonomous mechanism for landing complex code changes from an isolated environment into the main project. It is modeled after "AI-driven implementation" patterns where the agent is an orchestrator rather than a line-by-line coder.
+
+### 7.1 Lifecycle of an Autoland Change:
+1.  **Planning Phase**: The **Rails** service creates a **WIH** (Work Identity Handle) that represents an isolated implementation run.
+2.  **Execution Phase**: The agent operates within a dedicated workspace (`.a2r/runner/{wih_id}/`). All filesystem changes are restricted to this directory.
+3.  **Recording (Proof of Work)**: The **Operator** service streams and persists all run events (terminal output, tool calls, filesystem deltas) to a permanent "Proof of Work" log at `.a2r/autoland/{run_id}.jsonl`.
+4.  **Validation Phase (The Ralph Loop)**: A separate "Validator" agent executes tests in the isolated environment. The WIH can only be closed with a **PASS** status if all tests succeed.
+5.  **Landing Phase**: Once the WIH is closed with **PASS**, a user or higher-level agent triggers the `autoland` gate. 
+    *   **Gate Verification**: The Gate service verifies the WIH status and Proof of Work integrity.
+    *   **Atomic Mutation**: If verified, the Gate atomatically moves/copies the changes from the isolated runner workspace into the project root.
+    *   **Ledger Commit**: The final "Land" is recorded as a `GateAutolanded` event in the system ledger.
+
+---
+
+*Document generated: 2026-03-08*  
 *Maintainers: A2rchitect Platform Team*
+

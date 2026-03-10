@@ -8,7 +8,7 @@ import { createModuleLogger } from '@/lib/logger';
 
 const log = createModuleLogger('services/a2r-operator-status');
 
-const A2R_OPERATOR_URL = process.env.A2R_OPERATOR_URL || 'http://127.0.0.1:3010';
+const A2R_OPERATOR_URL = process.env.A2R_OPERATOR_URL || 'http://127.0.0.1:3000';
 
 export type A2RServiceStatus = 'online' | 'offline' | 'checking' | 'error';
 

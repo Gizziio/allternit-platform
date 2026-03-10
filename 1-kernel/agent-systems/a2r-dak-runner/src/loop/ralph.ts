@@ -20,11 +20,11 @@ import {
   DagId,
   NodeId,
   IterationId,
-  Role,
   ContextPack,
-  PolicyBundle,
+  PolicyBundleId,
   ReceiptId,
 } from '../types';
+import type { PolicyBundle } from '../policy/bundle-builder';
 
 export interface RalphLoopConfig {
   maxFixCycles: number;
@@ -138,7 +138,7 @@ export class RalphLoop extends EventEmitter {
         continue;
       }
 
-      builderReceipts.push(...(builderResult.receiptIds || []));
+      builderReceipts.push(...(builderResult.receiptIds || []) as ReceiptId[]);
       this.emit('builder:completed', { dagId, nodeId, iterationId, artifacts: builderResult.artifacts });
 
       // Phase 2: Validator (only if builder succeeded)
@@ -175,7 +175,7 @@ export class RalphLoop extends EventEmitter {
         continue;
       }
 
-      validatorReceipt = validatorResult.receiptIds?.[0];
+      validatorReceipt = validatorResult.receiptIds?.[0] as ReceiptId | undefined;
       lastValidatorReport = validatorResult.report as ValidatorReport;
 
       this.emit('validator:completed', { 
@@ -284,13 +284,14 @@ export class RalphLoop extends EventEmitter {
       role: 'builder',
       constraints: {
         ...policyBundle.constraints,
-        requireValidator: true,
+        require_validator: true,
       },
     };
 
     const builderConfig: WorkerConfig = {
       role: 'builder',
       contextPack,
+      policyBundleId: builderPolicy.bundle_id as PolicyBundleId,
       policyBundle: builderPolicy,
       timeboxSeconds: 1800, // 30 min timebox
     };
@@ -341,10 +342,10 @@ export class RalphLoop extends EventEmitter {
       role: 'validator',
       constraints: {
         ...policyBundle.constraints,
-        allowedTools: ['Read', 'Glob', 'Grep', 'Search', 'Test'], // No Write/Edit
-        writeScope: {
-          ...policyBundle.constraints.writeScope,
-          allowedGlobs: [], // Read-only
+        allowed_tools: ['Read', 'Glob', 'Grep', 'Search', 'Test'], // No Write/Edit
+        write_scope: {
+          ...policyBundle.constraints.write_scope,
+          allowed_globs: [], // Read-only
         },
       },
     };
@@ -352,6 +353,7 @@ export class RalphLoop extends EventEmitter {
     const validatorConfig: WorkerConfig = {
       role: 'validator',
       contextPack,
+      policyBundleId: validatorPolicy.bundle_id as PolicyBundleId,
       policyBundle: validatorPolicy,
       parentWihId: wihId, // Validator is child of builder context
       timeboxSeconds: 600, // 10 min timebox

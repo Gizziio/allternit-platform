@@ -1,0 +1,464 @@
+/**
+ * Agent Workspace - Kernel Sync
+ * 
+ * Synchronizes workspace state with the kernel ledger.
+ * The kernel is the source of truth; this module pulls authoritative
+ * state and updates the markdown distillation.
+ */
+
+import { Log } from "@/shared/util/log"
+import { Filesystem } from "@/shared/util/filesystem"
+import path from "path"
+import { AgentWorkspace } from "@/runtime/memory/memory"
+
+const log = Log.create({ service: "agent_workspace.kernel_sync" })
+
+export interface SyncOptions {
+  ledgerEndpoint?: string
+  syncInterval?: number
+  autoSync?: boolean
+  apiKey?: string
+  timeout?: number
+}
+
+export interface SyncState {
+  lastSyncAt: number
+  ledgerSequence: number
+  pendingUpdates: number
+  errors: string[]
+}
+
+export namespace KernelSync {
+
+  export interface LedgerEntry {
+    sequence: number
+    timestamp: number
+    type: "tool_call" | "state_change" | "checkpoint"
+    data: unknown
+  }
+
+  // Active sync intervals by workspace
+  const syncIntervals = new Map<string, ReturnType<typeof setInterval>>()
+
+  /**
+   * Start automatic synchronization with kernel
+   * 
+   * Polls the kernel ledger and updates workspace files.
+   */
+  export async function start(
+    workspace: string,
+    options: SyncOptions = {}
+  ): Promise<void> {
+    const interval = options.syncInterval ?? 5000 // 5 seconds default
+    
+    log.info("Starting kernel sync", { workspace, interval })
+
+    // Stop any existing sync
+    stop(workspace)
+
+    // Do initial sync
+    await syncOnce(workspace, options)
+
+    // Start interval
+    const id = setInterval(async () => {
+      try {
+        await syncOnce(workspace, options)
+      } catch (error) {
+        log.error("Sync error", { workspace, error })
+      }
+    }, interval)
+
+    syncIntervals.set(workspace, id)
+  }
+
+  /**
+   * Stop automatic synchronization
+   */
+  export function stop(workspace: string): void {
+    const id = syncIntervals.get(workspace)
+    if (id) {
+      clearInterval(id)
+      syncIntervals.delete(workspace)
+      log.info("Stopped kernel sync", { workspace })
+    }
+  }
+
+  /**
+   * Check if sync is active
+   */
+  export function isActive(workspace: string): boolean {
+    return syncIntervals.has(workspace)
+  }
+
+  /**
+   * Perform one sync operation
+   * 
+   * 1. Query kernel for new ledger entries
+   * 2. Update memory.jsonl
+   * 3. Update state.json
+   * 4. Regenerate BRAIN.md
+   * 5. Update HEARTBEAT.md
+   */
+  export async function syncOnce(
+    workspace: string,
+    options: SyncOptions = {}
+  ): Promise<SyncState> {
+    const state: SyncState = {
+      lastSyncAt: Date.now(),
+      ledgerSequence: 0,
+      pendingUpdates: 0,
+      errors: [],
+    }
+
+    try {
+      // Read current sync position
+      const manifest = await AgentWorkspace.readManifest(workspace)
+      const lastSequence = manifest?._sync?.lastSequence ?? 0
+
+      // Query kernel for new entries
+      const entries = await queryKernel(
+        options.ledgerEndpoint,
+        lastSequence,
+        options.apiKey,
+        options.timeout
+      )
+      state.ledgerSequence = entries.length > 0 
+        ? entries[entries.length - 1].sequence 
+        : lastSequence
+
+      // Apply updates
+      for (const entry of entries) {
+        await applyLedgerEntry(workspace, entry)
+      }
+
+      state.pendingUpdates = entries.length
+
+      // Update sync position in manifest
+      await updateSyncPosition(workspace, state.ledgerSequence)
+
+      // Regenerate derived files
+      await regenerateDerivedFiles(workspace)
+
+      log.debug("Sync complete", { 
+        workspace, 
+        entries: entries.length,
+        sequence: state.ledgerSequence,
+      })
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error)
+      state.errors.push(errorMsg)
+      log.error("Sync failed", { workspace, error: errorMsg })
+    }
+
+    return state
+  }
+
+  /**
+   * Query kernel ledger for entries after sequence
+   * 
+   * Makes an HTTP GET request to the kernel ledger endpoint with:
+   * - Timeout handling via AbortController
+   * - Optional API key authentication via Authorization header
+   * - JSON response parsing with validation
+   * - Graceful error handling (logs and returns empty on failure)
+   */
+  async function queryKernel(
+    endpoint: string | undefined,
+    afterSequence: number,
+    apiKey?: string,
+    timeoutMs?: number
+  ): Promise<LedgerEntry[]> {
+    if (!endpoint) {
+      log.debug("No kernel endpoint configured, skipping query")
+      return []
+    }
+
+    const url = `${endpoint}/api/v1/ledger?after=${afterSequence}`
+    const timeout = timeoutMs ?? 30000 // 30 seconds default timeout
+
+    try {
+      // Create abort controller for timeout
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), timeout)
+
+      // Build headers
+      const headers: Record<string, string> = {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+      }
+
+      // Add authorization if apiKey is provided
+      if (apiKey) {
+        headers["Authorization"] = `Bearer ${apiKey}`
+      }
+
+      log.debug("Querying kernel ledger", { endpoint, afterSequence, url })
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers,
+        signal: controller.signal,
+      })
+
+      clearTimeout(timeoutId)
+
+      // Handle HTTP errors
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => "Unknown error")
+        log.error("Kernel query HTTP error", {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText,
+        })
+        return []
+      }
+
+      // Parse JSON response
+      const data = await response.json() as unknown
+
+      // Validate response structure
+      if (!Array.isArray(data)) {
+        log.error("Invalid kernel response: expected array", {
+          type: typeof data,
+        })
+        return []
+      }
+
+      // Validate and filter entries
+      const entries: LedgerEntry[] = []
+      for (const item of data) {
+        if (isValidLedgerEntry(item)) {
+          entries.push(item as LedgerEntry)
+        } else {
+          log.warn("Skipping invalid ledger entry", { item })
+        }
+      }
+
+      log.debug("Kernel query successful", {
+        endpoint,
+        received: data.length,
+        valid: entries.length,
+      })
+
+      return entries
+    } catch (error) {
+      // Handle abort/timeout specifically
+      if (error instanceof Error && error.name === "AbortError") {
+        log.error("Kernel query timeout", { endpoint, timeout })
+      } else {
+        log.error("Kernel query failed", {
+          endpoint,
+          error: error instanceof Error ? error.message : String(error),
+        })
+      }
+      return []
+    }
+  }
+
+  /**
+   * Type guard to validate ledger entry structure
+   */
+  function isValidLedgerEntry(item: unknown): item is Record<keyof LedgerEntry, unknown> {
+    if (typeof item !== "object" || item === null) {
+      return false
+    }
+
+    const entry = item as Record<string, unknown>
+
+    return (
+      typeof entry.sequence === "number" &&
+      typeof entry.timestamp === "number" &&
+      typeof entry.type === "string" &&
+      ["tool_call", "state_change", "checkpoint"].includes(entry.type) &&
+      "data" in entry
+    )
+  }
+
+  /**
+   * Apply a single ledger entry to workspace
+   */
+  async function applyLedgerEntry(
+    workspace: string,
+    entry: LedgerEntry
+  ): Promise<void> {
+    switch (entry.type) {
+      case "tool_call":
+        await applyToolCall(workspace, entry.data)
+        break
+      case "state_change":
+        await applyStateChange(workspace, entry.data)
+        break
+      case "checkpoint":
+        await applyCheckpoint(workspace, entry.data)
+        break
+    }
+  }
+
+  /**
+   * Apply tool call entry
+   */
+  async function applyToolCall(
+    workspace: string,
+    data: unknown
+  ): Promise<void> {
+    // Append to memory.jsonl
+    await AgentWorkspace.appendMemory(workspace, {
+      ts: Date.now(),
+      ...data as object,
+    })
+  }
+
+  /**
+   * Apply state change entry
+   */
+  async function applyStateChange(
+    workspace: string,
+    data: unknown
+  ): Promise<void> {
+    const paths = AgentWorkspace.getPaths(workspace)
+    
+    // Read current state
+    const state = await Filesystem.readJson(paths.l1_state)
+    
+    // Merge changes
+    const updated = { ...state, ...(data as object) }
+    
+    // Write back
+    await Filesystem.write(paths.l1_state, JSON.stringify(updated, null, 2))
+  }
+
+  /**
+   * Apply checkpoint entry
+   */
+  async function applyCheckpoint(
+    workspace: string,
+    data: unknown
+  ): Promise<void> {
+    // Checkpoints are handled by the checkpoint module
+    // Just log for now
+    log.debug("Checkpoint synced", { workspace, data })
+  }
+
+  /**
+   * Update sync position in manifest
+   */
+  async function updateSyncPosition(
+    workspace: string,
+    sequence: number
+  ): Promise<void> {
+    const paths = AgentWorkspace.getPaths(workspace)
+    
+    try {
+      const manifest = await Filesystem.readJson(paths.manifest)
+      manifest._sync = {
+        lastSequence: sequence,
+        lastSyncAt: Date.now(),
+      }
+      await Filesystem.write(paths.manifest, JSON.stringify(manifest, null, 2))
+    } catch (error) {
+      log.error("Failed to update sync position", { error })
+    }
+  }
+
+  /**
+   * Regenerate derived markdown files
+   * 
+   * After syncing state, regenerate BRAIN.md and HEARTBEAT.md
+   */
+  async function regenerateDerivedFiles(workspace: string): Promise<void> {
+    const paths = AgentWorkspace.getPaths(workspace)
+    
+    // Regenerate BRAIN.md from taskgraph.json
+    await regenerateBrain(workspace, paths)
+    
+    // Regenerate HEARTBEAT.md
+    await regenerateHeartbeat(workspace, paths)
+  }
+
+  /**
+   * Regenerate BRAIN.md from taskgraph
+   */
+  async function regenerateBrain(
+    workspace: string,
+    paths: AgentWorkspace.WorkspacePaths
+  ): Promise<void> {
+    try {
+      const taskgraph = await Filesystem.readJson(paths.l1_taskgraph)
+      const state = await Filesystem.readJson(paths.l1_state)
+      
+      // Generate markdown
+      const content = generateBrainMarkdown(taskgraph, state)
+      await Filesystem.write(paths.l1_brain_md, content)
+    } catch (error) {
+      log.debug("Could not regenerate BRAIN.md", { error })
+    }
+  }
+
+  /**
+   * Regenerate HEARTBEAT.md
+   */
+  async function regenerateHeartbeat(
+    workspace: string,
+    paths: AgentWorkspace.WorkspacePaths
+  ): Promise<void> {
+    try {
+      const state = await Filesystem.readJson(paths.l1_state)
+      
+      const content = `# Agent Heartbeat
+
+**Last Update:** ${new Date().toISOString()}  
+**Status:** Synced with kernel
+
+## Metrics
+- Context Ratio: ${state.context?.context_ratio ?? 0}%
+- Tokens Used: ${state.context?.tokens_used ?? 0}
+- Current Node: ${state.dag?.current_node_id ?? "none"}
+
+## Sync Status
+- Last Sync: ${new Date().toISOString()}
+- Status: ✅ Connected to kernel
+`
+      
+      await Filesystem.write(paths.l3_heartbeat_md, content)
+    } catch (error) {
+      log.debug("Could not regenerate HEARTBEAT.md", { error })
+    }
+  }
+
+  /**
+   * Generate BRAIN.md content
+   */
+  function generateBrainMarkdown(taskgraph: any, state: any): string {
+    const tasks = taskgraph.tasks ?? []
+    const currentNode = state.dag?.current_node_id
+
+    const completed = tasks.filter((t: any) => t.status === "completed")
+    const inProgress = tasks.filter((t: any) => t.status === "in_progress")
+    const pending = tasks.filter((t: any) => t.status === "pending")
+
+    return `# GIZZI Brain - Task Graph
+
+**Updated:** ${new Date().toISOString()}  
+**Current Node:** ${currentNode ?? "none"}
+
+## Summary
+- Completed: ${completed.length}
+- In Progress: ${inProgress.length}
+- Pending: ${pending.length}
+
+## Task Graph
+
+### Completed
+${completed.map((t: any) => `- [x] ${t.name}: ${t.description}`).join("\n")}
+
+### In Progress
+${inProgress.map((t: any) => `- [~] ${t.name}: ${t.description}`).join("\n")}
+
+### Pending
+${pending.map((t: any) => `- [ ] ${t.name}: ${t.description}`).join("\n")}
+
+---
+*Synced from kernel at ${new Date().toISOString()}*
+`
+  }
+}

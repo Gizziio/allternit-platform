@@ -23,7 +23,11 @@ export async function replaceFilePartUrlByBinaryDataInMessages(
         message.content.map(async (part: { type: string; [key: string]: unknown }) => {
           // Handle file parts with URLs
           if (part.type === "file" && "data" in part && isUrl(part.data)) {
-            const binaryData = await fetchBinaryData(part.data as string);
+            const dataValue = part.data;
+            if (typeof dataValue !== 'string') {
+              throw new Error('Expected string data for file part');
+            }
+            const binaryData = await fetchBinaryData(dataValue);
             if (binaryData) {
               return {
                 ...part,
@@ -34,7 +38,11 @@ export async function replaceFilePartUrlByBinaryDataInMessages(
 
           // Handle image parts with URLs
           if (part.type === "image" && "image" in part && isUrl(part.image)) {
-            const binaryData = await fetchBinaryData(part.image as string);
+            const imageValue = part.image;
+            if (typeof imageValue !== 'string') {
+              throw new Error('Expected string data for image part');
+            }
+            const binaryData = await fetchBinaryData(imageValue);
             if (binaryData) {
               return {
                 ...part,

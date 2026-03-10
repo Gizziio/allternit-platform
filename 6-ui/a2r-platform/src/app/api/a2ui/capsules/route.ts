@@ -11,6 +11,22 @@ import { db } from "@/lib/db/client-sqlite";
 import { a2uiCapsule } from "@/lib/db/schema-sqlite";
 import { eq, and, like, desc } from "drizzle-orm";
 import { nanoid } from "nanoid";
+import type { MiniappManifest } from "@/capsules/browser/browser.types";
+
+/**
+ * Safely parse JSON with error handling
+ * Returns null if parsing fails, logs error for debugging
+ */
+function safeJSONParse<T>(json: string | null, fieldName: string, capsuleId?: string): T | null {
+  if (!json) return null;
+  try {
+    return JSON.parse(json) as T;
+  } catch (error) {
+    console.error(`[A2UI Capsules] Failed to parse ${fieldName}${capsuleId ? ` for capsule ${capsuleId}` : ''}:`, error);
+    console.error(`[A2UI Capsules] Invalid JSON content:`, json.substring(0, 200));
+    return null;
+  }
+}
 
 // ============================================================================
 // GET /api/a2ui/capsules
@@ -135,6 +151,14 @@ export async function POST(req: NextRequest) {
 
     console.log(`[A2UI Capsules] Installed capsule ${capsuleId}: ${name}`);
 
+    const parsedManifest = safeJSONParse<MiniappManifest>(capsule.manifest, 'manifest', capsule.id);
+    if (parsedManifest === null) {
+      return NextResponse.json(
+        { error: "Capsule manifest is corrupted" },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({
       id: capsule.id,
       name: capsule.name,
@@ -142,7 +166,7 @@ export async function POST(req: NextRequest) {
       version: capsule.version,
       author: capsule.author,
       status: capsule.status,
-      manifest: JSON.parse(capsule.manifest),
+      manifest: parsedManifest,
       installedAt: capsule.installedAt,
     });
   } catch (error) {

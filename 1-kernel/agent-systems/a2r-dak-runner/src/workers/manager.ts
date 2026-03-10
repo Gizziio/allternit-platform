@@ -19,11 +19,13 @@ import {
   CorrelationId,
   IterationId,
 } from '../types';
+import type { PolicyBundle } from '../policy/bundle-builder';
 
 export interface WorkerConfig {
   role: Role;
   contextPack: ContextPack;
   policyBundleId: PolicyBundleId;
+  policyBundle: PolicyBundle;
   parentWihId?: WihId;
   timeboxSeconds?: number;
 }
@@ -398,8 +400,8 @@ export class WorkerManager extends EventEmitter {
     return {
       worker,
       permissions: this.calculateEffectivePermissions(worker.config),
-      allowedTools: worker.config.policyBundle.constraints.allowedTools,
-      writeScope: worker.config.policyBundle.constraints.writeScope.allowedGlobs,
+      allowedTools: worker.config.policyBundle.constraints.allowed_tools,
+      writeScope: worker.config.policyBundle.constraints.write_scope.allowed_globs,
     };
   }
 
@@ -457,8 +459,8 @@ export class WorkerManager extends EventEmitter {
   private calculateEffectivePermissions(config: WorkerConfig): string[] {
     // Start with child (worker) permissions
     const childPermissions = new Set([
-      ...config.policyBundle.constraints.allowedTools,
-      ...config.policyBundle.constraints.writeScope.allowedGlobs,
+      ...config.policyBundle.constraints.allowed_tools,
+      ...config.policyBundle.constraints.write_scope.allowed_globs,
     ]);
 
     // If no parent, child permissions are effective

@@ -338,77 +338,16 @@ export function SettingsDrilldown({ children }: { children?: React.ReactNode }) 
             }}
           >
             <div ref={menuRef}>
-              {/* Main */}
-              <MenuItem 
-                item={menuItems[0]} 
-                isActive={activeSubmenuId === menuItems[0].id}
-                onHover={handleItemHover}
-                onClick={() => { menuItems[0].onClick?.(); setOpen(false); }}
-              />
-              
-              <SectionDivider />
-              
-              {/* Preferences */}
-              <MenuItem 
-                item={menuItems[1]} 
-                isActive={activeSubmenuId === menuItems[1].id}
-                onHover={handleItemHover}
-                onClick={() => { menuItems[1].onClick?.(); setOpen(false); }}
-              />
-              <MenuItem 
-                item={menuItems[2]} 
-                isActive={activeSubmenuId === menuItems[2].id}
-                onHover={handleItemHover}
-                onClick={() => { menuItems[2].onClick?.(); setOpen(false); }}
-              />
-              
-              <SectionDivider />
-              
-              {/* Actions */}
-              <MenuItem 
-                item={menuItems[3]} 
-                isActive={activeSubmenuId === menuItems[3].id}
-                onHover={handleItemHover}
-                onClick={() => { menuItems[3].onClick?.(); setOpen(false); }}
-              />
-              <MenuItem 
-                item={menuItems[4]} 
-                isActive={activeSubmenuId === menuItems[4].id}
-                onHover={handleItemHover}
-                onClick={() => { menuItems[4].onClick?.(); setOpen(false); }}
-              />
-              <MenuItem 
-                item={menuItems[5]} 
-                isActive={activeSubmenuId === menuItems[5].id}
-                onHover={handleItemHover}
-                onClick={() => { menuItems[5].onClick?.(); setOpen(false); }}
-              />
-              <MenuItem 
-                item={menuItems[6]} 
-                isActive={activeSubmenuId === menuItems[6].id}
-                onHover={handleItemHover}
-                onClick={() => { menuItems[6].onClick?.(); setOpen(false); }}
-              />
-              
-              <SectionDivider />
-              
-              {/* Info */}
-              <MenuItem 
-                item={menuItems[7]} 
-                isActive={activeSubmenuId === menuItems[7].id}
-                onHover={handleItemHover}
-                onClick={() => { menuItems[7].onClick?.(); setOpen(false); }}
-              />
-              
-              <SectionDivider />
-              
-              {/* Logout */}
-              <MenuItem 
-                item={menuItems[8]} 
-                isActive={activeSubmenuId === menuItems[8].id}
-                onHover={handleItemHover}
-                onClick={() => { menuItems[8].onClick?.(); setOpen(false); }}
-              />
+              {/* Menu Items - dynamically rendered with bounds checking */}
+              {menuItems.slice(0, 9).map((item, index) => (
+                <MenuItem 
+                  key={item.id}
+                  item={item} 
+                  isActive={activeSubmenuId === item.id}
+                  onHover={handleItemHover}
+                  onClick={() => { item.onClick?.(); setOpen(false); }}
+                />
+              ))}
             </div>
           </Popover.Content>
         </Popover.Portal>

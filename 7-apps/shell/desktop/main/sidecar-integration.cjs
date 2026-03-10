@@ -27,7 +27,7 @@ let statusCallback = null;
 
 // Configuration
 const API_HOST = process.env.A2R_API_HOST || '127.0.0.1';
-const MIN_PORT = 3010;
+const MIN_PORT = 3000;
 const MAX_PORT = 3100;
 const HEALTH_CHECK_INTERVAL = 1000; // ms
 const MAX_HEALTH_CHECK_ATTEMPTS = 30;

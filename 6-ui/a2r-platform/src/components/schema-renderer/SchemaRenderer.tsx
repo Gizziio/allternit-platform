@@ -1,7 +1,7 @@
 import React, { useState, createContext, useContext } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 
 interface SchemaContextType {
   data: Record<string, any>;

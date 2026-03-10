@@ -21,6 +21,11 @@ import type {
   UpdateCheckResult,
   UpdateDownloadProgress,
   SidecarStatus,
+  VMInfo,
+  VMStatus,
+  VMExecuteOptions,
+  VMExecuteResult,
+  VMSetupOptions,
 } from '../shared/types';
 
 /**
@@ -173,6 +178,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getApiUrl: createInvoke<string | undefined>(IPC_CHANNELS.SIDECAR.GET_API_URL),
     getAuthPassword: createInvoke<string | undefined>(IPC_CHANNELS.SIDECAR.GET_AUTH_PASSWORD),
     onStatusChanged: createOn(IPC_CHANNELS.SIDECAR.STATUS_CHANGED),
+  },
+
+  // VM Management
+  vm: {
+    getStatus: createInvoke<VMInfo>(IPC_CHANNELS.VM.GET_STATUS),
+    start: createInvoke<boolean>(IPC_CHANNELS.VM.START),
+    stop: createInvoke<boolean>(IPC_CHANNELS.VM.STOP),
+    restart: createInvoke<boolean>(IPC_CHANNELS.VM.RESTART),
+    execute: (options: VMExecuteOptions) =>
+      createInvoke<VMExecuteResult>(IPC_CHANNELS.VM.EXECUTE)(options),
+    setup: (options?: VMSetupOptions) =>
+      createInvoke<boolean>(IPC_CHANNELS.VM.SETUP)(options),
+    checkImages: createInvoke<boolean>(IPC_CHANNELS.VM.CHECK_IMAGES),
+    downloadImages: (options?: VMSetupOptions) =>
+      createInvoke<boolean>(IPC_CHANNELS.VM.DOWNLOAD_IMAGES)(options),
+    onStatusChanged: createOn(IPC_CHANNELS.VM.STATUS_CHANGED),
   },
 });
 

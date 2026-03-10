@@ -5,7 +5,7 @@
  * 
  * @example
  * ```tsx
- * import { AgentAvatar, useAvatarCreatorStore } from '@/components/avatar';
+ * import { AgentAvatar, useAvatarCreatorStore } from '@/components/Avatar';
  * 
  * // Display an avatar
  * <AgentAvatar 
@@ -21,6 +21,8 @@
 
 // Main component
 export { AgentAvatar, StaticAgentAvatar, AgentAvatarSizes } from './AgentAvatar';
+export { Avatar } from './Avatar';
+export type { AvatarProps } from './Avatar';
 export type { AgentAvatarProps } from './AgentAvatar.types';
 
 // Chat component
@@ -34,9 +36,6 @@ export type {
   GlowPartProps,
   AccessoryPartProps,
   AvatarSizePreset,
-  EmotionAnimationResult,
-  ReactiveAnimationResult,
-  AvatarAnimationResult,
 } from './AgentAvatar.types';
 
 // Size utilities
@@ -48,17 +47,20 @@ export {
 
 // Animation hooks
 export { useEmotionAnimation, getEmotionAnimationClass } from './hooks/useEmotionAnimation';
+export type { EmotionAnimationResult } from './hooks/useEmotionAnimation';
 export { 
   useReactiveAnimation, 
   useMouseTracking, 
   useClickAnimation 
 } from './hooks/useReactiveAnimation';
+export type { ReactiveAnimationResult } from './hooks/useReactiveAnimation';
 export { 
   useAvatarAnimation, 
   useLocomotionAnimation, 
   useBlinkAnimation,
   useAnimationFrame 
 } from './hooks/useAvatarAnimation';
+export type { AvatarAnimationResult } from './hooks/useAvatarAnimation';
 
 // Avatar parts (for advanced customization)
 export { Body, getBodyPositions, BODY_SHAPE_METADATA } from './parts/Body';

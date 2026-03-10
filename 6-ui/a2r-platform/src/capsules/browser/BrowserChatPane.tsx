@@ -49,6 +49,7 @@ import {
 } from "@/views/chat/agentModeSurfaceTheme";
 
 import { ChatComposer } from "../../views/chat/ChatComposer";
+import type { SpeechRecognition, SpeechRecognitionEvent, SpeechRecognitionErrorEvent } from "@/services/voice/SpeechToText";
 import { useBrowserAgentStore } from "./browserAgent.store";
 import { useBrowserChatPaneStore } from "./browserChatPane.store";
 import { BrowserChatPaneMenu } from "./BrowserChatPaneMenu";
@@ -58,22 +59,29 @@ import {
   getFaviconUrl,
   type BrowserShortcut,
 } from "./browserShortcuts.store";
+import type { BrowserTab } from "./browser.types";
 
 // Terminal Server URL for model fetching
 declare const __TERMINAL_SERVER_URL__: string | undefined;
+
+declare global {
+  interface Window {
+    __TERMINAL_SERVER_URL__?: string;
+  }
+}
+
 const TERMINAL_SERVER_URL =
   typeof __TERMINAL_SERVER_URL__ !== "undefined"
     ? __TERMINAL_SERVER_URL__
-    : typeof window !== "undefined" &&
-        (window as any).__TERMINAL_SERVER_URL__
-      ? (window as any).__TERMINAL_SERVER_URL__
+    : typeof window !== "undefined" && window.__TERMINAL_SERVER_URL__
+      ? window.__TERMINAL_SERVER_URL__
       : "http://127.0.0.1:4096";
 
 interface FallbackChatMessage {
   id: string;
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "system" | "tool";
   content: string;
-  timestamp: number;
+  timestamp: number | string;
 }
 
 type DisplayMessage = {
@@ -82,6 +90,11 @@ type DisplayMessage = {
   content: string;
   timestamp: string | number;
 };
+
+// Type guard for web tabs to safely access url/title properties
+function isWebTab(tab: BrowserTab | null | undefined): tab is BrowserTab & { contentType: 'web'; url: string; title: string } {
+  return tab !== null && tab !== undefined && 'contentType' in tab && tab.contentType === 'web';
+}
 
 function formatHost(url?: string): string {
   if (!url) {
@@ -245,7 +258,7 @@ function WorkflowPaneContent({
   const [selectedModel, setSelectedModel] = useState("claude-sonnet-4-5-20250929");
   const [saved, setSaved] = useState(false);
 
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   // Sync phase with store state
   useEffect(() => {
@@ -291,7 +304,7 @@ function WorkflowPaneContent({
   };
 
   const handleStartRecording = () => {
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) {
       setSteps((prev) => [...prev, "[Speech recognition not supported in this browser]"]);
       setRecording(true);
@@ -304,7 +317,7 @@ function WorkflowPaneContent({
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
 
-    recognition.onresult = (e: any) => {
+    recognition.onresult = (e: SpeechRecognitionEvent) => {
       let interim = "";
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const t = e.results[i][0].transcript;
@@ -319,7 +332,7 @@ function WorkflowPaneContent({
       setInterimText(interim);
     };
 
-    recognition.onerror = (e: any) => {
+    recognition.onerror = (e: SpeechRecognitionErrorEvent) => {
       if (e.error !== "aborted") {
         setSteps((prev) => [...prev, `[STT error: ${e.error}]`]);
       }
@@ -846,7 +859,7 @@ export function BrowserChatPane() {
       // Navigate the active browser tab to the shortcut URL
       const store = useBrowserStore.getState();
       const tab = store.tabs.find((t) => t.id === store.activeTabId);
-      if (tab && tab.type === "web") {
+      if (tab && isWebTab(tab)) {
         store.updateTab(tab.id, { url: shortcut.url });
       }
       setShortcutsOpen(false);
@@ -857,8 +870,9 @@ export function BrowserChatPane() {
   // Handler: add current page as shortcut
   const handleAddCurrentAsShortcut = useCallback(() => {
     if (!activeTab) return;
-    const url = (activeTab as any).url || "";
-    const label = (activeTab as any).title || formatHost(url) || "Untitled";
+    
+    const url = isWebTab(activeTab) ? activeTab.url : "";
+    const label = isWebTab(activeTab) ? activeTab.title : formatHost(url) || "Untitled";
     addShortcut({ label, url, icon: "🔗" });
   }, [activeTab, addShortcut]);
 
@@ -882,10 +896,10 @@ export function BrowserChatPane() {
         const data = await response.json();
         const models: Array<{ id: string; name: string; providerId: string }> = [];
         if (data.all && Array.isArray(data.all)) {
-          data.all.forEach((provider: any) => {
+          data.all.forEach((provider: { id: string; models?: Record<string, { name?: string }> }) => {
             if (provider.models && typeof provider.models === "object") {
               Object.entries(provider.models).forEach(
-                ([modelId, modelData]: [string, any]) => {
+                ([modelId, modelData]: [string, { name?: string }]) => {
                   models.push({
                     id: `${provider.id}/${modelId}`,
                     name: modelData.name || modelId,
@@ -1070,7 +1084,7 @@ export function BrowserChatPane() {
       sessionMode: "agent",
       agentId: selectedAgent?.id,
       agentName: selectedAgent?.name,
-      workspaceScope: getOpenClawWorkspacePathFromAgent(selectedAgent),
+      workspaceScope: getOpenClawWorkspacePathFromAgent(selectedAgent) ?? undefined,
       runtimeModel: selectedAgent?.model,
       agentFeatures: {
         workspace: true,
@@ -1202,8 +1216,8 @@ export function BrowserChatPane() {
   );
 
   const displayMessages: DisplayMessage[] = embeddedAgentSession.isEmbedded
-    ? mapNativeMessagesToStreamMessages(nativeMessages)
-    : messages;
+    ? mapNativeMessagesToStreamMessages(nativeMessages) as unknown as DisplayMessage[]
+    : messages as unknown as DisplayMessage[];
   const displayLoading = embeddedAgentSession.isEmbedded
     ? nativeStreaming.isStreaming
     : agentStatus === "Running";
@@ -1332,8 +1346,7 @@ export function BrowserChatPane() {
                 }}
               >
                 <Globe size={9} />
-                {activeTab?.title ||
-                  formatHost((activeTab as { url?: string } | null)?.url)}
+                {isWebTab(activeTab) ? (activeTab.title || formatHost(activeTab.url)) : formatHost(undefined)}
               </div>
             )}
 
@@ -1817,9 +1830,7 @@ export function BrowserChatPane() {
                 >
                   Your browser agent session is ready
                 </p>
-                <p
-                  style={{ fontSize: 12, color: "#93a1ab", lineHeight: 1.5 }}
-                >
+                <p style={{ fontSize: 12, color: "#93a1ab", lineHeight: 1.5 }}>
                   Ask this agent to inspect the current page, collect context,
                   or automate a browsing workflow.
                 </p>
@@ -1857,10 +1868,7 @@ export function BrowserChatPane() {
                       fontSize: 11,
                     }}
                   >
-                    {activeTab?.title ||
-                      formatHost(
-                        (activeTab as { url?: string } | null)?.url,
-                      )}
+                    {isWebTab(activeTab) ? (activeTab.title || formatHost(activeTab.url)) : formatHost(undefined)}
                   </div>
                   <div
                     style={{
@@ -1997,229 +2005,27 @@ export function BrowserChatPane() {
                     }
                   }
             }
-            placeholder="Type / for commands"
-            showTopActions={false}
-            variant="default"
-            onInteractionSignal={pulseMascot}
-            onAttentionChange={setMascotAttention}
-            agentModeSurface="browser"
+            placeholder={
+              embeddedAgentSession.isEmbedded
+                ? "Message browser agent..."
+                : "Ask the browser agent..."
+            }
             slashCommands={BROWSER_SLASH_COMMANDS}
           />
 
-          {/* Permission Mode Selector */}
+          {/* Footer disclaimer */}
           <div
             style={{
-              display: "flex",
-              justifyContent: "center",
-              padding: "8px 0 4px",
-              position: "relative",
-            }}
-          >
-            <button
-              type="button"
-              onClick={() =>
-                setPermissionDropdownOpen(!permissionDropdownOpen)
-              }
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "5px 12px",
-                borderRadius: 999,
-                border: "1px solid rgba(255,255,255,0.1)",
-                background: "transparent",
-                color: "#96a7b1",
-                fontSize: 13,
-                cursor: "pointer",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "rgba(255,255,255,0.04)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "transparent";
-              }}
-            >
-              <span style={{ fontSize: 12 }}>⚙</span>
-              <span>
-                {paneWidth < 320
-                  ? permissionMode === "ask"
-                    ? "Ask"
-                    : "Act"
-                  : permissionMode === "ask"
-                    ? "Ask before acting"
-                    : "Act without asking"}
-              </span>
-              <ChevronDown
-                size={11}
-                style={{
-                  opacity: 0.5,
-                  transform: permissionDropdownOpen
-                    ? "rotate(180deg)"
-                    : "none",
-                  transition: "transform 0.2s",
-                }}
-              />
-            </button>
-
-            {permissionDropdownOpen && (
-              <div
-                style={{
-                  position: "absolute",
-                  bottom: "calc(100% + 6px)",
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  width: 260,
-                  background: "#1e2024",
-                  borderRadius: 12,
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
-                  padding: 6,
-                  zIndex: 200,
-                }}
-                onMouseLeave={() => setPermissionDropdownOpen(false)}
-              >
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPermissionMode("ask");
-                    setPermissionDropdownOpen(false);
-                  }}
-                  style={{
-                    width: "100%",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 2,
-                    padding: "8px 12px",
-                    borderRadius: 8,
-                    background:
-                      permissionMode === "ask"
-                        ? "rgba(143,199,223,0.08)"
-                        : "transparent",
-                    border: "none",
-                    cursor: "pointer",
-                    textAlign: "left",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background =
-                      "rgba(255,255,255,0.06)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background =
-                      permissionMode === "ask"
-                        ? "rgba(143,199,223,0.08)"
-                        : "transparent";
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 6,
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color:
-                        permissionMode === "ask" ? "#8fc7df" : "#e8edf0",
-                    }}
-                  >
-                    Ask before acting
-                    {permissionMode === "ask" && (
-                      <span style={{ color: "#8fc7df", fontSize: 13 }}>
-                        ✓
-                      </span>
-                    )}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 11,
-                      color: "#96a7b1",
-                      lineHeight: 1.4,
-                    }}
-                  >
-                    A2R aligns its approach before taking actions
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPermissionMode("act");
-                    setPermissionDropdownOpen(false);
-                  }}
-                  style={{
-                    width: "100%",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 2,
-                    padding: "8px 12px",
-                    borderRadius: 8,
-                    background:
-                      permissionMode === "act"
-                        ? "rgba(143,199,223,0.08)"
-                        : "transparent",
-                    border: "none",
-                    cursor: "pointer",
-                    textAlign: "left",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background =
-                      "rgba(255,255,255,0.06)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background =
-                      permissionMode === "act"
-                        ? "rgba(143,199,223,0.08)"
-                        : "transparent";
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 6,
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color:
-                        permissionMode === "act" ? "#8fc7df" : "#e8edf0",
-                    }}
-                  >
-                    Act without asking
-                    {permissionMode === "act" && (
-                      <span style={{ color: "#8fc7df", fontSize: 13 }}>
-                        ✓
-                      </span>
-                    )}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 11,
-                      color: "#96a7b1",
-                      lineHeight: 1.4,
-                    }}
-                  >
-                    A2R takes actions without asking for permission
-                  </div>
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Footer Disclaimer */}
-          <p
-            style={{
+              marginTop: 8,
               textAlign: "center",
               fontSize: 11,
               color: "#666",
-              padding: "4px 0 0",
-              margin: 0,
-              lineHeight: 1.4,
             }}
           >
-            A2R is AI and can make mistakes. Please double-check responses.
-          </p>
+            AI-generated content may be inaccurate
+          </div>
         </div>
       </div>
     </div>
   );
 }
-
-export default BrowserChatPane;

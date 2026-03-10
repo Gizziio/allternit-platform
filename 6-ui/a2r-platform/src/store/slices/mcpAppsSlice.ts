@@ -80,7 +80,12 @@ export const fetchCapsules = createAsyncThunk(
     try {
       const response = await fetch(`${API_BASE}/capsules`);
       if (!response.ok) throw new Error('Failed to fetch capsules');
-      return await response.json() as Capsule[];
+      const data: unknown = await response.json();
+      // Validate that response is an array of Capsule objects
+      if (!Array.isArray(data)) {
+        throw new Error('Invalid response format: expected array');
+      }
+      return data as Capsule[];
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
     }
@@ -93,7 +98,8 @@ export const fetchCapsule = createAsyncThunk(
     try {
       const response = await fetch(`${API_BASE}/capsules/${id}`);
       if (!response.ok) throw new Error('Failed to fetch capsule');
-      return await response.json() as Capsule;
+      const data: unknown = await response.json();
+      return data as Capsule;
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
     }
@@ -118,7 +124,8 @@ export const createCapsule = createAsyncThunk(
         body: JSON.stringify(request),
       });
       if (!response.ok) throw new Error('Failed to create capsule');
-      return await response.json() as Capsule;
+      const data: unknown = await response.json();
+      return data as Capsule;
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
     }
@@ -150,7 +157,8 @@ export const updateCapsuleState = createAsyncThunk(
         body: JSON.stringify({ state }),
       });
       if (!response.ok) throw new Error('Failed to update capsule state');
-      return await response.json() as Capsule;
+      const data: unknown = await response.json();
+      return data as Capsule;
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
     }
@@ -244,14 +252,15 @@ const mcpAppsSlice = createSlice({
     });
     builder.addCase(fetchCapsules.fulfilled, (state, action) => {
       state.loading = false;
-      state.capsules = action.payload.reduce((acc, capsule) => {
-        acc[capsule.id] = capsule;
-        return acc;
-      }, {} as Record<string, Capsule>);
+      const capsuleRecord: Record<string, Capsule> = {};
+      for (const capsule of action.payload) {
+        capsuleRecord[capsule.id] = capsule;
+      }
+      state.capsules = capsuleRecord;
     });
     builder.addCase(fetchCapsules.rejected, (state, action) => {
       state.loading = false;
-      state.error = action.payload as string;
+      state.error = typeof action.payload === 'string' ? action.payload : 'Unknown error';
     });
 
     // Fetch single capsule
@@ -271,7 +280,7 @@ const mcpAppsSlice = createSlice({
     });
     builder.addCase(createCapsule.rejected, (state, action) => {
       state.loading = false;
-      state.error = action.payload as string;
+      state.error = typeof action.payload === 'string' ? action.payload : 'Unknown error';
     });
 
     // Delete capsule
@@ -297,7 +306,7 @@ const mcpAppsSlice = createSlice({
     });
     builder.addCase(sendCapsuleEvent.rejected, (state, action) => {
       state.loading = false;
-      state.error = action.payload as string;
+      state.error = typeof action.payload === 'string' ? action.payload : 'Unknown error';
     });
   },
 });

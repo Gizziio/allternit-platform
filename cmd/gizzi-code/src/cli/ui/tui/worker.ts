@@ -1,0 +1,184 @@
+import { Installation } from "@/shared/installation"
+import { Server } from "@/runtime/server/server"
+import { Log } from "@/shared/util/log"
+import { Instance } from "@/runtime/context/project/instance"
+import { InstanceBootstrap } from "@/runtime/context/project/bootstrap"
+import { Rpc } from "@/shared/util/rpc"
+import { upgrade } from "@/cli/upgrade"
+import { Config } from "@/runtime/context/config/config"
+import { GlobalBus } from "@/shared/bus/global"
+import { createA2RClient, type Event } from "@a2r/sdk/v2"
+import type { BunWebSocketData } from "hono/bun"
+import { GIZZIFlag } from "@/shared/brand/flags"
+
+await Log.init({
+  print: process.argv.includes("--print-logs"),
+  dev: Installation.isLocal(),
+  level: (() => {
+    if (Installation.isLocal()) return "DEBUG"
+    return "INFO"
+  })(),
+})
+
+Log.Default.info("worker: log initialized")
+
+process.on("unhandledRejection", (e) => {
+  Log.Default.error("worker: rejection", {
+    e: e instanceof Error ? e.message : e,
+  })
+})
+
+process.on("uncaughtException", (e) => {
+  Log.Default.error("worker: exception", {
+    e: e instanceof Error ? e.message : e,
+  })
+})
+
+Log.Default.info("worker: setting up global bus")
+// Subscribe to global events and forward them via RPC
+GlobalBus.on("event", (event) => {
+  Rpc.emit("global.event", event)
+})
+
+let server: Bun.Server<BunWebSocketData> | undefined
+
+const eventStream = {
+  abort: undefined as AbortController | undefined,
+}
+
+const startEventStream = (directory: string) => {
+  Log.Default.info("worker: starting event stream", { directory })
+  if (eventStream.abort) eventStream.abort.abort()
+  const abort = new AbortController()
+  eventStream.abort = abort
+  const signal = abort.signal
+
+  const fetchFn = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = new Request(input, init)
+    const auth = getAuthorizationHeader()
+    if (auth) request.headers.set("Authorization", auth)
+    return Server.App().fetch(request)
+  }) as typeof globalThis.fetch
+
+  const sdk = createA2RClient({
+    baseUrl: "http://gizzi.internal",
+    directory,
+    fetch: fetchFn,
+    signal,
+  })
+
+  ;(async () => {
+    Log.Default.info("worker: event stream loop started")
+    while (!signal.aborted) {
+      try {
+        const events = await sdk.event.subscribe(
+          {},
+          {
+            signal,
+          },
+        )
+
+        for await (const event of events.stream) {
+          Rpc.emit("event", event as Event)
+        }
+      } catch (error) {
+         if (!signal.aborted) {
+            Log.Default.error("worker: event stream error", {
+              error: error instanceof Error ? error.message : error,
+            })
+            await Bun.sleep(1000)
+         }
+      }
+
+      if (!signal.aborted) {
+        await Bun.sleep(250)
+      }
+    }
+    Log.Default.info("worker: event stream loop finished")
+  })().catch((error) => {
+    Log.Default.error("worker: event stream fatal error", {
+      error: error instanceof Error ? error.message : error,
+    })
+  })
+}
+
+Log.Default.info("worker: rpc definition")
+export const rpc = {
+  async fetch(input: { url: string; method: string; headers: Record<string, string>; body?: string }) {
+    return await Instance.provide({
+      directory: process.cwd(),
+      init: InstanceBootstrap,
+      fn: async () => {
+        Log.Default.debug("worker: rpc fetch", { url: input.url })
+        const headers = { ...input.headers }
+        const auth = getAuthorizationHeader()
+        if (auth && !headers["authorization"] && !headers["Authorization"]) {
+          headers["Authorization"] = auth
+        }
+        const request = new Request(input.url, {
+          method: input.method,
+          headers,
+          body: input.body,
+        })
+        const response = await Server.App().fetch(request)
+        const body = await response.text()
+        return {
+          status: response.status,
+          headers: Object.fromEntries(response.headers.entries()),
+          body,
+        }
+      },
+    })
+  },
+  async server(input: { port: number; hostname: string; mdns?: boolean; cors?: string[] }) {
+    Log.Default.info("worker: rpc server start", input)
+    if (server) await server.stop(true)
+    return await Instance.provide({
+      directory: process.cwd(),
+      init: InstanceBootstrap,
+      fn: async () => {
+        server = Server.listen(input)
+        return { url: server.url.toString() }
+      },
+    })
+  },
+  async checkUpgrade(input: { directory: string }) {
+    await Instance.provide({
+      directory: input.directory,
+      init: InstanceBootstrap,
+      fn: async () => {
+        await upgrade().catch(() => {})
+      },
+    })
+  },
+  async reload() {
+    Log.Default.info("worker: rpc reload")
+    Config.global.reset()
+    await Instance.disposeAll()
+  },
+  async shutdown() {
+    Log.Default.info("worker: rpc shutdown")
+    Log.Default.info("worker shutting down")
+    if (eventStream.abort) eventStream.abort.abort()
+    await Promise.race([
+      Instance.disposeAll(),
+      new Promise((resolve) => {
+        setTimeout(resolve, 5000)
+      }),
+    ])
+    if (server) server.stop(true)
+  },
+}
+
+Log.Default.info("worker: rpc listen")
+Rpc.listen(rpc)
+Log.Default.info("worker: starting initial event stream")
+startEventStream(process.cwd())
+Log.Default.info("worker: initialized")
+
+function getAuthorizationHeader(): string | undefined {
+  const password = GIZZIFlag.SERVER_PASSWORD
+  if (!password) return undefined
+  const username = GIZZIFlag.SERVER_USERNAME ?? "gizzi"
+  return `Basic ${btoa(`${username}:${password}`)}`
+}

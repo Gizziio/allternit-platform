@@ -7,13 +7,22 @@
 
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { AgentRunnerWindow } from "./shell/AgentRunnerWindow";
+import { AgentRunner } from "./runner/AgentRunner";
 import { TooltipProvider } from "./components/ui/tooltip";
-import "./index.css";
-
-// Import providers needed for Agent Runner
 import { SessionProvider } from "./providers/session-provider";
 import { VoiceProvider } from "./providers/voice-provider";
+import "./index.css";
+
+// Force transparent background for agent runner window
+// This overrides the body background from index.css
+const style = document.createElement('style');
+style.textContent = `
+  html, body, #root {
+    background: transparent !important;
+    overflow: hidden;
+  }
+`;
+document.head.appendChild(style);
 
 // Auto-open the runner when window loads
 const runnerStore = (await import("./runner/runner.store")).useRunnerStore;
@@ -25,10 +34,8 @@ root.render(
     <TooltipProvider>
       <SessionProvider session={null}>
         <VoiceProvider>
-          {/* Add the providers that NewChatInput expects */}
-          <div className="h-screen w-screen bg-transparent flex items-center justify-center p-4">
-            <AgentRunnerWindow />
-          </div>
+          {/* NO CONTAINER - AgentRunner renders itself with fixed positioning */}
+          <AgentRunner />
         </VoiceProvider>
       </SessionProvider>
     </TooltipProvider>

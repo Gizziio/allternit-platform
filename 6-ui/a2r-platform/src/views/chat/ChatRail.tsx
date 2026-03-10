@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useChatStore, ChatThread } from './ChatStore';
 import { RailRowMenu } from '../../shell/rail/RailRowMenu';
 import {
@@ -8,8 +8,20 @@ import {
   FolderPlus,
   CaretDown,
   CaretRight,
+  Upload,
+  FileText,
+  Image as ImageIcon,
 } from '@phosphor-icons/react';
 import { tokens } from '../../design/tokens';
+import { useDropTarget, type FileWithData } from '@/components/GlobalDropzone';
+
+interface DroppedFile {
+  id: string;
+  name: string;
+  type: 'image' | 'document' | 'other';
+  dataUrl: string;
+  size: number;
+}
 
 export function ChatRail() {
   const {
@@ -17,6 +29,7 @@ export function ChatRail() {
     projects,
     activeThreadId,
     activeProjectId,
+    activeProjectLocalKey,
     setActiveThread,
     setActiveProject,
     deleteThread,
@@ -30,6 +43,7 @@ export function ChatRail() {
     // Expand all projects by default
     return new Set(projects.map((p) => p.id));
   });
+  const [droppedFiles, setDroppedFiles] = useState<DroppedFile[]>([]);
 
   const toggleProject = (projectId: string) => {
     const next = new Set(expandedProjects);
@@ -41,9 +55,30 @@ export function ChatRail() {
     setExpandedProjects(next);
   };
 
+  const handleDroppedFiles = useCallback(async (files: FileWithData[]) => {
+    const newFiles: DroppedFile[] = files.map(({ file, dataUrl }) => ({
+      id: `rail-drop-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: file.name,
+      type: file.type.startsWith('image/') ? 'image' : 
+            file.type.includes('pdf') || file.name.endsWith('.docx') ? 'document' : 'other',
+      dataUrl,
+      size: file.size,
+    }));
+    setDroppedFiles(prev => [...prev.slice(-4), ...newFiles]); // Keep last 5
+  }, []);
+
+  // Register as drop target for rail
+  useDropTarget('rail', handleDroppedFiles);
+
   // Filter threads by type
   const agentThreads = threads.filter((t) => !t.projectId && t.mode === 'agent');
   const llmThreads = threads.filter((t) => !t.projectId && t.mode !== 'agent');
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
 
   return (
     <div
@@ -54,6 +89,61 @@ export function ChatRail() {
         padding: `${tokens.space.sm}px`,
       }}
     >
+      {/* Dropped Files Section */}
+      {droppedFiles.length > 0 && (
+        <div style={{ 
+          padding: '8px', 
+          background: 'rgba(212,149,106,0.1)', 
+          borderRadius: 8,
+          border: '1px solid rgba(212,149,106,0.2)',
+        }}>
+          <div style={{ 
+            fontSize: 10, 
+            fontWeight: 700, 
+            textTransform: 'uppercase',
+            color: '#d4956a', 
+            marginBottom: 6,
+            letterSpacing: '0.05em',
+          }}>
+            Quick Uploads
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {droppedFiles.map((file) => (
+              <div
+                key={file.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '4px 6px',
+                  borderRadius: 4,
+                  background: 'rgba(255,255,255,0.05)',
+                }}
+              >
+                {file.type === 'image' ? (
+                  <ImageIcon size={12} color="#d4956a" />
+                ) : (
+                  <FileText size={12} color="#d4956a" />
+                )}
+                <span style={{ 
+                  fontSize: 11, 
+                  color: 'var(--text-secondary)', 
+                  flex: 1,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}>
+                  {file.name}
+                </span>
+                <span style={{ fontSize: 9, color: 'var(--text-tertiary)' }}>
+                  {formatFileSize(file.size)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Projects Section */}
       <div>
         <SectionHeader
@@ -66,7 +156,9 @@ export function ChatRail() {
           {projects.map((project) => {
             const isExpanded = expandedProjects.has(project.id);
             const projectThreads = threads.filter((t) => t.projectId === project.id);
-            const isActive = activeProjectId === project.id;
+            const isActive = activeProjectLocalKey
+              ? activeProjectLocalKey === project.localKey
+              : activeProjectId === project.id;
 
             return (
               <div key={project.id}>
@@ -74,7 +166,7 @@ export function ChatRail() {
                   icon={FolderOpen}
                   label={project.title}
                   isActive={isActive}
-                  onClick={() => setActiveProject(project.id)}
+                  onClick={() => setActiveProject(project.id, project.localKey)}
                   badge={projectThreads.length > 0 ? projectThreads.length : undefined}
                   isFolder
                   isExpanded={isExpanded}
@@ -245,7 +337,7 @@ function SectionHeader({ title, count, onAdd, addTooltip }: SectionHeaderProps) 
 
 // New Item Button Component
 interface NewItemButtonProps {
-  icon: React.ComponentType<{ size?: number | string; weight?: string; color?: string }>;
+  icon: React.ComponentType<any>;
   label: string;
   onClick: () => void;
 }
@@ -286,7 +378,7 @@ function NewItemButton({ icon: Icon, label, onClick }: NewItemButtonProps) {
 
 // Chat Rail Item Component
 interface ChatRailItemProps {
-  icon: React.ComponentType<{ size?: number | string; weight?: string; color?: string }>;
+  icon: React.ComponentType<any>;
   label: string;
   isActive: boolean;
   isNested?: boolean;

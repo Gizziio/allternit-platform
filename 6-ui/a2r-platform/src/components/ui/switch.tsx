@@ -1,28 +1,56 @@
-"use client"
+import React from 'react';
 
-import * as React from "react"
-import * as SwitchPrimitives from "@radix-ui/react-switch"
-import { cn } from "@/lib/utils"
+interface SwitchProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
+  onCheckedChange?: (checked: boolean) => void;
+}
 
-const Switch = React.forwardRef<
-  React.ElementRef<typeof SwitchPrimitives.Root>,
-  React.ComponentPropsWithoutRef<typeof SwitchPrimitives.Root>
->(({ className, ...props }, ref) => (
-  <SwitchPrimitives.Root
-    className={cn(
-      "peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=unchecked]:bg-input",
-      className
-    )}
-    {...props}
-    ref={ref}
-  >
-    <SwitchPrimitives.Thumb
-      className={cn(
-        "pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0"
-      )}
-    />
-  </SwitchPrimitives.Root>
-))
-Switch.displayName = SwitchPrimitives.Root.displayName
-
-export { Switch }
+export const Switch: React.FC<SwitchProps> = ({ checked, onChange, onCheckedChange, style, ...props }) => {
+  return (
+    <label
+      style={{
+        position: 'relative',
+        display: 'inline-block',
+        width: '44px',
+        height: '24px',
+        cursor: 'pointer',
+        ...style,
+      }}
+    >
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => {
+          onChange?.(e);
+          onCheckedChange?.(e.target.checked);
+        }}
+        style={{ opacity: 0, width: 0, height: 0 }}
+        {...props}
+      />
+      <span
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: checked ? '#d4b08c' : 'rgba(255,255,255,0.1)',
+          borderRadius: '24px',
+          transition: '0.3s',
+        }}
+      >
+        <span
+          style={{
+            position: 'absolute',
+            top: '2px',
+            left: checked ? '22px' : '2px',
+            width: '20px',
+            height: '20px',
+            backgroundColor: '#fff',
+            borderRadius: '50%',
+            transition: '0.3s',
+          }}
+        />
+      </span>
+    </label>
+  );
+};

@@ -1,0 +1,27 @@
+{
+  "id": "example-playwright-001",
+  "type": "node",
+  "name": "Playwright Automation Example",
+  "description": "Use Playwright to take a screenshot of a webpage",
+  "code": "
+const { chromium } = require('playwright');
+
+(async () => {
+  const browser = await chromium.launch({ headless: true });
+  const page = await browser.newPage();
+  
+  await page.goto('https://example.com');
+  const title = await page.title();
+  
+  console.log('Page title:', title);
+  console.log('URL:', page.url());
+  
+  await page.screenshot({ path: '/home/agent/workspace/output/screenshot.png' });
+  console.log('Screenshot saved to output/screenshot.png');
+  
+  await browser.close();
+})();
+",
+  "timeout": 120,
+  "artifacts": ["output/screenshot.png"]
+}

@@ -313,6 +313,92 @@ const a2rUsageHost = {
 };
 
 // ============================================================================
+// VM Setup API (Onboarding)
+// ============================================================================
+
+/**
+ * API for VM setup and onboarding
+ * Used by the onboarding wizard to download/build VM images and manage the VM
+ */
+const vmSetupAPI = {
+  /** Check internet connectivity */
+  async checkConnectivity(): Promise<{ internet: boolean; github: boolean; a2rServices: boolean }> {
+    return ipcRenderer.invoke('vm-setup:check-connectivity');
+  },
+  
+  /** Download VM images */
+  async downloadVmImages(
+    onProgress: (progress: {
+      stage: 'downloading' | 'verifying' | 'extracting' | 'complete';
+      fileName: string;
+      bytesDownloaded: number;
+      totalBytes: number;
+      speed: number;
+      eta: number;
+    }) => void
+  ): Promise<boolean> {
+    const channel = 'vm-setup:download-progress';
+    const listener = (_event: Electron.IpcRendererEvent, progress: unknown) => onProgress(progress as typeof progress);
+    ipcRenderer.on(channel, listener);
+    
+    try {
+      return await ipcRenderer.invoke('vm-setup:download-images');
+    } finally {
+      ipcRenderer.removeListener(channel, listener);
+    }
+  },
+  
+  /** Build VM images locally (Linux only) */
+  async buildVmImages(
+    onProgress: (progress: {
+      stage: string;
+      fileName: string;
+      bytesDownloaded: number;
+      totalBytes: number;
+    }) => void
+  ): Promise<boolean> {
+    const channel = 'vm-setup:build-progress';
+    const listener = (_event: Electron.IpcRendererEvent, progress: unknown) => onProgress(progress as typeof progress);
+    ipcRenderer.on(channel, listener);
+    
+    try {
+      return await ipcRenderer.invoke('vm-setup:build-images');
+    } finally {
+      ipcRenderer.removeListener(channel, listener);
+    }
+  },
+  
+  /** Initialize VM */
+  async initializeVm(
+    onProgress: (progress: {
+      stage: 'verifying' | 'booting' | 'connecting' | 'ready';
+      message: string;
+      progress: number;
+    }) => void
+  ): Promise<boolean> {
+    const channel = 'vm-setup:init-progress';
+    const listener = (_event: Electron.IpcRendererEvent, progress: unknown) => onProgress(progress as typeof progress);
+    ipcRenderer.on(channel, listener);
+    
+    try {
+      return await ipcRenderer.invoke('vm-setup:initialize-vm');
+    } finally {
+      ipcRenderer.removeListener(channel, listener);
+    }
+  },
+  
+  /** Check if VM images exist */
+  async checkImagesExist(): Promise<boolean> {
+    return ipcRenderer.invoke('vm-setup:check-images-exist');
+  },
+  
+  /** Get VM status */
+  async getVmStatus(): Promise<'stopped' | 'starting' | 'running' | 'error'> {
+    return ipcRenderer.invoke('vm-setup:get-vm-status');
+  },
+};
+
+// ============================================================================
 // Chrome Embed API
 // ============================================================================
 
@@ -363,6 +449,7 @@ contextBridge.exposeInMainWorld('a2AgentRunner', agentRunnerAPI);
 contextBridge.exposeInMainWorld('a2rUsageHost', a2rUsageHost);
 contextBridge.exposeInMainWorld('a2rSidecar', sidecarAPI);
 contextBridge.exposeInMainWorld('a2rWindow', windowAPI);
+contextBridge.exposeInMainWorld('a2rVmSetup', vmSetupAPI);
 contextBridge.exposeInMainWorld('chromeEmbed', chromeEmbedAPI);
 
 // TypeScript declarations for the exposed APIs
@@ -372,6 +459,7 @@ declare global {
     a2rUsageHost: typeof a2rUsageHost;
     a2rSidecar: typeof sidecarAPI;
     a2rWindow: typeof windowAPI;
+    a2rVmSetup: typeof vmSetupAPI;
     chromeEmbed: typeof chromeEmbedAPI;
   }
 }

@@ -80,7 +80,7 @@ const InsightsView: React.FC = () => {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, idx) => (
-          <GlassSurface key={idx} className="p-4 rounded-lg">
+          <GlassSurface key={`stat-${stat.label}`} className="p-4 rounded-lg">
             <div className="flex flex-col gap-2">
               <p
                 style={{ color: 'var(--text-secondary)' }}
@@ -130,7 +130,7 @@ const InsightsView: React.FC = () => {
         <div className="flex flex-wrap gap-1">
           {heatmapData.map((intensity, idx) => (
             <div
-              key={idx}
+              key={`heatmap-${idx}`}
               className="w-4 h-4 rounded-sm"
               style={{
                 backgroundColor: '#af52de',
@@ -157,8 +157,8 @@ const InsightsView: React.FC = () => {
           Document Breakdown
         </h2>
         <div className="flex flex-col gap-4">
-          {documentBreakdown.map((item, idx) => (
-            <div key={idx} className="flex flex-col gap-2">
+          {documentBreakdown.map((item) => (
+            <div key={`doc-${item.type}`} className="flex flex-col gap-2">
               <div className="flex justify-between items-center">
                 <span style={{ color: 'var(--text-secondary)' }} className="text-sm">
                   {item.type}

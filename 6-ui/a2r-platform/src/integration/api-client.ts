@@ -41,7 +41,9 @@ function normalizeGatewayCandidate(value: string): string {
 }
 
 function configuredGatewayUrl(): string {
-  const configured = (window as any).__A2R_GATEWAY_URL__
+  // SSR-safe: check for window existence before accessing
+  const windowUrl = typeof window !== 'undefined' ? (window as any).__A2R_GATEWAY_URL__ : undefined;
+  const configured = windowUrl
     || (import.meta as any).env?.VITE_A2R_GATEWAY_URL
     || DEFAULT_GATEWAY_URL;
 
@@ -230,7 +232,8 @@ class A2RApiClient {
 
   constructor() {
     this.baseUrl = gatewayUrl();
-    this.token = localStorage.getItem('a2r_token');
+    // SSR-safe: only access localStorage in browser
+    this.token = typeof window !== 'undefined' ? localStorage.getItem('a2r_token') : null;
     
     console.log('[A2RApiClient] Initialized with gateway:', this.baseUrl);
   }
@@ -272,12 +275,16 @@ class A2RApiClient {
 
   setToken(token: string): void {
     this.token = token;
-    localStorage.setItem('a2r_token', token);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('a2r_token', token);
+    }
   }
 
   clearToken(): void {
     this.token = null;
-    localStorage.removeItem('a2r_token');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('a2r_token');
+    }
   }
 
   isAuthenticated(): boolean {

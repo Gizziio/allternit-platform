@@ -83,7 +83,9 @@ export async function GET(request: NextRequest) {
 
         // Handle client disconnect
         request.signal.addEventListener('abort', () => {
-          reader.cancel().catch(() => {});
+          reader.cancel().catch((error) => {
+            console.error('[A2UI Events] Failed to cancel reader:', error);
+          });
         });
       } catch (error) {
         console.error('[A2UI Events] Error:', error);

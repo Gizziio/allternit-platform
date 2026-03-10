@@ -1,27 +1,34 @@
-"use client"
+import React from 'react';
 
-import * as React from "react"
-import * as ProgressPrimitive from "@radix-ui/react-progress"
-import { cn } from "@/lib/utils"
+interface ProgressProps {
+  value: number;
+  max?: number;
+  className?: string;
+}
 
-const Progress = React.forwardRef<
-  React.ElementRef<typeof ProgressPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root>
->(({ className, value, ...props }, ref) => (
-  <ProgressPrimitive.Root
-    ref={ref}
-    className={cn(
-      "relative h-4 w-full overflow-hidden rounded-full bg-secondary",
-      className
-    )}
-    {...props}
-  >
-    <ProgressPrimitive.Indicator
-      className="h-full w-full flex-1 bg-primary transition-all"
-      style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
-    />
-  </ProgressPrimitive.Root>
-))
-Progress.displayName = ProgressPrimitive.Root.displayName
-
-export { Progress }
+export const Progress: React.FC<ProgressProps> = ({ value, max = 100, className }) => {
+  const percentage = Math.min((value / max) * 100, 100);
+  
+  return (
+    <div
+      className={className}
+      style={{
+        width: '100%',
+        height: '8px',
+        background: 'rgba(255,255,255,0.1)',
+        borderRadius: '4px',
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        style={{
+          width: `${percentage}%`,
+          height: '100%',
+          background: '#d4b08c',
+          borderRadius: '4px',
+          transition: 'width 0.3s ease',
+        }}
+      />
+    </div>
+  );
+};

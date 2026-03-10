@@ -71,7 +71,7 @@ export function BrainModelSelector({
   className,
   onLaunchTerminal
 }: BrainModelSelectorProps) {
-  const { toast } = useToast();
+  const { addToast } = useToast();
   const {
     getProviderState,
     refreshAuthStatus,
@@ -103,10 +103,10 @@ export function BrainModelSelector({
 
     if (provider.status === 'terminal-only') {
       // Terminal-only brains can't be used in chat
-      toast({
+      addToast({
         title: 'Terminal Only',
         description: `${provider.providerName} can only be used in Terminal view`,
-        variant: 'destructive'
+        type: 'error'
       });
       return;
     }
@@ -148,14 +148,14 @@ export function BrainModelSelector({
             {/* Available Providers */}
             {availableProviders.length > 0 && (
               <>
-                <SelectItem value="__header__" disabled className="font-semibold text-xs">
+                <SelectItem value="__header__" className="font-semibold text-xs pointer-events-none opacity-50">
                   Chat Providers
                 </SelectItem>
                 {availableProviders.map(provider => (
                   <SelectItem 
                     key={provider.providerId} 
                     value={provider.providerId}
-                    disabled={provider.isLocked}
+                    className={provider.isLocked ? "pointer-events-none opacity-50" : undefined}
                   >
                     <div className="flex items-center gap-2">
                       {provider.isLocked ? (
@@ -176,14 +176,14 @@ export function BrainModelSelector({
             {/* Terminal-Only Providers */}
             {terminalProviders.length > 0 && (
               <>
-                <SelectItem value="__terminal__" disabled className="font-semibold text-xs border-t mt-2 pt-2">
+                <SelectItem value="__terminal__" className="font-semibold text-xs border-t mt-2 pt-2 pointer-events-none opacity-50">
                   Terminal Only
                 </SelectItem>
                 {terminalProviders.map(provider => (
                   <SelectItem 
                     key={provider.providerId} 
                     value={provider.providerId}
-                    disabled
+                    className="pointer-events-none opacity-50"
                   >
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Terminal className="h-3 w-3" />

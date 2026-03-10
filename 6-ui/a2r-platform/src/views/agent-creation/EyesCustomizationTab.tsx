@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { useAvatarCreatorStore } from '../../stores/avatar-creator.store';
-import { EYE_PRESET_METADATA, PUPIL_STYLE_METADATA } from '../../components/avatar';
+import { EYE_PRESET_METADATA, PUPIL_STYLE_METADATA } from '../../components/Avatar';
 import { STUDIO_THEME } from '../AgentView';
 import type { EyePreset, PupilStyle, BlinkRate } from '../../lib/agents/character.types';
 
@@ -23,6 +23,7 @@ const EMOJI_MAP: Record<EyePreset, string> = {
   sleepy: '◡ ◡',
   starry: '✦ ✦',
   pixel: '⬛ ⬛',
+  focused: '◉ ◉',
 };
 
 const PUPIL_EMOJI: Record<PupilStyle, string> = {
@@ -52,7 +53,7 @@ export const EyesCustomizationTab: React.FC = () => {
     randomizeEyes,
   } = useAvatarCreatorStore();
 
-  const { eyes } = currentConfig;
+  const eyes = currentConfig.eyes ?? { preset: 'round', size: 1, color: '#ECECEC', pupilStyle: 'dot', blinkRate: 'normal' };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -76,6 +77,7 @@ export const EyesCustomizationTab: React.FC = () => {
             Eye Shape
           </h4>
           <button
+            type="button"
             onClick={randomizeEyes}
             style={{
               padding: '4px 10px',
@@ -103,6 +105,7 @@ export const EyesCustomizationTab: React.FC = () => {
             
             return (
               <button
+                type="button"
                 key={preset.id}
                 onClick={() => setEyePreset(preset.id)}
                 style={{
@@ -160,14 +163,14 @@ export const EyesCustomizationTab: React.FC = () => {
             marginBottom: '12px',
           }}
         >
-          Eye Size: {Math.round(eyes.size * 100)}%
+          Eye Size: {Math.round((eyes.size ?? 1) * 100)}%
         </h4>
         <input
           type="range"
           min="0.5"
           max="1.5"
           step="0.1"
-          value={eyes.size}
+          value={eyes.size ?? 1}
           onChange={(e) => setEyeSize(parseFloat(e.target.value))}
           style={{
             width: '100%',
@@ -207,7 +210,7 @@ export const EyesCustomizationTab: React.FC = () => {
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <input
             type="color"
-            value={eyes.color}
+            value={eyes.color ?? '#ECECEC'}
             onChange={(e) => setEyeColor(e.target.value)}
             style={{
               width: '48px',
@@ -220,7 +223,7 @@ export const EyesCustomizationTab: React.FC = () => {
           />
           <input
             type="text"
-            value={eyes.color}
+            value={eyes.color ?? '#ECECEC'}
             onChange={(e) => setEyeColor(e.target.value)}
             style={{
               flex: 1,
@@ -256,10 +259,11 @@ export const EyesCustomizationTab: React.FC = () => {
           }}
         >
           {Object.entries(PUPIL_STYLE_METADATA).map(([id, meta]) => {
-            const isSelected = eyes.pupilStyle === id;
+            const isSelected = (eyes.pupilStyle ?? 'dot') === id;
             
             return (
               <button
+                type="button"
                 key={id}
                 onClick={() => setPupilStyle(id as PupilStyle)}
                 style={{
@@ -320,6 +324,7 @@ export const EyesCustomizationTab: React.FC = () => {
         >
           {BLINK_OPTIONS.map((opt) => (
             <button
+              type="button"
               key={opt.value}
               onClick={() => setBlinkRate(opt.value)}
               style={{

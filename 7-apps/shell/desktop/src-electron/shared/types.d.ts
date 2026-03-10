@@ -203,6 +203,52 @@ export interface UpdaterStatus {
 export type SidecarStatus = 'stopped' | 'starting' | 'running' | 'error' | 'crashed';
 
 /**
+ * VM status types
+ */
+export type VMStatus = 'stopped' | 'starting' | 'running' | 'stopping' | 'error';
+
+/**
+ * VM information
+ */
+export interface VMInfo {
+  status: VMStatus;
+  version?: string;
+  pid?: number;
+  socketPath?: string;
+  error?: string;
+}
+
+/**
+ * VM setup options
+ */
+export interface VMSetupOptions {
+  force?: boolean;
+  version?: string;
+}
+
+/**
+ * VM execution options
+ */
+export interface VMExecuteOptions {
+  command: string;
+  args?: string[];
+  workingDir?: string;
+  env?: Record<string, string>;
+  timeoutMs?: number;
+}
+
+/**
+ * VM execution result
+ */
+export interface VMExecuteResult {
+  success: boolean;
+  stdout: string;
+  stderr: string;
+  exitCode: number;
+  executionTimeMs: number;
+}
+
+/**
  * Store operation result
  */
 export interface StoreOperationResult<T = unknown> {
@@ -365,6 +411,21 @@ export interface ElectronAPI {
     getApiUrl: () => Promise<string | undefined>;
     getAuthPassword: () => Promise<string | undefined>;
     onStatusChanged: (callback: (status: SidecarStatus) => void) => () => void;
+  };
+
+  /**
+   * VM Management
+   */
+  vm: {
+    getStatus: () => Promise<VMInfo>;
+    start: () => Promise<boolean>;
+    stop: () => Promise<boolean>;
+    restart: () => Promise<boolean>;
+    execute: (options: VMExecuteOptions) => Promise<VMExecuteResult>;
+    setup: (options?: VMSetupOptions) => Promise<boolean>;
+    checkImages: () => Promise<boolean>;
+    downloadImages: (options?: VMSetupOptions) => Promise<boolean>;
+    onStatusChanged: (callback: (status: VMStatus) => void) => () => void;
   };
 }
 

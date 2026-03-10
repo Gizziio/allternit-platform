@@ -10,7 +10,7 @@ import { createModuleLogger } from "@/lib/logger";
 
 const log = createModuleLogger("tools/retrieve-url");
 
-const A2R_OPERATOR_URL = process.env.A2R_OPERATOR_URL || "http://127.0.0.1:3010";
+const A2R_OPERATOR_URL = process.env.A2R_OPERATOR_URL || "http://127.0.0.1:3000";
 
 export const retrieveUrl = tool({
   description: `Fetch structured information from a URL using browser automation.

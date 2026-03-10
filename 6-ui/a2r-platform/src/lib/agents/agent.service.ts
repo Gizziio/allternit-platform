@@ -10,6 +10,11 @@
  * - Queue → Rails WIHs (ready_only filter)
  * 
  * All requests go through Gateway (8013) → API (3000) → [Registry|Rails]
+ * 
+ * ZOD VALIDATION:
+ * This service now uses Zod for runtime validation of API responses.
+ * All data from external APIs is validated before being used.
+ * See agent.types.ts for schema definitions.
  */
 
 import { api } from '../../integration/api-client';
@@ -26,6 +31,15 @@ import type {
   QueueItem,
   ExecutionPlan,
   PlanStep,
+} from './agent.types';
+import {
+  validateAgent,
+  validateAgentArray,
+  validateAgentListResponse,
+  validateCreateAgentInput,
+  safeValidate,
+  agentListResponseSchema,
+  agentSchema,
 } from './agent.types';
 import {
   createLocalAgent,
@@ -51,8 +65,16 @@ import { railsApi, type WihInfo, type LedgerEvent } from './rails.service';
 export async function listAgents(): Promise<Agent[]> {
   try {
     const response = await api.listAgents();
+    
+    // Validate API response with Zod
+    const validated = safeValidate(agentListResponseSchema, response);
+    if (!validated) {
+      console.error('[AgentService] Invalid API response format for listAgents');
+      return listLocalAgents();
+    }
+    
     return mergeAgentCatalog(
-      response.agents.map(transformAgentFromApi),
+      validated.agents.map(transformAgentFromApi),
       listLocalAgents(),
     );
   } catch (error) {
@@ -67,7 +89,15 @@ export async function listAgents(): Promise<Agent[]> {
 export async function getAgent(agentId: string): Promise<Agent> {
   try {
     const agent = await api.getAgent(agentId);
-    return transformAgentFromApi(agent);
+    
+    // Validate with Zod before transforming
+    const validated = safeValidate(agentSchema, agent);
+    if (!validated) {
+      console.error('[AgentService] Invalid API response format for getAgent');
+      throw new Error('Invalid agent data received from API');
+    }
+    
+    return transformAgentFromApi(validated);
   } catch (error) {
     if (shouldUseLocalAgentRegistryFallback(error)) {
       const localAgent = getLocalAgent(agentId);
@@ -81,6 +111,14 @@ export async function getAgent(agentId: string): Promise<Agent> {
 }
 
 export async function createAgent(input: CreateAgentInput): Promise<Agent> {
+  // Validate input with Zod
+  try {
+    validateCreateAgentInput(input);
+  } catch (validationError) {
+    console.error('[AgentService] Invalid create agent input:', validationError);
+    throw new Error(`Invalid input: ${validationError instanceof Error ? validationError.message : 'Validation failed'}`);
+  }
+  
   // Transform camelCase to snake_case for API
   const apiInput: Record<string, unknown> = {
     name: input.name,
@@ -103,6 +141,8 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent> {
       speak_on_checkpoint: input.voice.speakOnCheckpoint,
     } : undefined,
     config: input.config || {},
+    workspace_id: input.workspaceId,
+    owner_id: input.ownerId,
   };
   
   console.log('[AgentService] Creating agent:', input.name);
@@ -146,6 +186,7 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent> {
 
 /**
  * Transform agent data from API (snake_case) to frontend (camelCase)
+ * Note: Input should already be validated by Zod before calling this
  */
 function transformAgentFromApi(apiAgent: unknown): Agent {
   const a = apiAgent as Record<string, unknown>;
@@ -177,6 +218,8 @@ function transformAgentFromApi(apiAgent: unknown): Agent {
     createdAt: String(a.created_at || new Date().toISOString()),
     updatedAt: String(a.updated_at || new Date().toISOString()),
     lastRunAt: a.last_run_at as string | undefined,
+    workspaceId: a.workspace_id as string | undefined,
+    ownerId: a.owner_id as string | undefined,
   };
 }
 
@@ -184,6 +227,9 @@ export async function updateAgent(
   agentId: string,
   updates: Partial<CreateAgentInput>
 ): Promise<Agent> {
+  // Note: For partial updates, we skip full schema validation
+  // as only some fields may be provided
+  
   // Transform camelCase to snake_case for API
   const apiUpdates: Record<string, unknown> = {};
   

@@ -6,10 +6,26 @@
  */
 
 import React from 'react';
-import { Avatar } from '@/components/Avatar';
+import { AgentAvatar } from '@/components/Avatar';
 import { useAgentAvatar, DEFAULT_VISUAL_STATE } from '@/hooks/useAgentAvatar';
 import type { AvatarSize } from '@a2r/visual-state/types';
+import type { AvatarEmotion } from '@/lib/agents/character.types';
 import styles from './AvatarDisplay.module.css';
+
+// Avatar size mapping: converts string sizes to pixel numbers
+const SIZE_MAP: Record<string, number> = {
+  xs: 24,
+  sm: 32,
+  md: 48,
+  lg: 64,
+  xl: 96,
+};
+
+// Convert AvatarSize to number for AgentAvatar component
+function getNumericSize(size: AvatarSize): number {
+  if (typeof size === 'number') return size;
+  return SIZE_MAP[size] ?? 48; // default to md (48) if unknown
+}
 
 export interface AvatarDisplayProps {
   /** Agent ID to display avatar for */
@@ -64,11 +80,11 @@ export const AvatarDisplay: React.FC<AvatarDisplayProps> = ({
   return (
     <div className={`${styles.container} ${className}`}>
       <div className={styles.avatarWrapper}>
-        <Avatar
-          visualState={displayState}
-          size={size}
-          animate={animate}
-          reducedMotion={reducedMotion}
+        <AgentAvatar
+          config={displayState as any}
+          emotion={displayState.mood as AvatarEmotion}
+          size={getNumericSize(size)}
+          isAnimating={animate && !reducedMotion}
           onClick={onClick}
         />
         
@@ -115,10 +131,11 @@ export const AvatarDisplayInline: React.FC<AvatarDisplayInlineProps> = ({
 
   return (
     <div className={`${styles.inline} ${className}`} title={`${displayState.mood} (${displayState.intensity}/10)`}>
-      <Avatar
-        visualState={displayState}
-        size={size}
-        animate={animate}
+      <AgentAvatar
+        config={displayState as any}
+        emotion={displayState.mood as AvatarEmotion}
+        size={getNumericSize(size)}
+        isAnimating={animate}
       />
     </div>
   );

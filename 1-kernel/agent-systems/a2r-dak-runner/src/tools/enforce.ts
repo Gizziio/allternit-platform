@@ -61,8 +61,8 @@ export class ToolEnforcement {
     }
 
     // Step 2: Check WIH allowed_tools
-    if (policyConstraints.allowedTools.length > 0) {
-      const isAllowed = policyConstraints.allowedTools.some(allowed => {
+    if (policyConstraints.allowed_tools.length > 0) {
+      const isAllowed = policyConstraints.allowed_tools.some(allowed => {
         // Exact match
         if (allowed === toolCall.tool) return true;
         // Regex match
@@ -79,7 +79,7 @@ export class ToolEnforcement {
     }
 
     // Step 3: Check forbidden_tools
-    const isForbidden = policyConstraints.forbiddenTools.some(forbidden => {
+    const isForbidden = policyConstraints.forbidden_tools.some(forbidden => {
       if (forbidden === toolCall.tool) return true;
       const regex = new RegExp(forbidden);
       return regex.test(toolCall.tool);
@@ -151,7 +151,7 @@ export class ToolEnforcement {
     }
 
     // Check forbidden globs
-    for (const forbidden of constraints.writeScope.forbiddenGlobs) {
+    for (const forbidden of constraints.write_scope.forbidden_globs) {
       if (this.matchGlob(path, forbidden)) {
         return {
           valid: false,
@@ -162,7 +162,7 @@ export class ToolEnforcement {
 
     // Check allowed globs
     let inAllowedScope = false;
-    for (const allowed of constraints.writeScope.allowedGlobs) {
+    for (const allowed of constraints.write_scope.allowed_globs) {
       if (this.matchGlob(path, allowed)) {
         inAllowedScope = true;
         break;
@@ -177,7 +177,7 @@ export class ToolEnforcement {
     }
 
     // Check lease paths (if in lease_scoped mode)
-    if (constraints.writeScope.mode === 'lease_scoped' && leasePaths) {
+    if (constraints.write_scope.mode === 'lease_scoped' && leasePaths) {
       const inLease = leasePaths.some(leasePath => 
         path.startsWith(leasePath) || this.matchGlob(path, leasePath)
       );

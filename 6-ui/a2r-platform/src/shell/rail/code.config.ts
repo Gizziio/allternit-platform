@@ -45,6 +45,9 @@ import {
 } from '@phosphor-icons/react';
 import { RailConfigSection } from './rail.config';
 
+// Type cast for icon compatibility with RailConfigSection
+type RailIcon = React.ComponentType<{ size?: number | string; weight?: any; color?: string }>;
+
 export const CODE_RAIL_CONFIG: RailConfigSection[] = [
   // Core Navigation
   {
@@ -53,12 +56,12 @@ export const CODE_RAIL_CONFIG: RailConfigSection[] = [
     collapsible: false,
     defaultExpanded: true,
     items: [
-      { id: 'cd-workspace', label: 'Workspace', icon: Code, payload: 'code' },
-      { id: 'cd-threads', label: 'Threads', icon: ChatText, payload: 'code-threads' },
+      { id: 'cd-workspace', label: 'Workspace', icon: Code as RailIcon, payload: 'code' },
+      { id: 'cd-threads', label: 'Threads', icon: ChatText as RailIcon, payload: 'code-threads' },
       { 
         id: 'cd-new', 
         label: 'New File', 
-        icon: Plus, 
+        icon: Plus as RailIcon, 
         payload: 'new-file', 
         isAction: true,
         shortcut: '⌘N'
@@ -70,14 +73,14 @@ export const CODE_RAIL_CONFIG: RailConfigSection[] = [
   {
     id: 'repo',
     title: 'Repository',
-    icon: Folder,
+    icon: Folder as RailIcon,
     defaultExpanded: true,
     collapsible: true,
     items: [
-      { id: 'cd-explorer', label: 'Explorer', icon: Folders, payload: 'code-explorer' },
-      { id: 'cd-git', label: 'Git Graph', icon: GitBranch, payload: 'code-git' },
-      { id: 'cd-search', label: 'Search', icon: FlowArrow, payload: 'search' },
-      { id: 'cd-config', label: 'Config', icon: BracketsCurly, payload: 'settings' },
+      { id: 'cd-explorer', label: 'Explorer', icon: Folders as RailIcon, payload: 'code-explorer' },
+      { id: 'cd-git', label: 'Git Graph', icon: GitBranch as RailIcon, payload: 'code-git' },
+      { id: 'cd-search', label: 'Search', icon: FlowArrow as RailIcon, payload: 'search' },
+      { id: 'cd-config', label: 'Config', icon: BracketsCurly as RailIcon, payload: 'settings' },
     ]
   },
   
@@ -85,13 +88,13 @@ export const CODE_RAIL_CONFIG: RailConfigSection[] = [
   {
     id: 'automation',
     title: 'Automation',
-    icon: Lightning,
+    icon: Lightning as RailIcon,
     defaultExpanded: false,
     collapsible: true,
     items: [
-      { id: 'code-agent-session', label: 'Agent IDE', icon: Robot, payload: 'code-agent-session' },
-      { id: 'cd-automations', label: 'Automations', icon: Lightning, payload: 'code-automations' },
-      { id: 'cd-skills', label: 'Skills/Plugins', icon: Robot, payload: 'code-skills' },
+      { id: 'code-agent-session', label: 'Agent IDE', icon: Robot as RailIcon, payload: 'code-agent-session' },
+      { id: 'cd-automations', label: 'Automations', icon: Lightning as RailIcon, payload: 'code-automations' },
+      { id: 'cd-skills', label: 'Skills/Plugins', icon: Robot as RailIcon, payload: 'code-skills' },
     ]
   },
   
@@ -99,14 +102,14 @@ export const CODE_RAIL_CONFIG: RailConfigSection[] = [
   {
     id: 'infrastructure',
     title: 'Infrastructure',
-    icon: Network,
+    icon: Network as RailIcon,
     defaultExpanded: false,
     collapsible: true,
     items: [
-      { id: 'cd-swarm', label: 'Swarm Monitor', icon: Network, payload: 'swarm' },
-      { id: 'cd-policy', label: 'Policy', icon: LockKey, payload: 'policy' },
-      { id: 'cd-task-executor', label: 'Task Executor', icon: Engine, payload: 'task-executor' },
-      { id: 'cd-ontology', label: 'Ontology', icon: GitMerge, payload: 'ontology' },
+      { id: 'cd-swarm', label: 'Swarm Monitor', icon: Network as RailIcon, payload: 'swarm' },
+      { id: 'cd-policy', label: 'Policy', icon: LockKey as RailIcon, payload: 'policy' },
+      { id: 'cd-task-executor', label: 'Task Executor', icon: Engine as RailIcon, payload: 'task-executor' },
+      { id: 'cd-ontology', label: 'Ontology', icon: GitMerge as RailIcon, payload: 'ontology' },
     ]
   },
   
@@ -114,13 +117,13 @@ export const CODE_RAIL_CONFIG: RailConfigSection[] = [
   {
     id: 'security',
     title: 'Security',
-    icon: Warning,
+    icon: Warning as RailIcon,
     defaultExpanded: false,
     collapsible: true,
     items: [
-      { id: 'cd-security', label: 'Security', icon: Warning, payload: 'security' },
-      { id: 'cd-receipts', label: 'Receipts', icon: FileText, payload: 'receipts' },
-      { id: 'cd-purpose', label: 'Purpose', icon: Target, payload: 'purpose' },
+      { id: 'cd-security', label: 'Security', icon: Warning as RailIcon, payload: 'security' },
+      { id: 'cd-receipts', label: 'Receipts', icon: FileText as RailIcon, payload: 'receipts' },
+      { id: 'cd-purpose', label: 'Purpose', icon: Target as RailIcon, payload: 'purpose' },
     ]
   },
   
@@ -128,13 +131,13 @@ export const CODE_RAIL_CONFIG: RailConfigSection[] = [
   {
     id: 'observability',
     title: 'Observability',
-    icon: ChartLineUp,
+    icon: ChartLineUp as RailIcon,
     defaultExpanded: false,
     collapsible: true,
     items: [
-      { id: 'cd-dashboard', label: 'Dashboard', icon: ChartLineUp, payload: 'observability' },
-      { id: 'cd-evaluation', label: 'Evaluation', icon: ChartLineUp, payload: 'evaluation' },
-      { id: 'cd-gc-agents', label: 'GC Agents', icon: Engine, payload: 'gc-agents' },
+      { id: 'cd-dashboard', label: 'Dashboard', icon: ChartLineUp as RailIcon, payload: 'observability' },
+      { id: 'cd-evaluation', label: 'Evaluation', icon: ChartLineUp as RailIcon, payload: 'evaluation' },
+      { id: 'cd-gc-agents', label: 'GC Agents', icon: Engine as RailIcon, payload: 'gc-agents' },
     ]
   },
   
@@ -142,13 +145,13 @@ export const CODE_RAIL_CONFIG: RailConfigSection[] = [
   {
     id: 'dag',
     title: 'DAG & Execution',
-    icon: FlowArrow,
+    icon: FlowArrow as RailIcon,
     defaultExpanded: false,
     collapsible: true,
     items: [
-      { id: 'cd-dag-wih', label: 'DAG/WIH', icon: FlowArrow, payload: 'dag-wih' },
-      { id: 'cd-checkpointing', label: 'Checkpointing', icon: ClockCounterClockwise, payload: 'checkpointing' },
-      { id: 'cd-directive', label: 'Directive', icon: Cpu, payload: 'directive' },
+      { id: 'cd-dag-wih', label: 'DAG/WIH', icon: FlowArrow as RailIcon, payload: 'dag-wih' },
+      { id: 'cd-checkpointing', label: 'Checkpointing', icon: ClockCounterClockwise as RailIcon, payload: 'checkpointing' },
+      { id: 'cd-directive', label: 'Directive', icon: Cpu as RailIcon, payload: 'directive' },
     ]
   },
   
@@ -156,14 +159,14 @@ export const CODE_RAIL_CONFIG: RailConfigSection[] = [
   {
     id: 'execution',
     title: 'Execution',
-    icon: TerminalWindow,
+    icon: TerminalWindow as RailIcon,
     defaultExpanded: false,
     collapsible: true,
     items: [
-      { id: 'cd-runs', label: 'Runs', icon: ClockCounterClockwise, payload: 'rails' },
-      { id: 'cd-queue', label: 'Work Queue', icon: List, payload: 'rails' },
-      { id: 'cd-terminal', label: 'Terminal', icon: TerminalWindow, payload: 'terminal', shortcut: '⌘`'},
-      { id: 'cd-debug', label: 'Debug', icon: Bug, payload: 'debug' },
+      { id: 'cd-runs', label: 'Runs', icon: ClockCounterClockwise as RailIcon, payload: 'rails' },
+      { id: 'cd-queue', label: 'Work Queue', icon: List as RailIcon, payload: 'rails' },
+      { id: 'cd-terminal', label: 'Terminal', icon: TerminalWindow as RailIcon, payload: 'terminal', shortcut: '⌘`'},
+      { id: 'cd-debug', label: 'Debug', icon: Bug as RailIcon, payload: 'debug' },
     ]
   },
   
@@ -171,12 +174,12 @@ export const CODE_RAIL_CONFIG: RailConfigSection[] = [
   {
     id: 'system',
     title: 'System',
-    icon: Gear,
+    icon: Gear as RailIcon,
     defaultExpanded: false,
     collapsible: true,
     items: [
-      { id: 'cd-openclaw-control', label: 'OpenClaw Control', icon: Gear, payload: 'openclaw' },
-      { id: 'cd-settings', label: 'Settings', icon: Gear, payload: 'settings' },
+      { id: 'cd-openclaw-control', label: 'OpenClaw Control', icon: Gear as RailIcon, payload: 'openclaw' },
+      { id: 'cd-settings', label: 'Settings', icon: Gear as RailIcon, payload: 'settings' },
     ]
   }
 ];

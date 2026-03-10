@@ -95,7 +95,18 @@ export interface ReasoningUIPart {
   trace?: ReasoningTrace;
 }
 
-type ArtifactKind = "image" | "svg" | "mermaid" | "jsx" | "html";
+export type ArtifactKind = 
+  | "image" 
+  | "svg" 
+  | "mermaid" 
+  | "jsx" 
+  | "html"
+  | "document"    // ProseMirror-style documents (Sparkpages)
+  | "slides"      // Presentation decks
+  | "sheet"       // Interactive data grids
+  | "audio"       // Audio files with waveform
+  | "video"       // Video files
+  | "podcast";    // Multi-track audio
 type ChatMessageStatus = "streaming" | "complete" | "error" | "stopped";
 
 export interface LinkedSourceDocumentUIPart extends SourceDocumentUIPart {
@@ -266,6 +277,12 @@ function normalizeArtifactKind(kind?: string): ArtifactKind {
     case "mermaid":
     case "jsx":
     case "html":
+    case "document":
+    case "slides":
+    case "sheet":
+    case "audio":
+    case "video":
+    case "podcast":
       return kind;
     default:
       return "html";
@@ -287,6 +304,19 @@ function formatArtifactTitle(kind: ArtifactKind, title?: string): string {
     case "jsx":
       return "Generated component";
     case "html":
+      return "Generated HTML";
+    case "document":
+      return "Generated document";
+    case "slides":
+      return "Presentation deck";
+    case "sheet":
+      return "Data sheet";
+    case "audio":
+      return "Generated audio";
+    case "video":
+      return "Generated video";
+    case "podcast":
+      return "AI Podcast";
     default:
       return "Generated artifact";
   }

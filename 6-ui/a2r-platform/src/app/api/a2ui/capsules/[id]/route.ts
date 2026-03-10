@@ -12,6 +12,21 @@ import { db } from "@/lib/db/client-sqlite";
 import { a2uiCapsule } from "@/lib/db/schema-sqlite";
 import { eq, and } from "drizzle-orm";
 
+/**
+ * Safely parse JSON with error handling
+ * Returns null if parsing fails, logs error for debugging
+ */
+function safeJSONParse<T>(json: string | null, fieldName: string, capsuleId?: string): T | null {
+  if (!json) return null;
+  try {
+    return JSON.parse(json) as T;
+  } catch (error) {
+    console.error(`[A2UI Capsule] Failed to parse ${fieldName}${capsuleId ? ` for capsule ${capsuleId}` : ''}:`, error);
+    console.error(`[A2UI Capsule] Invalid JSON content:`, json.substring(0, 200));
+    return null;
+  }
+}
+
 // ============================================================================
 // GET /api/a2ui/capsules/[id]
 // ============================================================================
@@ -37,6 +52,14 @@ export async function GET(
       );
     }
 
+    const manifest = safeJSONParse<Record<string, unknown>>(capsule.manifest, 'manifest', capsuleId);
+    if (manifest === null) {
+      return NextResponse.json(
+        { error: "Capsule manifest is corrupted" },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({
       id: capsule.id,
       name: capsule.name,
@@ -45,7 +68,7 @@ export async function GET(
       author: capsule.author,
       status: capsule.status,
       favorite: capsule.favorite,
-      manifest: JSON.parse(capsule.manifest),
+      manifest,
       content: capsule.content,
       contentAddress: capsule.contentAddress,
       installedAt: capsule.installedAt,

@@ -14,7 +14,13 @@ import './index.css';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { ClerkProvider } from '@clerk/clerk-react';
-import { ShellApp, A2RHotkeysProvider, HOTKEY_SCOPES } from '@a2r/platform';
+import { ShellApp, A2RHotkeysProvider, HOTKEY_SCOPES, GlobalDropzoneProvider } from '@a2r/platform';
+import { TerminalClerkBridgeApp } from './terminal-clerk-bridge';
+import { AgentCommunicationDemo } from './components/AgentCommunicationDemo';
+
+if (!(window as any).Buffer && (globalThis as any).Buffer) {
+  (window as any).Buffer = (globalThis as any).Buffer;
+}
 
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -28,9 +34,17 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       publishableKey={PUBLISHABLE_KEY}
       afterSignOutUrl="/"
     >
-      <A2RHotkeysProvider initiallyActiveScopes={[HOTKEY_SCOPES.GLOBAL]}>
-        <ShellApp />
-      </A2RHotkeysProvider>
+      {window.location.pathname === '/terminal/clerk' || window.location.pathname === '/terminal/clerk/' ? (
+        <TerminalClerkBridgeApp />
+      ) : window.location.pathname === '/demo/agent-communication' || window.location.pathname === '/demo/agent-communication/' ? (
+        <AgentCommunicationDemo />
+      ) : (
+        <A2RHotkeysProvider initiallyActiveScopes={[HOTKEY_SCOPES.GLOBAL]}>
+          <GlobalDropzoneProvider>
+            <ShellApp />
+          </GlobalDropzoneProvider>
+        </A2RHotkeysProvider>
+      )}
     </ClerkProvider>
   </React.StrictMode>
 );

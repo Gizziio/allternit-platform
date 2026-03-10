@@ -205,17 +205,17 @@ export const Attachment = ({
       <div
         className={cn(
           "group relative",
-          variant === "grid" && "size-24 overflow-hidden rounded-lg",
-          variant === "inline" && [
+          variant === "grid" ? "size-24 overflow-hidden rounded-lg" : undefined,
+          variant === "inline" ? [
             "flex h-8 cursor-pointer select-none items-center gap-1.5",
             "rounded-md border border-border px-1.5",
             "font-medium text-sm transition-all",
             "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
-          ],
-          variant === "list" && [
+          ].join(' ') : undefined,
+          variant === "list" ? [
             "flex w-full items-center gap-3 rounded-lg border p-3",
             "hover:bg-accent/50",
-          ],
+          ].join(' ') : undefined,
           className
         )}
         {...props}
@@ -340,19 +340,19 @@ export const AttachmentRemove = ({
     <Button
       aria-label={label}
       className={cn(
-        variant === "grid" && [
+        variant === "grid" ? [
           "absolute top-2 right-2 size-6 rounded-full p-0",
           "bg-background/80 backdrop-blur-sm",
           "opacity-0 transition-opacity group-hover:opacity-100",
           "hover:bg-background",
           "[&>svg]:size-3",
-        ],
-        variant === "inline" && [
+        ].join(' ') : undefined,
+        variant === "inline" ? [
           "size-5 rounded p-0",
           "opacity-0 transition-opacity group-hover:opacity-100",
           "[&>svg]:size-2.5",
-        ],
-        variant === "list" && ["size-8 shrink-0 rounded p-0", "[&>svg]:size-4"],
+        ].join(' ') : undefined,
+        variant === "list" ? ["size-8 shrink-0 rounded p-0", "[&>svg]:size-4"].join(' ') : undefined,
         className
       )}
       onClick={handleClick}

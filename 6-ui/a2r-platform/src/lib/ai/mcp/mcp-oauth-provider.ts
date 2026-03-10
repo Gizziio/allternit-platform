@@ -1,4 +1,7 @@
-import { randomUUID } from "node:crypto";
+// Use Web Crypto API for UUID generation (works in both browser and Node.js)
+function randomUUID(): string {
+  return crypto.randomUUID();
+}
 import type {
   OAuthClientMetadata,
   OAuthClientProvider,

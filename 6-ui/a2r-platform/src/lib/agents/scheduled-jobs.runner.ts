@@ -312,7 +312,10 @@ function calculateNextRun(schedule: string, lastRunAt?: string): Date {
   // Every day at specific time
   const dailyMatch = schedule.match(/^0 (\d+) \* \* \*$/);
   if (dailyMatch) {
-    const hour = parseInt(dailyMatch[1]);
+    const hourStr = dailyMatch[1];
+    if (!hourStr) throw new Error('Invalid cron: missing hour');
+    const hour = parseInt(hourStr, 10);
+    if (isNaN(hour)) throw new Error(`Invalid hour: ${hourStr}`);
     const next = new Date(now);
     next.setHours(hour, 0, 0, 0);
     if (next <= now) {
@@ -324,7 +327,10 @@ function calculateNextRun(schedule: string, lastRunAt?: string): Date {
   // Every weekday
   const weekdayMatch = schedule.match(/^0 (\d+) \* \* (\d-\d|\d,?\d*)$/);
   if (weekdayMatch) {
-    const hour = parseInt(weekdayMatch[1]);
+    const hourStr = weekdayMatch[1];
+    if (!hourStr) throw new Error('Invalid cron: missing hour');
+    const hour = parseInt(hourStr, 10);
+    if (isNaN(hour)) throw new Error(`Invalid hour: ${hourStr}`);
     const next = new Date(now);
     next.setHours(hour, 0, 0, 0);
     

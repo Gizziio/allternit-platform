@@ -1145,51 +1145,72 @@ export const PromptInputSelect = (props: PromptInputSelectProps) => (
   <Select {...props} />
 );
 
-export type PromptInputSelectTriggerProps = ComponentProps<
-  typeof SelectTrigger
->;
+export type PromptInputSelectTriggerProps = {
+  className?: string;
+  children?: React.ReactNode;
+  value?: string;
+};
 
 export const PromptInputSelectTrigger = ({
   className,
-  ...props
+  children,
+  value,
 }: PromptInputSelectTriggerProps) => (
   <SelectTrigger
-    className={cn(
-      "border-none bg-transparent font-medium text-muted-foreground shadow-none transition-colors",
-      "hover:bg-accent hover:text-foreground aria-expanded:bg-accent aria-expanded:text-foreground",
-      className
-    )}
-    {...props}
-  />
+    style={{
+      border: "none",
+      background: "transparent",
+      fontWeight: 500,
+    }}
+    className={className}
+    value={value}
+  >
+    {children}
+  </SelectTrigger>
 );
 
-export type PromptInputSelectContentProps = ComponentProps<
-  typeof SelectContent
->;
+export type PromptInputSelectContentProps = {
+  className?: string;
+  children?: React.ReactNode;
+};
 
 export const PromptInputSelectContent = ({
   className,
-  ...props
+  children,
 }: PromptInputSelectContentProps) => (
-  <SelectContent className={cn(className)} {...props} />
+  <div className={className}>
+    <SelectContent>{children}</SelectContent>
+  </div>
 );
 
-export type PromptInputSelectItemProps = ComponentProps<typeof SelectItem>;
+export type PromptInputSelectItemProps = {
+  className?: string;
+  children?: React.ReactNode;
+  value: string;
+};
 
 export const PromptInputSelectItem = ({
   className,
-  ...props
+  children,
+  value,
 }: PromptInputSelectItemProps) => (
-  <SelectItem className={cn(className)} {...props} />
+  <div className={className}>
+    <SelectItem value={value}>{children}</SelectItem>
+  </div>
 );
 
-export type PromptInputSelectValueProps = ComponentProps<typeof SelectValue>;
+export type PromptInputSelectValueProps = {
+  className?: string;
+  placeholder?: string;
+};
 
 export const PromptInputSelectValue = ({
   className,
-  ...props
+  placeholder,
 }: PromptInputSelectValueProps) => (
-  <SelectValue className={cn(className)} {...props} />
+  <span className={className}>
+    <SelectValue placeholder={placeholder} />
+  </span>
 );
 
 export type PromptInputHoverCardProps = ComponentProps<typeof HoverCard>;

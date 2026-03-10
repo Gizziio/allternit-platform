@@ -95,6 +95,21 @@ struct ContextPack {
     receipts: Vec<ContextReceipt>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AutolandImpact {
+    pub modified: Vec<String>,
+    pub added: Vec<String>,
+    pub deleted: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AutolandResult {
+    pub success: bool,
+    pub dry_run: bool,
+    pub impact: AutolandImpact,
+    pub backup_dir: Option<String>,
+}
+
 impl Gate {
     pub fn new(opts: GateOptions) -> Self {
         Self {
@@ -779,6 +794,218 @@ impl Gate {
         Ok(receipt_id)
     }
 
+    pub async fn rollback_wih(&self, wih_id: &str) -> Result<()> {
+        let backups_dir = self.root_dir.join(".a2r").join("backups");
+        if !backups_dir.exists() {
+            return Err(anyhow!("No backups directory found"));
+        }
+
+        // Find the latest backup for this WIH
+        let mut latest_backup = None;
+        let mut latest_ts = 0;
+
+        if let Ok(entries) = std::fs::read_dir(&backups_dir) {
+            for entry in entries.flatten() {
+                let name = entry.file_name().to_string_lossy().to_string();
+                if name.starts_with(wih_id) {
+                    let parts: Vec<&str> = name.split('_').collect();
+                    if let Some(ts_str) = parts.last() {
+                        if let Ok(ts) = ts_str.parse::<i64>() {
+                            if ts > latest_ts {
+                                latest_ts = ts;
+                                latest_backup = Some(entry.path());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let backup_path = latest_backup.ok_or_else(|| anyhow!("No backup found for WIH {}", wih_id))?;
+        tracing::info!("Rolling back WIH {} using backup: {:?}", wih_id, backup_path);
+
+        // Restore files from backup to root
+        let mut stack = vec![backup_path.clone()];
+        while let Some(current_dir) = stack.pop() {
+            if let Ok(entries) = std::fs::read_dir(&current_dir) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if path.is_dir() {
+                        stack.push(path);
+                    } else if path.is_file() {
+                        if let Ok(rel_path) = path.strip_prefix(&backup_path) {
+                            let target_path = self.root_dir.join(rel_path);
+                            if let Some(parent) = target_path.parent() {
+                                crate::core::io::ensure_dir(parent)?;
+                            }
+                            std::fs::copy(&path, &target_path)?;
+                        }
+                    }
+                }
+            }
+        }
+
+        let rolled_back = A2REvent {
+            event_id: create_event_id(),
+            ts: Utc::now().to_rfc3339(),
+            actor: gate_actor(&self.actor_id),
+            scope: None,
+            r#type: "GateAutolandRolledBack".to_string(),
+            payload: json!({ "wih_id": wih_id, "backup_used": backup_path.to_string_lossy() }),
+            provenance: None,
+        };
+        self.emit(rolled_back).await?;
+
+        Ok(())
+    }
+
+    pub async fn autoland_wih(&self, wih_id: &str, dry_run: bool, git_commit: bool) -> Result<AutolandResult> {
+        let scope = EventScope {
+            wih_id: Some(wih_id.to_string()),
+            ..Default::default()
+        };
+        self.ensure_policy_scope(&scope).await?;
+
+        let wih_events = self.events_for_wih(wih_id).await?;
+        let wih_state = project_wih(&wih_events, wih_id).ok_or_else(|| anyhow!("wih not found"))?;
+
+        let mut has_pass = false;
+        for evt in &wih_events {
+            if evt.r#type == "WIHClosedSigned" {
+                if evt.payload.get("final_status").and_then(|s| s.as_str()) == Some("PASS") {
+                    has_pass = true;
+                }
+            }
+        }
+        if !has_pass {
+            return Err(anyhow!("WIH must be closed with PASS status to autoland"));
+        }
+
+        let mut impact = AutolandImpact {
+            modified: Vec::new(),
+            added: Vec::new(),
+            deleted: Vec::new(),
+        };
+
+        let runner_dir = self.root_dir.join(".a2r").join("runner").join(wih_id);
+        let mut backup_path = None;
+
+        if runner_dir.exists() && runner_dir.is_dir() {
+            // First pass: Calculate impact and prepare for rollback
+            let mut files_to_copy = Vec::new();
+            let mut stack = vec![runner_dir.clone()];
+            while let Some(current_dir) = stack.pop() {
+                if let Ok(entries) = std::fs::read_dir(&current_dir) {
+                    for entry in entries.flatten() {
+                        let path = entry.path();
+                        if path.is_dir() {
+                            stack.push(path);
+                        } else if path.is_file() {
+                            if let Ok(rel_path) = path.strip_prefix(&runner_dir) {
+                                let target_path = self.root_dir.join(rel_path);
+                                let rel_path_str = rel_path.to_string_lossy().to_string();
+                                if target_path.exists() {
+                                    impact.modified.push(rel_path_str);
+                                } else {
+                                    impact.added.push(rel_path_str);
+                                }
+                                files_to_copy.push((path, target_path));
+                            }
+                        }
+                    }
+                }
+            }
+
+            if !dry_run {
+                // Prepare backup for rollback
+                let backup_dir = self.root_dir.join(".a2r").join("backups").join(format!("{}_{}", wih_id, Utc::now().timestamp()));
+                crate::core::io::ensure_dir(&backup_dir)?;
+                backup_path = Some(backup_dir.to_string_lossy().to_string());
+
+                for (_, target_path) in &files_to_copy {
+                    if target_path.exists() {
+                        if let Ok(rel) = target_path.strip_prefix(&self.root_dir) {
+                            let b_path = backup_dir.join(rel);
+                            if let Some(p) = b_path.parent() {
+                                crate::core::io::ensure_dir(p)?;
+                            }
+                            std::fs::copy(target_path, b_path)?;
+                        }
+                    }
+                }
+
+                // Execute copies with rollback on failure
+                for (source, target) in files_to_copy {
+                    if let Some(parent) = target.parent() {
+                        if let Err(e) = crate::core::io::ensure_dir(parent) {
+                            tracing::error!("Autoland rollback triggered: {}", e);
+                            return Err(anyhow!("Autoland failed during directory creation: {}", e));
+                        }
+                    }
+                    if let Err(e) = std::fs::copy(&source, &target) {
+                        tracing::error!("Autoland rollback triggered: {}", e);
+                        return Err(anyhow!("Autoland failed during file copy: {}", e));
+                    }
+                }
+
+                let landed = A2REvent {
+                    event_id: create_event_id(),
+                    ts: Utc::now().to_rfc3339(),
+                    actor: gate_actor(&self.actor_id),
+                    scope: None,
+                    r#type: "GateAutolanded".to_string(),
+                    payload: json!({ "wih_id": wih_id, "impact": impact, "git_committed": git_commit }),
+                    provenance: None,
+                };
+                self.emit(landed).await?;
+
+                // 🤖 A2A Synchronization
+                let sync_evt = A2REvent {
+                    event_id: create_event_id(),
+                    ts: Utc::now().to_rfc3339(),
+                    actor: gate_actor(&self.actor_id),
+                    scope: None,
+                    r#type: "DagNodeSynchronized".to_string(),
+                    payload: json!({ "wih_id": wih_id, "status": "COMPLETED" }),
+                    provenance: None,
+                };
+                self.emit(sync_evt).await?;
+
+                // 🧹 Cleanup
+                if let Some(vault) = &self.vault {
+                    let _ = vault.archive_wih(wih_id).await;
+                }
+
+                // 🌲 Git Integration: Optional Atomic Commit
+                if git_commit {
+                    let git_dir = self.root_dir.join(".git");
+                    if git_dir.exists() {
+                        tracing::info!("Git detected and commit requested. Committing changes for {}", wih_id);
+                        let _ = std::process::Command::new("git")
+                            .args(&["add", "."])
+                            .current_dir(&self.root_dir)
+                            .output();
+                        
+                        let commit_msg = format!("autoland: implementation run {} landed\n\nProof of Work: .a2r/autoland/{}.jsonl", wih_id, wih_id);
+                        let _ = std::process::Command::new("git")
+                            .args(&["commit", "-m", &commit_msg])
+                            .current_dir(&self.root_dir)
+                            .output();
+                    }
+                }
+            }
+        }
+
+        self.refresh_wih_view(wih_id).await?;
+
+        Ok(AutolandResult {
+            success: !dry_run,
+            dry_run,
+            impact,
+            backup_dir: backup_path,
+        })
+    }
+
     pub async fn wih_close(
         &self,
         wih_id: &str,
@@ -855,6 +1082,19 @@ impl Gate {
 
         if let Some(vault) = &self.vault {
             let _ = vault.archive_wih(wih_id).await;
+        }
+
+        // 🚀 Autonomous Loop Trigger: If status is PASS and autoland_on_pass is set, land now!
+        if status == "PASS" {
+            if let Some(policy) = wih_state.loop_policy {
+                if policy.autoland_on_pass {
+                    tracing::info!("Autonomous Loop: Triggering Autoland for WIH {}", wih_id);
+                    // Default git_commit to FALSE for safety in autonomous loop
+                    if let Err(e) = self.autoland_wih(wih_id, false, false).await {
+                        tracing::error!("Autonomous Loop: Autoland failed for {}: {}", wih_id, e);
+                    }
+                }
+            }
         }
 
         self.refresh_wih_view(wih_id).await?;

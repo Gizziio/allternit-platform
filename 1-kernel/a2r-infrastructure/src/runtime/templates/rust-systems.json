@@ -1,0 +1,82 @@
+{
+  "id": "rust-systems",
+  "name": "Rust Systems Programming",
+  "description": "Rust 1.75+ environment with cargo-watch, clippy, and systems development tools",
+  "version": "1.0.0",
+  "image": "mcr.microsoft.com/devcontainers/rust:1",
+  "features": [
+    "ghcr.io/devcontainers/features/github-cli:1",
+    "ghcr.io/devcontainers/features/docker-in-docker:2",
+    "ghcr.io/devcontainers/features/sshd:1"
+  ],
+  "ports": [8080, 3000, 9090],
+  "postCreateCommand": "rustup component add rustfmt clippy rust-analysis rust-src && cargo install cargo-watch cargo-expand cargo-audit cargo-tarpaulin && sudo apt-get update && sudo apt-get install -y lldb",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "vadimcn.vscode-lldb",
+        "serayuzgur.crates",
+        "tamasfe.even-better-toml",
+        "usernamehw.errorlens",
+        "gruntfuggly.todo-tree"
+      ],
+      "settings": {
+        "rust-analyzer.cargo.autoreload": true,
+        "rust-analyzer.checkOnSave.command": "clippy",
+        "rust-analyzer.checkOnSave.allTargets": true,
+        "rust-analyzer.cargo.allFeatures": true,
+        "rust-analyzer.procMacro.enable": true,
+        "rust-analyzer.lens.enable": true,
+        "rust-analyzer.lens.implementations.enable": true,
+        "rust-analyzer.lens.references.enable": true,
+        "editor.formatOnSave": true,
+        "[rust]": {
+          "editor.defaultFormatter": "rust-lang.rust-analyzer"
+        }
+      }
+    }
+  },
+  "variables": {
+    "CARGO_HOME": {
+      "default": "/usr/local/cargo",
+      "description": "Cargo home directory"
+    },
+    "RUST_BACKTRACE": {
+      "default": "1",
+      "description": "Enable backtrace for debugging"
+    }
+  },
+  "dockerfile": null,
+  "buildContext": null,
+  "mounts": [
+    {
+      "type": "volume",
+      "source": "cargo-registry",
+      "target": "/usr/local/cargo/registry"
+    },
+    {
+      "type": "volume",
+      "source": "cargo-git",
+      "target": "/usr/local/cargo/git"
+    },
+    {
+      "type": "volume",
+      "source": "target-cache",
+      "target": "/workspace/target"
+    }
+  ],
+  "containerEnv": {
+    "CARGO_HOME": "/usr/local/cargo",
+    "RUSTUP_HOME": "/usr/local/rustup",
+    "RUST_BACKTRACE": "1",
+    "RUST_LOG": "debug",
+    "CARGO_NET_OFFLINE": "false"
+  },
+  "remoteUser": "vscode",
+  "runArgs": [
+    "--cap-add=SYS_PTRACE",
+    "--security-opt",
+    "seccomp=unconfined"
+  ]
+}

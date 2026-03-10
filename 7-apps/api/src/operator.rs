@@ -335,6 +335,31 @@ impl OperatorClient {
             Err(OperatorError::Service(format!("{}: {}", status, text)))
         }
     }
+
+    /// Retrieve the proof of work events for an autoland run
+    pub async fn get_proof_of_work(&self, run_id: &str) -> Result<serde_json::Value, OperatorError> {
+        let response = self
+            .http_client
+            .get(format!(
+                "{}/v1/operator/autoland/{}/proof_of_work",
+                self.base_url, run_id
+            ))
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .send()
+            .await
+            .map_err(|e| OperatorError::Http(e.to_string()))?;
+
+        if response.status().is_success() {
+            response
+                .json()
+                .await
+                .map_err(|e| OperatorError::Parse(e.to_string()))
+        } else {
+            let status = response.status();
+            let text = response.text().await.unwrap_or_default();
+            Err(OperatorError::Service(format!("{}: {}", status, text)))
+        }
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -491,6 +516,8 @@ pub fn create_operator_routes() -> Router<Arc<crate::AppState>> {
         .route("/api/v1/operator/vision/propose", post(vision_propose))
         // Parallel
         .route("/api/v1/operator/parallel/runs", post(create_parallel_run))
+        // Autoland
+        .route("/api/v1/operator/autoland/:run_id/proof_of_work", get(get_proof_of_work))
 }
 
 async fn operator_health() -> impl IntoResponse {
@@ -565,6 +592,16 @@ async fn create_parallel_run(
     let client = OperatorClient::from_env();
     match client.create_parallel_run(request).await {
         Ok(response) => Ok((StatusCode::CREATED, Json(response))),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+async fn get_proof_of_work(
+    Path(run_id): Path<String>,
+) -> Result<impl IntoResponse, StatusCode> {
+    let client = OperatorClient::from_env();
+    match client.get_proof_of_work(&run_id).await {
+        Ok(response) => Ok((StatusCode::OK, Json(response))),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }

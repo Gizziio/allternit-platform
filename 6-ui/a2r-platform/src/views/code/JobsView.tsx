@@ -1,6 +1,17 @@
 "use client";
 
 import React, { useState, useCallback } from 'react';
+
+// Helper to safely parse JSON
+function safeJSONParse<T>(text: string | null, defaultValue: T): T {
+  if (!text) return defaultValue;
+  try {
+    return JSON.parse(text) as T;
+  } catch (error) {
+    console.error('[JobsView] JSON parse error:', error);
+    return defaultValue;
+  }
+}
 // @ts-ignore - Hook stub for now
 const useJobs = () => ({
   jobs: [] as any[],
@@ -50,15 +61,15 @@ import { useToast } from '@/hooks/use-toast';
 export function JobsView() {
   const { jobs, stats, loading, error, refresh, createJob, cancelJob } = useJobs();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const { toast } = useToast();
+  const { addToast } = useToast();
 
   const handleRefresh = useCallback(() => {
     refresh();
-    toast({
+    (addToast as any)({
       title: 'Refreshing',
       description: 'Job queue updated',
     });
-  }, [refresh, toast]);
+  }, [refresh, addToast]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -218,7 +229,7 @@ export function JobsView() {
                   </TableCell>
                   <TableCell className="font-mono text-sm">{job.job_id}</TableCell>
                   <TableCell>
-                    {JSON.parse(job.job_spec)?.name || 'Unnamed Job'}
+                    {safeJSONParse<{ name?: string }>(job.job_spec, { name: 'Unnamed Job' }).name || 'Unnamed Job'}
                   </TableCell>
                   <TableCell>{job.node_id || '-'}</TableCell>
                   <TableCell>{job.priority}</TableCell>
@@ -265,7 +276,7 @@ function CreateJobDialog({ onClose }: { onClose: () => void }) {
   const [priority, setPriority] = useState(0);
   const [loading, setLoading] = useState(false);
   const { createJob } = useJobs();
-  const { toast } = useToast();
+  const { addToast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -296,17 +307,16 @@ function CreateJobDialog({ onClose }: { onClose: () => void }) {
       });
 
       if (result) {
-        toast({
+        (addToast as any)({
           title: 'Job Created',
           description: `Job ${result.job_id} has been queued`,
         });
         onClose();
       }
     } catch (error) {
-      toast({
+      (addToast as any)({
         title: 'Error',
         description: 'Failed to create job',
-        variant: 'destructive',
       });
     } finally {
       setLoading(false);

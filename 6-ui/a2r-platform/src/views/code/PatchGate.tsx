@@ -70,7 +70,8 @@ function convertToChangeSet(legacyDiffs: any[]): ChangeSet {
     },
     policy: { policyId: 'default', decision: 'stage', autoApproved: false },
     applyState: { appliedFiles: 0, failedFiles: 0, rollbackAvailable: false },
-    metadata: { generator: 'agent', toolCalls: [] }
+    metadata: { generator: 'agent', toolCalls: [] },
+    userReview: { startedAt: new Date().toISOString() }
   };
 }
 

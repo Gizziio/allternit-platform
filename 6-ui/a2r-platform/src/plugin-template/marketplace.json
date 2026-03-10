@@ -1,0 +1,217 @@
+{
+  "$schema": "https://schemas.a2r.dev/marketplace.json",
+  "_comment": "Marketplace listing configuration for A2R Plugin Template",
+  
+  "// ============ DISPLAY INFORMATION ============": "",
+  
+  "// Display name shown in marketplace": "",
+  "// Can include spaces and special characters": "",
+  "displayName": "{{PLUGIN_NAME}}",
+  
+  "// Short tagline (max 100 characters)": "",
+  "// This appears under the plugin name in listings": "",
+  "tagline": "{{PLUGIN_TAGLINE}}",
+  
+  "// Full description (supports Markdown)": "",
+  "// This appears on the plugin detail page": "",
+  "description": "{{PLUGIN_DESCRIPTION}}\n\n## Features\n\n- ✨ Feature 1: Description of feature 1\n- 🚀 Feature 2: Description of feature 2\n- 🔧 Feature 3: Description of feature 3\n\n## Installation\n\n```bash\na2r plugin install {{PLUGIN_ID}}\n```\n\n## Usage\n\nSee [documentation](./docs/README.md) for detailed usage instructions.",
+  
+  "// ============ CATEGORIZATION ============": "",
+  
+  "// Primary category": "",
+  "// Options: productivity, developer, design, data, automation, integration, utility, ai, other": "",
+  "category": "productivity",
+  
+  "// Secondary categories": "",
+  "categories": ["developer", "utility"],
+  
+  "// Search tags": "",
+  "// Max 10 tags, use lowercase, separate words with hyphens": "",
+  "tags": [
+    "example",
+    "template",
+    "starter",
+    "plugin-development"
+  ],
+  
+  "// ============ MEDIA ============": "",
+  
+  "// Plugin icon": "",
+  "// Supported formats: SVG (preferred), PNG, JPG": "",
+  "// Recommended size: 512x512px for PNG/JPG": "",
+  "icon": {
+    "src": "./assets/icon.svg",
+    "alt": "{{PLUGIN_NAME}} Icon",
+    "backgroundColor": "#6366f1"
+  },
+  
+  "// Hero image for detail page": "",
+  "// Recommended size: 1280x640px, 2:1 ratio": "",
+  "heroImage": {
+    "src": "./assets/hero.png",
+    "alt": "{{PLUGIN_NAME}} Hero Image"
+  },
+  
+  "// Screenshots for gallery": "",
+  "// Max 5 screenshots, recommended 1200x800px": "",
+  "screenshots": [
+    {
+      "src": "./assets/screenshot-1.png",
+      "alt": "Main interface",
+      "caption": "The main plugin interface showing key features"
+    },
+    {
+      "src": "./assets/screenshot-2.png",
+      "alt": "Settings panel",
+      "caption": "Customize plugin settings to fit your workflow"
+    }
+  ],
+  
+  "// Demo media": "",
+  "demo": {
+    "// Video demo (preferred)": "",
+    "video": {
+      "src": "./assets/demo.mp4",
+      "poster": "./assets/demo-poster.jpg",
+      "duration": "2:30"
+    },
+    "// Or GIF animation": "",
+    "gif": {
+      "src": "./assets/demo.gif",
+      "alt": "Plugin demo animation"
+    }
+  },
+  
+  "// ============ AUTHOR INFORMATION ============": "",
+  
+  "// Author/Publisher details": "",
+  "author": {
+    "name": "{{AUTHOR_NAME}}",
+    "email": "{{AUTHOR_EMAIL}}",
+    "url": "https://github.com/{{GITHUB_USERNAME}}",
+    "avatar": "https://github.com/{{GITHUB_USERNAME}}.png"
+  },
+  
+  "// Organization (if applicable)": "",
+  "organization": {
+    "name": "",
+    "url": "",
+    "logo": ""
+  },
+  
+  "// ============ LINKS ============": "",
+  
+  "// Website URL": "",
+  "website": "https://github.com/{{GITHUB_USERNAME}}/{{REPO_NAME}}",
+  
+  "// Documentation URL": "",
+  "documentation": "https://github.com/{{GITHUB_USERNAME}}/{{REPO_NAME}}/blob/main/docs/README.md",
+  
+  "// Repository URL": "",
+  "repository": "https://github.com/{{GITHUB_USERNAME}}/{{REPO_NAME}}",
+  
+  "// Issues/Bug reports": "",
+  "issues": "https://github.com/{{GITHUB_USERNAME}}/{{REPO_NAME}}/issues",
+  
+  "// Support URL": "",
+  "support": "https://github.com/{{GITHUB_USERNAME}}/{{REPO_NAME}}/discussions",
+  
+  "// Changelog URL": "",
+  "changelog": "https://github.com/{{GITHUB_USERNAME}}/{{REPO_NAME}}/blob/main/CHANGELOG.md",
+  
+  "// License URL": "",
+  "license": "https://github.com/{{GITHUB_USERNAME}}/{{REPO_NAME}}/blob/main/LICENSE",
+  
+  "// ============ PRICING ============": "",
+  
+  "// Pricing model": "",
+  "// Options: free, freemium, paid, subscription": "",
+  "pricing": {
+    "model": "free",
+    "price": 0,
+    "currency": "USD",
+    "// For freemium/paid plugins": "",
+    "tiers": [
+      {
+        "name": "Free",
+        "price": 0,
+        "features": ["Basic features", "Community support"]
+      },
+      {
+        "name": "Pro",
+        "price": 9.99,
+        "currency": "USD",
+        "billing": "monthly",
+        "features": ["Advanced features", "Priority support", "Custom integrations"]
+      }
+    ]
+  },
+  
+  "// ============ DISTRIBUTION ============": "",
+  
+  "// Release information": "",
+  "releases": {
+    "latest": {
+      "version": "1.0.0",
+      "date": "2024-01-15",
+      "downloadUrl": "https://github.com/{{GITHUB_USERNAME}}/{{REPO_NAME}}/releases/download/v1.0.0/{{PLUGIN_ID}}-1.0.0.zip",
+      "changelog": "Initial release"
+    },
+    "// Previous versions": "",
+    "history": []
+  },
+  
+  "// Supported platforms": "",
+  "platforms": ["macOS", "Windows", "Linux"],
+  
+  "// Minimum A2R Platform version": "",
+  "minA2RVersion": "2.0.0",
+  
+  "// ============ STATS & RATINGS ============": "",
+  
+  "// These are auto-populated by the marketplace": "",
+  "stats": {
+    "installs": 0,
+    "rating": 0,
+    "reviewCount": 0,
+    "downloads": 0
+  },
+  
+  "// ============ LOCALIZATION ============": "",
+  
+  "// Supported languages": "",
+  "languages": ["en"],
+  
+  "// Localized content": "",
+  "i18n": {
+    "es": {
+      "displayName": "",
+      "tagline": "",
+      "description": ""
+    }
+  },
+  
+  "// ============ VERIFICATION ============": "",
+  
+  "// Verified status": "",
+  "verified": false,
+  
+  "// Featured/recommended": "",
+  "featured": false,
+  
+  "// ============ RESOURCES ============": "",
+  
+  "// Additional resources": "",
+  "resources": [
+    {
+      "type": "article",
+      "title": "Getting Started Guide",
+      "url": "https://github.com/{{GITHUB_USERNAME}}/{{REPO_NAME}}/blob/main/docs/getting-started.md"
+    },
+    {
+      "type": "video",
+      "title": "Tutorial: Using {{PLUGIN_NAME}}",
+      "url": "https://youtube.com/watch?v=..."
+    }
+  ]
+}

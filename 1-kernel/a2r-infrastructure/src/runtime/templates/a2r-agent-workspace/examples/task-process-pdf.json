@@ -1,0 +1,37 @@
+{
+  "id": "example-pdf-001",
+  "type": "python",
+  "name": "PDF Processing Example",
+  "description": "Download and process a PDF file",
+  "code": "
+import requests
+import pypdf
+import os
+
+# Download sample PDF
+url = 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf'
+response = requests.get(url)
+pdf_path = '/home/agent/workspace/temp/sample.pdf'
+
+with open(pdf_path, 'wb') as f:
+    f.write(response.content)
+
+print(f'Downloaded: {len(response.content)} bytes')
+
+# Process PDF
+reader = pypdf.PdfReader(pdf_path)
+print(f'Number of pages: {len(reader.pages)}')
+
+# Extract text from first page
+if len(reader.pages) > 0:
+    text = reader.pages[0].extract_text()
+    print(f'First page text: {text[:200]}...')
+
+# Get metadata
+if reader.metadata:
+    print('Metadata:')
+    for key, value in reader.metadata.items():
+        print(f'  {key}: {value}')
+",
+  "timeout": 60
+}

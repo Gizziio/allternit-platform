@@ -1,0 +1,139 @@
+# Clippy Configuration
+# Reference: https://doc.rust-lang.org/clippy/configuration.html
+
+# Lint levels
+# Allow certain lints that might be too noisy
+allow = [
+    # Too restrictive for some use cases
+    "clippy::multiple_crate_versions",
+]
+
+# Deny these lints (fail the build)
+deny = [
+    # Safety-critical
+    "clippy::correctness",
+    "clippy::suspicious",
+    
+    # Performance
+    "clippy::perf",
+    
+    # Common mistakes
+    "clippy::needless_pass_by_value",
+    "clippy::unused_async",
+]
+
+# Warn about these lints
+warn = [
+    # Code quality
+    "clippy::all",
+    "clippy::pedantic",
+    "clippy::nursery",
+    "clippy::cargo",
+    
+    # Style
+    "clippy::style",
+    "clippy::complexity",
+    
+    # Documentation
+    "clippy::doc_markdown",
+    "missing_docs",
+    
+    # Performance hints
+    "clippy::inefficient_to_string",
+    "clippy::linkedlist",
+    "clippy::mutex_integer",
+    "clippy::naive_bytecount",
+    "clippy::needless_bitwise_bool",
+    "clippy::slow_vector_initialization",
+    "clippy::trivially_copy_pass_by_ref",
+    "clippy::zero_sized_map_values",
+    
+    # Common mistakes
+    "clippy::await_holding_lock",
+    "clippy::dbg_macro",
+    "clippy::empty_enum",
+    "clippy::enum_glob_use",
+    "clippy::exit",
+    "clippy::filetype_is_file",
+    "clippy::if_let_mutex",
+    "clippy::imprecise_flops",
+    "clippy::inefficient_to_string",
+    "clippy::large_types_passed_by_value",
+    "clippy::let_unit_value",
+    "clippy::lossy_float_literal",
+    "clippy::macro_use_imports",
+    "clippy::map_err_ignore",
+    "clippy::match_on_vec_items",
+    "clippy::mem_forget",
+    "clippy::missing_enforced_import_renames",
+    "clippy::mut_mut",
+    "clippy::needless_borrow",
+    "clippy::nonstandard_macro_braces",
+    "clippy::option_option",
+    "clippy::path_buf_push_overwrite",
+    "clippy::print_stderr",
+    "clippy::print_stdout",
+    "clippy::rc_mutex",
+    "clippy::rest_pat_in_fully_bound_structs",
+    "clippy::semicolon_if_nothing_returned",
+    "clippy::string_lit_as_bytes",
+    "clippy::string_to_string",
+    "clippy::todo",
+    "clippy::unimplemented",
+    "clippy::unnecessary_wraps",
+    "clippy::useless_let_if_seq",
+    "clippy::wildcard_dependencies",
+]
+
+# Cognitive complexity threshold
+cognitive-complexity-threshold = 25
+
+# Cyclomatic complexity threshold
+cyclomatic-complexity-threshold = 30
+
+# Maximum length for functions (in lines)
+# Functions longer than this will trigger a warning
+too-many-lines-threshold = 100
+
+# Maximum number of arguments for functions
+# Functions with more arguments will trigger a warning
+too-many-arguments-threshold = 7
+
+# Maximum number of lines in a type definition
+type-complexity-threshold = 250
+
+# Maximum size of an enum variant
+enum-variant-size-threshold = 200
+
+# Maximum size of a function's AST
+fn-params-abbreviate-bool = false
+
+# Acceptable prefixes for enum variants
+enum-variant-name-threshold = 3
+
+# Large error threshold
+large-error-threshold = 128
+
+# Allow expect with message (useful in tests)
+allow-expect-in-tests = true
+
+# Allow unwrap in tests
+allow-unwrap-in-tests = true
+
+# Allow panic in tests
+allow-panic-in-tests = true
+
+# Allow print in tests
+allow-print-in-tests = true
+
+# Check for README when using cargo-common-metadata
+check-private-items = false
+
+# Maximum size of a vec that can be stack-allocated
+vec-box-size-threshold = 4096
+
+# Suppress lints in external macros
+avoid-breaking-exported-api = true
+
+# Check for missing documentation in public items
+missing-docs-in-crate-items = false

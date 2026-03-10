@@ -16,7 +16,7 @@ export const PersonalityCustomizationTab: React.FC = () => {
     setBreathing,
   } = useAvatarCreatorStore();
 
-  const { personality } = currentConfig;
+  const personality = currentConfig.personality ?? { bounce: 0.3, sway: 0.15, breathing: true };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
@@ -62,7 +62,7 @@ export const PersonalityCustomizationTab: React.FC = () => {
                 color: STUDIO_THEME.accent,
               }}
             >
-              {Math.round(personality.bounce * 100)}%
+              {Math.round((personality.bounce ?? 0.3) * 100)}%
             </span>
           </div>
           <p
@@ -80,7 +80,7 @@ export const PersonalityCustomizationTab: React.FC = () => {
           min="0"
           max="1"
           step="0.05"
-          value={personality.bounce}
+          value={personality.bounce ?? 0.3}
           onChange={(e) => setBounce(parseFloat(e.target.value))}
           style={{
             width: '100%',
@@ -122,16 +122,16 @@ export const PersonalityCustomizationTab: React.FC = () => {
               height: '24px',
               borderRadius: '50%',
               backgroundColor: STUDIO_THEME.accent,
-              animation: personality.bounce > 0 
-                ? `demo-bounce ${2 - personality.bounce}s ease-in-out infinite`
+              animation: (personality.bounce ?? 0) > 0 
+                ? `demo-bounce ${2 - (personality.bounce ?? 0.3)}s ease-in-out infinite`
                 : 'none',
-              opacity: personality.bounce > 0 ? 1 : 0.5,
+              opacity: (personality.bounce ?? 0) > 0 ? 1 : 0.5,
             }}
           />
           <style>{`
             @keyframes demo-bounce {
               0%, 100% { transform: translateY(0); }
-              50% { transform: translateY(-${personality.bounce * 10}px); }
+              50% { transform: translateY(-${(personality.bounce ?? 0.3) * 10}px); }
             }
           `}</style>
         </div>
@@ -164,7 +164,7 @@ export const PersonalityCustomizationTab: React.FC = () => {
                 color: STUDIO_THEME.accent,
               }}
             >
-              {Math.round(personality.sway * 100)}%
+              {Math.round((personality.sway ?? 0.15) * 100)}%
             </span>
           </div>
           <p
@@ -182,7 +182,7 @@ export const PersonalityCustomizationTab: React.FC = () => {
           min="0"
           max="1"
           step="0.05"
-          value={personality.sway}
+          value={personality.sway ?? 0.15}
           onChange={(e) => setSway(parseFloat(e.target.value))}
           style={{
             width: '100%',
@@ -224,17 +224,17 @@ export const PersonalityCustomizationTab: React.FC = () => {
               height: '24px',
               borderRadius: '4px',
               backgroundColor: STUDIO_THEME.accent,
-              animation: personality.sway > 0 
-                ? `demo-sway ${3 - personality.sway}s ease-in-out infinite`
+              animation: (personality.sway ?? 0) > 0 
+                ? `demo-sway ${3 - (personality.sway ?? 0.15)}s ease-in-out infinite`
                 : 'none',
-              opacity: personality.sway > 0 ? 1 : 0.5,
+              opacity: (personality.sway ?? 0) > 0 ? 1 : 0.5,
             }}
           />
           <style>{`
             @keyframes demo-sway {
               0%, 100% { transform: rotate(0deg); }
-              25% { transform: rotate(-${personality.sway * 10}deg); }
-              75% { transform: rotate(${personality.sway * 10}deg); }
+              25% { transform: rotate(-${(personality.sway ?? 0.15) * 10}deg); }
+              75% { transform: rotate(${(personality.sway ?? 0.15) * 10}deg); }
             }
           `}</style>
         </div>
@@ -264,16 +264,17 @@ export const PersonalityCustomizationTab: React.FC = () => {
         </div>
         
         <button
-          onClick={() => setBreathing(!personality.breathing)}
+          type="button"
+          onClick={() => setBreathing(!(personality.breathing ?? true))}
           style={{
             width: '100%',
             padding: '14px 16px',
             borderRadius: '8px',
             border: '2px solid',
-            borderColor: personality.breathing 
+            borderColor: (personality.breathing ?? true) 
               ? STUDIO_THEME.accent 
               : STUDIO_THEME.border,
-            backgroundColor: personality.breathing 
+            backgroundColor: (personality.breathing ?? true) 
               ? `${STUDIO_THEME.accent}15`
               : STUDIO_THEME.bg,
             cursor: 'pointer',
@@ -292,7 +293,7 @@ export const PersonalityCustomizationTab: React.FC = () => {
                 : STUDIO_THEME.textPrimary,
             }}
           >
-            {personality.breathing ? 'Enabled' : 'Disabled'}
+            {(personality.breathing ?? true) ? 'Enabled' : 'Disabled'}
           </span>
           
           <div
@@ -300,7 +301,7 @@ export const PersonalityCustomizationTab: React.FC = () => {
               width: '44px',
               height: '24px',
               borderRadius: '12px',
-              backgroundColor: personality.breathing 
+              backgroundColor: (personality.breathing ?? true) 
                 ? STUDIO_THEME.accent 
                 : STUDIO_THEME.border,
               position: 'relative',
@@ -315,7 +316,7 @@ export const PersonalityCustomizationTab: React.FC = () => {
                 backgroundColor: 'white',
                 position: 'absolute',
                 top: '2px',
-                left: personality.breathing ? '22px' : '2px',
+                left: (personality.breathing ?? true) ? '22px' : '2px',
                 transition: 'left 0.15s ease',
               }}
             />
@@ -323,7 +324,7 @@ export const PersonalityCustomizationTab: React.FC = () => {
         </button>
 
         {/* Visual Indicator */}
-        {personality.breathing && (
+        {(personality.breathing ?? true) && (
           <div
             style={{
               display: 'flex',
@@ -383,6 +384,7 @@ export const PersonalityCustomizationTab: React.FC = () => {
           }}
         >
           <button
+            type="button"
             onClick={() => {
               setBounce(0.1);
               setSway(0.05);
@@ -406,6 +408,7 @@ export const PersonalityCustomizationTab: React.FC = () => {
           </button>
           
           <button
+            type="button"
             onClick={() => {
               setBounce(0.3);
               setSway(0.15);
@@ -429,6 +432,7 @@ export const PersonalityCustomizationTab: React.FC = () => {
           </button>
           
           <button
+            type="button"
             onClick={() => {
               setBounce(0.5);
               setSway(0.3);
@@ -452,6 +456,7 @@ export const PersonalityCustomizationTab: React.FC = () => {
           </button>
           
           <button
+            type="button"
             onClick={() => {
               setBounce(0);
               setSway(0);

@@ -1,0 +1,46 @@
+{
+  "id": "python-ml",
+  "name": "Python ML & Data Science",
+  "description": "Complete ML environment with Python 3.12, JupyterLab, PyTorch, TensorFlow, scikit-learn, pandas, and GPU support (CUDA).",
+  "version": "1.0.0",
+  "author": "A2R",
+  "type": "devcontainer",
+  "category": "ml",
+  "language": "python",
+  "features": [
+    "Python 3.12",
+    "JupyterLab + Jupyter Notebook",
+    "PyTorch 2.1+ with CUDA support",
+    "TensorFlow 2.15",
+    "scikit-learn, XGBoost, LightGBM",
+    "pandas, NumPy, SciPy",
+    "Hugging Face Transformers",
+    "LangChain for LLM apps",
+    "OpenCV for computer vision",
+    "Matplotlib, Seaborn, Plotly",
+    "MLflow for experiment tracking",
+    "Weights & Biases integration",
+    "Poetry for dependency management"
+  ],
+  "ports": [8888, 6006, 8080, 5000],
+  "variables": [
+    {
+      "name": "ENABLE_GPU",
+      "description": "Enable NVIDIA GPU support (CUDA)",
+      "type": "boolean",
+      "default": "true"
+    },
+    {
+      "name": "JUPYTER_TOKEN",
+      "description": "Jupyter access token",
+      "type": "secret",
+      "default": "a2r-ml-dev"
+    },
+    {
+      "name": "INCLUDE_TENSORFLOW",
+      "description": "Include TensorFlow (large download)",
+      "type": "boolean",
+      "default": "false"
+    }
+  ]
+}

@@ -7,6 +7,8 @@ import {
   TerminalWindow,
   Globe,
   Cpu,
+  Desktop,
+  PuzzlePiece,
 } from '@phosphor-icons/react';
 
 interface RailControlsProps {
@@ -71,16 +73,17 @@ export function RailControls({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingLeft: horizontalPadding,
-        paddingRight: 16,
+        paddingRight: 4,
         pointerEvents: 'auto',
-        WebkitAppRegion: 'no-drag'
+        ...({'WebkitAppRegion': 'no-drag'} as React.CSSProperties),
       }}>
-        {/* Left side: Sidebar Toggle + New Chat */}
+        {/* Left side: Sidebar Toggle + New Chat + Plugins */}
         <div style={{
+          marginLeft: 0,
           display: 'flex',
           alignItems: 'center',
-          gap: 1,
-          padding: '3px',
+          gap: 0,
+          padding: '2px',
           borderRadius: isRailCollapsed ? 999 : 12,
           background: isRailCollapsed ? 'rgba(20, 20, 20, 0.5)' : 'transparent',
           border: isRailCollapsed ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
@@ -93,15 +96,15 @@ export function RailControls({
             onClick={onToggleRail}
             title={isRailCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
           >
-            <SidebarSimple size={18} weight="bold" />
+            <SidebarSimple size={16} weight="bold" />
           </ControlButton>
 
-          <div ref={createMenuRef} style={{ position: 'relative' }}>
+          <div ref={createMenuRef} style={{ position: 'relative', marginLeft: 2 }}>
             <ControlButton
               onClick={() => setShowCreateMenu((value) => !value)}
               title="New Session"
             >
-              <NotePencil size={18} weight="bold" />
+              <NotePencil size={16} weight="bold" />
             </ControlButton>
 
             {showCreateMenu ? (
@@ -116,10 +119,11 @@ export function RailControls({
                   border: '1px solid rgba(212,176,140,0.18)',
                   background: 'linear-gradient(180deg, rgba(28,24,23,0.98), rgba(21,19,19,0.98))',
                   boxShadow: '0 20px 40px rgba(8,6,6,0.3)',
+                  zIndex: 10002,
                 }}
               >
                 <CreateMenuButton
-                  icon={ChatText}
+                  icon={ChatText as any}
                   label="New Chat"
                   description="Start a regular chat thread"
                   onClick={() => {
@@ -128,7 +132,7 @@ export function RailControls({
                   }}
                 />
                 <CreateMenuButton
-                  icon={Cpu}
+                  icon={Cpu as any}
                   label="New Agent Session"
                   description="Start a durable operator session"
                   onClick={() => {
@@ -139,53 +143,47 @@ export function RailControls({
               </div>
             ) : null}
           </div>
-        </div>
 
-        {/* Right side: Browser + Plugins */}
-        <div style={{ display: 'flex', gap: 6 }}>
+          {/* Plugin icon - inline with other controls, glass only when collapsed */}
           {onOpenPlugins && (
-            <button
+            <ControlButton
               onClick={onOpenPlugins}
               title="Plugins"
-              style={{
-                width: 34, height: 34, borderRadius: 10, border: '1px solid rgba(212,176,140,0.18)',
-                background: 'rgba(20,20,20,0.85)', backdropFilter: 'blur(12px)',
-                WebkitBackdropFilter: 'blur(12px)', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: 'rgba(212,176,140,0.7)', transition: 'all 0.15s',
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#d4b08c'; e.currentTarget.style.borderColor = 'rgba(212,176,140,0.4)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(212,176,140,0.7)'; e.currentTarget.style.borderColor = 'rgba(212,176,140,0.18)'; }}
             >
-              {/* Puzzle piece icon */}
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14.5 2a2 2 0 0 1 0 4V7h4a1 1 0 0 1 1 1v4h-1a2 2 0 0 0 0 4h1v4a1 1 0 0 1-1 1H14v-1a2 2 0 0 0-4 0v1H6a1 1 0 0 1-1-1v-4h1a2 2 0 0 0 0-4H5V8a1 1 0 0 1 1-1h4V5.5a2 2 0 0 1-1.73-2A2 2 0 0 1 14.5 2z"/>
-              </svg>
-            </button>
+              <PuzzlePiece size={16} weight="bold" />
+            </ControlButton>
           )}
-          <div style={{
-            display: 'flex',
-            background: 'rgba(20, 20, 20, 0.85)',
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
-            padding: '3px',
-            borderRadius: 14,
-            border: '1px solid #333',
-            height: 40,
-            width: 92,
-            gap: 2,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-            transition: 'all 0.3s ease-in-out',
-            opacity: isRailCollapsed ? 0.95 : 1
-          }}>
-            <ProminentModePill
-              active={isBrowser}
-              onClick={() => onOpenView?.('browser')}
-              icon={Globe}
-              label="Browser"
-              color="#579BD9"
-            />
-          </div>
+        </div>
+
+        {/* Right side: Browser widget - compact */}
+        <div style={{ display: 'flex', gap: 6, marginRight: 20 }}>
+          <button
+            onClick={() => onOpenView?.('browser')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 2,
+              borderRadius: 6,
+              border: '1px solid #333',
+              background: 'rgba(20, 20, 20, 0.85)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              color: isBrowser ? '#579BD9' : '#6e6e6e',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              height: 26,
+              padding: '0 4px',
+              fontSize: 10,
+              fontWeight: 600,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+            }}
+            onMouseEnter={(e) => { if (!isBrowser) e.currentTarget.style.color = '#9b9b9b'; }}
+            onMouseLeave={(e) => { if (!isBrowser) e.currentTarget.style.color = '#6e6e6e'; }}
+          >
+            <Desktop size={14} weight={isBrowser ? 'fill' : 'bold'} />
+            <span>Browser</span>
+          </button>
         </div>
       </div>
 
@@ -276,7 +274,7 @@ function CreateMenuButton({
           height: 30,
           borderRadius: 10,
           border: '1px solid rgba(212,176,140,0.14)',
-          background: 'rgba(217,119,87,0.12)',
+          background: 'transparent',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -303,9 +301,9 @@ function ControlButton({ children, onClick, title }: any) {
       style={{
         background: 'transparent',
         border: 'none',
-        borderRadius: 8,
-        width: 30,
-        height: 30,
+        borderRadius: 6,
+        width: 26,
+        height: 26,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

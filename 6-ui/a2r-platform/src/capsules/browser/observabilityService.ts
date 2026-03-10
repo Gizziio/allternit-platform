@@ -128,6 +128,9 @@ export interface ObservabilityStore {
   recordResponseTime(duration_ms: number): Promise<void>;
   recordError(): Promise<void>;
   getPerformanceStats(period: { start: string; end: string }): Promise<PerformanceStats>;
+  
+  // Prometheus export
+  getPrometheusMetrics(): Promise<string>;
 }
 
 // ============================================================================
@@ -158,7 +161,6 @@ export interface LogQueryResult {
 
 // ============================================================================
 // In-Memory Store (for development)
-// TODO: Replace with proper observability backend (Prometheus, Jaeger, etc.)
 // ============================================================================
 
 export class InMemoryObservabilityStore implements ObservabilityStore {
@@ -345,6 +347,150 @@ export class InMemoryObservabilityStore implements ObservabilityStore {
       period,
     };
   }
+
+  /**
+   * Export metrics in Prometheus format
+   */
+  async getPrometheusMetrics(): Promise<string> {
+    const lines: string[] = [];
+    const timestamp = Date.now();
+
+    // Add response time metrics
+    if (this.responseTimes.length > 0) {
+      const sorted = [...this.responseTimes].sort((a, b) => a - b);
+      lines.push('# HELP a2r_response_time_ms Response time in milliseconds');
+      lines.push('# TYPE a2r_response_time_ms histogram');
+      lines.push(`a2r_response_time_ms_count ${sorted.length}`);
+      lines.push(`a2r_response_time_ms_sum ${sorted.reduce((a, b) => a + b, 0)}`);
+      
+      // Add bucket counts for standard percentiles
+      const buckets = [10, 50, 100, 250, 500, 1000, 2500, 5000, 10000];
+      for (const bucket of buckets) {
+        const count = sorted.filter(v => v <= bucket).length;
+        lines.push(`a2r_response_time_ms_bucket{le="${bucket}"} ${count}`);
+      }
+      lines.push(`a2r_response_time_ms_bucket{le="+Inf"} ${sorted.length}`);
+    }
+
+    // Add error count
+    lines.push('# HELP a2r_errors_total Total number of errors');
+    lines.push('# TYPE a2r_errors_total counter');
+    lines.push(`a2r_errors_total ${this.errorCount}`);
+
+    // Add log counts by severity
+    const severityCounts = new Map<string, number>();
+    for (const log of this.logs) {
+      severityCounts.set(log.severity, (severityCounts.get(log.severity) || 0) + 1);
+    }
+    lines.push('# HELP a2r_logs_total Total number of log events');
+    lines.push('# TYPE a2r_logs_total counter');
+    for (const [severity, count] of severityCounts) {
+      lines.push(`a2r_logs_total{severity="${severity}"} ${count}`);
+    }
+
+    // Add custom metrics
+    for (const [name, points] of this.metrics.entries()) {
+      const sanitizedName = name.replace(/[^a-zA-Z0-9_]/g, '_');
+      lines.push(`# HELP a2r_${sanitizedName} Metric ${name}`);
+      lines.push(`# TYPE a2r_${sanitizedName} gauge`);
+      const latest = points[points.length - 1];
+      if (latest) {
+        const labels = latest.labels ? 
+          Object.entries(latest.labels).map(([k, v]) => `${k}="${v}"`).join(',') : '';
+        const labelStr = labels ? `{${labels}}` : '';
+        lines.push(`a2r_${sanitizedName}${labelStr} ${latest.value}`);
+      }
+    }
+
+    return lines.join('\n');
+  }
+}
+
+// ============================================================================
+// Prometheus Integration Store
+// ============================================================================
+
+export class PrometheusObservabilityStore extends InMemoryObservabilityStore {
+  private prometheusUrl?: string;
+  private pushGatewayUrl?: string;
+  private jobName: string;
+  private instance: string;
+
+  constructor(config: {
+    prometheusUrl?: string;
+    pushGatewayUrl?: string;
+    jobName?: string;
+    instance?: string;
+  } = {}) {
+    super();
+    this.prometheusUrl = config.prometheusUrl || process.env.PROMETHEUS_URL;
+    this.pushGatewayUrl = config.pushGatewayUrl || process.env.PROMETHEUS_PUSHGATEWAY_URL;
+    this.jobName = config.jobName || 'a2r-platform';
+    this.instance = config.instance || 'localhost';
+  }
+
+  async recordMetric(name: string, value: number, labels?: Record<string, string>): Promise<void> {
+    await super.recordMetric(name, value, labels);
+    
+    // Push to Prometheus PushGateway if configured
+    if (this.pushGatewayUrl) {
+      try {
+        await this.pushToGateway(name, value, labels);
+      } catch (error) {
+        console.warn('Failed to push metric to Prometheus:', error);
+      }
+    }
+  }
+
+  private async pushToGateway(name: string, value: number, labels?: Record<string, string>): Promise<void> {
+    if (!this.pushGatewayUrl) return;
+
+    const sanitizedName = name.replace(/[^a-zA-Z0-9_]/g, '_');
+    const allLabels = {
+      job: this.jobName,
+      instance: this.instance,
+      ...labels,
+    };
+    const labelStr = Object.entries(allLabels)
+      .map(([k, v]) => `${k}="${v}"`)
+      .join(',');
+
+    const metricData = `# TYPE a2r_${sanitizedName} gauge
+a2r_${sanitizedName}{${labelStr}} ${value}
+`;
+
+    const url = `${this.pushGatewayUrl}/metrics/job/${this.jobName}/instance/${this.instance}`;
+    
+    try {
+      await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: metricData,
+      });
+    } catch (error) {
+      // Silently fail - metrics should not break the application
+      console.debug('Prometheus push failed:', error);
+    }
+  }
+
+  /**
+   * Query metrics from Prometheus
+   */
+  async queryPrometheus(query: string): Promise<unknown> {
+    if (!this.prometheusUrl) {
+      throw new Error('Prometheus URL not configured');
+    }
+
+    const url = new URL('/api/v1/query', this.prometheusUrl);
+    url.searchParams.set('query', query);
+
+    const response = await fetch(url.toString());
+    if (!response.ok) {
+      throw new Error(`Prometheus query failed: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
 }
 
 // ============================================================================
@@ -443,6 +589,13 @@ export class ObservabilityService {
     const hourAgo = new Date(Date.now() - 3600000).toISOString();
     return this.store.getPerformanceStats(period || { start: hourAgo, end: now });
   }
+
+  /**
+   * Get Prometheus-formatted metrics for scraping
+   */
+  async getPrometheusMetrics(): Promise<string> {
+    return this.store.getPrometheusMetrics();
+  }
 }
 
 // ============================================================================
@@ -454,7 +607,12 @@ let _observabilityService: ObservabilityService | null = null;
 
 export function getObservabilityStore(): ObservabilityStore {
   if (!_observabilityStore) {
-    _observabilityStore = new InMemoryObservabilityStore();
+    // Use Prometheus integration if configured, otherwise in-memory
+    if (process.env.PROMETHEUS_PUSHGATEWAY_URL) {
+      _observabilityStore = new PrometheusObservabilityStore();
+    } else {
+      _observabilityStore = new InMemoryObservabilityStore();
+    }
   }
   return _observabilityStore;
 }
@@ -468,4 +626,23 @@ export function getObservabilityService(sessionId?: string, correlationId?: stri
     );
   }
   return _observabilityService;
+}
+
+// ============================================================================
+// API Route Handler for Prometheus Scraping
+// ============================================================================
+
+/**
+ * Handler for /api/metrics endpoint
+ * Returns metrics in Prometheus format
+ */
+export async function metricsHandler(): Promise<Response> {
+  const store = getObservabilityStore();
+  const metrics = await store.getPrometheusMetrics();
+  
+  return new Response(metrics, {
+    headers: {
+      'Content-Type': 'text/plain; version=0.0.4',
+    },
+  });
 }

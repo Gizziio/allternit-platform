@@ -122,11 +122,12 @@ const getRiskColor = (risk: string): string => {
   }
 };
 
-const getCheckIcon = (status: string) => {
+const getCheckIcon = (status: string): any => {
   switch (status) {
     case 'passed': return CheckCircle;
     case 'failed': return XCircle;
     case 'running': return Settings;
+    default: return null;
   }
 };
 
@@ -135,6 +136,7 @@ const getCheckColor = (status: string): string => {
     case 'passed': return '#34c759';
     case 'failed': return '#ff3b30';
     case 'running': return '#ffa500';
+    default: return '#888';
   }
 };
 
@@ -183,7 +185,7 @@ export function PromotionDashboardView() {
       {/* Header with Summary Stats */}
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-          <ShieldCheck size={28} weight="fill" color="var(--accent-primary)" />
+          <ShieldCheck size={28} color="var(--accent-primary)" />
           <div>
             <h1 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>Promotion Dashboard</h1>
             <p style={{ fontSize: 13, color: 'var(--text-tertiary)', margin: '4px 0 0 0' }}>
@@ -252,7 +254,7 @@ export function PromotionDashboardView() {
           {sortedProposals.map(proposal => {
             const currentStatus = proposalStates[proposal.id];
             const isExpanded = expandedId === proposal.id;
-            const CheckIcon = getCheckIcon(proposal.ciChecks);
+            const CheckIconComponent = getCheckIcon(proposal.ciChecks);
 
             return (
               <GlassCard
@@ -333,7 +335,7 @@ export function PromotionDashboardView() {
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12, paddingTop: 12, borderTop: '1px solid var(--border-subtle)' }}>
                   {/* CI Checks */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <CheckIcon size={14} color={getCheckColor(proposal.ciChecks)} weight="fill" />
+                    {CheckIconComponent && <CheckIconComponent size={14} color={getCheckColor(proposal.ciChecks)} />}
                     <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>
                       CI: {proposal.ciChecks}
                     </span>
@@ -341,7 +343,7 @@ export function PromotionDashboardView() {
 
                   {/* Risk Level */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <AlertCircle size={14} color={getRiskColor(proposal.riskLevel)} weight="fill" />
+                    <AlertCircle size={14} color={getRiskColor(proposal.riskLevel)} />
                     <span
                       style={{
                         fontSize: 11,
@@ -356,7 +358,7 @@ export function PromotionDashboardView() {
 
                   {/* Affected Files Count */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <FolderOpen size={14} color="var(--text-tertiary)" weight="fill" />
+                    <FolderOpen size={14} color="var(--text-tertiary)" />
                     <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>
                       {proposal.affectedFiles.length} files
                     </span>

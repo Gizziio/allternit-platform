@@ -443,7 +443,7 @@ function NewTerminalDialog({
                 setOptions((prev) => ({ ...prev, shell: value }))
               }
             >
-              <SelectTrigger id="shell">
+              <SelectTrigger>
                 <SelectValue placeholder="Select shell" />
               </SelectTrigger>
               <SelectContent>

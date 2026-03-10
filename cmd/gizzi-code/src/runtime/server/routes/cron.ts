@@ -1,0 +1,380 @@
+import { Hono } from "hono"
+import { describeRoute, validator, resolver } from "hono-openapi"
+import z from "zod/v4"
+import { CronService } from "@/runtime/automation/cron/service"
+import { CronTypes } from "@/runtime/automation/cron/types"
+import { errors } from "@/runtime/server/error"
+import { lazy } from "@/shared/util/lazy"
+
+export const CronRoutes = lazy(() =>
+  new Hono()
+    .get(
+      "/status",
+      describeRoute({
+        summary: "Get cron status",
+        description: "Get overall cron service status",
+        operationId: "cron.status",
+        responses: {
+          200: {
+            description: "Cron status",
+            content: {
+              "application/json": {
+                schema: resolver(
+                  z.object({
+                    jobs: z.number(),
+                    active: z.number(),
+                    pendingRuns: z.number(),
+                    runningRuns: z.number(),
+                  }),
+                ),
+              },
+            },
+          },
+        },
+      }),
+      async (c) => {
+        const status = CronService.getStatus()
+        return c.json(status)
+      },
+    )
+    .get(
+      "/jobs",
+      describeRoute({
+        summary: "List cron jobs",
+        description: "Get all cron jobs",
+        operationId: "cron.list",
+        responses: {
+          200: {
+            description: "List of cron jobs",
+            content: {
+              "application/json": {
+                schema: resolver(z.any()),
+              },
+            },
+          },
+        },
+      }),
+      async (c) => {
+        const jobs = CronService.list()
+        return c.json(jobs)
+      },
+    )
+    .post(
+      "/jobs",
+      describeRoute({
+        summary: "Create cron job",
+        description: "Create a new scheduled job",
+        operationId: "cron.create",
+        responses: {
+          201: {
+            description: "Cron job created",
+            content: {
+              "application/json": {
+                schema: resolver(z.any()),
+              },
+            },
+          },
+          ...errors(400),
+        },
+      }),
+      validator("json", z.any()),
+      async (c) => {
+        const input = c.req.valid("json")
+        const job = CronService.create(input)
+        return c.json(job, 201)
+      },
+    )
+    .get(
+      "/jobs/:id",
+      describeRoute({
+        summary: "Get cron job",
+        description: "Get details of a specific cron job",
+        operationId: "cron.get",
+        responses: {
+          200: {
+            description: "Cron job details",
+            content: {
+              "application/json": {
+                schema: resolver(z.any()),
+              },
+            },
+          },
+          ...errors(404),
+        },
+      }),
+      validator(
+        "param",
+        z.object({
+          id: z.string(),
+        }),
+      ),
+      async (c) => {
+        const { id } = c.req.valid("param")
+        const job = CronService.get(id)
+        if (!job) {
+          return c.json({ error: `Cron job "${id}" not found` }, 404)
+        }
+        return c.json(job)
+      },
+    )
+    .put(
+      "/jobs/:id",
+      describeRoute({
+        summary: "Update cron job",
+        description: "Update an existing cron job",
+        operationId: "cron.update",
+        responses: {
+          200: {
+            description: "Cron job updated",
+            content: {
+              "application/json": {
+                schema: resolver(z.any()),
+              },
+            },
+          },
+          ...errors(400, 404),
+        },
+      }),
+      validator(
+        "param",
+        z.object({
+          id: z.string(),
+        }),
+      ),
+      validator("json", z.any()),
+      async (c) => {
+        const { id } = c.req.valid("param")
+        const input = c.req.valid("json")
+        const job = CronService.update(id, input)
+        return c.json(job)
+      },
+    )
+    .delete(
+      "/jobs/:id",
+      describeRoute({
+        summary: "Delete cron job",
+        description: "Delete a cron job",
+        operationId: "cron.delete",
+        responses: {
+          204: {
+            description: "Cron job deleted",
+          },
+          ...errors(404),
+        },
+      }),
+      validator(
+        "param",
+        z.object({
+          id: z.string(),
+        }),
+      ),
+      async (c) => {
+        const { id } = c.req.valid("param")
+        CronService.remove(id)
+        return c.body(null, 204)
+      },
+    )
+    .post(
+      "/jobs/:id/pause",
+      describeRoute({
+        summary: "Pause cron job",
+        description: "Pause a cron job temporarily",
+        operationId: "cron.pause",
+        responses: {
+          200: {
+            description: "Cron job paused",
+            content: {
+              "application/json": {
+                schema: resolver(z.any()),
+              },
+            },
+          },
+          ...errors(404),
+        },
+      }),
+      validator(
+        "param",
+        z.object({
+          id: z.string(),
+        }),
+      ),
+      async (c) => {
+        const { id } = c.req.valid("param")
+        CronService.setStatus(id, "paused")
+        const job = CronService.get(id)
+        return c.json(job)
+      },
+    )
+    .post(
+      "/jobs/:id/resume",
+      describeRoute({
+        summary: "Resume cron job",
+        description: "Resume a paused cron job",
+        operationId: "cron.resume",
+        responses: {
+          200: {
+            description: "Cron job resumed",
+            content: {
+              "application/json": {
+                schema: resolver(z.any()),
+              },
+            },
+          },
+          ...errors(404),
+        },
+      }),
+      validator(
+        "param",
+        z.object({
+          id: z.string(),
+        }),
+      ),
+      async (c) => {
+        const { id } = c.req.valid("param")
+        CronService.setStatus(id, "active")
+        const job = CronService.get(id)
+        return c.json(job)
+      },
+    )
+    .post(
+      "/jobs/:id/run",
+      describeRoute({
+        summary: "Trigger cron job",
+        description: "Manually trigger a cron job to run immediately",
+        operationId: "cron.run",
+        responses: {
+          200: {
+            description: "Cron job triggered",
+            content: {
+              "application/json": {
+                schema: resolver(z.any()),
+              },
+            },
+          },
+          ...errors(404),
+        },
+      }),
+      validator(
+        "param",
+        z.object({
+          id: z.string(),
+        }),
+      ),
+      async (c) => {
+        const { id } = c.req.valid("param")
+        const run = await CronService.trigger(id, "manual")
+        return c.json(run)
+      },
+    )
+    .get(
+      "/jobs/:id/runs",
+      describeRoute({
+        summary: "List job runs",
+        description: "Get run history for a specific job",
+        operationId: "cron.runs",
+        responses: {
+          200: {
+            description: "List of runs",
+            content: {
+              "application/json": {
+                schema: resolver(z.any()),
+              },
+            },
+          },
+        },
+      }),
+      validator(
+        "param",
+        z.object({
+          id: z.string(),
+        }),
+      ),
+      async (c) => {
+        const { id } = c.req.valid("param")
+        const runs = CronService.getRuns(id)
+        return c.json(runs)
+      },
+    )
+    .get(
+      "/runs",
+      describeRoute({
+        summary: "List all runs",
+        description: "Get all cron runs across all jobs",
+        operationId: "cron.allRuns",
+        responses: {
+          200: {
+            description: "List of all runs",
+            content: {
+              "application/json": {
+                schema: resolver(z.any()),
+              },
+            },
+          },
+        },
+      }),
+      async (c) => {
+        const runs = CronService.getRuns()
+        return c.json(runs)
+      },
+    )
+    .get(
+      "/runs/:id",
+      describeRoute({
+        summary: "Get run",
+        description: "Get details of a specific run",
+        operationId: "cron.getRun",
+        responses: {
+          200: {
+            description: "Run details",
+            content: {
+              "application/json": {
+                schema: resolver(z.any()),
+              },
+            },
+          },
+          ...errors(404),
+        },
+      }),
+      validator(
+        "param",
+        z.object({
+          id: z.string(),
+        }),
+      ),
+      async (c) => {
+        const { id } = c.req.valid("param")
+        const run = CronService.getRun(id)
+        if (!run) {
+          return c.json({ error: `Run "${id}" not found` }, 404)
+        }
+        return c.json(run)
+      },
+    )
+    .post(
+      "/wake",
+      describeRoute({
+        summary: "Wake cron service",
+        description: "Trigger due jobs immediately",
+        operationId: "cron.wake",
+        responses: {
+          200: {
+            description: "Wake completed",
+            content: {
+              "application/json": {
+                schema: resolver(
+                  z.object({
+                    triggered: z.number(),
+                    jobs: z.string().array(),
+                  }),
+                ),
+              },
+            },
+          },
+        },
+      }),
+      async (c) => {
+        const result = await CronService.wake("api")
+        return c.json(result)
+      },
+    ),
+)

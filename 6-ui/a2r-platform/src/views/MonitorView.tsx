@@ -134,7 +134,7 @@ function StatusDot({ status }: { status: AgentMetric['status'] }) {
 function MetricCard({ metric }: { metric: SystemMetric }) {
   const TrendIcon = metric.trend === 'up' ? ArrowUp : metric.trend === 'down' ? ArrowDown : Circle;
   return (
-    <GlassCard hoverable={false} style={{ padding: '20px 24px', flex: 1, minWidth: 160 }}>
+    <GlassCard style={{ padding: '20px 24px', flex: 1, minWidth: 160 }}>
       <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
         {metric.label}
       </div>
@@ -260,7 +260,6 @@ export function MonitorView() {
             return (
               <GlassCard
                 key={agent.id}
-                hoverable
                 style={{
                   padding: '16px 20px',
                   cursor: 'pointer',
@@ -384,7 +383,7 @@ export function MonitorView() {
           </div>
 
           {/* Log Entries */}
-          <GlassCard hoverable={false} style={{ padding: 0, overflow: 'hidden' }}>
+          <GlassCard style={{ padding: 0, overflow: 'hidden' }}>
             {filteredLogs.map((entry, idx) => {
               const cfg = LOG_LEVEL_CONFIG[entry.level];
               return (

@@ -84,6 +84,7 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   'a2r-ix': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'form-surfaces': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   canvas: { singleton: false, maxInstances: 3, allowNew: true, surface: 'view', ownsTabs: false },
+  'a2r-canvas': { singleton: false, maxInstances: 3, allowNew: true, surface: 'view', ownsTabs: false },
   hooks: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
 
   // P4 UI Views
@@ -121,10 +122,16 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   'cowork-runs': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'cowork-drafts': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'cowork-tasks': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+  'cowork-cron': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+  'cowork-project': { singleton: false, maxInstances: 10, allowNew: true, surface: 'view', ownsTabs: false },
   'cowork-documents': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'cowork-tables': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'cowork-files': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'cowork-exports': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+  'cowork-new-task': { singleton: false, maxInstances: 5, allowNew: true, surface: 'view', ownsTabs: false },
+  
+  // Product Discovery
+  products: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
 };
 
 export function makeStableViewId(viewType: ViewType, capsuleId?: string) {

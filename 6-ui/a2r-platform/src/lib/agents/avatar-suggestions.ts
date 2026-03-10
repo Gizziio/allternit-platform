@@ -18,7 +18,7 @@ import type {
   AvatarEmotion 
 } from './character.types';
 import { createDefaultAvatarConfig } from './character.types';
-import { SETUP_COLOR_PALETTES } from '../../components/avatar/presets/colorPalettes';
+import { SETUP_COLOR_PALETTES } from '../../components/Avatar/presets/colorPalettes';
 
 // ============================================================================
 // Setup-to-Visual Mappings
@@ -241,8 +241,8 @@ export function suggestAvatarForSetup(
     const adj = TEMPERAMENT_ADJUSTMENTS[temperament];
     
     if (config.personality) {
-      config.personality.bounce *= adj.bounceModifier;
-      config.personality.sway *= adj.swayModifier;
+      config.personality.bounce = (config.personality.bounce ?? 0.3) * adj.bounceModifier;
+      config.personality.sway = (config.personality.sway ?? 0.15) * adj.swayModifier;
     }
     
     if (config.eyes) {
@@ -294,26 +294,31 @@ export function generateSmartAvatar(
     baseShape: nameSuggestion.bodyShape || setupSuggestion.baseShape || base.baseShape,
     eyes: {
       ...base.eyes,
-      preset: nameSuggestion.eyePreset || setupSuggestion.eyes?.preset || base.eyes.preset,
-      color: setupSuggestion.eyes?.color || base.eyes.color,
-      blinkRate: setupSuggestion.eyes?.blinkRate || base.eyes.blinkRate,
+      preset: nameSuggestion.eyePreset || setupSuggestion.eyes?.preset || base.eyes?.preset || 'round',
+      color: setupSuggestion.eyes?.color || base.eyes?.color || '#ECECEC',
+      blinkRate: setupSuggestion.eyes?.blinkRate || base.eyes?.blinkRate || 'normal',
+      size: base.eyes?.size ?? 1,
+      pupilStyle: base.eyes?.pupilStyle ?? 'dot',
     },
     antennas: {
       ...base.antennas,
-      style: nameSuggestion.antennaStyle || setupSuggestion.antennas?.style || base.antennas.style,
-      animation: nameSuggestion.antennaAnimation || setupSuggestion.antennas?.animation || base.antennas.animation,
+      style: nameSuggestion.antennaStyle || setupSuggestion.antennas?.style || base.antennas?.style || 'straight',
+      animation: nameSuggestion.antennaAnimation || setupSuggestion.antennas?.animation || base.antennas?.animation || 'sway',
+      count: base.antennas?.count ?? 2,
+      tipDecoration: base.antennas?.tipDecoration ?? 'none',
     },
     colors: {
       ...base.colors,
-      primary: setupSuggestion.colors?.primary || base.colors.primary,
-      secondary: setupSuggestion.colors?.secondary || base.colors.secondary,
-      glow: setupSuggestion.colors?.glow || base.colors.glow,
+      primary: setupSuggestion.colors?.primary || base.colors?.primary || '#6366f1',
+      secondary: setupSuggestion.colors?.secondary || base.colors?.secondary || '#8b5cf6',
+      glow: setupSuggestion.colors?.glow || base.colors?.glow || '#6366f1',
+      outline: base.colors?.outline || '#1e1b4b',
     },
     personality: {
       ...base.personality,
-      bounce: setupSuggestion.personality?.bounce || base.personality.bounce,
-      sway: setupSuggestion.personality?.sway || base.personality.sway,
-      breathing: setupSuggestion.personality?.breathing ?? base.personality.breathing,
+      bounce: setupSuggestion.personality?.bounce ?? base.personality?.bounce ?? 0.3,
+      sway: setupSuggestion.personality?.sway ?? base.personality?.sway ?? 0.15,
+      breathing: setupSuggestion.personality?.breathing ?? base.personality?.breathing ?? true,
     },
   };
   
@@ -390,12 +395,12 @@ export function validateAvatarMatchesSetup(
     differences.push(`Body shape is ${config.baseShape}, suggested ${suggestion.bodyShape}`);
   }
   
-  if (config.eyes.preset !== suggestion.eyePreset) {
-    differences.push(`Eye preset is ${config.eyes.preset}, suggested ${suggestion.eyePreset}`);
+  if (config.eyes?.preset !== suggestion.eyePreset) {
+    differences.push(`Eye preset is ${config.eyes?.preset}, suggested ${suggestion.eyePreset}`);
   }
   
-  if (config.antennas.style !== suggestion.antennaStyle) {
-    differences.push(`Antenna style is ${config.antennas.style}, suggested ${suggestion.antennaStyle}`);
+  if (config.antennas?.style !== suggestion.antennaStyle) {
+    differences.push(`Antenna style is ${config.antennas?.style}, suggested ${suggestion.antennaStyle}`);
   }
   
   return {

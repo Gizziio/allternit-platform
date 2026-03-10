@@ -162,7 +162,8 @@ export class ToolExecutor {
 import json
 from openpyxl import load_workbook
 wb = load_workbook('${args.path}')
-ws = wb['${args.sheet || wb.sheetnames[0]}']
+sheet_name = '${args.sheet}' if '${args.sheet}' else wb.sheetnames[0]
+ws = wb[sheet_name]
 rows = []
 headers = [cell.value for cell in ws[1]]
 for row in ws.iter_rows(min_row=2, values_only=True):

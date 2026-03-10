@@ -96,6 +96,7 @@ export type EyePreset =
   | "round"      // Friendly, approachable
   | "wide"       // Alert, attentive
   | "narrow"     // Focused, intense
+  | "focused"    // Concentrated attention
   | "curious"    // Questioning, asymmetrical
   | "pleased"    // Happy, content
   | "skeptical"  // Raised eyebrow, questioning
@@ -122,34 +123,36 @@ export type AvatarEmotion =
   | "pleased"    // Happy bounce, warm glow
   | "skeptical"  // Lean back, raised eyebrow
   | "mischief"   // Playful sway, quick twitches
-  | "proud";     // Lifted posture, strong glow
+  | "proud"      // Lifted posture, strong glow
+  | "narrow"     // Narrowed eyes, intense focus
+  | "sleepy";    // Droopy eyes, relaxed state
 
 export interface AvatarEyeConfig {
-  preset: EyePreset;
-  size: number;        // 0.5 - 1.5
-  color: string;       // Hex color
-  pupilStyle: PupilStyle;
-  blinkRate: BlinkRate;
+  preset?: EyePreset;
+  size?: number;        // 0.5 - 1.5
+  color?: string;       // Hex color
+  pupilStyle?: PupilStyle;
+  blinkRate?: BlinkRate;
 }
 
 export interface AvatarAntennaConfig {
-  count: 0 | 1 | 2 | 3;
-  style: AntennaStyle;
-  animation: AntennaAnimation;
+  count?: 0 | 1 | 2 | 3;
+  style?: AntennaStyle;
+  animation?: AntennaAnimation;
   tipDecoration?: "none" | "ball" | "glow" | "star" | "diamond";
 }
 
 export interface AvatarColorScheme {
-  primary: string;     // Body fill
-  secondary: string;   // Eye/accent color
-  glow: string;        // Beacon/emission color
-  outline: string;     // Stroke color
+  primary?: string;     // Body fill
+  secondary?: string;   // Eye/accent color
+  glow?: string;        // Beacon/emission color
+  outline?: string;     // Stroke color
 }
 
 export interface AvatarPersonalityConfig {
-  bounce: number;      // 0-1 idle bounce intensity
-  sway: number;        // 0-1 rotation sway
-  breathing: boolean;  // Scale pulsing
+  bounce?: number;      // 0-1 idle bounce intensity
+  sway?: number;        // 0-1 rotation sway
+  breathing?: boolean;  // Scale pulsing
 }
 
 export interface AvatarAccessory {
@@ -164,28 +167,33 @@ export interface AvatarAccessory {
  * Supports video game-style character customization
  */
 export interface AvatarConfig {
-  version: "1.0";
+  version?: "1.0";
   
   // Base Appearance
-  baseShape: AvatarBodyShape;
+  baseShape?: AvatarBodyShape;
   
   // Eye System
-  eyes: AvatarEyeConfig;
+  eyes?: AvatarEyeConfig;
   
   // Antennas/Accessories
-  antennas: AvatarAntennaConfig;
+  antennas?: AvatarAntennaConfig;
   
   // Color Palette
-  colors: AvatarColorScheme;
+  colors?: AvatarColorScheme;
   
   // Personality-Driven Animation
-  personality: AvatarPersonalityConfig;
+  personality?: AvatarPersonalityConfig;
   
   // Unlockable Decorations
-  accessories: string[];  // IDs of unlocked accessories
+  accessories?: string[];  // IDs of unlocked accessories
   
   // Current Display State
   currentEmotion?: AvatarEmotion;
+  
+  // Legacy/simple config support
+  type?: "glb" | "image" | "color";
+  uri?: string;
+  fallbackColor?: string;
 }
 
 /**
@@ -195,6 +203,14 @@ export interface AvatarConfig {
 export interface LegacyAvatarConfig {
   type: "glb" | "image" | "color";
   uri?: string;
+  fallbackColor: string;
+}
+
+/**
+ * Simple Avatar Config (for backward compatibility with minimal config)
+ */
+export interface SimpleAvatarConfig {
+  type: "color";
   fallbackColor: string;
 }
 
@@ -243,8 +259,8 @@ export function createDefaultAvatarConfig(setup: AgentSetup): AvatarConfig {
       return {
         ...base,
         baseShape: "hex",
-        eyes: { ...base.eyes, preset: "narrow", color: "#22D3EE" },
-        antennas: { ...base.antennas, style: "straight", animation: "pulse" },
+        eyes: { ...(base.eyes ?? {}), preset: "narrow", color: "#22D3EE" },
+        antennas: { ...(base.antennas ?? {}), style: "straight", animation: "pulse" },
         colors: {
           primary: "#1E293B",
           secondary: "#22D3EE",
@@ -258,8 +274,8 @@ export function createDefaultAvatarConfig(setup: AgentSetup): AvatarConfig {
       return {
         ...base,
         baseShape: "cloud",
-        eyes: { ...base.eyes, preset: "wide", color: "#ECECEC", pupilStyle: "star" },
-        antennas: { ...base.antennas, style: "leaf", animation: "sway" },
+        eyes: { ...(base.eyes ?? {}), preset: "wide", color: "#ECECEC", pupilStyle: "star" },
+        antennas: { ...(base.antennas ?? {}), style: "leaf", animation: "sway" },
         colors: {
           primary: "#8B5CF6",
           secondary: "#EC4899",
@@ -273,8 +289,8 @@ export function createDefaultAvatarConfig(setup: AgentSetup): AvatarConfig {
       return {
         ...base,
         baseShape: "diamond",
-        eyes: { ...base.eyes, preset: "curious", color: "#1E40AF", pupilStyle: "ring" },
-        antennas: { ...base.antennas, style: "coiled", animation: "bounce" },
+        eyes: { ...(base.eyes ?? {}), preset: "curious", color: "#1E40AF", pupilStyle: "ring" },
+        antennas: { ...(base.antennas ?? {}), style: "coiled", animation: "bounce" },
         colors: {
           primary: "#F59E0B",
           secondary: "#1E40AF",
@@ -288,8 +304,8 @@ export function createDefaultAvatarConfig(setup: AgentSetup): AvatarConfig {
       return {
         ...base,
         baseShape: "square",
-        eyes: { ...base.eyes, preset: "narrow", color: "#ECECEC" },
-        antennas: { ...base.antennas, style: "zigzag", animation: "wiggle" },
+        eyes: { ...(base.eyes ?? {}), preset: "narrow", color: "#ECECEC" },
+        antennas: { ...(base.antennas ?? {}), style: "zigzag", animation: "wiggle" },
         colors: {
           primary: "#DC2626",
           secondary: "#F59E0B",

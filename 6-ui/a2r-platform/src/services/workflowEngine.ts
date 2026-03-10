@@ -273,7 +273,8 @@ export class WorkflowDesignerEngine {
     const queue = nodes.filter(n => (inDegree.get(n.id) || 0) === 0).map(n => n.id);
     
     while (queue.length > 0) {
-      const nodeId = queue.shift()!;
+      const nodeId = queue.shift();
+      if (!nodeId) break;
       const currentLevel = levels.get(nodeId) || 0;
 
       // Find outgoing edges

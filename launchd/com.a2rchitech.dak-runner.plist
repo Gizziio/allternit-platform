@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.a2rchitech.dak-runner</string>
+
+    <key>LabelDescription</key>
+    <string>A2rchitech DAK Runner Daemon - Continuous Agent Execution</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/bin/node</string>
+        <string>/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/1-kernel/agent-systems/a2r-dak-runner/dist/daemon.js</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech</string>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <true/>
+        <key>Crashed</key>
+        <true/>
+        <key>NetworkState</key>
+        <true/>
+    </dict>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>NODE_ENV</key>
+        <string>production</string>
+        <key>A2R_RAILS_CLI</key>
+        <string>/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/target/release/a2r-rails</string>
+        <key>A2R_PROJECT_PATH</key>
+        <string>/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech</string>
+        <key>A2R_OUTPUT_DIR</key>
+        <string>/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/.a2r/runner</string>
+        <key>A2R_MAX_CONCURRENT</key>
+        <string>3</string>
+        <key>A2R_BUDGET_MAX</key>
+        <string>90</string>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/macbook/Library/Logs/a2rchitech/dak-runner.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/macbook/Library/Logs/a2rchitech/dak-runner.err.log</string>
+
+    <key>Nice</key>
+    <integer>10</integer>
+
+    <key>SoftResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>512</integer>
+        <key>MemoryLock</key>
+        <integer>1073741824</integer>
+    </dict>
+
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+
+    <key>AbandonProcessGroup</key>
+    <false/>
+</dict>
+</plist>

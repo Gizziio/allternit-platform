@@ -38,6 +38,7 @@ import { ModelPicker } from '@/components/model-picker';
 import { useCoworkStore } from './CoworkStore';
 import { useAgentSurfaceModeStore } from '@/stores/agent-surface-mode.store';
 import { AgentModeBackdrop } from '../chat/agentModeSurfaceTheme';
+import { AgentCapabilitiesPanel } from './AgentCapabilitiesPanel';
 
 // ============================================================================
 // Animation Keyframes - Each headline gets a unique entrance
@@ -492,6 +493,14 @@ export function CoworkLaunchpad({ onStartChat, onResumeThread }: CoworkLaunchpad
             Customize with plugins
           </button>
         </section>
+
+        {/* Agent Capabilities */}
+        <AgentCapabilitiesPanel
+          variant="inline"
+          onUseCapability={(_type, _item, prompt) => {
+            onStartChat(prompt);
+          }}
+        />
 
         <ModelPicker
           open={isSelecting}

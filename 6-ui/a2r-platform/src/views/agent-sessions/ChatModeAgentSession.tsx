@@ -62,7 +62,7 @@ export function ChatModeAgentSession({
   onClose,
 }: ChatModeAgentSessionProps) {
   const mode = 'chat';
-  const modeColors = MODE_COLORS[mode];
+  const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.chat;
   const accentColor = useToolCallAccent(mode);
   
   // State
@@ -284,7 +284,7 @@ function ChatMessage({
   mode: 'chat';
   accentColor: string;
 }) {
-  const modeColors = MODE_COLORS[mode];
+  const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.chat;
   const isUser = message.role === 'user';
   
   return (
@@ -324,13 +324,11 @@ function ChatMessage({
         {/* Tool Calls */}
         {message.toolCalls && message.toolCalls.length > 0 && (
           <div className="mt-2 space-y-2">
-            {message.toolCalls.map((toolCall) => (
-              <ToolCallVisualization
-                key={toolCall.id}
-                toolCall={toolCall}
-                surface={mode}
-              />
-            ))}
+            <ToolCallVisualization
+              toolCalls={message.toolCalls}
+              isLoading={true}
+              accentColor={accentColor}
+            />
           </div>
         )}
         
@@ -349,7 +347,7 @@ function ChatMessage({
 }
 
 function ChatWorkbenchRail({ mode }: { mode: 'chat' }) {
-  const modeColors = MODE_COLORS[mode];
+  const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.chat;
   
   return (
     <div className="py-2">
@@ -394,7 +392,7 @@ function ChatWorkbenchRail({ mode }: { mode: 'chat' }) {
 }
 
 function ChatCanvasPanel({ mode, canvases }: { mode: 'chat'; canvases: AgentSessionCanvas[] }) {
-  const modeColors = MODE_COLORS[mode];
+  const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.chat;
   
   if (canvases.length === 0) {
     return (

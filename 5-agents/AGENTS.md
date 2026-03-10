@@ -43,6 +43,13 @@ Every tool call MUST:
 - **Builder NEVER self-approves**
 - Node is DONE only when `validator_report` == PASS
 
+### 1.5 Landing Standard
+
+Structural code changes **MUST** use the Autoland Protocol. Agents are strictly prohibited from writing directly to the project root for implementation tasks.
+1.  **Isolation**: Work MUST happen in `.a2r/runner/{wih_id}/`.
+2.  **Landing**: Final commitment to the root MUST be handled by the `autoland` gate.
+3.  **Policy**: Implementation tasks should default to `autoland_on_pass: true`.
+
 ---
 
 ## 2. Role Definitions
@@ -58,12 +65,14 @@ Every tool call MUST:
 
 - Implements features per WIH spec
 - Produces: code, tests, docs, build reports
+- **Invariant**: **MUST** produce or update documentation (README.md, SPEC.md, ARCHITECTURE.md) for any structural change.
 - **Constraints:** Writes only under lease scope
 
 ### 2.3 Validator
 
 - Verifies builder output
 - Produces: validator report (PASS/FAIL + required fixes)
+- **Invariant**: **MUST** verify that documentation artifacts exist and are accurate before marking `PASS`.
 - **Constraints:** No writes to repo (read-only validation)
 
 ### 2.4 Reviewer

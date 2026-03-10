@@ -208,7 +208,7 @@ function Icon({ name, size = 'md', className }: IconProps) {
     .map(part => part.charAt(0).toUpperCase() + part.slice(1))
     .join('');
 
-  const IconComponent = (LucideIcons as Record<string, React.ComponentType<{ size?: number; className?: string }>>)[
+  const IconComponent = ((LucideIcons as unknown) as Record<string, React.ComponentType<{ size?: number; className?: string }>>)[
     pascalName
   ];
 
