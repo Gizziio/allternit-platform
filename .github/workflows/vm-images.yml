@@ -61,9 +61,9 @@ jobs:
         run: |
           mkdir -p vm-images
           cargo run --release -p a2r-vm-image-builder -- \
+            --output-dir ./vm-images \
             build \
-            --ubuntu-version 22.04 \
-            --output-dir ./vm-images
+            --ubuntu-version 22.04
         env:
           RUST_LOG: info
 
@@ -149,7 +149,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y debootstrap qemu-user-static binutils-aarch64-linux-gnu e2fsprogs zstd
+          sudo apt-get install -y debootstrap qemu-user-static gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu e2fsprogs zstd
 
       - name: Install Rust
         uses: actions-rs/toolchain@v1
