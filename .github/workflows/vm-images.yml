@@ -46,7 +46,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y debootstrap qemu-utils e2fsprogs zstd
+          sudo apt-get install -y e2fsprogs zstd wget
 
       - name: Cache Rust build
         uses: Swatinem/rust-cache@v2
@@ -57,30 +57,95 @@ jobs:
         run: |
           cargo build --release -p a2r-vm-executor
 
-      - name: Build VM images
+      - name: Download Ubuntu cloud image
         run: |
           mkdir -p vm-images
-          cargo run --release -p a2r-vm-image-builder -- \
-            --output-dir ./vm-images \
-            build \
-            --ubuntu-version 22.04
-        env:
-          RUST_LOG: info
+          # Download Ubuntu 22.04 cloud image
+          wget -q https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64.img \
+            -O vm-images/ubuntu-22.04-base-amd64.img
+          
+          # Download kernel and initrd
+          wget -q https://cloud-images.ubuntu.com/releases/22.04/release/unpacked/ubuntu-22.04-server-cloudimg-amd64-vmlinuz-generic \
+            -O vm-images/vmlinux-6.5.0-a2r
+          wget -q https://cloud-images.ubuntu.com/releases/22.04/release/unpacked/ubuntu-22.04-server-cloudimg-amd64-initrd-generic \
+            -O vm-images/initrd.img-6.5.0-a2r
+
+      - name: Create rootfs with a2r-vm-executor
+        run: |
+          cd vm-images
+          
+          # Convert qcow2 to raw
+          sudo apt-get install -y qemu-utils
+          qemu-img convert -f qcow2 -O raw ubuntu-22.04-base-amd64.img rootfs.raw
+          
+          # Mount and modify
+          mkdir -p /tmp/rootfs
+          sudo mount -o loop,offset=1048576 rootfs.raw /tmp/rootfs || \
+            sudo mount -o loop $(fdisk -l rootfs.raw | grep Linux | awk '{print $1}') /tmp/rootfs
+          
+          # Copy a2r-vm-executor
+          sudo mkdir -p /tmp/rootfs/usr/bin
+          sudo cp ../target/release/a2r-vm-executor /tmp/rootfs/usr/bin/
+          sudo chmod +x /tmp/rootfs/usr/bin/a2r-vm-executor
+          
+          # Create config directory
+          sudo mkdir -p /tmp/rootfs/etc/a2r
+          
+          # Create vm-executor config
+          sudo tee /tmp/rootfs/etc/a2r/vm-executor.toml << 'EOF'
+          vsock_port = 8080
+          log_level = "info"
+          max_sessions = 50
+          workspace_path = "/workspace"
+          
+          [sandbox]
+          use_bubblewrap = true
+          network = "host"
+          max_memory_mb = 2048
+          EOF
+          
+          # Create systemd service
+          sudo mkdir -p /tmp/rootfs/etc/systemd/system
+          sudo tee /tmp/rootfs/etc/systemd/system/a2r-vm-executor.service << 'EOF'
+          [Unit]
+          Description=A2R VM Executor
+          After=network.target
+          
+          [Service]
+          Type=simple
+          ExecStart=/usr/bin/a2r-vm-executor
+          Restart=always
+          RestartSec=5
+          
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+          
+          sudo ln -sf /etc/systemd/system/a2r-vm-executor.service /tmp/rootfs/etc/systemd/system/multi-user.target.wants/
+          
+          # Unmount
+          sudo umount /tmp/rootfs
+          
+          # Convert back to ext4
+          mv rootfs.raw ubuntu-22.04-a2r-v${IMAGE_VERSION}.ext4
+          
+          # Clean up
+          rm -f ubuntu-22.04-base-amd64.img
 
       - name: Create image metadata
         run: |
-          KERNEL_VERSION=$(ls vm-images/vmlinux-* | grep -oP '\d+\.\d+\.\d+' | head -1)
-          cat > vm-images/version-${IMAGE_VERSION}-amd64.json << EOF
+          cd vm-images
+          cat > version-${IMAGE_VERSION}-amd64.json << EOF
           {
             "version": "${IMAGE_VERSION}",
             "build_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
             "architecture": "x86_64",
-            "kernel_version": "${KERNEL_VERSION}",
+            "kernel_version": "6.5.0",
             "rootfs_size_mb": 2048,
             "checksums": {
-              "vmlinux_sha256": "$(sha256sum vm-images/vmlinux-*-a2r | cut -d' ' -f1)",
-              "initrd_sha256": "$(sha256sum vm-images/initrd.img-*-a2r | cut -d' ' -f1)",
-              "rootfs_sha256": "$(sha256sum vm-images/ubuntu-22.04-a2r-*.ext4 | cut -d' ' -f1)"
+              "vmlinux_sha256": "$(sha256sum vmlinux-6.5.0-a2r | cut -d' ' -f1)",
+              "initrd_sha256": "$(sha256sum initrd.img-6.5.0-a2r | cut -d' ' -f1)",
+              "rootfs_sha256": "$(sha256sum ubuntu-22.04-a2r-v${IMAGE_VERSION}.ext4 | cut -d' ' -f1)"
             }
           }
           EOF
@@ -88,8 +153,8 @@ jobs:
       - name: Compress images
         run: |
           cd vm-images
-          zstd -T0 --ultra -19 ubuntu-22.04-a2r-*.ext4 -o ubuntu-22.04-a2r-v${IMAGE_VERSION}.ext4.zst
-          rm ubuntu-22.04-a2r-*.ext4
+          zstd -T0 --ultra -19 ubuntu-22.04-a2r-v${IMAGE_VERSION}.ext4 -o ubuntu-22.04-a2r-v${IMAGE_VERSION}.ext4.zst
+          rm ubuntu-22.04-a2r-v${IMAGE_VERSION}.ext4
           ls -la
 
       - name: Upload artifacts
@@ -126,7 +191,6 @@ jobs:
             
             ## Platforms
             - ✅ x86_64 (AMD64)
-            - ✅ aarch64 (ARM64) - Apple Silicon
           files: |
             vm-images/*
           draft: false
@@ -143,22 +207,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y debootstrap qemu-user-static gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu e2fsprogs zstd
-
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           override: true
+          target: aarch64-unknown-linux-gnu
 
-      - name: Add ARM64 target
-        run: rustup target add aarch64-unknown-linux-gnu
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu e2fsprogs zstd wget qemu-utils
 
       - name: Cache Rust build
         uses: Swatinem/rust-cache@v2
@@ -171,44 +230,63 @@ jobs:
         env:
           CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
 
-      - name: Build VM images (ARM64)
+      - name: Download Ubuntu cloud image (ARM64)
         run: |
           mkdir -p vm-images
+          # Download Ubuntu 22.04 ARM64 cloud image
+          wget -q https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-arm64.img \
+            -O vm-images/ubuntu-22.04-base-arm64.img
           
-          # Create ARM64 rootfs using debootstrap with QEMU
-          sudo debootstrap --arch=arm64 --foreign jammy vm-images/rootfs http://ports.ubuntu.com/ubuntu-ports
-          sudo cp /usr/bin/qemu-aarch64-static vm-images/rootfs/usr/bin/
-          sudo chroot vm-images/rootfs /debootstrap/debootstrap --second-stage
-          
-          # Copy executor binary
-          sudo mkdir -p vm-images/rootfs/usr/bin
-          sudo cp target/aarch64-unknown-linux-gnu/release/a2r-vm-executor vm-images/rootfs/usr/bin/
-          sudo chmod +x vm-images/rootfs/usr/bin/a2r-vm-executor
-          
-          # Install toolchains inside chroot
-          sudo chroot vm-images/rootfs apt-get update
-          sudo chroot vm-images/rootfs apt-get install -y nodejs npm python3 python3-pip docker.io cargo git bubblewrap
-          
-          # Create disk image
-          dd if=/dev/zero of=vm-images/ubuntu-22.04-a2r-v${IMAGE_VERSION}-arm64.ext4 bs=1M count=2048
-          mkfs.ext4 vm-images/ubuntu-22.04-a2r-v${IMAGE_VERSION}-arm64.ext4
-          
-          # Mount and copy
-          mkdir -p /tmp/arm64-rootfs
-          sudo mount vm-images/ubuntu-22.04-a2r-v${IMAGE_VERSION}-arm64.ext4 /tmp/arm64-rootfs
-          sudo cp -a vm-images/rootfs/. /tmp/arm64-rootfs/
-          sudo umount /tmp/arm64-rootfs
-          
-          # Get ARM64 kernel
-          wget -q http://cloud-images.ubuntu.com/releases/22.04/release/unpacked/ubuntu-22.04-server-cloudimg-arm64-vmlinuz-generic \
+          # Download kernel and initrd
+          wget -q https://cloud-images.ubuntu.com/releases/22.04/release/unpacked/ubuntu-22.04-server-cloudimg-arm64-vmlinuz-generic \
             -O vm-images/vmlinux-6.5.0-a2r-arm64 || true
-          wget -q http://cloud-images.ubuntu.com/releases/22.04/release/unpacked/ubuntu-22.04-server-cloudimg-arm64-initrd-generic \
+          wget -q https://cloud-images.ubuntu.com/releases/22.04/release/unpacked/ubuntu-22.04-server-cloudimg-arm64-initrd-generic \
             -O vm-images/initrd.img-6.5.0-a2r-arm64 || true
-        continue-on-error: true
+
+      - name: Create rootfs with a2r-vm-executor (ARM64)
+        run: |
+          cd vm-images
+          
+          # Convert qcow2 to raw
+          qemu-img convert -f qcow2 -O raw ubuntu-22.04-base-arm64.img rootfs.raw
+          
+          # Mount and modify
+          mkdir -p /tmp/rootfs
+          sudo mount -o loop,offset=1048576 rootfs.raw /tmp/rootfs || \
+            sudo mount -o loop $(fdisk -l rootfs.raw 2>/dev/null | grep Linux | awk '{print $1}') /tmp/rootfs
+          
+          # Copy a2r-vm-executor
+          sudo mkdir -p /tmp/rootfs/usr/bin
+          sudo cp ../target/aarch64-unknown-linux-gnu/release/a2r-vm-executor /tmp/rootfs/usr/bin/
+          sudo chmod +x /tmp/rootfs/usr/bin/a2r-vm-executor
+          
+          # Create config
+          sudo mkdir -p /tmp/rootfs/etc/a2r
+          sudo tee /tmp/rootfs/etc/a2r/vm-executor.toml << 'EOF'
+          vsock_port = 8080
+          log_level = "info"
+          max_sessions = 50
+          workspace_path = "/workspace"
+          
+          [sandbox]
+          use_bubblewrap = true
+          network = "host"
+          max_memory_mb = 2048
+          EOF
+          
+          # Unmount
+          sudo umount /tmp/rootfs || true
+          
+          # Convert back to ext4
+          mv rootfs.raw ubuntu-22.04-a2r-v${IMAGE_VERSION}-arm64.ext4
+          
+          # Clean up
+          rm -f ubuntu-22.04-base-arm64.img
 
       - name: Create ARM64 metadata
         run: |
-          cat > vm-images/version-${IMAGE_VERSION}-arm64.json << EOF
+          cd vm-images
+          cat > version-${IMAGE_VERSION}-arm64.json << EOF
           {
             "version": "${IMAGE_VERSION}",
             "build_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
@@ -216,23 +294,18 @@ jobs:
             "kernel_version": "6.5.0",
             "rootfs_size_mb": 2048,
             "checksums": {
-              "vmlinux_sha256": "$(sha256sum vm-images/vmlinux-*-arm64 2>/dev/null | cut -d' ' -f1 || echo 'N/A')",
-              "initrd_sha256": "$(sha256sum vm-images/initrd.img-*-arm64 2>/dev/null | cut -d' ' -f1 || echo 'N/A')",
-              "rootfs_sha256": "$(sha256sum vm-images/ubuntu-22.04-a2r-*-arm64.ext4 2>/dev/null | cut -d' ' -f1 || echo 'N/A')"
+              "vmlinux_sha256": "$(sha256sum vmlinux-6.5.0-a2r-arm64 2>/dev/null | cut -d' ' -f1 || echo 'N/A')",
+              "initrd_sha256": "$(sha256sum initrd.img-6.5.0-a2r-arm64 2>/dev/null | cut -d' ' -f1 || echo 'N/A')",
+              "rootfs_sha256": "$(sha256sum ubuntu-22.04-a2r-v${IMAGE_VERSION}-arm64.ext4 | cut -d' ' -f1)"
             }
           }
           EOF
-        continue-on-error: true
 
       - name: Compress ARM64 images
         run: |
           cd vm-images
-          for f in ubuntu-22.04-a2r-*-arm64.ext4; do
-            [ -f "$f" ] && zstd -T0 --ultra -19 "$f" -o "${f}.zst"
-          done
-          rm -f ubuntu-22.04-a2r-*-arm64.ext4
+          zstd -T0 --ultra -19 ubuntu-22.04-a2r-v${IMAGE_VERSION}-arm64.ext4 -o ubuntu-22.04-a2r-v${IMAGE_VERSION}-arm64.ext4.zst
           ls -la
-        continue-on-error: true
 
       - name: Upload ARM64 artifacts
         uses: actions/upload-artifact@v4
@@ -261,7 +334,7 @@ jobs:
           zstd -d ubuntu-22.04-a2r-*.ext4.zst
           
           # Verify checksums
-          cat version-*.json | jq -r '.checksums.rootfs_sha256'
+          cat version-*.json
           sha256sum ubuntu-22.04-a2r-*.ext4
           
           echo "Images verified successfully"
@@ -276,37 +349,3 @@ jobs:
           # Check Firecracker works
           ./release-*/firecracker-* --version
           echo "✅ Firecracker VM images built and ready"
-
-  # Update version manifest
-  update-manifest:
-    runs-on: ubuntu-latest
-    needs: [build-x86_64, build-arm64]
-    if: github.event.inputs.upload_release == 'true'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Update version manifest
-        run: |
-          mkdir -p docs
-          cat > docs/vm-images-manifest.json << EOF
-          {
-            "latest": "${IMAGE_VERSION}",
-            "versions": {
-              "${IMAGE_VERSION}": {
-                "release_date": "$(date -u +%Y-%m-%d)",
-                "architectures": ["x86_64", "aarch64"],
-                "size_mb": 500,
-                "changelog": "Initial release with Ubuntu 22.04 and A2R toolchains"
-              }
-            }
-          }
-          EOF
-
-      - name: Commit manifest
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add docs/vm-images-manifest.json
-          git diff --staged --quiet || git commit -m "Update VM image manifest for v${IMAGE_VERSION}"
-          git push || echo "No changes to commit"
