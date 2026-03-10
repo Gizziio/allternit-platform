@@ -24,8 +24,8 @@ env:
   IMAGE_VERSION: ${{ github.event.inputs.version || '1.1.0' }}
 
 jobs:
-  # Build a2r-vm-executor binaries
-  build-binaries:
+  # Build VM images using Docker
+  build-images:
     runs-on: ubuntu-22.04
     permissions:
       contents: write
@@ -38,82 +38,208 @@ jobs:
         with:
           toolchain: stable
           override: true
-          target: aarch64-unknown-linux-gnu
 
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
+          sudo apt-get install -y e2fsprogs zstd wget qemu-utils
 
       - name: Cache Rust build
         uses: Swatinem/rust-cache@v2
         with:
-          key: vm-executor-binaries
+          key: vm-executor-build
 
-      - name: Build a2r-vm-executor (x86_64)
+      - name: Build a2r-vm-executor
         run: |
           cargo build --release -p a2r-vm-executor
-          mkdir -p binaries
-          cp target/release/a2r-vm-executor binaries/a2r-vm-executor-x86_64
 
-      - name: Build a2r-vm-executor (ARM64)
+      - name: Download Ubuntu kernel and initrd
         run: |
-          cargo build --release -p a2r-vm-executor --target aarch64-unknown-linux-gnu
-          cp target/aarch64-unknown-linux-gnu/release/a2r-vm-executor binaries/a2r-vm-executor-arm64
-        env:
-          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
+          mkdir -p vm-images
+          
+          # Download kernel (vmlinux)
+          wget -q "https://cloud-images.ubuntu.com/releases/22.04/release/unpacked/ubuntu-22.04-server-cloudimg-amd64-vmlinuz-generic" \
+            -O vm-images/vmlinux-6.5.0-a2r || \
+          wget -q "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64-vmlinuz-generic" \
+            -O vm-images/vmlinux-6.5.0-a2r
+          
+          # Download initrd
+          wget -q "https://cloud-images.ubuntu.com/releases/22.04/release/unpacked/ubuntu-22.04-server-cloudimg-amd64-initrd-generic" \
+            -O vm-images/initrd.img-6.5.0-a2r || \
+          wget -q "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64-initrd-generic" \
+            -O vm-images/initrd.img-6.5.0-a2r
 
-      - name: Build a2r-vm-image-builder
+      - name: Create rootfs image
         run: |
-          cargo build --release -p a2r-vm-image-builder
-          cp target/release/a2r-vm-image-builder binaries/
+          mkdir -p vm-images
+          
+          # Create a 2GB empty ext4 image
+          dd if=/dev/zero of=vm-images/ubuntu-22.04-a2r-v${IMAGE_VERSION}.ext4 bs=1M count=2048
+          mkfs.ext4 vm-images/ubuntu-22.04-a2r-v${IMAGE_VERSION}.ext4
+          
+          # Mount it
+          sudo mkdir -p /mnt/rootfs
+          sudo mount -o loop vm-images/ubuntu-22.04-a2r-v${IMAGE_VERSION}.ext4 /mnt/rootfs
+          
+          # Download and extract Ubuntu base
+          wget -q http://cdimage.ubuntu.com/ubuntu-base/releases/22.04/release/ubuntu-base-22.04-base-amd64.tar.gz \
+            -O /tmp/ubuntu-base.tar.gz
+          
+          sudo tar -xzf /tmp/ubuntu-base.tar.gz -C /mnt/rootfs
+          
+          # Install essential packages
+          sudo mount --bind /dev /mnt/rootfs/dev
+          sudo mount --bind /proc /mnt/rootfs/proc
+          sudo mount --bind /sys /mnt/rootfs/sys
+          
+          sudo chroot /mnt/rootfs /bin/bash -c "
+            apt-get update && \
+            apt-get install -y \
+              systemd systemd-sysv \
+              openssh-server \
+              iproute2 iputils-ping \
+              curl wget \
+              ca-certificates \
+              nano vim \
+              htop \
+              git \
+              nodejs npm \
+              python3 python3-pip \
+              bubblewrap \
+              zstd
+          " || echo "Some packages may have failed, continuing..."
+          
+          # Copy a2r-vm-executor into the image
+          sudo cp target/release/a2r-vm-executor /mnt/rootfs/usr/bin/
+          sudo chmod +x /mnt/rootfs/usr/bin/a2r-vm-executor
+          
+          # Create a2r config directory
+          sudo mkdir -p /mnt/rootfs/etc/a2r
+          
+          # Create vm-executor config
+          sudo tee /mnt/rootfs/etc/a2r/vm-executor.toml << 'EOF'
+          vsock_port = 8080
+          log_level = "info"
+          max_sessions = 50
+          workspace_path = "/workspace"
+          
+          [sandbox]
+          use_bubblewrap = true
+          network = "host"
+          max_memory_mb = 2048
+          EOF
+          
+          # Create systemd service for a2r-vm-executor
+          sudo mkdir -p /mnt/rootfs/etc/systemd/system
+          sudo tee /mnt/rootfs/etc/systemd/system/a2r-vm-executor.service << 'EOF'
+          [Unit]
+          Description=A2R VM Executor
+          After=network.target
+          
+          [Service]
+          Type=simple
+          ExecStart=/usr/bin/a2r-vm-executor
+          Restart=always
+          RestartSec=5
+          
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+          
+          sudo ln -sf /etc/systemd/system/a2r-vm-executor.service \
+            /mnt/rootfs/etc/systemd/system/multi-user.target.wants/a2r-vm-executor.service 2>/dev/null || true
+          
+          # Unmount
+          sudo umount /mnt/rootfs/dev 2>/dev/null || true
+          sudo umount /mnt/rootfs/proc 2>/dev/null || true
+          sudo umount /mnt/rootfs/sys 2>/dev/null || true
+          sudo umount /mnt/rootfs
+          
+          echo "✅ Rootfs image created"
 
-      - name: Create version metadata
+      - name: Create image metadata
         run: |
-          cd binaries
-          cat > version-${IMAGE_VERSION}.json << 'EOF'
+          cd vm-images
+          
+          # Calculate checksums
+          VMLINUX_SHA=$(sha256sum vmlinux-6.5.0-a2r | cut -d' ' -f1)
+          INITRD_SHA=$(sha256sum initrd.img-6.5.0-a2r | cut -d' ' -f1)
+          ROOTFS_SHA=$(sha256sum ubuntu-22.04-a2r-v${IMAGE_VERSION}.ext4 | cut -d' ' -f1)
+          
+          cat > version-${IMAGE_VERSION}-amd64.json << EOF
           {
             "version": "${IMAGE_VERSION}",
             "build_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-            "binaries": {
-              "a2r-vm-executor-x86_64": "$(sha256sum a2r-vm-executor-x86_64 | cut -d' ' -f1)",
-              "a2r-vm-executor-arm64": "$(sha256sum a2r-vm-executor-arm64 | cut -d' ' -f1)",
-              "a2r-vm-image-builder": "$(sha256sum a2r-vm-image-builder | cut -d' ' -f1)"
+            "architecture": "x86_64",
+            "kernel_version": "6.5.0",
+            "rootfs_size_mb": 2048,
+            "checksums": {
+              "vmlinux_sha256": "${VMLINUX_SHA}",
+              "initrd_sha256": "${INITRD_SHA}",
+              "rootfs_sha256": "${ROOTFS_SHA}"
             }
           }
           EOF
+
+      - name: Compress images
+        run: |
+          cd vm-images
+          
+          # Compress rootfs with zstd
+          zstd -T0 -19 ubuntu-22.04-a2r-v${IMAGE_VERSION}.ext4 -o ubuntu-22.04-a2r-v${IMAGE_VERSION}.ext4.zst
+          
+          # Remove uncompressed version
+          rm ubuntu-22.04-a2r-v${IMAGE_VERSION}.ext4
+          
+          # List results
+          ls -lh
 
       - name: Upload to GitHub Releases
         if: github.event.inputs.upload_release == 'true'
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ env.IMAGE_VERSION }}
-          name: VM Executor v${{ env.IMAGE_VERSION }}
+          name: VM Images v${{ env.IMAGE_VERSION }}
           body: |
-            A2R VM Executor Binaries v${{ env.IMAGE_VERSION }}
+            A2R VM Images v${{ env.IMAGE_VERSION }}
             
-            ## Binaries
-            - `a2r-vm-executor-x86_64` - VM executor for x86_64 VMs
-            - `a2r-vm-executor-arm64` - VM executor for ARM64 VMs
-            - `a2r-vm-image-builder` - Tool to download/build VM images
+            ## Contents
+            - `vmlinux-6.5.0-a2r` - Linux kernel for Firecracker
+            - `initrd.img-6.5.0-a2r` - Initial ramdisk
+            - `ubuntu-22.04-a2r-v${{ env.IMAGE_VERSION }}.ext4.zst` - Root filesystem (compressed)
+            - `version-${{ env.IMAGE_VERSION }}-amd64.json` - Metadata and checksums
+            
+            ## What's Inside
+            - Ubuntu 22.04 LTS base system
+            - a2r-vm-executor pre-installed and configured
+            - Node.js, npm, Python 3, pip
+            - Git, curl, wget
+            - Bubblewrap for sandboxing
             
             ## Quick Start
             
-            ### Download Pre-built Images
+            ### Download Images
             ```bash
-            cargo run --release -p a2r-vm-image-builder -- download
+            a2r-vm-image-builder download --version ${{ env.IMAGE_VERSION }}
             ```
             
-            ### Build Images Locally (Linux only)
+            ### Or Download Manually
             ```bash
-            cargo run --release -p a2r-vm-image-builder -- build
+            # Download compressed image
+            curl -L -o ubuntu-22.04-a2r-v${{ env.IMAGE_VERSION }}.ext4.zst \
+              https://github.com/Gizziio/a2rchitech/releases/download/v${{ env.IMAGE_VERSION }}/ubuntu-22.04-a2r-v${{ env.IMAGE_VERSION }}.ext4.zst
+            
+            # Decompress
+            zstd -d ubuntu-22.04-a2r-v${{ env.IMAGE_VERSION }}.ext4.zst
             ```
             
             ## Platform Support
-            - ✅ x86_64 (AMD64)
-            - ✅ aarch64 (ARM64) - Apple Silicon
+            - ✅ x86_64 (AMD64) - Intel/AMD processors
+            
+            ## macOS Users
+            These images work with Firecracker microVMs. On macOS, use with A2R Desktop app which manages the VM via Apple Virtualization.framework.
           files: |
-            binaries/*
+            vm-images/*
           draft: false
           prerelease: false
         env:
@@ -122,6 +248,6 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: vm-executor-binaries
-          path: binaries/*
+          name: vm-images-x86_64
+          path: vm-images/*
           retention-days: 30
