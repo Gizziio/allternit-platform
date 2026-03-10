@@ -5,13 +5,13 @@
  * Inspired by Supabase Cron's natural language support.
  * 
  * Examples:
- * - "every 5 minutes" → */5 * * * *
- * - "every hour" → 0 * * * *
- * - "daily at 9am" → 0 9 * * *
- * - "weekdays at noon" → 0 12 * * 1-5
- * - "mondays at 8:30" → 30 8 * * 1
- * - "on the 1st of every month" → 0 0 1 * *
- * - "every 30 seconds" → interval: 30
+ * - "every 5 minutes" becomes star/5 star star star star
+ * - "every hour" becomes 0 star star star star
+ * - "daily at 9am" becomes 0 9 star star star
+ * - "weekdays at noon" becomes 0 12 star star 1-5
+ * - "mondays at 8:30" becomes 30 8 star star 1
+ * - "on the 1st of every month" becomes 0 0 1 star star
+ * - "every 30 seconds" becomes interval: 30
  */
 
 import type { ParsedSchedule, Schedule } from "./types";
@@ -93,14 +93,32 @@ const TIME_PATTERNS: Array<{
   
   // Daily at specific time
   {
-    pattern: /^daily(?:\s+at\s+(\d+)(?::(\d+))?\s*(am?|pm?)?)?$/i,
+    pattern: /^daily(?:\s+at\s+(noon|midnight|\d+(?::\d+)?(?:\s*[ap]m?)?))?$/i,
     handler: (m) => {
-      let hour = m[1] ? parseInt(m[1], 10) : 0;
-      const minute = m[2] ? parseInt(m[2], 10) : 0;
-      const ampm = m[3]?.toLowerCase();
+      let hour = 0;
+      let minute = 0;
       
-      if (ampm === "pm" && hour !== 12) hour += 12;
-      if (ampm === "am" && hour === 12) hour = 0;
+      if (m[1]) {
+        const timeSpec = m[1].toLowerCase().trim();
+        
+        if (timeSpec === "noon") {
+          hour = 12;
+          minute = 0;
+        } else if (timeSpec === "midnight") {
+          hour = 0;
+          minute = 0;
+        } else {
+          // Parse time like "9", "9am", "9:30", "9:30am"
+          const timeMatch = timeSpec.match(/^(\d+)(?::(\d+))?\s*(am?|pm?)?$/i);
+          if (timeMatch) {
+            hour = parseInt(timeMatch[1], 10);
+            minute = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
+            const ampm = timeMatch[3]?.toLowerCase();
+            if (ampm?.startsWith("p") && hour !== 12) hour += 12;
+            if (ampm?.startsWith("a") && hour === 12) hour = 0;
+          }
+        }
+      }
       
       return {
         original: m[0],
@@ -113,14 +131,32 @@ const TIME_PATTERNS: Array<{
   
   // Weekdays at time
   {
-    pattern: /^(?:weekdays?|business\s+days?)(?:\s+at\s+(\d+)(?::(\d+))?\s*(am?|pm?)?)?$/i,
+    pattern: /^(?:weekdays?|business\s+days?)(?:\s+at\s+(noon|midnight|\d+(?::\d+)?(?:\s*[ap]m?)?))?$/i,
     handler: (m) => {
-      let hour = m[1] ? parseInt(m[1], 10) : 9;
-      const minute = m[2] ? parseInt(m[2], 10) : 0;
-      const ampm = m[3]?.toLowerCase();
+      let hour = 9;
+      let minute = 0;
       
-      if (ampm === "pm" && hour !== 12) hour += 12;
-      if (ampm === "am" && hour === 12) hour = 0;
+      if (m[1]) {
+        const timeSpec = m[1].toLowerCase().trim();
+        
+        if (timeSpec === "noon") {
+          hour = 12;
+          minute = 0;
+        } else if (timeSpec === "midnight") {
+          hour = 0;
+          minute = 0;
+        } else {
+          // Parse time like "9", "9am", "9:30", "9:30am"
+          const timeMatch = timeSpec.match(/^(\d+)(?::(\d+))?\s*(am?|pm?)?$/i);
+          if (timeMatch) {
+            hour = parseInt(timeMatch[1], 10);
+            minute = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
+            const ampm = timeMatch[3]?.toLowerCase();
+            if (ampm?.startsWith("p") && hour !== 12) hour += 12;
+            if (ampm?.startsWith("a") && hour === 12) hour = 0;
+          }
+        }
+      }
       
       return {
         original: m[0],

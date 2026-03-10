@@ -1,66 +1,143 @@
-import { Log } from "@/shared/util/log"
-import { CronService } from "@/runtime/automation/cron/service"
-import { CronStore } from "@/runtime/automation/cron/store"
-import { CronTypes } from "@/runtime/automation/cron/types"
-import { SessionPrompt } from "@/runtime/session/prompt"
-import { RunRegistry } from "@/runtime/session/run-registry"
+/**
+ * A2R Cron - Unified TypeScript Cron System
+ * 
+ * Consolidated implementation replacing:
+ * - Rust a2r-scheduler (deprecated)
+ * - Previous in-memory CronService
+ * 
+ * Features:
+ * - SQLite persistence (Bun built-in)
+ * - Natural language scheduling
+ * - Multiple job types (shell, http, agent, cowork, function)
+ * - Daemon mode with HTTP API
+ * - Run history and logs
+ * 
+ * Architecture based on research from:
+ * - Supabase Cron (best-in-class UX)
+ * - Vercel Cron (config-based simplicity)
+ * - GitHub Actions (workflow integration)
+ */
 
-export { CronService, CronStore, CronTypes }
+// Core Types
+export type {
+  // Job Types
+  CronJob,
+  JobType,
+  JobStatus,
+  ShellJob,
+  HttpJob,
+  AgentJob,
+  CoworkJob,
+  FunctionJob,
+  
+  // Run Types
+  CronRun,
+  RunStatus,
+  
+  // Schedule Types
+  Schedule,
+  CronSchedule,
+  IntervalSchedule,
+  ParsedSchedule,
+  
+  // API Types
+  CreateJobInput,
+  UpdateJobInput,
+  ListJobsFilter,
+  ListRunsFilter,
+  
+  // Event Types
+  CronEvent,
+  CronEventType,
+  
+  // Daemon Types
+  DaemonConfig,
+  DaemonStatus,
+  CronServiceConfig,
+} from "./types";
 
-const log = Log.create({ service: "cron-init" })
+// Core Service
+export { CronService } from "./service";
 
-export async function initializeCron(): Promise<void> {
-  log.info("initializing cron service")
+// Daemon Server
+export { CronDaemon, startDaemon, isDaemonRunning, getRemoteStatus } from "./daemon";
 
-  // Load persisted data
-  const { jobs, runs } = await CronStore.load()
+// Schedule Parser
+export {
+  parseSchedule,
+  parseScheduleToType,
+  describeSchedule,
+  getNextRunTime,
+  suggestSchedules,
+  COMMON_SCHEDULES,
+} from "./parser";
 
-  // Initialize service
-  CronService.initialize({
-    persist: async (jobs, runs) => {
-      await CronStore.persist(jobs, runs)
-    },
-    execute: async (job, reason) => {
-      log.info("executing cron job", { jobId: job.id, reason })
+// Database
+export { CronDatabase } from "./database";
 
-      // Create a new session or use existing
-      const sessionID = job.sessionID ?? `cron-${Date.now()}`
+// ═══════════════════════════════════════════════════════════════════════════════
+// Quick Start Examples
+// ═══════════════════════════════════════════════════════════════════════════════
 
-      // Create run via RunRegistry for tracking
-      const { runId } = RunRegistry.create(sessionID, job.agent, job.prompt)
+/**
+ * Example 1: Local Mode (CLI attached)
+ * 
+ * ```typescript
+ * import { CronService } from "./index";
+ * 
+ * // Initialize
+ * CronService.initialize();
+ * CronService.start();
+ * 
+ * // Create a job
+ * const job = CronService.create({
+ *   name: "Backup",
+ *   type: "shell",
+ *   schedule: "0 2 * * *", // Daily at 2am
+ *   config: { command: "./backup.sh" },
+ * });
+ * 
+ * // Or use natural language
+ * const job2 = CronService.create({
+ *   name: "Health Check",
+ *   type: "http",
+ *   schedule: "every 5 minutes",
+ *   config: { url: "https://api.example.com/health", method: "GET" },
+ * });
+ * ```
+ */
 
-      // Execute the prompt
-      const promptPromise = SessionPrompt.prompt({
-        sessionID,
-        agent: job.agent,
-        parts: [{ type: "text", text: job.prompt }],
-      })
-        .then(() => {
-          RunRegistry.complete(runId, "completed")
-          return "completed"
-        })
-        .catch((error) => {
-          const errorMsg = error instanceof Error ? error.message : String(error)
-          RunRegistry.complete(runId, "errored", errorMsg)
-          throw error
-        })
+/**
+ * Example 2: Daemon Mode (background server)
+ * 
+ * ```typescript
+ * import { startDaemon } from "./index";
+ * 
+ * // Start daemon
+ * const daemon = await startDaemon({
+ *   port: 3031,
+ *   dbPath: "~/.a2r/cron.db",
+ * });
+ * 
+ * // Access via HTTP API
+ * // GET  http://localhost:3031/jobs
+ * // POST http://localhost:3031/jobs
+ * // GET  http://localhost:3031/jobs/:id
+ * // POST http://localhost:3031/jobs/:id/run
+ * // POST http://localhost:3031/wake
+ * ```
+ */
 
-      RunRegistry.start(runId, promptPromise)
+/**
+ * Example 3: Client Mode (connect to remote daemon)
+ * 
+ * ```typescript
+ * import { getRemoteStatus } from "./index";
+ * 
+ * const status = await getRemoteStatus(3031);
+ * console.log(`Daemon has ${status.jobs.active} active jobs`);
+ * ```
+ */
 
-      await promptPromise
-
-      return runId
-    },
-    checkIntervalMs: 60000, // Check every minute
-  })
-
-  // Load data into service
-  await CronService.load(jobs, runs)
-
-  log.info("cron service initialized", { jobs: jobs.length, runs: runs.length })
-}
-
-export function shutdownCron(): void {
-  log.info("shutting down cron service")
-  // The service cleanup is handled by Instance.state disposal
-}
+// Version
+export const VERSION = "1.0.0";

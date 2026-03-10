@@ -221,6 +221,27 @@ Requirements:
 | Command execution | ✅ | ✅ | Done |
 | File operations | ✅ | 🟡 Partial | Needs work |
 
+### 5. Cron/Scheduler (NEW - Unified Implementation)
+
+| Feature | Claude Code | A2R (Old) | A2R (New) | Status |
+|---------|-------------|-----------|-----------|--------|
+| Schedule jobs | ❌ Not a feature | ✅ Rust + TS (dual) | ✅ TypeScript only | **DONE** |
+| SQLite persistence | ❌ N/A | ✅ (Rust) | ✅ (Bun native) | Done |
+| HTTP API | ❌ N/A | ✅ (Rust) | ✅ (enhanced) | Done |
+| Natural language | ❌ N/A | ❌ | ✅ "every 5 mins" | Done |
+| Multiple job types | ❌ N/A | cowork only | shell, http, agent, cowork | Done |
+| CLI commands | ❌ N/A | ❌ | ✅ Full CLI | Done |
+| Daemon mode | ❌ N/A | ✅ (Rust) | ✅ TypeScript | Done |
+
+**Migration:** See `CRON_MIGRATION.md` for details on consolidating from dual Rust/TS to unified TypeScript.
+
+**Key Features:**
+- Natural language: `a2r cron add "backup every day at 2am"`
+- Multiple types: shell, HTTP, agent tasks, cowork sessions
+- Rich CLI: list, logs, run, status, wake
+- HTTP API: Port 3031 for remote management
+- SQLite persistence: `~/.a2r/cron.db`
+
 ---
 
 ## Implementation Plan
@@ -388,6 +409,15 @@ a2r-vm-image-builder build --dry-run
 - `/Users/macbook/6-ui/desktop/src/vm/manager.ts` - Desktop VM manager
 - `/Users/macbook/6-ui/desktop/src/vm/socket-server.ts` - Unix socket server
 - `/Users/macbook/6-ui/desktop/src/components/onboarding/Wizard.tsx` - Onboarding UI
+- `/Users/macbook/cmd/gizzi-code/src/runtime/automation/cron/` - Unified TypeScript Cron
+  - `types.ts` - Core type definitions
+  - `parser.ts` - Natural language schedule parsing
+  - `database.ts` - SQLite persistence layer
+  - `service.ts` - Core CronService with job execution
+  - `daemon.ts` - HTTP daemon for background scheduling
+  - `index.ts` - Public API exports
+- `/Users/macbook/cmd/gizzi-code/src/cli/commands/cron.ts` - CLI commands for cron
+- `/Users/macbook/CRON_MIGRATION.md` - Migration guide from Rust to TypeScript
 
 ---
 

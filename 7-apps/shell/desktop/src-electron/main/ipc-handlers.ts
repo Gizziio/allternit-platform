@@ -47,6 +47,15 @@ import {
   VMExecuteOptions,
 } from './vm-integration';
 
+// Import Node.js VM Manager bridge if available
+let A2RVMManager: any = null;
+try {
+  const { A2RVMManager: VMManagerClass } = require('../native/vm-manager-node/dist/index');
+  A2RVMManager = VMManagerClass;
+} catch (e) {
+  console.log('[IPC] VM Manager Node bridge not available, using fallback implementation');
+}
+
 /**
  * Electron store instance with typed schema
  */
@@ -495,19 +504,53 @@ export { store };
  * VM IPC handlers for VM lifecycle management
  */
 function registerVMHandlers(): void {
+  // VM Manager instance (created when needed)
+  let vmManager: any = null;
+
+  // Initialize VM Manager if available
+  const getVMManager = () => {
+    if (!vmManager && A2RVMManager) {
+      vmManager = new A2RVMManager();
+      
+      // Forward status changes
+      vmManager.on('statusChanged', (status: any) => {
+        const windows = BrowserWindow.getAllWindows();
+        windows.forEach((window) => {
+          if (!window.isDestroyed()) {
+            window.webContents.send(IPC_CHANNELS.VM.STATUS_CHANGED, status.state);
+          }
+        });
+      });
+    }
+    return vmManager;
+  };
+
   // Get VM status
   ipcMain.handle(IPC_CHANNELS.VM.GET_STATUS, async () => {
+    const manager = getVMManager();
+    if (manager) {
+      return manager.getStatus();
+    }
     return getVMStatus();
   });
 
   // Check if VM images exist
   ipcMain.handle(IPC_CHANNELS.VM.CHECK_IMAGES, async (): Promise<boolean> => {
+    const manager = getVMManager();
+    if (manager) {
+      return manager.checkImages();
+    }
     return checkVMImages();
   });
 
   // Download VM images
   ipcMain.handle(IPC_CHANNELS.VM.DOWNLOAD_IMAGES, async (_, options?: VMSetupOptions): Promise<boolean> => {
     try {
+      const manager = getVMManager();
+      if (manager) {
+        await manager.downloadImages(options);
+        return true;
+      }
       return await downloadVMImages(options || {});
     } catch (error) {
       console.error('[VM] Download failed:', error);
@@ -518,6 +561,11 @@ function registerVMHandlers(): void {
   // Setup VM (download images if needed)
   ipcMain.handle(IPC_CHANNELS.VM.SETUP, async (_, options?: VMSetupOptions): Promise<boolean> => {
     try {
+      const manager = getVMManager();
+      if (manager) {
+        await manager.setup(options);
+        return true;
+      }
       return await setupVM(options || {});
     } catch (error) {
       console.error('[VM] Setup failed:', error);
@@ -528,6 +576,11 @@ function registerVMHandlers(): void {
   // Start VM
   ipcMain.handle(IPC_CHANNELS.VM.START, async (): Promise<boolean> => {
     try {
+      const manager = getVMManager();
+      if (manager) {
+        await manager.start();
+        return true;
+      }
       return await startVM();
     } catch (error) {
       console.error('[VM] Start failed:', error);
@@ -537,12 +590,27 @@ function registerVMHandlers(): void {
 
   // Stop VM
   ipcMain.handle(IPC_CHANNELS.VM.STOP, async (): Promise<boolean> => {
-    return stopVM();
+    try {
+      const manager = getVMManager();
+      if (manager) {
+        await manager.stop();
+        return true;
+      }
+      return stopVM();
+    } catch (error) {
+      console.error('[VM] Stop failed:', error);
+      throw error;
+    }
   });
 
   // Restart VM
   ipcMain.handle(IPC_CHANNELS.VM.RESTART, async (): Promise<boolean> => {
     try {
+      const manager = getVMManager();
+      if (manager) {
+        await manager.restart();
+        return true;
+      }
       return await restartVM();
     } catch (error) {
       console.error('[VM] Restart failed:', error);
@@ -553,6 +621,18 @@ function registerVMHandlers(): void {
   // Execute command in VM
   ipcMain.handle(IPC_CHANNELS.VM.EXECUTE, async (_, options: VMExecuteOptions) => {
     try {
+      const manager = getVMManager();
+      if (manager) {
+        return await manager.execute(
+          options.command,
+          options.args || [],
+          {
+            workingDir: options.workingDir,
+            env: options.env,
+            timeout: options.timeoutMs,
+          }
+        );
+      }
       return await executeInVM(options);
     } catch (error) {
       console.error('[VM] Execute failed:', error);
@@ -560,7 +640,7 @@ function registerVMHandlers(): void {
     }
   });
 
-  // Forward VM status changes to renderer
+  // Forward VM status changes to renderer (fallback)
   onVMStatusChanged((status) => {
     const windows = BrowserWindow.getAllWindows();
     windows.forEach((window) => {
@@ -568,5 +648,13 @@ function registerVMHandlers(): void {
         window.webContents.send(IPC_CHANNELS.VM.STATUS_CHANGED, status);
       }
     });
+  });
+
+  // Clean up VM on app quit
+  app.on('before-quit', () => {
+    if (vmManager) {
+      vmManager.dispose();
+    }
+    cleanupVM();
   });
 }

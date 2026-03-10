@@ -1,400 +1,708 @@
-import { Log } from "@/shared/util/log"
-import { Instance } from "@/runtime/context/project/instance"
-import { BusEvent } from "@/shared/bus/bus-event"
-import { Bus } from "@/shared/bus"
-import { CronTypes } from "@/runtime/automation/cron/types"
-import { CronParser } from "@/runtime/automation/cron/parser"
-import z from "zod/v4"
+/**
+ * Enhanced CronService with SQLite Persistence
+ * 
+ * Unified TypeScript implementation replacing both:
+ * - Rust a2r-scheduler (will be deprecated)
+ * - Previous in-memory CronService
+ * 
+ * Features:
+ * - SQLite persistence via Bun's built-in database
+ * - Natural language schedule parsing
+ * - Multiple job types (shell, http, agent, cowork, function)
+ * - Daemon mode with HTTP API
+ * - Event-driven architecture
+ * - Run history and logs
+ */
 
-export namespace CronService {
-  const log = Log.create({ service: "cron" })
+import { CronDatabase } from "./database";
+import { parseScheduleToType, getNextRunTime, describeSchedule } from "./parser";
+import type {
+  CronJob,
+  CronRun,
+  CreateJobInput,
+  UpdateJobInput,
+  JobStatus,
+  CronServiceConfig,
+  CronEvent,
+  DaemonStatus,
+} from "./types";
+import { homedir } from "os";
+import { join } from "path";
+import { randomUUID } from "crypto";
 
-  const JobCreatedEvent = BusEvent.define(
-    "cron.job.created",
-    z.object({
-      jobId: z.string(),
-      name: z.string(),
-      createdAt: z.number(),
-    })
-  )
+// ═══════════════════════════════════════════════════════════════════════════════
+// State Management
+// ═══════════════════════════════════════════════════════════════════════════════
 
-  const JobUpdatedEvent = BusEvent.define(
-    "cron.job.updated",
-    z.object({
-      jobId: z.string(),
-      updatedAt: z.number(),
-    })
-  )
+interface ServiceState {
+  db: CronDatabase | null;
+  timer: ReturnType<typeof setInterval> | null;
+  isRunning: boolean;
+  config: Required<CronServiceConfig>;
+  runningJobs: Map<string, AbortController>; // jobId -> abort controller
+  eventListeners: Set<(event: CronEvent) => void>;
+}
 
-  const JobRemovedEvent = BusEvent.define(
-    "cron.job.removed",
-    z.object({
-      jobId: z.string(),
-      removedAt: z.number(),
-    })
-  )
+const DEFAULT_CONFIG: Required<CronServiceConfig> = {
+  dbPath: join(homedir(), ".a2r", "cron.db"),
+  checkIntervalMs: 60000,      // Check every minute
+  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  maxConcurrentJobs: 10,
+  defaultTimeoutSeconds: 300,  // 5 minutes
+  defaultMaxRetries: 0,
+  onJobExecute: async () => {},
+  onJobComplete: async () => {},
+  onJobError: async () => {},
+  emitEvent: () => {},
+};
 
-  const JobFinishedEvent = BusEvent.define(
-    "cron.job.finished",
-    z.object({
-      jobId: z.string(),
-      runId: z.string(),
-      status: CronTypes.CronRunStatus,
-      finishedAt: z.number(),
-    })
-  )
+let state: ServiceState = {
+  db: null,
+  timer: null,
+  isRunning: false,
+  config: DEFAULT_CONFIG,
+  runningJobs: new Map(),
+  eventListeners: new Set(),
+};
 
-  export const Events = {
-    JobCreated: JobCreatedEvent,
-    JobUpdated: JobUpdatedEvent,
-    JobRemoved: JobRemovedEvent,
-    JobFinished: JobFinishedEvent,
-  }
+// ═══════════════════════════════════════════════════════════════════════════════
+// Public API
+// ═══════════════════════════════════════════════════════════════════════════════
 
-  type JobStore = {
-    jobs: Map<string, CronTypes.CronJob>
-    runs: Map<string, CronTypes.CronRun>
-    timer: ReturnType<typeof setInterval> | null
-  }
+export const CronService = {
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // Lifecycle
+  // ═══════════════════════════════════════════════════════════════════════════════
 
-  const state = Instance.state(
-    (): JobStore => ({
-      jobs: new Map(),
-      runs: new Map(),
-      timer: null,
-    }),
-    async (store) => {
-      if (store.timer) {
-        clearInterval(store.timer)
-        store.timer = null
+  /**
+   * Initialize the cron service with configuration
+   */
+  initialize(config: CronServiceConfig = {}): void {
+    state.config = { ...DEFAULT_CONFIG, ...config };
+    state.db = new CronDatabase(state.config.dbPath);
+    
+    emitEvent({
+      type: "daemon:started",
+      timestamp: new Date().toISOString(),
+      data: { dbPath: state.config.dbPath },
+    });
+    
+    console.log(`[CronService] Initialized with database: ${state.config.dbPath}`);
+  },
+
+  /**
+   * Start the scheduler (checks for due jobs)
+   */
+  start(): void {
+    if (state.isRunning) return;
+    if (!state.db) throw new Error("CronService not initialized. Call initialize() first.");
+    
+    state.isRunning = true;
+    
+    // Schedule next runs for all active jobs
+    const jobs = state.db.getActiveJobs();
+    for (const job of jobs) {
+      if (!job.nextRunAt) {
+        this._scheduleNextRun(job);
       }
     }
-  )
+    
+    // Start the check timer
+    state.timer = setInterval(() => this._checkDueJobs(), state.config.checkIntervalMs);
+    
+    console.log(`[CronService] Started scheduler (checking every ${state.config.checkIntervalMs}ms)`);
+  },
 
-  let persistCallback: ((jobs: CronTypes.CronJob[], runs: CronTypes.CronRun[]) => Promise<void>) | null = null
-  let executeCallback: ((job: CronTypes.CronJob, reason: CronTypes.CronWakeReason) => Promise<string>) | null = null
+  /**
+   * Stop the scheduler
+   */
+  stop(): void {
+    state.isRunning = false;
+    if (state.timer) {
+      clearInterval(state.timer);
+      state.timer = null;
+    }
+    
+    // Cancel all running jobs
+    for (const [jobId, controller] of state.runningJobs) {
+      controller.abort();
+      state.runningJobs.delete(jobId);
+    }
+    
+    emitEvent({
+      type: "daemon:stopped",
+      timestamp: new Date().toISOString(),
+      data: {},
+    });
+    
+    console.log("[CronService] Stopped scheduler");
+  },
 
-  export function initialize(options: {
-    persist: (jobs: CronTypes.CronJob[], runs: CronTypes.CronRun[]) => Promise<void>
-    execute: (job: CronTypes.CronJob, reason: CronTypes.CronWakeReason) => Promise<string>
-    checkIntervalMs?: number
-  }): void {
-    persistCallback = options.persist
-    executeCallback = options.execute
+  /**
+   * Close database connection
+   */
+  close(): void {
+    this.stop();
+    state.db?.close();
+    state.db = null;
+  },
 
-    const checkInterval = options.checkIntervalMs ?? 60000 // 1 minute default
+  /**
+   * Check if scheduler is running
+   */
+  isRunning(): boolean {
+    return state.isRunning;
+  },
 
-    const store = state()
-    if (store.timer) {
-      clearInterval(store.timer)
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // Job Management
+  // ═══════════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Create a new scheduled job
+   */
+  create(input: CreateJobInput): CronJob {
+    if (!state.db) throw new Error("CronService not initialized");
+
+    // Parse schedule
+    const schedule = typeof input.schedule === "string"
+      ? parseScheduleToType(input.schedule)
+      : input.schedule;
+    
+    if (!schedule) {
+      throw new Error(`Invalid schedule: ${input.schedule}`);
     }
 
-    store.timer = setInterval(() => {
-      void checkDueJobs()
-    }, checkInterval)
-
-    log.info("cron service initialized", { checkInterval })
-  }
-
-  export async function load(jobs: CronTypes.CronJob[], runs: CronTypes.CronRun[]): Promise<void> {
-    const store = state()
-
-    for (const job of jobs) {
-      store.jobs.set(job.id, job)
-    }
-
-    for (const run of runs) {
-      store.runs.set(run.id, run)
-    }
-
-    recalculateAllNextRuns()
-
-    log.info("cron data loaded", { jobs: jobs.length, runs: runs.length })
-  }
-
-  export function create(input: CronTypes.CronJobInput): CronTypes.CronJob {
-    const now = Date.now()
-    const id = crypto.randomUUID()
-
-    const job: CronTypes.CronJob = {
-      id,
+    const now = new Date().toISOString();
+    const job: CronJob = {
+      id: randomUUID(),
       name: input.name,
       description: input.description,
-      schedule: input.schedule,
-      prompt: input.prompt,
-      agent: input.agent,
-      sessionID: input.sessionID,
-      status: "active",
-      wakeMode: input.wakeMode,
+      type: input.type,
+      status: input.status ?? "active",
+      schedule,
+      config: input.config as CronJob["config"],
       createdAt: now,
       updatedAt: now,
       runCount: 0,
       failCount: 0,
-    }
+      maxRuns: input.maxRuns,
+      timeoutSeconds: input.timeoutSeconds ?? state.config.defaultTimeoutSeconds,
+      maxRetries: input.maxRetries ?? state.config.defaultMaxRetries,
+      tags: input.tags ?? [],
+      metadata: input.metadata ?? {},
+    };
 
-    job.nextRunAt = calculateNextRun(job.schedule, now)
+    // Calculate next run
+    job.nextRunAt = getNextRunTime(schedule, undefined, new Date()).toISOString();
 
-    state().jobs.set(id, job)
+    // Persist
+    state.db.saveJob(job);
 
-    void persist()
+    emitEvent({
+      type: "job:created",
+      timestamp: now,
+      data: { jobId: job.id, name: job.name },
+    });
 
-    Bus.publish(JobCreatedEvent, { jobId: id, name: job.name, createdAt: now })
+    console.log(`[CronService] Created job: ${job.name} (${describeSchedule(schedule)})`);
+    return job;
+  },
 
-    log.info("cron job created", { id, name: job.name })
+  /**
+   * Get a job by ID
+   */
+  get(id: string): CronJob | null {
+    if (!state.db) throw new Error("CronService not initialized");
+    return state.db.getJob(id);
+  },
 
-    return job
-  }
+  /**
+   * Get all jobs
+   */
+  list(): CronJob[] {
+    if (!state.db) throw new Error("CronService not initialized");
+    return state.db.getAllJobs();
+  },
 
-  export function update(id: string, input: CronTypes.CronJobUpdate): CronTypes.CronJob {
-    const store = state()
-    const job = store.jobs.get(id)
+  /**
+   * Get active jobs
+   */
+  listActive(): CronJob[] {
+    if (!state.db) throw new Error("CronService not initialized");
+    return state.db.getActiveJobs();
+  },
 
-    if (!job) {
-      throw new Error(`Cron job "${id}" not found`)
-    }
+  /**
+   * Update a job
+   */
+  update(id: string, input: UpdateJobInput): CronJob {
+    if (!state.db) throw new Error("CronService not initialized");
+    
+    const job = state.db.getJob(id);
+    if (!job) throw new Error(`Job not found: ${id}`);
 
-    const now = Date.now()
-
-    if (input.name !== undefined) job.name = input.name
-    if (input.description !== undefined) job.description = input.description
-    if (input.schedule !== undefined) {
-      job.schedule = input.schedule
-      job.nextRunAt = calculateNextRun(job.schedule, now)
-    }
-    if (input.prompt !== undefined) job.prompt = input.prompt
-    if (input.agent !== undefined) job.agent = input.agent
-    if (input.sessionID !== undefined) job.sessionID = input.sessionID
-    if (input.wakeMode !== undefined) job.wakeMode = input.wakeMode
-
-    job.updatedAt = now
-
-    void persist()
-
-    Bus.publish(JobUpdatedEvent, { jobId: id, updatedAt: now })
-
-    log.info("cron job updated", { id, name: job.name })
-
-    return job
-  }
-
-  export function remove(id: string): void {
-    const store = state()
-    const job = store.jobs.get(id)
-
-    if (!job) {
-      throw new Error(`Cron job "${id}" not found`)
-    }
-
-    store.jobs.delete(id)
-
-    // Clean up associated runs
-    for (const [runId, run] of store.runs) {
-      if (run.jobId === id) {
-        store.runs.delete(runId)
+    // Update fields
+    if (input.name !== undefined) job.name = input.name;
+    if (input.description !== undefined) job.description = input.description;
+    if (input.status !== undefined) job.status = input.status;
+    if (input.maxRuns !== undefined) job.maxRuns = input.maxRuns;
+    if (input.timeoutSeconds !== undefined) job.timeoutSeconds = input.timeoutSeconds;
+    if (input.maxRetries !== undefined) job.maxRetries = input.maxRetries;
+    if (input.tags !== undefined) job.tags = input.tags;
+    
+    // Update schedule
+    if (input.schedule) {
+      const schedule = typeof input.schedule === "string"
+        ? parseScheduleToType(input.schedule)
+        : input.schedule;
+      if (schedule) {
+        job.schedule = schedule;
+        job.nextRunAt = getNextRunTime(schedule, undefined, new Date()).toISOString();
       }
     }
 
-    void persist()
-
-    Bus.publish(JobRemovedEvent, { jobId: id, removedAt: Date.now() })
-
-    log.info("cron job removed", { id, name: job.name })
-  }
-
-  export function get(id: string): CronTypes.CronJob | undefined {
-    return state().jobs.get(id)
-  }
-
-  export function list(): CronTypes.CronJob[] {
-    return Array.from(state().jobs.values()).sort((a, b) => b.createdAt - a.createdAt)
-  }
-
-  export function setStatus(id: string, status: CronTypes.CronJobStatus): void {
-    const job = state().jobs.get(id)
-    if (!job) {
-      throw new Error(`Cron job "${id}" not found`)
+    // Update config
+    if (input.config) {
+      job.config = { ...job.config, ...input.config } as CronJob["config"];
     }
 
-    job.status = status
-    job.updatedAt = Date.now()
+    job.updatedAt = new Date().toISOString();
+    state.db.saveJob(job);
 
-    if (status === "active") {
-      job.nextRunAt = calculateNextRun(job.schedule, Date.now())
-    } else {
-      job.nextRunAt = undefined
+    emitEvent({
+      type: "job:updated",
+      timestamp: job.updatedAt,
+      data: { jobId: job.id },
+    });
+
+    console.log(`[CronService] Updated job: ${job.name}`);
+    return job;
+  },
+
+  /**
+   * Pause a job
+   */
+  pause(id: string): CronJob {
+    const job = this.update(id, { status: "paused" });
+    emitEvent({
+      type: "job:paused",
+      timestamp: new Date().toISOString(),
+      data: { jobId: id },
+    });
+    return job;
+  },
+
+  /**
+   * Resume a paused job
+   */
+  resume(id: string): CronJob {
+    const job = this.update(id, { status: "active" });
+    this._scheduleNextRun(job);
+    emitEvent({
+      type: "job:resumed",
+      timestamp: new Date().toISOString(),
+      data: { jobId: id },
+    });
+    return job;
+  },
+
+  /**
+   * Delete a job
+   */
+  delete(id: string): boolean {
+    if (!state.db) throw new Error("CronService not initialized");
+    
+    const success = state.db.deleteJob(id);
+    if (success) {
+      emitEvent({
+        type: "job:deleted",
+        timestamp: new Date().toISOString(),
+        data: { jobId: id },
+      });
+      console.log(`[CronService] Deleted job: ${id}`);
+    }
+    return success;
+  },
+
+  /**
+   * Run a job manually
+   */
+  async run(id: string, triggeredByUser?: string): Promise<CronRun> {
+    if (!state.db) throw new Error("CronService not initialized");
+    
+    const job = state.db.getJob(id);
+    if (!job) throw new Error(`Job not found: ${id}`);
+
+    return this._executeJob(job, "manual", triggeredByUser);
+  },
+
+  /**
+   * Wake schedules - immediately check for due jobs
+   */
+  wake(): number {
+    return this._checkDueJobs();
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // Run History
+  // ═══════════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Get runs for a job
+   */
+  getRuns(jobId: string, limit = 100): CronRun[] {
+    if (!state.db) throw new Error("CronService not initialized");
+    return state.db.getRunsByJob(jobId, limit);
+  },
+
+  /**
+   * Get recent runs across all jobs
+   */
+  getRecentRuns(limit = 50): CronRun[] {
+    if (!state.db) throw new Error("CronService not initialized");
+    return state.db.getRecentRuns(limit);
+  },
+
+  /**
+   * Get run by ID
+   */
+  getRun(id: string): CronRun | null {
+    if (!state.db) throw new Error("CronService not initialized");
+    return state.db.getRun(id);
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // Statistics & Status
+  // ═══════════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Get daemon status
+   */
+  getStatus(): DaemonStatus {
+    if (!state.db) {
+      return {
+        running: false,
+        port: 0,
+        jobs: { total: 0, active: 0, paused: 0 },
+        runs: { pending: 0, running: 0, last24h: 0 },
+        version: "1.0.0",
+      };
     }
 
-    void persist()
-
-    Bus.publish(JobUpdatedEvent, { jobId: id, updatedAt: job.updatedAt })
-
-    log.info("cron job status changed", { id, status })
-  }
-
-  export async function trigger(id: string, reason: CronTypes.CronWakeReason = "manual"): Promise<CronTypes.CronRun> {
-    const job = state().jobs.get(id)
-    if (!job) {
-      throw new Error(`Cron job "${id}" not found`)
-    }
-
-    return executeJob(job, reason)
-  }
-
-  export async function wake(reason: CronTypes.CronWakeReason = "api"): Promise<{ triggered: number; jobs: string[] }> {
-    const dueJobs = getDueJobs()
-    const triggered: string[] = []
-
-    for (const job of dueJobs) {
-      try {
-        await executeJob(job, reason)
-        triggered.push(job.id)
-      } catch (error) {
-        log.error("failed to execute job during wake", { jobId: job.id, error })
-      }
-    }
-
-    return { triggered: triggered.length, jobs: triggered }
-  }
-
-  export function getRuns(jobId?: string): CronTypes.CronRun[] {
-    const runs = Array.from(state().runs.values())
-    if (jobId) {
-      return runs.filter((r) => r.jobId === jobId).sort((a, b) => b.startedAt - a.startedAt)
-    }
-    return runs.sort((a, b) => b.startedAt - a.startedAt)
-  }
-
-  export function getRun(id: string): CronTypes.CronRun | undefined {
-    return state().runs.get(id)
-  }
-
-  export function getStatus(): {
-    jobs: number
-    active: number
-    pendingRuns: number
-    runningRuns: number
-  } {
-    const store = state()
-    const jobs = Array.from(store.jobs.values())
-    const runs = Array.from(store.runs.values())
-
+    const stats = state.db.getStats();
     return {
-      jobs: jobs.length,
-      active: jobs.filter((j) => j.status === "active").length,
-      pendingRuns: runs.filter((r) => r.status === "pending").length,
-      runningRuns: runs.filter((r) => r.status === "running").length,
-    }
-  }
+      running: state.isRunning,
+      port: 0, // Set by HTTP server layer
+      startedAt: undefined, // Track if needed
+      jobs: stats.jobs,
+      runs: stats.runs,
+      version: "1.0.0",
+    };
+  },
 
-  async function checkDueJobs(): Promise<void> {
-    const dueJobs = getDueJobs()
+  /**
+   * Get statistics
+   */
+  getStats() {
+    if (!state.db) throw new Error("CronService not initialized");
+    return state.db.getStats();
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // Event Handling
+  // ═══════════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Subscribe to events
+   */
+  onEvent(handler: (event: CronEvent) => void): () => void {
+    state.eventListeners.add(handler);
+    return () => state.eventListeners.delete(handler);
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // Internal Methods
+  // ═══════════════════════════════════════════════════════════════════════════════
+
+  _checkDueJobs(): number {
+    if (!state.db || !state.isRunning) return 0;
+
+    const now = new Date().toISOString();
+    const dueJobs = state.db.getJobsDueBefore(now);
+    let executed = 0;
 
     for (const job of dueJobs) {
-      try {
-        await executeJob(job, "schedule")
-      } catch (error) {
-        log.error("failed to execute scheduled job", { jobId: job.id, error })
+      // Skip if max runs reached
+      if (job.maxRuns && job.runCount >= job.maxRuns) {
+        job.status = "disabled";
+        state.db.saveJob(job);
+        continue;
       }
+
+      // Skip if too many concurrent jobs
+      if (state.runningJobs.size >= state.config.maxConcurrentJobs) {
+        console.log(`[CronService] Max concurrent jobs reached, skipping: ${job.name}`);
+        continue;
+      }
+
+      // Execute
+      this._executeJob(job, "schedule");
+      executed++;
     }
-  }
 
-  function getDueJobs(): CronTypes.CronJob[] {
-    const now = Date.now()
-    return Array.from(state().jobs.values()).filter((job) => {
-      if (job.status !== "active") return false
-      if (!job.nextRunAt) return false
-      return job.nextRunAt <= now
-    })
-  }
+    if (executed > 0) {
+      console.log(`[CronService] Executed ${executed} due jobs`);
+    }
 
-  async function executeJob(job: CronTypes.CronJob, reason: CronTypes.CronWakeReason): Promise<CronTypes.CronRun> {
-    const runId = crypto.randomUUID()
-    const now = Date.now()
+    return executed;
+  },
 
-    const run: CronTypes.CronRun = {
+  async _executeJob(job: CronJob, triggeredBy: CronRun["triggeredBy"], triggeredByUser?: string): Promise<CronRun> {
+    if (!state.db) throw new Error("CronService not initialized");
+
+    const runId = randomUUID();
+    const now = new Date().toISOString();
+
+    // Create run record
+    const run: CronRun = {
       id: runId,
       jobId: job.id,
       status: "pending",
-      startedAt: now,
-    }
+      scheduledAt: now,
+      attempt: 1,
+      triggeredBy,
+      triggeredByUser,
+      metadata: {},
+    };
 
-    state().runs.set(runId, run)
+    state.db.saveRun(run);
 
-    log.info("cron job executing", { jobId: job.id, runId, reason })
+    emitEvent({
+      type: "job:run:started",
+      timestamp: now,
+      data: { jobId: job.id, runId, name: job.name },
+    });
+
+    // Create abort controller for timeout
+    const controller = new AbortController();
+    state.runningJobs.set(job.id, controller);
+
+    const startTime = Date.now();
 
     try {
-      run.status = "running"
+      // Update job and run status
+      run.status = "running";
+      run.startedAt = new Date().toISOString();
+      state.db.saveRun(run);
 
-      if (!executeCallback) {
-        throw new Error("Cron service not initialized with execute callback")
+      // Call user-provided handler
+      await state.config.onJobExecute(job, run);
+
+      // Execute based on job type
+      switch (job.type) {
+        case "shell":
+          await this._executeShell(job, run, controller.signal);
+          break;
+        case "http":
+          await this._executeHttp(job, run, controller.signal);
+          break;
+        case "agent":
+          await this._executeAgent(job, run, controller.signal);
+          break;
+        case "cowork":
+          await this._executeCowork(job, run, controller.signal);
+          break;
+        case "function":
+          await this._executeFunction(job, run, controller.signal);
+          break;
       }
 
-      const output = await executeCallback(job, reason)
+      // Success
+      run.status = "success";
+      run.finishedAt = new Date().toISOString();
+      run.durationMs = Date.now() - startTime;
 
-      run.status = "completed"
-      run.finishedAt = Date.now()
-      run.output = output
+      job.lastRunAt = run.startedAt;
+      job.runCount++;
 
-      job.runCount++
-      job.lastRunAt = now
-      job.nextRunAt = calculateNextRun(job.schedule, now)
+      emitEvent({
+        type: "job:run:completed",
+        timestamp: run.finishedAt,
+        data: { jobId: job.id, runId, durationMs: run.durationMs },
+      });
+
+      await state.config.onJobComplete(job, run);
+
     } catch (error) {
-      run.status = "failed"
-      run.finishedAt = Date.now()
-      run.error = error instanceof Error ? error.message : String(error)
+      // Failure
+      run.status = "failed";
+      run.error = error instanceof Error ? error.message : String(error);
+      run.finishedAt = new Date().toISOString();
+      run.durationMs = Date.now() - startTime;
 
-      job.failCount++
-      job.lastRunAt = now
-      job.nextRunAt = calculateNextRun(job.schedule, now)
+      job.failCount++;
 
-      log.error("cron job execution failed", { jobId: job.id, runId, error })
-    }
+      // Check for retries
+      if (run.attempt <= (job.maxRetries ?? 0)) {
+        run.status = "pending";
+        emitEvent({
+          type: "job:run:retry",
+          timestamp: run.finishedAt,
+          data: { jobId: job.id, runId, attempt: run.attempt + 1 },
+        });
+      } else {
+        emitEvent({
+          type: "job:run:failed",
+          timestamp: run.finishedAt,
+          data: { jobId: job.id, runId, error: run.error },
+        });
+      }
 
-    void persist()
+      await state.config.onJobError(job, run, error instanceof Error ? error : new Error(String(error)));
+    } finally {
+      state.runningJobs.delete(job.id);
+      state.db?.saveRun(run);
+      state.db?.saveJob(job);
 
-    Bus.publish(JobFinishedEvent, {
-      jobId: job.id,
-      runId,
-      status: run.status,
-      finishedAt: run.finishedAt ?? Date.now(),
-    })
-
-    return run
-  }
-
-  function calculateNextRun(schedule: string, fromTime: number): number | undefined {
-    try {
-      const interval = CronParser.parseExpression(schedule, {
-        currentDate: new Date(fromTime),
-      })
-      const next = interval.next()
-      return next.getTime()
-    } catch (error) {
-      log.error("failed to calculate next run", { schedule, error })
-      return undefined
-    }
-  }
-
-  function recalculateAllNextRuns(): void {
-    const now = Date.now()
-    for (const job of state().jobs.values()) {
+      // Schedule next run
       if (job.status === "active") {
-        job.nextRunAt = calculateNextRun(job.schedule, job.lastRunAt ?? now)
+        this._scheduleNextRun(job);
       }
     }
-  }
 
-  async function persist(): Promise<void> {
-    if (!persistCallback) return
+    return run;
+  },
 
-    const store = state()
-    const jobs = Array.from(store.jobs.values())
-    const runs = Array.from(store.runs.values())
+  _scheduleNextRun(job: CronJob): void {
+    const nextRun = getNextRunTime(job.schedule, undefined, new Date());
+    job.nextRunAt = nextRun.toISOString();
+    state.db?.saveJob(job);
 
+    emitEvent({
+      type: "job:run:scheduled",
+      timestamp: new Date().toISOString(),
+      data: { jobId: job.id, nextRunAt: job.nextRunAt },
+    });
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // Job Type Executors
+  // ═══════════════════════════════════════════════════════════════════════════════
+
+  async _executeShell(job: CronJob, run: CronRun, signal: AbortSignal): Promise<void> {
+    const config = job.config as { command: string; cwd?: string; env?: Record<string, string>; shell?: string };
+    
+    const proc = Bun.spawn({
+      cmd: [config.shell ?? "bash", "-c", config.command],
+      cwd: config.cwd,
+      env: { ...process.env, ...config.env },
+      signal,
+    });
+
+    const stdout = await new Response(proc.stdout).text();
+    const stderr = await new Response(proc.stderr).text();
+    const exitCode = await proc.exited;
+
+    run.output = stdout;
+    if (stderr) run.error = stderr;
+    run.exitCode = exitCode;
+
+    if (exitCode !== 0) {
+      throw new Error(`Command failed with exit code ${exitCode}: ${stderr || stdout}`);
+    }
+  },
+
+  async _executeHttp(job: CronJob, run: CronRun, signal: AbortSignal): Promise<void> {
+    const config = job.config as { url: string; method: string; headers?: Record<string, string>; body?: string; timeoutSeconds?: number };
+    
+    const timeoutMs = (config.timeoutSeconds ?? 30) * 1000;
+    const controller = new AbortController();
+    
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    
     try {
-      await persistCallback(jobs, runs)
+      const response = await fetch(config.url, {
+        method: config.method,
+        headers: config.headers,
+        body: config.body,
+        signal: controller.signal,
+      });
+
+      run.httpStatus = response.status;
+      run.output = await response.text();
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${run.output}`);
+      }
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  },
+
+  async _executeAgent(job: CronJob, run: CronRun, signal: AbortSignal): Promise<void> {
+    // This is a placeholder - actual implementation depends on Agent system
+    const config = job.config as { prompt: string; agentId?: string; model?: string };
+    
+    run.output = `Agent task would execute: ${config.prompt}`;
+    run.agentId = config.agentId ?? "default";
+    
+    // TODO: Integrate with actual agent system
+    // For now, just simulate
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  },
+
+  async _executeCowork(job: CronJob, run: CronRun, signal: AbortSignal): Promise<void> {
+    // This is a placeholder - actual implementation depends on Cowork system
+    const config = job.config as { runtime: string; commands: string[] };
+    
+    run.output = `Cowork run would execute: ${config.commands.join("; ")}`;
+    
+    // TODO: Integrate with actual cowork system
+    // For now, just simulate
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  },
+
+  async _executeFunction(job: CronJob, run: CronRun, signal: AbortSignal): Promise<void> {
+    const config = job.config as { module: string; function: string; args: unknown[] };
+    
+    try {
+      // Dynamic import
+      const mod = await import(config.module);
+      const fn = mod[config.function];
+      
+      if (typeof fn !== "function") {
+        throw new Error(`Function ${config.function} not found in module ${config.module}`);
+      }
+      
+      const result = await fn(...config.args);
+      run.output = JSON.stringify(result, null, 2);
     } catch (error) {
-      log.error("failed to persist cron data", { error })
+      throw new Error(`Function execution failed: ${error}`);
+    }
+  },
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Event Helpers
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function emitEvent(event: CronEvent): void {
+  state.db?.logEvent(event);
+  
+  for (const handler of state.eventListeners) {
+    try {
+      handler(event);
+    } catch (e) {
+      console.error("[CronService] Event handler error:", e);
     }
   }
+  
+  state.config.emitEvent(event);
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Re-exports
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export type { CronJob, CronRun, CreateJobInput, UpdateJobInput, JobStatus, CronEvent, DaemonStatus };

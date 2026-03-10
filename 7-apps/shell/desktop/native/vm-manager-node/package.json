@@ -1,0 +1,23 @@
+{
+  "name": "@a2r/vm-manager",
+  "version": "1.0.0",
+  "description": "Node.js wrapper for A2R VM Manager",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "build:swift": "cd ../vm-manager && swift build -c release",
+    "install": "npm run build:swift",
+    "test": "jest"
+  },
+  "dependencies": {
+    "node-ipc": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
