@@ -31,11 +31,14 @@ members = [
     # Kernel - Execution
     "1-kernel/execution/a2r-process-driver",
     "1-kernel/execution/a2r-firecracker-driver",
+    "1-kernel/execution/a2r-vm-executor",
+    "1-kernel/execution/a2r-vm-image-builder",
     "1-kernel/execution/a2r-ops/packaging",
     "1-kernel/execution/multimodal-streaming",
     
     # Kernel - Infrastructure
     "1-kernel/infrastructure/a2r-driver-interface",
+    "1-kernel/infrastructure/a2r-guest-agent-protocol",
     "1-kernel/infrastructure/a2r-environment-spec",
     "1-kernel/infrastructure/a2r-openclaw-host",
     "1-kernel/infrastructure/a2r-parity",
@@ -52,6 +55,10 @@ members = [
     "1-kernel/infrastructure/a2r-runtime",
     "1-kernel/infrastructure/harness-engineering",
     
+    # Agent Systems
+    "0-substrate/a2r-agent-system-rails",
+    "2-governance/worktree-manager",
+
     # Governance
     "2-governance/a2r-replay",
     "2-governance/identity-access-control/policy-tier-gating",
@@ -69,6 +76,7 @@ members = [
     "4-services/orchestration/a2r-prewarm",
     "4-services/orchestration/budget-metering",
     "4-services/orchestration/kernel-service",
+    "4-services/orchestration/workspace-service",
     "4-services/memory/state/memory",
     "4-services/io-service",
 
@@ -100,6 +108,7 @@ repository = "https://github.com/a2rchitect/a2rchitech"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tokio = { version = "1.35", features = ["full"] }
+tokio-util = { version = "0.7", features = ["io"] }
 anyhow = "1.0"
 thiserror = "1.0"
 async-trait = "0.1"
@@ -158,14 +167,21 @@ portable-pty = "0.8"
 which = "6.0"
 walkdir = "2.5"
 dirs = "5.0"
+bytes = "1.5"
 lazy_static = "1.4"
 serde_yaml = "0.9"
+toml = "0.8"
 tar = "0.4"
 flate2 = "1.0"
+indicatif = "0.17"
+zstd = "0.13"
 
 # Terminal
 crossterm = "0.27"
 ratatui = "0.26"
+
+# Testing
+tokio-test = "0.4"
 
 # Scheduling
 tokio-cron-scheduler = "0.10"
@@ -222,7 +238,10 @@ a2rchitech-artifact-registry = { path = "1-kernel/control-plane/unified-registry
 
 # === A2R Workspace Dependencies - Kernel Infrastructure ===
 a2r-driver-interface = { path = "1-kernel/infrastructure/a2r-driver-interface" }
+a2r-guest-agent-protocol = { path = "1-kernel/infrastructure/a2r-guest-agent-protocol" }
 a2r-process-driver = { path = "1-kernel/execution/a2r-process-driver" }
+a2r-vm-executor = { path = "1-kernel/execution/a2r-vm-executor" }
+a2r-vm-image-builder = { path = "1-kernel/execution/a2r-vm-image-builder" }
 a2r-environment-spec = { path = "1-kernel/infrastructure/a2r-environment-spec" }
 a2r-parity = { path = "1-kernel/infrastructure/a2r-parity" }
 a2r-rlm = { path = "1-kernel/infrastructure/a2r-rlm" }

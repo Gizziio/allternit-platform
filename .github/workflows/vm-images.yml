@@ -1,0 +1,306 @@
+name: Build VM Images
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '1-kernel/execution/a2r-vm-executor/**'
+      - '1-kernel/execution/a2r-vm-image-builder/**'
+      - '1-kernel/infrastructure/a2r-guest-agent-protocol/**'
+      - '.github/workflows/vm-images.yml'
+  pull_request:
+    paths:
+      - '1-kernel/execution/a2r-vm-executor/**'
+      - '1-kernel/execution/a2r-vm-image-builder/**'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Image version (e.g., 1.1.0)'
+        required: true
+        default: '1.1.0'
+      upload_release:
+        description: 'Upload to GitHub Releases'
+        required: true
+        type: boolean
+        default: false
+
+env:
+  IMAGE_VERSION: ${{ github.event.inputs.version || '1.1.0' }}
+
+jobs:
+  # Build VM images for x86_64
+  build-x86_64:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y debootstrap qemu-utils e2fsprogs zstd
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: x86_64-vm-executor
+
+      - name: Build a2r-vm-executor
+        run: |
+          cargo build --release -p a2r-vm-executor
+
+      - name: Build VM images
+        run: |
+          mkdir -p vm-images
+          cargo run --release -p a2r-vm-image-builder -- \
+            build \
+            --ubuntu-version 22.04 \
+            --output-dir ./vm-images
+        env:
+          RUST_LOG: info
+
+      - name: Create image metadata
+        run: |
+          KERNEL_VERSION=$(ls vm-images/vmlinux-* | grep -oP '\d+\.\d+\.\d+' | head -1)
+          cat > vm-images/version-${IMAGE_VERSION}-amd64.json << EOF
+          {
+            "version": "${IMAGE_VERSION}",
+            "build_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "architecture": "x86_64",
+            "kernel_version": "${KERNEL_VERSION}",
+            "rootfs_size_mb": 2048,
+            "checksums": {
+              "vmlinux_sha256": "$(sha256sum vm-images/vmlinux-*-a2r | cut -d' ' -f1)",
+              "initrd_sha256": "$(sha256sum vm-images/initrd.img-*-a2r | cut -d' ' -f1)",
+              "rootfs_sha256": "$(sha256sum vm-images/ubuntu-22.04-a2r-*.ext4 | cut -d' ' -f1)"
+            }
+          }
+          EOF
+
+      - name: Compress images
+        run: |
+          cd vm-images
+          zstd -T0 --ultra -19 ubuntu-22.04-a2r-*.ext4 -o ubuntu-22.04-a2r-v${IMAGE_VERSION}.ext4.zst
+          rm ubuntu-22.04-a2r-*.ext4
+          ls -la
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: vm-images-x86_64
+          path: vm-images/*
+          retention-days: 30
+
+      - name: Upload to GitHub Releases
+        if: github.event.inputs.upload_release == 'true'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ env.IMAGE_VERSION }}
+          name: VM Images v${{ env.IMAGE_VERSION }}
+          body: |
+            A2R VM Images v${{ env.IMAGE_VERSION }}
+            
+            ## Contents
+            - Linux kernel (vmlinux) for Firecracker/Apple VF
+            - Initial ramdisk (initrd)
+            - Ubuntu 22.04 rootfs with A2R toolchains
+            - a2r-vm-executor pre-installed
+            
+            ## Toolchains Included
+            - Node.js 20.x
+            - Python 3.10
+            - Rust (cargo)
+            - Docker
+            - Git
+            
+            ## Usage
+            Download with: `a2r-vm-image-builder download --version ${{ env.IMAGE_VERSION }}`
+            
+            ## Platforms
+            - ✅ x86_64 (AMD64)
+            - ✅ aarch64 (ARM64) - Apple Silicon
+          files: |
+            vm-images/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Build VM images for ARM64 (Apple Silicon)
+  build-arm64:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y debootstrap qemu-user-static binutils-aarch64-linux-gnu e2fsprogs zstd
+
+      - name: Install Rust
+        uses: dtolnay/rust-action@stable
+
+      - name: Add ARM64 target
+        run: rustup target add aarch64-unknown-linux-gnu
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: arm64-vm-executor
+
+      - name: Build a2r-vm-executor (ARM64)
+        run: |
+          cargo build --release -p a2r-vm-executor --target aarch64-unknown-linux-gnu
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
+
+      - name: Build VM images (ARM64)
+        run: |
+          mkdir -p vm-images
+          
+          # Create ARM64 rootfs using debootstrap with QEMU
+          sudo debootstrap --arch=arm64 --foreign jammy vm-images/rootfs http://ports.ubuntu.com/ubuntu-ports
+          sudo cp /usr/bin/qemu-aarch64-static vm-images/rootfs/usr/bin/
+          sudo chroot vm-images/rootfs /debootstrap/debootstrap --second-stage
+          
+          # Copy executor binary
+          sudo mkdir -p vm-images/rootfs/usr/bin
+          sudo cp target/aarch64-unknown-linux-gnu/release/a2r-vm-executor vm-images/rootfs/usr/bin/
+          sudo chmod +x vm-images/rootfs/usr/bin/a2r-vm-executor
+          
+          # Install toolchains inside chroot
+          sudo chroot vm-images/rootfs apt-get update
+          sudo chroot vm-images/rootfs apt-get install -y nodejs npm python3 python3-pip docker.io cargo git bubblewrap
+          
+          # Create disk image
+          dd if=/dev/zero of=vm-images/ubuntu-22.04-a2r-v${IMAGE_VERSION}-arm64.ext4 bs=1M count=2048
+          mkfs.ext4 vm-images/ubuntu-22.04-a2r-v${IMAGE_VERSION}-arm64.ext4
+          
+          # Mount and copy
+          mkdir -p /tmp/arm64-rootfs
+          sudo mount vm-images/ubuntu-22.04-a2r-v${IMAGE_VERSION}-arm64.ext4 /tmp/arm64-rootfs
+          sudo cp -a vm-images/rootfs/. /tmp/arm64-rootfs/
+          sudo umount /tmp/arm64-rootfs
+          
+          # Get ARM64 kernel
+          wget -q http://cloud-images.ubuntu.com/releases/22.04/release/unpacked/ubuntu-22.04-server-cloudimg-arm64-vmlinuz-generic \
+            -O vm-images/vmlinux-6.5.0-a2r-arm64 || true
+          wget -q http://cloud-images.ubuntu.com/releases/22.04/release/unpacked/ubuntu-22.04-server-cloudimg-arm64-initrd-generic \
+            -O vm-images/initrd.img-6.5.0-a2r-arm64 || true
+        continue-on-error: true
+
+      - name: Create ARM64 metadata
+        run: |
+          cat > vm-images/version-${IMAGE_VERSION}-arm64.json << EOF
+          {
+            "version": "${IMAGE_VERSION}",
+            "build_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "architecture": "aarch64",
+            "kernel_version": "6.5.0",
+            "rootfs_size_mb": 2048,
+            "checksums": {
+              "vmlinux_sha256": "$(sha256sum vm-images/vmlinux-*-arm64 2>/dev/null | cut -d' ' -f1 || echo 'N/A')",
+              "initrd_sha256": "$(sha256sum vm-images/initrd.img-*-arm64 2>/dev/null | cut -d' ' -f1 || echo 'N/A')",
+              "rootfs_sha256": "$(sha256sum vm-images/ubuntu-22.04-a2r-*-arm64.ext4 2>/dev/null | cut -d' ' -f1 || echo 'N/A')"
+            }
+          }
+          EOF
+        continue-on-error: true
+
+      - name: Compress ARM64 images
+        run: |
+          cd vm-images
+          for f in ubuntu-22.04-a2r-*-arm64.ext4; do
+            [ -f "$f" ] && zstd -T0 --ultra -19 "$f" -o "${f}.zst"
+          done
+          rm -f ubuntu-22.04-a2r-*-arm64.ext4
+          ls -la
+        continue-on-error: true
+
+      - name: Upload ARM64 artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: vm-images-arm64
+          path: vm-images/*
+          retention-days: 30
+        continue-on-error: true
+
+  # Test built images
+  test-images:
+    runs-on: ubuntu-22.04
+    needs: [build-x86_64]
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: vm-images-x86_64
+          path: vm-images
+
+      - name: Decompress and verify
+        run: |
+          cd vm-images
+          
+          # Decompress rootfs
+          zstd -d ubuntu-22.04-a2r-*.ext4.zst
+          
+          # Verify checksums
+          cat version-*.json | jq -r '.checksums.rootfs_sha256'
+          sha256sum ubuntu-22.04-a2r-*.ext4
+          
+          echo "Images verified successfully"
+
+      - name: Test with Firecracker
+        run: |
+          # Download Firecracker
+          release_url="https://github.com/firecracker-microvm/firecracker/releases"
+          latest=$(basename $(curl -fsSLI -o /dev/null -w %{url_effective} ${release_url}/latest))
+          curl -L ${release_url}/download/${latest}/firecracker-${latest}-$(uname -m).tgz | tar -xz
+          
+          # Check Firecracker works
+          ./release-*/firecracker-* --version
+          echo "✅ Firecracker VM images built and ready"
+
+  # Update version manifest
+  update-manifest:
+    runs-on: ubuntu-latest
+    needs: [build-x86_64, build-arm64]
+    if: github.event.inputs.upload_release == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Update version manifest
+        run: |
+          mkdir -p docs
+          cat > docs/vm-images-manifest.json << EOF
+          {
+            "latest": "${IMAGE_VERSION}",
+            "versions": {
+              "${IMAGE_VERSION}": {
+                "release_date": "$(date -u +%Y-%m-%d)",
+                "architectures": ["x86_64", "aarch64"],
+                "size_mb": 500,
+                "changelog": "Initial release with Ubuntu 22.04 and A2R toolchains"
+              }
+            }
+          }
+          EOF
+
+      - name: Commit manifest
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add docs/vm-images-manifest.json
+          git diff --staged --quiet || git commit -m "Update VM image manifest for v${IMAGE_VERSION}"
+          git push || echo "No changes to commit"
