@@ -916,6 +916,7 @@ export interface SubmitMessageParams {
   agentFallbackModels?: string[];
   agentSessionKey?: string;
   signal?: AbortSignal;
+  mode?: 'plan' | 'build';  // Execution mode for system prompt
 }
 
 export interface UseRustStreamAdapterReturn {
@@ -1282,6 +1283,7 @@ export function useRustStreamAdapter(
     agentFallbackModels,
     agentSessionKey,
     signal: externalSignal,
+    mode,  // Execution mode: plan or build
   }: SubmitMessageParams): Promise<void> => {
     if (!chatId) {
       options.onError?.(new Error("chatId is required"));
@@ -1376,10 +1378,10 @@ export function useRustStreamAdapter(
         message,
         modelId,
         runtimeModelId,
-        attachments: attachments?.map((f: any) => ({ 
-          name: f.name, 
-          type: f.type, 
-          size: f.size 
+        attachments: attachments?.map((f: any) => ({
+          name: f.name,
+          type: f.type,
+          size: f.size
         })),
         webSearch,
         conversationMode,
@@ -1389,6 +1391,7 @@ export function useRustStreamAdapter(
         agentModel,
         agentFallbackModels,
         agentSessionKey,
+        mode,  // Pass execution mode for system prompt injection
         gatewayUrl: runtimeConfig?.gatewayUrl,
         gatewayWsUrl: runtimeConfig?.gatewayWsUrl,
         gatewayToken: runtimeConfig?.token,
@@ -1403,8 +1406,10 @@ export function useRustStreamAdapter(
       console.log('[rust-stream-adapter] Trying endpoints:', endpointAttempts.map(e => e.label));
       
       for (const attempt of endpointAttempts) {
+        console.log('[rust-stream-adapter] Attempting endpoint:', attempt.url);
+        
         // Check if this is a Terminal Server endpoint (either direct or via proxy)
-        const isTerminalEndpoint = (attempt.url.includes("/session/") && attempt.url.includes("/message")) || 
+        const isTerminalEndpoint = (attempt.url.includes("/session/") && attempt.url.includes("/message")) ||
                                    attempt.url.includes("/api/chat");
         
         // For Terminal Server, ensure session exists first

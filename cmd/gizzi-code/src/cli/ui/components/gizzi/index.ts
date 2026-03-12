@@ -8,4 +8,7 @@ export { GIZZIMascot, type GIZZIMascotState } from "@/cli/ui/components/gizzi/ma
 export { GIZZIThemeProvider } from "@/cli/ui/components/gizzi/provider"
 export { useGIZZITheme, type GIZZIRuntimeState } from "@/cli/ui/components/gizzi/theme"
 export { useBrand, GIZZI_BRAND, type BrandBannerVariant } from "@/cli/ui/components/gizzi/useBrand"
+export { GIZZIBrand } from "@/shared/brand/meta"
 export { GIZZIBanner } from "@/cli/ui/components/gizzi/banner"
+export { ShimmeringBanner } from "@/cli/ui/components/gizzi/shimmering-banner"
+export { SetupBanner } from "@/cli/ui/components/gizzi/setup-banner"

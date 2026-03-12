@@ -4,9 +4,9 @@
  * Production-ready retry logic with configurable backoff strategies.
  */
 
-import { Log } from "@/shared/util/log";
+import { createLogger } from "./logger";
 
-const log = Log.create({ service: "cron-retry" });
+const log = createLogger("cron-retry");
 
 export interface RetryConfig {
   /** Maximum number of retry attempts */

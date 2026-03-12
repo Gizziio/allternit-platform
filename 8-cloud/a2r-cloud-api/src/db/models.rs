@@ -79,3 +79,42 @@ pub struct AuditLog {
     pub ip_address: Option<String>,
     pub created_at: DateTime<Utc>,
 }
+
+/// Region record - cloud provider region
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
+pub struct Region {
+    pub id: String,
+    pub name: String,
+    pub provider: String,
+    pub endpoint: Option<String>,
+    pub capacity: i32,
+    pub active: bool,
+    pub cost_factor: f64,
+    pub location_lat: Option<f64>,
+    pub location_lon: Option<f64>,
+    pub metadata: Option<serde_json::Value>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Region capacity tracking
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
+pub struct RegionCapacity {
+    pub region_id: String,
+    pub current_runs: i32,
+    pub queued_runs: i32,
+    pub last_updated: DateTime<Utc>,
+}
+
+/// Region summary for list views
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
+pub struct RegionSummary {
+    pub id: String,
+    pub name: String,
+    pub provider: String,
+    pub capacity: i32,
+    pub active: bool,
+    pub current_runs: i32,
+    pub queued_runs: i32,
+    pub available_capacity: i32,
+}

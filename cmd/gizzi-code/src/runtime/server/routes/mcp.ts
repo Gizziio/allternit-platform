@@ -8,6 +8,28 @@ import { lazy } from "@/shared/util/lazy"
 export const McpRoutes = lazy(() =>
   new Hono()
     .get(
+      "/",
+      describeRoute({
+        summary: "Get MCP status",
+        description: "Retrieve the current status of all configured and connected MCP servers.",
+        operationId: "mcp.status",
+        responses: {
+          200: {
+            description: "MCP status",
+            content: {
+              "application/json": {
+                schema: resolver(z.any()),
+              },
+            },
+          },
+        },
+      }),
+      async (c) => {
+        const status = await MCP.status()
+        return c.json(status)
+      },
+    )
+    .get(
       "/list",
       describeRoute({
         summary: "List MCP servers",

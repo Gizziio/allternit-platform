@@ -74,7 +74,7 @@ export class AnimationDriver {
   }
 
   /**
-   * Alive Mascot - Staggered blinking and subtle movements.
+   * Alive Mascot - Staggered blinking, gaze shifting, and horizontal wandering.
    */
   private aliveMascotFrame(inputs: { compact?: boolean; state?: string }): string {
     const tick = this.config.getTick()
@@ -83,35 +83,76 @@ export class AnimationDriver {
 
     const animBase = isCompact ? "gizzi.mascot.compact" : "gizzi.mascot"
 
-    // 1. Blinking (Staggered/Semi-random)
-    // Evaluate a blink window every ~4 seconds (80 ticks)
+    // 1. Horizontal Wandering Logic (The "Pacing" Engine)
+    // We use a 600-tick master cycle (~30 seconds)
+    const wanderCycle = tick % 600n
+    let offsetX = 0
+    let isWalking = false
+
+    if (!isCompact) {
+      if (wanderCycle < 100n) {
+        // State: Stay at origin (0-5s)
+        offsetX = 0
+      } else if (wanderCycle < 200n) {
+        // State: Walk Right (5-10s) - move from 0 to 12
+        offsetX = Math.floor(Number(wanderCycle - 100n) / 8) 
+        isWalking = true
+      } else if (wanderCycle < 400n) {
+        // State: Stay at Right (10-20s)
+        offsetX = 12
+      } else if (wanderCycle < 500n) {
+        // State: Walk Left (20-25s) - move from 12 back to 0
+        offsetX = 12 - Math.floor(Number(wanderCycle - 400n) / 8)
+        isWalking = true
+      } else {
+        // State: Stay at origin (25-30s)
+        offsetX = 0
+      }
+    }
+
+    // 2. Expression Selection
+    let selectedFrame: string
+
+    // Blinking (Staggered/Semi-random)
     const blinkBucket = tick / 80n
     const blinkHash = Number((blinkBucket * 7n + 13n) % 5n)
     const tickInBucket = tick % 80n
     
-    // Different blink patterns based on hash
-    if (blinkHash === 0 && tickInBucket < 3n) return this.frame(`${animBase}.blink`) // Standard blink
-    if (blinkHash === 1 && (tickInBucket < 3n || (tickInBucket > 8n && tickInBucket < 11n))) return this.frame(`${animBase}.blink`) // Double blink
-    if (blinkHash === 2 && tickInBucket < 6n) return this.frame(`${animBase}.blink`) // Long blink
+    // Choose the base animation
+    if (blinkHash === 0 && tickInBucket < 3n) {
+      selectedFrame = this.frame(`${animBase}.blink`)
+    } else if (blinkHash === 1 && (tickInBucket < 3n || (tickInBucket > 8n && tickInBucket < 11n))) {
+      selectedFrame = this.frame(`${animBase}.blink`)
+    } else if (blinkHash === 2 && tickInBucket < 6n) {
+      selectedFrame = this.frame(`${animBase}.blink`)
+    } else if (isWalking) {
+      selectedFrame = this.frame(`${animBase}.walking`)
+    } else {
+      // Gaze Shifting
+      const gazeBucket = tick / 240n
+      const gazeHash = Number((gazeBucket * 11n + 3n) % 8n)
+      const tickInGaze = tick % 240n
+      const canShiftGaze = state === "idle" || state === "steady" || state === "curious" || state === "pleased"
 
-    // 2. Gaze Shifting (Occasional side looks)
-    // Evaluate gaze window every ~12 seconds (240 ticks)
-    const gazeBucket = tick / 240n
-    const gazeHash = Number((gazeBucket * 11n + 3n) % 8n)
-    const tickInGaze = tick % 240n
-
-    // Only shift gaze if we are in a relatively "stable" state
-    const canShiftGaze = state === "idle" || state === "steady" || state === "curious" || state === "pleased"
-
-    if (canShiftGaze) {
-      // Look left for ~2 seconds
-      if (gazeHash === 1 && tickInGaze < 40n) return this.frame(`${animBase}.look-left`)
-      // Look right for ~2 seconds
-      if (gazeHash === 2 && tickInGaze < 40n) return this.frame(`${animBase}.look-right`)
+      if (canShiftGaze && gazeHash === 1 && tickInGaze < 40n) {
+        selectedFrame = this.frame(`${animBase}.look-left`)
+      } else if (canShiftGaze && gazeHash === 2 && tickInGaze < 40n) {
+        selectedFrame = this.frame(`${animBase}.look-right`)
+      } else {
+        selectedFrame = this.frame(`${animBase}.${state}`)
+      }
     }
 
-    // Default to the requested state
-    return this.frame(`${animBase}.${state}`)
+    // 3. Apply Physical Translation (prepended spaces)
+    if (offsetX > 0) {
+      const padding = " ".repeat(offsetX)
+      return selectedFrame
+        .split("\n")
+        .map(line => padding + line)
+        .join("\n")
+    }
+
+    return selectedFrame
   }
 
   /**

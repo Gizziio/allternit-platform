@@ -404,6 +404,8 @@ async fn main() -> Result<()> {
         root_dir: Some(root.clone()),
         actor_id: Some("gate".to_string()),
         strict_provenance: None,
+        visual_provider: None,
+        visual_config: None,
     }));
 
     let transport_root = Arc::new(root.clone());

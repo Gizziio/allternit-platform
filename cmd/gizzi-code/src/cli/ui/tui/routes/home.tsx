@@ -18,6 +18,8 @@ import { useTerminalDimensions } from "@opentui/solid"
 import { WelcomeScreen } from "@/cli/ui/tui/component/welcome"
 import { StartupFlow } from "@/cli/ui/tui/component/startup-flow"
 import { isStartupFlowActive } from "@/cli/ui/tui/component/startup-flow-state"
+import { ModeSwitcher, useMode } from "@/cli/ui/tui/component/mode-switcher"
+import { AgentToggle, useAgent } from "@/cli/ui/tui/component/agent-toggle"
 
 // Track whether initial prompt has been applied (persists across re-renders)
 let initialPromptApplied = false
@@ -31,6 +33,8 @@ export function Home() {
   const promptRef = usePromptRef()
   const command = useCommandDialog()
   const dimensions = useTerminalDimensions()
+  const { mode, setMode } = useMode()
+  const { enabled: agentEnabled, toggle: toggleAgent } = useAgent()
   const mcp = createMemo(() => Object.keys(sync.data.mcp).length > 0)
   const mcpError = createMemo(() => {
     return Object.values(sync.data.mcp).some((x) => x.status === "failed")
@@ -156,6 +160,62 @@ export function Home() {
 
   return (
     <>
+      {/* HEADER BAR - TOP with Mode Switcher & Agent Toggle */}
+      <box
+        paddingTop={1}
+        paddingBottom={1}
+        paddingLeft={2}
+        paddingRight={2}
+        flexDirection="row"
+        flexShrink={0}
+        gap={2}
+      >
+        <text fg={theme.textMuted} wrapMode="none">
+          {directoryLabel()}
+        </text>
+        <box gap={1} flexDirection="row" flexShrink={0}>
+          <Show when={mcp()}>
+            <text fg={theme.text}>
+              <Switch>
+                <Match when={mcpError()}>
+                  <span style={{ fg: theme.error }}>⊙ </span>
+                </Match>
+                <Match when={true}>
+                  <span style={{ fg: connectedMcpCount() > 0 ? theme.success : theme.textMuted }}>⊙ </span>
+                </Match>
+              </Switch>
+              {connectedMcpCount()} MCP
+            </text>
+            <text fg={theme.textMuted}>/status</text>
+          </Show>
+        </box>
+        <box flexGrow={1} />
+        <box flexDirection="row" gap={2} alignItems="center">
+          <ModeSwitcher 
+            activeMode={mode} 
+            onModeChange={(newMode) => {
+              setMode(newMode)
+              if (newMode === "cowork") {
+                route.navigate({ type: "cowork" })
+              } else {
+                route.navigate({ type: "home" })
+              }
+            }} 
+            size="small" 
+            showLabels={true} 
+          />
+          <AgentToggle 
+            enabled={agentEnabled} 
+            onToggle={toggleAgent} 
+            size="small" 
+          />
+        </box>
+        <box flexShrink={0}>
+          <text fg={theme.textMuted}>{Installation.VERSION}</text>
+        </box>
+      </box>
+      
+      {/* MAIN CONTENT */}
       <box flexGrow={1} alignItems="center" paddingLeft={2} paddingRight={2}>
         <box flexGrow={1} minHeight={0} />
         <box height={4} minHeight={0} flexShrink={1} />
@@ -182,31 +242,6 @@ export function Home() {
         </box>
         <box flexGrow={1} minHeight={0} />
         <Toast />
-      </box>
-      <box paddingTop={1} paddingBottom={1} paddingLeft={2} paddingRight={2} flexDirection="row" flexShrink={0} gap={2}>
-        <text fg={theme.textMuted} wrapMode="none">
-          {directoryLabel()}
-        </text>
-        <box gap={1} flexDirection="row" flexShrink={0}>
-          <Show when={mcp()}>
-            <text fg={theme.text}>
-              <Switch>
-                <Match when={mcpError()}>
-                  <span style={{ fg: theme.error }}>⊙ </span>
-                </Match>
-                <Match when={true}>
-                  <span style={{ fg: connectedMcpCount() > 0 ? theme.success : theme.textMuted }}>⊙ </span>
-                </Match>
-              </Switch>
-              {connectedMcpCount()} MCP
-            </text>
-            <text fg={theme.textMuted}>/status</text>
-          </Show>
-        </box>
-        <box flexGrow={1} />
-        <box flexShrink={0}>
-          <text fg={theme.textMuted}>{Installation.VERSION}</text>
-        </box>
       </box>
     </>
   )

@@ -15,6 +15,7 @@ mod container_pty;
 mod docker;
 mod executor;
 mod pty;
+mod run_manager;
 mod websocket;
 
 use config::NodeConfig;
@@ -22,6 +23,7 @@ use container_pty::ContainerPtyManager;
 use docker::{DockerRuntime, detect_docker_capabilities};
 use executor::JobExecutor;
 use pty::PtyManager;
+use run_manager::RunManager;
 use websocket::{WebSocketClient, WebSocketConfig};
 
 /// A2R Node Agent
@@ -65,6 +67,8 @@ pub struct NodeState {
     pub container_pty_manager: RwLock<Option<Arc<ContainerPtyManager>>>,
     /// Job executor for running containerized jobs
     pub executor: RwLock<Option<Arc<JobExecutor>>>,
+    /// Run manager for run lifecycle
+    pub run_manager: RwLock<Option<Arc<RunManager>>>,
 }
 
 impl NodeState {
@@ -77,6 +81,7 @@ impl NodeState {
             pty_manager: RwLock::new(Some(Arc::new(PtyManager::new()))),
             container_pty_manager: RwLock::new(Some(Arc::new(ContainerPtyManager::new()))),
             executor: RwLock::new(None),
+            run_manager: RwLock::new(None),
         }
     }
 }

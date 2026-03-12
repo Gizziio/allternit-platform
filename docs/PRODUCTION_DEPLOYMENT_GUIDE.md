@@ -1,942 +1,328 @@
-# A2RCHITECH PLATFORM - PRODUCTION DEPLOYMENT GUIDE
+# Production Deployment Guide
 
-> **Complete guide for preparing, configuring, and deploying A2rchitech Platform to production**
+**Agent Communication System - Production Ready**
 
----
+## Prerequisites
 
-## Table of Contents
+- Node.js 18+ or Bun 1.0+
+- Git installed
+- a2rchitech platform running
 
-1. [Current Issues to Fix](#current-issues-to-fix)
-2. [Pre-Production Checklist](#pre-production-checklist)
-3. [Code Base Changes Required](#code-base-changes-required)
-4. [Infrastructure Setup](#infrastructure-setup)
-5. [Configuration Management](#configuration-management)
-6. [Deployment Options](#deployment-options)
-7. [Post-Deployment Verification](#post-deployment-verification)
-8. [Monitoring & Maintenance](#monitoring--maintenance)
+## Installation
 
----
-
-## Current Issues to Fix
-
-### 🔴 CRITICAL - Must Fix Before Production
-
-#### 1. Port Conflicts Between Services
-
-**Problem:** Multiple services may attempt to bind to the same ports.
-
-**Current State:**
-| Service | Configured Port | Actual Port | Conflict |
-|---------|----------------|-------------|----------|
-| Main Gateway | 8013 | 8013 | ✅ OK |
-| AGUI Gateway | 8010 | 8010 | ✅ OK |
-| A2A Gateway | 8012 | 8012 | ✅ OK |
-| Kernel | 3004 | 3004 | ✅ OK |
-| API | 3000 | 3000 | ✅ OK |
-
-**Fix Required:**
-- ✅ Port registry created: `docs/PORT_REGISTRY.md`
-- ✅ Centralized config: `dev/scripts/service-config.sh`
-- ⚠️ **TODO:** Update each service to read from environment variables
-
-**Action Items:**
-```bash
-# 1. Verify each service reads PORT from environment
-grep -r "PORT.*=" 4-services/ 7-apps/ --include="*.rs" --include="*.py" --include="*.ts"
-
-# 2. Update services that hardcode ports
-# See: Code Base Changes Required section below
-```
-
----
-
-#### 2. Database Migration System
-
-**Problem:** SQLite database schema changes may break between versions.
-
-**Current State:**
-- Database: `./a2rchitech.db`
-- No migration system in place
-- Schema changes require manual intervention
-
-**Fix Required:**
-```bash
-# Create migrations directory
-mkdir -p 7-apps/api/migrations
-
-# Create migration runner
-cat > 7-apps/api/migrations/README.md << 'EOF'
-# Database Migrations
-
-## Running Migrations
-./migrate.sh up    # Apply all pending migrations
-./migrate.sh down  # Rollback last migration
-./migrate.sh status # Show migration status
-EOF
-```
-
-**Action Items:**
-- [ ] Implement SQL migration system (like Diesel migrations for Rust)
-- [ ] Add migration version tracking table
-- [ ] Create rollback scripts
-- [ ] Test migration path from v0.1 → v1.0
-
----
-
-#### 3. Service Health Checks
-
-**Problem:** No standardized health check endpoints across all services.
-
-**Current State:**
-- API Service: `/health` ✅
-- Other services: Unknown/Inconsistent
-
-**Fix Required:**
-```rust
-// Add to each Rust service (src/main.rs)
-async fn health_check() -> impl Responder {
-    web::Json(json!({
-        "status": "healthy",
-        "service": env!("CARGO_PKG_NAME"),
-        "version": env!("CARGO_PKG_VERSION"),
-        "timestamp": Utc::now()
-    }))
-}
-```
-
-```python
-# Add to each Python service
-@app.get("/health")
-async def health_check():
-    return {
-        "status": "healthy",
-        "service": "voice-service",
-        "version": "1.0.0",
-        "timestamp": datetime.utcnow().isoformat()
-    }
-```
-
-**Action Items:**
-- [ ] Add `/health` endpoint to all services
-- [ ] Add `/ready` endpoint (checks dependencies)
-- [ ] Add `/live` endpoint (liveness probe)
-- [ ] Create health check aggregator in Gateway
-
----
-
-#### 4. Logging Standardization
-
-**Problem:** Inconsistent logging formats across services.
-
-**Current State:**
-- Rust services: `tracing` crate (structured)
-- Python services: `logging` module (varies)
-- TypeScript services: `console.log` (unstructured)
-
-**Fix Required:**
-```json
-{
-  "timestamp": "2026-02-26T21:30:00Z",
-  "level": "INFO",
-  "service": "api-service",
-  "trace_id": "abc123",
-  "span_id": "def456",
-  "message": "Request processed",
-  "context": {
-    "method": "POST",
-    "path": "/api/v1/chat",
-    "duration_ms": 150
-  }
-}
-```
-
-**Action Items:**
-- [ ] Configure structured logging for all Rust services
-- [ ] Add JSON formatter to Python services
-- [ ] Replace console.log with structured logger in TypeScript
-- [ ] Set up log aggregation (ELK stack or similar)
-
----
-
-#### 5. Configuration Management
-
-**Problem:** Configuration scattered across `.env` files, code, and command-line args.
-
-**Fix Required:**
-```bash
-# Create centralized config directory
-mkdir -p config/production
-mkdir -p config/staging
-mkdir -p config/development
-
-# Create config validator
-cat > scripts/validate-config.sh << 'EOF'
-#!/bin/bash
-# Validate all required config values are present
-REQUIRED_VARS=(
-    "A2R_API_PORT"
-    "A2R_KERNEL_PORT"
-    "DATABASE_URL"
-    "SECRET_KEY"
-)
-
-for var in "${REQUIRED_VARS[@]}"; do
-    if [ -z "${!var}" ]; then
-        echo "ERROR: Required variable $var not set"
-        exit 1
-    fi
-done
-echo "Configuration valid"
-EOF
-```
-
----
-
-### 🟡 HIGH PRIORITY - Should Fix Before Production
-
-#### 6. Error Handling & Recovery
-
-**Action Items:**
-- [ ] Add retry logic with exponential backoff
-- [ ] Implement circuit breakers for external services
-- [ ] Create dead letter queue for failed jobs
-- [ ] Add graceful shutdown handlers
-
-#### 7. Rate Limiting
-
-**Action Items:**
-- [ ] Implement rate limiting at Gateway level
-- [ ] Add per-user rate limits
-- [ ] Add per-IP rate limits
-- [ ] Create rate limit bypass for internal services
-
-#### 8. Authentication & Authorization
-
-**Action Items:**
-- [ ] Implement JWT token validation at Gateway
-- [ ] Add API key management
-- [ ] Create service-to-service auth (mTLS)
-- [ ] Add RBAC (Role-Based Access Control)
-
-#### 9. Secret Management
-
-**Action Items:**
-- [ ] Move secrets out of `.env` files
-- [ ] Use AWS Secrets Manager / HashiCorp Vault
-- [ ] Implement secret rotation
-- [ ] Add secret access auditing
-
----
-
-## Pre-Production Checklist
-
-### Code Quality
-
-- [ ] All services have unit tests with >80% coverage
-- [ ] Integration tests pass for all service combinations
-- [ ] Load testing completed (target: 1000 req/s)
-- [ ] Security audit completed
-- [ ] Code review completed by 2+ engineers
-
-### Infrastructure
-
-- [ ] Production environment provisioned
-- [ ] Database backups configured (hourly + daily)
-- [ ] Monitoring stack deployed (Prometheus + Grafana)
-- [ ] Log aggregation configured
-- [ ] SSL certificates provisioned
-- [ ] CDN configured for static assets
-
-### Configuration
-
-- [ ] Production config files created
-- [ ] All secrets migrated to secret manager
-- [ ] Environment variables documented
-- [ ] Feature flags configured
-
-### Documentation
-
-- [ ] API documentation generated and published
-- [ ] Runbooks created for common issues
-- [ ] Incident response plan documented
-- [ ] On-call rotation schedule created
-
----
-
-## Code Base Changes Required
-
-### 1. Update Service Port Configuration
-
-**File:** `7-apps/api/src/main.rs`
-```rust
-// BEFORE (hardcoded)
-let addr = "127.0.0.1:3000";
-
-// AFTER (from environment)
-let port = std::env::var("A2R_API_PORT").unwrap_or_else(|_| "3000".to_string());
-let host = std::env::var("A2R_API_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
-let addr = format!("{}:{}", host, port);
-```
-
-**File:** `4-services/gateway/src/main.py`
-```python
-# BEFORE
-PORT = 8013
-
-# AFTER
-PORT = int(os.environ.get("A2R_GATEWAY_PORT", "8013"))
-HOST = os.environ.get("A2R_GATEWAY_HOST", "127.0.0.1")
-```
-
-**File:** `4-services/gateway/agui-gateway/src/index.ts`
-```typescript
-// BEFORE
-const PORT = process.env.PORT || 8010;
-
-// AFTER
-const PORT = parseInt(process.env.A2R_AGUI_PORT || "8010", 10);
-const HOST = process.env.A2R_AGUI_HOST || "127.0.0.1";
-```
-
----
-
-### 2. Add Health Check Endpoints
-
-**File:** `7-apps/api/src/main.rs` (add to routes)
-```rust
-async fn health_check(
-    kernel_url: web::Data<String>,
-    memory_url: web::Data<String>,
-) -> impl Responder {
-    // Check dependencies
-    let kernel_healthy = reqwest::get(&format!("{}/health", kernel_url))
-        .await
-        .map(|r| r.status().is_success())
-        .unwrap_or(false);
-    
-    let memory_healthy = reqwest::get(&format!("{}/health", memory_url))
-        .await
-        .map(|r| r.status().is_success())
-        .unwrap_or(false);
-    
-    let status = if kernel_healthy && memory_healthy { "healthy" } else { "degraded" };
-    
-    web::Json(json!({
-        "status": status,
-        "service": "api",
-        "version": env!("CARGO_PKG_VERSION"),
-        "dependencies": {
-            "kernel": kernel_healthy,
-            "memory": memory_healthy
-        }
-    }))
-}
-```
-
----
-
-### 3. Add Graceful Shutdown
-
-**File:** `7-apps/api/src/main.rs`
-```rust
-use tokio::signal;
-
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // ... setup code ...
-    
-    let (tx, rx) = tokio::sync::oneshot::channel();
-    
-    // Spawn shutdown handler
-    tokio::spawn(async move {
-        let ctrl_c = async {
-            signal::ctrl_c()
-                .await
-                .expect("failed to install Ctrl+C handler");
-        };
-        
-        #[cfg(unix)]
-        let terminate = async {
-            signal::unix::signal(signal::unix::SignalKind::terminate())
-                .expect("failed to install signal handler")
-                .recv()
-                .await;
-        };
-        
-        #[cfg(not(unix))]
-        let terminate = std::future::pending::<()>();
-        
-        tokio::select! {
-            _ = ctrl_c => {},
-            _ = terminate => {},
-        }
-        
-        let _ = tx.send(());
-    });
-    
-    // ... server code ...
-    
-    let server = axum::serve(listener, app).with_graceful_shutdown(async {
-        rx.await.ok();
-        tracing::info!("Shutting down gracefully...");
-    });
-    
-    server.await?;
-    
-    Ok(())
-}
-```
-
----
-
-### 4. Add Structured Logging
-
-**File:** `7-apps/api/src/main.rs`
-```rust
-use tracing_subscriber::{fmt, prelude::*, EnvFilter};
-
-fn init_logging() {
-    let fmt_layer = fmt::layer()
-        .with_target(false)
-        .with_thread_ids(true)
-        .with_file(true)
-        .with_line_number(true)
-        .json(); // JSON format for production
-    
-    let filter_layer = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new("info,a2rchitech_api=debug"));
-    
-    tracing_subscriber::registry()
-        .with(filter_layer)
-        .with(fmt_layer)
-        .init();
-}
-```
-
----
-
-### 5. Create Configuration Module
-
-**File:** `7-apps/api/src/config.rs` (new file)
-```rust
-use serde::Deserialize;
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct Config {
-    pub host: String,
-    pub port: u16,
-    pub kernel_url: String,
-    pub memory_url: String,
-    pub registry_url: String,
-    pub policy_url: String,
-    pub database_url: String,
-    pub log_level: String,
-    pub environment: Environment,
-}
-
-#[derive(Debug, Clone, Deserialize, PartialEq)]
-#[serde(rename_all = "lowercase")]
-pub enum Environment {
-    Development,
-    Staging,
-    Production,
-}
-
-impl Config {
-    pub fn from_env() -> Result<Self, config::ConfigError> {
-        let config = config::Config::builder()
-            .add_source(config::Environment::with_prefix("A2R").separator("__"))
-            .add_source(config::File::with_name("config/base").required(false))
-            .add_source(config::File::with_name("config/production").required(false))
-            .build()?;
-        
-        config.try_deserialize()
-    }
-    
-    pub fn is_production(&self) -> bool {
-        self.environment == Environment::Production
-    }
-}
-```
-
----
-
-## Infrastructure Setup
-
-### Option 1: Single Server Deployment
-
-**Best for:** Small teams, low traffic (<10k requests/day)
+### 1. Install Dependencies
 
 ```bash
-# Server Requirements
-- CPU: 4 cores minimum (8 recommended)
-- RAM: 16GB minimum (32GB recommended)
-- Disk: 100GB SSD minimum
-- OS: Ubuntu 22.04 LTS or macOS 14+
-
-# Installation Steps
-1. Install system dependencies
-   sudo apt update
-   sudo apt install -y curl git build-essential pkg-config libssl-dev
-
-2. Install Rust
-   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-
-3. Install Python 3.11+
-   sudo apt install -y python3.11 python3.11-venv python3-pip
-
-4. Install Node.js 18+
-   curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-   sudo apt install -y nodejs
-
-5. Clone repository
-   git clone https://github.com/your-org/a2rchitech.git
-   cd a2rchitech
-
-6. Build services
-   ./start-platform.sh build
-
-7. Configure systemd services
-   sudo cp distribution/systemd/*.service /etc/systemd/system/
-   sudo systemctl daemon-reload
-   sudo systemctl enable a2r-api a2r-kernel a2r-gateway
-
-8. Start services
-   sudo systemctl start a2r-api a2r-kernel a2r-gateway
+cd /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech
+pnpm install
 ```
 
----
+### 2. Verify Installation
 
-### Option 2: Docker Compose Deployment
-
-**Best for:** Medium teams, medium traffic (<100k requests/day)
-
-**File:** `docker-compose.production.yml`
-```yaml
-version: '3.8'
-
-services:
-  gateway:
-    build:
-      context: .
-      dockerfile: 4-services/gateway/Dockerfile
-    ports:
-      - "8013:8013"
-    environment:
-      - A2R_GATEWAY_PORT=8013
-      - A2R_API_URL=http://api:3000
-    depends_on:
-      - api
-    networks:
-      - a2r-network
-    restart: unless-stopped
-
-  api:
-    build:
-      context: .
-      dockerfile: 7-apps/api/Dockerfile
-    environment:
-      - A2R_API_PORT=3000
-      - A2R_KERNEL_URL=http://kernel:3004
-      - A2R_MEMORY_URL=http://memory:3200
-      - DATABASE_URL=/data/a2rchitech.db
-    volumes:
-      - api-data:/data
-    depends_on:
-      - kernel
-      - memory
-    networks:
-      - a2r-network
-    restart: unless-stopped
-
-  kernel:
-    build:
-      context: .
-      dockerfile: 4-services/orchestration/kernel-service/Dockerfile
-    environment:
-      - A2R_KERNEL_PORT=3004
-    networks:
-      - a2r-network
-    restart: unless-stopped
-
-  memory:
-    build:
-      context: .
-      dockerfile: 4-services/memory/Dockerfile
-    volumes:
-      - memory-data:/data
-    networks:
-      - a2r-network
-    restart: unless-stopped
-
-  # Monitoring
-  prometheus:
-    image: prom/prometheus:latest
-    volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus-data:/prometheus
-    ports:
-      - "9090:9090"
-    networks:
-      - a2r-network
-
-  grafana:
-    image: grafana/grafana:latest
-    volumes:
-      - grafana-data:/var/lib/grafana
-    ports:
-      - "3000:3000"
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=changeme
-    networks:
-      - a2r-network
-
-volumes:
-  api-data:
-  memory-data:
-  prometheus-data:
-  grafana-data:
-
-networks:
-  a2r-network:
-    driver: bridge
-```
-
-**Deployment:**
 ```bash
-docker-compose -f docker-compose.production.yml up -d
+# Run verification tests
+cd cmd/gizzi-code
+bun run test-verify-integration.ts
+
+# Expected: 10/10 PASS
 ```
 
----
-
-### Option 3: Kubernetes Deployment
-
-**Best for:** Large teams, high traffic (>100k requests/day)
-
-**File:** `k8s/api-deployment.yaml`
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: a2r-api
-  namespace: a2rchitech
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: a2r-api
-  template:
-    metadata:
-      labels:
-        app: a2r-api
-    spec:
-      containers:
-      - name: api
-        image: a2rchitech/api:latest
-        ports:
-        - containerPort: 3000
-        env:
-        - name: A2R_API_PORT
-          value: "3000"
-        - name: A2R_KERNEL_URL
-          value: "http://a2r-kernel:3004"
-        - name: A2R_MEMORY_URL
-          value: "http://a2r-memory:3200"
-        resources:
-          requests:
-            memory: "512Mi"
-            cpu: "250m"
-          limits:
-            memory: "1Gi"
-            cpu: "500m"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 3000
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /ready
-            port: 3000
-          initialDelaySeconds: 5
-          periodSeconds: 5
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: a2r-api
-  namespace: a2rchitech
-spec:
-  selector:
-    app: a2r-api
-  ports:
-  - port: 3000
-    targetPort: 3000
-  type: ClusterIP
-```
-
----
-
-## Configuration Management
+## Configuration
 
 ### Environment Variables
 
-**File:** `.env.production`
 ```bash
-# =============================================================================
-# A2RCHITECH PLATFORM - PRODUCTION CONFIGURATION
-# =============================================================================
+# Optional: Custom rate limits
+A2R_RATE_LIMIT_DEFAULT_REQUESTS=100
+A2R_RATE_LIMIT_DEFAULT_WINDOW_MS=60000
 
-# -----------------------------------------------------------------------------
-# Core Settings
-# -----------------------------------------------------------------------------
-A2R_ENVIRONMENT=production
-A2R_LOG_LEVEL=info
-A2R_SECRET_KEY=changeme-in-production-use-32-char-random-string
+# Optional: Git bundle size limit (MB)
+A2R_GIT_BUNDLE_MAX_SIZE_MB=50
 
-# -----------------------------------------------------------------------------
-# Service Ports
-# -----------------------------------------------------------------------------
-A2R_API_PORT=3000
-A2R_API_HOST=0.0.0.0
-A2R_KERNEL_PORT=3004
-A2R_KERNEL_HOST=127.0.0.1
-A2R_GATEWAY_PORT=8013
-A2R_GATEWAY_HOST=0.0.0.0
-
-# -----------------------------------------------------------------------------
-# Service URLs (internal network)
-# -----------------------------------------------------------------------------
-A2R_KERNEL_URL=http://127.0.0.1:3004
-A2R_MEMORY_URL=http://127.0.0.1:3200
-A2R_REGISTRY_URL=http://127.0.0.1:8080
-A2R_POLICY_URL=http://127.0.0.1:3003
-
-# -----------------------------------------------------------------------------
-# Database
-# -----------------------------------------------------------------------------
-DATABASE_URL=/var/lib/a2rchitech/a2rchitech.db
-DATABASE_POOL_SIZE=10
-DATABASE_TIMEOUT=30
-
-# -----------------------------------------------------------------------------
-# Redis (optional, for caching)
-# -----------------------------------------------------------------------------
-REDIS_URL=redis://127.0.0.1:6379
-REDIS_POOL_SIZE=5
-
-# -----------------------------------------------------------------------------
-# Rate Limiting
-# -----------------------------------------------------------------------------
-RATE_LIMIT_REQUESTS=100
-RATE_LIMIT_WINDOW=60
-
-# -----------------------------------------------------------------------------
-# Security
-# -----------------------------------------------------------------------------
-CORS_ORIGINS=https://your-domain.com
-JWT_SECRET=changeme-in-production
-JWT_EXPIRY=24h
+# Optional: API key expiration (days)
+A2R_AUTH_KEY_DEFAULT_EXPIRY_DAYS=30
 ```
 
----
+### Rate Limit Configuration
 
-## Deployment Options
+Edit `cmd/gizzi-code/src/runtime/integrations/rate-limiter/rate-limiter.ts`:
 
-### Quick Deploy Scripts
+```typescript
+const defaultLimits: RateLimitConfig = {
+  maxRequests: 100,    // Adjust as needed
+  windowMs: 60000,     // 1 minute
+  burstLimit: 20,      // Allow short bursts
+}
+```
 
-**File:** `scripts/deploy-production.sh`
+### Git Bundle Configuration
+
+Edit `cmd/gizzi-code/src/runtime/integrations/git-bundle/git-bundle.ts`:
+
+```typescript
+const defaultConfig: BundleConfig = {
+  maxBundleSizeMB: 50,  // Adjust as needed
+  allowedRefPatterns: ['refs/heads/*', 'refs/tags/*'],
+  requireValidation: true,
+}
+```
+
+## Deployment Steps
+
+### 1. Build the System
+
 ```bash
-#!/bin/bash
-set -e
-
-echo "🚀 Deploying A2rchitech Platform to Production"
-
-# 1. Validate configuration
-echo "📋 Validating configuration..."
-./scripts/validate-config.sh
-
-# 2. Build all services
-echo "🔨 Building services..."
-cargo build --release --workspace
-npm run build --prefix 4-services/gateway/agui-gateway
-npm run build --prefix 4-services/gateway/a2a-gateway
-
-# 3. Run database migrations
-echo "🗄️  Running database migrations..."
-./7-apps/api/migrate.sh up
-
-# 4. Stop existing services
-echo "🛑 Stopping existing services..."
-sudo systemctl stop a2r-api a2r-kernel a2r-gateway || true
-
-# 5. Deploy new binaries
-echo "📦 Deploying binaries..."
-sudo cp target/release/a2rchitech-api /usr/local/bin/
-sudo cp target/release/a2r-kernel /usr/local/bin/
-
-# 6. Start services
-echo "▶️  Starting services..."
-sudo systemctl start a2r-api
-sudo systemctl start a2r-kernel
-sudo systemctl start a2r-gateway
-
-# 7. Health check
-echo "🏥 Running health checks..."
-sleep 5
-curl -f http://127.0.0.1:3000/health || exit 1
-curl -f http://127.0.0.1:3004/health || exit 1
-curl -f http://127.0.0.1:8013/health || exit 1
-
-echo "✅ Deployment complete!"
+cd /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech
+pnpm build
 ```
 
----
+### 2. Initialize Workspace
 
-## Post-Deployment Verification
-
-### Health Check Script
-
-**File:** `scripts/verify-deployment.sh`
 ```bash
-#!/bin/bash
-
-SERVICES=(
-    "API:3000"
-    "Kernel:3004"
-    "Gateway:8013"
-    "Memory:3200"
-    "Registry:8080"
-)
-
-echo "🔍 Verifying deployment..."
-
-for service in "${SERVICES[@]}"; do
-    name="${service%%:*}"
-    port="${service##*:}"
-    
-    response=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:${port}/health")
-    
-    if [ "$response" = "200" ]; then
-        echo "✅ $name (port $port) - Healthy"
-    else
-        echo "❌ $name (port $port) - Unhealthy (HTTP $response)"
-        exit 1
-    fi
-done
-
-echo "✅ All services healthy!"
+# Create .a2r/communication directory structure
+mkdir -p .a2r/communication
+touch .a2r/communication/{messages.jsonl,channels.json,mentions.jsonl,loop-guard.jsonl}
 ```
 
----
+### 3. Start the Platform
 
-## Monitoring & Maintenance
+```bash
+# Start main platform
+pnpm dev
 
-### Prometheus Configuration
-
-**File:** `monitoring/prometheus.yml`
-```yaml
-global:
-  scrape_interval: 15s
-
-scrape_configs:
-  - job_name: 'a2r-api'
-    static_configs:
-      - targets: ['api:3000']
-    metrics_path: '/metrics'
-    
-  - job_name: 'a2r-kernel'
-    static_configs:
-      - targets: ['kernel:3004']
-    metrics_path: '/metrics'
-    
-  - job_name: 'a2r-gateway'
-    static_configs:
-      - targets: ['gateway:8013']
-    metrics_path: '/metrics'
+# Or start specific services
+cd cmd/gizzi-code
+bun run src/cli/main.ts
 ```
 
-### Grafana Dashboard
+### 4. Verify Deployment
 
-Import dashboard ID: `TBD` (create custom dashboard)
+```bash
+# Test CLI
+ac --help
 
-### Alert Rules
+# Test authentication
+ac auth create --agent-id test-1 --agent-name "Test Agent"
 
-**File:** `monitoring/alerts.yml`
-```yaml
-groups:
-- name: a2rchitech
-  rules:
-  - alert: ServiceDown
-    expr: up == 0
-    for: 1m
-    labels:
-      severity: critical
-    annotations:
-      summary: "Service {{ $labels.job }} is down"
-      
-  - alert: HighErrorRate
-    expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.1
-    for: 5m
-    labels:
-      severity: warning
-    annotations:
-      summary: "High error rate detected"
+# Test communication
+ac send "Test message" --to builder
+
+# Test Git DAG
+ac git leaves --repo /path/to/repo
 ```
 
----
+## Monitoring
+
+### Health Checks
+
+```bash
+# Check rate limit status
+ac rate-limit show --agent-id <agent-id>
+
+# Check API keys
+ac auth list --agent-id <agent-id>
+
+# Check workspace state
+ls -la .a2r/communication/
+```
+
+### Logs
+
+Logs are written to standard output with service tags:
+
+```
+INFO  service=agent-auth Generated API key for agent
+INFO  service=agent-rate-limiter Rate limit exceeded
+INFO  service=git-dag Tracked commit
+INFO  service=bus type=agent.communicate.message.sent publishing
+```
+
+### Metrics to Monitor
+
+1. **Authentication**
+   - Keys generated per hour
+   - Validation success rate
+   - Revocation count
+
+2. **Rate Limiting**
+   - Requests per agent
+   - Rate limit violations
+   - Burst limit hits
+
+3. **Git Operations**
+   - Bundles created
+   - Bundle validation failures
+   - Commits tracked
+
+4. **Communication**
+   - Messages sent
+   - @mentions routed
+   - Loop guard triggers
+
+## Scaling
+
+### Horizontal Scaling
+
+The system supports multiple instances:
+
+1. **Shared State**: Use Redis for rate limit state
+2. **Bus Events**: Use message queue (RabbitMQ, Kafka)
+3. **Workspace**: Use shared filesystem (NFS, S3)
+
+### Vertical Scaling
+
+Adjust limits based on capacity:
+
+```typescript
+// Higher limits for powerful instances
+const highCapacityLimits = {
+  maxRequests: 1000,
+  windowMs: 60000,
+  burstLimit: 100,
+}
+```
+
+## Security
+
+### API Key Security
+
+1. **Store Securely**: Never log plain text keys
+2. **Rotate Regularly**: Set expiration dates
+3. **Revoke Compromised**: Use `ac auth revoke`
+
+### Rate Limiting
+
+Prevents abuse:
+
+```bash
+# Default: 60 requests/minute for communicate:send
+# Adjust based on your needs
+```
+
+### Git Bundle Validation
+
+Prevents malicious bundles:
+
+```typescript
+// Validates:
+// - Size limits
+// - Ref patterns
+// - Bundle integrity
+```
+
+## Backup and Recovery
+
+### Backup Workspace State
+
+```bash
+# Backup communication state
+tar -czf communication-backup.tar.gz .a2r/communication/
+
+# Backup to remote storage
+aws s3 cp .a2r/communication/ s3://bucket/a2r/communication/ --recursive
+```
+
+### Recovery
+
+```bash
+# Restore from backup
+tar -xzf communication-backup.tar.gz
+
+# Or from S3
+aws s3 cp s3://bucket/a2r/communication/ .a2r/communication/ --recursive
+```
 
 ## Troubleshooting
 
-### Common Issues
+### Issue: Rate Limit Too Strict
 
-#### 1. Service Won't Start
-
-```bash
-# Check logs
-journalctl -u a2r-api -f
-
-# Check port conflicts
-lsof -i :3000
-
-# Check permissions
-ls -la /usr/local/bin/a2rchitech-api
+**Solution:**
+```typescript
+// Increase limits
+AgentRateLimiter.setAgentLimits({
+  agentId: 'agent-1',
+  limits: {
+    'communicate:send': {
+      maxRequests: 200,  // Increased from 60
+      windowMs: 60000,
+    },
+  },
+})
 ```
 
-#### 2. Database Errors
+### Issue: Git Bundle Too Large
 
+**Solution:**
 ```bash
-# Check database file
-ls -la /var/lib/a2rchitech/a2rchitech.db
-
-# Run migrations
-./7-apps/api/migrate.sh status
-
-# Backup and restore
-cp a2rchitech.db a2rchitech.db.backup
+# Split into smaller bundles
+ac git bundle create HEAD~10..HEAD~5 --repo /path --agent-id agent-1
+ac git bundle create HEAD~5..HEAD --repo /path --agent-id agent-1
 ```
 
-#### 3. High Memory Usage
+### Issue: API Key Expired
 
+**Solution:**
 ```bash
-# Check memory
-top -p $(pgrep a2rchitech)
+# Create new key
+ac auth create --agent-id agent-1 --agent-name "Agent" --expires 30
 
-# Adjust limits
-sudo systemctl edit a2r-api
-# Add: LimitRSS=1G
+# Revoke old key
+ac auth revoke <old-key-id>
 ```
 
----
+## Performance Tuning
 
-## Contact & Support
+### Optimize Rate Limit Cleanup
 
-- Documentation: `docs/`
-- Issues: GitHub Issues
-- Emergency: On-call rotation schedule
+```typescript
+// Run cleanup more frequently
+setInterval(() => {
+  AgentRateLimiter.cleanup()
+}, 60 * 1000) // Every minute instead of 5 minutes
+```
 
----
+### Optimize Git DAG Cache
 
-*Last updated: 2026-02-26*
-*Version: 1.0.0*
+```typescript
+// Pre-load frequently accessed commits
+const frontier = GitDAGTracker.getFrontier()
+for (const hash of frontier) {
+  GitDAGTracker.getCommit(hash) // Cache it
+}
+```
+
+### Optimize Workspace I/O
+
+```typescript
+// Batch message writes
+const messages = [msg1, msg2, msg3]
+await Promise.all(
+  messages.map(msg => AgentWorkspaceCommunication.logMessage(msg))
+)
+```
+
+## Production Checklist
+
+- [ ] Rate limits configured
+- [ ] API key expiration set
+- [ ] Git bundle size limits set
+- [ ] Backup strategy implemented
+- [ ] Monitoring configured
+- [ ] Logs aggregated
+- [ ] Security audit completed
+- [ ] Performance tested
+- [ ] Documentation reviewed
+- [ ] Team trained
+
+## Support
+
+For issues or questions:
+
+1. Check logs for error messages
+2. Review configuration
+3. Run verification tests
+4. Check documentation
+
+## License
+
+MIT

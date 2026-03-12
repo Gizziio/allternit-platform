@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <defs>
+    <linearGradient id="ollamaGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7C3AED;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#5B21B6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <circle cx="50" cy="50" r="45" fill="url(#ollamaGradient)" />
+  <path d="M35 40 L50 35 L65 40 L65 60 L50 65 L35 60 Z" fill="white" />
+  <path d="M35 60 L30 75 L50 80 L70 75 L65 60" fill="#DDD6FE" />
+  <path d="M50 35 L50 65" stroke="#5B21B6" stroke-width="2" />
+</svg>

@@ -1,7 +1,7 @@
 import { useKeyboard, useTerminalDimensions } from "@opentui/solid"
 import { createEffect, createMemo, createSignal, For, on, Show } from "solid-js"
 import { useAnimation } from "@/cli/ui/components/animation"
-import { GIZZIMascot, GIZZIBanner } from "@/cli/ui/components/gizzi"
+import { GIZZIMascot, GIZZIBanner, SetupBanner, type GIZZIMascotState } from "@/cli/ui/components/gizzi"
 import { useCommandDialog } from "@/cli/ui/tui/component/dialog-command"
 import { DialogMcp } from "@/cli/ui/tui/component/dialog-mcp"
 import { DialogProvider } from "@/cli/ui/tui/component/dialog-provider"
@@ -25,6 +25,8 @@ import { DialogPrompt } from "@/cli/ui/tui/ui/dialog-prompt"
 import { GIZZIBrand } from "@/shared/brand"
 import { Installation } from "@/shared/installation"
 import { Log } from "@/shared/util/log"
+import { Bus } from "@/shared/bus"
+import { TuiEvent } from "@/cli/ui/tui/event"
 
 const log = Log.create({ service: "startup-flow" })
 
@@ -285,17 +287,8 @@ export function StartupFlow() {
   }
 
   async function openNewSession() {
-    const created = await sdk.client.session.create({})
-    const sessionID = created.data?.id
     completeStartupFlow()
-    if (sessionID) {
-      route.navigate({
-        type: "session",
-        sessionID,
-      })
-      return
-    }
-    openSessionListDialog()
+    Bus.publish(TuiEvent.SessionCreated, { sessionID: undefined })
   }
 
   async function refreshMcpStatus() {
@@ -783,7 +776,7 @@ export function StartupFlow() {
         justifyContent="center"
       >
         <box flexDirection="column" alignItems="center" gap={0}>
-          <For each={sceneLines()}>{(line) => <text fg={theme.accent}>{line}</text>}</For>
+          <SetupBanner stepId={active().id} />
           <box paddingTop={1}>
             <GIZZIMascot state={mascotState()} color={theme.accent} compact={false} />
           </box>

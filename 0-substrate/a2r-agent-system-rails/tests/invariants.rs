@@ -59,6 +59,8 @@ async fn fresh_wih_writes_context_pack() {
         root_dir: Some(root.clone()),
         actor_id: Some("gate".to_string()),
         strict_provenance: None,
+        visual_provider: None,
+        visual_config: None,
     });
 
     let (_, dag_id, node_id) = gate.plan_new("Fresh Task", None).await.unwrap();
@@ -137,6 +139,8 @@ async fn plan_new_emits_required_events() {
         root_dir: Some(root.clone()),
         actor_id: Some("gate".to_string()),
         strict_provenance: None,
+        visual_provider: None,
+        visual_config: None,
     });
 
     let _ = gate.plan_new("Build ledger", None).await.unwrap();
@@ -185,6 +189,8 @@ async fn pre_tool_denies_without_open_signature() {
         root_dir: Some(root.clone()),
         actor_id: Some("gate".to_string()),
         strict_provenance: None,
+        visual_provider: None,
+        visual_config: None,
     });
 
     let (_, dag_id, node_id) = gate.plan_new("Task", None).await.unwrap();
@@ -232,6 +238,8 @@ async fn blocked_by_cycle_is_rejected() {
         root_dir: Some(root.clone()),
         actor_id: Some("gate".to_string()),
         strict_provenance: None,
+        visual_provider: None,
+        visual_config: None,
     });
 
     let (_, dag_id, root_node) = gate.plan_new("Root", None).await.unwrap();

@@ -39,6 +39,7 @@ export namespace LLM {
     tools: Record<string, Tool>
     retries?: number
     toolChoice?: "auto" | "required" | "none"
+    mode?: 'plan' | 'build'  // Execution mode for system prompt
   }
 
   export type StreamOutput = StreamTextResult<ToolSet, any>
@@ -69,7 +70,7 @@ export namespace LLM {
       [
         // use agent prompt otherwise provider prompt
         // For Codex sessions, skip SystemPrompt.provider() since it's sent via options.instructions
-        ...(input.agent.prompt ? [input.agent.prompt] : isCodex ? [] : SystemPrompt.provider(input.model)),
+        ...(input.agent.prompt ? [input.agent.prompt] : isCodex ? [] : SystemPrompt.provider(input.model, input.mode)),
         // any custom prompt passed into this call
         ...input.system,
         // any custom prompt from last user message

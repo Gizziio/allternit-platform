@@ -6,10 +6,10 @@
  */
 
 import type { GIZZIClient } from "@a2r/sdk/v2";
-import { Log } from "@/shared/util/log";
+import { createLogger } from "../utils/logger";
 import type { CronJob, CronRun } from "../types";
 
-const log = Log.create({ service: "cron-agent-executor" });
+const log = createLogger("cron-agent-executor");
 
 export interface AgentExecutorConfig {
   /** GIZZI SDK client instance */

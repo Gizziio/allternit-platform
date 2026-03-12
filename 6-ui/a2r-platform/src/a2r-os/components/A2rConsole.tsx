@@ -2,15 +2,21 @@
  * A2rchitect Super-Agent OS - A2r Console Drawer
  * 
  * The main agent control center featuring:
- * - Agent Terminal: xterm.js-based console for direct agent interaction
+ * - Agent Terminal: REAL multi-session terminal using TerminalTabs
  * - Kanban Board: Visual task management for agent workflows
  * - Automation Hub: Trigger and monitor automated sequences
+ * 
+ * THIS IS THE REAL IMPLEMENTATION - Uses actual node-pty via TerminalTabs
  */
 
 import * as React from 'react';
 const { useState, useEffect, useRef, useCallback } = React;
 import { useSidecarStore } from '../stores/useSidecarStore';
 import type { TaskNode, Agent } from '../types/programs';
+
+// Import the REAL terminal implementation
+import { TerminalTabs } from '@/views/nodes/terminal/TerminalTabs';
+import { nodeTerminalService } from '@/views/nodes/terminal/terminal.service';
 
 // ============================================================================
 // Types
@@ -58,247 +64,29 @@ interface AutomationSequence {
 }
 
 // ============================================================================
-// Agent Terminal Component
+// REAL Agent Terminal Component - Uses TerminalTabs
 // ============================================================================
 
 const AgentTerminal: React.FC = () => {
-  const [lines, setLines] = useState<TerminalLine[]>([]);
-  const [input, setInput] = useState('');
-  const [activeAgent, setActiveAgent] = useState<string>('system');
-  const [agents, setAgents] = useState<Agent[]>([]);
-  const terminalRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  // Auto-scroll to bottom
-  useEffect(() => {
-    if (terminalRef.current) {
-      terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
-    }
-  }, [lines]);
-
-  // Focus input on mount
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
-
-  const addLine = useCallback((line: Omit<TerminalLine, 'id' | 'timestamp'>) => {
-    setLines(prev => [...prev, {
-      ...line,
-      id: `line-${Date.now()}-${Math.random()}`,
-      timestamp: new Date().toISOString(),
-    }]);
-  }, []);
-
-  const handleCommand = useCallback(async (command: string) => {
-    // Add command to history
-    addLine({ type: 'input', content: command });
-    setInput('');
-
-    const [cmd, ...args] = command.trim().split(' ');
-
-    switch (cmd.toLowerCase()) {
-      case 'help':
-        addLine({
-          type: 'system',
-          content: `Available commands:
-  help              Show this help message
-  agents            List all available agents
-  use <agent>       Switch to agent context
-  run <task>        Run a task with current agent
-  status            Show agent status
-  clear             Clear terminal
-  logs              Show recent logs
-  workflows         List active workflows`,
-        });
-        break;
-
-      case 'clear':
-        setLines([]);
-        break;
-
-      case 'agents':
-        addLine({
-          type: 'output',
-          content: `Available agents:
-  🤖 orchestrator   - Main workflow coordinator
-  🔍 researcher     - Information gathering
-  💻 developer      - Code generation & review
-  🎨 designer       - UI/UX design tasks
-  📊 analyst        - Data analysis & visualization`,
-        });
-        break;
-
-      case 'use':
-        if (args[0]) {
-          setActiveAgent(args[0]);
-          addLine({
-            type: 'system',
-            content: `Switched to agent: ${args[0]}`,
-          });
-        } else {
-          addLine({
-            type: 'error',
-            content: 'Usage: use <agent-name>',
-          });
-        }
-        break;
-
-      case 'run':
-        if (args.length > 0) {
-          const task = args.join(' ');
-          addLine({
-            type: 'system',
-            content: `🚀 Starting task with ${activeAgent}: "${task}"`,
-          });
-          
-          // Simulate agent processing
-          setTimeout(() => {
-            addLine({
-              type: 'agent',
-              content: `Processing task: ${task}`,
-              agentId: activeAgent,
-            });
-          }, 500);
-          
-          setTimeout(() => {
-            addLine({
-              type: 'output',
-              content: `✅ Task completed successfully`,
-            });
-          }, 2000);
-        } else {
-          addLine({
-            type: 'error',
-            content: 'Usage: run <task-description>',
-          });
-        }
-        break;
-
-      case 'status':
-        addLine({
-          type: 'output',
-          content: `Agent: ${activeAgent}
-Status: active
-Tasks completed: 42
-Uptime: 2h 15m`,
-        });
-        break;
-
-      case 'logs':
-        addLine({
-          type: 'output',
-          content: `Recent activity:
-[10:32:45] Task completed: Code review
-[10:28:12] New workflow started: Data analysis
-[10:15:33] Agent connected: researcher`,
-        });
-        break;
-
-      case 'workflows':
-        addLine({
-          type: 'output',
-          content: `Active workflows:
-  #1234 - Data Pipeline (running)
-  #1235 - Report Generation (paused)
-  #1236 - Code Review Queue (idle)`,
-        });
-        break;
-
-      default:
-        addLine({
-          type: 'error',
-          content: `Unknown command: ${cmd}. Type 'help' for available commands.`,
-        });
-    }
-  }, [activeAgent, addLine]);
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleCommand(input);
-    }
-    if (e.key === 'l' && e.ctrlKey) {
-      e.preventDefault();
-      setLines([]);
-    }
-  }, [input, handleCommand]);
-
-  const getLineColor = (type: TerminalLine['type']) => {
-    switch (type) {
-      case 'input': return 'text-green-400';
-      case 'output': return 'text-gray-300';
-      case 'error': return 'text-red-400';
-      case 'system': return 'text-blue-400';
-      case 'agent': return 'text-yellow-400';
-      default: return 'text-gray-300';
-    }
-  };
-
-  const getLinePrefix = (type: TerminalLine['type'], agentId?: string) => {
-    switch (type) {
-      case 'input': return '❯';
-      case 'error': return '✗';
-      case 'system': return 'ℹ';
-      case 'agent': return `🤖 ${agentId || 'agent'}`;
-      default: return '';
-    }
-  };
-
+  // Use the REAL TerminalTabs component for multi-session terminal support
+  // This connects to actual PTY via WebSocket - not a simulation
   return (
-    <div className="flex flex-col h-full bg-gray-900 text-gray-100 font-mono text-sm">
+    <div className="flex flex-col h-full bg-gray-900 text-gray-100">
       {/* Terminal Header */}
       <div className="flex items-center justify-between px-4 py-2 bg-gray-800 border-b border-gray-700">
         <div className="flex items-center gap-2">
           <span className="text-green-400">●</span>
-          <span>Agent Terminal</span>
+          <span>Multi-Session Terminal</span>
         </div>
         <div className="flex items-center gap-2 text-xs text-gray-400">
-          <span>Active: {activeAgent}</span>
-          <span className="px-2 py-0.5 bg-gray-700 rounded">Ctrl+L clear</span>
+          <span className="px-2 py-0.5 bg-gray-700 rounded">Real PTY</span>
+          <span className="px-2 py-0.5 bg-gray-700 rounded">WebSocket</span>
         </div>
       </div>
-
-      {/* Terminal Output */}
-      <div 
-        ref={terminalRef}
-        className="flex-1 overflow-y-auto p-4 space-y-1"
-        onClick={() => inputRef.current?.focus()}
-      >
-        <div className="text-gray-500 mb-4">
-          A2rchitect Agent Terminal v1.0.0
-          Type 'help' for available commands.
-        </div>
-        {lines.map(line => (
-          <div key={line.id} className={`${getLineColor(line.type)} whitespace-pre-wrap break-all`}>
-            {line.type === 'input' && (
-              <span className="text-green-400 mr-2">{getLinePrefix(line.type)}</span>
-            )}
-            {line.type === 'agent' && (
-              <span className="text-yellow-400 mr-2">{getLinePrefix(line.type, line.agentId)}</span>
-            )}
-            {line.type === 'error' && (
-              <span className="text-red-400 mr-2">{getLinePrefix(line.type)}</span>
-            )}
-            {line.type === 'system' && (
-              <span className="text-blue-400 mr-2">{getLinePrefix(line.type)}</span>
-            )}
-            {line.content}
-          </div>
-        ))}
-      </div>
-
-      {/* Terminal Input */}
-      <div className="flex items-center gap-2 px-4 py-3 bg-gray-800 border-t border-gray-700">
-        <span className="text-green-400">❯</span>
-        <input
-          ref={inputRef}
-          type="text"
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          className="flex-1 bg-transparent border-none outline-none text-gray-100 placeholder-gray-500"
-          placeholder="Type a command..."
-          spellCheck={false}
-          autoComplete="off"
-        />
+      
+      {/* Real Terminal Tabs */}
+      <div className="flex-1 overflow-hidden">
+        <TerminalTabs />
       </div>
     </div>
   );
@@ -360,11 +148,6 @@ const KanbanBoard: React.FC = () => {
   const [draggedTask, setDraggedTask] = useState<KanbanTask | null>(null);
   const [showAddTask, setShowAddTask] = useState(false);
   const [newTaskName, setNewTaskName] = useState('');
-
-  // Subscribe to DAG updates (placeholder for real implementation)
-  useEffect(() => {
-    // TODO: Connect to workspace service for real-time updates
-  }, []);
 
   const handleDragStart = (task: KanbanTask) => {
     setDraggedTask(task);
@@ -778,58 +561,49 @@ export const A2rConsole: React.FC<A2rConsoleProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/50"
-        onClick={onClose}
-      />
-      
-      {/* Drawer */}
-      <div className="relative w-full sm:w-[900px] h-[80vh] sm:h-[600px] bg-white dark:bg-gray-900 rounded-t-xl sm:rounded-xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 duration-200">
-        {/* Drawer Header with Tabs */}
-        <div className="flex items-center justify-between px-4 py-3 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-4">
-            <span className="text-xl">🤖</span>
-            <span className="font-semibold">A2r Console</span>
-            
-            {/* Tab Navigation */}
-            <div className="flex gap-1 ml-4">
-              {[
-                { id: 'terminal', label: 'Terminal', icon: '💻' },
-                { id: 'kanban', label: 'Kanban', icon: '📊' },
-                { id: 'automation', label: 'Automation', icon: '🤖' },
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as ConsoleTab)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                    activeTab === tab.id
-                      ? 'bg-blue-600 text-white'
-                      : 'hover:bg-gray-200 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  <span>{tab.icon}</span>
-                  <span>{tab.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
+    <div className="h-full flex flex-col bg-white dark:bg-gray-900">
+      {/* Drawer Header with Tabs */}
+      <div className="flex items-center justify-between px-4 py-3 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-4">
+          <span className="text-xl">🤖</span>
+          <span className="font-semibold">A2r Console</span>
           
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg"
-          >
-            ✕
-          </button>
+          {/* Tab Navigation */}
+          <div className="flex gap-1 ml-4">
+            {[
+              { id: 'terminal', label: 'Terminal', icon: '💻' },
+              { id: 'kanban', label: 'Kanban', icon: '📊' },
+              { id: 'automation', label: 'Automation', icon: '🤖' },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as ConsoleTab)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                  activeTab === tab.id
+                    ? 'bg-blue-600 text-white'
+                    : 'hover:bg-gray-200 dark:hover:bg-gray-700'
+                }`}
+              >
+                <span>{tab.icon}</span>
+                <span>{tab.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
+        
+        <button
+          onClick={onClose}
+          className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg"
+        >
+          ✕
+        </button>
+      </div>
 
-        {/* Content Area */}
-        <div className="h-[calc(100%-60px)]">
-          {activeTab === 'terminal' && <AgentTerminal />}
-          {activeTab === 'kanban' && <KanbanBoard />}
-          {activeTab === 'automation' && <AutomationHub />}
-        </div>
+      {/* Content Area */}
+      <div className="flex-1 overflow-hidden">
+        {activeTab === 'terminal' && <AgentTerminal />}
+        {activeTab === 'kanban' && <KanbanBoard />}
+        {activeTab === 'automation' && <AutomationHub />}
       </div>
     </div>
   );
@@ -839,21 +613,15 @@ export const A2rConsole: React.FC<A2rConsoleProps> = ({ isOpen, onClose }) => {
 // A2r Console Toggle Button
 // ============================================================================
 
-export const A2rConsoleToggle: React.FC = () => {
-  const [isOpen, setIsOpen] = useState(false);
-
+export const A2rConsoleToggle: React.FC<{ onClick?: () => void }> = ({ onClick }) => {
   return (
-    <>
-      <button
-        onClick={() => setIsOpen(true)}
-        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition-all"
-      >
-        <span className="text-xl">🤖</span>
-        <span>A2r</span>
-      </button>
-      
-      <A2rConsole isOpen={isOpen} onClose={() => setIsOpen(false)} />
-    </>
+    <button
+      onClick={onClick}
+      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition-all"
+    >
+      <span className="text-xl">🤖</span>
+      <span>A2r</span>
+    </button>
   );
 };
 

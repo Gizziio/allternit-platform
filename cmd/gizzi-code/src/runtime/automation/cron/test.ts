@@ -3,7 +3,8 @@
  * Run with: bun test src/runtime/automation/cron/test.ts
  */
 
-import { CronService, parseSchedule, describeSchedule, getNextRunTime } from "./index";
+import { CronService, parseSchedule, describeSchedule } from "./index";
+import { calculateNextRun as getNextRunTime } from "./utils/timezone";
 import { unlinkSync, existsSync } from "fs";
 
 const TEST_DB = "/tmp/cron-test.db";
@@ -55,8 +56,8 @@ for (const tc of descCases) {
 // Test 3: Next Run Calculation
 console.log("\n3️⃣ Testing Next Run Calculation");
 const nextRun = getNextRunTime(
-  { type: "cron", expression: "*/5 * * * *" },
-  undefined,
+  "*/5 * * * *",
+  "UTC",
   new Date("2024-01-01T12:00:00Z")
 );
 console.log(`  ✅ Next run from 12:00: ${nextRun.toISOString()}`);

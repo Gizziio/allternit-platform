@@ -113,16 +113,19 @@ impl KernelClient {
     /// Create a new kernel client from config
     pub fn new(config_manager: &crate::config::ConfigManager) -> Self {
         let config = config_manager.get();
-        let base_url = config
-            .get("kernel_url")
-            .and_then(|v| v.as_str())
-            .unwrap_or("http://127.0.0.1:3000")
-            .to_string();
+        
+        // First check for credentials from 'a2r auth login'
+        let (creds_url, creds_token) = crate::commands::auth::get_credentials()
+            .map(|c: crate::commands::auth::Credentials| (Some(c.url), Some(c.token)))
+            .unwrap_or((None, None));
+        
+        let base_url = creds_url
+            .or_else(|| config.get("kernel_url").and_then(|v| v.as_str()).map(|s| s.to_string()))
+            .or_else(|| std::env::var("A2R_CLOUD_URL").ok())
+            .unwrap_or_else(|| "http://127.0.0.1:3000".to_string());
 
-        let auth_token = config
-            .get("auth_token")
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string());
+        let auth_token = creds_token
+            .or_else(|| config.get("auth_token").and_then(|v| v.as_str()).map(|s| s.to_string()));
 
         let timeout_ms = config
             .get("timeout_ms")
@@ -297,6 +300,32 @@ impl KernelClient {
         }
 
         Ok(())
+    }
+
+    /// GET request returning raw response for streaming
+    pub async fn get_raw(&self, path: &str) -> Result<Response, String> {
+        let url = self.build_url(path);
+        debug!("GET {}", url);
+
+        let req = self.http.get(&url);
+        let req = self.add_auth(req);
+        let req = self.apply_timeout(req);
+
+        let response = req
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
+
+        let status = response.status();
+        if !status.is_success() {
+            let body = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "<no body>".to_string());
+            return Err(format!("HTTP {}: {}", status, body));
+        }
+
+        Ok(response)
     }
 
     // ========================================================================

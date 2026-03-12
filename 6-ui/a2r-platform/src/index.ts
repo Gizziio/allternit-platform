@@ -203,6 +203,26 @@ export type {
 // UI Components
 export { TooltipProvider } from "./components/ui/tooltip";
 
+// Visual Verification Components
+export {
+  VisualVerificationPanel,
+  ConfidenceMeter,
+  EvidenceCard,
+  ArtifactViewer,
+  TrendChart,
+} from "./components/visual";
+export type {
+  ArtifactType,
+  EvidenceCardProps,
+  ArtifactViewerProps,
+  TrendChartProps,
+  VisualVerificationPanelProps,
+} from "./components/visual";
+
+// Verification View
+export { VerificationView } from "./views/VerificationView";
+export type { VerificationViewProps } from "./views/VerificationView";
+
 export * from "./design/tokens";
 export * from "./design/GlassSurface";
 export * from "./design/GlassCard";
@@ -272,6 +292,7 @@ export {
   useToast,
   useProviderAuth,
   useAgentAvatar,
+  useVisualVerification,
   DEFAULT_VISUAL_STATE,
   type ToastOptions,
   type UseAgentAvatarOptions,
@@ -296,6 +317,12 @@ export {
   type ModelsResponse,
   type ModelInfo,
   type ValidationResponse,
+  type VerificationResult,
+  type VerificationStatus,
+  type Artifact,
+  type TrendDataPoint,
+  type UseVisualVerificationOptions,
+  type UseVisualVerificationReturn,
 } from "./hooks";
 
 // Services - Ported from Rust consolidation  

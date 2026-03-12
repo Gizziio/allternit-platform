@@ -874,7 +874,7 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
         </div>
       </div>
       
-      {/* Bottom Input */}
+      {/* Bottom Input - Full width like Chat mode */}
       <div style={{
         position: 'absolute',
         bottom: 0,
@@ -891,10 +891,7 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
       }}>
         <div style={{ 
           width: '100%', 
-          maxWidth: '760px', 
           pointerEvents: 'auto', 
-          padding: '0 20px', 
-          boxSizing: 'border-box' 
         }}>
           <ChatComposer
             onSend={handleSend}

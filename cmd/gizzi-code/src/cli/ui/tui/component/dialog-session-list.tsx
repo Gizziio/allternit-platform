@@ -33,7 +33,11 @@ export function DialogSessionList() {
 
   const currentSessionID = createMemo(() => (route.data.type === "session" ? route.data.sessionID : undefined))
 
-  const sessions = createMemo(() => searchResults() ?? sync.data.session)
+  const sessions = createMemo(() => {
+    const data = searchResults() ?? sync.data.session
+    Log.Default.info("tui: dialog session list data", { count: data.length })
+    return data
+  })
 
   const options = createMemo(() => {
     const today = new Date().toDateString()

@@ -47,6 +47,8 @@ export type ViewType =
   // Cloud & Deploy views
   | "deploy"
   | "nodes"
+  // Verification views
+  | "verification"
   // Capsule Management (P3.9 MCP Apps)
   | "capsules"
   // Operator Browser Control (P3.10/P3.12)
@@ -62,6 +64,8 @@ export type ViewType =
   | "context-control"
   | "memory-kernel"
   | "acf"
+  // A2rOS View
+  | "a2r-os"
   // Other views
   | "settings"
   | "terminal"

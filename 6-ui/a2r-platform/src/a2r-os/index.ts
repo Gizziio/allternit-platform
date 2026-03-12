@@ -4,9 +4,6 @@
  * Main entry point for the Super-Agent OS infrastructure.
  */
 
-// Load Electron API type extensions
-import './types/electron';
-
 // ============================================================================
 // Core Components
 // ============================================================================

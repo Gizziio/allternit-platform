@@ -96,7 +96,7 @@ impl From<Deployment> for DeploymentResponse {
 }
 
 /// Create a new deployment
-#[axum::debug_handler]
+
 pub async fn create_deployment(
     State(state): State<Arc<ApiState>>,
     Json(request): Json<CreateDeploymentRequest>,

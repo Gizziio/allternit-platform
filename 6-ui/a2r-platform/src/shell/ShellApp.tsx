@@ -142,8 +142,10 @@ import { GitView } from '../views/code/GitView';
 import { ThreadsView } from '../views/code/ThreadsView';
 import { AutomationsView as CodeAutomationsView } from '../views/code/AutomationsView';
 import { SkillsView } from '../views/code/SkillsView';
+import { A2rOSView } from '../views/A2rOSView';
 import { ErrorBoundary } from '../components/error-boundary';
 import { TooltipProvider } from '../components/ui/tooltip';
+import { VerificationView } from '../views/VerificationView';
 import { ShellHeader } from './ShellHeader';
 import { RailControls } from './FloatingWidgets';
 
@@ -1430,6 +1432,12 @@ function ShellAppInner() {
         />
       </ErrorBoundary>
     ),
+    // A2rOS - Super-Agent OS View
+    "a2r-os": ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary fallback={<div>Failed to load A2rOS</div>}>
+        <A2rOSView context={context} />
+      </ErrorBoundary>
+    ),
     hooks: ({ context }: { context: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load Hooks System</div>}>
         <HooksSystemView />
@@ -1991,6 +1999,18 @@ function ShellAppInner() {
     'new-file': ({ context }: { context: ViewContext }) => (
       <ErrorBoundary fallback={<div style={{ padding: 16, color: 'var(--text-secondary)' }}>Failed to load</div>}>
         <CodeRoot />
+      </ErrorBoundary>
+    ),
+    // Visual Verification View
+    verification: ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Visual Verification" />}
+        onError={(error, errorInfo) => {
+          console.error('[VisualVerification] Error:', error);
+          console.error('[VisualVerification] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <VerificationView />
       </ErrorBoundary>
     ),
   }), [handleOpenAgentSession, open]);

@@ -200,6 +200,32 @@ pub enum MessagePayload {
 
     /// Request node to shutdown
     Shutdown,
+    
+    // === Run Lifecycle (Control Plane → Node) ===
+    /// Start a new run
+    StartRun { run_id: String, config: RunConfig },
+    
+    /// Stop/cancel a run
+    StopRun { run_id: String },
+    
+    /// Attach client to run for events
+    AttachRun { run_id: String, client_id: String },
+    
+    /// Detach client from run
+    DetachRun { run_id: String, client_id: String },
+    
+    /// Get run status
+    GetRunStatus { run_id: String },
+    
+    /// Send input to run
+    RunInput { run_id: String, input: String },
+    
+    // === Run Lifecycle (Node → Control Plane) ===
+    /// Run status response
+    RunStatus { run_id: String, status: RunStatus, exit_code: Option<i32>, node_id: String },
+    
+    /// Run event (output, status change, etc.)
+    RunEvent { run_id: String, event: RunEvent },
 }
 
 /// ZMODEM transfer direction
@@ -634,6 +660,58 @@ pub struct FileUploadRequest {
 pub struct FileDownloadRequest {
     pub path: String,
     pub chunk_size: Option<u32>,
+}
+
+// ============================================================================
+// Run Types
+// ============================================================================
+
+/// Run configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RunConfig {
+    pub name: String,
+    pub job_id: Option<String>,
+    pub image: String,
+    pub command: Vec<String>,
+    pub args: Vec<String>,
+    pub env: HashMap<String, String>,
+    pub working_dir: String,
+    pub resources: ResourceRequirements,
+    pub timeout_secs: u64,
+}
+
+/// Run status
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum RunStatus {
+    Starting,
+    Running,
+    Paused,
+    Completed,
+    Failed,
+    Cancelled,
+}
+
+/// Run event
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RunEvent {
+    pub event_type: RunEventType,
+    pub timestamp: DateTime<Utc>,
+    pub data: serde_json::Value,
+}
+
+/// Run event types
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RunEventType {
+    Started,
+    Completed,
+    Failed,
+    Cancelled,
+    StatusChange,
+    Output,
+    StepStarted,
+    StepCompleted,
 }
 
 // ============================================================================

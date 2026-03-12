@@ -34,6 +34,9 @@ import { InitCommand } from "@/cli/commands/init"
 import { DoctorCommand } from "@/cli/commands/doctor"
 import { VerificationCommand } from "@/cli/commands/verification"
 import { AgentHubCommand } from "@/cli/commands/agent-hub"
+import { AcCommand } from "@/cli/commands/ac"
+import { CoworkCommand } from "@/cli/commands/cowork"
+import { AgentCommand } from "@/cli/commands/agent"
 import path from "path"
 import { Global } from "@/runtime/context/global"
 import { JsonMigration } from "@/runtime/session/storage/json-migration"
@@ -69,7 +72,14 @@ const cli = yargs(hideBin(process.argv))
     type: "string",
     choices: ["DEBUG", "INFO", "WARN", "ERROR"],
   })
+  .option("onboarding", {
+    describe: "force the setup onboarding wizard",
+    type: "boolean",
+  })
   .middleware(async (opts) => {
+    if (opts.onboarding) {
+      process.env.GIZZI_TUI_FORCE_STARTUP_FLOW = "1"
+    }
     await Log.init({
       print: process.argv.includes("--print-logs"),
       dev: Installation.isLocal(),
@@ -127,6 +137,9 @@ const cli = yargs(hideBin(process.argv))
   .command(DoctorCommand)
   .command(VerificationCommand)
   .command(AgentHubCommand)
+  .command(AcCommand)
+  .command(CoworkCommand)
+  .command(AgentCommand)
   .fail((msg, err) => {
     if (
       msg?.startsWith("Unknown argument") ||

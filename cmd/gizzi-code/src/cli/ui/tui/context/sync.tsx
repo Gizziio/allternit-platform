@@ -31,6 +31,7 @@ import { batch, onMount } from "solid-js"
 import { Log } from "@/shared/util/log"
 import type { Path } from "@a2r/sdk"
 import { GIZZIBrand, sanitizeBrandSurface } from "@/shared/brand"
+import { Instance } from "@/runtime/context/project/instance"
 
 export const { use: useSync, provider: SyncProvider } = createSimpleContext({
   name: "Sync",
@@ -360,10 +361,29 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
     const args = useArgs()
 
     async function bootstrap() {
+      // Provide Instance context before bootstrapping
+      await Instance.provide({
+        directory: process.cwd(),
+        init: async () => {},
+        fn: async () => {
+          await bootstrapInternal()
+        }
+      })
+    }
+    
+    async function bootstrapInternal() {
       const start = Date.now() - 30 * 24 * 60 * 60 * 1000
+      const projectId = Instance.project.id
       const sessionListPromise = sdk.client.session
         .list({ start: start })
-        .then((x) => (x.data ?? []).toSorted((a, b) => a.id.localeCompare(b.id)))
+        .then((x) => {
+          Log.Default.info("tui: sync session list received", { 
+            count: x.data?.length,
+            error: x.error?.message,
+            projectId 
+          })
+          return (x.data ?? []).toSorted((a, b) => a.id.localeCompare(b.id))
+        })
 
       // blocking - include session.list when continuing a session
       const providersPromise = sdk.client.config.providers({}, { throwOnError: true })
@@ -375,7 +395,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
         providerListPromise,
         agentsPromise,
         configPromise,
-        ...(args.continue ? [sessionListPromise] : []),
+        sessionListPromise,
       ]
 
       await Promise.all(blockingRequests)
@@ -384,14 +404,14 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           const providerListResponse = providerListPromise.then((x) => x.data!)
           const agentsResponse = agentsPromise.then((x) => x.data ?? [])
           const configResponse = configPromise.then((x) => x.data!)
-          const sessionListResponse = args.continue ? sessionListPromise : undefined
+          const sessionListResponse = sessionListPromise
 
           return Promise.all([
             providersResponse,
             providerListResponse,
             agentsResponse,
             configResponse,
-            ...(sessionListResponse ? [sessionListResponse] : []),
+            sessionListResponse,
           ]).then((responses) => {
             const providers = responses[0]
             const providerList = responses[1]
@@ -424,7 +444,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
               setStore("provider_next", reconcile(transformedProviderList))
               setStore("agent", reconcile(sanitizedAgents))
               setStore("config", reconcile(config))
-              if (sessions !== undefined) setStore("session", reconcile(sessions))
+              setStore("session", reconcile(sessions))
             })
           })
         })
@@ -433,7 +453,6 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           // non-blocking
           Log.Default.info("tui: starting non-blocking sync requests")
           Promise.allSettled([
-            ...(args.continue ? [] : [sessionListPromise.then((sessions) => { Log.Default.info("tui: sync session list done"); setStore("session", reconcile(sessions))})]),
             sdk.client.command.list().then((x) => { Log.Default.info("tui: sync command list done"); setStore("command", reconcile(x.data ?? []))}),
             sdk.client.lsp.status().then((x) => { Log.Default.info("tui: sync lsp status done"); setStore("lsp", reconcile(x.data ?? []))}),
             sdk.client.mcp.status().then((x) => { Log.Default.info("tui: sync mcp status done"); setStore("mcp", reconcile(x.data ?? {}))}),

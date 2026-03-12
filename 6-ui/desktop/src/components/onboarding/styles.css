@@ -1,0 +1,361 @@
+/**
+ * @fileoverview Onboarding Wizard Styles
+ * 
+ * Custom styles for the onboarding wizard components.
+ * These complement Tailwind CSS with wizard-specific styling.
+ * 
+ * @module components/onboarding/styles
+ */
+
+/* ============================================
+   CSS Custom Properties
+   ============================================ */
+
+:root {
+  /* Wizard color palette (VS Code dark theme inspired) */
+  --wizard-bg-primary: #1e1e1e;
+  --wizard-bg-secondary: #252526;
+  --wizard-bg-tertiary: #2d2d30;
+  --wizard-bg-elevated: #3c3c3c;
+  
+  --wizard-text-primary: #cccccc;
+  --wizard-text-secondary: #858585;
+  --wizard-text-muted: #6e6e6e;
+  
+  --wizard-accent-blue: #007acc;
+  --wizard-accent-blue-hover: #1177bb;
+  --wizard-accent-green: #4ec9b0;
+  --wizard-accent-yellow: #dcdcaa;
+  --wizard-accent-red: #f48771;
+  --wizard-accent-purple: #c586c0;
+  
+  --wizard-border-color: #3e3e42;
+  --wizard-border-color-light: #5a5a5a;
+  
+  /* Animation timings */
+  --wizard-transition-fast: 150ms;
+  --wizard-transition-medium: 250ms;
+  --wizard-transition-slow: 350ms;
+  
+  /* Spacing */
+  --wizard-spacing-xs: 0.25rem;
+  --wizard-spacing-sm: 0.5rem;
+  --wizard-spacing-md: 1rem;
+  --wizard-spacing-lg: 1.5rem;
+  --wizard-spacing-xl: 2rem;
+  
+  /* Border radius */
+  --wizard-radius-sm: 0.375rem;
+  --wizard-radius-md: 0.5rem;
+  --wizard-radius-lg: 0.75rem;
+  --wizard-radius-xl: 1rem;
+}
+
+/* ============================================
+   Wizard Container
+   ============================================ */
+
+.onboarding-wizard {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  color: var(--wizard-text-primary);
+}
+
+.onboarding-wizard * {
+  box-sizing: border-box;
+}
+
+/* ============================================
+   Scrollbar Styling
+   ============================================ */
+
+.onboarding-wizard .scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.onboarding-wizard .scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.onboarding-wizard .scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.onboarding-wizard .scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.onboarding-wizard .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* ============================================
+   Terminal Styling
+   ============================================ */
+
+.onboarding-wizard .terminal {
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+  line-height: 1.6;
+}
+
+.onboarding-wizard .terminal-log {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Log level colors */
+.onboarding-wizard .terminal-log.error {
+  color: var(--wizard-accent-red);
+}
+
+.onboarding-wizard .terminal-log.warn {
+  color: var(--wizard-accent-yellow);
+}
+
+.onboarding-wizard .terminal-log.info {
+  color: var(--wizard-accent-blue);
+}
+
+.onboarding-wizard .terminal-log.success {
+  color: var(--wizard-accent-green);
+}
+
+/* Blinking cursor */
+.onboarding-wizard .terminal-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 1.2em;
+  background-color: currentColor;
+  animation: blink 1s step-end infinite;
+  vertical-align: text-bottom;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* ============================================
+   Animations
+   ============================================ */
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Slide up animation */
+@keyframes slideUp {
+  from { 
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Pulse animation for loading states */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Spin animation */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Shimmer effect for loading bars */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.onboarding-wizard .animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* ============================================
+   Progress Bar Enhancements
+   ============================================ */
+
+.onboarding-wizard .progress-bar-animated {
+  background-image: linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.15) 25%,
+    transparent 25%,
+    transparent 50%,
+    rgba(255, 255, 255, 0.15) 50%,
+    rgba(255, 255, 255, 0.15) 75%,
+    transparent 75%,
+    transparent
+  );
+  background-size: 1rem 1rem;
+  animation: progress-bar-stripes 1s linear infinite;
+}
+
+@keyframes progress-bar-stripes {
+  0% { background-position: 1rem 0; }
+  100% { background-position: 0 0; }
+}
+
+/* ============================================
+   Focus Styles for Accessibility
+   ============================================ */
+
+.onboarding-wizard button:focus-visible,
+.onboarding-wizard a:focus-visible,
+.onboarding-wizard input:focus-visible {
+  outline: 2px solid var(--wizard-accent-blue);
+  outline-offset: 2px;
+}
+
+/* ============================================
+   Step Transitions
+   ============================================ */
+
+.onboarding-wizard .step-enter {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.onboarding-wizard .step-enter-active {
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity var(--wizard-transition-medium) ease-out,
+              transform var(--wizard-transition-medium) ease-out;
+}
+
+.onboarding-wizard .step-exit {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.onboarding-wizard .step-exit-active {
+  opacity: 0;
+  transform: translateX(-20px);
+  transition: opacity var(--wizard-transition-medium) ease-in,
+              transform var(--wizard-transition-medium) ease-in;
+}
+
+/* ============================================
+   Card Hover Effects
+   ============================================ */
+
+.onboarding-wizard .card-hover {
+  transition: transform var(--wizard-transition-fast) ease-out,
+              box-shadow var(--wizard-transition-fast) ease-out;
+}
+
+.onboarding-wizard .card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* ============================================
+   Button Press Effect
+   ============================================ */
+
+.onboarding-wizard .btn-press:active {
+  transform: scale(0.98);
+}
+
+/* ============================================
+   Glass Effect
+   ============================================ */
+
+.onboarding-wizard .glass {
+  background: rgba(30, 30, 30, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* ============================================
+   Platform Icons
+   ============================================ */
+
+.onboarding-wizard .platform-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--wizard-radius-lg);
+}
+
+.onboarding-wizard .platform-icon.macos {
+  background: linear-gradient(135deg, #007aff20, #5856d620);
+  color: #007aff;
+}
+
+.onboarding-wizard .platform-icon.linux {
+  background: linear-gradient(135deg, #fcc62420, #ffcc0020);
+  color: #fcc624;
+}
+
+.onboarding-wizard .platform-icon.windows {
+  background: linear-gradient(135deg, #00a4ef20, #0078d720);
+  color: #00a4ef;
+}
+
+/* ============================================
+   Responsive Adjustments
+   ============================================ */
+
+@media (max-width: 640px) {
+  .onboarding-wizard {
+    padding: var(--wizard-spacing-md);
+  }
+  
+  .onboarding-wizard .step-title {
+    font-size: 1.5rem;
+  }
+  
+  .onboarding-wizard .progress-step-label {
+    display: none;
+  }
+}
+
+/* ============================================
+   Reduced Motion
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .onboarding-wizard *,
+  .onboarding-wizard *::before,
+  .onboarding-wizard *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================
+   High Contrast Mode
+   ============================================ */
+
+@media (prefers-contrast: high) {
+  .onboarding-wizard {
+    --wizard-border-color: #ffffff;
+    --wizard-text-primary: #ffffff;
+    --wizard-text-secondary: #ffffff;
+  }
+  
+  .onboarding-wizard button:focus-visible,
+  .onboarding-wizard a:focus-visible {
+    outline: 3px solid #ffffff;
+  }
+}

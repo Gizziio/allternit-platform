@@ -11,7 +11,7 @@ use bootstrap::BootstrapContext;
 use clap::{Parser, Subcommand};
 use client::KernelClient;
 use commands::{
-    auth, autoland, brain_integration, cap, daemon, ev, j, marketplace, model, openclaw_compat,
+    auth, autoland, brain_integration, cap, cowork, daemon, ev, instances, j, marketplace, model, openclaw_compat,
     repl, rlm, run, skills, status_health_sessions, swarm, taskgraph, tools, tui, voice, vm, webvm,
 };
 use config::ConfigManager;
@@ -97,6 +97,10 @@ enum Commands {
     Tools(tools::ToolsArgs),
     /// Skills and publisher key management
     Skills(skills::SkillsArgs),
+    
+    /// Cloud instance management
+    #[command(visible_alias = "inst")]
+    Instances(instances::InstancesArgs),
 
     /// Authentication and provider setup
     Auth(auth::AuthArgs),
@@ -138,6 +142,10 @@ enum Commands {
 
     /// VM environment management
     Vm(vm::VmArgs),
+    
+    /// Cowork Runtime - manage runs and schedules
+    #[command(visible_alias = "cw")]
+    Cowork(cowork::CoworkArgs),
 
     /// CLI configuration
     Config {
@@ -298,7 +306,7 @@ async fn main() -> anyhow::Result<()> {
                 Commands::Tools(args) => tools::handle_tools_args(args, &client).await?,
                 Commands::Skills(args) => skills::handle_skills_args(args, &client).await?,
 
-                Commands::Auth(args) => auth::handle_auth(args, &client).await?,
+                Commands::Auth(args) => auth::handle_auth(args).await?,
                 Commands::Model(args) => model::handle_model_args(args, &client).await?,
                 Commands::Run(args) => run::handle_run(args, &client).await?,
                 Commands::Repl(_) => repl::handle_repl(&client).await?,
@@ -326,6 +334,8 @@ async fn main() -> anyhow::Result<()> {
                 Commands::Task(cmd) => taskgraph::handle_taskgraph_args(cmd, &client).await?,
                 Commands::Swarm(args) => swarm::handle_swarm(args, &client, &config_manager).await?,
                 Commands::Vm(args) => vm::handle_vm(args).await?,
+                Commands::Cowork(args) => cowork::handle_cowork_args(args, &client).await?,
+                Commands::Instances(args) => instances::handle_instances_args(args, &client).await?,
                 Commands::Config { .. } | Commands::Registry { .. } | Commands::External(_) => {
                     unreachable!()
                 }

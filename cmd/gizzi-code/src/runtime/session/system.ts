@@ -11,6 +11,8 @@ import PROMPT_GEMINI from "@/runtime/session/prompt/gemini.txt"
 
 import PROMPT_CODEX from "@/runtime/session/prompt/codex_header.txt"
 import PROMPT_TRINITY from "@/runtime/session/prompt/trinity.txt"
+import PROMPT_PLAN_MODE from "@/runtime/session/prompt/plan-mode.txt"
+import PROMPT_BUILD_MODE from "@/runtime/session/prompt/build-mode.txt"
 import type { Provider } from "@/runtime/providers/provider"
 
 export namespace SystemPrompt {
@@ -18,14 +20,28 @@ export namespace SystemPrompt {
     return PROMPT_CODEX.trim()
   }
 
-  export function provider(model: Provider.Model) {
-    if (model.api.id.includes("gpt-5")) return [PROMPT_CODEX]
+  export function provider(model: Provider.Model, mode?: 'plan' | 'build') {
+    const basePrompts = []
+    
+    // Add mode-specific prompt
+    if (mode === 'plan') {
+      basePrompts.push(PROMPT_PLAN_MODE)
+    } else if (mode === 'build') {
+      basePrompts.push(PROMPT_BUILD_MODE)
+    }
+    
+    // Add provider-specific prompts
+    if (model.api.id.includes("gpt-5")) basePrompts.push(PROMPT_CODEX)
     if (model.api.id.includes("gpt-") || model.api.id.includes("o1") || model.api.id.includes("o3"))
-      return [PROMPT_BEAST]
-    if (model.api.id.includes("gemini-")) return [PROMPT_GEMINI]
-    if (model.api.id.includes("claude")) return [PROMPT_ANTHROPIC]
-    if (model.api.id.toLowerCase().includes("trinity")) return [PROMPT_TRINITY]
-    return [PROMPT_ANTHROPIC_WITHOUT_TODO]
+      basePrompts.push(PROMPT_BEAST)
+    if (model.api.id.includes("gemini-")) basePrompts.push(PROMPT_GEMINI)
+    if (model.api.id.includes("claude")) basePrompts.push(PROMPT_ANTHROPIC)
+    if (model.api.id.toLowerCase().includes("trinity")) basePrompts.push(PROMPT_TRINITY)
+    if (basePrompts.length === 0 || !basePrompts.includes(PROMPT_ANTHROPIC)) {
+      basePrompts.push(PROMPT_ANTHROPIC_WITHOUT_TODO)
+    }
+    
+    return basePrompts
   }
 
   async function memoryPrompt(): Promise<string> {

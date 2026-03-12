@@ -1,4 +1,4 @@
-import React, { useState, useCallback, memo, useEffect } from 'react';
+import React, { useState, useCallback, memo, useEffect, useMemo } from 'react';
 import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
@@ -25,6 +25,7 @@ import {
 import { useChatStore, ChatThread, ChatProject } from '../views/chat/ChatStore';
 import { useArtifactStore } from '../views/cowork/ArtifactStore';
 import { useCoworkStore, Task, TaskProject } from '../views/cowork/CoworkStore';
+import { useCodeModeStore } from '../views/code/CodeModeStore';
 import { RAIL_CONFIG, type RailConfigSection } from './rail/rail.config';
 import { COWORK_RAIL_CONFIG } from './rail/cowork.config';
 import { CODE_RAIL_CONFIG } from './rail/code.config';
@@ -47,6 +48,8 @@ import {
 import { useAgentSurfaceModeStore } from '../stores/agent-surface-mode.store';
 import { useSidecarStore } from '../stores/sidecar-store';
 import { SettingsDrilldown } from './SettingsDrilldown';
+import { getAgentModeSurfaceTheme } from '../views/chat/agentModeSurfaceTheme';
+import type { AgentModeSurface } from '../stores/agent-surface-mode.store';
 
 interface ShellRailProps {
   activeViewType?: string;
@@ -71,6 +74,14 @@ export function ShellRail({
   isCollapsed,
   onModeChange,
 }: ShellRailProps) {
+  // Determine current surface for agent mode glow
+  const currentSurface: AgentModeSurface = 
+    mode === 'cowork' ? 'cowork' : 
+    mode === 'code' ? 'code' : 'chat';
+  
+  const enabledBySurface = useAgentSurfaceModeStore((s) => s.enabledBySurface);
+  const isAgentActive = enabledBySurface[currentSurface];
+  const surfaceTheme = isAgentActive ? getAgentModeSurfaceTheme(currentSurface) : null;
   const [foldedCategories, setFoldedCategories] = useState<Set<string>>(new Set(['workspace', 'ai_vision', 'infrastructure', 'security', 'execution', 'observability', 'services']));
   const [isLoading, setIsLoading] = useState(false);
 
@@ -98,9 +109,9 @@ export function ShellRail({
   const setEmbeddedSession = useStoreWithEqualityFn(useEmbeddedAgentSessionStore, (s) => s.setSurfaceSession);
   const clearEmbeddedSession = useStoreWithEqualityFn(useEmbeddedAgentSessionStore, (s) => s.clearSurfaceSession);
   
-  const selectedAgentIdBySurface = useStoreWithEqualityFn(useAgentSurfaceModeStore, (s) => s.selectedAgentIdBySurface, shallow);
   const setAgentModeEnabled = useStoreWithEqualityFn(useAgentSurfaceModeStore, (s) => s.setEnabled);
   const setSelectedSurfaceAgent = useStoreWithEqualityFn(useAgentSurfaceModeStore, (s) => s.setSelectedAgent);
+  const selectedAgentIdBySurface = useStoreWithEqualityFn(useAgentSurfaceModeStore, (s) => s.selectedAgentIdBySurface, shallow);
   
   const agents = useStoreWithEqualityFn(useAgentStore, (s) => s.agents, shallow);
   const activeArtifactId = useStoreWithEqualityFn(useArtifactStore, (s) => s.activeArtifactId);
@@ -255,28 +266,16 @@ export function ShellRail({
       height: '100%', 
       display: 'flex', 
       flexDirection: 'column', 
-      background: isCodeMode 
-        ? 'transparent' 
-        : 'linear-gradient(180deg, rgba(24,21,20,0.98) 0%, rgba(31,27,25,0.98) 48%, rgba(20,18,18,0.98) 100%)',
-      borderRadius: isCodeMode ? 0 : 24, 
-      border: isCodeMode ? 'none' : '1px solid rgba(212,176,140,0.14)',
-      boxShadow: isCodeMode ? 'none' : '0 18px 48px rgba(16,12,10,0.28)',
+      background: isAgentActive 
+        ? `linear-gradient(180deg, ${surfaceTheme?.wash} 0%, ${surfaceTheme?.soft} 40%, transparent 100%)`
+        : 'transparent',
+      borderRadius: 0, 
+      border: 'none',
+      boxShadow: 'none',
       position: 'relative', 
       overflow: 'hidden',
       outline: 'none',
     }}>
-      {!isCodeMode && (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            pointerEvents: 'none',
-            background:
-              'radial-gradient(circle at top left, rgba(217,119,87,0.14), transparent 30%), radial-gradient(circle at top right, rgba(176,141,110,0.1), transparent 32%)',
-            opacity: 0.9,
-          }}
-        />
-      )}
       {/* SPACER FOR FIXED CONTROLS */}
       <div style={{ height: 104 }} />
 
@@ -286,15 +285,11 @@ export function ShellRail({
           display: 'flex', 
           alignItems: 'center', 
           gap: 8, 
-          background: isCodeMode 
-            ? 'rgba(255,255,255,0.03)' 
-            : 'linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.025))', 
+          background: 'rgba(255,255,255,0.03)', 
           borderRadius: 14, 
           padding: '9px 12px', 
-          border: isCodeMode 
-            ? '1px solid rgba(255,255,255,0.06)' 
-            : '1px solid rgba(212,176,140,0.12)',
-          boxShadow: isCodeMode ? 'none' : 'inset 0 1px 0 rgba(255,255,255,0.05)'
+          border: '1px solid rgba(255,255,255,0.06)',
+          boxShadow: 'none'
         }}>
           <MagnifyingGlass size={16} color="#b08d6e" weight="bold" />
           <input 
@@ -314,12 +309,26 @@ export function ShellRail({
 
       {/* MAIN CONTENT */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 8px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {activeConfig.map((category) => {
+        {activeConfig.map((category, index) => {
           const isFolded = foldedCategories.has(category.id);
           const isCollapsible = category.collapsible !== false;
+          
+          // Add separator before 'threads' section in code mode
+          const showSeparator = isCodeMode && category.id === 'threads';
 
           return (
             <div key={category.id} style={{ marginBottom: 4 }}>
+              {showSeparator && (
+                <div style={{ 
+                  padding: '8px 12px', 
+                  color: '#b08d6e', 
+                  fontSize: 11, 
+                  fontWeight: 800,
+                  letterSpacing: '0.08em'
+                }}>
+                  &gt;
+                </div>
+              )}
               {isCollapsible ? (
                 <button 
                   onClick={() => toggleFold(category.id)}
@@ -421,6 +430,11 @@ export function ShellRail({
                       onMoveTaskToProject={coworkStore.moveTaskToProject}
                       onRenameProject={coworkStore.renameProject}
                       onDeleteProject={coworkStore.deleteProject}
+                      activeViewType={activeViewType}
+                    />
+                  ) : category.id === 'threads' && isCodeMode ? (
+                    <CodeThreadsSection
+                      onOpen={onOpen}
                       activeViewType={activeViewType}
                     />
                   ) : (
@@ -2992,6 +3006,222 @@ function ThreadRailItem({
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * CodeThreadsSection - Shows Code Mode threads (sessions) with tabs for Threads and Agent Threads
+ */
+function CodeThreadsSection({
+  onOpen,
+  activeViewType,
+}: {
+  onOpen?: (view: string) => void;
+  activeViewType?: string;
+}) {
+  const [activeTab, setActiveTab] = useState<'threads' | 'agent'>('threads');
+  
+  // Get code mode store data
+  const sessions = useCodeModeStore((state) => state.sessions);
+  const activeSessionId = useCodeModeStore((state) => state.activeSessionId);
+  const activeWorkspaceId = useCodeModeStore((state) => state.activeWorkspaceId);
+  const setActiveSession = useCodeModeStore((state) => state.setActiveSession);
+  const workspaces = useCodeModeStore((state) => state.workspaces);
+  
+  // Get native agent sessions for "Agent Threads" tab
+  const nativeSessions = useStoreWithEqualityFn(useNativeAgentStore, (s) => s.sessions, shallow);
+  const activeNativeSessionId = useStoreWithEqualityFn(useNativeAgentStore, (s) => s.activeSessionId, shallow);
+  const setActiveNativeSession = useStoreWithEqualityFn(useNativeAgentStore, (s) => s.setActiveSession, shallow);
+  
+  // Filter sessions for active workspace
+  const workspaceSessions = useMemo(() => {
+    return sessions.filter(s => s.workspace_id === activeWorkspaceId);
+  }, [sessions, activeWorkspaceId]);
+  
+  const activeWorkspace = useMemo(() => {
+    return workspaces.find(w => w.workspace_id === activeWorkspaceId);
+  }, [workspaces, activeWorkspaceId]);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 4, padding: '0 8px' }}>
+        <button
+          onClick={() => setActiveTab('threads')}
+          style={{
+            flex: 1,
+            padding: '4px 6px',
+            borderRadius: '5px',
+            border: 'none',
+            background: activeTab === 'threads' 
+              ? 'linear-gradient(135deg, rgba(217,119,87,0.18) 0%, rgba(212,176,140,0.12) 100%)' 
+              : 'transparent',
+            color: activeTab === 'threads' ? '#f0c8aa' : '#888',
+            fontSize: '10px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            boxShadow: activeTab === 'threads' ? '0 4px 12px rgba(217,119,87,0.15)' : 'none',
+          }}
+        >
+          Threads
+          <span style={{ 
+            padding: '0px 3px', 
+            background: activeTab === 'threads' ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)', 
+            borderRadius: '2px',
+            fontSize: '9px',
+            marginLeft: '4px'
+          }}>
+            {workspaceSessions.length}
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveTab('agent')}
+          style={{
+            flex: 1,
+            padding: '4px 6px',
+            borderRadius: '5px',
+            border: 'none',
+            background: activeTab === 'agent' 
+              ? 'linear-gradient(135deg, rgba(217,119,87,0.18) 0%, rgba(212,176,140,0.12) 100%)' 
+              : 'transparent',
+            color: activeTab === 'agent' ? '#f0c8aa' : '#888',
+            fontSize: '10px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            boxShadow: activeTab === 'agent' ? '0 4px 12px rgba(217,119,87,0.15)' : 'none',
+          }}
+        >
+          Agent Threads
+          <span style={{ 
+            padding: '0px 3px', 
+            background: activeTab === 'agent' ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)', 
+            borderRadius: '2px',
+            fontSize: '9px',
+            marginLeft: '4px'
+          }}>
+            {nativeSessions.length}
+          </span>
+        </button>
+      </div>
+      
+      {/* Projects separator */}
+      <div style={{ padding: '0 12px' }}>
+        <div style={{ 
+          fontSize: 10, 
+          fontWeight: 700, 
+          color: '#6e6e6e', 
+          textTransform: 'uppercase', 
+          letterSpacing: '0.05em',
+          marginBottom: 4
+        }}>
+          {activeWorkspace?.display_name || 'Projects'}
+        </div>
+      </div>
+      
+      {/* Threads Tab */}
+      {activeTab === 'threads' && (
+        <div style={{ padding: '0 8px' }}>
+          {workspaceSessions.length > 0 ? (
+            workspaceSessions.map((session) => (
+              <button
+                key={session.session_id}
+                onClick={() => {
+                  setActiveSession(session.session_id);
+                  onOpen?.('code');
+                }}
+                style={{
+                  width: '100%',
+                  padding: '8px 10px',
+                  borderRadius: 8,
+                  border: '1px solid transparent',
+                  background: activeSessionId === session.session_id 
+                    ? 'rgba(86, 169, 255, 0.12)' 
+                    : 'transparent',
+                  borderColor: activeSessionId === session.session_id 
+                    ? 'var(--accent-chat)' 
+                    : 'transparent',
+                  color: 'var(--text-primary)',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  marginBottom: 4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                }}
+              >
+                <div
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: '50%',
+                    background: session.state === 'EXECUTING' ? '#45c56b' : '#8f99ad',
+                    flexShrink: 0,
+                  }}
+                />
+                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {session.title}
+                </span>
+              </button>
+            ))
+          ) : (
+            <div style={{ padding: 16, textAlign: 'center', color: '#6e6e6e', fontSize: 12 }}>
+              No threads yet
+            </div>
+          )}
+        </div>
+      )}
+      
+      {/* Agent Threads Tab */}
+      {activeTab === 'agent' && (
+        <div style={{ padding: '0 8px' }}>
+          {nativeSessions.length > 0 ? (
+            nativeSessions.map((session) => (
+              <button
+                key={session.id}
+                onClick={() => {
+                  setActiveNativeSession(session.id);
+                  onOpen?.('code-agent-session');
+                }}
+                style={{
+                  width: '100%',
+                  padding: '8px 10px',
+                  borderRadius: 8,
+                  border: '1px solid transparent',
+                  background: activeNativeSessionId === session.id 
+                    ? 'rgba(86, 169, 255, 0.12)' 
+                    : 'transparent',
+                  borderColor: activeNativeSessionId === session.id 
+                    ? 'var(--accent-chat)' 
+                    : 'transparent',
+                  color: 'var(--text-primary)',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  marginBottom: 4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                }}
+              >
+                <Robot size={14} style={{ flexShrink: 0, color: '#b08d6e' }} />
+                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {session.name || 'Agent Session'}
+                </span>
+              </button>
+            ))
+          ) : (
+            <div style={{ padding: 16, textAlign: 'center', color: '#6e6e6e', fontSize: 12 }}>
+              No agent threads yet
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

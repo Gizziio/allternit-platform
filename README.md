@@ -136,6 +136,25 @@ const layout = engine.autoLayout(nodes, edges);
 const executable = engine.compileToExecutable(draft);
 ```
 
+### visualVerificationApi
+Visual verification for A2R Autoland quality gates.
+
+**Location**: `6-ui/a2r-platform/src/services/visualVerificationApi.ts`
+
+```typescript
+import { visualVerificationApi, useVisualVerification } from '@/services';
+
+// API service
+const result = await visualVerificationApi.getStatus('wih_123');
+const trend = await visualVerificationApi.getTrendData('wih_123', { days: 7 });
+
+// React hook
+function VerificationPanel({ wihId }) {
+  const { result, isLoading, trendData, refresh } = useVisualVerification({ wihId });
+  return <VisualVerificationPanel status={result} trendData={trendData} />;
+}
+```
+
 ---
 
 ## React Hooks
@@ -189,6 +208,34 @@ function WorkflowDesigner() {
   } = useWorkflow();
   
   return <Designer onValidate={validateDesign} />;
+}
+```
+
+### useVisualVerification
+Hook for visual verification status and operations.
+
+```typescript
+import { useVisualVerification } from '@/hooks';
+
+function VerificationDashboard({ wihId }) {
+  const { 
+    result, isLoading, isPolling,
+    error, trendData,
+    refresh, startVerification, requestBypass 
+  } = useVisualVerification({ 
+    wihId, 
+    pollInterval: 3000,
+    onComplete: (result) => console.log('Done!', result)
+  });
+  
+  return (
+    <VisualVerificationPanel 
+      status={result}
+      trendData={trendData}
+      onRefresh={refresh}
+      onRequestBypass={() => requestBypass('Emergency hotfix')}
+    />
+  );
 }
 ```
 
@@ -253,6 +300,7 @@ The project has undergone significant restructuring. See [MIGRATION.md](./MIGRAT
 | WebVM | 8002 | Rust | WebAssembly VMs |
 | Operator | 3010 | Python | Browser automation |
 | Rails | 3011 | Rust | Agent task planning |
+| Visual Verification | 50052 | TypeScript/gRPC | UI evidence capture |
 
 ---
 

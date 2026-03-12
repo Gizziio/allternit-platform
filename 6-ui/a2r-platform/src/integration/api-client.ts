@@ -483,23 +483,26 @@ class A2RApiClient {
 
   /**
    * Create a brain session for AI chat (kernel-managed)
-   * 
+   *
    * @param brainProfileId - The brain profile ID (e.g., "opencode-acp", "claude-code")
-   * @param source - "chat" or "terminal" 
+   * @param source - "chat" or "terminal"
    * @param runtimeOverrides - Optional model selection and config overrides
    * @param workspaceDir - Optional workspace directory
+   * @param mode - Execution mode: "plan" (read-only) or "build" (full access)
    */
   async createBrainSession(
     brainProfileId: string,
     source: 'chat' | 'terminal' = 'chat',
     runtimeOverrides?: { model_id?: string; [key: string]: unknown },
-    workspaceDir?: string
+    workspaceDir?: string,
+    mode?: 'plan' | 'build'
   ): Promise<Session> {
     return this.post<Session>('/api/v1/sessions', {
       brain_profile_id: brainProfileId,
       source,
       runtime_overrides: runtimeOverrides,
-      workspace_dir: workspaceDir
+      workspace_dir: workspaceDir,
+      mode  // Pass execution mode for system prompt injection
     });
   }
 

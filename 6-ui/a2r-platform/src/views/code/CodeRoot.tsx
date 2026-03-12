@@ -141,17 +141,11 @@ export function CodeRoot() {
       data-testid="code-root"
       style={{
         height: '100%',
-        padding: '12px',
-        boxSizing: 'border-box',
-        transition: 'padding 180ms ease',
         position: 'relative',
         isolation: 'isolate',
         background: embeddedAgentSession.isEmbedded
           ? 'radial-gradient(circle at top right, rgba(121,196,124,0.08), transparent 34%), linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(0,0,0,0) 18%)'
           : 'transparent',
-        boxShadow: embeddedAgentSession.isEmbedded
-          ? 'inset 0 0 0 1px rgba(121,196,124,0.08), inset 0 24px 120px rgba(121,196,124,0.04)'
-          : 'none',
       }}
     >
       <AgentModeBackdrop
@@ -197,17 +191,13 @@ export function CodeRoot() {
       </div>
 
       {/* Main layout: canvas fills space, preview pane on right */}
-      <div style={{ display: 'flex', height: '100%', gap: 0 }}>
+      <div style={{ display: 'flex', height: '100%', gap: 0, overflow: 'auto' }}>
         {/* Canvas — fills remaining space, no pane styling */}
         <div
           data-testid="code-pane-canvas"
           style={{
             flex: 1,
             minWidth: 0,
-            height: '100%',
-            boxSizing: 'border-box',
-            paddingTop: canvasTopInset,
-            paddingRight: isPreviewCollapsed ? 0 : 6,
           }}
         >
           <CodeCanvas isPreviewCollapsed={isPreviewCollapsed} />

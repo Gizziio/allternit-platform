@@ -1,0 +1,59 @@
+{
+  "name": "@a2r/apple-vf-driver",
+  "version": "1.0.0",
+  "description": "Apple Virtualization.framework TypeScript driver for macOS VM management",
+  "main": "dist/apple-vf.js",
+  "types": "dist/apple-vf.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "build:native": "node-gyp rebuild -C native",
+    "build:all": "npm run build:native && npm run build",
+    "clean": "rm -rf dist native/build",
+    "test": "jest",
+    "lint": "eslint . --ext .ts",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "virtualization",
+    "apple",
+    "macos",
+    "vm",
+    "vzvirtualmachine",
+    "a2r",
+    "hypervisor"
+  ],
+  "author": "A2rchitech Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0",
+    "darwin": ">=20.0.0"
+  },
+  "os": [
+    "darwin"
+  ],
+  "dependencies": {
+    "node-addon-api": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "eslint": "^8.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "jest": "^29.0.0",
+    "@types/jest": "^29.0.0",
+    "ts-jest": "^29.0.0",
+    "node-gyp": "^10.0.0"
+  },
+  "files": [
+    "dist/",
+    "native/apple-vf-native.mm",
+    "native/binding.gyp",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/a2rchitech/a2r.git",
+    "directory": "1-kernel/cowork/drivers"
+  }
+}

@@ -13,6 +13,7 @@ pub mod prompt;
 pub mod receipts;
 pub mod service;
 pub mod vault;
+pub mod verification;
 pub mod wih;
 pub mod work;
 pub mod workspace;

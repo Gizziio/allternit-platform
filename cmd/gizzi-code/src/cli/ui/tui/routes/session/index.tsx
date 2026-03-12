@@ -221,22 +221,37 @@ export function Session() {
   const lastAssistant = createMemo(() => {
     return messages().findLast((x) => x.role === "assistant")
   })
-  const sessionMascotState = createMemo<GIZZIMascotState>(() => {
+
+  const activeAssistant = createMemo(() =>
+    messages().findLast(
+      (message): message is AssistantMessage => message.role === "assistant" && !message.time.completed,
+    ),
+  )
+
+  // Define activeTools early to avoid reference issues
+  const activeTools = createMemo(() => {
+    const assistant = activeAssistant()
+    if (!assistant) return [] as string[]
+    const parts = sync.data.part[assistant.id] ?? []
+    return parts
+      .filter(
+        (part): part is Extract<Part, { type: "tool" }> =>
+          part.type === "tool" && (part.state.status === "running" || part.state.status === "pending"),
+      )
+      .map((part) => part.tool)
+  })
+
+  const sessionMascotState = createMemo<"idle" | "curious" | "proud" | "pleased" | "steady" | "executing" | "responding" | "thinking">(() => {
     if (!pending()) {
       const count = messages().length
-      if (count === 0) return "curious"
+      if (count === 0) return "idle"
       if (count > 20) return "proud"
       if (count > 8) return "pleased"
       return "steady"
     }
-    const activeAssistant = messages().findLast(
-      (message): message is AssistantMessage => message.role === "assistant" && !message.time.completed,
-    )
-    const activeParts = activeAssistant ? (sync.data.part[activeAssistant.id] ?? []) : []
-    const hasRunningTool = activeParts.some(
-      (part): part is Extract<Part, { type: "tool" }> =>
-        part.type === "tool" && (part.state.status === "running" || part.state.status === "pending"),
-    )
+
+    const activeParts = activeAssistant() ? (sync.data.part[activeAssistant()!.id] ?? []) : []
+    const hasRunningTool = activeTools().length > 0
     if (hasRunningTool) return "executing"
 
     const hasVisibleText = activeParts.some(
@@ -254,6 +269,7 @@ export function Session() {
     }
     if (state === "responding") return "Gizzi responding"
     if (state === "thinking") return "Gizzi thinking"
+    if (state === "idle") return "Gizzi ready"
     if (state === "curious") return "Gizzi is curious"
     if (state === "proud") return "Gizzi is proud"
     if (state === "pleased") return "Gizzi is pleased"

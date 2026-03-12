@@ -45,4 +45,10 @@ export const TuiEvent = {
       sessionID: z.string().regex(/^ses/).describe("Session ID to navigate to"),
     }),
   ),
+  SessionCreated: BusEvent.define(
+    "tui.session.created",
+    z.object({
+      sessionID: z.string().regex(/^ses/).optional(),
+    }),
+  ),
 }

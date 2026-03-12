@@ -8,7 +8,7 @@
 //! - File operations support
 
 use anyhow::{Context, Result};
-use a2r_protocol::{Message, MessagePayload, NodeCapabilities, NodeStatus, ResourceUsage, FileOperation, FileEntry, FileData, FileInfo};
+use a2r_protocol::{Message, MessagePayload, NodeCapabilities, NodeStatus, ResourceUsage, FileOperation, FileEntry, FileData, FileInfo, RunEvent, RunEventType};
 use futures::{SinkExt, StreamExt};
 use std::collections::HashMap;
 use std::path::Path;
@@ -563,6 +563,81 @@ impl WebSocketClient {
                 
                 // Exit cleanly
                 std::process::exit(0);
+            }
+            
+            // Run lifecycle messages
+            MessagePayload::StartRun { run_id, config } => {
+                info!("🏃 Start run requested: {}", run_id);
+                let run_id_for_error = run_id.clone();
+                // Delegate to run manager if available
+                if let Some(run_manager) = self.state.run_manager.read().await.as_ref() {
+                    if let Err(e) = run_manager.start_run(run_id, config).await {
+                        error!("Failed to start run: {}", e);
+                        
+                        // Send error event
+                        let error_msg = Message::new(MessagePayload::RunEvent {
+                            run_id: run_id_for_error,
+                            event: RunEvent {
+                                event_type: RunEventType::Failed,
+                                timestamp: chrono::Utc::now(),
+                                data: serde_json::json!({
+                                    "error": e.to_string(),
+                                }),
+                            },
+                        });
+                        let _ = tx.send(error_msg).await;
+                    }
+                } else {
+                    warn!("Run manager not available");
+                }
+            }
+            
+            MessagePayload::StopRun { run_id } => {
+                info!("⏹️ Stop run requested: {}", run_id);
+                if let Some(run_manager) = self.state.run_manager.read().await.as_ref() {
+                    if let Err(e) = run_manager.stop_run(&run_id).await {
+                        error!("Failed to stop run: {}", e);
+                    }
+                }
+            }
+            
+            MessagePayload::AttachRun { run_id, client_id } => {
+                info!("👁️ Attach to run requested: {} (client: {})", run_id, client_id);
+                if let Some(run_manager) = self.state.run_manager.read().await.as_ref() {
+                    if let Err(e) = run_manager.attach_client(&run_id, &client_id).await {
+                        error!("Failed to attach to run: {}", e);
+                    }
+                }
+            }
+            
+            MessagePayload::DetachRun { run_id, client_id } => {
+                info!("👁️ Detach from run requested: {} (client: {})", run_id, client_id);
+                if let Some(run_manager) = self.state.run_manager.read().await.as_ref() {
+                    if let Err(e) = run_manager.detach_client(&run_id, &client_id).await {
+                        error!("Failed to detach from run: {}", e);
+                    }
+                }
+            }
+            
+            MessagePayload::GetRunStatus { run_id } => {
+                debug!("📊 Get run status requested: {}", run_id);
+                if let Some(run_manager) = self.state.run_manager.read().await.as_ref() {
+                    if let Some(status) = run_manager.get_run_status(&run_id).await {
+                        let status_msg = Message::new(MessagePayload::RunStatus {
+                            run_id: run_id.clone(),
+                            status: status.status,
+                            exit_code: status.exit_code,
+                            node_id: self.config.node_id.clone(),
+                        });
+                        let _ = tx.send(status_msg).await;
+                    }
+                }
+            }
+            
+            MessagePayload::RunInput { run_id, input } => {
+                trace!("⌨️  Run input for {}: {} bytes", run_id, input.len());
+                // Forward input to running run (if stdin is supported)
+                // This would require additional stdin forwarding implementation
             }
             
             _ => {

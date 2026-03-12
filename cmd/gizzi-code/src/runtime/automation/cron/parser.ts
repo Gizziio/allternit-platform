@@ -255,13 +255,24 @@ function getOrdinal(n: number): string {
   return s[(v - 20) % 10] || s[v] || s[0];
 }
 
+export namespace CronParser {
+  export function isValid(expression: string): boolean {
+    const parts = expression.trim().split(/\s+/);
+    if (parts.length === 5 || parts.length === 6) {
+      // Basic validation - check for valid cron syntax
+      const validPattern = /^[\d*,/-?#LW]+$|^(\*|\?)$/;
+      if (parts.every((part) => validPattern.test(part))) {
+        return true;
+      }
+    }
+    
+    // Also check if it's a valid natural language schedule
+    return parseSchedule(expression) !== null;
+  }
+}
+
 function isValidCron(expression: string): boolean {
-  const parts = expression.trim().split(/\s+/);
-  if (parts.length !== 5 && parts.length !== 6) return false;
-  
-  // Basic validation - check for valid cron syntax
-  const validPattern = /^[\d*,/-?#LW]+$|^(\*|\?)$/;
-  return parts.every((part) => validPattern.test(part));
+  return CronParser.isValid(expression);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

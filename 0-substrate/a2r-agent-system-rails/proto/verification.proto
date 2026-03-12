@@ -1,0 +1,345 @@
+/**
+ * Verification Provider Protocol
+ * 
+ * Protocol buffer definition for visual evidence gathering between
+ * Rust substrate and TypeScript verification service.
+ * 
+ * Version: 1.0.0
+ */
+
+syntax = "proto3";
+
+package verification;
+
+option go_package = "github.com/a2rchitech/substrate/verification";
+option java_package = "com.a2rchitech.verification";
+option java_multiple_files = true;
+
+/**
+ * VerificationProvider service
+ * 
+ * Provides visual evidence gathering for WIH (Work Identity Handle) validation.
+ */
+service VerificationProvider {
+  /**
+   * Gather evidence for a WIH
+   * 
+   * Performs visual capture (UI state, coverage, console) and returns
+   * structured evidence with confidence scores.
+   */
+  rpc GatherEvidence(EvidenceRequest) returns (EvidenceResponse);
+  
+  /**
+   * Stream evidence in real-time
+   * 
+   * Streams artifacts as they are captured, useful for progress monitoring.
+   */
+  rpc StreamEvidence(EvidenceRequest) returns (stream Artifact);
+  
+  /**
+   * Health check
+   * 
+   * Returns service health status and metadata.
+   */
+  rpc HealthCheck(HealthRequest) returns (HealthResponse);
+  
+  /**
+   * Get provider capabilities
+   * 
+   * Returns what types of evidence this provider can gather.
+   */
+  rpc GetCapabilities(CapabilitiesRequest) returns (CapabilitiesResponse);
+}
+
+// ============================================================================
+// Request/Response Messages
+// ============================================================================
+
+message EvidenceRequest {
+  /** WIH identifier */
+  string wih_id = 1;
+  
+  /** Optional metadata for the capture session */
+  map<string, string> metadata = 2;
+  
+  /** 
+   * Timeout in milliseconds (0 = use provider default)
+   */
+  uint32 timeout_ms = 3;
+  
+  /**
+   * Comma-separated list of changed files (for targeted capture)
+   */
+  string changed_files = 4;
+  
+  /**
+   * Specific artifact types to capture (empty = all)
+   */
+  repeated ArtifactType artifact_types = 5;
+}
+
+message EvidenceResponse {
+  /** Unique evidence identifier */
+  string evidence_id = 1;
+  
+  /** WIH identifier */
+  string wih_id = 2;
+  
+  /** Collected artifacts */
+  repeated Artifact artifacts = 3;
+  
+  /** ISO 8601 timestamp when capture started */
+  string captured_at = 4;
+  
+  /** ISO 8601 timestamp when capture completed */
+  string completed_at = 5;
+  
+  /** Provider identifier */
+  string provider_id = 6;
+  
+  /** 
+   * Overall confidence score (0.0 - 1.0)
+   * 
+   * Calculated as the average of all artifact confidences.
+   */
+  double overall_confidence = 7;
+  
+  /** Whether evidence gathering was successful */
+  bool success = 8;
+  
+  /** Error messages if success is false */
+  repeated string errors = 9;
+  
+  /** Capture duration in milliseconds */
+  uint32 capture_duration_ms = 10;
+}
+
+// ============================================================================
+// Artifact Types
+// ============================================================================
+
+enum ArtifactType {
+  /** Unknown/default type */
+  UNKNOWN = 0;
+  
+  /** UI state screenshot with accessibility tree */
+  UI_STATE = 1;
+  
+  /** Code coverage report */
+  COVERAGE_MAP = 2;
+  
+  /** Console output (logs, errors, warnings) */
+  CONSOLE_OUTPUT = 3;
+  
+  /** Visual diff comparison */
+  VISUAL_DIFF = 4;
+  
+  /** Error state capture */
+  ERROR_STATE = 5;
+  
+  /** Performance metrics */
+  PERFORMANCE_CHART = 6;
+  
+  /** Code structure diagram */
+  STRUCTURE_DIAGRAM = 7;
+  
+  /** Network trace */
+  NETWORK_TRACE = 8;
+}
+
+message Artifact {
+  /** Artifact type */
+  ArtifactType artifact_type = 1;
+  
+  /** 
+   * Confidence score for this artifact (0.0 - 1.0)
+   * 
+   * Higher confidence = more reliable evidence
+   */
+  double confidence = 2;
+  
+  /** ISO 8601 timestamp */
+  string timestamp = 3;
+  
+  /** 
+   * JSON-encoded metadata
+   * 
+   * Includes description, verification claim, and type-specific data.
+   */
+  string metadata_json = 4;
+  
+  /** Artifact data (oneof) */
+  oneof data {
+    ImageData image = 5;
+    TextData text = 6;
+    JsonData json = 7;
+    BinaryData binary = 8;
+  }
+}
+
+message ImageData {
+  /** Raw image bytes */
+  bytes image_data = 1;
+  
+  /** Image width in pixels */
+  uint32 width = 2;
+  
+  /** Image height in pixels */
+  uint32 height = 3;
+  
+  /** Image format: "png", "jpg", "webp" */
+  string format = 4;
+  
+  /** Optional file path (if stored on disk) */
+  string file_path = 5;
+}
+
+message TextData {
+  /** Text content */
+  string content = 1;
+  
+  /** Text encoding, usually "utf-8" */
+  string encoding = 2;
+  
+  /** Line count (if applicable) */
+  uint32 line_count = 3;
+}
+
+message JsonData {
+  /** JSON-encoded data */
+  string json_content = 1;
+  
+  /** Schema identifier (if applicable) */
+  string schema_version = 2;
+}
+
+message BinaryData {
+  /** Raw binary data */
+  bytes data = 1;
+  
+  /** MIME type */
+  string mime_type = 2;
+  
+  /** Size in bytes */
+  uint64 size_bytes = 3;
+}
+
+// ============================================================================
+// Health Check
+// ============================================================================
+
+message HealthRequest {
+  /** Optional: specific component to check */
+  string component = 1;
+}
+
+message HealthResponse {
+  /** Whether the service is healthy */
+  bool healthy = 1;
+  
+  /** Service version */
+  string version = 2;
+  
+  /** ISO 8601 timestamp */
+  string timestamp = 3;
+  
+  /** Uptime in milliseconds */
+  uint64 uptime_ms = 4;
+  
+  /** Additional metadata */
+  map<string, string> metadata = 5;
+  
+  /** Component-specific health details */
+  repeated ComponentHealth components = 6;
+}
+
+message ComponentHealth {
+  /** Component name */
+  string name = 1;
+  
+  /** Whether component is healthy */
+  bool healthy = 2;
+  
+  /** Status message */
+  string status = 3;
+  
+  /** Last error (if unhealthy) */
+  string last_error = 4;
+}
+
+// ============================================================================
+// Capabilities
+// ============================================================================
+
+message CapabilitiesRequest {}
+
+message CapabilitiesResponse {
+  /** Provider identifier */
+  string provider_id = 1;
+  
+  /** Provider version */
+  string version = 2;
+  
+  /** Supported artifact types */
+  repeated ArtifactType supported_types = 3;
+  
+  /** Maximum timeout supported (ms) */
+  uint32 max_timeout_ms = 4;
+  
+  /** Whether streaming is supported */
+  bool supports_streaming = 5;
+  
+  /** Maximum image dimensions supported */
+  ImageDimensions max_image_dimensions = 6;
+  
+  /** Provider features */
+  repeated string features = 7;
+}
+
+message ImageDimensions {
+  uint32 width = 1;
+  uint32 height = 2;
+}
+
+// ============================================================================
+// Error Handling
+// ============================================================================
+
+/**
+ * Standard error codes for verification failures
+ */
+enum VerificationErrorCode {
+  /** Unknown error */
+  UNKNOWN_ERROR = 0;
+  
+  /** Timeout waiting for evidence */
+  TIMEOUT = 1;
+  
+  /** Dev server not available */
+  DEV_SERVER_UNAVAILABLE = 2;
+  
+  /** Browser automation failed */
+  BROWSER_ERROR = 3;
+  
+  /** Screenshot/capture failed */
+  CAPTURE_FAILED = 4;
+  
+  /** Invalid WIH identifier */
+  INVALID_WIH = 5;
+  
+  /** Provider not initialized */
+  NOT_INITIALIZED = 6;
+  
+  /** Internal error */
+  INTERNAL_ERROR = 7;
+}
+
+/**
+ * Error details message
+ */
+message VerificationError {
+  VerificationErrorCode code = 1;
+  string message = 2;
+  string details = 3;
+  string stack_trace = 4;
+}

@@ -239,16 +239,22 @@ export class BrowserAdapter {
       execSync(`agent-browser screenshot "${screenshotPath}"`, { stdio: "pipe" });
 
       // Get console logs
-      const logsOutput = execSync("agent-browser logs", {
-        encoding: "utf-8",
-        stdio: "pipe",
-      }).catch(() => "");
+      let logsOutput = "";
+      try {
+        logsOutput = execSync("agent-browser logs", {
+          encoding: "utf-8",
+          stdio: "pipe",
+        });
+      } catch { /* ignore */ }
 
       // Get errors
-      const snapshotOutput = execSync("agent-browser snapshot --json", {
-        encoding: "utf-8",
-        stdio: "pipe",
-      }).catch(() => "{}");
+      let snapshotOutput = "{}";
+      try {
+        snapshotOutput = execSync("agent-browser snapshot --json", {
+          encoding: "utf-8",
+          stdio: "pipe",
+        });
+      } catch { /* ignore */ }
 
       const { logs, errors } = this.parseAgentBrowserOutput(logsOutput, snapshotOutput);
 

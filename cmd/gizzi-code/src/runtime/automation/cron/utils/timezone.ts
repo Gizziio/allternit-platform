@@ -5,9 +5,9 @@
  */
 
 import moment from "moment-timezone";
-import { Log } from "@/shared/util/log";
+import { createLogger } from "./logger";
 
-const log = Log.create({ service: "cron-timezone" });
+const log = createLogger("cron-timezone");
 
 /** Valid IANA timezone identifier */
 export type Timezone = string;

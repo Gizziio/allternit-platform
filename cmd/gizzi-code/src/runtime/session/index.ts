@@ -553,6 +553,7 @@ export namespace Session {
         .limit(limit)
         .all(),
     )
+    log.info("list", { projectId: project.id, count: rows.length, roots: input?.roots })
     for (const row of rows) {
       yield fromRow(row)
     }

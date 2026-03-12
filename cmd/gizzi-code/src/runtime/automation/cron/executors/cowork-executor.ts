@@ -5,10 +5,10 @@
  * Supports local, Docker, and VM execution modes.
  */
 
-import { Log } from "@/shared/util/log";
+import { createLogger } from "../utils/logger";
 import type { CronJob, CronRun } from "../types";
 
-const log = Log.create({ service: "cron-cowork-executor" });
+const log = createLogger("cron-cowork-executor");
 
 export interface CoworkExecutorConfig {
   /** Default working directory */

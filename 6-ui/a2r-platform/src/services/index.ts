@@ -15,3 +15,6 @@ export * from './poolManager';
 
 // Workflow engine
 export * from './workflowEngine';
+
+// Visual verification
+export * from './visualVerificationApi';

@@ -322,6 +322,25 @@ export class CronDatabase {
     return result.changes;
   }
 
+  /**
+   * Get database size in bytes
+   */
+  getDatabaseSize(): number {
+    try {
+      const row = this.db.prepare("SELECT page_count * page_size as size FROM pragma_page_count(), pragma_page_size()").get() as { size: number } | undefined;
+      return row?.size ?? 0;
+    } catch {
+      return 0;
+    }
+  }
+
+  /**
+   * Vacuum the database to reclaim space
+   */
+  vacuum(): void {
+    this.db.exec("VACUUM");
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════════
   // Event Operations
   // ═══════════════════════════════════════════════════════════════════════════════

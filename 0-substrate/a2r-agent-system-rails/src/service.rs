@@ -97,6 +97,8 @@ impl ServiceState {
             root_dir: Some(root_dir.clone()),
             actor_id: Some("gate".to_string()),
             strict_provenance: None,
+            visual_provider: None,
+            visual_config: None,
         }));
 
         let work_ops = Arc::new(WorkOps::new(

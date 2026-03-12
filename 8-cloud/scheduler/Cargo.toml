@@ -1,0 +1,54 @@
+[package]
+name = "a2r-scheduler"
+version = "0.1.0"
+edition = "2021"
+description = "A2R Scheduler Daemon - Server-side cron scheduling service"
+
+[[bin]]
+name = "a2r-scheduler"
+path = "src/main.rs"
+
+[dependencies]
+# A2R internal
+a2r-cron-parser = { path = "../../packages/cron-parser" }
+a2r-cloud-api = { path = "../a2r-cloud-api" }
+
+# Async runtime
+tokio = { workspace = true, features = ["full"] }
+tokio-util = { workspace = true }
+futures = { workspace = true }
+async-trait = { workspace = true }
+
+# Database
+sqlx = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Time
+chrono = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# Scheduling
+tokio-cron-scheduler = { workspace = true }
+
+# HTTP client for API calls
+reqwest = { workspace = true }
+
+# UUID
+uuid = { workspace = true }
+
+# Configuration
+config = "0.14"
+clap = { workspace = true }
+
+[dev-dependencies]
+tokio-test = { workspace = true }

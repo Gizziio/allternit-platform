@@ -9,8 +9,12 @@
  * - SQLite persistence (Bun built-in)
  * - Natural language scheduling
  * - Multiple job types (shell, http, agent, cowork, function)
+ * - Timezone support
+ * - Exponential backoff retry
+ * - Job timeout enforcement
+ * - Graceful shutdown
  * - Daemon mode with HTTP API
- * - Run history and logs
+ * - Prometheus metrics
  * 
  * Architecture based on research from:
  * - Supabase Cron (best-in-class UX)
@@ -56,8 +60,31 @@ export type {
   CronServiceConfig,
 } from "./types";
 
-// Core Service
+// Core Service (Legacy - use CronServiceEnhanced for production)
 export { CronService } from "./service";
+
+// Enhanced Service (Production-ready)
+export { CronServiceEnhanced } from "./service-enhanced";
+
+// Executors
+export { AgentExecutor, type AgentExecutorConfig } from "./executors/agent-executor";
+export { CoworkExecutor, type CoworkExecutorConfig } from "./executors/cowork-executor";
+
+// Utilities
+export { withRetry, RetryableErrors, calculateDelay, type RetryConfig } from "./utils/retry";
+export {
+  calculateNextRun,
+  nowInTimezone,
+  convertToTimezone,
+  getTimezoneOffset,
+  formatInTimezone,
+  isValidTimezone,
+  listTimezones,
+  searchTimezones,
+  COMMON_TIMEZONES,
+  SYSTEM_TIMEZONE,
+  type Timezone,
+} from "./utils/timezone";
 
 // Daemon Server
 export { CronDaemon, startDaemon, isDaemonRunning, getRemoteStatus } from "./daemon";
@@ -67,7 +94,6 @@ export {
   parseSchedule,
   parseScheduleToType,
   describeSchedule,
-  getNextRunTime,
   suggestSchedules,
   COMMON_SCHEDULES,
 } from "./parser";
@@ -80,64 +106,93 @@ export { CronDatabase } from "./database";
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Example 1: Local Mode (CLI attached)
+ * Example 1: Local Mode with Enhanced Service
  * 
  * ```typescript
- * import { CronService } from "./index";
+ * import { CronServiceEnhanced, AgentExecutor, CoworkExecutor } from "./index";
+ * import { GIZZIClient } from "@a2r/sdk/v2";
  * 
- * // Initialize
- * CronService.initialize();
- * CronService.start();
+ * // Initialize SDK
+ * const sdk = new GIZZIClient();
  * 
- * // Create a job
- * const job = CronService.create({
- *   name: "Backup",
- *   type: "shell",
- *   schedule: "0 2 * * *", // Daily at 2am
- *   config: { command: "./backup.sh" },
+ * // Initialize CronService with executors
+ * CronServiceEnhanced.initialize({
+ *   dbPath: "~/.a2r/cron.db",
+ *   timezone: "America/New_York",
+ *   agent: {
+ *     sdk,
+ *     defaultCwd: process.cwd(),
+ *   },
+ *   cowork: {
+ *     defaultCwd: process.cwd(),
+ *   },
  * });
  * 
- * // Or use natural language
- * const job2 = CronService.create({
- *   name: "Health Check",
+ * CronServiceEnhanced.start();
+ * 
+ * // Create a job with timezone
+ * const job = CronServiceEnhanced.create({
+ *   name: "Daily Report",
+ *   type: "agent",
+ *   schedule: "0 9 * * *", // 9 AM
+ *   config: {
+ *     prompt: "Generate daily sales report",
+ *   },
+ * });
+ * 
+ * // The job will run at 9 AM in the configured timezone
+ * ```
+ */
+
+/**
+ * Example 2: Retry with Exponential Backoff
+ * 
+ * ```typescript
+ * import { CronServiceEnhanced } from "./index";
+ * 
+ * const job = CronServiceEnhanced.create({
+ *   name: "API Health Check",
  *   type: "http",
- *   schedule: "every 5 minutes",
- *   config: { url: "https://api.example.com/health", method: "GET" },
+ *   schedule: "star/5 star star star star", // Every 5 minutes
+ *   config: {
+ *     url: "https://api.example.com/health",
+ *     method: "GET",
+ *   },
+ *   maxRetries: 3, // Will retry 3 times with exponential backoff
  * });
  * ```
  */
 
 /**
- * Example 2: Daemon Mode (background server)
+ * Example 3: Graceful Shutdown
+ * 
+ * ```typescript
+ * import { CronServiceEnhanced } from "./index";
+ * 
+ * process.on('SIGTERM', async () => {
+ *   await CronServiceEnhanced.stop({ 
+ *     force: false,  // Wait for running jobs
+ *     timeoutMs: 30000 // 30 second timeout
+ *   });
+ *   process.exit(0);
+ * });
+ * ```
+ */
+
+/**
+ * Example 4: Daemon Mode with Production Config
  * 
  * ```typescript
  * import { startDaemon } from "./index";
  * 
- * // Start daemon
  * const daemon = await startDaemon({
  *   port: 3031,
  *   dbPath: "~/.a2r/cron.db",
+ *   checkIntervalMs: 60000,
+ *   timezone: "UTC",
  * });
- * 
- * // Access via HTTP API
- * // GET  http://localhost:3031/jobs
- * // POST http://localhost:3031/jobs
- * // GET  http://localhost:3031/jobs/:id
- * // POST http://localhost:3031/jobs/:id/run
- * // POST http://localhost:3031/wake
- * ```
- */
-
-/**
- * Example 3: Client Mode (connect to remote daemon)
- * 
- * ```typescript
- * import { getRemoteStatus } from "./index";
- * 
- * const status = await getRemoteStatus(3031);
- * console.log(`Daemon has ${status.jobs.active} active jobs`);
  * ```
  */
 
 // Version
-export const VERSION = "1.0.0";
+export const VERSION = "2.0.0";

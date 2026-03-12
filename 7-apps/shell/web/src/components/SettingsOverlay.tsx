@@ -1,10 +1,10 @@
 import React, { useCallback } from 'react';
-import { User, Server, Settings, X } from 'lucide-react';
+import { User, Server, Settings, X, Sparkles } from 'lucide-react';
 
 interface SettingsOverlayProps {
   isOpen: boolean;
   onClose: () => void;
-  onOpenSection: (section: 'signin' | 'vps' | 'general') => void;
+  onOpenSection: (section: 'signin' | 'vps' | 'providers' | 'general') => void;
 }
 
 /**
@@ -50,6 +50,13 @@ export const SettingsOverlay: React.FC<SettingsOverlayProps> = ({
       description: 'Connect your own servers for agent execution',
       icon: Server,
       color: '#34c759'
+    },
+    {
+      id: 'providers' as const,
+      title: 'AI Providers',
+      description: 'Connect Anthropic, OpenAI, and other AI services',
+      icon: Sparkles,
+      color: '#a855f7'
     },
     {
       id: 'general' as const,

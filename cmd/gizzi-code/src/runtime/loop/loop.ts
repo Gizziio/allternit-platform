@@ -1,5 +1,5 @@
 import { HookDispatcher } from "@/runtime/hooks/dispatcher";
-import { Turn } from "./turn";
+import { Turn, type TurnOptions } from "./turn";
 import { Log } from "@/shared/util/log";
 import { StopCondition } from "./stop";
 import { BudgetManager } from "./budget";
@@ -11,7 +11,10 @@ export class AgentLoop {
   private turnCount = 0;
   private recentPlanHashes: string[] = [];
 
-  constructor(private sessionId: string) {}
+  constructor(
+    private sessionId: string,
+    private options: TurnOptions = {}
+  ) {}
 
   async start() {
     this.log.info("Starting production agent loop", { sessionId: this.sessionId });
@@ -40,7 +43,7 @@ export class AgentLoop {
         }
 
         // 2. Execute a single turn
-        const turn = new Turn(this.sessionId, this.budget);
+        const turn = new Turn(this.sessionId, this.budget, this.options);
         const result = await turn.execute();
         this.turnCount++;
 

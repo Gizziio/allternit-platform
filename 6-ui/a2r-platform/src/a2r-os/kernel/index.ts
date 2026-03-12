@@ -18,4 +18,4 @@ export * from './OrchestratorEngine';
 export * from './PythonExecutionService';
 
 // Default export
-export { KernelBridge as default } from './KernelBridge';
+export { kernelBridge as default } from './KernelBridge';

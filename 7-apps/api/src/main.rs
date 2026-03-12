@@ -3647,6 +3647,8 @@ struct ChatRequest {
     runtime_model_id: Option<String>,
     attachments: Option<Vec<serde_json::Value>>,
     web_search: Option<bool>,
+    /// Mode: "plan" for read-only operations, "build" for full tool access
+    mode: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -4071,6 +4073,10 @@ async fn chat_handler(
                         "model_id": runtime_model
                     });
                 }
+                // Add mode for tool filtering (plan vs build)
+                if let Some(ref mode) = request.mode {
+                    create_body["mode"] = serde_json::json!(mode);
+                }
                 match kernel_client
                     .post(&create_url)
                     .bearer_auth(&kernel_auth_token)
@@ -4174,6 +4180,10 @@ async fn chat_handler(
                 create_body["runtime_overrides"] = serde_json::json!({
                     "model_id": runtime_model
                 });
+            }
+            // Add mode for tool filtering (plan vs build)
+            if let Some(ref mode) = request.mode {
+                create_body["mode"] = serde_json::json!(mode);
             }
             match kernel_client
                 .post(&create_url)

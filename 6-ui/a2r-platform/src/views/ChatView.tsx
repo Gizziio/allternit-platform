@@ -12,7 +12,20 @@ import {
   Plus,
   ArrowUp,
   ArrowDown,
-  Share2
+  Share2,
+  Briefcase,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  Circle,
+  Hammer,
+  Search,
+  FileCode,
+  Bug,
+  Lightbulb,
+  Zap,
+  Target,
+  type LucideIcon
 } from "lucide-react";
 // ShareDialog is not available - create inline or skip for now
 const ShareDialogPlaceholder = ({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) => null;
@@ -43,6 +56,8 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import type { AgentModeSurface } from "@/stores/agent-surface-mode.store";
 import { AgentModeBackdrop } from "./chat/agentModeSurfaceTheme";
+import { useUnifiedStore } from "@/lib/agents/unified.store";
+import { useRuntimeExecutionMode } from "@/hooks/useRuntimeExecutionMode";
 
 // Cowork mode components
 import { CoworkTranscript } from "./cowork/CoworkTranscript";
@@ -179,6 +194,9 @@ export function ChatView({
   const selectedModel = modelSelection?.profileId ?? MODELS[0].id;
   const runtimeModelId = modelSelection?.modelId;
 
+  const { executionMode } = useRuntimeExecutionMode();
+  const brainMode = executionMode?.mode === 'plan' ? 'plan' : 'build';
+
   const {
     messages,
     isLoading,
@@ -274,6 +292,15 @@ export function ChatView({
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const shareVisibility: 'private' | 'workspace' | 'public' = 'private';
   const currentChatId = chatId || 'welcome';
+
+
+
+  // Unified Store - WIHs for quick tasks
+  const { wihs, fetchWihs, selectWih } = useUnifiedStore();
+  
+  useEffect(() => {
+    fetchWihs();
+  }, [fetchWihs]);
 
   // Send initial message if provided (for Cowork mode from launchpad)
   const hasSentInitialMessage = useRef(false);
@@ -375,8 +402,13 @@ export function ChatView({
     }, 640);
   }, []);
 
-  const handleSend = useCallback(async (text: string) => {
+  const handleSend = useCallback(async (text: string, context?: any) => {
     if (!text.trim()) return;
+
+    // Log context if provided
+    if (context) {
+      console.log('[ChatView] Received context:', context);
+    }
 
     if (isAgentSessionEmbedded && embeddedAgentSession.sessionId) {
       setActiveNativeSession(embeddedAgentSession.sessionId);
@@ -453,6 +485,7 @@ export function ChatView({
       message: text,
       modelId: selectedModel,
       runtimeModelId,
+      mode: brainMode,  // Pass current execution mode
       ...agentContext,
     });
   }, [
@@ -464,6 +497,7 @@ export function ChatView({
     embeddedAgentSession.sessionId,
     isAgentSessionEmbedded,
     isPersisted,
+    brainMode,  // Add mode to dependencies
     runtimeModelId,
     sendNativeMessageStream,
     selectedAgent,
@@ -473,6 +507,48 @@ export function ChatView({
     submitMessage,
     threads,
   ]);
+
+  // Helper: Get icon based on WIH title/content
+  const getWihIcon = useCallback((wih: typeof wihs[0]): React.ReactNode => {
+    const title = (wih.title || '').toLowerCase();
+    const description = (wih.description || '').toLowerCase();
+    const text = `${title} ${description}`;
+    
+    if (text.includes('bug') || text.includes('fix') || text.includes('error')) return <Bug size={20} />;
+    if (text.includes('test') || text.includes('verify') || text.includes('check')) return <CheckCircle size={20} />;
+    if (text.includes('refactor') || text.includes('clean') || text.includes('organize')) return <Sparkles size={20} />;
+    if (text.includes('search') || text.includes('find') || text.includes('lookup')) return <Search size={20} />;
+    if (text.includes('implement') || text.includes('build') || text.includes('create') || text.includes('add')) return <Hammer size={20} />;
+    if (text.includes('optimize') || text.includes('improve') || text.includes('perf')) return <Zap size={20} />;
+    if (text.includes('review') || text.includes('audit')) return <FileCode size={20} />;
+    if (text.includes('plan') || text.includes('design') || text.includes('architecture')) return <Lightbulb size={20} />;
+    if (text.includes('deploy') || text.includes('release') || text.includes('ship')) return <Target size={20} />;
+    if (wih.status === 'blocked') return <AlertCircle size={20} />;
+    if (wih.status === 'ready') return <Clock size={20} />;
+    
+    return <Briefcase size={20} />;
+  }, []);
+
+  // Helper: Handle WIH click
+  const handleWihClick = useCallback((wih: typeof wihs[0]) => {
+    selectWih(wih.wih_id);
+    // Send a message about working on this WIH
+    const message = `Work on: ${wih.title || wih.wih_id}`;
+    handleSend(message);
+  }, [selectWih, handleSend]);
+
+  // Filter and sort WIHs for quick tasks
+  const quickTasks = useMemo(() => {
+    return wihs
+      .filter(w => ['open', 'ready'].includes(w.status))
+      .sort((a, b) => {
+        // Sort by status (ready first), then by title
+        if (a.status === 'ready' && b.status !== 'ready') return -1;
+        if (b.status === 'ready' && a.status !== 'ready') return 1;
+        return (a.title || '').localeCompare(b.title || '');
+      })
+      .slice(0, 5); // Limit to top 5
+  }, [wihs]);
 
   const handleRegenerate = useCallback(() => {
     const lastUserMsg = [...activeMessages].reverse().find((m) => m.role === "user");
@@ -604,7 +680,7 @@ export function ChatView({
       />
 
       {/* 1. Content row: message scroll + optional artifact panel */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'row', overflow: 'hidden', minHeight: 0 }}>
 
       {/* Message scroll list */}
       <div
@@ -616,7 +692,8 @@ export function ChatView({
           width: '100%',
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center'
+          alignItems: 'center',
+          minHeight: 0,  // Allow flex item to shrink below content size
         }}
       >
         {isChatEmpty && !hideEmptyState ? (
@@ -628,9 +705,10 @@ export function ChatView({
             justifyContent: 'flex-start',
             width: '100%',
             maxWidth: '640px',
-            minHeight: '100%',
             padding: '10vh 24px 80px 24px',
-            boxSizing: 'border-box'
+            boxSizing: 'border-box',
+            flex: 1,  // Allow content to fill available space
+            minHeight: 0,  // Prevent pushing beyond bounds
           }}>
             {embeddedAgentStrip}
             {/* Interactive Logo Section */}
@@ -717,59 +795,132 @@ export function ChatView({
               />
             </div>
 
-            {/* Task List */}
+            {/* Task List - Dynamic WIHs */}
             <div style={{ width: '100%', borderTop: `1px solid ${THEME.borderSubtle}` }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '24px 8px 16px 8px', opacity: 0.4 }}>
                 <Plus size={14} color={THEME.textPrimary} />
-                <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: THEME.textPrimary }}>Pick a task, any task</span>
+                <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: THEME.textPrimary }}>
+                  {quickTasks.length > 0 ? 'Quick Tasks' : 'Pick a task, any task'}
+                </span>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-                {[
-                  { icon: <CalendarClock size={20} />, label: "Optimize my week" },
-                  { icon: <Image size={20} />, label: "Organize my screenshots" },
-                  { icon: <FileText size={20} />, label: "Find insights in files" },
-                ].map((item) => (
-                  <button
-                    key={item.label}
-                    onClick={() => handleSend(item.label)}
-                    onMouseEnter={() => {
-                      if (!useMonolithLogo) {
-                        setLaunchMascotAttention({ state: 'locked-on', target: { x: 0, y: 0.76 } });
-                        pulseMascot('focused');
-                      }
-                    }}
-                    onMouseLeave={() => {
-                      if (!useMonolithLogo) {
-                        setLaunchMascotAttention(null);
-                        setLaunchMascotEmotion('steady');
-                      }
-                    }}
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '16px',
-                      padding: '16px',
-                      background: 'transparent',
-                      border: 'none',
-                      borderBottom: `1px solid ${THEME.borderSubtle}`,
-                      cursor: 'pointer',
-                      textAlign: 'left'
-                    }}
-                  >
-                    <div style={{
-                      padding: '8px',
-                      borderRadius: '8px',
-                      background: THEME.bgInput,
-                      border: `1px solid ${THEME.borderSubtle}`,
-                      color: THEME.textSecondary
-                    }}>
-                      {item.icon}
-                    </div>
-                    <span style={{ fontSize: '15px', fontWeight: 500, color: THEME.textSecondary }}>{item.label}</span>
-                  </button>
-                ))}
+                {quickTasks.length > 0 ? (
+                  // Dynamic WIH tasks
+                  quickTasks.map((wih) => (
+                    <button
+                      key={wih.wih_id}
+                      onClick={() => handleWihClick(wih)}
+                      onMouseEnter={() => {
+                        if (!useMonolithLogo) {
+                          setLaunchMascotAttention({ state: 'locked-on', target: { x: 0, y: 0.76 } });
+                          pulseMascot('focused');
+                        }
+                      }}
+                      onMouseLeave={() => {
+                        if (!useMonolithLogo) {
+                          setLaunchMascotAttention(null);
+                          setLaunchMascotEmotion('steady');
+                        }
+                      }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '16px',
+                        padding: '16px',
+                        background: 'transparent',
+                        border: 'none',
+                        borderBottom: `1px solid ${THEME.borderSubtle}`,
+                        cursor: 'pointer',
+                        textAlign: 'left'
+                      }}
+                    >
+                      <div style={{
+                        padding: '8px',
+                        borderRadius: '8px',
+                        background: THEME.bgInput,
+                        border: `1px solid ${THEME.borderSubtle}`,
+                        color: wih.status === 'ready' ? THEME.accent : THEME.textSecondary
+                      }}>
+                        {getWihIcon(wih)}
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1 }}>
+                        <span style={{ fontSize: '15px', fontWeight: 500, color: THEME.textSecondary }}>
+                          {wih.title || `Task ${wih.wih_id.slice(0, 8)}`}
+                        </span>
+                        {wih.description && (
+                          <span style={{ fontSize: '12px', color: THEME.textMuted, lineHeight: 1.4 }}>
+                            {wih.description.length > 60 ? `${wih.description.slice(0, 60)}...` : wih.description}
+                          </span>
+                        )}
+                      </div>
+                      {wih.status === 'ready' && (
+                        <span style={{
+                          fontSize: '10px',
+                          fontWeight: 600,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                          color: THEME.accent,
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          background: 'rgba(212,149,106,0.1)'
+                        }}>
+                          Ready
+                        </span>
+                      )}
+                    </button>
+                  ))
+                ) : (
+                  // Fallback static suggestions when no WIHs available
+                  <>
+                    {[
+                      { icon: <CalendarClock size={20} />, label: "Optimize my week" },
+                      { icon: <Image size={20} />, label: "Organize my screenshots" },
+                      { icon: <FileText size={20} />, label: "Find insights in files" },
+                    ].map((item) => (
+                      <button
+                        key={item.label}
+                        onClick={() => handleSend(item.label, [])}
+                        onMouseEnter={() => {
+                          if (!useMonolithLogo) {
+                            setLaunchMascotAttention({ state: 'locked-on', target: { x: 0, y: 0.76 } });
+                            pulseMascot('focused');
+                          }
+                        }}
+                        onMouseLeave={() => {
+                          if (!useMonolithLogo) {
+                            setLaunchMascotAttention(null);
+                            setLaunchMascotEmotion('steady');
+                          }
+                        }}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '16px',
+                          padding: '16px',
+                          background: 'transparent',
+                          border: 'none',
+                          borderBottom: `1px solid ${THEME.borderSubtle}`,
+                          cursor: 'pointer',
+                          textAlign: 'left'
+                        }}
+                      >
+                        <div style={{
+                          padding: '8px',
+                          borderRadius: '8px',
+                          background: THEME.bgInput,
+                          border: `1px solid ${THEME.borderSubtle}`,
+                          color: THEME.textSecondary
+                        }}>
+                          {item.icon}
+                        </div>
+                        <span style={{ fontSize: '15px', fontWeight: 500, color: THEME.textSecondary }}>{item.label}</span>
+                      </button>
+                    ))}
+                  </>
+                )}
               </div>
             </div>
           </div>

@@ -14,6 +14,7 @@ import {
   Users,
   Shield,
   Warning,
+  Gear,
 } from '@phosphor-icons/react';
 
 export type DrawerTabId = 
@@ -23,6 +24,7 @@ export type DrawerTabId =
   | 'problems' 
   | 'queue' 
   | 'agents' 
+  | 'automation' // NEW - Automation sequences
   | 'scheduler' 
   | 'context'
   | 'changes'
@@ -52,6 +54,7 @@ export function DrawerTabs({ activeTab, onTabChange }: DrawerTabsProps) {
       
       {/* Agents & Orchestration */}
       <Tab id="agents" label="Agents" icon={Robot} active={activeTab === 'agents'} onClick={onTabChange} />
+      <Tab id="automation" label="Automation" icon={Gear} active={activeTab === 'automation'} onClick={onTabChange} />
       <Tab id="swarm" label="Swarm" icon={Users} active={activeTab === 'swarm'} onClick={onTabChange} />
       
       {/* Governance & Security */}

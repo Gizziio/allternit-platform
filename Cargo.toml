@@ -82,6 +82,17 @@ members = [
 
     # Cloud/Executor
     "8-cloud/executor",
+    "8-cloud/a2r-cloud-api",
+    "8-cloud/a2r-cloud-core",
+    "8-cloud/a2r-cloud-ssh",
+    "8-cloud/a2r-cloud-providers/hetzner",
+    "8-cloud/a2r-node",
+    
+    # Shared packages
+    "packages/cron-parser",
+    
+    # Scheduler
+    "8-cloud/scheduler",
 ]
 
 exclude = [
@@ -92,7 +103,6 @@ exclude = [
     "1-kernel/execution/a2r-ops",
     # Archived: 6-ui/shell-ui moved to 6-ui/_reference/shell-native-rust
     # Rust browserview code archived - functionality ported to TypeScript
-    "8-cloud/a2r-node",
     "distribution/launcher-desktop",
     "distribution/launcher-simplified",
 ]
@@ -200,6 +210,7 @@ prometheus = "0.13"
 
 # Validation
 validator = { version = "0.18", features = ["derive"] }
+serde_bytes = "0.11"
 
 # Extism
 extism = "1.0"
@@ -286,3 +297,9 @@ a2rchitech-harness-engineering = { path = "1-kernel/infrastructure/harness-engin
 
 # === MCP ===
 mcp = { path = "3-adapters/mcp" }
+
+# === gRPC / Protocol Buffers ===
+tonic = "0.10"
+prost = "0.12"
+prost-types = "0.12"
+tonic-build = "0.10"

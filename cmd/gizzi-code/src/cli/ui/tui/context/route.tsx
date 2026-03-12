@@ -22,7 +22,13 @@ export type BackgroundTasksRoute = {
   type: "background-tasks"
 }
 
-export type Route = HomeRoute | SessionRoute | AgentModeRoute | BackgroundTasksRoute
+export type CoworkRoute = {
+  type: "cowork"
+  runID?: string
+  tab?: "dashboard" | "sessions" | "templates"
+}
+
+export type Route = HomeRoute | SessionRoute | AgentModeRoute | BackgroundTasksRoute | CoworkRoute
 
 export const { use: useRoute, provider: RouteProvider } = createSimpleContext({
   name: "Route",

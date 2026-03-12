@@ -200,7 +200,6 @@ export function CodeLaunchBranding({
   const [showThoughtBubble, setShowThoughtBubble] = useState(false);
   const [thoughtIndex, setThoughtIndex] = useState(() => greeting.index % GIZZI_THOUGHTS.length);
   const [showAgentPulse, setShowAgentPulse] = useState(false);
-  const helperText = workspaceReady ? greeting.helper_ready : greeting.helper_locked;
   const activeThoughts = useMemo(
     () =>
       agentModeEnabled
@@ -295,7 +294,7 @@ export function CodeLaunchBranding({
               alignItems: 'center',
               transform: 'translate(-50%, -100%)',
               pointerEvents: 'none',
-              zIndex: 4,
+              zIndex: 100,
             }}
           >
             <div
@@ -433,25 +432,12 @@ export function CodeLaunchBranding({
         style={{
           marginTop: 12,
           maxWidth: 620,
-          fontSize: 14,
-          lineHeight: 1.72,
+          fontSize: 13,
+          lineHeight: 1.6,
           color: 'var(--text-secondary)',
         }}
       >
         {greeting.tagline}
-      </AnimatedLine>
-      <AnimatedLine
-        animation={taglineAnimations[greeting.helperAnimation % taglineAnimations.length]}
-        delay={360}
-        style={{
-          marginTop: 14,
-          maxWidth: 520,
-          fontSize: 12,
-          lineHeight: 1.65,
-          color: 'var(--text-tertiary)',
-        }}
-      >
-        {helperText}
       </AnimatedLine>
     </div>
   );

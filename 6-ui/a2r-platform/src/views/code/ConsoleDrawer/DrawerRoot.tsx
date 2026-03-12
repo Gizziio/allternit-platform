@@ -16,6 +16,7 @@ import { PolicyManager } from '../../dag/PolicyManager';
 import { SecurityDashboard } from '../../dag/SecurityDashboard';
 import { KanbanDAG } from '../KanbanDAG';
 import { RunTraceView } from '../runtime/RunTraceView';
+import { AutomationHub } from './AutomationHub';
 
 export function DrawerRoot() {
   const consoleDrawer = useDrawerStore((state) => state.drawers.console);
@@ -73,6 +74,7 @@ export function DrawerRoot() {
       case 'executions': return <RunsView />;
       case 'problems': return <ProblemsView />;
       case 'agents': return <OrchestrationView />;
+      case 'automation': return <AutomationHub />;
       case 'scheduler': return <SchedulerView />;
       case 'context': return <ContextView />;
       case 'receipts': return <div style={{ padding: 20 }}>Receipts View (Coming Soon)</div>;

@@ -1,0 +1,266 @@
+# Visual Verification GitHub Actions Workflow
+#
+# This workflow runs visual verification on PRs and blocks merge
+# if confidence score is below threshold.
+
+name: Visual Verification
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'src/**/*.{tsx,jsx,vue,svelte}'
+      - 'src/**/*.{css,scss}'
+      - '**/*.html'
+      - 'public/**'
+  
+  push:
+    branches: [main, develop]
+    paths:
+      - 'src/**/*.{tsx,jsx,vue,svelte}'
+      - 'src/**/*.{css,scss}'
+      - '**/*.html'
+      - 'public/**'
+
+jobs:
+  visual-verification:
+    name: Visual Evidence Capture
+    runs-on: ubuntu-latest
+    
+    services:
+      # Optional: Run a local dev server for capture
+      dev-server:
+        image: node:18
+        ports:
+          - 3000:3000
+        options: --name dev-server
+    
+    steps:
+      # Checkout code
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Needed for changed files detection
+      
+      # Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      # Install dependencies
+      - name: Install Dependencies
+        run: npm ci
+      
+      # Detect changed files
+      - name: Detect Changed Files
+        id: changed-files
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            # For PRs, compare with base branch
+            git fetch origin ${{ github.base_ref }}
+            CHANGED=$(git diff --name-only origin/${{ github.base_ref }} HEAD | grep -E '\.(tsx|jsx|vue|svelte|css|scss|html)$' | tr '\n' ',')
+          else
+            # For pushes, use last commit
+            CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -E '\.(tsx|jsx|vue|svelte|css|scss|html)$' | tr '\n' ',')
+          fi
+          
+          echo "files=$CHANGED" >> $GITHUB_OUTPUT
+          echo "Changed files: $CHANGED"
+      
+      # Start dev server (if needed)
+      - name: Start Dev Server
+        if: steps.changed-files.outputs.files != ''
+        run: |
+          npm run dev &
+          npx wait-on http://localhost:3000 --timeout 60000
+        env:
+          NODE_ENV: development
+      
+      # Run visual verification
+      - name: Run Visual Verification
+        id: verification
+        if: steps.changed-files.outputs.files != ''
+        run: |
+          # Create WIH ID from PR/commit
+          WIH_ID="gh_${{ github.event_name }}_${{ github.run_id }}_${{ github.run_attempt }}"
+          
+          # Run visual capture
+          npx a2r verify-visual \
+            --wih-id "$WIH_ID" \
+            --changed-files "${{ steps.changed-files.outputs.files }}" \
+            --output .a2r/evidence/ \
+            --format json
+          
+          # Read result
+          if [ -f ".a2r/evidence/${WIH_ID}.json" ]; then
+            CONFIDENCE=$(cat ".a2r/evidence/${WIH_ID}.json" | jq -r '.overall_confidence')
+            PASSED=$(cat ".a2r/evidence/${WIH_ID}.json" | jq -r '.passed')
+            
+            echo "confidence=$CONFIDENCE" >> $GITHUB_OUTPUT
+            echo "passed=$PASSED" >> $GITHUB_OUTPUT
+            
+            echo "Visual confidence: $CONFIDENCE"
+            echo "Passed: $PASSED"
+          else
+            echo "No evidence file generated"
+            echo "passed=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          VERIFICATION_TIMEOUT: 120000
+          VERIFICATION_MODE: file
+      
+      # Upload evidence as artifact
+      - name: Upload Evidence
+        if: steps.changed-files.outputs.files != '' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-evidence-${{ github.run_id }}
+          path: .a2r/evidence/
+          retention-days: 7
+      
+      # Post PR comment with results
+      - name: Post PR Comment
+        if: github.event_name == 'pull_request' && steps.changed-files.outputs.files != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const confidence = '${{ steps.verification.outputs.confidence }}';
+            const passed = '${{ steps.verification.outputs.passed }}' === 'true';
+            const threshold = 0.7;
+            
+            const status = passed ? '✅ PASSED' : '❌ FAILED';
+            const confidencePercent = Math.round(parseFloat(confidence || 0) * 100);
+            const thresholdPercent = Math.round(threshold * 100);
+            
+            const body = `## Visual Verification ${status}
+            
+            | Metric | Value |
+            |--------|-------|
+            | Confidence | ${confidencePercent}% |
+            | Threshold | ${thresholdPercent}% |
+            | Status | ${status} |
+            
+            ${!passed ? '> ⚠️ **Merge blocked:** Visual verification confidence below threshold' : '> ✅ Visual verification passed'}
+            
+            <details>
+            <summary>View Evidence Artifacts</summary>
+            
+            Evidence artifacts are available in the workflow artifacts.
+            
+            </details>
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+      
+      # Fail if verification failed
+      - name: Check Verification Result
+        if: steps.changed-files.outputs.files != '' && steps.verification.outputs.passed != 'true'
+        run: |
+          echo "Visual verification failed!"
+          echo "Confidence: ${{ steps.verification.outputs.confidence }}"
+          echo "Threshold: 0.7"
+          exit 1
+
+  # Optional: Visual diff comparison
+  visual-diff:
+    name: Visual Diff
+    runs-on: ubuntu-latest
+    needs: visual-verification
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout Base
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.base_ref }}
+          path: base
+      
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          path: pr
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Install Playwright
+        run: |
+          npm install -g @playwright/test
+          npx playwright install chromium
+      
+      - name: Capture Base Screenshots
+        working-directory: base
+        run: |
+          npm ci
+          npm run build
+          npx playwright screenshot --browser=chromium --viewport-size=1280,720 http://localhost:3000 ../base-screenshot.png &
+          npm run preview &
+          npx wait-on http://localhost:3000 --timeout 60000
+          wait
+      
+      - name: Capture PR Screenshots
+        working-directory: pr
+        run: |
+          npm ci
+          npm run build
+          npx playwright screenshot --browser=chromium --viewport-size=1280,720 http://localhost:3000 ../pr-screenshot.png &
+          npm run preview &
+          npx wait-on http://localhost:3000 --timeout 60000
+          wait
+      
+      - name: Compare Screenshots
+        id: compare
+        run: |
+          # Use ImageMagick or similar to compare
+          if command -v compare &> /dev/null; then
+            compare -metric AE base-screenshot.png pr-screenshot.png diff.png 2> diff.txt || true
+            DIFF_PIXELS=$(cat diff.txt)
+            echo "diff_pixels=$DIFF_PIXELS" >> $GITHUB_OUTPUT
+          else
+            echo "ImageMagick not available, skipping pixel comparison"
+            echo "diff_pixels=unknown" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Upload Diff
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-diff-${{ github.run_id }}
+          path: |
+            base-screenshot.png
+            pr-screenshot.png
+            diff.png
+          retention-days: 7
+
+  # Report metrics
+  metrics:
+    name: Report Metrics
+    runs-on: ubuntu-latest
+    needs: [visual-verification]
+    if: always()
+    
+    steps:
+      - name: Record Metrics
+        run: |
+          echo "Recording visual verification metrics..."
+          # Send to your metrics system (Datadog, Prometheus, etc.)
+          # Example with curl:
+          # curl -X POST "https://api.datadoghq.com/api/v1/series" \
+          #   -H "Content-Type: application/json" \
+          #   -H "DD-API-KEY: ${{ secrets.DATADOG_API_KEY }}" \
+          #   -d "{
+          #     \"series\": [{
+          #       \"metric\": \"visual.verification.confidence\",
+          #       \"points\": [[$(date +%s), ${{ steps.verification.outputs.confidence }}]],
+          #       \"tags\": [\"repo:${{ github.repository }}\", \"branch:${{ github.ref_name }}\"]
+          #     }]
+          #   }"

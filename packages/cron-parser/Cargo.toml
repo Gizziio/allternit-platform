@@ -1,0 +1,16 @@
+[package]
+name = "a2r-cron-parser"
+version = "0.1.0"
+edition = "2021"
+description = "Natural language schedule parser for A2R - converts human-readable descriptions to cron expressions"
+
+[dependencies]
+chrono = { workspace = true }
+regex = { workspace = true }
+once_cell = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+tokio-test = { workspace = true }

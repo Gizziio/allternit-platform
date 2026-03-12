@@ -2,6 +2,9 @@ import React, { useCallback, useRef } from 'react';
 import { WorkspaceBackground } from '../components/WorkspaceBackground';
 import { useMode } from '../providers/mode-provider';
 import { useSidecarStore } from '../stores/sidecar-store';
+import { getAgentModeSurfaceTheme } from '../views/chat/agentModeSurfaceTheme';
+import { useAgentSurfaceModeStore } from '../stores/agent-surface-mode.store';
+import type { AgentModeSurface } from '../stores/agent-surface-mode.store';
 
 const SIDECAR_MIN_WIDTH = 260;
 const SIDECAR_MAX_WIDTH = 700;
@@ -27,6 +30,14 @@ export function ShellFrame({
   isRailCollapsed?: boolean;
 }) {
   const { mode } = useMode();
+  const selectedAgentIdBySurface = useAgentSurfaceModeStore((s) => s.selectedAgentIdBySurface);
+  
+  const currentSurface: AgentModeSurface = 
+    mode === 'cowork' ? 'cowork' : 
+    mode === 'code' ? 'code' : 'chat';
+    
+  const isAgentActive = !!selectedAgentIdBySurface[currentSurface];
+
   const sidecarWidth = useSidecarStore((s) => s.width);
   const setWidth = useSidecarStore((s) => s.setWidth);
   const setResizing = useSidecarStore((s) => s.setResizing);
@@ -71,8 +82,8 @@ export function ShellFrame({
       position: 'relative'
     }}>
       <WorkspaceBackground />
-
-      {/* Rail Container */}
+      
+      {/* Rail Container with Agent Glow */}
       {!isRailCollapsed && (
         <div style={{
           gridRow: '1',
@@ -82,13 +93,15 @@ export function ShellFrame({
           overflow: 'hidden',
           padding: '12px 0 12px 12px',
           zIndex: 1,
-          background: isImmersive ? 'transparent' : undefined,
+          background: isAgentActive 
+            ? `linear-gradient(180deg, ${getAgentModeSurfaceTheme(currentSurface).wash} 0%, ${getAgentModeSurfaceTheme(currentSurface).soft} 50%, transparent 100%)`
+            : 'transparent',
         }}>
           {rail}
         </div>
       )}
 
-      {/* Main Canvas */}
+      {/* Main Canvas with Agent Glow */}
       <div style={{
         gridRow: '1',
         gridColumn: '2',
@@ -96,13 +109,17 @@ export function ShellFrame({
         overflow: isImmersive ? 'visible' : 'hidden',
         padding: '12px',
         zIndex: 1,
+        background: isAgentActive 
+          ? `radial-gradient(100% 80% at 50% 0%, ${getAgentModeSurfaceTheme(currentSurface).fog} 0%, ${getAgentModeSurfaceTheme(currentSurface).soft} 60%, ${getAgentModeSurfaceTheme(currentSurface).panelTint} 100%)`
+          : 'transparent',
+        transition: 'background 0.3s ease',
       }}>
         <div data-shell-card style={{
           height: '100%',
           width: '100%',
           borderRadius: isImmersive ? 0 : 24,
           border: isImmersive ? 'none' : '1px solid #333',
-          background: isImmersive ? 'transparent' : '#1e1e1e',
+          background: 'transparent',
           overflow: isImmersive ? 'visible' : 'hidden',
           boxShadow: isImmersive ? 'none' : '0 10px 40px rgba(0,0,0,0.2)',
           display: 'flex',

@@ -8,6 +8,7 @@
  * - Use semi-formal verification for execution-free validation (faster, no sandbox needed)
  * - Fall back to empirical verification when semi-formal is inconclusive
  * - Combine both for high-confidence verification of critical changes
+ * - Automatically captures visual evidence (screenshots, coverage maps, etc.)
  */
 
 import { Log } from "@/shared/util/log";
@@ -20,6 +21,7 @@ import {
   VerificationCertificate,
   formatCertificate 
 } from "./semi-formal-verifier";
+import { VisualCaptureManager, type CaptureResult as VisualCaptureResult } from "@/runtime/verification/visual";
 
 export interface OrchestratedVerificationResult {
   /** Whether verification passed */
@@ -49,6 +51,24 @@ export interface OrchestratedVerificationResult {
   
   /** Formatted certificate for display */
   formattedCertificate?: string;
+  
+  /** Visual evidence captured during verification (screenshots, coverage maps, etc.) */
+  visualEvidence?: {
+    artifacts: Array<{
+      id: string;
+      type: string;
+      description: string;
+      verificationClaim: string;
+      confidence: number;
+      imagePath?: string;
+    }>;
+    summary: {
+      totalArtifacts: number;
+      typesCaptured: string[];
+      hasVisualEvidence: boolean;
+    };
+    llmContext: string;
+  };
 }
 
 export interface VerificationStrategy {
@@ -70,12 +90,21 @@ export interface VerificationStrategy {
     testFiles?: string[];
     description?: string;
   };
+  
+  /** Visual evidence capture options - defaults to enabled */
+  visualCapture?: {
+    enabled?: boolean;
+    outputDir?: string;
+    enabledTypes?: string[];
+  };
 }
 
 export class VerificationOrchestrator {
   private log = Log.create({ service: "runtime.verification-orchestrator" });
   private empiricalVerifier: Verifier;
   private semiFormalVerifier: SemiFormalVerifier;
+  private visualManager?: VisualCaptureManager;
+  private visualResult?: VisualCaptureResult;
 
   constructor(
     private sessionId: string,
@@ -85,12 +114,22 @@ export class VerificationOrchestrator {
     this.semiFormalVerifier = new SemiFormalVerifier(sessionId, {
       model: strategy.model,
     });
+    
+    // Initialize visual capture - enabled by default
+    const visualCaptureConfig = this.strategy.visualCapture ?? { enabled: true };
+    if (visualCaptureConfig.enabled !== false) {
+      this.visualManager = new VisualCaptureManager({
+        outputDir: visualCaptureConfig.outputDir ?? "./.verification/visual",
+        enabledTypes: (visualCaptureConfig.enabledTypes ?? ["ui-state", "coverage-map", "console-output"]) as any,
+      });
+    }
   }
 
   /**
    * Main verification entry point
    * 
    * Based on strategy, coordinates empirical and/or semi-formal verification
+   * Automatically captures visual evidence for LLM reasoning
    */
   async verify(
     plan: Plan,
@@ -103,19 +142,104 @@ export class VerificationOrchestrator {
       receipts: receipts.length,
     });
 
+    // Run verification based on strategy
+    let result: OrchestratedVerificationResult;
     switch (this.strategy.mode) {
       case "empirical":
-        return this.runEmpiricalOnly(plan, receipts);
+        result = await this.runEmpiricalOnly(plan, receipts);
+        break;
       
       case "semi-formal":
-        return this.runSemiFormalOnly(plan, receipts);
+        result = await this.runSemiFormalOnly(plan, receipts);
+        break;
       
       case "both":
-        return this.runBoth(plan, receipts);
+        result = await this.runBoth(plan, receipts);
+        break;
       
       case "adaptive":
       default:
-        return this.runAdaptive(plan, receipts);
+        result = await this.runAdaptive(plan, receipts);
+        break;
+    }
+    
+    // Capture visual evidence
+    await this.captureVisualEvidence(plan, receipts, result);
+    
+    return result;
+  }
+  
+  /**
+   * Capture visual evidence for verification
+   * Automatically detects changed files and captures screenshots, coverage maps, etc.
+   */
+  private async captureVisualEvidence(
+    plan: Plan,
+    receipts: ExecutionReceipt[],
+    result: OrchestratedVerificationResult
+  ): Promise<void> {
+    if (!this.visualManager) return;
+    
+    try {
+      this.log.info("Capturing visual evidence");
+      
+      // Auto-detect files from git if not provided
+      const files = this.strategy.context?.patches?.map(p => p.path) || 
+                    this.detectChangedFiles() ||
+                    [];
+      
+      const captureContext = {
+        sessionId: this.sessionId,
+        verificationId: `verify_${Date.now()}`,
+        cwd: process.cwd(),
+        files: files.length > 0 ? files : undefined,
+        patches: this.strategy.context?.patches?.map(p => ({
+          path: p.path,
+          after: p.content || "",
+        })),
+        testFiles: this.strategy.context?.testFiles,
+      };
+      
+      this.visualResult = await this.visualManager.capture(captureContext);
+      
+      // Attach visual evidence to result
+      result.visualEvidence = {
+        artifacts: this.visualResult.artifacts.map(a => ({
+          id: a.id,
+          type: a.type,
+          description: a.description,
+          verificationClaim: a.verificationClaim,
+          confidence: a.confidence,
+          imagePath: a.image?.path,
+        })),
+        summary: this.visualResult.summary,
+        llmContext: this.visualManager.formatForLLM(this.visualResult),
+      };
+      
+      this.log.info("Visual evidence captured", {
+        artifactCount: this.visualResult.artifacts.length,
+        types: this.visualResult.summary.typesCaptured,
+      });
+    } catch (error) {
+      this.log.warn("Failed to capture visual evidence", { error });
+      // Don't fail verification if visual capture fails
+    }
+  }
+  
+  /**
+   * Auto-detect changed files from git
+   */
+  private detectChangedFiles(): string[] | null {
+    try {
+      const { execSync } = require("child_process");
+      const output = execSync("git diff --name-only HEAD", {
+        encoding: "utf-8",
+        stdio: ["pipe", "pipe", "ignore"],
+      });
+      const files = output.split("\n").filter(Boolean);
+      return files.length > 0 ? files : null;
+    } catch {
+      return null;
     }
   }
 
@@ -369,6 +493,21 @@ export class VerificationOrchestrator {
         model: strategy.model,
       });
     }
+  }
+  
+  /**
+   * Get visual evidence from the last verification
+   */
+  getVisualEvidence(): VisualCaptureResult | undefined {
+    return this.visualResult;
+  }
+  
+  /**
+   * Get visual evidence formatted for LLM prompting
+   */
+  getVisualEvidenceForLLM(): string | undefined {
+    if (!this.visualResult) return undefined;
+    return this.visualManager?.formatForLLM(this.visualResult);
   }
 }
 

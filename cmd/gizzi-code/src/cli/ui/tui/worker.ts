@@ -103,6 +103,18 @@ const startEventStream = (directory: string) => {
 }
 
 Log.Default.info("worker: rpc definition")
+
+// Initialize Instance context at worker startup (before TUI renders)
+Log.Default.info("worker: initializing Instance context")
+await Instance.provide({
+  directory: process.cwd(),
+  init: InstanceBootstrap,
+  fn: async () => {
+    Log.Default.info("worker: Instance context initialized")
+  },
+})
+Log.Default.info("worker: Instance context ready")
+
 export const rpc = {
   async fetch(input: { url: string; method: string; headers: Record<string, string>; body?: string }) {
     return await Instance.provide({

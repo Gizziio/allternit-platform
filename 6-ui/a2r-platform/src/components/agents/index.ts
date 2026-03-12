@@ -96,7 +96,11 @@ export type {
   WorkspaceDocuments,
   AgentType,
   ModelProvider,
+  ProfessionalAvatar,
 } from './AgentCreationWizardEnhanced';
+
+// Professional Avatar Collection - defined in AgentCreationWizardEnhanced
+// export { PROFESSIONAL_AVATARS } from './AgentCreationWizardEnhanced';
 
 export type {
   AgentTestingPlaygroundProps,

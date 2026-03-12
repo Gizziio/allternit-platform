@@ -38,6 +38,8 @@ mod autoland_tests {
             root_dir: Some(root.path().to_path_buf()),
             actor_id: Some("test_gate".to_string()),
             strict_provenance: Some(false),
+            visual_provider: None,
+            visual_config: None,
         });
 
         let wih_id = "test_wih";
@@ -110,6 +112,8 @@ mod autoland_tests {
             root_dir: Some(root.path().to_path_buf()),
             actor_id: Some("test_gate".to_string()),
             strict_provenance: Some(false),
+            visual_provider: None,
+            visual_config: None,
         });
 
         let wih_id = "test_wih_full";

@@ -221,10 +221,10 @@ export function ModelPicker({ onSelect, onCancel, defaultProfileId, trigger, ope
       
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="text-white">
             {step === "profile" ? "Select Runtime" : "Select Model"}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-gray-400">
             {step === "profile" 
               ? "Choose an authenticated AI runtime to use"
               : `Select a model for ${PROVIDER_NAMES[PROFILE_TO_PROVIDER[selectedProfileId]] || "this runtime"}`
@@ -248,10 +248,10 @@ export function ModelPicker({ onSelect, onCancel, defaultProfileId, trigger, ope
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : availableProfiles.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="text-center py-8 text-gray-400">
                 <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>No authenticated runtimes found</p>
-                <p className="text-sm mt-1">
+                <p className="text-white">No authenticated runtimes found</p>
+                <p className="text-sm mt-1 text-gray-400">
                   Please authenticate a provider first
                 </p>
               </div>
@@ -261,12 +261,16 @@ export function ModelPicker({ onSelect, onCancel, defaultProfileId, trigger, ope
                   <Button
                     key={profileId}
                     variant={selectedProfileId === profileId ? "default" : "outline"}
-                    className="justify-start h-auto py-3 px-4"
+                    className={`justify-start h-auto py-3 px-4 border-[#333333] ${
+                      selectedProfileId === profileId 
+                        ? 'bg-[#d4966a] hover:bg-[#c4865a] text-white' 
+                        : 'bg-transparent hover:bg-[#2a2a2a] text-white'
+                    }`}
                     onClick={() => handleProfileSelect(profileId)}
                   >
                     <div className="flex flex-col items-start gap-1">
                       <span className="font-medium">{displayName}</span>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs text-gray-400">
                         {profileId}
                       </span>
                     </div>
@@ -287,18 +291,22 @@ export function ModelPicker({ onSelect, onCancel, defaultProfileId, trigger, ope
             ) : discoveryResult?.supported && discoveryResult.models ? (
               // Discovery supported - show dropdown
               <div className="space-y-2">
-                <Label>Select Model</Label>
+                <Label className="text-gray-300">Select Model</Label>
                 <Select value={selectedModelId} onValueChange={handleModelSelect}>
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-[#2a2a2a] border-[#333333] text-white">
                     <SelectValue placeholder="Choose a model..." />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-[#1e1e1e] border-[#333333]">
                     {discoveryResult.models.map((model) => (
-                      <SelectItem key={model.id} value={model.id}>
+                      <SelectItem 
+                        key={model.id} 
+                        value={model.id}
+                        className="text-white hover:bg-[#2a2a2a] focus:bg-[#2a2a2a]"
+                      >
                         <div className="flex flex-col items-start">
                           <span>{model.name}</span>
                           {model.description && (
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-xs text-gray-400">
                               {model.description}
                             </span>
                           )}

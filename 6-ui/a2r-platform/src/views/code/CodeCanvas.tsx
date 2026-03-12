@@ -42,7 +42,7 @@ import {
   useNativeAgentStore,
 } from '@/lib/agents';
 import { useAgentSurfaceModeStore } from '@/stores/agent-surface-mode.store';
-import { AgentModeBackdrop } from '../chat/agentModeSurfaceTheme';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 const CONTENT_WIDTH = 760;
 const CODE_MODEL_NAMES: Record<string, string> = {
@@ -364,81 +364,61 @@ export function CodeCanvas({ isPreviewCollapsed: _isPreviewCollapsed }: any) {
   };
 
   return (
-    <div
-      data-testid="code-canvas-shell"
-      style={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        background: 'transparent',
-        position: 'relative',
-        isolation: 'isolate',
-        overflow: 'hidden',
-      }}
-    >
-      <AgentModeBackdrop
-        active={codeAgentModeEnabled}
-        surface="code"
-        dataTestId="agent-mode-code-backdrop"
-      />
-      <div style={{ position: 'relative', zIndex: 1, height: '100%' }}>
-        <CodeSessionSurface
-          key={effectiveCanvasKey}
-          activeAction={activeAction}
-          activeSession={activeSession}
-          activeWorkspace={activeWorkspace}
-          composerSeed={composerSeed}
-          composerVersion={composerVersion}
-          embeddedAgentSession={embeddedAgentSession}
-          embeddedCanvasCount={embeddedCanvasIds.length}
-          isEmbeddedAgentSession={isEmbeddedAgentSession}
-          initialMessages={cachedMessages}
-          onMessagesChange={(messages) => {
-            if (isEmbeddedAgentSession) {
-              return;
-            }
-            setSessionTranscripts((prev) => {
-              if (prev[activeSessionId] === messages) {
-                return prev;
-              }
-              return { ...prev, [activeSessionId]: messages };
-            });
-          }}
-          onDismissEmbeddedAgentSession={() => clearEmbeddedAgentSession('code')}
-          onOpenConsole={handleOpenConsole}
-          onSelectModel={(selection: any) => {
-            setSelectedModel(selection.modelId);
-            setSelectedModelDisplayName(
-              selection.modelName || CODE_MODEL_NAMES[selection.modelId] || selection.modelId,
-            );
-          }}
-          onPreviewTemplate={(prompt) => applyComposerSeed(prompt)}
-          onSelectTemplate={(prompt) => applyComposerSeed(prompt, { closeAction: true })}
-          onSetActiveSession={handleSessionSelect}
-          onToggleAction={(nextActionId) =>
-            setActiveActionId((current) => (current === nextActionId ? null : nextActionId))
+    <CodeSessionSurface
+      key={effectiveCanvasKey}
+      activeAction={activeAction}
+      activeSession={activeSession}
+      activeWorkspace={activeWorkspace}
+      composerSeed={composerSeed}
+      composerVersion={composerVersion}
+      embeddedAgentSession={embeddedAgentSession}
+      embeddedCanvasCount={embeddedCanvasIds.length}
+      isEmbeddedAgentSession={isEmbeddedAgentSession}
+      initialMessages={cachedMessages}
+      onMessagesChange={(messages) => {
+        if (isEmbeddedAgentSession) {
+          return;
+        }
+        setSessionTranscripts((prev) => {
+          if (prev[activeSessionId] === messages) {
+            return prev;
           }
-          onToggleSessionPicker={() => {
-            setShowWorkspacePicker(false);
-            setShowSessionPicker((current) => !current);
-          }}
-          onToggleWorkspacePicker={() => {
-            setShowSessionPicker(false);
-            setShowWorkspacePicker((current) => !current);
-          }}
-          selectedModel={selectedModel}
-          selectedModelDisplayName={selectedModelDisplayName}
-          showSessionPicker={showSessionPicker}
-          showWorkspacePicker={showWorkspacePicker}
-          workspaceReady={workspaceReady}
-          workspaceSessions={workspaceSessions}
-          workspaces={workspaces}
-          activeSessionId={activeSessionId}
-          activeWorkspaceId={activeWorkspaceId}
-          onConfirmWorkspace={confirmWorkspace}
-        />
-      </div>
-    </div>
+          return { ...prev, [activeSessionId]: messages };
+        });
+      }}
+      onDismissEmbeddedAgentSession={() => clearEmbeddedAgentSession('code')}
+      onOpenConsole={handleOpenConsole}
+      onSelectModel={(selection: any) => {
+        setSelectedModel(selection.modelId);
+        setSelectedModelDisplayName(
+          selection.modelName || CODE_MODEL_NAMES[selection.modelId] || selection.modelId,
+        );
+      }}
+      onPreviewTemplate={(prompt) => applyComposerSeed(prompt)}
+      onSelectTemplate={(prompt) => applyComposerSeed(prompt, { closeAction: true })}
+      onSetActiveSession={handleSessionSelect}
+      onToggleAction={(nextActionId) =>
+        setActiveActionId((current) => (current === nextActionId ? null : nextActionId))
+      }
+      onToggleSessionPicker={() => {
+        setShowWorkspacePicker(false);
+        setShowSessionPicker((current) => !current);
+      }}
+      onToggleWorkspacePicker={() => {
+        setShowSessionPicker(false);
+        setShowWorkspacePicker((current) => !current);
+      }}
+      selectedModel={selectedModel}
+      selectedModelDisplayName={selectedModelDisplayName}
+      showSessionPicker={showSessionPicker}
+      showWorkspacePicker={showWorkspacePicker}
+      workspaceReady={workspaceReady}
+      workspaceSessions={workspaceSessions}
+      workspaces={workspaces}
+      activeSessionId={activeSessionId}
+      activeWorkspaceId={activeWorkspaceId}
+      onConfirmWorkspace={confirmWorkspace}
+    />
   );
 }
 
@@ -828,96 +808,63 @@ function LaunchpadStage({
   const [brandingAttention, setBrandingAttention] = useState<GizziAttention | null>(null);
 
   return (
-    <div
-      style={{
-        height: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '48px 24px 56px',
-        boxSizing: 'border-box',
-        // Background now handled at CodeRoot level for full-screen effect
-      }}
-    >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: CONTENT_WIDTH,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          textAlign: 'center',
-        }}
-      >
-        {agentContextStrip ? (
-          <div style={{ width: '100%', textAlign: 'left', marginBottom: 18 }}>
-            {agentContextStrip}
-          </div>
-        ) : null}
-        <CodeLaunchBranding
-          workspaceReady={workspaceReady}
-          attention={brandingAttention}
-          agentModeEnabled={agentModeEnabled}
-          agentModePulse={agentModePulse}
-          selectedAgentName={selectedAgentName}
-        />
+    <div style={{ padding: '120px 24px 60px' }}>
+      {agentContextStrip ? (
+        <div style={{ width: '100%', textAlign: 'left', marginBottom: 18 }}>
+          {agentContextStrip}
+        </div>
+      ) : null}
+      <CodeLaunchBranding
+        workspaceReady={workspaceReady}
+        attention={brandingAttention}
+        agentModeEnabled={agentModeEnabled}
+        agentModePulse={agentModePulse}
+        selectedAgentName={selectedAgentName}
+      />
 
-        <div style={{ width: '100%', marginTop: 28 }}>
-          <div
-            onMouseEnter={() => setBrandingAttention({ state: 'locked-on', target: { x: 0, y: 0.2 } })}
-            onMouseLeave={() => setBrandingAttention(null)}
-          >
-            <CodeActionPills
-              activeAction={activeAction}
-              align="center"
-              onPreviewTemplate={onPreviewTemplate}
-              onSelectTemplate={onSelectTemplate}
-              onToggleAction={onToggleAction}
-            />
-          </div>
-          <div data-testid="code-shared-composer" style={{ marginTop: 14 }}>
-            <ChatComposer
-              key={`code-launchpad-composer-${composerVersion}`}
-              onSend={onSend}
-              isLoading={isProcessing}
-              onStop={() => undefined}
-              selectedModel={selectedModel}
-              selectedModelDisplayName={selectedModelDisplayName}
-              onSelectModel={onSelectModel}
-              placeholder={
-                workspaceReady
-                  ? 'Describe what you want to build or modify...'
-                  : 'Choose a workspace folder to unlock the session...'
-              }
-              showTopActions={false}
-              inputValue={composerSeed}
-              variant="large"
-              onAttentionChange={setBrandingAttention}
-              agentModeSurface="code"
-            />
-          </div>
-
-          <div
-            onMouseEnter={() => setBrandingAttention({ state: 'locked-on', target: { x: 0, y: 0.62 } })}
-            onMouseLeave={() => setBrandingAttention(null)}
-          >
-            <ComposerUtilityBar
-              activeWorkspace={activeWorkspace}
-              activeWorkspaceId={activeWorkspaceId}
-              activeSessionId={activeSessionId}
-              onConfirmWorkspace={onConfirmWorkspace}
-              onOpenConsole={onOpenConsole}
-              onSetActiveSession={onSetActiveSession}
-              onToggleSessionPicker={onToggleSessionPicker}
-              onToggleWorkspacePicker={onToggleWorkspacePicker}
-              showSessionPicker={showSessionPicker}
-              showWorkspacePicker={showWorkspacePicker}
-              workspaceReady={workspaceReady}
-              workspaceSessions={workspaceSessions}
-              workspaces={workspaces}
-              activeSession={workspaceSessions.find((session) => session.session_id === activeSessionId)}
-            />
-          </div>
+      <div style={{ width: '100%', marginTop: 28 }}>
+        <div
+          onMouseEnter={() => setBrandingAttention({ state: 'locked-on', target: { x: 0, y: 0.2 } })}
+          onMouseLeave={() => setBrandingAttention(null)}
+        >
+          <CodeActionPills
+            activeAction={activeAction}
+            align="center"
+            onPreviewTemplate={onPreviewTemplate}
+            onSelectTemplate={onSelectTemplate}
+            onToggleAction={onToggleAction}
+          />
+        </div>
+        <div data-testid="code-shared-composer" style={{ marginTop: 14 }}>
+          <ChatComposer
+            key={`code-launchpad-composer-${composerVersion}`}
+            onSend={onSend}
+            isLoading={isProcessing}
+            onStop={() => undefined}
+            selectedModel={selectedModel}
+            selectedModelDisplayName={selectedModelDisplayName}
+            onSelectModel={onSelectModel}
+            placeholder={
+              workspaceReady
+                ? 'Describe what you want to build or modify...'
+                : 'Choose a workspace folder to unlock the session...'
+            }
+            showTopActions={false}
+            inputValue={composerSeed}
+            variant="large"
+            onAttentionChange={setBrandingAttention}
+            agentModeSurface="code"
+            bottomDockContent={
+              <CompactUtilityBar
+                activeWorkspace={activeWorkspace}
+                activeWorkspaceId={activeWorkspaceId}
+                onConfirmWorkspace={onConfirmWorkspace}
+                onOpenConsole={onOpenConsole}
+                workspaceReady={workspaceReady}
+                workspaces={workspaces}
+              />
+            }
+          />
         </div>
       </div>
     </div>
@@ -995,9 +942,10 @@ function ConversationStage({
       display: 'flex',
       flexDirection: 'column',
       minHeight: 0,
+      overflow: 'hidden',
       // Background now handled at CodeRoot level for full-screen effect
     }}>
-      <Conversation>
+      <Conversation style={{ minHeight: 0 }}>
         <ConversationContent>
           <div
             style={{
@@ -1006,6 +954,7 @@ function ConversationStage({
               margin: '0 auto',
               padding: '34px 20px 40px',
               boxSizing: 'border-box',
+              minHeight: 0,
             }}
           >
             {agentContextStrip}
@@ -1023,14 +972,16 @@ function ConversationStage({
         <ConversationScrollButton />
       </Conversation>
 
+      {/* Bottom Input Dock - Standardized with Cowork mode */}
       <div
         style={{
-          padding: '0 18px 18px',
+          padding: '0 20px 18px',
           borderTop: '1px solid rgba(255, 255, 255, 0.04)',
-          background:
-            'linear-gradient(180deg, rgba(16, 19, 22, 0) 0%, rgba(16, 19, 22, 0.12) 20%, rgba(16, 19, 22, 0.34) 100%)',
+          background: 'transparent',
           backdropFilter: 'blur(14px)',
           WebkitBackdropFilter: 'blur(14px)',
+          flexShrink: 0,
+          zIndex: 40,
         }}
       >
         <div style={{ width: '100%', maxWidth: CONTENT_WIDTH, margin: '0 auto' }}>
@@ -1067,14 +1018,7 @@ function ConversationStage({
             ) : null}
           </div>
 
-          <CodeActionPills
-            activeAction={activeAction}
-            align="left"
-            onPreviewTemplate={onPreviewTemplate}
-            onSelectTemplate={onSelectTemplate}
-            onToggleAction={onToggleAction}
-          />
-          <div data-testid="code-shared-composer" style={{ marginTop: 12 }}>
+          <div data-testid="code-shared-composer" style={{ marginTop: 8 }}>
             <ChatComposer
               key={`code-conversation-composer-${composerVersion}`}
               onSend={onSend}
@@ -1250,6 +1194,145 @@ function ComposerUtilityBar({
       <span style={{ fontSize: 12, color: 'var(--text-tertiary)', textAlign: 'right' }}>
         {workspaceReady ? activeWorkspace?.root_path : 'Workspace required before execution'}
       </span>
+    </div>
+  );
+}
+
+/** Compact utility bar for bottom dock - simplified version without session selector stub */
+function CompactUtilityBar({
+  activeWorkspace,
+  activeWorkspaceId,
+  onConfirmWorkspace,
+  onOpenConsole,
+  workspaceReady,
+  workspaces,
+}: {
+  activeWorkspace: ReturnType<typeof getActiveWorkspace>;
+  activeWorkspaceId: string;
+  onConfirmWorkspace: (workspaceId?: string) => void;
+  onOpenConsole: () => void;
+  workspaceReady: boolean;
+  workspaces: ReturnType<typeof useCodeModeStore.getState>['workspaces'];
+}) {
+  const [open, setOpen] = useState(false);
+  
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      {/* Workspace picker - using Popover for proper portal rendering */}
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            data-testid="code-folder-button"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '6px 10px',
+              borderRadius: 8,
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              background: 'transparent',
+              color: 'var(--text-secondary)',
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            <FolderSimple size={14} weight="bold" />
+            {workspaceReady ? activeWorkspace?.display_name ?? 'Workspace' : 'Select folder'}
+            <CaretDown size={12} />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent 
+          side="top" 
+          align="start" 
+          sideOffset={8}
+          style={{
+            width: 320,
+            padding: 0,
+            background: '#332D27',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 12,
+            boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+          }}
+        >
+          <div style={{ padding: 8 }}>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              padding: '8px 12px 10px',
+              borderBottom: '1px solid rgba(255,255,255,0.08)'
+            }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: '#D4956A', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Workspace
+              </div>
+              <div style={{ fontSize: 11, color: '#6B6B6B' }}>{workspaces.length} repos</div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingTop: 6 }}>
+              {workspaces.map((workspace) => (
+                <button
+                  key={workspace.workspace_id}
+                  type="button"
+                  onClick={() => {
+                    onConfirmWorkspace(workspace.workspace_id);
+                    setOpen(false);
+                  }}
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: 8,
+                    border: 'none',
+                    background: workspace.workspace_id === activeWorkspaceId
+                      ? 'rgba(255,255,255,0.05)'
+                      : 'transparent',
+                    color: '#ECECEC',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (workspace.workspace_id !== activeWorkspaceId) {
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (workspace.workspace_id !== activeWorkspaceId) {
+                      e.currentTarget.style.background = 'transparent';
+                    }
+                  }}
+                >
+                  <div style={{ fontSize: 12, fontWeight: 700 }}>{workspace.display_name}</div>
+                  <div style={{ marginTop: 4, fontSize: 11, color: '#9B9B9B', lineHeight: 1.5 }}>
+                    {workspace.root_path}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
+
+      {/* Console button */}
+      <button
+        type="button"
+        data-testid="code-console-button"
+        onClick={onOpenConsole}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 6,
+          padding: '6px 10px',
+          borderRadius: 8,
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          background: 'transparent',
+          color: 'var(--text-secondary)',
+          fontSize: 12,
+          fontWeight: 600,
+          cursor: 'pointer',
+        }}
+      >
+        <TerminalWindow size={14} />
+        Console
+      </button>
     </div>
   );
 }

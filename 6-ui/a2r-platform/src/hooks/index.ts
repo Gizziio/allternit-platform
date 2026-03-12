@@ -7,6 +7,15 @@ export { useWorkflow } from './useWorkflow';
 export { useToast, type ToastOptions } from './use-toast';
 export { useProviderAuth } from './useProviderAuth';
 export { useAgentAvatar, DEFAULT_VISUAL_STATE, type UseAgentAvatarOptions, type UseAgentAvatarReturn } from './useAgentAvatar';
+export { useVisualVerification } from './useVisualVerification';
+export type { 
+  VerificationResult, 
+  VerificationStatus, 
+  Artifact,
+  TrendDataPoint,
+  UseVisualVerificationOptions,
+  UseVisualVerificationReturn 
+} from './useVisualVerification';
 
 // Re-export types for convenience
 export type { 

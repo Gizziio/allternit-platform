@@ -6,6 +6,8 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
+use crate::verification::types::{ProviderError, VerificationProvider, VisualConfig};
+
 use crate::core::ids::{create_event_id, create_lease_id, create_receipt_id};
 use crate::core::io::{ensure_dir, write_json_atomic};
 use crate::core::types::{
@@ -35,6 +37,10 @@ pub struct GateOptions {
     pub root_dir: Option<PathBuf>,
     pub actor_id: Option<String>,
     pub strict_provenance: Option<bool>,
+    /// Optional visual verification provider
+    pub visual_provider: Option<Arc<dyn VerificationProvider>>,
+    /// Visual verification configuration
+    pub visual_config: Option<VisualConfig>,
 }
 
 pub struct Gate {
@@ -46,6 +52,8 @@ pub struct Gate {
     root_dir: PathBuf,
     actor_id: String,
     strict_provenance: bool,
+    visual_provider: Option<Arc<dyn VerificationProvider>>,
+    visual_config: Option<VisualConfig>,
 }
 
 #[derive(Debug)]
@@ -123,6 +131,8 @@ impl Gate {
                 .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR"))),
             actor_id: opts.actor_id.unwrap_or_else(|| "gate".to_string()),
             strict_provenance: opts.strict_provenance.unwrap_or(true),
+            visual_provider: opts.visual_provider,
+            visual_config: opts.visual_config,
         }
     }
 
@@ -867,7 +877,7 @@ impl Gate {
         self.ensure_policy_scope(&scope).await?;
 
         let wih_events = self.events_for_wih(wih_id).await?;
-        let wih_state = project_wih(&wih_events, wih_id).ok_or_else(|| anyhow!("wih not found"))?;
+        let _wih_state = project_wih(&wih_events, wih_id).ok_or_else(|| anyhow!("wih not found"))?;
 
         let mut has_pass = false;
         for evt in &wih_events {
@@ -879,6 +889,49 @@ impl Gate {
         }
         if !has_pass {
             return Err(anyhow!("WIH must be closed with PASS status to autoland"));
+        }
+
+        // 2. Visual verification check (if enabled)
+        if let (Some(visual_provider), Some(visual_config)) = (&self.visual_provider, &self.visual_config) {
+            if visual_config.enabled {
+                let evidence = visual_provider
+                    .gather_evidence(wih_id)
+                    .await
+                    .map_err(|e: ProviderError| anyhow!("Visual verification failed: {}", e))?;
+
+                if !evidence.success || evidence.overall_confidence < visual_config.min_confidence {
+                    return Err(anyhow!(
+                        "Visual confidence {:.1}% below threshold {:.1}%",
+                        evidence.overall_confidence * 100.0,
+                        visual_config.min_confidence * 100.0
+                    ));
+                }
+
+                // 3. Log verification success
+                tracing::info!(
+                    "Visual verification passed for {}: {:.1}% confidence",
+                    wih_id,
+                    evidence.overall_confidence * 100.0
+                );
+
+                // Emit visual verification event for audit trail
+                let verified_event = A2REvent {
+                    event_id: create_event_id(),
+                    ts: Utc::now().to_rfc3339(),
+                    actor: gate_actor(&self.actor_id),
+                    scope: Some(scope.clone()),
+                    r#type: "GateVisualVerified".to_string(),
+                    payload: json!({
+                        "wih_id": wih_id,
+                        "confidence": evidence.overall_confidence,
+                        "artifact_count": evidence.artifacts.len(),
+                        "threshold": visual_config.min_confidence,
+                        "provider": format!("{:?}", visual_config.provider_type),
+                    }),
+                    provenance: None,
+                };
+                self.emit(verified_event).await?;
+            }
         }
 
         let mut impact = AutolandImpact {

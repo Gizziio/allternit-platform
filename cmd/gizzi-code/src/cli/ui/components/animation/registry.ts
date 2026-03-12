@@ -24,10 +24,13 @@ type GridFirstMascotFrameSpec = {
   eyes: string
   mouth: string
   legs?: string
+  feet?: string
 }
 
 function renderGridFirstMascotLines(frame: GridFirstMascotFrameSpec): string[] {
   const beacon = frame.beacon.length >= 2 ? frame.beacon.slice(0, 2) : frame.beacon.padEnd(2, " ")
+  const legs = frame.legs ?? "   █ █  █ █   "
+  const feet = frame.feet ?? "   ▀ ▀  ▀ ▀   "
   return [
     `      ${beacon}      `, // 0: Floating Beacon (14 wide)
     "   ▄▄▄  ▄▄▄   ", // 1: Antenna Blocks (14 wide)
@@ -35,8 +38,8 @@ function renderGridFirstMascotLines(frame: GridFirstMascotFrameSpec): string[] {
     ` █${frame.eyes}█ `, // 3: Eye Panel - Eyes (1 + 1 + 10 + 1 + 1 = 14)
     ` █${frame.mouth}█ `, // 4: Eye Panel - Mark (1 + 1 + 10 + 1 + 1 = 14)
     "  ▀████████▀  ", // 5: Head Bottom (14 wide)
-    "   █ █  █ █   ", // 6: 4 Legs (14 wide)
-    "   ▀ ▀  ▀ ▀   ", // 7: Sub-pixel Feet (14 wide)
+    legs,             // 6: 4 Legs (14 wide)
+    feet,             // 7: Sub-pixel Feet (14 wide)
   ]
 }
 
@@ -352,6 +355,30 @@ export function createGIZZIRegistry(): AnimationRegistry {
   })
 
   registry.register({
+    id: "gizzi.mascot.walking",
+    frames: [
+      renderGridFirstMascotFrame({ 
+        beacon: "▄▄", eyes: "  ●    ●  ", mouth: "  A : / / ",
+        legs: "   █ █  █ █   ", feet: "   ▀ ▀  ▀ ▀   " 
+      }),
+      renderGridFirstMascotFrame({ 
+        beacon: "▄▄", eyes: "  ●    ●  ", mouth: "  A : / / ",
+        legs: "    █ █  █ █  ", feet: "    ▀ ▀  ▀ ▀  " 
+      }),
+      renderGridFirstMascotFrame({ 
+        beacon: "▄▄", eyes: "  ●    ●  ", mouth: "  A : / / ",
+        legs: "   █ █  █ █   ", feet: "   ▀ ▀  ▀ ▀   " 
+      }),
+      renderGridFirstMascotFrame({ 
+        beacon: "▄▄", eyes: "  ●    ●  ", mouth: "  A : / / ",
+        legs: "  █ █  █ █    ", feet: "  ▀ ▀  ▀ ▀    " 
+      }),
+    ],
+    intervalTicks: 4,
+    mode: "loop",
+  })
+
+  registry.register({
     id: "gizzi.mascot.thinking",
     frames: [
       renderGridFirstMascotFrame({ beacon: "▄▄", eyes: "  ?    ?  ", mouth: "  A : / / " }),
@@ -642,6 +669,21 @@ export function createGIZZIRegistry(): AnimationRegistry {
       " ▗▄▄▄▄▄▄▖ \n ▐▓▀▀▀▀▀▘ \n ▐▓ ▗▄▄▄▖ \n ▐▓ ▐▓▄▟▌ \n ▐▓▄▄▄▄▟▌ \n  ▝▀▀▀▀▀▘ "
     ],
     intervalTicks: 4,
+    mode: "loop",
+  })
+
+  // GIZZI Startup Matrix Shimmer
+  registry.register({
+    id: "gizzi.startup.matrix",
+    frames: [
+      "  G  I  Z  Z  I  O  \n  ░  ░  ░  ░  ░  ░  ",
+      "  G  I  Z  Z  I  O  \n  ▒  ░  ░  ░  ░  ▒  ",
+      "  G  I  Z  Z  I  O  \n  ▓  ▒  ░  ░  ▒  ▓  ",
+      "  G  I  Z  Z  I  O  \n  █  ▓  ▒  ▒  ▓  █  ",
+      "  G  I  Z  Z  I  O  \n  ▒  █  ▓  ▓  █  ▒  ",
+      "  G  I  Z  Z  I  O  \n  ░  ▒  █  █  ▒  ░  ",
+    ],
+    intervalTicks: 3,
     mode: "loop",
   })
 

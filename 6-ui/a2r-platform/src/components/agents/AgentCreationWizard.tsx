@@ -146,6 +146,8 @@ export function AgentCreationWizard({
     const currentIndex = STEPS.findIndex(s => s.id === currentStep);
     if (currentIndex < STEPS.length - 1) {
       setCurrentStep(STEPS[currentIndex + 1].id);
+      // Scroll to top of wizard
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -153,6 +155,8 @@ export function AgentCreationWizard({
     const currentIndex = STEPS.findIndex(s => s.id === currentStep);
     if (currentIndex > 0) {
       setCurrentStep(STEPS[currentIndex - 1].id);
+      // Scroll to top of wizard
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 

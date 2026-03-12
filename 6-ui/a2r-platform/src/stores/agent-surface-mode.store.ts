@@ -1,18 +1,22 @@
 import { create } from 'zustand';
 
 export type AgentModeSurface = 'chat' | 'cowork' | 'code' | 'browser';
+export type AgentModeId = 'research' | 'data' | 'slides' | 'code' | 'assets' | 'agents' | 'flow' | 'web';
 
 type SurfaceStateMap = Record<AgentModeSurface, boolean>;
 type SurfacePulseMap = Record<AgentModeSurface, number>;
 type SurfaceAgentMap = Record<AgentModeSurface, string | null>;
+type SurfaceModeMap = Record<AgentModeSurface, AgentModeId | null>;
 
 interface AgentSurfaceModeState {
   enabledBySurface: SurfaceStateMap;
   pulseBySurface: SurfacePulseMap;
   selectedAgentIdBySurface: SurfaceAgentMap;
+  selectedModeBySurface: SurfaceModeMap;
   lastActiveSurface: AgentModeSurface | null;
   setEnabled: (surface: AgentModeSurface, enabled: boolean) => void;
   setSelectedAgent: (surface: AgentModeSurface, agentId: string | null) => void;
+  setSelectedMode: (surface: AgentModeSurface, modeId: AgentModeId | null) => void;
   toggle: (surface: AgentModeSurface) => void;
   /**
    * Call this when switching to a new surface. If agent mode was enabled
@@ -42,10 +46,18 @@ const DEFAULT_SELECTED_AGENT: SurfaceAgentMap = {
   browser: null,
 };
 
+const DEFAULT_SELECTED_MODE: SurfaceModeMap = {
+  chat: null,
+  cowork: null,
+  code: null,
+  browser: null,
+};
+
 export const useAgentSurfaceModeStore = create<AgentSurfaceModeState>((set, get) => ({
   enabledBySurface: DEFAULT_ENABLED,
   pulseBySurface: DEFAULT_PULSE,
   selectedAgentIdBySurface: DEFAULT_SELECTED_AGENT,
+  selectedModeBySurface: DEFAULT_SELECTED_MODE,
   lastActiveSurface: null,
   setEnabled: (surface, enabled) =>
     set((state) => ({
@@ -64,6 +76,13 @@ export const useAgentSurfaceModeStore = create<AgentSurfaceModeState>((set, get)
       selectedAgentIdBySurface: {
         ...state.selectedAgentIdBySurface,
         [surface]: agentId,
+      },
+    })),
+  setSelectedMode: (surface, modeId) =>
+    set((state) => ({
+      selectedModeBySurface: {
+        ...state.selectedModeBySurface,
+        [surface]: modeId,
       },
     })),
   toggle: (surface) =>
