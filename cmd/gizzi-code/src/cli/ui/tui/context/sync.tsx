@@ -18,6 +18,7 @@ import type {
   ProviderAuthMethod,
   VcsInfo,
 } from "@a2r/sdk/v2"
+import type { UserData } from "@/runtime/context/user"
 import type { RunRegistry } from "@/runtime/session/run-registry"
 import type { CronTypes } from "@/runtime/automation/cron/types"
 import { createStore, produce, reconcile } from "solid-js/store"
@@ -81,6 +82,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       cron_jobs: CronTypes.CronJob[]
       cron_runs: CronTypes.CronRun[]
       cron_status: { jobs: number; active: number; pendingRuns: number; runningRuns: number }
+      user: UserData | null
     }>({
       provider_next: {
         all: [],
@@ -113,6 +115,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       cron_jobs: [] as CronTypes.CronJob[],
       cron_runs: [] as CronTypes.CronRun[],
       cron_status: { jobs: 0, active: 0, pendingRuns: 0, runningRuns: 0 },
+      user: null,
     })
 
     const sdk = useSDK()
@@ -354,6 +357,11 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           break
         }
 
+        case "user.updated": {
+          setStore("user", event.properties.user)
+          break
+        }
+
       }
     })
 
@@ -378,11 +386,12 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
         .list({ start: start })
         .then((x) => {
           Log.Default.info("tui: sync session list received", { 
-            count: x.data?.length,
+            count: Array.isArray(x.data) ? x.data.length : 0,
             error: x.error?.message,
             projectId 
           })
-          return (x.data ?? []).toSorted((a, b) => a.id.localeCompare(b.id))
+          const sessions = Array.isArray(x.data) ? x.data : []
+          return sessions.slice().sort((a, b) => a.id.localeCompare(b.id))
         })
 
       // blocking - include session.list when continuing a session
@@ -458,13 +467,17 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
             sdk.client.mcp.status().then((x) => { Log.Default.info("tui: sync mcp status done"); setStore("mcp", reconcile(x.data ?? {}))}),
             sdk.client.experimental.resource.list().then((x) => { Log.Default.info("tui: sync mcp resource done"); setStore("mcp_resource", reconcile(x.data ?? {}))}),
             sdk.client.formatter.status().then((x) => { Log.Default.info("tui: sync formatter status done"); setStore("formatter", reconcile(x.data ?? []))}),
-            sdk.client.session.status().then((x) => {
+            sdk.client.session.allstatus().then((x) => {
               Log.Default.info("tui: sync session status done")
               setStore("session_status", reconcile(x.data ?? {}))
             }),
             sdk.client.provider.auth().then((x) => { Log.Default.info("tui: sync provider auth done"); setStore("provider_auth", reconcile(x.data ?? {}))}),
             sdk.client.vcs.get().then((x) => { Log.Default.info("tui: sync vcs done"); setStore("vcs", reconcile(x.data))}),
             sdk.client.path.get().then((x) => { Log.Default.info("tui: sync path done"); setStore("path", reconcile(x.data ?? { state: "", config: "", worktree: "", directory: "" }))}),
+            sdk.client.user.get().then((x) => { 
+              Log.Default.info("tui: sync user done")
+              setStore("user", reconcile(x.data ?? null))
+            }),
           ]).then(() => {
             Log.Default.info("tui: all sync requests settled")
             setStore("status", "complete")
