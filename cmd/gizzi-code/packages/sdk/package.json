@@ -16,22 +16,6 @@
     "./server": {
       "import": "./dist/server.js",
       "types": "./dist/server.d.ts"
-    },
-    "./v2": {
-      "import": "./dist/v2/index.js",
-      "types": "./dist/v2/index.d.ts"
-    },
-    "./v2/client": {
-      "import": "./dist/v2/client.js",
-      "types": "./dist/v2/client.d.ts"
-    },
-    "./v2/gen/client": {
-      "import": "./dist/v2/gen/client/index.js",
-      "types": "./dist/v2/gen/client/index.d.ts"
-    },
-    "./v2/server": {
-      "import": "./dist/v2/server.js",
-      "types": "./dist/v2/server.d.ts"
     }
   },
   "files": ["dist"]
