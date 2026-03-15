@@ -1,67 +1,90 @@
 [package]
-name = "a2rchitech-cli"
+name = "a2r-cli"
 version = "0.1.0"
 edition = "2021"
-description = "A2rchitech command-line interface for kernel control"
+description = "A2R Command Line Interface"
+license = "MIT OR Apache-2.0"
 
 [[bin]]
-name = "a2rchitech"
+name = "a2r"
 path = "src/main.rs"
 
 [dependencies]
+# Internal crates
+a2r-driver-interface = { path = "../../1-kernel/infrastructure/a2r-driver-interface" }
+a2r-session-manager = { path = "../../1-kernel/execution/a2r-session-manager" }
+a2r-firecracker-driver = { path = "../../1-kernel/execution/a2r-firecracker-driver" }
 
-serde = { workspace = true }
+# Apple Virtualization.framework driver (macOS only)
+[target.'cfg(target_os = "macos")'.dependencies]
+a2r-apple-vf-driver = { path = "../../1-kernel/execution/a2r-apple-vf-driver" }
 
-serde_json = { workspace = true }
+# CLI
+clap = { version = "4", features = ["derive", "env"] }
+clap_complete = "4"
 
-tokio = { workspace = true }
+# Async
+tokio = { version = "1", features = ["full"] }
+async-trait = "0.1"
 
-anyhow = { workspace = true }
+# Error handling
+thiserror = "1"
+anyhow = "1"
 
-clap = { version = "4.0", features = ["derive"] }
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
 
-reqwest = { workspace = true, features = ["json"] }
+# HTTP client for API calls
+reqwest = { version = "0.11", features = ["json"] }
 
+# Terminal UI
+indicatif = "0.17"
+console = "0.15"
 dialoguer = "0.11"
 
-indicatif = "0.17"
+# Colors/Formatting
+colored = "2"
 
-colored = "2.0"
+# Table formatting
+tabled = "0.16"
 
-axum = "0.7"
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+tracing-appender = "0.2"
+atty = "0.2"
 
-tabled = "0.15"
+# Database
+sqlx = { version = "0.7", features = ["sqlite", "runtime-tokio", "chrono", "uuid"] }
 
-directories = "5.0"
-
-config = "0.13"
-
-ratatui = "0.26"
-
-crossterm = { version = "0.27", features = ["event-stream"] }
-
-futures-util = "0.3"
-futures = "0.3"
-ring = "0.17"
-data-encoding = "2.0"
-urlencoding = "2.1"
-
-tracing = { workspace = true }
-tokio-stream = "0.1"
-
-voice-service = { path = "../../4-services/ml-ai-services/voice-service" }
-
-webvm-service = { path = "../../3-adapters/bridge-systems/a2r-webvm" }
-marketplace = { path = "../../3-adapters/rust/marketplace" }
-
-sqlx = { workspace = true, features = ["runtime-tokio-rustls", "sqlite"] }
-
-a2r-skill-portability = { path = "../../0-substrate/a2r-skill-portability" }
-serde_yaml = "0.9"
-
-syntect = { version = "5.1", default-features = false, features = ["default-fancy"] }
-uuid = { version = "1.0", features = ["v4"] }
+# Token generation
+base64 = "0.22"
 rand = "0.8"
 
+# Additional serialization
+serde_with = "3"
+
+# Configuration
+dirs = "5"
+
+# Process management
+nix = { version = "0.29", features = ["process", "signal", "term", "fs", "ioctl"] }
+libc = "0.2"
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# UUID
+uuid = { version = "1", features = ["v4"] }
+
+# Bytes handling for streaming
+bytes = "1"
+
 [dev-dependencies]
-tempfile = "3.8"
+tokio-test = "0.4"
+tempfile = "3"
+assert_cmd = "2"
+predicates = "3"
+# sqlx-test = "0.1"
