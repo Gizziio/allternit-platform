@@ -451,7 +451,7 @@ impl<'a> TuiApp<'a> {
                 .to_string(),
         );
         self.push_system(
-            "Slash: /queue /stop /resume /skills /telemetry /path /models /help /git /hooks /mode /agent-sessions".to_string(),
+            "Slash: /queue /stop /resume /skills /telemetry /path /models /help /git /hooks".to_string(),
         );
         self.push_system("Type '@' in input to open file reference picker.".to_string());
 
@@ -1005,9 +1005,19 @@ impl<'a> TuiApp<'a> {
 
     async fn refresh_health(&mut self) {
         match self.client.health().await {
-            Ok(health_response) => {
-                self.health_status = health_response.status.clone();
-                self.status_line = format!("health: {} | mode: runtime", health_response.status);
+            Ok(payload) => {
+                let status = payload
+                    .get("status")
+                    .and_then(|value| value.as_str())
+                    .unwrap_or("ok");
+                self.health_status = status.to_string();
+
+                let mode = payload
+                    .get("mode")
+                    .and_then(|value| value.as_str())
+                    .unwrap_or("runtime");
+
+                self.status_line = format!("health: {status} | mode: {mode}");
             }
             Err(err) => {
                 self.health_status = "unavailable".to_string();
@@ -1903,87 +1913,6 @@ impl<'a> TuiApp<'a> {
                 self.overlay_cursor = 0;
                 self.overlay_trigger = OverlayTrigger::Other;
             }
-            "/agent-sessions" | "/agents" => {
-                // Agent session management (OpenClaw-compatible long-lived sessions)
-                let action = parts.next().unwrap_or("list");
-                match action {
-                    "list" | "ls" => {
-                        self.set_activity_status("loading");
-                        match self.client.list_agent_sessions().await {
-                            Ok(sessions) => {
-                                self.push_system(format!("agent sessions ({}):", sessions.len()));
-                                for session in sessions {
-                                    let id = session.get("id").and_then(|v| v.as_str()).unwrap_or("unknown");
-                                    let name = session.get("name").and_then(|v| v.as_str()).unwrap_or("unnamed");
-                                    let active = session.get("active").and_then(|v| v.as_bool()).unwrap_or(false);
-                                    let status = if active { "active" } else { "idle" };
-                                    self.push_system(format!("  {} - {} ({})", id, name, status));
-                                }
-                            }
-                            Err(err) => self.push_error(format!("failed to list agent sessions: {err}")),
-                        }
-                        self.set_activity_status("idle");
-                    }
-                    "new" | "create" => {
-                        let name = parts.next().map(|s| s.to_string());
-                        let desc = parts.collect::<Vec<_>>().join(" ");
-                        let desc = if desc.is_empty() { None } else { Some(desc) };
-                        self.set_activity_status("running");
-                        match self.client.create_agent_session(name, desc).await {
-                            Ok(session) => {
-                                let id = session.get("id").and_then(|v| v.as_str()).unwrap_or("unknown");
-                                self.push_system(format!("created agent session: {}", id));
-                                self.current_session = id.to_string();
-                                self.attach_stream_for_current_session().await;
-                            }
-                            Err(err) => self.push_error(format!("failed to create agent session: {err}")),
-                        }
-                        self.set_activity_status("idle");
-                    }
-                    "delete" | "rm" => {
-                        if let Some(session_id) = parts.next() {
-                            match self.client.delete_agent_session(session_id).await {
-                                Ok(_) => self.push_system(format!("deleted agent session: {}", session_id)),
-                                Err(err) => self.push_error(format!("failed to delete session: {err}")),
-                            }
-                        } else {
-                            self.push_error("usage: /agent-sessions delete <session_id>".to_string());
-                        }
-                    }
-                    "messages" | "msgs" => {
-                        if let Some(session_id) = parts.next() {
-                            match self.client.list_agent_messages(session_id).await {
-                                Ok(messages) => {
-                                    self.push_system(format!("messages in {}:", session_id));
-                                    for msg in messages {
-                                        let role = msg.get("role").and_then(|v| v.as_str()).unwrap_or("unknown");
-                                        let content = msg.get("content").and_then(|v| v.as_str()).unwrap_or("");
-                                        self.push_system(format!("  [{}] {}", role, content));
-                                    }
-                                }
-                                Err(err) => self.push_error(format!("failed to list messages: {err}")),
-                            }
-                        } else {
-                            self.push_error("usage: /agent-sessions messages <session_id>".to_string());
-                        }
-                    }
-                    "abort" => {
-                        if let Some(session_id) = parts.next() {
-                            let reason = parts.collect::<Vec<_>>().join(" ");
-                            let reason = if reason.is_empty() { None } else { Some(reason.as_str()) };
-                            match self.client.abort_agent_session(session_id, reason).await {
-                                Ok(_) => self.push_system(format!("aborted agent session: {}", session_id)),
-                                Err(err) => self.push_error(format!("failed to abort session: {err}")),
-                            }
-                        } else {
-                            self.push_error("usage: /agent-sessions abort <session_id> [reason]".to_string());
-                        }
-                    }
-                    _ => {
-                        self.push_system("agent sessions: list | new [name] [desc] | delete <id> | messages <id> | abort <id> [reason]".to_string());
-                    }
-                }
-            }
             "/model" => {
                 let model_arg = parts.next();
                 if model_arg.is_none() || model_arg == Some("list") {
@@ -2478,18 +2407,6 @@ impl<'a> TuiApp<'a> {
                     _ => self.push_error("usage: /hooks [status|reload|run <type>]".to_string()),
                 }
             }
-            "/mode" => {
-                // Set execution mode: plan, safe, or auto
-                let mode = parts.next().unwrap_or("safe");
-                match mode {
-                    "plan" | "safe" | "auto" => {
-                        self.push_system(format!("execution mode set to: {}", mode));
-                        // In a full implementation, this would update session state
-                        // For now, just acknowledge the mode change
-                    }
-                    _ => self.push_error("usage: /mode [plan|safe|auto]".to_string()),
-                }
-            }
             "/git" => {
                 let action = parts.next().unwrap_or("status");
                 match action {
@@ -2544,10 +2461,10 @@ impl<'a> TuiApp<'a> {
 
     async fn create_new_session(&mut self) {
         self.set_activity_status("running");
-        let workspace = self.current_path.display().to_string();
+        let workspace = Some(self.current_path.display().to_string());
         match self
             .client
-            .create_brain_session(workspace)
+            .create_brain_session(Some(self.current_agent.clone()), workspace)
             .await
         {
             Ok(session) => {
@@ -3103,10 +3020,7 @@ fn slash_command_catalog_full() -> Vec<SlashCommand> {
         SlashCommand::new("/subagent", CommandCategory::ClaudeCode, "Spawn subagent"),
         SlashCommand::new("/mcp", CommandCategory::ClaudeCode, "MCP server management"),
         SlashCommand::new("/todo", CommandCategory::ClaudeCode, "Task tracking"),
-        SlashCommand::new("/mode", CommandCategory::ClaudeCode, "Set execution mode [plan|safe|auto]"),
-        SlashCommand::new("/agent-sessions", CommandCategory::Agent, "Agent session management [list|new|delete|messages|abort]"),
-        SlashCommand::new("/agents", CommandCategory::Agent, "Alias for /agent-sessions"),
-
+        
         // Hooks
         SlashCommand::new("/hooks", CommandCategory::Hooks, "Manage hooks [status|reload|run]"),
         
@@ -3212,7 +3126,7 @@ fn stringify_value(value: &Value) -> String {
 pub async fn run_tui(base_client: &KernelClient, args: TuiArgs) -> anyhow::Result<()> {
     let auth_override = args.token.as_deref().or(args.password.as_deref());
     let runtime_client =
-        base_client.with_runtime_overrides(args.url.as_deref(), auth_override, args.timeout_ms);
+        base_client.with_runtime_overrides(args.url.as_deref(), auth_override, args.timeout_ms)?;
 
     enable_raw_mode()?;
     let mut stdout = io::stdout();

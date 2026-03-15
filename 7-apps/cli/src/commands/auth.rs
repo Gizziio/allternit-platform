@@ -1,285 +1,278 @@
-//! Auth commands for CLI authentication
-//!
-//! Provides login/logout/whoami functionality with secure token storage.
+//! Authentication commands
 
-use anyhow::{anyhow, Result};
-use clap::{Args, Subcommand};
-use dialoguer::Password;
+use colored::Colorize;
+use dialoguer::{Input, Password};
+use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderValue};
+use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
-#[derive(Args, Debug, Clone)]
-pub struct AuthArgs {
-    #[command(subcommand)]
-    pub command: AuthCommands,
+use crate::config::{save_config, Config};
+use crate::error::{CliError, Result};
+
+/// Token file path for JWT storage
+fn get_token_path() -> Result<PathBuf> {
+    let home = dirs::home_dir()
+        .ok_or_else(|| CliError::Config("Could not find home directory".to_string()))?;
+    Ok(home.join(".config").join("a2r").join("token"))
 }
 
-#[derive(Subcommand, Debug, Clone)]
-pub enum AuthCommands {
-    /// Login to A2R Cloud API
-    Login {
-        /// API base URL (defaults to A2R_CLOUD_URL env var or http://localhost:3001)
-        #[arg(short, long)]
-        url: Option<String>,
-        /// API token (will prompt if not provided)
-        #[arg(short, long)]
-        token: Option<String>,
-    },
-    /// Logout and clear stored credentials
-    Logout,
-    /// Show current authentication status
-    Whoami,
-    /// Validate stored token
-    Validate,
-}
-
-/// Handle auth commands
-pub async fn handle_auth(args: AuthArgs) -> Result<()> {
-    match args.command {
-        AuthCommands::Login { url, token } => login(url, token).await,
-        AuthCommands::Logout => logout(),
-        AuthCommands::Whoami => whoami().await,
-        AuthCommands::Validate => validate().await,
-    }
-}
-
-/// Login to A2R Cloud API
-async fn login(url: Option<String>, token: Option<String>) -> Result<()> {
-    // Determine API URL
-    let api_url = url
-        .or_else(|| std::env::var("A2R_CLOUD_URL").ok())
-        .unwrap_or_else(|| "http://localhost:3001".to_string());
-
-    // Get token - prompt if not provided
-    let api_token = match token {
-        Some(t) => t,
-        None => {
-            println!("Please enter your A2R API token:");
-            Password::new()
-                .with_prompt("Token")
-                .interact()
-                .map_err(|e| anyhow!("Failed to read token: {}", e))?
-        }
-    };
-
-    // Validate token by making a test request
-    print!("Validating token... ");
+/// Save JWT token to file
+async fn save_token(token: &str) -> Result<()> {
+    let token_path = get_token_path()?;
     
-    let client = reqwest::Client::new();
-    let response = client
-        .get(format!("{}/api/v1/auth/me", api_url))
-        .bearer_auth(&api_token)
-        .send()
-        .await;
-
-    match response {
-        Ok(resp) if resp.status().is_success() => {
-            let user: serde_json::Value = resp.json().await
-                .map_err(|e| anyhow!("Failed to parse user info: {}", e))?;
-            
-            // Store credentials
-            save_credentials(&api_url, &api_token)?;
-            
-            println!("✓");
-            println!("\n✅ Successfully logged in to {}", api_url);
-            if let Some(email) = user.get("email").and_then(|v| v.as_str()) {
-                println!("   User: {}", email);
-            }
-            if let Some(role) = user.get("role").and_then(|v| v.as_str()) {
-                println!("   Role: {}", role);
-            }
-        }
-        Ok(resp) => {
-            println!("✗");
-            return Err(anyhow!(
-                "Authentication failed: HTTP {} - {}",
-                resp.status(),
-                resp.text().await.unwrap_or_default()
-            ));
-        }
-        Err(e) => {
-            println!("✗");
-            return Err(anyhow!("Connection failed: {}", e));
-        }
-    }
-
-    Ok(())
-}
-
-/// Logout and clear credentials
-fn logout() -> Result<()> {
-    let config_dir = get_config_dir()?;
-    let creds_file = config_dir.join("credentials.json");
-    
-    if creds_file.exists() {
-        std::fs::remove_file(&creds_file)
-            .map_err(|e| anyhow!("Failed to remove credentials: {}", e))?;
-        println!("✅ Logged out successfully");
-    } else {
-        println!("ℹ️  Not currently logged in");
+    // Ensure parent directory exists
+    if let Some(parent) = token_path.parent() {
+        tokio::fs::create_dir_all(parent).await
+            .map_err(|e| CliError::Io(e))?;
     }
     
-    Ok(())
-}
-
-/// Show current user info
-async fn whoami() -> Result<()> {
-    let (api_url, token) = match load_credentials() {
-        Some(creds) => (creds.url, creds.token),
-        None => {
-            println!("ℹ️  Not logged in. Run 'a2r auth login' to authenticate.");
-            return Ok(());
-        }
-    };
-
-    let client = reqwest::Client::new();
-    let response = client
-        .get(format!("{}/api/v1/auth/me", api_url))
-        .bearer_auth(&token)
-        .send()
-        .await;
-
-    match response {
-        Ok(resp) if resp.status().is_success() => {
-            let user: serde_json::Value = resp.json().await?;
-            
-            println!("Authenticated to: {}", api_url);
-            println!();
-            
-            if let Some(id) = user.get("id").and_then(|v| v.as_str()) {
-                println!("  ID:       {}", id);
-            }
-            if let Some(email) = user.get("email").and_then(|v| v.as_str()) {
-                println!("  Email:    {}", email);
-            }
-            if let Some(name) = user.get("name").and_then(|v| v.as_str()) {
-                println!("  Name:     {}", name);
-            }
-            if let Some(role) = user.get("role").and_then(|v| v.as_str()) {
-                println!("  Role:     {}", role);
-            }
-        }
-        Ok(resp) => {
-            println!("⚠️  Token validation failed: HTTP {}", resp.status());
-            println!("   Run 'a2r auth login' to re-authenticate.");
-        }
-        Err(e) => {
-            println!("⚠️  Connection failed: {}", e);
-        }
-    }
-
-    Ok(())
-}
-
-/// Validate stored token
-async fn validate() -> Result<()> {
-    let (api_url, token) = match load_credentials() {
-        Some(creds) => (creds.url, creds.token),
-        None => {
-            println!("ℹ️  Not logged in");
-            std::process::exit(1);
-        }
-    };
-
-    let client = reqwest::Client::new();
-    let response = client
-        .get(format!("{}/api/v1/auth/me", api_url))
-        .bearer_auth(&token)
-        .send()
-        .await;
-
-    match response {
-        Ok(resp) if resp.status().is_success() => {
-            println!("✅ Token is valid");
-            Ok(())
-        }
-        Ok(resp) => {
-            println!("❌ Token is invalid: HTTP {}", resp.status());
-            std::process::exit(1);
-        }
-        Err(e) => {
-            println!("❌ Connection failed: {}", e);
-            std::process::exit(1);
-        }
-    }
-}
-
-/// Credentials storage
-#[derive(serde::Serialize, serde::Deserialize, Clone)]
-pub struct Credentials {
-    pub url: String,
-    pub token: String,
-}
-
-/// Get config directory
-fn get_config_dir() -> Result<std::path::PathBuf> {
-    let home = std::env::var("HOME")
-        .or_else(|_| std::env::var("USERPROFILE"))
-        .map_err(|_| anyhow!("HOME environment variable not set"))?;
+    // Write token with restricted permissions (owner read/write only)
+    tokio::fs::write(&token_path, token).await
+        .map_err(|e| CliError::Io(e))?;
     
-    let config_dir = std::path::PathBuf::from(home)
-        .join(".config")
-        .join("a2r");
-    
-    // Create directory if it doesn't exist
-    std::fs::create_dir_all(&config_dir)
-        .map_err(|e| anyhow!("Failed to create config directory: {}", e))?;
-    
-    Ok(config_dir)
-}
-
-/// Save credentials to file
-fn save_credentials(url: &str, token: &str) -> Result<()> {
-    let config_dir = get_config_dir()?;
-    let creds_file = config_dir.join("credentials.json");
-    
-    let creds = Credentials {
-        url: url.to_string(),
-        token: token.to_string(),
-    };
-    
-    // Set restrictive permissions (owner read/write only)
-    #[cfg(unix)]
-    use std::os::unix::fs::PermissionsExt;
-    
-    let json = serde_json::to_string_pretty(&creds)
-        .map_err(|e| anyhow!("Failed to serialize credentials: {}", e))?;
-    
-    std::fs::write(&creds_file, json)
-        .map_err(|e| anyhow!("Failed to write credentials: {}", e))?;
-    
-    // Set file permissions to 600 (owner read/write only)
     #[cfg(unix)]
     {
-        let mut perms = std::fs::metadata(&creds_file)?.permissions();
-        perms.set_mode(0o600);
-        std::fs::set_permissions(&creds_file, perms)?;
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = std::fs::metadata(&token_path)?.permissions();
+        perms.set_mode(0o600); // owner read/write only
+        std::fs::set_permissions(&token_path, perms)?;
     }
     
     Ok(())
 }
 
-/// Load credentials from file
-fn load_credentials() -> Option<Credentials> {
-    let config_dir = get_config_dir().ok()?;
-    let creds_file = config_dir.join("credentials.json");
+/// Load JWT token from file
+async fn load_token() -> Result<Option<String>> {
+    let token_path = get_token_path()?;
     
-    let json = std::fs::read_to_string(&creds_file).ok()?;
-    serde_json::from_str(&json).ok()
+    if !token_path.exists() {
+        return Ok(None);
+    }
+    
+    let token = tokio::fs::read_to_string(&token_path).await
+        .map_err(|e| CliError::Io(e))?;
+    
+    Ok(Some(token.trim().to_string()))
 }
 
-/// Get API URL from stored credentials or environment
-pub fn get_api_url() -> Option<String> {
-    load_credentials().map(|c| c.url)
-        .or_else(|| std::env::var("A2R_CLOUD_URL").ok())
+/// Delete JWT token file
+async fn delete_token() -> Result<()> {
+    let token_path = get_token_path()?;
+    
+    if token_path.exists() {
+        tokio::fs::remove_file(&token_path).await
+            .map_err(|e| CliError::Io(e))?;
+    }
+    
+    Ok(())
 }
 
-/// Get auth token from stored credentials
-pub fn get_auth_token() -> Option<String> {
-    load_credentials().map(|c| c.token)
+/// Login request payload
+#[derive(Serialize)]
+struct LoginRequest {
+    email: String,
+    password: String,
 }
 
-/// Get stored credentials
-pub fn get_credentials() -> Option<Credentials> {
-    load_credentials()
+/// Login response
+#[derive(Deserialize)]
+struct LoginResponse {
+    access_token: String,
+    token_type: String,
+    expires_in: Option<u64>,
 }
 
+/// Error response from auth API
+#[derive(Deserialize)]
+struct AuthErrorResponse {
+    error: String,
+    message: Option<String>,
+}
 
+/// Login to A2R cloud
+pub async fn login(mut config: Config) -> Result<()> {
+    println!("{}", "Login to A2R Cloud".bold().underline());
+    println!();
+    
+    // Prompt for email
+    let email: String = Input::new()
+        .with_prompt("Email")
+        .interact_text()
+        .map_err(|e| CliError::Internal(format!("Input error: {}", e)))?;
+    
+    // Validate email format
+    if !email.contains('@') || !email.contains('.') {
+        return Err(CliError::Config("Please enter a valid email address".to_string()));
+    }
+    
+    // Prompt for password (hidden input)
+    let password = Password::new()
+        .with_prompt("Password")
+        .interact()
+        .map_err(|e| CliError::Internal(format!("Input error: {}", e)))?;
+    
+    println!();
+    println!("{}", "Authenticating...".dimmed());
+    
+    // Create HTTP client
+    let client = reqwest::Client::new();
+    
+    // Build login URL
+    let login_url = format!("{}/api/v1/auth/login", config.api_endpoint);
+    
+    // Send login request
+    let login_request = LoginRequest {
+        email: email.clone(),
+        password,
+    };
+    
+    let response = client
+        .post(&login_url)
+        .header(CONTENT_TYPE, "application/json")
+        .json(&login_request)
+        .send()
+        .await?;
+    
+    match response.status() {
+        reqwest::StatusCode::OK => {
+            // Parse successful response
+            let login_response: LoginResponse = response.json().await
+                .map_err(|e| CliError::Internal(format!(
+                    "Failed to parse login response: {}", e
+                )))?;
+            
+            let token = login_response.access_token;
+            
+            // Validate token format (should be JWT)
+            if !token.split('.').count() == 3 {
+                return Err(CliError::Internal(
+                    "Invalid token format received from server".to_string()
+                ));
+            }
+            
+            // Save token to file
+            save_token(&token).await?;
+            
+            // Update config with token (for backward compatibility)
+            config.auth_token = Some(token.clone());
+            save_config(&config).await?;
+            
+            println!();
+            println!("{}", "✓ Login successful".green().bold());
+            println!();
+            println!("  Welcome back, {}!", email.dimmed());
+            
+            if let Some(expires_in) = login_response.expires_in {
+                let hours = expires_in / 3600;
+                println!("  Session expires in {} hours", hours);
+            }
+        }
+        reqwest::StatusCode::UNAUTHORIZED => {
+            let error_response: AuthErrorResponse = response.json().await
+                .unwrap_or_else(|_| AuthErrorResponse {
+                    error: "Unauthorized".to_string(),
+                    message: Some("Invalid email or password".to_string()),
+                });
+            
+            return Err(CliError::NotAuthenticated);
+        }
+        _ => {
+            let error_text = response.text().await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            
+            return Err(CliError::Internal(format!(
+                "Authentication failed: {}", error_text
+            )));
+        }
+    }
+    
+    Ok(())
+}
+
+/// Logout from A2R cloud
+pub async fn logout(config: Config) -> Result<()> {
+    // Check if already logged out
+    let token = load_token().await?;
+    let config_has_token = config.auth_token.is_some();
+    
+    if token.is_none() && !config_has_token {
+        println!("{}", "Already logged out".yellow());
+        return Ok(());
+    }
+    
+    // Get the token for the logout request
+    let token_to_invalidate = token.clone()
+        .or_else(|| config.auth_token.clone())
+        .unwrap_or_default();
+    
+    println!("{}", "Logging out...".dimmed());
+    
+    // Call logout API if we have a token
+    if !token_to_invalidate.is_empty() {
+        let client = reqwest::Client::new();
+        let logout_url = format!("{}/api/v1/auth/logout", config.api_endpoint);
+        
+        let mut headers = HeaderMap::new();
+        let auth_value = format!("Bearer {}", token_to_invalidate);
+        if let Ok(header_val) = HeaderValue::from_str(&auth_value) {
+            headers.insert(AUTHORIZATION, header_val);
+        }
+        
+        // Send logout request (best effort - don't fail if server is unreachable)
+        let _ = client
+            .post(&logout_url)
+            .headers(headers)
+            .send()
+            .await;
+    }
+    
+    // Delete token file
+    delete_token().await?;
+    
+    // Also clear config token
+    let mut config = config;
+    config.auth_token = None;
+    save_config(&config).await?;
+    
+    println!("{}", "✓ Logged out successfully".green().bold());
+    
+    Ok(())
+}
+
+/// Check if user is authenticated
+pub async fn is_authenticated() -> bool {
+    match load_token().await {
+        Ok(Some(_)) => true,
+        _ => false,
+    }
+}
+
+/// Get authentication headers for API requests
+pub async fn get_auth_headers(config: &Config) -> Result<HeaderMap> {
+    let mut headers = HeaderMap::new();
+    
+    // Try to get token from file first, then from config
+    let token = load_token().await?
+        .or_else(|| config.auth_token.clone())
+        .ok_or(CliError::NotAuthenticated)?;
+    
+    let auth_value = format!("Bearer {}", token);
+    let header_val = HeaderValue::from_str(&auth_value)
+        .map_err(|e| CliError::Internal(format!("Invalid auth header: {}", e)))?;
+    
+    headers.insert(AUTHORIZATION, header_val);
+    headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
+    
+    Ok(headers)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn test_token_path() {
+        let path = get_token_path().unwrap();
+        assert!(path.to_string_lossy().contains(".config/a2r/token"));
+    }
+}

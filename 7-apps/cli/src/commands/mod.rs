@@ -1,52 +1,9 @@
-//! CLI Commands Module
+//! CLI commands
 
 pub mod auth;
-pub mod autoland;
-pub mod brain_integration;
-pub mod cap;
-pub mod cowork;
-pub mod daemon;
-pub mod ev;
-pub mod instances;
-pub mod j;
-pub mod marketplace;
-pub mod memory;
-pub mod model;
-pub mod openclaw_compat;
 pub mod repl;
-pub mod rlm;
 pub mod run;
-pub mod skills;
-pub mod status_health_sessions;
-pub mod swarm;
-pub mod taskgraph;
-pub mod tools;
-pub mod tui;
+pub mod sessions;
+pub mod shell;
+pub mod status;
 pub mod vm;
-pub mod voice;
-pub mod webvm;
-
-pub use auth::{handle_auth, get_credentials, get_api_url, get_auth_token, Credentials};
-pub use autoland::handle_autoland_args;
-pub use brain_integration::{handle_brain, handle_brain_args};
-pub use cap::{handle_cap, handle_cap_args};
-pub use cowork::{handle_cowork_args, CoworkArgs};
-pub use daemon::handle_daemon;
-pub use ev::{handle_ev, handle_ev_args};
-pub use instances::{handle_instances, handle_instances_args, InstancesArgs};
-pub use j::{handle_j, handle_j_args};
-pub use marketplace::handle_marketplace;
-pub use memory::handle_memory;
-pub use model::{handle_model, handle_model_args};
-pub use repl::handle_repl;
-pub use rlm::{handle_rlm, handle_rlm_args};
-pub use run::handle_run;
-pub use skills::{handle_skills, handle_skills_args};
-pub use swarm::{handle_swarm, SwarmArgs};
-pub use status_health_sessions::{handle_status, handle_health, handle_sessions};
-pub use vm::{handle_vm, VmArgs};
-pub use taskgraph::{handle_taskgraph, handle_taskgraph_args};
-pub use tools::{handle_tools, handle_tools_args};
-pub use tui::run_tui;
-pub use voice::{handle_voice, handle_voice_args};
-pub use webvm::{handle_webvm, handle_webvm_args};
