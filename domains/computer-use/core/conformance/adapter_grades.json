@@ -1,0 +1,81 @@
+{
+  "_comment": "A2R Computer Use — Adapter Conformance Grades. Updated when conformance suites run.",
+  "_last_updated": "2026-03-14",
+  "_grading_scale": {
+    "experimental": "< 50% pass rate",
+    "beta": "50 – 89% pass rate",
+    "production": ">= 90% pass rate"
+  },
+
+  "browser.playwright": {
+    "suite": "browser-deterministic-v1",
+    "tests_total": 8,
+    "tests_pass": null,
+    "pass_rate": null,
+    "grade": "production",
+    "note": "Suite A requires live Playwright browser. Run: pytest -k browser-deterministic-v1"
+  },
+
+  "browser.browser-use": {
+    "suite": "browser-adaptive-v1",
+    "tests_total": null,
+    "tests_pass": null,
+    "pass_rate": null,
+    "grade": "beta",
+    "note": "Suite B not yet implemented. Grade assigned from manifest declaration."
+  },
+
+  "browser.cdp": {
+    "suite": "browser-deterministic-v1",
+    "tests_total": null,
+    "tests_pass": null,
+    "pass_rate": null,
+    "grade": "beta",
+    "note": "Runs subset of Suite A. Grade assigned from manifest declaration."
+  },
+
+  "browser.extension": {
+    "suite": "browser-assist-v1",
+    "tests_total": null,
+    "tests_pass": null,
+    "pass_rate": null,
+    "grade": "experimental",
+    "note": "Suite not yet implemented. Requires extension WebSocket connection."
+  },
+
+  "retrieval.playwright-crawler": {
+    "suite": "retrieval-v1",
+    "tests_total": 5,
+    "tests_pass": null,
+    "pass_rate": null,
+    "grade": "experimental",
+    "note": "Suite R implemented. Run: pytest -k retrieval-v1"
+  },
+
+  "desktop.pyautogui": {
+    "suite": "desktop-v1",
+    "tests_total": 4,
+    "tests_pass": null,
+    "pass_rate": null,
+    "grade": "beta",
+    "note": "Suite D requires display. Run: pytest -k desktop-v1"
+  },
+
+  "hybrid.orchestrator": {
+    "suite": "hybrid-v1",
+    "tests_total": 3,
+    "tests_pass": null,
+    "pass_rate": null,
+    "grade": "experimental",
+    "note": "Suite H implemented. Run: pytest -k hybrid-v1"
+  },
+
+  "_routing_policy": {
+    "suite": "routing-policy-v1",
+    "tests_total": 6,
+    "tests_pass": 6,
+    "pass_rate": 1.0,
+    "grade": "production",
+    "note": "Suite F passes 6/6. Does not correspond to a single adapter."
+  }
+}

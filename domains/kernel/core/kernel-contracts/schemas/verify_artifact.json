@@ -1,0 +1,131 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "VerifyArtifact",
+  "description": "VerifyArtifacts defines the required structure for verification artifacts.",
+  "type": "object",
+  "required": [
+    "metadata",
+    "outputs_hash",
+    "results",
+    "run_id",
+    "step_id",
+    "timestamp",
+    "verified_by",
+    "verify_id"
+  ],
+  "properties": {
+    "metadata": {
+      "description": "Metadata for the verification",
+      "type": "object",
+      "additionalProperties": true
+    },
+    "outputs_hash": {
+      "description": "Hash of the outputs being verified",
+      "type": "string"
+    },
+    "results": {
+      "description": "Verification results",
+      "allOf": [
+        {
+          "$ref": "#/definitions/VerificationResults"
+        }
+      ]
+    },
+    "run_id": {
+      "description": "Run ID this verification belongs to",
+      "type": "string"
+    },
+    "step_id": {
+      "description": "Step ID within the run",
+      "type": "string"
+    },
+    "timestamp": {
+      "description": "Unix timestamp when verification was performed",
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "verified_by": {
+      "description": "Identity that performed the verification",
+      "type": "string"
+    },
+    "verify_id": {
+      "description": "Unique identifier for this verification artifact",
+      "type": "string"
+    }
+  },
+  "definitions": {
+    "VerificationIssue": {
+      "type": "object",
+      "required": [
+        "description",
+        "issue_type",
+        "severity"
+      ],
+      "properties": {
+        "description": {
+          "description": "Description of the issue",
+          "type": "string"
+        },
+        "issue_type": {
+          "description": "Type of issue",
+          "type": "string"
+        },
+        "location": {
+          "description": "Location of the issue",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "severity": {
+          "description": "Severity level",
+          "allOf": [
+            {
+              "$ref": "#/definitions/VerificationSeverity"
+            }
+          ]
+        }
+      }
+    },
+    "VerificationResults": {
+      "type": "object",
+      "required": [
+        "confidence",
+        "details",
+        "issues",
+        "passed"
+      ],
+      "properties": {
+        "confidence": {
+          "description": "Confidence level (0.0 to 1.0)",
+          "type": "number",
+          "format": "double"
+        },
+        "details": {
+          "description": "Verification details"
+        },
+        "issues": {
+          "description": "Any issues found during verification",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/VerificationIssue"
+          }
+        },
+        "passed": {
+          "description": "Whether verification passed",
+          "type": "boolean"
+        }
+      }
+    },
+    "VerificationSeverity": {
+      "type": "string",
+      "enum": [
+        "Info",
+        "Warning",
+        "Error",
+        "Critical"
+      ]
+    }
+  }
+}

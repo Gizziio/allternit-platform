@@ -1,0 +1,89 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ToolABI",
+  "description": "ToolABI defines the interface contract for all tools in the system.",
+  "type": "object",
+  "required": [
+    "description",
+    "has_side_effects",
+    "input_schema",
+    "max_execution_time_ms",
+    "name",
+    "output_schema",
+    "requires_policy_approval",
+    "resource_requirements",
+    "tool_id"
+  ],
+  "properties": {
+    "description": {
+      "description": "Description of what the tool does",
+      "type": "string"
+    },
+    "has_side_effects": {
+      "description": "Whether the tool has side effects",
+      "type": "boolean"
+    },
+    "input_schema": {
+      "description": "Input schema for the tool"
+    },
+    "max_execution_time_ms": {
+      "description": "Maximum execution time in milliseconds",
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "name": {
+      "description": "Name of the tool",
+      "type": "string"
+    },
+    "output_schema": {
+      "description": "Output schema for the tool"
+    },
+    "requires_policy_approval": {
+      "description": "Whether the tool requires policy approval",
+      "type": "boolean"
+    },
+    "resource_requirements": {
+      "description": "Resource requirements",
+      "allOf": [
+        {
+          "$ref": "#/definitions/ResourceRequirements"
+        }
+      ]
+    },
+    "tool_id": {
+      "description": "Unique identifier for the tool",
+      "type": "string"
+    }
+  },
+  "definitions": {
+    "ResourceRequirements": {
+      "type": "object",
+      "required": [
+        "cpu_millicores",
+        "memory_mb",
+        "storage_mb"
+      ],
+      "properties": {
+        "cpu_millicores": {
+          "description": "CPU requirements (in millicores)",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "memory_mb": {
+          "description": "Memory requirements (in MB)",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        },
+        "storage_mb": {
+          "description": "Storage requirements (in MB)",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0.0
+        }
+      }
+    }
+  }
+}

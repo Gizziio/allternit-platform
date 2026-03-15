@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EventEnvelope",
+  "description": "EventEnvelope defines the canonical structure for all events in the system. This is a frozen contract that all subsystems must comply with.",
+  "type": "object",
+  "required": [
+    "actor_id",
+    "event_id",
+    "event_type",
+    "payload",
+    "role",
+    "session_id",
+    "tenant_id",
+    "timestamp"
+  ],
+  "properties": {
+    "actor_id": {
+      "description": "Identity of the actor that initiated this event",
+      "type": "string"
+    },
+    "causation_id": {
+      "description": "Causation ID for causal relationships between events",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "correlation_id": {
+      "description": "Correlation ID for tracing across multiple events",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "event_id": {
+      "description": "Unique identifier for this specific event",
+      "type": "string"
+    },
+    "event_type": {
+      "description": "Type of event (e.g., \"CommandExecuted\", \"StateTransition\", \"ToolCall\")",
+      "type": "string"
+    },
+    "idempotency_key": {
+      "description": "Idempotency key for preventing duplicate processing",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "payload": {
+      "description": "Additional contextual data for the event"
+    },
+    "role": {
+      "description": "Role of the actor (e.g., \"user\", \"agent\", \"system\")",
+      "type": "string"
+    },
+    "session_id": {
+      "description": "Session identifier for the run this event belongs to",
+      "type": "string"
+    },
+    "tenant_id": {
+      "description": "Tenant identifier for multi-tenant isolation",
+      "type": "string"
+    },
+    "timestamp": {
+      "description": "Unix timestamp when the event occurred",
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0.0
+    },
+    "trace_id": {
+      "description": "Trace ID for distributed tracing",
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "teacher_id": "tch_123",
+  "name": "Teacher Name",
+  "canvas_user_id": 999,
+  "preferred_grade_band": "6-8",
+  "style": {
+    "tone": "direct",
+    "format": "bulleted"
+  },
+  "auth": {
+    "canvas_api_token_ref": "secret://summit_oic/teacher/tch_123/canvas_token"
+  }
+}

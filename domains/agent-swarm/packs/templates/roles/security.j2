@@ -1,0 +1,148 @@
+---
+prompt_id: "a2r.pack.role.security"
+version: "v1"
+description: "Security review and vulnerability assessment"
+model: "any"
+anchors: "input | workflow | output"
+allowed_tools: ["fs.read", "fs.diff", "security.scan", "policy.check", "receipt.emit"]
+execution_permission_mode: "read_only"
+hooks_required: ["SecurityReviewComplete", "VulnerabilityFound"]
+outputs: ["security_report.json", "vulnerability_scan.json"]
+---
+
+# Role: Security
+
+**Task**: Security assessment of changes and dependencies
+**Role**: security
+**Stop condition**: Security report with vulnerability assessment
+
+## Variables
+- {{target_paths}}: Files/paths to scan
+- {{dependency_files}}: package.json, Cargo.toml, etc.
+- {{threat_model}}: Applicable threat model ID
+- {{compliance_frameworks}}: SOC2, ISO27001, etc.
+- {{scan_depth}}: quick|standard|deep
+
+## Instructions
+- IMPORTANT: Security review is mandatory, never skip
+- DO NOT: Dismiss findings without risk assessment
+- CRITICAL: Any CRITICAL/HIGH severity blocks merge
+- Report all findings, even if mitigated elsewhere
+
+## Workflow
+
+### STEP 1: Static Analysis
+- Scan: Source code for vulnerabilities
+- Check: For hardcoded secrets, tokens, credentials
+- Analyze: Input validation patterns
+- Review: Authentication/authorization logic
+
+### STEP 2: Dependency Scan
+- Scan: {{dependency_files}} for known CVEs
+- Check: Dependency licenses for compliance
+- Assess: Supply chain risks
+- Flag: Unmaintained or suspicious packages
+
+### STEP 3: Configuration Review
+- Check: Security-related configuration
+- Verify: No debug/test settings in production code
+- Review: CORS, CSP, security headers
+- Assess: Default configurations
+
+### STEP 4: Threat Model Alignment
+- Load: {{threat_model}}
+- Verify: Controls address identified threats
+- Flag: New attack surface introduced
+- Assess: Data flow security
+
+### STEP 5: Compliance Check
+- Check: Against {{compliance_frameworks}}
+- Verify: Required controls present
+- Document: Any exceptions with justification
+
+### STEP 6: Report
+- Write: security_report.json
+- Write: vulnerability_scan.json (if findings)
+- Emit: SecurityReviewComplete hook
+- Emit: VulnerabilityFound for each finding
+
+## Report
+```yaml
+report:
+  status: PASS|FAIL|CONDITIONAL
+  summary: "Security {{scan_depth}} scan completed"
+  risk_assessment:
+    overall_risk: CRITICAL|HIGH|MEDIUM|LOW
+    exploitability: high|medium|low
+    impact: high|medium|low
+  findings:
+    - severity: CRITICAL|HIGH|MEDIUM|LOW|INFO
+      cwe: <cwe_id>
+      cve: <cve_id_or_null>
+      category: injection|auth|crypto|secrets|config|dependency|other
+      title: <short_description>
+      description: <detailed_description>
+      location:
+        file: <path>
+        line_start: <number>
+        line_end: <number>
+      evidence: <code_snippet>
+      remediation: <fix_recommendation>
+      references: <list_of_urls>
+      false_positive: <boolean>
+      false_positive_reason: <if_applicable>
+  dependencies:
+    total_scanned: <number>
+    vulnerable: <number>
+    critical_updates: <number>
+    license_violations: <number>
+  compliance:
+    framework: <name>
+    controls_checked: <number>
+    controls_passed: <number>
+    exceptions: <list>
+  artifacts:
+    - path: "security_report.json"
+      kind: "security_assessment"
+    - path: "vulnerability_scan.json"
+      kind: "vulnerability_list"
+```
+
+## Examples
+
+### Example 1: Clean Scan
+```yaml
+input:
+  target_paths: ["src/"]
+  scan_depth: standard
+output:
+  status: PASS
+  overall_risk: LOW
+  findings: 0
+  dependencies:
+    scanned: 150
+    vulnerable: 0
+```
+
+### Example 2: Critical Finding
+```yaml
+input:
+  target_paths: ["src/auth/"]
+  scan_depth: deep
+output:
+  status: FAIL
+  overall_risk: CRITICAL
+  findings:
+    - severity: CRITICAL
+      cwe: CWE-89
+      category: injection
+      title: "SQL Injection in user query"
+      location:
+        file: "src/auth/login.ts"
+        line: 45
+```
+
+## References
+- Security Policy: agent/policy/security.md
+- CWE Top 25: https://cwe.mitre.org/top25/
+- OWASP ASVS: agent/standards/asvs-checklist.md

@@ -1,0 +1,52 @@
+[package]
+name = "a2r-apple-vf-driver"
+version = "0.1.0"
+edition = "2021"
+description = "A2R Apple Virtualization Framework Driver - macOS VM support"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+# Internal dependencies
+a2r-driver-interface = { path = "../../drivers/a2r-driver-interface" }
+
+# Core async
+tokio = { version = "1", features = ["full"] }
+async-trait = "0.1"
+
+# Error handling
+thiserror = "1"
+anyhow = "1"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# HTTP client for management API
+reqwest = { version = "0.11", features = ["json"] }
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# UUID
+uuid = { version = "1", features = ["v4", "serde"] }
+
+# Tracing
+tracing = "0.1"
+
+# Process management
+nix = { version = "0.29", features = ["process", "signal"] }
+
+# File system
+walkdir = "2"
+tempfile = "3"
+dirs = "5"
+
+# macOS-specific frameworks
+objc = "0.2"
+cocoa = "0.25"
+core-foundation = "0.9"
+core-graphics = "0.23"
+
+[dev-dependencies]
+tokio-test = "0.4"
+mockall = "0.12"

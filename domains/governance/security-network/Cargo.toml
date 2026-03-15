@@ -1,0 +1,48 @@
+[package]
+name = "a2rchitech-federation"
+version = "0.1.0"
+edition = "2021"
+authors = ["A2rchitech Team"]
+license = "MIT"
+description = "Node identity and trust graph for federation capabilities"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+tokio-stream = "0.1"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+thiserror = "1.0"
+anyhow = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+async-trait = "0.1"
+futures = "0.3"
+ed25519-dalek = { version = "2.0", features = ["std", "rand_core"] }
+rand = "0.8"
+sha2 = "0.10"
+hex = "0.4"
+base64 = "0.22"
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "postgres", "chrono", "uuid"] }
+a2rchitech-policy = { workspace = true }
+a2rchitech-history = { workspace = true }
+a2rchitech-messaging = { workspace = true }
+a2rchitech-data-fabric = { package = "a2rchitech-memory-provider", path = "../../1-kernel/data/a2r-memory-provider" }
+a2rchitech-registry = { path = "../../1-kernel/control-plane/unified-registry/registry" }
+a2rchitech-tools-gateway = { workspace = true }
+a2rchitech-hooks = { path = "../../1-kernel/control-plane/a2r-agent-orchestration/hooks" }
+a2rchitech-context-router = { workspace = true }
+a2rchitech-providers = { workspace = true }
+a2rchitech-memory = { workspace = true }
+a2rchitech-agents = { path = "../../1-kernel/control-plane/a2r-agent-orchestration/agents" }
+a2rchitech-skills = { workspace = true }
+a2rchitech-workflows = { workspace = true }
+a2rchitech-runtime-core = { workspace = true }
+a2rchitech-security-governance = { workspace = true }
+a2rchitech-embodiment = { workspace = true }
+a2rchitech-orchestration = { package = "a2rchitech-control-plane", path = "../../1-kernel/control-plane/a2r-control/control-plane" }
+a2rchitech-kernel-contracts = { workspace = true }
+a2rchitech-capsule = { package = "a2r-capsule", path = "../../1-kernel/capsule-system/a2r-capsule" }
+a2rchitech-wasm-runtime = { package = "a2r-wasm-runtime", path = "../../1-kernel/a2r-kernel/wasm-runtime" }
+a2rchitech-cloud-runner = { package = "a2rchitech-runtime-local", path = "../../1-kernel/a2r-kernel/runtime-local-executor" }
+a2rchitech-control-plane-service = { path = "../../1-kernel/control-plane/a2r-control/control-plane-impl" }

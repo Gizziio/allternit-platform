@@ -1,0 +1,21 @@
+[package]
+name = "a2r-policy-tier-gating"
+version = "0.1.0"
+edition = "2021"
+description = "A2R Policy Tier Gating - Tiered policy enforcement for safety levels"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+uuid = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+chrono = { workspace = true }
+a2r-ontology-runtime = { path = "../../../1-kernel/infrastructure/ontology-runtime" }
+a2r-purpose-binding = { path = "../purpose-binding" }
+
+[dev-dependencies]
+tokio-test = "0.4"
+tempfile = "3.10"

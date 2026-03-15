@@ -1,0 +1,19 @@
+{
+  "name": "@a2r/environment-standardization",
+  "version": "1.0.0",
+  "description": "Environment Standardization - NES, lifecycle runner, determinism hashing",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": ["a2r", "environment", "standardization", "reproducibility"],
+  "license": "MIT"
+}

@@ -1,0 +1,10 @@
+{
+  "type": "object",
+  "required": ["endpoint_ref", "task_description"],
+  "properties": {
+    "endpoint_ref": { "type": "string", "description": "Desktop session endpoint reference (e.g., ws://127.0.0.1:3008/session/miller_ws_1)" },
+    "task_description": { "type": "string", "description": "What to do on the desktop (e.g., 'Log into the CoWork portal and navigate to Reports')" },
+    "display_name": { "type": "string", "description": "Friendly name for the session" },
+    "max_steps": { "type": "integer", "minimum": 1, "maximum": 50, "default": 10 }
+  }
+}

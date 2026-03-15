@@ -1,0 +1,141 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://a2r.io/schemas/capsule.json",
+  "title": "Interactive Capsule",
+  "description": "Schema for MCP Apps Interactive Capsules",
+  "type": "object",
+  "required": ["id", "type", "state", "surface", "toolId", "createdAt", "updatedAt"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique identifier for the capsule"
+    },
+    "type": {
+      "type": "string",
+      "description": "Capsule type identifier"
+    },
+    "state": {
+      "type": "string",
+      "enum": ["pending", "active", "closed", "error"],
+      "description": "Current lifecycle state of the capsule"
+    },
+    "surface": {
+      "$ref": "#/definitions/ToolUISurface"
+    },
+    "toolId": {
+      "type": "string",
+      "description": "ID of the tool that created this capsule"
+    },
+    "agentId": {
+      "type": "string",
+      "description": "Optional ID of the agent that owns this capsule"
+    },
+    "sessionId": {
+      "type": "string",
+      "description": "Optional session ID for grouping capsules"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of capsule creation"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of last update"
+    },
+    "expiresAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Optional expiration timestamp"
+    },
+    "error": {
+      "type": "string",
+      "description": "Error message if state is 'error'"
+    }
+  },
+  "definitions": {
+    "ToolUISurface": {
+      "type": "object",
+      "required": ["html", "permissions"],
+      "properties": {
+        "html": {
+          "type": "string",
+          "minLength": 1,
+          "description": "HTML content of the capsule UI"
+        },
+        "css": {
+          "type": "string",
+          "description": "Optional CSS styles"
+        },
+        "js": {
+          "type": "string",
+          "description": "Optional JavaScript code"
+        },
+        "props": {
+          "type": "object",
+          "description": "Initial props for the capsule"
+        },
+        "permissions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CapsulePermission"
+          },
+          "description": "Permissions granted to this capsule"
+        },
+        "metadata": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "version": {
+              "type": "string",
+              "default": "1.0.0"
+            },
+            "author": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "CapsulePermission": {
+      "type": "object",
+      "required": ["permission_type", "resource"],
+      "properties": {
+        "permission_type": {
+          "type": "string",
+          "enum": [
+            "tool:invoke",
+            "tool:subscribe",
+            "state:read",
+            "state:write",
+            "event:emit",
+            "event:subscribe"
+          ],
+          "description": "Type of permission"
+        },
+        "resource": {
+          "type": "string",
+          "description": "Resource identifier (tool name, state path, event type)"
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Allowed actions for this permission"
+        },
+        "conditions": {
+          "type": "object",
+          "description": "Optional conditions for this permission"
+        }
+      }
+    }
+  }
+}

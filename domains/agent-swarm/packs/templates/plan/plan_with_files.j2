@@ -1,0 +1,122 @@
+---
+prompt_id: "a2r.pack.plan.plan_with_files"
+version: "v1"
+description: "Create execution plan from files and requirements"
+model: "any"
+anchors: "input | workflow | output"
+allowed_tools: ["fs.read", "fs.list", "dag.validate", "receipt.emit"]
+execution_permission_mode: "read_only"
+hooks_required: ["PlanCreated"]
+outputs: ["execution_plan.json", "file_manifest.json"]
+---
+
+# Plan with Files
+
+**Task**: Analyze codebase and create deterministic execution plan
+**Role**: planner
+**Stop condition**: Valid execution plan emitted with file manifest
+
+## Variables
+- {{target_files}}: Glob patterns or specific file paths to analyze
+- {{requirements_path}}: Path to requirements document
+- {{constraints}}: Optional execution constraints (time, resources)
+- {{dag_template}}: Optional DAG template to base plan on
+
+## Instructions
+- IMPORTANT: Analyze all files matching {{target_files}} before planning
+- DO NOT: Include files outside scope in execution plan
+- CRITICAL: Validate all file paths exist before emitting plan
+- All estimates must include confidence intervals
+
+## Workflow
+
+### STEP 1: Discovery
+- List: All files matching {{target_files}}
+- Read: {{requirements_path}}
+- Identify: Entry points, dependencies, test boundaries
+
+### STEP 2: Dependency Analysis
+- Parse: Import/require statements in target files
+- Build: Dependency graph (internal and external)
+- Flag: Circular dependencies as risks
+
+### STEP 3: Task Decomposition
+- Break: Requirements into atomic tasks
+- Assign: Each task to appropriate worker role
+- Estimate: Time and complexity (with confidence)
+- Order: Tasks by dependency graph
+
+### STEP 4: DAG Construction
+- Create: Nodes for each task
+- Add: Edges for dependencies
+- Insert: Gates at validation points
+- **Autoland Protocol**: Set `autoland_on_pass: true` for all `builder` tasks that involve structural code changes.
+- Validate: Against dag.schema.v1.json
+
+### STEP 5: Emit Plan
+- Write: execution_plan.json
+- Write: file_manifest.json
+- **Landing Standard**: Ensure all `builder` nodes specify an isolated workspace in `.a2r/runner/` and never write directly to the project root.
+- Emit: PlanCreated hook
+
+## Report
+```yaml
+report:
+  status: PASS|FAIL|BLOCKED
+  summary: "Plan created for {{file_count}} files, {{task_count}} tasks"
+  files:
+    total: <number>
+    analyzed: <number>
+    skipped: <number>
+  tasks:
+    total: <number>
+    by_role:
+      builder: <number>
+      validator: <number>
+      reviewer: <number>
+  dependencies:
+    internal: <number>
+    external: <number>
+    circular: <list>
+  estimates:
+    total_duration: "<duration>"
+    confidence: "high|medium|low"
+    risks:
+      - description: <risk>
+        mitigation: <strategy>
+  artifacts:
+    - path: "execution_plan.json"
+      kind: "dag_definition"
+    - path: "file_manifest.json"
+      kind: "file_list"
+```
+
+## Examples
+
+### Example 1: Feature Implementation Plan
+```yaml
+input:
+  target_files: ["src/auth/**/*.ts"]
+  requirements_path: "docs/auth-refactor.md"
+output:
+  status: PASS
+  tasks: 8
+  files: 12
+  estimates:
+    total_duration: "4h"
+    confidence: high
+```
+
+### Example 2: Blocked - Missing Requirements
+```yaml
+input:
+  target_files: ["src/api/**/*.rs"]
+  requirements_path: "docs/api-spec.md"
+output:
+  status: BLOCKED
+  reason: "Requirements document not found"
+```
+
+## References
+- DAG Schema v1: agent/spec/dag.schema.v1.json
+- Planning Guide: agent/cookbooks/planning.md

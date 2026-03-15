@@ -1,0 +1,10 @@
+[package]
+name = "a2r-governor"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+a2r-substrate = { version = "0.1.0", path = "../../../0-substrate/a2r-substrate" }
+anyhow.workspace = true

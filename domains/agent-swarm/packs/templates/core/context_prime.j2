@@ -1,0 +1,154 @@
+---
+prompt_id: "a2r.pack.core.context_prime@v1"
+version: "v1"
+description: "Prime an agent session with deterministic context injection"
+argument_hint: "context_prime --wih={{wih_id}} --dag={{dag_id}}"
+model: "any"
+anchors: "input | workflow | output"
+allowed_tools: ["fs.read", "fs.glob"]
+disallowed_tools: ["fs.write", "fs.edit", "bash.exec"]
+execution_permission_mode: "default"
+hooks_required: ["SessionStart", "UserPromptSubmit"]
+outputs: ["injection_marker.json"]
+writes_policy:
+  workspace_root: ".a2r/"
+  allow_write_paths: [".a2r/runner/{{run_id}}/markers/"]
+  deny_write_paths: [".a2r/ledger/**", ".a2r/leases/**"]
+role: "orchestrator"
+timeout_s: 30
+requires_wih: true
+requires_dag_node: true
+context_pack_inputs:
+  - "{{agents_md_path}}"
+  - "{{policy_bundle_path}}"
+  - "{{dag_slice_path}}"
+  - "{{receipts_slice_path}}"
+notes:
+  - "This prompt is idempotent - same inputs produce same output"
+  - "Injection marker is content-addressed for replay"
+---
+
+# Context Prime: {{agent_role}}
+
+**Task**: Initialize agent session with deterministic context from AGENTS.md, policy bundle, DAG slice, and evidence receipts.
+
+**Role**: {{role}}
+
+**Stop condition**: Context pack compiled and injection marker emitted.
+
+---
+
+## Variables
+
+```yaml
+wih_id: "{{wih_id}}"
+dag_id: "{{dag_id}}"
+node_id: "{{node_id}}"
+run_id: "{{run_id}}"
+agent_role: "{{agent_role}}"
+agents_md_path: "{{agents_md_path}}"
+policy_bundle_id: "{{policy_bundle_id}}"
+context_pack_id: "{{context_pack_id}}"
+plan_hashes:
+  plan_md: "{{plan_md_hash}}"
+  todo_md: "{{todo_md_hash}}"
+  progress_md: "{{progress_md_hash}}"
+  findings_md: "{{findings_md_hash}}"
+```
+
+---
+
+## Instructions
+
+**IMPORTANT**: This is a read-only initialization phase. Do not modify any files.
+
+**DO NOT**:
+- Write to repository files
+- Execute bash commands that modify state
+- Create new files outside the workspace root
+
+**IMPORTANT**: All context must be content-addressed for determinism.
+
+---
+
+## Workflow
+
+STEP 1: Load AGENTS.md
+- Read: {{agents_md_path}}
+- Hash content for injection marker
+- Validate against expected hash: {{agents_md_hash}}
+
+STEP 2: Load Policy Bundle
+- Read: {{policy_bundle_path}}
+- Verify bundle_id: {{policy_bundle_id}}
+- Extract constraints for role: {{agent_role}}
+
+STEP 3: Load DAG Slice
+- Read: {{dag_slice_path}}
+- Extract node {{node_id}} context
+- Verify all dependencies are DONE
+
+STEP 4: Load Evidence Receipts
+- Read: {{receipts_slice_path}}
+- Verify receipt integrity
+- Extract relevant evidence for this node
+
+STEP 5: Compile Context Pack
+- Combine all inputs deterministically
+- Sort all object keys
+- Compute content hash
+
+STEP 6: Emit Injection Marker
+- Write: injection_marker.json
+- Include all content hashes
+- Reference Rails ledger event
+
+---
+
+## Report Format
+
+```yaml
+report:
+  status: PASS|FAIL|BLOCKED
+  summary: "Context primed successfully"
+  artifacts:
+    - path: ".a2r/runner/{{run_id}}/markers/injection_marker.json"
+      kind: "marker"
+      hash: "{{injection_marker_hash}}"
+  context_pack:
+    id: "{{context_pack_id}}"
+    hash: "{{content_hash}}"
+    inputs_verified:
+      agents_md: true|false
+      policy_bundle: true|false
+      dag_slice: true|false
+      receipts: true|false
+  next_actions:
+    - "Proceed with tool execution phase"
+```
+
+---
+
+## Examples
+
+**Minimal Example**:
+```
+context_prime --wih=T0001 --dag=D0001 --role=builder
+```
+
+**Blocked Example** (missing policy bundle):
+```
+Report:
+  status: BLOCKED
+  summary: "Policy bundle not found"
+  next_actions:
+    - "Escalate: missing required policy bundle"
+```
+
+---
+
+## References
+
+- AGENTS.md - Agent law and invariants
+- agents/spec/BRIDGE_RAILS_RUNNER.md - Context pack spec
+- agents/cookbooks/policy-injection.md - Policy injection procedure

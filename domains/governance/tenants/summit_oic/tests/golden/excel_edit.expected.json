@@ -1,0 +1,14 @@
+{
+  "input": {
+    "path": "fixtures/office/sample_gradebook.xlsx",
+    "objective": "Flag all students with score < 60 as 'FAILING'"
+  },
+  "fixture_data": [
+    { "Student": "Alice", "Score": 85 },
+    { "Student": "Bob", "Score": 45 }
+  ],
+  "expected_patch": [
+    { "sheet": "Grades", "cell": "C3", "value": "FAILING" }
+  ],
+  "expected_output_hash_prefix": "sha256:..."
+}

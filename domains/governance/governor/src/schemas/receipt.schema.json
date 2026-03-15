@@ -1,0 +1,91 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://a2rchitect.dev/schemas/receipt.json",
+  "title": "Receipt Schema",
+  "description": "Cryptographic completion certificate for WIH items",
+  "type": "object",
+  "required": ["id", "wihId", "status", "timestamp", "attestations", "artifacts"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^RCPT-[a-z0-9]+$",
+      "description": "Unique receipt identifier"
+    },
+    "wihId": {
+      "type": "string",
+      "pattern": "^[A-Z0-9]+-[A-Z0-9]+$",
+      "description": "Reference to completed WIH item"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["complete", "partial", "rejected", "superseded"],
+      "description": "Completion status"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC timestamp of completion"
+    },
+    "duration": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Time spent in milliseconds"
+    },
+    "agent": {
+      "type": "string",
+      "description": "Agent or system that completed the work"
+    },
+    "attestations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["type", "value"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["git-commit", "test-pass", "review-approval", "manual-sign", "checksum", "signature"]
+          },
+          "value": { "type": "string" },
+          "agent": { "type": "string" },
+          "timestamp": { "type": "string", "format": "date-time" }
+        }
+      },
+      "description": "Cryptographic proofs of completion"
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path"],
+        "properties": {
+          "path": { "type": "string" },
+          "checksum": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "type": { "type": "string", "enum": ["code", "doc", "config", "test", "binary"] }
+        }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "properties": {
+        "linesAdded": { "type": "integer", "minimum": 0 },
+        "linesRemoved": { "type": "integer", "minimum": 0 },
+        "filesChanged": { "type": "integer", "minimum": 0 },
+        "testsPassed": { "type": "integer", "minimum": 0 },
+        "testsFailed": { "type": "integer", "minimum": 0 },
+        "coveragePercent": { "type": "number", "minimum": 0, "maximum": 100 }
+      }
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Human-readable completion notes"
+    },
+    "supersedes": {
+      "type": "string",
+      "pattern": "^RCPT-[a-z0-9]+$",
+      "description": "Reference to previous receipt if amended"
+    }
+  },
+  "additionalProperties": false
+}

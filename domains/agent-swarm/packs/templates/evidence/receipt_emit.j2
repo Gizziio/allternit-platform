@@ -1,0 +1,132 @@
+---
+prompt_id: "a2r.pack.evidence.receipt_emit"
+version: "v1"
+description: "Emit tamper-evident receipt for tool execution or decision"
+model: "any"
+anchors: "input | workflow | output"
+allowed_tools: ["receipt.create", "hash.compute", "receipt.emit"]
+execution_permission_mode: "read_only"
+hooks_required: ["ReceiptCreated"]
+outputs: ["receipt.json"]
+---
+
+# Evidence: Receipt Emit
+
+**Task**: Create and emit cryptographically signed receipt
+**Role**: auditor
+**Stop condition**: Receipt created, signed, and logged
+
+## Variables
+- {{receipt_type}}: Type of receipt (tool_invoke, gate_decision, etc.)
+- {{subject_id}}: ID of subject (tool call, gate check, etc.)
+- {{agent_id}}: Agent creating the receipt
+- {{dag_id}}: Current DAG execution
+- {{node_id}}: Current node in DAG
+- {{inputs_hash}}: Hash of inputs
+- {{outputs_hash}}: Hash of outputs
+- {{tool_invoked}}: Tool name (if tool receipt)
+- {{policy_decision}}: ALLOW|DENY|REVIEW (if policy receipt)
+- {{evidence_refs}}: References to supporting evidence
+
+## Instructions
+- IMPORTANT: Receipts are immutable once emitted
+- DO NOT: Modify receipt after signing
+- CRITICAL: Include all evidence by reference, not inline
+- Receipts form the audit trail - accuracy is paramount
+
+## Workflow
+
+### STEP 1: Content Assembly
+- Create: receipt payload structure
+  - header: metadata (type, version, timestamps)
+  - body: subject details (tool, inputs/outputs hashes)
+  - context: dag_id, node_id, agent_id
+  - evidence: {{evidence_refs}} list
+  - policy: decision and rationale (if applicable)
+
+### STEP 2: Content Hashing
+- Serialize: Receipt body to canonical JSON
+- Compute: SHA-256 hash of serialized body
+- Store: Hash in receipt.header.content_hash
+
+### STEP 3: Signature Generation
+- Load: Agent signing key
+- Sign: content_hash with agent private key
+- Attach: Signature to receipt.header.signature
+- Include: Public key fingerprint
+
+### STEP 4: Receipt Storage
+- Write: receipt.json to receipts directory
+- Path: .a2r/receipts/{{receipt_type}}/{{receipt_id}}.json
+- Verify: File written and readable
+
+### STEP 5: Indexing
+- Add: Receipt to local index
+- Update: DAG execution state
+- Emit: ReceiptCreated hook
+
+## Report
+```yaml
+report:
+  status: EMITTED|FAILED
+  summary: "Receipt {{receipt_id}} created for {{receipt_type}}"
+  receipt:
+    id: <uuid>
+    type: <receipt_type>
+    version: "v1"
+    created_at: <iso8601>
+    agent_id: <uuid>
+    dag_id: <uuid>
+    node_id: <string>
+  content:
+    subject_id: <uuid>
+    content_hash: <sha256>
+    inputs_hash: <sha256>
+    outputs_hash: <sha256>
+  signature:
+    algorithm: "ed25519"
+    public_key_fp: <fingerprint>
+    signature: <base64>
+  evidence:
+    count: <number>
+    refs: <list_of_receipt_refs>
+  storage:
+    path: <file_path>
+    indexed: <boolean>
+  artifacts:
+    - path: "receipt.json"
+      kind: "signed_receipt"
+```
+
+## Examples
+
+### Example 1: Tool Invocation Receipt
+```yaml
+input:
+  receipt_type: "tool_invoke"
+  subject_id: "call-abc123"
+  tool_invoked: "fs.read"
+  inputs_hash: "sha256:abc..."
+  outputs_hash: "sha256:def..."
+output:
+  status: EMITTED
+  receipt_id: "rcpt-123e4567-e89b-12d3-a456-426614174000"
+  content_hash: "sha256:789..."
+```
+
+### Example 2: Policy Decision Receipt
+```yaml
+input:
+  receipt_type: "policy_decision"
+  subject_id: "req-xyz789"
+  policy_decision: "ALLOW"
+  evidence_refs: ["rcpt-prev001", "rcpt-prev002"]
+output:
+  status: EMITTED
+  receipt_id: "rcpt-987fcdeb-51a2-43f1-9b45-123456789abc"
+  content_hash: "sha256:abc..."
+```
+
+## References
+- Receipt Schema: agent/spec/receipt.schema.v1.json
+- Signing Protocol: agent/spec/signing.protocol.md

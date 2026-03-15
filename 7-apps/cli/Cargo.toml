@@ -11,13 +11,13 @@ path = "src/main.rs"
 
 [dependencies]
 # Internal crates
-a2r-driver-interface = { path = "../../1-kernel/infrastructure/a2r-driver-interface" }
-a2r-session-manager = { path = "../../1-kernel/execution/a2r-session-manager" }
-a2r-firecracker-driver = { path = "../../1-kernel/execution/a2r-firecracker-driver" }
+a2r-driver-interface = { path = "../../domains/kernel/drivers/a2r-driver-interface" }
+a2r-session-manager = { path = "../../domains/kernel/service/a2r-session-manager" }
+a2r-firecracker-driver = { path = "../../domains/kernel/service/a2r-firecracker-driver" }
 
 # Apple Virtualization.framework driver (macOS only)
 [target.'cfg(target_os = "macos")'.dependencies]
-a2r-apple-vf-driver = { path = "../../1-kernel/execution/a2r-apple-vf-driver" }
+a2r-apple-vf-driver = { path = "../../domains/kernel/service/a2r-apple-vf-driver" }
 
 # CLI
 clap = { version = "4", features = ["derive", "env"] }

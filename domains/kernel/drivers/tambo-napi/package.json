@@ -1,0 +1,26 @@
+{
+  "name": "@a2rchitech/tambo-napi",
+  "version": "0.1.0",
+  "description": "Node-API bindings for Tambo engine",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "napi": {
+    "name": "a2r-tambo-napi",
+    "triples": {
+      "defaults": true,
+      "additional": [
+        "aarch64-apple-darwin"
+      ]
+    }
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@napi-rs/cli": "^2.18.0"
+  },
+  "scripts": {
+    "build": "napi build --platform --release",
+    "build:debug": "napi build --platform",
+    "artifacts": "napi artifacts",
+    "prepublishOnly": "napi prepublish -t npm"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "name": "@a2r/workflow-engine",
+  "version": "1.0.0",
+  "description": "A2R Workflow Engine - Re-exports from @a2r/governor for backward compatibility",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "echo 'Nothing to build - re-exports from @a2r/governor'",
+    "test": "echo 'Tests moved to @a2r/governor'",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@a2r/governor": "workspace:*"
+  },
+  "keywords": [
+    "a2r",
+    "workflow",
+    "deprecated"
+  ],
+  "author": "A2rchitect Team",
+  "license": "MIT"
+}

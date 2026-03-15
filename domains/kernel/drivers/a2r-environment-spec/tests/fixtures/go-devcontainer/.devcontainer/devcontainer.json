@@ -1,0 +1,44 @@
+{
+  "name": "Go Development Environment",
+  "image": "mcr.microsoft.com/devcontainers/go:1.21",
+  "workspaceFolder": "/workspace",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "18"
+    }
+  },
+  "containerEnv": {
+    "GOPATH": "/go",
+    "GOBIN": "/go/bin"
+  },
+  "postCreateCommand": "go install golang.org/x/tools/gopls@latest && go install github.com/go-delve/delve/cmd/dlv@latest",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.Go",
+        "premparihar.gotestexplorer"
+      ],
+      "settings": {
+        "gopls": {
+          "ui.diagnostic.annotations": {
+            "bounds": true,
+            "escape": true,
+            "inline": true,
+            "nil": true
+          }
+        }
+      }
+    },
+    "a2r": {
+      "driver": "process",
+      "enablePrewarm": true
+    }
+  },
+  "hostRequirements": {
+    "cpus": 2,
+    "memory": 4096,
+    "storage": 10240
+  },
+  "forwardPorts": [8080, 3000]
+}

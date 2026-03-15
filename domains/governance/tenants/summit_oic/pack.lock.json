@@ -1,0 +1,24 @@
+{
+  "pack_id": "tenant.summit_oic",
+  "version": "1.0.0",
+  "platform_compatibility": "a2rchitech-v0.8.x",
+  "lock_timestamp": "2026-02-26T14:00:00Z",
+  "pins": {
+    "tools_registry": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "skills_registry": "sha256:01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    "policy": "sha256:5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5"
+  },
+  "model_config": {
+    "planner": {
+      "provider": "anthropic",
+      "model": "claude-3-7-sonnet-20250219",
+      "temperature": 0.0
+    },
+    "summarizer": {
+      "provider": "google",
+      "model": "gemini-2.0-flash",
+      "temperature": 0.2
+    }
+  },
+  "enforcement": "strict"
+}

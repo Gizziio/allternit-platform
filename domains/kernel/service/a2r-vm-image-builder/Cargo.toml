@@ -1,0 +1,61 @@
+[package]
+name = "a2r-vm-image-builder"
+version = "1.1.0"
+edition = "2021"
+authors = ["A2R Team"]
+description = "Builds VM images for A2R VM Executor"
+
+[[bin]]
+name = "a2r-vm-image-builder"
+path = "src/main.rs"
+
+[dependencies]
+# Async runtime
+tokio = { workspace = true, features = ["full", "process", "rt-multi-thread"] }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+toml = { workspace = true }
+
+# HTTP client for downloading images
+reqwest = { workspace = true, features = ["json", "stream"] }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter", "fmt"] }
+
+# File operations
+tokio-util = { workspace = true, features = ["io"] }
+futures = { workspace = true }
+
+# CLI
+clap = { workspace = true }
+
+# Archive handling (for tar.gz)
+tar = "0.4"
+flate2 = "1.0"
+
+# Progress bars
+indicatif = "0.17"
+
+# Directories
+dirs = { workspace = true }
+
+# Version parsing
+semver = "1.0"
+
+# Compression
+zstd = "0.13"
+
+# SHA256 verification
+sha2 = "0.10"
+hex = "0.4"
+
+[dev-dependencies]
+tempfile = { workspace = true }
+tokio-test = { workspace = true }

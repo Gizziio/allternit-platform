@@ -1,0 +1,32 @@
+{
+  "name": "@a2r/content-ingestion",
+  "version": "1.0.0",
+  "description": "Content Ingestion Kernel - HTML → Markdown → Structured Context pipeline",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --test dist/**/*.test.js",
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "keywords": ["a2r", "content", "ingestion", "markdown", "living-files", "nlp", "ner"],
+  "license": "MIT",
+  "dependencies": {
+    "compromise": "^14.14.4",
+    "sanitize-html": "^2.14.0",
+    "node-html-markdown": "^1.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "@types/sanitize-html": "^2.13.0",
+    "typescript": "^5.7.3"
+  }
+}

@@ -2,101 +2,115 @@
 resolver = "2"
 
 members = [
-    # API Application
-    "7-apps/api",
+    # A2R CLI
     "7-apps/cli",
+
+    # Kernel execution crates (moved to domains/)
+    "domains/kernel/drivers/a2r-driver-interface",
+    "domains/kernel/service/a2r-session-manager",
+    "domains/kernel/service/a2r-firecracker-driver",
+    "domains/kernel/service/a2r-apple-vf-driver",
+    "domains/kernel/service/a2r-process-driver",
     
     # Substrate (excluding a2r-protocol which has its own workspace)
-    "0-substrate/sdk/sdk-core",
-    "0-substrate/sdk/sdk-policy",
-    "0-substrate/a2r-embodiment",
+    # MISSING: "0-substrate/sdk/sdk-core",
+    # MISSING: "0-substrate/sdk/sdk-policy",
+    # "0-substrate/a2r-embodiment",
     
     # Kernel - Core
-    "1-kernel/capsule-system/a2r-capsule",
-    "1-kernel/a2r-kernel/kernel-contracts",
-    "1-kernel/a2r-kernel/runtime-execution-core",
-    "1-kernel/communication/kernel-messaging",
-    "4-services/io-service",
-    "1-kernel/data/history-ledger",
+    # "1-kernel/capsule-system/a2r-capsule",
+    # MISSING: "1-kernel/a2r-kernel/kernel-contracts",
+    # MISSING: "1-kernel/a2r-kernel/runtime-execution-core",
+    # "1-kernel/communication/kernel-messaging",
+    # MISSING: "4-services/io-service",
+    # "1-kernel/data/history-ledger",
     
     # Kernel - Control Plane
-    "1-kernel/control-plane/a2r-control/control-plane-impl",
-    "1-kernel/control-plane/a2r-control/context-router",
-    "1-kernel/control-plane/unified-registry/registry",
-    "1-kernel/control-plane/unified-registry/artifact-registry",
-    "1-kernel/control-plane/a2r-agent-orchestration/workflows",
-    "1-kernel/control-plane/a2r-agent-orchestration/agent-router",
-    "1-kernel/control-plane/a2r-agent-orchestration/model-router",
+    # "1-kernel/control-plane/a2r-control/control-plane-impl",
+    # "1-kernel/control-plane/a2r-control/context-router",
+    # "1-kernel/control-plane/unified-registry/registry",
+    # "1-kernel/control-plane/unified-registry/artifact-registry",
+    # "1-kernel/control-plane/a2r-agent-orchestration/workflows",
+    # "1-kernel/control-plane/a2r-agent-orchestration/agent-router",
+    # "1-kernel/control-plane/a2r-agent-orchestration/model-router",
     
     # Kernel - Execution
-    "1-kernel/execution/a2r-process-driver",
-    "1-kernel/execution/a2r-firecracker-driver",
-    "1-kernel/execution/a2r-vm-executor",
-    "1-kernel/execution/a2r-vm-image-builder",
-    "1-kernel/execution/a2r-ops/packaging",
-    "1-kernel/execution/multimodal-streaming",
+    # MISSING: "1-kernel/execution/a2r-process-driver",
+    # MISSING: "1-kernel/execution/a2r-firecracker-driver",
+    # MISSING: "1-kernel/execution/a2r-vm-executor",
+    # MISSING: "1-kernel/execution/a2r-vm-image-builder",
+    # MISSING: "1-kernel/execution/a2r-ops/packaging",
+    # MISSING: "1-kernel/execution/multimodal-streaming",
     
     # Kernel - Infrastructure
-    "1-kernel/infrastructure/a2r-driver-interface",
-    "1-kernel/infrastructure/a2r-guest-agent-protocol",
-    "1-kernel/infrastructure/a2r-environment-spec",
-    "1-kernel/infrastructure/a2r-openclaw-host",
-    "1-kernel/infrastructure/a2r-parity",
-    "1-kernel/infrastructure/a2r-rlm",
-    "1-kernel/infrastructure/evolution-layer",
-    "1-kernel/infrastructure/ivkge-advanced",
-    "1-kernel/infrastructure/multimodal-streaming",
-    "1-kernel/infrastructure/swarm-advanced",
-    "1-kernel/infrastructure/tambo-integration",
-    "1-kernel/infrastructure/tambo-napi",
-    "1-kernel/infrastructure/system-law",
-    "1-kernel/infrastructure/ontology-runtime",
-    "1-kernel/infrastructure/a2r-providers",
-    "1-kernel/infrastructure/a2r-runtime",
-    "1-kernel/infrastructure/harness-engineering",
+    # MISSING: "1-kernel/infrastructure/a2r-driver-interface",
+    # MISSING: "1-kernel/infrastructure/a2r-guest-agent-protocol",
+    # MISSING: "1-kernel/infrastructure/a2r-environment-spec",
+    # MISSING: "1-kernel/infrastructure/a2r-openclaw-host",
+    # MISSING: "1-kernel/infrastructure/a2r-parity",
+    # MISSING: "1-kernel/infrastructure/a2r-rlm",
+    # MISSING: "1-kernel/infrastructure/evolution-layer",
+    # MISSING: "1-kernel/infrastructure/ivkge-advanced",
+    # MISSING: "1-kernel/infrastructure/multimodal-streaming",
+    # MISSING: "1-kernel/infrastructure/swarm-advanced",
+    # MISSING: "1-kernel/infrastructure/tambo-integration",
+    # MISSING: "1-kernel/infrastructure/tambo-napi",
+    # MISSING: "1-kernel/infrastructure/system-law",
+    # MISSING: "1-kernel/infrastructure/ontology-runtime",
+    # MISSING: "1-kernel/infrastructure/a2r-providers",
+    # MISSING: "1-kernel/infrastructure/a2r-runtime",
+    # MISSING: "1-kernel/infrastructure/harness-engineering",
     
     # Agent Systems
-    "0-substrate/a2r-agent-system-rails",
-    "2-governance/worktree-manager",
+    # "0-substrate/a2r-agent-system-rails",
+    # MISSING: "2-governance/worktree-manager",
 
     # Governance
-    "2-governance/a2r-replay",
-    "2-governance/identity-access-control/policy-tier-gating",
-    "2-governance/identity-access-control/policy-engine",
-    "2-governance/security-network/security-hardening",
-    "2-governance/governance-workflows/rust-governor",
-    "2-governance/security-quality-assurance/evals",
-    "2-governance/garbage-collection/gc-agents",
+    # MISSING: "2-governance/a2r-replay",
+    # MISSING: "2-governance/identity-access-control/policy-tier-gating",
+    # MISSING: "2-governance/identity-access-control/policy-engine",
+    # MISSING: "2-governance/security-network/security-hardening",
+    # MISSING: "2-governance/governance-workflows/rust-governor",
+    # MISSING: "2-governance/security-quality-assurance/evals",
+    # MISSING: "2-governance/garbage-collection/gc-agents",
     
     # Adapters
-    "3-adapters/mcp",
-    "3-adapters/rust/skills",
+    # MISSING: "3-adapters/mcp",
+    # "3-adapters/rust/skills",
     
     # Services
-    "4-services/orchestration/a2r-prewarm",
-    "4-services/orchestration/budget-metering",
-    "4-services/orchestration/kernel-service",
-    "4-services/orchestration/workspace-service",
-    "4-services/memory/state/memory",
-    "4-services/io-service",
+    # "4-services/orchestration/a2r-prewarm",
+    # "4-services/orchestration/budget-metering",
+    # "4-services/orchestration/kernel-service",
+    # "4-services/orchestration/workspace-service",
+    # MISSING: "4-services/memory/state/memory",
+    # MISSING: "4-services/io-service",
 
     # Cloud/Executor
-    "8-cloud/executor",
-    "8-cloud/a2r-cloud-api",
-    "8-cloud/a2r-cloud-core",
-    "8-cloud/a2r-cloud-ssh",
-    "8-cloud/a2r-cloud-providers/hetzner",
-    "8-cloud/a2r-node",
+    # MISSING: "8-cloud/executor",
+    # "8-cloud/a2r-cloud-api",
+    # "8-cloud/a2r-cloud-core",
+    # "8-cloud/a2r-cloud-ssh",
+    # MISSING: "8-cloud/a2r-cloud-providers/hetzner",
+    # MISSING: "8-cloud/a2r-node",
     
     # Shared packages
-    "packages/cron-parser",
+    # MISSING: "packages/cron-parser",
     
     # Scheduler
-    "8-cloud/scheduler",
+    # MISSING: "8-cloud/scheduler",
+    
+    # Cowork (moved from orphaned locations)
+    # "1-kernel/cowork/a2r-cowork-scheduler",
+    # "1-kernel/cowork/a2r-cowork-runtime",
+    
+    # Missing execution crates (now created)
+    # MISSING: "1-kernel/execution/a2r-session-manager",
+    # MISSING: "1-kernel/execution/a2r-apple-vf-driver",
 ]
 
 exclude = [
-    # CLI now enabled
+    # CLI is now in members above
     # "7-apps/cli",
     "0-substrate/a2r-agent-workspace",
     "0-substrate/a2r-protocol",
@@ -112,6 +126,7 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/a2rchitect/a2rchitech"
+authors = ["A2R Team <team@a2rchitect.com>"]
 
 [workspace.dependencies]
 # Core dependencies
@@ -251,6 +266,9 @@ a2rchitech-artifact-registry = { path = "1-kernel/control-plane/unified-registry
 a2r-driver-interface = { path = "1-kernel/infrastructure/a2r-driver-interface" }
 a2r-guest-agent-protocol = { path = "1-kernel/infrastructure/a2r-guest-agent-protocol" }
 a2r-process-driver = { path = "1-kernel/execution/a2r-process-driver" }
+a2r-firecracker-driver = { path = "1-kernel/execution/a2r-firecracker-driver" }
+a2r-session-manager = { path = "1-kernel/execution/a2r-session-manager" }
+a2r-apple-vf-driver = { path = "1-kernel/execution/a2r-apple-vf-driver" }
 a2r-vm-executor = { path = "1-kernel/execution/a2r-vm-executor" }
 a2r-vm-image-builder = { path = "1-kernel/execution/a2r-vm-image-builder" }
 a2r-environment-spec = { path = "1-kernel/infrastructure/a2r-environment-spec" }

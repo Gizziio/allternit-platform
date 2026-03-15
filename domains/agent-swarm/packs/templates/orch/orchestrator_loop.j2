@@ -1,0 +1,111 @@
+---
+prompt_id: "a2r.pack.orch.orchestrator_loop"
+version: "v1"
+description: "Run bounded iterations until gates pass or escalation"
+model: "any"
+anchors: "workflow | output"
+allowed_tools: ["worker.spawn", "gate.check", "receipt.emit"]
+execution_permission_mode: "write_leased"
+hooks_required: ["Stop", "TaskCompleted"]
+outputs: ["iteration_state.json", "escalation_envelope.json"]
+---
+
+# Orchestrator Loop (Ralph)
+
+**Task**: Execute bounded fix cycle until acceptance gates pass
+**Role**: orchestrator
+**Stop condition**: validator_report == PASS or max_iterations reached
+
+## Variables
+- {{max_iterations}}: Maximum fix cycles (default: 5)
+- {{acceptance_refs}}: List of gate names to check
+- {{required_evidence}}: Required receipt references
+- {{dag_id}}: Current DAG execution identifier
+- {{current_node_id}}: Active node being processed
+
+## Instructions
+- IMPORTANT: Always enforce iteration bounds to prevent infinite loops
+- DO NOT: Exceed {{max_iterations}} under any circumstances
+- CRITICAL: Emit escalation_envelope.json if bounds exceeded
+- All durable state through Rails APIs only
+
+## Workflow
+
+### STEP 1: Initialize Iteration
+- Set: iteration = 0
+- Load: Current execution state from context
+- Validate: Required evidence present
+
+### STEP 2: Check Acceptance Gates
+- Evaluate: All gates in {{acceptance_refs}}
+- If ALL PASS → Emit TaskCompleted, exit
+- If ANY FAIL → Continue to STEP 3
+
+### STEP 3: Execute Fix Cycle
+- Spawn: builder agent with fix scope
+- Await: build_report receipt
+- Validate: Build artifacts generated
+- Spawn: validator agent
+- Await: validator_report receipt
+- Increment: iteration += 1
+
+### STEP 4: Check Termination
+- If validator_report == PASS:
+  - Emit: TaskCompleted hook
+  - Write: iteration_state.json (status: completed)
+  - Exit
+- If iteration >= {{max_iterations}}:
+  - Emit: escalation_envelope.json
+  - Write: iteration_state.json (status: max_iterations_exceeded)
+  - Exit
+- Else:
+  - Return to STEP 2
+
+## Report
+```yaml
+report:
+  status: PASS|FAIL|ESCALATED
+  summary: "Completed {{actual_iterations}} of {{max_iterations}} iterations"
+  iterations:
+    count: <number>
+    status: completed|max_exceeded|blocked
+  gates:
+    - name: <gate_name>
+      status: PASS|FAIL
+      evidence: <receipt_ref>
+  artifacts:
+    - path: "iteration_state.json"
+      kind: "state_dump"
+    - path: "escalation_envelope.json"
+      kind: "escalation"
+      condition: "if max_iterations exceeded"
+```
+
+## Examples
+
+### Example 1: Successful Completion
+```yaml
+input:
+  max_iterations: 5
+  acceptance_refs: ["tests_pass", "lint_clean", "build_success"]
+output:
+  status: PASS
+  iterations: 3
+  summary: "All gates passed after 3 iterations"
+```
+
+### Example 2: Escalation Triggered
+```yaml
+input:
+  max_iterations: 3
+  acceptance_refs: ["tests_pass"]
+output:
+  status: ESCALATED
+  iterations: 3
+  summary: "Max iterations exceeded, escalation envelope emitted"
+```
+
+## References
+- DAG Schema v1: agent/spec/dag.schema.v1.json
+- Receipt Format: agent/spec/receipt.schema.v1.json
+- WIH Schema: agent/spec/wih.schema.v1.md

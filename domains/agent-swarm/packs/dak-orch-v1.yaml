@@ -1,0 +1,91 @@
+# DAK Orchestration Prompt Pack v1.0.0
+#
+# Prompts for planning, Ralph loops, worker management, and context operations.
+
+pack_id: "dak.orch"
+name: "DAK Orchestration"
+description: "Prompts for planning, loops, worker management, and context operations"
+version: "1.0.0"
+deterministic: true
+
+author: "a2r-platform"
+tags: ["dak", "orchestration", "planning", "loops"]
+
+dependencies:
+  - pack_id: "dak.core"
+    version: ">=1.0.0"
+
+variables:
+  - name: "wih_id"
+    type: "string"
+    required: true
+  
+  - name: "dag_id"
+    type: "string"
+    required: true
+  
+  - name: "node_id"
+    type: "string"
+    required: true
+  
+  - name: "iteration"
+    type: "number"
+    required: false
+    default: 0
+    description: "Current Ralph loop iteration"
+  
+  - name: "max_iterations"
+    type: "number"
+    required: false
+    default: 3
+    description: "Maximum allowed fix cycles"
+  
+  - name: "plan_state"
+    type: "object"
+    required: false
+    description: "Current plan state (plan.md, todo.md, etc.)"
+
+prompts:
+  # Planning prompts
+  - id: "plan.decompose"
+    template: "prompts/plan/decompose.j2"
+    description: "Task decomposition instructions"
+  
+  - id: "plan.refine"
+    template: "prompts/plan/refine.j2"
+    description: "Plan refinement instructions"
+  
+  # Ralph loop prompts
+  - id: "loop.ralph.builder"
+    template: "prompts/loop/ralph_builder.j2"
+    description: "Builder instructions within Ralph loop"
+  
+  - id: "loop.ralph.validator"
+    template: "prompts/loop/ralph_validator.j2"
+    description: "Validator instructions within Ralph loop"
+  
+  - id: "loop.ralph.fix_cycle"
+    template: "prompts/loop/ralph_fix_cycle.j2"
+    description: "Fix cycle retry instructions"
+  
+  - id: "loop.ralph.escalation"
+    template: "prompts/loop/ralph_escalation.j2"
+    description: "Escalation instructions when max cycles exceeded"
+  
+  # Worker management
+  - id: "worker.spawn"
+    template: "prompts/worker/spawn.j2"
+    description: "Worker spawn instructions"
+  
+  - id: "worker.context_inherit"
+    template: "prompts/worker/context_inherit.j2"
+    description: "Context inheritance instructions"
+  
+  # Context operations
+  - id: "context.compact"
+    template: "prompts/context/compact.j2"
+    description: "Context compaction instructions"
+  
+  - id: "context.reinject"
+    template: "prompts/context/reinject.j2"
+    description: "Context reinjection after compaction"
