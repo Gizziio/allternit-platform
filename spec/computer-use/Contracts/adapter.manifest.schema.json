@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://a2rchitech.dev/schemas/computer-use/adapter.manifest.schema.json",
+  "title": "A2R Computer Use Adapter Manifest",
+  "description": "Adapter capability declaration — used by router for selection",
+  "type": "object",
+  "required": ["adapter_id", "family", "capability_classes", "supports", "risk_level", "policy_profile", "conformance_suite"],
+  "properties": {
+    "adapter_id": { "type": "string", "description": "Unique ID (e.g. browser.playwright, desktop.ui-tars)" },
+    "family": { "type": "string", "enum": ["browser", "retrieval", "desktop", "hybrid"] },
+    "capability_classes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["deterministic-web", "adaptive-web", "embedded-surfaces", "fleet-session-infra", "visual-computer-use"]
+      }
+    },
+    "supports": {
+      "type": "object",
+      "required": ["headed", "headless", "parallel", "checkpoint", "persistent_profile", "network_inspection", "visual_reasoning", "user_present"],
+      "properties": {
+        "headed": { "type": "boolean" },
+        "headless": { "type": "boolean" },
+        "parallel": { "type": "boolean" },
+        "checkpoint": { "type": "boolean" },
+        "persistent_profile": { "type": "boolean" },
+        "network_inspection": { "type": "boolean" },
+        "visual_reasoning": { "type": "boolean" },
+        "user_present": { "type": "boolean" }
+      }
+    },
+    "risk_level": { "type": "string", "enum": ["low", "medium", "high"] },
+    "policy_profile": { "type": "string", "description": "Named policy profile (e.g. standard-browser, restricted-desktop)" },
+    "conformance_suite": { "type": "string", "description": "Conformance suite ID (e.g. browser-deterministic-v1)" },
+    "conformance_grade": {
+      "type": "string",
+      "enum": ["experimental", "beta", "production"],
+      "description": "Current conformance grade"
+    },
+    "version": { "type": "string" },
+    "description": { "type": "string" }
+  },
+  "additionalProperties": false
+}

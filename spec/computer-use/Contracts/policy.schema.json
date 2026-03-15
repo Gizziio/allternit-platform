@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://a2rchitech.dev/schemas/computer-use/policy.schema.json",
+  "title": "A2R Computer Use Policy Decision",
+  "description": "Policy evaluation contract — G2 policy guarantee",
+  "type": "object",
+  "required": ["decision_id", "decision", "timestamp"],
+  "properties": {
+    "decision_id": { "type": "string" },
+    "decision": {
+      "type": "string",
+      "enum": ["allow", "deny", "require_approval", "force_mode", "force_adapter", "require_headed", "require_user_present"]
+    },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "reason": { "type": "string", "description": "Human-readable explanation" },
+    "input": {
+      "type": "object",
+      "required": ["run_intent", "target", "adapter_candidate"],
+      "properties": {
+        "run_intent": { "type": "string" },
+        "target_domains": { "type": "array", "items": { "type": "string" } },
+        "target_apps": { "type": "array", "items": { "type": "string" } },
+        "risk_profile": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+        "adapter_candidate": { "type": "string" },
+        "user_approval_state": { "type": "string", "enum": ["not_required", "pending", "approved", "denied"] },
+        "target": { "type": "string" }
+      }
+    },
+    "overrides": {
+      "type": ["object", "null"],
+      "properties": {
+        "forced_mode": { "type": "string" },
+        "forced_adapter": { "type": "string" },
+        "forced_headed": { "type": "boolean" },
+        "forced_user_present": { "type": "boolean" }
+      }
+    },
+    "policy_rules_applied": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "IDs of policy rules that contributed to this decision"
+    }
+  },
+  "additionalProperties": false
+}

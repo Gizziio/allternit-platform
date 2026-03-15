@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://a2rchitech.dev/schemas/computer-use/result.schema.json",
+  "title": "A2R Computer Use Result Envelope",
+  "description": "Normalized result envelope — G1 semantic guarantee",
+  "type": "object",
+  "required": ["run_id", "session_id", "adapter_id", "family", "mode", "action", "target", "status", "trace_id"],
+  "properties": {
+    "run_id": { "type": "string" },
+    "session_id": { "type": "string" },
+    "adapter_id": { "type": "string" },
+    "family": { "type": "string", "enum": ["browser", "retrieval", "desktop", "hybrid"] },
+    "mode": { "type": "string", "enum": ["assist", "execute", "inspect", "parallel", "desktop", "hybrid", "crawl"] },
+    "action": { "type": "string", "enum": ["goto", "observe", "act", "extract", "screenshot", "download", "upload", "eval", "inspect", "handoff"] },
+    "target": { "type": "string" },
+    "status": { "type": "string", "enum": ["pending", "running", "completed", "failed", "cancelled"] },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["artifact_id", "type", "path"],
+        "properties": {
+          "artifact_id": { "type": "string" },
+          "type": { "type": "string", "enum": ["screenshot", "html", "json", "text", "file", "dom_snapshot"] },
+          "path": { "type": "string" },
+          "hash": { "type": "string" },
+          "size_bytes": { "type": "integer" },
+          "media_type": { "type": "string" }
+        }
+      }
+    },
+    "receipts": { "type": "array", "items": { "type": "string" }, "description": "List of receipt IDs" },
+    "policy_decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["decision_id", "decision"],
+        "properties": {
+          "decision_id": { "type": "string" },
+          "decision": { "type": "string", "enum": ["allow", "deny", "require_approval", "force_mode", "force_adapter", "require_headed", "require_user_present"] },
+          "reason": { "type": "string" }
+        }
+      }
+    },
+    "trace_id": { "type": "string" },
+    "fallbacks_used": { "type": "array", "items": { "type": "string" }, "description": "Adapter IDs attempted before success" },
+    "started_at": { "type": "string", "format": "date-time" },
+    "completed_at": { "type": ["string", "null"], "format": "date-time" },
+    "duration_ms": { "type": ["integer", "null"] },
+    "error": {
+      "type": ["object", "null"],
+      "properties": {
+        "code": { "type": "string" },
+        "message": { "type": "string" },
+        "adapter_id": { "type": "string" }
+      }
+    },
+    "extracted_content": { "type": ["object", "string", "null"], "description": "Adapter-specific extracted data" }
+  },
+  "additionalProperties": false
+}

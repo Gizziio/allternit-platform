@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://a2rchitech.dev/schemas/computer-use/session.schema.json",
+  "title": "A2R Computer Use Session",
+  "description": "Session contract for computer-use adapters",
+  "type": "object",
+  "required": ["session_id", "run_id", "family", "mode", "adapter_id", "status", "created_at"],
+  "properties": {
+    "session_id": { "type": "string", "description": "Unique session identifier" },
+    "run_id": { "type": "string", "description": "Parent run identifier" },
+    "family": { "type": "string", "enum": ["browser", "retrieval", "desktop", "hybrid"] },
+    "mode": { "type": "string", "enum": ["assist", "execute", "inspect", "parallel", "desktop", "hybrid", "crawl"] },
+    "adapter_id": { "type": "string", "description": "Active adapter (e.g. browser.playwright)" },
+    "status": { "type": "string", "enum": ["created", "active", "checkpointed", "restored", "destroyed"] },
+    "auth_ref": { "type": ["string", "null"], "description": "Reference to auth credential (never inline)" },
+    "trace_id": { "type": "string", "description": "Distributed trace ID" },
+    "checkpoint_support": { "type": "boolean", "default": false },
+    "artifact_root": { "type": "string", "description": "Base path for session artifacts" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" },
+    "destroyed_at": { "type": ["string", "null"], "format": "date-time" }
+  },
+  "additionalProperties": false
+}

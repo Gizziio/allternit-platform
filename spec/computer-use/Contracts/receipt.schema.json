@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://a2rchitech.dev/schemas/computer-use/receipt.schema.json",
+  "title": "A2R Computer Use Receipt",
+  "description": "Action receipt contract — G3 receipt guarantee",
+  "type": "object",
+  "required": ["receipt_id", "timestamp", "action_type", "adapter_id", "target", "integrity_hash"],
+  "properties": {
+    "receipt_id": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "run_id": { "type": "string" },
+    "session_id": { "type": "string" },
+    "action_type": {
+      "type": "string",
+      "enum": ["goto", "observe", "act", "extract", "screenshot", "download", "upload", "eval", "inspect", "handoff", "route_decision"]
+    },
+    "adapter_id": { "type": "string" },
+    "target": { "type": "string" },
+    "status": { "type": "string", "enum": ["success", "failure", "skipped"] },
+    "before_evidence": {
+      "type": ["object", "null"],
+      "properties": {
+        "dom_hash": { "type": "string" },
+        "screenshot_hash": { "type": "string" },
+        "url": { "type": "string" }
+      }
+    },
+    "after_evidence": {
+      "type": ["object", "null"],
+      "properties": {
+        "dom_hash": { "type": "string" },
+        "screenshot_hash": { "type": "string" },
+        "url": { "type": "string" }
+      }
+    },
+    "integrity_hash": { "type": "string", "description": "SHA-256 of action + result payload" },
+    "policy_decision_id": { "type": ["string", "null"] },
+    "duration_ms": { "type": "integer" },
+    "error": { "type": ["string", "null"] },
+    "artifact_refs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "References to artifacts produced by this action"
+    }
+  },
+  "additionalProperties": false
+}
