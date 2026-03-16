@@ -88,7 +88,7 @@ export function createDialogProviderOptions() {
           const method = methods[index]
           if (method.type === "oauth") {
             const result = await sdk.client.provider.oauth.authorize({
-              path: { id: provider.id },
+              path: { providerID: provider.id },
               body: { method: index },
             } as any)
             const resultData = (result as any).data
@@ -142,7 +142,7 @@ function AutoMethod(props: AutoMethodProps) {
 
   onMount(async () => {
     const result = await sdk.client.provider.oauth.callback({
-      path: { id: props.providerID },
+      path: { providerID: props.providerID },
       body: { method: props.index },
     } as any)
     if ((result as any).error) {
@@ -195,7 +195,7 @@ function CodeMethod(props: CodeMethodProps) {
       placeholder={GIZZICopy.dialogs.providerAuthorizationCodePlaceholder}
       onConfirm={async (value) => {
         const verifyResult = await sdk.client.provider.oauth.callback({
-          path: { id: props.providerID },
+          path: { providerID: props.providerID },
           body: { method: props.index, code: value },
         } as any)
         if (!(verifyResult as any).error) {
@@ -248,7 +248,7 @@ function ApiMethod(props: ApiMethodProps) {
       onConfirm={async (value) => {
         if (!value) return
         await sdk.client.auth.set({
-          path: { id: props.providerID },
+          path: { providerID: props.providerID },
           body: { type: "api", key: value } as any,
         })
         await sdk.client.instance.dispose()

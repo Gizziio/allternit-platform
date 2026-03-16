@@ -440,7 +440,7 @@ export async function CodexAuthPlugin(input: PluginInput): Promise<Hooks> {
               const tokens = await refreshAccessToken(currentAuth.refresh)
               const newAccountId = extractAccountId(tokens) || authWithAccount.accountId
               await input.client.auth.set({
-                path: { id: "openai" },
+                path: { providerID: "openai" },
                 body: {
                   type: "oauth",
                   refresh: tokens.refresh_token,

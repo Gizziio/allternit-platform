@@ -355,7 +355,7 @@ export namespace ACP {
 
           const message = await this.sdk.session
             .messages({
-              path: { id: part.sessionID },
+              path: { sessionID: part.sessionID },
               query: { directory },
               throwOnError: true,
             })
@@ -528,7 +528,7 @@ export namespace ACP {
 
           const message = await this.sdk.session
             .messages({
-              path: { id: props.sessionID },
+              path: { sessionID: props.sessionID },
               query: { directory: session.cwd },
               throwOnError: true,
             })
@@ -696,7 +696,7 @@ export namespace ACP {
         // Replay session history
         const messages = await this.sdk.session
           .messages({
-            path: { id: sessionId },
+            path: { sessionID: sessionId },
             query: { directory },
             throwOnError: true,
           })
@@ -789,7 +789,7 @@ export namespace ACP {
 
         const forked = await this.sdk.session
           .fork({
-            path: { id: params.sessionId },
+            path: { sessionID: params.sessionId },
             query: { directory },
             throwOnError: true,
           })
@@ -812,7 +812,7 @@ export namespace ACP {
 
         const messages = await this.sdk.session
           .messages({
-            path: { id: sessionId },
+            path: { sessionID: sessionId },
             query: { directory },
             throwOnError: true,
           })
@@ -1429,7 +1429,7 @@ export namespace ACP {
 
       if (!cmd) {
         const response = await this.sdk.session.prompt({
-          path: { id: sessionID },
+          path: { sessionID },
           body: {
             model: {
               providerID: model.providerID,
@@ -1455,7 +1455,7 @@ export namespace ACP {
         .then((x: any) => x.data?.find((c: any) => c.name === cmd.name))
       if (command) {
         const response = await this.sdk.session.command({
-          path: { id: sessionID },
+          path: { sessionID },
           body: {
             command: command.name,
             arguments: cmd.args,
@@ -1477,7 +1477,7 @@ export namespace ACP {
       switch (cmd.name) {
         case "compact":
           await this.config.sdk.session.summarize({
-            path: { id: sessionID },
+            path: { sessionID },
             body: {
               providerID: model.providerID,
               modelID: model.modelID,
@@ -1498,7 +1498,7 @@ export namespace ACP {
     async cancel(params: CancelNotification) {
       const session = this.sessionManager.get(params.sessionId)
       await this.config.sdk.session.abort({
-        path: { id: params.sessionId },
+        path: { sessionID: params.sessionId },
         query: { directory: session.cwd },
         throwOnError: true,
       })

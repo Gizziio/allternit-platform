@@ -41,7 +41,7 @@ export function DialogMessage(props: {
             if (!msg) return
 
             sdk.client.session.revert({
-              path: { id: props.sessionID },
+              path: { sessionID: props.sessionID },
               body: { messageID: (msg as { id?: string }).id! },
             })
 
@@ -91,7 +91,7 @@ export function DialogMessage(props: {
           description: GIZZICopy.dialogs.messageForkDescription,
           onSelect: async (dialog) => {
             const result = await sdk.client.session.fork({
-              path: { id: props.sessionID },
+              path: { sessionID: props.sessionID },
               body: { messageID: props.messageID },
             })
             const initialPrompt = (() => {

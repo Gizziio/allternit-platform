@@ -89,7 +89,7 @@ export function DialogAcpRelay(props: { sessionID: string }) {
     setLoading(true)
     try {
       const result = await (sdk.client as any).session.get({
-        path: { id: props.sessionID },
+        path: { sessionID: props.sessionID },
       })
       if (result?.data) {
         setSessionDetail(result.data)

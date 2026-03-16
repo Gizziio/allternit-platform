@@ -542,10 +542,10 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
         async sync(sessionID: string) {
           if (fullSyncedSessions.has(sessionID)) return
           const [session, messages, todo, diff] = await Promise.all([
-            sdk.client.session.get({ path: { id: sessionID }, throwOnError: true } as any),
-            sdk.client.session.messages({ path: { id: sessionID }, query: { limit: 100 } } as any),
-            sdk.client.session.todo({ path: { id: sessionID } } as any),
-            sdk.client.session.diff({ path: { id: sessionID } } as any),
+            sdk.client.session.get({ path: { sessionID }, throwOnError: true } as any),
+            sdk.client.session.messages({ path: { sessionID }, query: { limit: 100 } } as any),
+            sdk.client.session.todo({ path: { sessionID } } as any),
+            sdk.client.session.diff({ path: { sessionID } } as any),
           ])
           setStore(
             produce((draft) => {

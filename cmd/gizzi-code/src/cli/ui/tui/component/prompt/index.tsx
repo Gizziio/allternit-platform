@@ -532,7 +532,7 @@ export function Prompt(props: PromptProps) {
 
           if (store.interrupt >= 2) {
             sdk.client.session.abort({
-              path: { id: props.sessionID },
+              path: { sessionID: props.sessionID },
             })
             setStore("interrupt", 0)
           }
@@ -877,7 +877,7 @@ export function Prompt(props: PromptProps) {
         }
       }
 
-      const lookup = await sdk.client.session.get({ path: { id: props.sessionID } })
+      const lookup = await sdk.client.session.get({ path: { sessionID: props.sessionID } })
       if (lookup.data?.id) {
         return {
           sessionID: props.sessionID,
@@ -965,7 +965,7 @@ export function Prompt(props: PromptProps) {
     if (store.mode === "shell") {
       withSessionRetry(() =>
         (sdk.client.session as any).shell({
-          path: { id: sessionID },
+          path: { sessionID },
           body: {
             agent: local.agent.current().name,
             model: {
@@ -1003,7 +1003,7 @@ export function Prompt(props: PromptProps) {
 
       withSessionRetry(() =>
         sdk.client.session.command({
-          path: { id: sessionID },
+          path: { sessionID },
           body: {
             command: command.slice(1),
             arguments: args,
@@ -1032,7 +1032,7 @@ export function Prompt(props: PromptProps) {
     } else {
       withSessionRetry(() =>
         sdk.client.session.prompt({
-          path: { id: sessionID },
+          path: { sessionID },
           body: {
             ...selectedModel,
             messageID,

@@ -482,7 +482,7 @@ function App() {
     if (match) {
       continued = true
       if (args.fork) {
-        sdk.client.session.fork({ path: { id: match } }).then((result: any) => {
+        sdk.client.session.fork({ path: { sessionID: match } }).then((result: any) => {
           if (result.data?.id) {
             route.navigate({ type: "session", sessionID: result.data.id })
           } else {
@@ -502,7 +502,7 @@ function App() {
   createEffect(() => {
     if (forked || (sync as any).status !== "complete" || !args.sessionID || !args.fork) return
     forked = true
-    sdk.client.session.fork({ path: { id: args.sessionID } }).then((result: any) => {
+    sdk.client.session.fork({ path: { sessionID: args.sessionID } }).then((result: any) => {
       if (result.data?.id) {
         route.navigate({ type: "session", sessionID: result.data.id })
       } else {
@@ -966,7 +966,7 @@ function App() {
         return
       }
 
-      const lookup = await sdk.client.session.get({ path: { id: sessionID } })
+      const lookup = await sdk.client.session.get({ path: { sessionID } })
       if (lookup.data?.id) {
         route.navigate({
           type: "session",

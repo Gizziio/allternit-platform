@@ -537,7 +537,7 @@ export function Session() {
         const checkSessionExistence = async () => {
           for (let attempt = 0; attempt < 4; attempt++) {
             try {
-              const lookup = await sdk.client.session.get({ path: { id: sessionID } })
+              const lookup = await sdk.client.session.get({ path: { sessionID } })
               if (lookup.data?.id) return "exists" as const
               if (attempt < 3) await pause(250 * (attempt + 1))
             } catch (lookupError) {
@@ -850,7 +850,7 @@ export function Session() {
       const isIdle = sessionStatus.type === "idle"
       if (!isIdle) {
         // Session is running: Ctrl+C aborts first, user must press again to exit
-        sdk.client.session.abort({ path: { id: route.sessionID } }).catch(() => {})
+        sdk.client.session.abort({ path: { sessionID: route.sessionID } }).catch(() => {})
         evt.preventDefault()
         return
       }
@@ -1163,7 +1163,7 @@ export function Session() {
         }
         await sdk.client.session
           .share({
-            path: { id: route.sessionID },
+            path: { sessionID: route.sessionID },
           })
           .then((res: any) => copy(res.data!.share!.url))
           .catch(() => toast.show({ message: GIZZICopy.toast.shareSessionFailed, variant: "error" }))
@@ -1247,7 +1247,7 @@ export function Session() {
           return
         }
         sdk.client.session.summarize({
-          path: { id: route.sessionID },
+          path: { sessionID: route.sessionID },
           body: { modelID: selectedModel.modelID, providerID: selectedModel.providerID },
         } as any)
         dialog.clear()
@@ -1265,7 +1265,7 @@ export function Session() {
       onSelect: async (dialog) => {
         await (sdk.client.session as any)
           .unshare({
-            path: { id: route.sessionID },
+            path: { sessionID: route.sessionID },
           })
           .then(() => toast.show({ message: GIZZICopy.toast.unsharedSuccess, variant: "success" }))
           .catch(() => toast.show({ message: GIZZICopy.toast.unsharedFailed, variant: "error" }))
@@ -1282,13 +1282,13 @@ export function Session() {
       },
       onSelect: async (dialog) => {
         const status = (sync.data.session_status?.[route.sessionID] ?? { type: "idle" }) as unknown as SessionStatus
-        if (status.type !== "idle") await sdk.client.session.abort({ path: { id: route.sessionID } }).catch(() => {})
+        if (status.type !== "idle") await sdk.client.session.abort({ path: { sessionID: route.sessionID } }).catch(() => {})
         const revert = session()?.revert?.messageID
         const message = messages().findLast((x) => (!revert || x.id < revert) && x.role === "user")
         if (!message) return
         sdk.client.session
           .revert({
-            path: { id: route.sessionID },
+            path: { sessionID: route.sessionID },
             body: { messageID: message.id },
           })
           .then(() => {
@@ -1326,13 +1326,13 @@ export function Session() {
         const message = messages().find((x: SyncMessage) => x.role === "user" && x.id > messageID)
         if (!message) {
           sdk.client.session.unrevert({
-            path: { id: route.sessionID },
+            path: { sessionID: route.sessionID },
           })
           prompt.set({ input: "", parts: [] })
           return
         }
         sdk.client.session.revert({
-          path: { id: route.sessionID },
+          path: { sessionID: route.sessionID },
           body: { messageID: message.id },
         })
       },
