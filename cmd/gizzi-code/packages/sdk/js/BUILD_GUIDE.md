@@ -22,8 +22,10 @@ bun install
 ## Building the SDK
 
 ```bash
-bun packages/sdk/js/script/build.ts
+bun --conditions=browser packages/sdk/js/script/build.ts
 ```
+
+> **Important:** The `--conditions=browser` flag is required because the server code uses `browser` condition exports. Without it, `Server.openapi()` fails with a Zod schema processing error during OpenAPI spec generation.
 
 ### What the Build Script Does
 

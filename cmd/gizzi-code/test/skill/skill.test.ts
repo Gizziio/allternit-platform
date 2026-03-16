@@ -1,10 +1,15 @@
 // @ts-nocheck
-import { test, expect } from "bun:test"
+import { test, expect, beforeAll, afterAll } from "bun:test"
 import { Skill } from "../../src/skill"
 import { Instance } from "../../src/project/instance"
 import { tmpdir } from "../fixture/fixture"
 import path from "path"
 import fs from "fs/promises"
+
+// Disable built-in skill packs for all tests in this file so that count
+// assertions (toBe(1), toEqual([])) are not affected by the bundled domain skills.
+beforeAll(() => { process.env.GIZZI_DISABLE_BUILTIN_SKILLS = "true" })
+afterAll(() => { delete process.env.GIZZI_DISABLE_BUILTIN_SKILLS })
 
 async function createGlobalSkill(homeDir: string) {
   const skillDir = path.join(homeDir, ".claude", "skills", "global-test-skill")
