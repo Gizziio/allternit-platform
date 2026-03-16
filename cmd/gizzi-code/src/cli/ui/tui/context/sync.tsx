@@ -553,9 +553,10 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
               if (match.found) draft.session[match.index] = session.data!
               if (!match.found) draft.session.splice(match.index, 0, session.data!)
               draft.todo[sessionID] = todo.data ?? []
-              draft.message[sessionID] = messages.data!.map((x: any) => x.info)
-              for (const message of messages.data!) {
-                draft.part[message.info.id] = message.parts
+              const messageList = messages.data ?? []
+              draft.message[sessionID] = messageList.map((x: any) => x.info)
+              for (const message of messageList) {
+                draft.part[(message as any).info.id] = (message as any).parts
               }
               draft.session_diff[sessionID] = diff.data ?? []
             }),

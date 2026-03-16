@@ -539,6 +539,10 @@ export function Session() {
             try {
               const lookup = await sdk.client.session.get({ path: { sessionID } })
               if (lookup.data?.id) return "exists" as const
+              // Check HTTP status from the response object (hey-api returns { error, response } not throw)
+              const httpStatus = (lookup as any).response?.status as number | undefined
+              if (httpStatus && httpStatus >= 500) return "unknown" as const
+              if (httpStatus && httpStatus !== 404) return "unknown" as const
               if (attempt < 3) await pause(250 * (attempt + 1))
             } catch (lookupError) {
               if (classifyMissingFromError(lookupError)) {

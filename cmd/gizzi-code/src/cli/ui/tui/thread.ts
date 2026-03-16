@@ -24,16 +24,26 @@ function createWorkerFetch(client: RpcClient): typeof fetch {
   const fn = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const request = new Request(input, init)
     const body = request.body ? await request.text() : undefined
-    const result = await client.call("fetch", {
-      url: request.url,
-      method: request.method,
-      headers: Object.fromEntries(request.headers.entries()),
-      body,
-    })
-    return new Response(result.body, {
-      status: result.status,
-      headers: result.headers,
-    })
+    try {
+      const result = await client.call("fetch", {
+        url: request.url,
+        method: request.method,
+        headers: Object.fromEntries(request.headers.entries()),
+        body,
+      })
+      return new Response(result.body, {
+        status: result.status,
+        headers: result.headers,
+      })
+    } catch (e) {
+      // Worker threw — return a 503 so the SDK gets a real HTTP error response
+      // instead of a hanging promise
+      Log.Default.error("tui: worker fetch failed", { url: request.url, error: e })
+      return new Response(JSON.stringify({ message: e instanceof Error ? e.message : String(e) }), {
+        status: 503,
+        headers: { "content-type": "application/json" },
+      })
+    }
   }
   return fn as typeof fetch
 }
