@@ -1,3 +1,4 @@
+
 /**
  * Background Tasks Dashboard
  * 
@@ -13,7 +14,7 @@ import { useOrbitalHarness, useRailsScan } from "@/cli/ui/components/animation"
 import { TextAttributes } from "@opentui/core"
 import { useKeyboard } from "@opentui/solid"
 import type { RunRegistry } from "@/runtime/session/run-registry"
-import type { CronTypes } from "@/runtime/automation/cron/types"
+import type { CronJob, CronRun } from "@/runtime/automation/cron/types"
 
 export function BackgroundTasks() {
   const { navigate } = useRoute()
@@ -43,7 +44,7 @@ export function BackgroundTasks() {
   )
 
   const activeCronRuns = createMemo(() =>
-    cronRuns().filter((r: CronTypes.CronRun) => r.status === "running")
+    cronRuns().filter((r: CronRun) => r.status === "running")
   )
 
   // Total active count
@@ -69,10 +70,10 @@ export function BackgroundTasks() {
           <span style={{ fg: theme.accent }}>●</span> {totalActive()} active
         </text>
         <text fg={theme.textMuted}>
-          {runs().length} runs total
+          {String(runs().length ?? 0)} runs total
         </text>
         <text fg={theme.textMuted}>
-          {cronJobs().length} cron jobs
+          {String(cronJobs().length ?? 0)} cron jobs
         </text>
       </box>
 
@@ -80,7 +81,7 @@ export function BackgroundTasks() {
       <Show when={totalActive() > 0}>
         <box flexDirection="column" gap={1}>
           <text fg={theme.text} attributes={TextAttributes.BOLD}>
-            Active ({totalActive()})
+            Active ({String(totalActive() ?? 0)})
           </text>
           
           <For each={activeRuns()}>
@@ -97,7 +98,7 @@ export function BackgroundTasks() {
       <Show when={completedRuns().length > 0}>
         <box flexDirection="column" gap={1}>
           <text fg={theme.textMuted} attributes={TextAttributes.BOLD}>
-            Recent ({completedRuns().length})
+            Recent ({String(completedRuns().length ?? 0)})
           </text>
           
           <For each={completedRuns().slice(-5)}>
@@ -110,7 +111,7 @@ export function BackgroundTasks() {
       <Show when={cronJobs().length > 0}>
         <box flexDirection="column" gap={1}>
           <text fg={theme.textMuted} attributes={TextAttributes.BOLD}>
-            Cron Jobs ({cronJobs().length})
+            Cron Jobs ({String(cronJobs().length ?? 0)})
           </text>
           
           <For each={cronJobs()}>
@@ -188,14 +189,14 @@ function RunItem(props: {
   )
 }
 
-function CronRunItem(props: { run: CronTypes.CronRun }) {
+function CronRunItem(props: { run: CronRun }) {
   const { theme } = useTheme()
 
   const rails = useRailsScan(() => [])
 
   const duration = createMemo(() => {
-    const start = props.run.startedAt
-    const end = props.run.finishedAt ?? Date.now()
+    const start = props.run.startedAt ? new Date(props.run.startedAt).getTime() : Date.now()
+    const end = props.run.finishedAt ? new Date(props.run.finishedAt).getTime() : Date.now()
     const ms = end - start
     return `${Math.round(ms / 1000)}s`
   })
@@ -214,7 +215,7 @@ function CronRunItem(props: { run: CronTypes.CronRun }) {
   )
 }
 
-function CronJobItem(props: { job: CronTypes.CronJob }) {
+function CronJobItem(props: { job: CronJob }) {
   const { theme } = useTheme()
   
   const isActive = createMemo(() => props.job.status === "active")

@@ -805,7 +805,7 @@ const message = await createUserMessage(input)
       { modelID: input.model.api.id, providerID: input.model.providerID },
       input.agent,
     )) {
-      const schema = ProviderTransform.schema(input.model, z.toJSONSchema(item.parameters))
+      const schema = ProviderTransform.schema(input.model, z.toJSONSchema(item.parameters) as any)
       tools[item.id] = tool({
         id: item.id as any,
         description: item.description,

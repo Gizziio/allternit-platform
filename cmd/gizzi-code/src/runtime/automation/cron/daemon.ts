@@ -194,6 +194,12 @@ export class CronDaemon {
       else if (url.pathname === "/wake" && method === "POST") {
         response = await this.wakeSchedules();
       }
+      // Graceful shutdown
+      else if (url.pathname === "/shutdown" && method === "POST") {
+        response = this.jsonResponse({ status: "shutting down" });
+        // Stop after response is sent
+        setImmediate(() => this.stop());
+      }
       // 404
       else {
         response = this.errorResponse("Not found", 404);
@@ -429,7 +435,7 @@ export class CronDaemon {
         seconds: job.schedule.type === "interval" ? job.schedule.seconds : undefined,
         timezone: job.schedule.type === "cron" ? job.schedule.timezone : undefined,
       },
-      description: describeSchedule(job.schedule),
+      scheduleDescription: describeSchedule(job.schedule),
       nextRunAt: job.nextRunAt,
       lastRunAt: job.lastRunAt,
       runCount: job.runCount,
@@ -501,6 +507,21 @@ export async function isDaemonRunning(port: number): Promise<boolean> {
   try {
     const response = await fetch(`http://127.0.0.1:${port}/health`, {
       signal: AbortSignal.timeout(1000),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Stop a running daemon by sending a shutdown request
+ */
+export async function stopRemoteDaemon(port: number): Promise<boolean> {
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/shutdown`, {
+      method: "POST",
+      signal: AbortSignal.timeout(3000),
     });
     return response.ok;
   } catch {

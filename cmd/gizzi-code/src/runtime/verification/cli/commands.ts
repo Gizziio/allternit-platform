@@ -209,8 +209,13 @@ async function runVerify(options: {
     }
     
     // Create minimal plan/receipts
-    const plan = { steps: [] };
-    const receipts = [];
+    const plan: import("../types").VerificationRequest["plan"] = { 
+      sessionId: `cli_${Date.now()}`,
+      steps: [],
+      exitCriteria: [],
+      goal: options.description || "CLI verification",
+    };
+    const receipts: import("../types").VerificationRequest["receipts"] = [];
     
     const result = await orchestrator.verify(plan as any, receipts as any, context);
     
@@ -494,8 +499,10 @@ async function listVisualArtifacts(verificationId: string) {
       process.exit(1);
     }
     
-    const visualEvidence = verification.certificate?.visualEvidence || 
-                          verification.fullResult?.visualEvidence?.artifacts;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const visualEvidence = (verification.certificate?.visualEvidence as any[]) || 
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                          (verification.fullResult as any)?.visualEvidence?.artifacts;
     
     if (!visualEvidence || visualEvidence.length === 0) {
       process.stdout.write("No visual artifacts found for this verification.\n");

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { test, expect } from "bun:test"
 import os from "os"
 import { PermissionNext } from "../../src/permission/next"

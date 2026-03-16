@@ -121,6 +121,38 @@ export namespace UI {
   }
 
   export function markdown(text: string): string {
-    return text
+    const lines = text.split("\n")
+    const out: string[] = []
+    let inCode = false
+
+    for (const line of lines) {
+      if (line.startsWith("```")) {
+        inCode = !inCode
+        if (inCode) {
+          const lang = line.slice(3).trim()
+          out.push(Style.TEXT_DIM + (lang ? `[${lang}]` : ""))
+        } else {
+          out.push(Style.TEXT_NORMAL)
+        }
+        continue
+      }
+      if (inCode) {
+        out.push("  " + line)
+        continue
+      }
+
+      const hm = line.match(/^(#{1,3}) (.+)/)
+      if (hm) {
+        out.push(Style.TEXT_NORMAL_BOLD + hm[2]! + Style.TEXT_NORMAL)
+        continue
+      }
+
+      const l = line
+        .replace(/\*\*(.+?)\*\*/g, `${Style.TEXT_NORMAL_BOLD}$1${Style.TEXT_NORMAL}`)
+        .replace(/`([^`]+)`/g, `${Style.TEXT_DIM}$1${Style.TEXT_NORMAL}`)
+      out.push(l)
+    }
+
+    return out.join("\n")
   }
 }

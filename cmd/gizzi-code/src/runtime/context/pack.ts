@@ -4,8 +4,10 @@ import { Instance } from "@/runtime/context/project/instance";
 import { ToolRegistry } from "@/runtime/tools/builtins/registry";
 import { Session } from "@/runtime/session"; 
 import { Git } from "@/shared/util/git";
-import { BudgetSnapshot } from "@/runtime/loop/budget";
+import type { BudgetSnapshot } from "@/runtime/loop/budget";
+import { Ripgrep } from "@/shared/file/ripgrep";
 import path from "path";
+import { MessageV2 } from "@/runtime/session/message-v2";
 
 export interface PromptContext {
   instructions: string;
@@ -28,7 +30,7 @@ export namespace ContextPacker {
       instructionFiles.map(async (file) => {
         const fullPath = path.join(root, file);
         if (await Filesystem.exists(fullPath)) {
-          return `--- ${file} ---\n${await Filesystem.read(fullPath)}`;
+          return `--- ${file} ---\n${await Filesystem.readText(fullPath)}`;
         }
         return null;
       })
@@ -38,10 +40,18 @@ export namespace ContextPacker {
     const history = await Session.messages({ sessionID: sessionId, limit: 10 });
     const recentMessages = history.map(msg => ({
       role: msg.info.role,
-      content: msg.parts.map(p => {
-        if ('text' in p.data) return p.data.text;
-        if ('call' in p.data) return `Tool Call: ${p.data.call.toolID}(${JSON.stringify(p.data.call.input)})`;
-        if ('response' in p.data) return `Tool Response: ${JSON.stringify(p.data.response.output)}`;
+      content: msg.parts.map((p: MessageV2.Part) => {
+        const part = p as any;
+        if (part.type === 'text') return part.text ?? '';
+        if (part.type === 'tool') {
+          const state = part.state;
+          if (state?.status === 'pending' || state?.status === 'running') {
+            return `Tool Call: ${part.tool}(${JSON.stringify(state.input ?? {})})`;
+          }
+          if (state?.status === 'completed') {
+            return `Tool Response: ${JSON.stringify(state.output)}`;
+          }
+        }
         return "";
       }).join("\n")
     }));
@@ -59,10 +69,7 @@ export namespace ContextPacker {
     const tools = await ToolRegistry.ids();
 
     // 5. GATHER: Repo Map Snapshot
-    const repoSnapshot = await Filesystem.tree(root, { 
-      maxDepth: 3, 
-      exclude: ["node_modules", ".git", "dist", "build", ".gizzi"] 
-    });
+    const repoSnapshot = await Ripgrep.tree({ cwd: root, limit: 100 });
 
     return {
       instructions,

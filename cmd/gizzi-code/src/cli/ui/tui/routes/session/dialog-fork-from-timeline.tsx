@@ -1,7 +1,19 @@
 import { createMemo, onMount } from "solid-js"
 import { useSync } from "@/cli/ui/tui/context/sync"
 import { DialogSelect, type DialogSelectOption } from "@/cli/ui/tui/ui/dialog-select"
-import type { TextPart } from "@a2r/sdk/v2"
+import type { Message, Part } from "@a2r/sdk"
+// Local TextPart type (SDK exports as unknown)
+type TextPart = Part & {
+  type: "text"
+  text: string
+  synthetic?: boolean
+  ignored?: boolean
+}
+
+type FilePart = Part & {
+  type: "file"
+}
+
 import { Locale } from "@/shared/util/locale"
 import { useSDK } from "@/cli/ui/tui/context/sdk"
 import { useRoute } from "@/cli/ui/tui/context/route"
@@ -20,30 +32,35 @@ export function DialogForkFromTimeline(props: { sessionID: string; onMove: (mess
   })
 
   const options = createMemo((): DialogSelectOption<string>[] => {
-    const messages = sync.data.message[props.sessionID] ?? []
+    const messages = (sync.data.message as Record<string, (Message & { role?: string; id?: string; time?: { created: number } })[]>)[props.sessionID] ?? []
     const result = [] as DialogSelectOption<string>[]
     for (const message of messages) {
-      if (message.role !== "user") continue
-      const part = (sync.data.part[message.id] ?? []).find(
-        (x) => x.type === "text" && !x.synthetic && !x.ignored,
+      const msg = message as Message & { role?: string; id?: string; time?: { created: number } }
+      if (msg.role !== "user") continue
+      const part = ((sync.data.part as Record<string, Part[]>)[msg.id!] ?? []).find(
+        (x) => {
+          const p = x as Part & { type?: string; synthetic?: boolean; ignored?: boolean }
+          return p.type === "text" && !p.synthetic && !p.ignored
+        },
       ) as TextPart
       if (!part) continue
       result.push({
         title: part.text.replace(/\n/g, " "),
-        value: message.id,
-        footer: Locale.time(message.time.created),
+        value: msg.id!,
+        footer: Locale.time(msg.time?.created ?? 0),
         onSelect: async (dialog) => {
           const forked = await sdk.client.session.fork({
-            sessionID: props.sessionID,
-            messageID: message.id,
+            path: { id: props.sessionID },
+            body: { messageID: msg.id! },
           })
-          const parts = sync.data.part[message.id] ?? []
-          const initialPrompt = parts.reduce(
-            (agg, part) => {
-              if (part.type === "text") {
-                if (!part.synthetic) agg.input += part.text
+          const parts = (sync.data.part as Record<string, Part[]>)[msg.id!] ?? []
+          const initialPrompt = (parts as Part[]).reduce(
+            (agg: { input: string; parts: PromptInfo["parts"] }, part: Part) => {
+              const p = part as TextPart | FilePart
+              if (p.type === "text") {
+                if (!p.synthetic) agg.input += (p as TextPart).text
               }
-              if (part.type === "file") agg.parts.push(part)
+              if (p.type === "file") agg.parts.push(p as FilePart)
               return agg
             },
             { input: "", parts: [] as PromptInfo["parts"] },

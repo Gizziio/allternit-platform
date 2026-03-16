@@ -8,9 +8,10 @@
 import * as fs from "fs/promises";
 import * as path from "path";
 import { Log } from "@/shared/util/log";
-import { captureVisualEvidenceDeterministic } from "./integration/deterministic";
-import type { VisualCaptureManager } from "./manager";
-import type { DeterministicCaptureResult } from "./integration/deterministic";
+import { captureVisualEvidenceDeterministic } from "./visual/integration/deterministic";
+import type { VisualCaptureManager } from "./visual/manager";
+import type { DeterministicCaptureResult } from "./visual/integration/deterministic";
+import type { VisualArtifact } from "./visual/types";
 
 const log = Log.create({ service: "verification.file-writer" });
 
@@ -121,7 +122,7 @@ export class EvidenceFileWriter {
         provider_id: "visual-capture-ts-file",
         success: result.success,
         overall_confidence: this.calculateOverallConfidence(result),
-        artifacts: result.artifacts.map(a => this.convertArtifact(a)),
+        artifacts: result.artifacts.map((a: VisualArtifact) => this.convertArtifact(a)),
         errors: result.errors,
         metadata: {
           capture_duration_ms: captureDuration,
@@ -260,11 +261,11 @@ export class EvidenceFileWriter {
   private calculateOverallConfidence(result: DeterministicCaptureResult): number {
     if (result.artifacts.length === 0) return 1.0;
     
-    const sum = result.artifacts.reduce((acc, a) => acc + (a.confidence || 0), 0);
+    const sum = result.artifacts.reduce((acc: number, a: VisualArtifact) => acc + (a.confidence || 0), 0);
     return sum / result.artifacts.length;
   }
 
-  private convertArtifact(artifact: import("./types").VisualArtifact): ArtifactFile {
+  private convertArtifact(artifact: VisualArtifact): ArtifactFile {
     return {
       id: artifact.id,
       type: artifact.type,

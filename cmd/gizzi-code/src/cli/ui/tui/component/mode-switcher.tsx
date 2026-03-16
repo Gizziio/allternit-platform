@@ -12,7 +12,7 @@
  * - Visual distinction between modes
  */
 
-import { createSignal, createMemo, onMount, Show } from "solid-js"
+import { createSignal, createMemo, onMount, Show, createEffect } from "solid-js"
 import { useTheme } from "@/cli/ui/tui/context/theme"
 import { useKV } from "@/cli/ui/tui/context/kv"
 import { RGBA, TextAttributes } from "@opentui/core"
@@ -61,7 +61,8 @@ export function ModeSwitcher(props: ModeSwitcherProps) {
   const { theme } = useTheme()
   const kv = useKV()
   const [hoveredMode, setHoveredMode] = createSignal<AppMode | null>(null)
-  
+  const [clickedMode, setClickedMode] = createSignal<AppMode | null>(null)
+
   const sizeConfig = {
     small: {
       height: 3,
@@ -79,33 +80,37 @@ export function ModeSwitcher(props: ModeSwitcherProps) {
       fontSize: 1,
     },
   }
-  
+
   const sizes = sizeConfig[props.size || "medium"]
-  // Safely get activeConfig with fallback
   const activeConfig = MODES.find((m) => m.id === props.activeMode) || MODES[0]
-  
+
+  // Clear clicked state after animation
+  createEffect(() => {
+    if (clickedMode()) {
+      const timer = setTimeout(() => setClickedMode(null), 200)
+      return () => clearTimeout(timer)
+    }
+  })
+
   return (
     <box
       flexDirection="row"
       gap={1}
       padding={1}
-      borderRadius={999}
-      borderStyle="single"
-      borderColor={theme.border}
+      borderStyle={clickedMode() ? "double" : "single"}
+      borderColor={clickedMode() ? RGBA.fromInts(255, 255, 255) : theme.border}
       backgroundColor={RGBA.fromInts(0, 0, 0, 64)}
-      cursor="pointer"
     >
       {MODES.map((mode) => {
         const isActive = props.activeMode === mode.id
         const isHovered = hoveredMode() === mode.id
-        
+        const isClicked = clickedMode() === mode.id
+
         return (
           <box
-            key={mode.id}
-            onMouseEnter={() => setHoveredMode(mode.id)}
-            onMouseLeave={() => setHoveredMode(null)}
             onMouseUp={(event) => {
-              if (event.button === 0) { // Left click only
+              if (event.button === 0) {
+                setClickedMode(mode.id)
                 props.onModeChange(mode.id)
               }
             }}
@@ -113,21 +118,23 @@ export function ModeSwitcher(props: ModeSwitcherProps) {
             paddingRight={sizes.paddingX}
             paddingTop={1}
             paddingBottom={1}
-            backgroundColor={isActive ? mode.accentColor : "transparent"}
-            borderRadius={999}
-            cursor="pointer"
+            backgroundColor={isActive ? mode.accentColor : (isClicked ? RGBA.fromInts(255, 255, 255, 100) : "transparent")}
           >
             <box flexDirection="row" gap={1} alignItems="center">
-              <text fg={isActive ? RGBA.fromInts(255, 255, 255) : (isHovered ? mode.accentColor : theme.textMuted)}>
+              <text fg={isActive ? RGBA.fromInts(255, 255, 255) : (isHovered || isClicked ? mode.accentColor : theme.textMuted)}>
                 {mode.icon}
               </text>
               <Show when={props.showLabels !== false}>
                 <text
-                  fg={isActive ? RGBA.fromInts(255, 255, 255) : (isHovered ? mode.accentColor : theme.text)}
+                  fg={isActive ? RGBA.fromInts(255, 255, 255) : (isHovered || isClicked ? mode.accentColor : theme.text)}
                   attributes={isActive ? TextAttributes.BOLD : undefined}
                 >
                   {mode.label}
                 </text>
+              </Show>
+              {/* Active indicator dot */}
+              <Show when={isActive}>
+                <box width={1} height={1} backgroundColor={RGBA.fromInts(255, 255, 255)} marginLeft={1} />
               </Show>
             </box>
           </box>
@@ -154,9 +161,8 @@ export function ModeIndicator(props: ModeIndicatorProps) {
         width={props.size === "small" ? 1 : 2}
         height={props.size === "small" ? 1 : 2}
         backgroundColor={config.accentColor}
-        borderRadius={999}
       />
-      <text fg={config.accentColor} style={{ fontSize: 0.8 }}>
+      <text fg={config.accentColor}>
         {config.label}
       </text>
       <Show when={props.pulse}>

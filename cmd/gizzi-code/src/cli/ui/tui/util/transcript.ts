@@ -1,5 +1,33 @@
-import type { AssistantMessage, Part, UserMessage } from "@a2r/sdk/v2"
 import { Locale } from "@/shared/util/locale"
+
+// Local type definitions (SDK exports these as unknown)
+interface UserMessage {
+  role: "user"
+  id: string
+  time?: { created: number }
+}
+
+interface AssistantMessage {
+  role: "assistant"
+  id: string
+  providerID: string
+  modelID: string
+  agent?: string
+  cost: number
+  tokens: {
+    input: number
+    output: number
+    reasoning?: number
+    cache?: { read: number; write: number }
+  }
+  time?: { created: number; completed?: number }
+}
+
+interface Part {
+  id: string
+  type: string
+  [key: string]: any
+}
 
 export type TranscriptOptions = {
   thinking: boolean
@@ -62,9 +90,9 @@ export function formatAssistantHeader(msg: AssistantMessage, includeMetadata: bo
   }
 
   const duration =
-    msg.time.completed && msg.time.created ? ((msg.time.completed - msg.time.created) / 1000).toFixed(1) + "s" : ""
+    msg.time?.completed && msg.time?.created ? ((msg.time.completed - msg.time.created) / 1000).toFixed(1) + "s" : ""
 
-  return `## Assistant (${Locale.titlecase(msg.agent)} · ${msg.modelID}${duration ? ` · ${duration}` : ""})\n\n`
+  return `## Assistant (${Locale.titlecase(msg.agent ?? "Assistant")} · ${msg.modelID}${duration ? ` · ${duration}` : ""})\n\n`
 }
 
 export function formatPart(part: Part, options: TranscriptOptions): string {

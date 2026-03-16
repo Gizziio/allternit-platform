@@ -1,15 +1,38 @@
+
 import { createStore } from "solid-js/store"
 import { createMemo, createSignal, For, Show } from "solid-js"
 import { useKeyboard } from "@opentui/solid"
 import type { TextareaRenderable } from "@opentui/core"
 import { useKeybind } from "@/cli/ui/tui/context/keybind"
 import { selectedForeground, tint, useTheme } from "@/cli/ui/tui/context/theme"
-import type { QuestionAnswer, QuestionRequest } from "@a2r/sdk/v2"
+// QuestionAnswer and QuestionRequest are internal event bus types, not exported by the SDK
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+type QuestionAnswer = unknown
+type QuestionRequest = unknown
 import { useSDK } from "@/cli/ui/tui/context/sdk"
 import { SplitBorder } from "@/cli/ui/tui/component/border"
 import { useTextareaKeybindings } from "@/cli/ui/tui/component/textarea-keybindings"
 import { useDialog } from "@/cli/ui/tui/ui/dialog"
 import { GIZZICopy, sanitizeBrandSurface } from "@/shared/brand"
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnySDKType = any
+
+interface QuestionOption {
+  label: string
+  description: string
+}
+
+interface LocalQuestionRequest {
+  id: string
+  questions: {
+    header: string
+    question: string
+    options: QuestionOption[]
+    custom?: boolean
+    multiple?: boolean
+  }[]
+}
 
 export function QuestionPrompt(props: { request: QuestionRequest }) {
   const sdk = useSDK()
@@ -17,13 +40,14 @@ export function QuestionPrompt(props: { request: QuestionRequest }) {
   const keybind = useKeybind()
   const bindings = useTextareaKeybindings()
 
-  const questions = createMemo(() => props.request.questions)
+  const request = createMemo(() => props.request as unknown as LocalQuestionRequest)
+  const questions = createMemo(() => request().questions)
   const single = createMemo(() => questions().length === 1 && questions()[0]?.multiple !== true)
   const tabs = createMemo(() => (single() ? 1 : questions().length + 1)) // questions + confirm tab (no confirm for single select)
   const [tabHover, setTabHover] = createSignal<number | "confirm" | null>(null)
   const [store, setStore] = createStore({
     tab: 0,
-    answers: [] as QuestionAnswer[],
+    answers: [] as string[][],
     custom: [] as string[],
     selected: 0,
     editing: false,
@@ -31,9 +55,9 @@ export function QuestionPrompt(props: { request: QuestionRequest }) {
 
   let textarea: TextareaRenderable | undefined
 
-  const question = createMemo(() => questions()[store.tab])
+  const question = createMemo(() => questions()[store.tab] ?? { header: "", question: "", options: [] as QuestionOption[], custom: true, multiple: false })
   const confirm = createMemo(() => !single() && store.tab === questions().length)
-  const options = createMemo(() => question()?.options ?? [])
+  const options = createMemo(() => question()?.options ?? [] as QuestionOption[])
   const custom = createMemo(() => question()?.custom !== false)
   const other = createMemo(() => custom() && store.selected === options().length)
   const input = createMemo(() => store.custom[store.tab] ?? "")
@@ -45,17 +69,12 @@ export function QuestionPrompt(props: { request: QuestionRequest }) {
   })
 
   function submit() {
-    const answers = questions().map((_, i) => store.answers[i] ?? [])
-    sdk.client.question.reply({
-      requestID: props.request.id,
-      answers,
-    })
+    const answers = questions().map((_, i) => store.answers[i] ?? []) as AnySDKType
+    sdk.client.question.reply({ path: { requestID: request().id }, body: { answers } })
   }
 
   function reject() {
-    sdk.client.question.reject({
-      requestID: props.request.id,
-    })
+    sdk.client.question.reject({ path: { requestID: request().id } })
   }
 
   function pick(answer: string, custom: boolean = false) {
@@ -68,10 +87,7 @@ export function QuestionPrompt(props: { request: QuestionRequest }) {
       setStore("custom", inputs)
     }
     if (single()) {
-      sdk.client.question.reply({
-        requestID: props.request.id,
-        answers: [[answer]],
-      })
+      sdk.client.question.reply({ path: { requestID: request().id }, body: { answers: [[answer]] } })
       return
     }
     setStore("tab", store.tab + 1)
@@ -251,6 +267,8 @@ export function QuestionPrompt(props: { request: QuestionRequest }) {
     }
   })
 
+  const answeredCount = createMemo(() => questions().filter((_, i) => (store.answers[i]?.length ?? 0) > 0).length)
+
   return (
     <box
       backgroundColor={theme.backgroundPanel}
@@ -258,6 +276,32 @@ export function QuestionPrompt(props: { request: QuestionRequest }) {
       borderColor={theme.accent}
       customBorderChars={SplitBorder.customBorderChars}
     >
+      {/* Header: label + progress + reject */}
+      <box
+        flexDirection="row"
+        justifyContent="space-between"
+        paddingLeft={2}
+        paddingRight={2}
+        paddingTop={1}
+        paddingBottom={1}
+        borderColor={theme.border}
+        border={["bottom"]}
+      >
+        <box flexDirection="row" gap={1}>
+          <text fg={theme.accent}>{GIZZICopy.question.title ?? "Question"}</text>
+          <Show when={!single()}>
+            <text fg={theme.textMuted}>
+              {answeredCount()} / {questions().length} answered
+            </text>
+          </Show>
+        </box>
+        <text
+          fg={theme.textMuted}
+          onMouseUp={() => reject()}
+        >
+          esc <span style={{ fg: theme.error }}>dismiss</span>
+        </text>
+      </box>
       <box gap={1} paddingLeft={1} paddingRight={3} paddingTop={1} paddingBottom={1}>
         <Show when={!single()}>
           <box flexDirection="row" gap={1} paddingLeft={1}>
@@ -458,11 +502,10 @@ export function QuestionPrompt(props: { request: QuestionRequest }) {
               {confirm() ? GIZZICopy.question.keySubmit : multi() ? GIZZICopy.question.keyToggle : single() ? GIZZICopy.question.keySubmit : GIZZICopy.question.keyConfirm}
             </span>
           </text>
-
-          <text fg={theme.text}>
-            esc <span style={{ fg: theme.textMuted }}>{GIZZICopy.question.keyDismiss}</span>
-          </text>
         </box>
+        <text fg={theme.error} onMouseUp={() => reject()}>
+          esc <span style={{ fg: theme.textMuted }}>{GIZZICopy.question.keyDismiss}</span>
+        </text>
       </box>
     </box>
   )

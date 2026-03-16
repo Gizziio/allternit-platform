@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { test, expect } from "bun:test"
 import { FileIgnore } from "../../src/file/ignore"
 

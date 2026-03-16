@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+
 /**
  * GIZZI Unified CLI
  *
@@ -46,7 +46,8 @@ export async function main() {
       // Launch TUI - this is the default
       process.stdout.write("Launching GIZZI Terminal UI...\n")
       // Import and start TUI
-      await import("../index")
+      const { TuiThreadCommand } = await import("../cli/ui/tui/thread")
+      await TuiThreadCommand.handler({} as any)
       break
 
     case "up":

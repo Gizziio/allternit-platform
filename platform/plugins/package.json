@@ -1,0 +1,24 @@
+{
+  "name": "@a2r/plugins",
+  "version": "1.0.0",
+  "description": "A2R Plugin System",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./plugins/counter": "./src/plugins/counter.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@a2r/sdk": "workspace:*",
+    "@a2r/types": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  }
+}

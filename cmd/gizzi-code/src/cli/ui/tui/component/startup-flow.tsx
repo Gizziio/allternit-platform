@@ -20,6 +20,7 @@ import { useSDK } from "@/cli/ui/tui/context/sdk"
 import { useSync } from "@/cli/ui/tui/context/sync"
 import { useTheme } from "@/cli/ui/tui/context/theme"
 import { useRoute } from "@/cli/ui/tui/context/route"
+import { useMode } from "@/cli/ui/tui/component/mode-switcher"
 import { useDialog } from "@/cli/ui/tui/ui/dialog"
 import { DialogPrompt } from "@/cli/ui/tui/ui/dialog-prompt"
 import { GIZZIBrand } from "@/shared/brand"
@@ -47,6 +48,12 @@ type StepInfo = {
   detail: string[]
   actions: StepAction[]
 }
+
+// Type definitions for sync data
+type Provider = { id: string; name: string }
+type ProviderNext = { all: Provider[]; connected: string[] }
+type McpStatus = { status: string }
+type Session = { id: string; time: { updated: number } }
 
 const THEME_DONE_KEY = startupFlowStateKey("theme_done")
 const ACCOUNT_DONE_KEY = startupFlowStateKey("account_done")
@@ -144,6 +151,7 @@ async function responseError(response: Response): Promise<string> {
 
 export function StartupFlow() {
   const { theme, mode, setMode, selected } = useTheme()
+  const { mode: activeMode, setMode: setAppMode } = useMode()
   const sync = useSync()
   const sdk = useSDK()
   const kv = useKV()
@@ -156,6 +164,7 @@ export function StartupFlow() {
 
   const [selectedActionIndex, setSelectedActionIndex] = createSignal(0)
   const [runningActionID, setRunningActionID] = createSignal<string | null>(null)
+  const [actionError, setActionError] = createSignal<string>()
   const [accountBusy, setAccountBusy] = createSignal(false)
   const [accountError, setAccountError] = createSignal<string>()
   const [accountStatus, setAccountStatus] = createSignal<string>()
@@ -173,11 +182,11 @@ export function StartupFlow() {
   const mcpDone = createMemo(() => kv.get(MCP_DONE_KEY, false) === true)
   const providerSkipped = createMemo(() => kv.get(PROVIDER_SKIPPED_KEY, false) === true)
 
-  const providerNameByID = createMemo(() => new Map(sync.data.provider_next.all.map((provider) => [provider.id, provider.name])))
+  const providerNameByID = createMemo(() => new Map(((sync.data.provider_next as unknown as ProviderNext | undefined)?.all ?? []).map((provider) => [provider.id, provider.name])))
   const connectedProviderNames = createMemo(() => {
     const ids = new Set<string>()
-    for (const providerID of sync.data.provider_next.connected) ids.add(providerID)
-    for (const provider of sync.data.provider) ids.add(provider.id)
+    for (const providerID of (sync.data.provider_next as unknown as ProviderNext | undefined)?.connected ?? []) ids.add(providerID)
+    for (const provider of (sync.data.provider as Provider[] | undefined) ?? []) ids.add(provider.id)
     return [...ids].map((id) => providerNameByID().get(id) ?? id)
   })
   const connectedProviderCount = createMemo(() => connectedProviderNames().length)
@@ -199,13 +208,14 @@ export function StartupFlow() {
     let disabled = 0
     let needsAuth = 0
     let failed = 0
-    for (const status of Object.values(sync.data.mcp)) {
+    const mcpData = (sync.data.mcp as Record<string, McpStatus> | undefined) ?? {}
+    for (const status of Object.values(mcpData)) {
       if (status.status === "connected") connected++
       if (status.status === "disabled") disabled++
       if (status.status === "needs_auth" || status.status === "needs_client_registration") needsAuth++
       if (status.status === "failed") failed++
     }
-    return { total: Object.keys(sync.data.mcp).length, connected, disabled, needsAuth, failed }
+    return { total: Object.keys(mcpData).length, connected, disabled, needsAuth, failed }
   })
 
   const status = createMemo(() => ({
@@ -367,7 +377,7 @@ export function StartupFlow() {
       setAccountStatus(`Connected ${platformURL}`)
 
       await sdk.client.instance.dispose()
-      await sync.bootstrap()
+      await (sync as { bootstrap?: () => Promise<void> }).bootstrap?.()
     } catch (error) {
       setAccountError(errorMessage(error))
       setAccountStatus(undefined)
@@ -607,29 +617,51 @@ export function StartupFlow() {
       ],
       actions: [
         {
-          id: "ready.start",
-          label: "Start coding",
-          description: "Finish setup and open a new session now.",
-          run: openNewSession,
-        },
-        {
-          id: "ready.sessions",
-          label: "Open sessions",
-          description: "Finish setup and open the session list now.",
+          id: "ready.resume",
+          label: "Resume session",
+          description: "Continue your last active conversation.",
+          disabled: sync.data.session.length === 0,
           run: () => {
-            completeStartupFlow()
-            openSessionListDialog()
+            const lastSession = ((sync.data.session as Session[] | undefined) ?? []).slice().sort((a: Session, b: Session) => b.time.updated - a.time.updated)[0]
+            if (lastSession) {
+              completeStartupFlow()
+              route.navigate({ type: "session", sessionID: lastSession.id })
+            }
           },
         },
         {
+          id: "ready.code",
+          label: "Code mode",
+          description: "Enter optimized environment for engineering.",
+          run: () => {
+            completeStartupFlow()
+            setAppMode("code")
+          },
+        },
+        {
+          id: "ready.cowork",
+          label: "Cowork mode",
+          description: "Multi-agent collaborative workspace.",
+          run: () => {
+            completeStartupFlow()
+            route.navigate({ type: "cowork" })
+          },
+        },
+        {
+          id: "ready.start",
+          label: "New session",
+          description: "Start a fresh interaction.",
+          run: openNewSession,
+        },
+        ...(connectedProviderCount() === 0 ? [{
           id: "ready.providers",
           label: "Connect providers",
-          description: "Finish setup and open provider auth.",
+          description: "Open provider authentication settings.",
           run: () => {
             completeStartupFlow()
             openProviderDialog()
           },
-        },
+        }] : []),
       ],
     }
   })
@@ -665,12 +697,33 @@ export function StartupFlow() {
     if (action.disabled) return
     if (runningActionID()) return
 
+    setActionError(undefined)
     setRunningActionID(action.id)
     try {
       await action.run()
+    } catch (err) {
+      setActionError(errorMessage(err))
     } finally {
       setRunningActionID(null)
     }
+  }
+
+  function goBack() {
+    const currentIndex = activeStepIndex()
+    if (currentIndex <= 0) return
+    // Mark previous step as not done so we go back
+    const previousStep = progress()[currentIndex - 1]
+    if (!previousStep) return
+    const stepId = previousStep.id as StepID
+    const stepKeyMap: Partial<Record<StepID, string>> = {
+      workspace: workspaceTrustKey(workspace()),
+      theme: THEME_DONE_KEY,
+      account: ACCOUNT_DONE_KEY,
+      terminal: TERMINAL_DONE_KEY,
+      mcp: MCP_DONE_KEY,
+    }
+    const key = stepKeyMap[stepId]
+    if (key) kv.set(key, false)
   }
 
   useKeyboard((evt) => {
@@ -708,6 +761,13 @@ export function StartupFlow() {
     if (key === "enter" || key === "return" || key === "right") {
       evt.preventDefault()
       void runAction(selectedAction())
+      return
+    }
+
+    if (key === "escape" || key === "left" || key === "backspace") {
+      evt.preventDefault()
+      setActionError(undefined)
+      goBack()
     }
   })
 
@@ -749,7 +809,7 @@ export function StartupFlow() {
         </text>
         <box flexGrow={1} />
         <text fg={theme.textMuted}>
-          Step {activeStepIndex() + 1} / {progress().length}
+          Step {String(activeStepIndex() + 1)} / {String(progress().length ?? 0)}
         </text>
       </box>
 
@@ -803,10 +863,10 @@ export function StartupFlow() {
         </For>
       </box>
 
-      <Show when={accountStatus() || accountError()}>
+      <Show when={accountStatus() || accountError() || actionError()}>
         <box
           borderStyle="single"
-          borderColor={accountError() ? theme.error : theme.border}
+          borderColor={accountError() || actionError() ? theme.error : theme.border}
           paddingLeft={1}
           paddingRight={1}
           paddingTop={0}
@@ -818,6 +878,9 @@ export function StartupFlow() {
           </Show>
           <Show when={accountError()}>
             <text fg={theme.error}>{accountError()}</text>
+          </Show>
+          <Show when={actionError()}>
+            <text fg={theme.error}>{actionError()}</text>
           </Show>
         </box>
       </Show>
@@ -853,10 +916,13 @@ export function StartupFlow() {
       </box>
 
       <box flexDirection="row" gap={2}>
-        <text fg={theme.textMuted} wrapMode="word">
-          Use up/down arrows to move, Enter or right-arrow to select.
+        <text fg={theme.textMuted}>
+          ↑↓ navigate{"  "}
+          <span style={{ fg: theme.accent }}>enter</span> select{"  "}
+          <Show when={activeStepIndex() > 0}>
+            <span style={{ fg: theme.textMuted }}>esc back{"  "}</span>
+          </Show>
         </text>
-        <text fg={theme.textMuted}>Cursor navigation only</text>
       </box>
     </box>
   )

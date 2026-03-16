@@ -48,12 +48,16 @@ async function runDemo() {
       retry: {
         maxAttempts: 2,
         initialDelayMs: 1000,
+        maxDelayMs: 60000,
+        backoffMultiplier: 2,
         exponential: true,
       },
     });
 
     // Register executor manually (normally done internally)
-    (CronServiceEnhanced as any).executors = { cowork: coworkExecutor };
+    // Register executor manually (normally done internally)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (CronServiceEnhanced as unknown as { executors: { cowork: typeof coworkExecutor } }).executors = { cowork: coworkExecutor };
 
     console.log("   ✅ Service initialized");
     console.log(`   📁 Database: ${DEMO_DB}\n`);
@@ -150,11 +154,14 @@ async function runDemo() {
       
       // Print important events
       if (event.type === "job:run:started") {
-        console.log(`   🚀 Job Started: ${(event.data as { name?: string }).name || event.data.jobId}`);
+        const data = event.data as { name?: string; jobId?: string };
+        console.log(`   🚀 Job Started: ${data.name || data.jobId}`);
       } else if (event.type === "job:run:completed") {
-        console.log(`   ✅ Job Completed: ${event.data.jobId} (${event.data.durationMs}ms)`);
+        const data = event.data as { jobId?: string; durationMs?: number };
+        console.log(`   ✅ Job Completed: ${data.jobId} (${data.durationMs}ms)`);
       } else if (event.type === "job:run:failed") {
-        console.log(`   ❌ Job Failed: ${event.data.jobId} - ${event.data.error}`);
+        const data = event.data as { jobId?: string; error?: string };
+        console.log(`   ❌ Job Failed: ${data.jobId} - ${data.error}`);
       }
     });
 

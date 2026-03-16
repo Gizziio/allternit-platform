@@ -1,8 +1,0 @@
-{
-  "type": "object",
-  "required": ["course_id"],
-  "properties": {
-    "course_id": {"type": "integer"},
-    "search_term": {"type": "string", "nullable": true}
-  }
-}

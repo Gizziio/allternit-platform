@@ -115,7 +115,7 @@ export class VisualDiffCaptureProvider extends VisualCaptureProvider {
             description: `Version after changes (${afterVersion.label})`,
           },
           diff: {
-            image: comparison.diffImage,
+            image: await this.createImageData(comparison.diffPath, "png"),
             pixelDifference: comparison.pixelDifference,
             changedRegions: [], // Would be populated with actual diff analysis
           },

@@ -99,7 +99,7 @@ export const PtyRoutes = () =>
       validator("param", z.any()),
       async (c) => {
         const { ptyID } = c.req.valid("param") as any
-        await Pty.kill(ptyID)
+        await Pty.remove(ptyID)
         return c.json(true)
       },
     )

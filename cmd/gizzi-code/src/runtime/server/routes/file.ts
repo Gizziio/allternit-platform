@@ -55,7 +55,7 @@ export const FileRoutes = lazy(() =>
       validator("query", z.any()),
       async (c) => {
         const { pattern } = c.req.valid("query") as any
-        const files = await File.glob(pattern)
+        const files = await File.search({ query: pattern, type: "file" })
         return c.json(files)
       },
     )
@@ -80,7 +80,7 @@ export const FileRoutes = lazy(() =>
       validator("query", z.any()),
       async (c) => {
         const { path } = c.req.valid("query") as any
-        const symbols = await LSP.symbols(path)
+        const symbols = await LSP.documentSymbol(path)
         return c.json(symbols)
       },
     )
@@ -104,7 +104,7 @@ export const FileRoutes = lazy(() =>
       validator("query", z.any()),
       async (c) => {
         const query = c.req.valid("query") as any
-        const tree = await File.tree(query)
+        const tree = await File.list(query.path)
         return c.json(tree)
       },
     )
@@ -154,7 +154,9 @@ export const FileRoutes = lazy(() =>
       validator("query", z.any()),
       async (c) => {
         const { paths } = c.req.valid("query") as any
-        const info = await File.info(paths)
+        const info = Array.isArray(paths) 
+          ? await Promise.all(paths.map((p: string) => File.read(p)))
+          : []
         return c.json(info)
       },
     ),

@@ -16,6 +16,7 @@
 import path from "path"
 import { Log } from "@/shared/util/log"
 import { Filesystem } from "@/shared/util/filesystem"
+import { chmod } from "fs/promises"
 
 const log = Log.create({ service: "agent_workspace.artifacts" })
 

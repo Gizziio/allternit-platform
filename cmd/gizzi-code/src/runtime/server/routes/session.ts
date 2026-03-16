@@ -41,7 +41,8 @@ export const SessionRoutes = lazy(() =>
         },
       }),
       async (c) => {
-        const sessions = await Session.list()
+        const agentID = c.req.query("agentID")
+        const sessions = Array.from(Session.list(agentID ? { agentID } : undefined))
         return c.json(sessions)
       },
     )
@@ -297,10 +298,10 @@ export const SessionRoutes = lazy(() =>
         const { sessionID } = c.req.valid("param") as any
         const input = c.req.valid("json") as any
         if (input.title !== undefined) {
-          await Session.setTitle({ id: sessionID, title: input.title })
+          await Session.setTitle({ sessionID, title: input.title })
         }
         if (input.archived !== undefined) {
-          await Session.setArchived({ id: sessionID, archived: input.archived })
+          await Session.setArchived({ sessionID, time: input.archived ? Date.now() : undefined })
         }
         if (input.permission !== undefined) {
           await Session.setPermission({ sessionID, permission: input.permission })
@@ -330,7 +331,7 @@ export const SessionRoutes = lazy(() =>
       validator("param", z.any()),
       async (c) => {
         const { sessionID } = c.req.valid("param") as any
-        const result = await Session.fork({ id: sessionID })
+        const result = await Session.fork({ sessionID })
         return c.json(result)
       },
     )
@@ -428,9 +429,11 @@ export const SessionRoutes = lazy(() =>
         },
       }),
       validator("param", z.any()),
+      validator("json", z.any()),
       async (c) => {
         const { sessionID } = c.req.valid("param") as any
-        const result = await SessionRevert.revert({ sessionID })
+        const input = c.req.valid("json") as any
+        const result = await SessionRevert.revert({ sessionID, messageID: input.messageID })
         return c.json(result)
       },
     )
@@ -507,6 +510,31 @@ export const SessionRoutes = lazy(() =>
         const { sessionID } = c.req.valid("param") as any
         const result = await Todo.get(sessionID)
         return c.json(result)
+      },
+    )
+    .post(
+      "/:sessionID/clear",
+      describeRoute({
+        summary: "Clear session messages",
+        description: "Delete all messages and parts for a session.",
+        operationId: "session.clear",
+        responses: {
+          200: {
+            description: "Session cleared",
+            content: {
+              "application/json": {
+                schema: resolver(z.any()),
+              },
+            },
+          },
+          ...errors(404),
+        },
+      }),
+      validator("param", z.any()),
+      async (c) => {
+        const { sessionID } = c.req.valid("param") as any
+        await Session.clear(sessionID)
+        return c.json(true)
       },
     ),
 )

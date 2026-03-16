@@ -1,6 +1,6 @@
 import { Log } from "@/shared/util/log";
 import { Config } from "@/runtime/context/config/config";
-import { Credential } from "./credentials";
+import type { Credential } from "./credentials";
 import { Identifier } from "@/shared/id/id";
 
 export namespace AuthStore {
@@ -18,17 +18,17 @@ export namespace AuthStore {
 
   export async function listCredentials(): Promise<Credential[]> {
     const config = await Config.get();
-    // Assuming config.auth is a record of credentials by some internal key or list
-    return Object.values(config.auth || {}) as Credential[];
+    // Assuming config has credentials storage
+    return Object.values((config as any).credentials || {}) as Credential[];
   }
 
   export async function saveCredential(input: Omit<Credential, "id">): Promise<string> {
-    const id = Identifier.generate("cred"); // Generate a stable fingerprint
+    const id = Identifier.ascending("part"); // Generate a stable fingerprint
     const credential: Credential = { ...input, id };
     
     log.info("Saving credential", { provider: credential.provider, method: credential.method, id });
     
-    // Logic to update config.auth[id] = credential
+    // Logic to update config.credentials[id] = credential
     return id;
   }
 }

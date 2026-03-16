@@ -1,5 +1,52 @@
+
 import type { Argv } from "yargs"
-import type { Session as SDKSession, Message, Part } from "@a2r/sdk/v2"
+
+// Local type definitions (SDK exports unknown)
+type SDKSession = {
+  id: string
+  slug: string
+  projectID: string
+  directory: string
+  title: string
+  version: string
+  parentID?: string
+  time: {
+    created: number
+    updated: number
+    compacting?: number
+    archived?: number
+  }
+  share?: { url: string }
+  summary?: {
+    additions: number
+    deletions: number
+    files: number
+  }
+  permission?: unknown
+  [key: string]: unknown
+}
+
+type Message = {
+  id: string
+  sessionID: string
+  role: "user" | "assistant"
+  time?: {
+    created: number
+    completed?: number
+  }
+  agent?: string
+  modelID?: string
+  providerID?: string
+  [key: string]: unknown
+}
+
+type Part = {
+  id: string
+  sessionID: string
+  messageID: string
+  type: string
+  [key: string]: unknown
+}
 import { Session } from "@/runtime/session"
 import { cmd } from "@/cli/commands/cmd"
 import { bootstrap } from "@/cli/bootstrap"
@@ -115,7 +162,7 @@ export const ImportCommand = cmd({
           return
         }
 
-        exportData = transformed
+        exportData = transformed as typeof exportData
       } else {
         exportData = await Filesystem.readJson<NonNullable<typeof exportData>>(args.file).catch(() => undefined)
         if (!exportData) {
@@ -134,14 +181,16 @@ export const ImportCommand = cmd({
       Database.use((db) => db.insert(SessionTable).values(Session.toRow(exportData.info)).onConflictDoNothing().run())
 
       for (const msg of exportData.messages) {
+        const timeCreated = msg.info.time?.created ?? Date.now()
         Database.use((db) =>
           db
             .insert(MessageTable)
             .values({
               id: msg.info.id,
               session_id: exportData.info.id,
-              time_created: msg.info.time?.created ?? Date.now(),
-              data: msg.info,
+              time_created: timeCreated,
+              time_updated: timeCreated,
+              data: msg.info as any,
             })
             .onConflictDoNothing()
             .run(),
@@ -155,7 +204,9 @@ export const ImportCommand = cmd({
                 id: part.id,
                 message_id: msg.info.id,
                 session_id: exportData.info.id,
-                data: part,
+                time_created: timeCreated,
+                time_updated: timeCreated,
+                data: part as any,
               })
               .onConflictDoNothing()
               .run(),

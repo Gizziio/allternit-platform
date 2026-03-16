@@ -168,7 +168,7 @@ export const ExperimentalRoutes = lazy(() =>
         },
       }),
       async (c) => {
-        const sessions = await Session.listGlobal()
+        const sessions = Array.from(Session.listGlobal())
         return c.json(sessions)
       },
     )

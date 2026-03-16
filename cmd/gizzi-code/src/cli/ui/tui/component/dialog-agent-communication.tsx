@@ -5,117 +5,143 @@
  * Shows messages, channels, and unread counts.
  */
 
-import { useState, useEffect } from "hono/jsx"
-import { Box, Text, Newline } from "@inkjs/ui"
-import { AgentCommunicationRuntime } from "@/runtime/agents/communication-runtime"
+import { createMemo, createSignal } from "solid-js"
+import { useDialog } from "@/cli/ui/tui/ui/dialog"
+import { DialogSelect, type DialogSelectOption } from "@/cli/ui/tui/ui/dialog-select"
+import { useTheme } from "@/cli/ui/tui/context/theme"
+import { useKeybind } from "@/cli/ui/tui/context/keybind"
+import { useSync } from "@/cli/ui/tui/context/sync"
+import type { AgentPart, TextPart } from "@a2r/sdk"
 
-export function DialogAgentCommunication(props: { sessionID: string }) {
-  const [messages, setMessages] = useState<any[]>([])
-  const [channels, setChannels] = useState<any[]>([])
-  const [unreadCount, setUnreadCount] = useState(0)
-  const [selectedTab, setSelectedTab] = useState<"messages" | "channels">("messages")
-
-  useEffect(() => {
-    // Load initial data
-    const loadData = () => {
-      // Get messages for this session
-      const allMessages = AgentCommunicationRuntime.getAllAgentsStatus()
-      
-      // Get channels
-      const sessionChannels = AgentCommunicationRuntime.getAgentChannels(props.sessionID)
-      setChannels(sessionChannels)
-
-      // Get unread count (simplified - would need agent identity)
-      setUnreadCount(0)
-    }
-
-    loadData()
-
-    // Subscribe to message events
-    const unsubscribe = subscribeToMessages((message) => {
-      setMessages(prev => [message, ...prev].slice(0, 50))
-    })
-
-    return () => unsubscribe()
-  }, [props.sessionID])
-
-  return (
-    <Box flexDirection="column" height={20}>
-      {/* Header */}
-      <Box marginBottom={1}>
-        <Text bold>Agent Communication</Text>
-        {unreadCount > 0 && (
-          <Text color="yellow"> ({unreadCount} unread)</Text>
-        )}
-      </Box>
-
-      {/* Tabs */}
-      <Box marginBottom={1}>
-        <Text
-          color={selectedTab === "messages" ? "green" : "gray"}
-          bold={selectedTab === "messages"}
-        >
-          [M]essages
-        </Text>
-        <Text> | </Text>
-        <Text
-          color={selectedTab === "channels" ? "green" : "gray"}
-          bold={selectedTab === "channels"}
-        >
-          [C]hannels
-        </Text>
-      </Box>
-
-      {/* Content */}
-      {selectedTab === "messages" ? (
-        <Box flexDirection="column" height={14}>
-          {messages.length === 0 ? (
-            <Text color="gray">No agent messages yet</Text>
-          ) : (
-            messages.slice(0, 10).map((msg, i) => (
-              <Box key={msg.id} marginBottom={i < 9 ? 1 : 0}>
-                <Text color="cyan">{msg.from.agentName}</Text>
-                <Text color="gray"> → </Text>
-                <Text color="magenta">
-                  {msg.to.channel ? `#${msg.to.channel}` : msg.to.agentName || "broadcast"}
-                </Text>
-                <Text>: </Text>
-                <Text>{msg.content.slice(0, 60)}</Text>
-                {msg.mentions && msg.mentions.length > 0 && (
-                  <Text color="yellow"> {msg.mentions.map(m => `@${m}`).join(" ")}</Text>
-                )}
-              </Box>
-            ))
-          )}
-        </Box>
-      ) : (
-        <Box flexDirection="column" height={14}>
-          {channels.length === 0 ? (
-            <Text color="gray">No channels yet</Text>
-          ) : (
-            channels.map((channel, i) => (
-              <Box key={channel.id} marginBottom={i < channels.length - 1 ? 1 : 0}>
-                <Text color="green">#{channel.name}</Text>
-                <Text color="gray"> ({channel.members.length} members)</Text>
-              </Box>
-            ))
-          )}
-        </Box>
-      )}
-
-      {/* Footer */}
-      <Box marginTop={1}>
-        <Text color="gray">Tab to switch • Esc to close</Text>
-      </Box>
-    </Box>
-  )
+// Message type for agent communication
+interface AgentMessage {
+  id: string
+  from: {
+    agentName: string
+  }
+  to: {
+    channel?: string
+    agentName?: string
+  }
+  content: string
+  mentions?: string[]
 }
 
-// Simple subscription helper
-function subscribeToMessages(callback: (message: any) => void): () => void {
-  // In production, would subscribe to Bus events
-  // For now, this is a placeholder
-  return () => {}
+// Channel type for agent channels
+interface AgentChannel {
+  id: string
+  name: string
+  members: string[]
+}
+
+export function DialogAgentCommunication(props: { sessionID: string }) {
+  const dialog = useDialog()
+  const { theme } = useTheme()
+  const keybind = useKeybind()
+  const sync = useSync()
+  
+  const [selectedTab, setSelectedTab] = createSignal<"messages" | "channels">("messages")
+  const [unreadCount, setUnreadCount] = createSignal(0)
+
+  // Extract agent-to-agent messages from session parts
+  const messages = createMemo<AgentMessage[]>(() => {
+    const msgs = sync.data.message[props.sessionID]
+    if (!msgs) return []
+    const result: AgentMessage[] = []
+    for (const msg of msgs) {
+      if (msg.role !== "assistant") continue
+      const parts = sync.data.part[msg.id] ?? []
+      const agentParts = parts.filter((p): p is AgentPart => p.type === "agent")
+      if (agentParts.length === 0) continue
+      const textContent = parts
+        .filter((p): p is TextPart => p.type === "text")
+        .map(p => p.text ?? "")
+        .join("")
+        .slice(0, 100)
+      for (const agentPart of agentParts) {
+        result.push({
+          id: `${msg.id}-${agentPart.name}`,
+          from: { agentName: agentPart.name },
+          to: { agentName: "coordinator" },
+          content: agentPart.source?.value ?? textContent,
+        })
+      }
+    }
+    return result
+  })
+
+  // Derive channels from unique agent names seen in session parts
+  const channels = createMemo<AgentChannel[]>(() => {
+    const msgs = sync.data.message[props.sessionID]
+    if (!msgs) return []
+    const agentNames = new Set<string>()
+    for (const msg of msgs) {
+      const parts = sync.data.part[msg.id] ?? []
+      for (const part of parts) {
+        if (part.type === "agent") agentNames.add((part as AgentPart).name)
+      }
+    }
+    return [...agentNames].map(name => ({ id: name, name, members: [name, "coordinator"] }))
+  })
+
+  // Format message content for display
+  const formatMessage = (msg: AgentMessage): DialogSelectOption<void> => {
+    const recipient = msg.to.channel ? `#${msg.to.channel}` : msg.to.agentName || "broadcast"
+    const mentions = msg.mentions && msg.mentions.length > 0 
+      ? ` ${msg.mentions.map((m: string) => `@${m}`).join(" ")}`
+      : ""
+    
+    return {
+      title: `${msg.from.agentName} → ${recipient}: ${msg.content.slice(0, 60)}`,
+      description: mentions,
+      value: undefined,
+    }
+  }
+
+  // Format channel for display
+  const formatChannel = (channel: AgentChannel): DialogSelectOption<void> => {
+    return {
+      title: `#${channel.name}`,
+      description: `(${channel.members.length} members)`,
+      value: undefined,
+    }
+  }
+
+  // Create options based on selected tab
+  const options = createMemo<DialogSelectOption<void>[]>(() => {
+    const opts = selectedTab() === "messages" 
+      ? messages().slice(0, 10).map(formatMessage)
+      : channels().map(formatChannel)
+    
+    // Add empty state option
+    if (opts.length === 0) {
+      return [{
+        title: selectedTab() === "messages" 
+          ? "No agent messages yet" 
+          : "No channels yet",
+        disabled: true,
+        value: undefined,
+      }]
+    }
+    
+    return opts
+  })
+
+  const title = createMemo(() => {
+    const unread = unreadCount()
+    return `Agent Communication${unread > 0 ? ` (${unread} unread)` : ""}`
+  })
+
+  return (
+    <DialogSelect
+      title={title()}
+      options={options()}
+      onSelect={() => {
+        dialog.clear()
+      }}
+      skipFilter={true}
+    />
+  )
 }
 
 export default DialogAgentCommunication

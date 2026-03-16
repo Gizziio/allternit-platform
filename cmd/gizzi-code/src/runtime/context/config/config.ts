@@ -978,6 +978,14 @@ export namespace Config {
     .extend({
       whitelist: z.array(z.string()).optional(),
       blacklist: z.array(z.string()).optional(),
+      // Auth mode for LLM config forwarding to the computer-use operator:
+      //   "api_key"    — standard key-based auth (default for all API providers)
+      //   "none"       — local model, no auth needed (Ollama, LM Studio, vLLM)
+      //   "bearer"     — subscription / OAuth token (Authorization: Bearer)
+      //   "subprocess" — CLI tool already authed in OS (claude -p, llm, aichat)
+      auth_type: z.enum(["api_key", "none", "bearer", "subprocess"]).optional(),
+      token: z.string().optional().describe("Bearer token for auth_type: bearer"),
+      subprocess_cmd: z.string().optional().describe("CLI command for auth_type: subprocess, e.g. 'claude -p'"),
       models: z
         .record(
           z.string(),

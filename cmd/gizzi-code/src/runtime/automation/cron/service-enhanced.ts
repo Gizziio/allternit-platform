@@ -254,7 +254,7 @@ export const CronServiceEnhanced = {
     }
 
     const now = new Date().toISOString();
-    const job: CronJob = {
+    const job = {
       id: randomUUID(),
       name: input.name,
       description: input.description,
@@ -271,7 +271,7 @@ export const CronServiceEnhanced = {
       maxRetries: input.maxRetries ?? state.config.defaultMaxRetries,
       tags: input.tags ?? [],
       metadata: input.metadata ?? {},
-    };
+    } as CronJob;
 
     // Calculate next run with timezone support
     if (schedule.type === "cron") {
@@ -437,7 +437,7 @@ export const CronServiceEnhanced = {
   // Statistics & Status
   // ═══════════════════════════════════════════════════════════════════════════════
 
-  getStatus(): DaemonStatus {
+  getStatus(): DaemonStatus & { metrics?: typeof state.metrics } {
     if (!state.db) {
       return {
         running: false,
@@ -445,6 +445,7 @@ export const CronServiceEnhanced = {
         jobs: { total: 0, active: 0, paused: 0 },
         runs: { pending: 0, running: 0, last24h: 0 },
         version: "1.0.0",
+        metrics: state.metrics,
       };
     }
 
@@ -452,7 +453,6 @@ export const CronServiceEnhanced = {
     return {
       running: state.isRunning,
       port: 0,
-      startedAt: undefined,
       jobs: stats.jobs,
       runs: stats.runs,
       version: "1.0.0",
@@ -683,8 +683,11 @@ export const CronServiceEnhanced = {
       case "function":
         await this._executeFunction(job, run, signal);
         break;
-      default:
-        throw new Error(`Unknown job type: ${job.type}`);
+      default: {
+        // Exhaustiveness check - should never reach here if all job types are handled
+        const _exhaustiveCheck: never = job;
+        throw new Error(`Unknown job type: ${(_exhaustiveCheck as { type: string }).type}`);
+      }
     }
   },
 

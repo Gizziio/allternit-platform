@@ -12,6 +12,9 @@ import { Provider } from "@/runtime/providers/provider"
 import { NamedError } from "@a2r/util/error"
 import { LSP } from "@/runtime/integrations/lsp"
 import { Format } from "@/shared/format"
+import { Config } from "@/runtime/context/config/config"
+import { ModelsDev } from "@/runtime/providers/adapters/models"
+import { ProviderAuth } from "@/runtime/providers/adapters/auth"
 import { TuiRoutes } from "@/runtime/server/routes/tui"
 import { Instance } from "@/runtime/context/project/instance"
 import { Vcs } from "@/runtime/context/project/vcs"
@@ -41,12 +44,27 @@ import { errors } from "@/runtime/server/error"
 import { QuestionRoutes } from "@/runtime/server/routes/question"
 import { PermissionRoutes } from "@/runtime/server/routes/permission"
 import { GlobalRoutes } from "@/runtime/server/routes/global"
+import { AuthRoutes } from "@/runtime/server/routes/auth"
 import { AgentRoutes } from "@/runtime/server/routes/agent"
+import { CommandRoutes } from "@/runtime/server/routes/command"
 import { CronRoutes } from "@/runtime/server/routes/cron"
 import { ArsContextaRoutes } from "@/runtime/server/routes/ars-contexta"
 import { WebProxyRoutes } from "@/runtime/server/routes/web-proxy"
 import { MDNS } from "@/runtime/server/mdns"
 import { TerminalClerkAuthRoutes } from "@/runtime/server/routes/terminal-clerk-auth"
+import { UserRoutes } from "@/runtime/server/routes/user"
+import { InstanceRoutes } from "@/runtime/server/routes/instance"
+import { EventRoutes } from "@/runtime/server/routes/event"
+import { LspRoutes } from "@/runtime/server/routes/lsp"
+import { FormatterRoutes } from "@/runtime/server/routes/formatter"
+import { SkillRoutes } from "@/runtime/server/routes/skill"
+import { VcsRoutes } from "@/runtime/server/routes/vcs"
+import { PathRoutes } from "@/runtime/server/routes/path"
+import { MemoryRoutes } from "@/runtime/server/routes/memory"
+import { SandboxRoutes } from "@/runtime/server/routes/sandbox"
+import { VmSessionRoutes } from "@/runtime/server/routes/vm-session"
+import { WorkspaceRoutes } from "@/runtime/server/routes/workspace"
+import { PluginRoutes } from "@/runtime/server/routes/plugin"
 
 // @ts-ignore This global is needed to prevent ai-sdk from logging warnings to stdout https://github.com/vercel/ai/blob/2dc67e0ef538307f21368db32d5a12345d98831b/packages/ai/src/logger/log-warnings.ts#L85
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -276,116 +294,21 @@ export namespace Server {
         .route("/mcp", McpRoutes())
         .route("/tui", TuiRoutes())
         .route("/agent", AgentRoutes())
+        .route("/command", CommandRoutes())
         .route("/cron", CronRoutes())
         .route("/ars-contexta", ArsContextaRoutes())
         .route("/web-proxy", WebProxyRoutes())
-        .post(
-          "/instance/dispose",
-          describeRoute({
-            summary: "Dispose instance",
-            description: "Clean up and dispose the current GIZZI instance, releasing all resources.",
-            operationId: "instance.dispose",
-            responses: {
-              200: {
-                description: "Instance disposed",
-                content: {
-                  "application/json": {
-                    schema: resolver(z.boolean()),
-                  },
-                },
-              },
-            },
-          }),
-          async (c) => {
-            await Instance.dispose()
-            return c.json(true)
-          },
-        )
-        .get(
-          "/path",
-          describeRoute({
-            summary: "Get paths",
-            description:
-              "Retrieve the current working directory and related path information for the GIZZI instance.",
-            operationId: "path.get",
-            responses: {
-              200: {
-                description: "Path",
-                content: {
-                  "application/json": {
-                    schema: resolver(
-                      z
-                        .object({
-                          home: z.string(),
-                          state: z.string(),
-                          config: z.string(),
-                          worktree: z.string(),
-                          directory: z.string(),
-                        })
-                        ,
-                    ),
-                  },
-                },
-              },
-            },
-          }),
-          async (c) => {
-            return c.json({
-              home: Global.Path.home,
-              state: Global.Path.state,
-              config: Global.Path.config,
-              worktree: Instance.worktree,
-              directory: Instance.directory,
-            })
-          },
-        )
-        .get(
-          "/vcs",
-          describeRoute({
-            summary: "Get VCS info",
-            description:
-              "Retrieve version control system (VCS) information for the current project, such as git branch.",
-            operationId: "vcs.get",
-            responses: {
-              200: {
-                description: "VCS info",
-                content: {
-                  "application/json": {
-                    schema: resolver(Vcs.Info),
-                  },
-                },
-              },
-            },
-          }),
-          async (c) => {
-            const branch = await Vcs.branch()
-            return c.json({
-              branch,
-            })
-          },
-        )
-        .get(
-          "/command",
-          describeRoute({
-            summary: "List commands",
-            description: "Get a list of all available commands in the GIZZI system.",
-            operationId: "command.list",
-            responses: {
-              200: {
-                description: "List of commands",
-                content: {
-                  "application/json": {
-                    schema: resolver(Command.Info.array()),
-                  },
-                },
-              },
-            },
-          }),
-          async (c) => {
-            const commands = await Command.list()
-            return c.json(commands)
-          },
-        )
+        .route("/user", UserRoutes())
+        .route("/instance", InstanceRoutes())
+        .route("/path", PathRoutes())
+        .route("/vcs", VcsRoutes())
+        .route("/lsp", LspRoutes())
+        .route("/formatter", FormatterRoutes())
+        .route("/skill", SkillRoutes())
+        .route("/memory", MemoryRoutes())
+        .route("/sandbox", SandboxRoutes())
+        .route("/vm-session", VmSessionRoutes())
+        .route("/plugin", PluginRoutes())
         .post(
           "/log",
           describeRoute({
@@ -438,149 +361,42 @@ export namespace Server {
             return c.json(true)
           },
         )
-        .get(
-          "/agent",
-          describeRoute({
-            summary: "List agents",
-            description: "Get a list of all available AI agents including workspace agents from .gizzi and .openclaw.",
-            operationId: "app.agents",
-            responses: {
-              200: {
-                description: "List of agents",
-                content: {
-                  "application/json": {
-                    schema: resolver(Agent.Info.array()),
-                  },
-                },
-              },
-            },
-          }),
-          async (c) => {
-            const modes = await Agent.list()
-            return c.json(modes)
-          },
-        )
-        .get(
-          "/skill",
-          describeRoute({
-            summary: "List skills",
-            description: "Get a list of all available skills in the GIZZI system.",
-            operationId: "app.skills",
-            responses: {
-              200: {
-                description: "List of skills",
-                content: {
-                  "application/json": {
-                    schema: resolver(Skill.Info.array()),
-                  },
-                },
-              },
-            },
-          }),
-          async (c) => {
-            const skills = await Skill.all()
-            return c.json(skills)
-          },
-        )
-        .get(
-          "/lsp",
-          describeRoute({
-            summary: "Get LSP status",
-            description: "Get LSP server status",
-            operationId: "lsp.status",
-            responses: {
-              200: {
-                description: "LSP server status",
-                content: {
-                  "application/json": {
-                    schema: resolver(LSP.Status.array()),
-                  },
-                },
-              },
-            },
-          }),
-          async (c) => {
-            return c.json(await LSP.status())
-          },
-        )
-        .get(
-          "/formatter",
-          describeRoute({
-            summary: "Get formatter status",
-            description: "Get formatter status",
-            operationId: "formatter.status",
-            responses: {
-              200: {
-                description: "Formatter status",
-                content: {
-                  "application/json": {
-                    schema: resolver(Format.Status.array()),
-                  },
-                },
-              },
-            },
-          }),
-          async (c) => {
-            return c.json(await Format.status())
-          },
-        )
-        .get(
-          "/event",
-          describeRoute({
-            summary: "Subscribe to events",
-            description: "Get events",
-            operationId: "event.subscribe",
-            responses: {
-              200: {
-                description: "Event stream",
-                content: {
-                  "text/event-stream": {
-                    schema: resolver(BusEvent.payloads()),
-                  },
-                },
-              },
-            },
-          }),
-          async (c) => {
-            log.info("event connected")
-            c.header("X-Accel-Buffering", "no")
-            c.header("X-Content-Type-Options", "nosniff")
-            return streamSSE(c, async (stream) => {
-              stream.writeSSE({
-                data: JSON.stringify({
-                  type: "server.connected",
-                  properties: {},
-                }),
-              })
-              const unsub = Bus.subscribeAll(async (event) => {
-                await stream.writeSSE({
-                  data: JSON.stringify(event),
-                })
-                if (event.type === Bus.InstanceDisposed.type) {
-                  stream.close()
-                }
-              })
-
-              // Send heartbeat every 10s to prevent stalled proxy streams.
-              const heartbeat = setInterval(() => {
-                stream.writeSSE({
-                  data: JSON.stringify({
-                    type: "server.heartbeat",
-                    properties: {},
-                  }),
-                })
-              }, 10_000)
-
-              await new Promise<void>((resolve) => {
-                stream.onAbort(() => {
-                  clearInterval(heartbeat)
-                  unsub()
-                  resolve()
-                  log.info("event disconnected")
-                })
-              })
-            })
-          },
+        .route("/event", EventRoutes())
+        // /v1/ — versioned API surface (same handlers, new path prefix)
+        .route(
+          "/v1",
+          new Hono()
+            .route("/session", SessionRoutes())
+            .route("/agent", AgentRoutes())
+            .route("/command", CommandRoutes())
+            .route("/provider", ProviderRoutes())
+            .route("/config", ConfigRoutes())
+            .route("/mcp", McpRoutes())
+            .route("/cron", CronRoutes())
+            .route("/permission", PermissionRoutes())
+            .route("/question", QuestionRoutes())
+            .route("/file", FileRoutes())
+            .route("/user", UserRoutes())
+            .route("/pty", PtyRoutes())
+            .route("/instance", InstanceRoutes())
+            .route("/path", PathRoutes())
+            .route("/vcs", VcsRoutes())
+            .route("/lsp", LspRoutes())
+            .route("/formatter", FormatterRoutes())
+            .route("/skill", SkillRoutes())
+            .route("/memory", MemoryRoutes())
+            .route("/sandbox", SandboxRoutes())
+            .route("/vm-session", VmSessionRoutes())
+            .route("/plugin", PluginRoutes())
+            .route("/event", EventRoutes())
+            .route("/ars-contexta", ArsContextaRoutes())
+            .route("/auth", AuthRoutes())
+            .route("/auth/terminal/clerk", TerminalClerkAuthRoutes())
+            .route("/global", GlobalRoutes())
+            .route("/project", ProjectRoutes())
+            .route("/experimental", ExperimentalRoutes())
+            .route("/tui", TuiRoutes())
+            .route("/workspace", WorkspaceRoutes()) as unknown as Hono,
         )
         .all("/*", async (c) => {
           const path = c.req.path

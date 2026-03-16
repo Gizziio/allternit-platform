@@ -3,7 +3,7 @@ resolver = "2"
 
 members = [
     # A2R CLI
-    "7-apps/cli",
+    # MISSING: "7-apps/cli",
 
     # Kernel execution crates (moved to domains/)
     "domains/kernel/drivers/a2r-driver-interface",
@@ -76,7 +76,7 @@ members = [
     
     # Adapters
     # MISSING: "3-adapters/mcp",
-    # "3-adapters/rust/skills",
+    "platform/sdk/adapters/rust/skills",
     
     # Services
     # "4-services/orchestration/a2r-prewarm",
@@ -298,7 +298,7 @@ a2rchitech-evals = { path = "2-governance/security-quality-assurance/evals" }
 a2rchitech-security-governance = { path = "2-governance/governance-workflows/core-governance" }
 
 # === A2R Workspace Dependencies - Adapters ===
-a2rchitech-skills = { path = "3-adapters/rust/skills" }
+a2rchitech-skills = { path = "platform/sdk/adapters/rust/skills" }
 
 # === A2R Workspace Dependencies - Services ===
 a2r-prewarm = { path = "4-services/orchestration/a2r-prewarm" }

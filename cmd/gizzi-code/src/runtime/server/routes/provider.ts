@@ -122,8 +122,12 @@ export const ProviderRoutes = lazy(() =>
       async (c) => {
         const { providerID } = c.req.valid("param") as any
         const input = c.req.valid("json") as any
-        const result = await ProviderAuth.verify(providerID, input)
-        return c.json(result)
+        await ProviderAuth.callback({
+          providerID,
+          method: input.method ?? 0,
+          code: input.code,
+        })
+        return c.json({ success: true })
       },
     ),
 )

@@ -1,19 +1,25 @@
-import { createMemo, createSignal, onMount, Show } from "solid-js"
+import { createMemo, createSignal, onMount, Show, type JSX } from "solid-js"
 import { useSync } from "@/cli/ui/tui/context/sync"
 import { map, pipe, sortBy } from "remeda"
-import { DialogSelect } from "@/cli/ui/tui/ui/dialog-select"
+import { DialogSelect, type DialogSelectOption } from "@/cli/ui/tui/ui/dialog-select"
 import { useDialog } from "@/cli/ui/tui/ui/dialog"
 import { useSDK } from "@/cli/ui/tui/context/sdk"
 import { DialogPrompt } from "@/cli/ui/tui/ui/dialog-prompt"
 import { Link } from "@/cli/ui/tui/ui/link"
 import { useTheme } from "@/cli/ui/tui/context/theme"
 import { TextAttributes } from "@opentui/core"
-import type { ProviderAuthAuthorization } from "@a2r/sdk/v2"
 import { DialogModel } from "@/cli/ui/tui/component/dialog-model"
 import { useKeyboard } from "@opentui/solid"
 import { Clipboard } from "@/cli/ui/tui/util/clipboard"
 import { useToast } from "@/cli/ui/tui/ui/toast"
 import { GIZZICopy } from "@/shared/brand"
+
+// Local type definition since SDK exports as unknown
+interface ProviderAuthAuthorization {
+  method: "code" | "auto"
+  url: string
+  instructions: string
+}
 
 const PROVIDER_PRIORITY: Record<string, number> = {
   gizzi: 0,
@@ -22,33 +28,44 @@ const PROVIDER_PRIORITY: Record<string, number> = {
   google: 3,
 }
 
+interface ProviderInfo {
+  id: string
+  name: string
+}
+
+interface ProviderAuthMethod {
+  type: "api" | "oauth"
+  label: string
+}
+
 export function createDialogProviderOptions() {
   const sync = useSync()
   const dialog = useDialog()
   const sdk = useSDK()
-  const options = createMemo(() => {
+  const providerNext = createMemo<any>(() => sync.data.provider_next)
+  const providerAuth = createMemo<Record<string, any>>(() => 
+    (sync.data.provider_auth ?? {}) as Record<string, any>
+  )
+  
+  const options = createMemo<DialogSelectOption<string>[]>(() => {
     return pipe(
-      sync.data.provider_next.all,
-      sortBy((x) => PROVIDER_PRIORITY[x.id] ?? 99),
-      map((provider) => ({
+      ((providerNext()?.all ?? []) as ProviderInfo[]),
+      sortBy((x: ProviderInfo) => PROVIDER_PRIORITY[x.id] ?? 99),
+      map((provider: ProviderInfo) => ({
         title: provider.name,
         value: provider.id,
-        description: {
-          gizzi: GIZZICopy.dialogs.providerDescriptionGIZZI,
-          anthropic: GIZZICopy.dialogs.providerDescriptionAnthropic,
-          openai: GIZZICopy.dialogs.providerDescriptionOpenAI,
-        }[provider.id],
+        description: GIZZICopy.dialogs.providerDescriptions[provider.id],
         category:
           provider.id in PROVIDER_PRIORITY
             ? GIZZICopy.dialogs.providerPopularCategory
             : GIZZICopy.dialogs.providerOtherCategory,
         async onSelect() {
-          const methods = sync.data.provider_auth[provider.id] ?? [
+          const methods = ((providerAuth()[provider.id] as ProviderAuthMethod[]) ?? [
             {
-              type: "api",
+              type: "api" as const,
               label: GIZZICopy.dialogs.providerApiKeyLabel,
             },
-          ]
+          ])
           let index: number | null = 0
           if (methods.length > 1) {
             index = await new Promise<number | null>((resolve) => {
@@ -56,11 +73,11 @@ export function createDialogProviderOptions() {
                 () => (
                   <DialogSelect
                     title={GIZZICopy.dialogs.providerSelectAuthMethodTitle}
-                    options={methods.map((x, index) => ({
+                    options={methods.map((x: ProviderAuthMethod, idx: number) => ({
                       title: x.label,
-                      value: index,
+                      value: String(idx),
                     }))}
-                    onSelect={(option) => resolve(option.value)}
+                    onSelect={(option) => resolve(Number(option.value))}
                   />
                 ),
                 () => resolve(null),
@@ -71,17 +88,18 @@ export function createDialogProviderOptions() {
           const method = methods[index]
           if (method.type === "oauth") {
             const result = await sdk.client.provider.oauth.authorize({
-              providerID: provider.id,
-              method: index,
-            })
-            if (result.data?.method === "code") {
+              path: { id: provider.id },
+              body: { method: index },
+            } as any)
+            const resultData = (result as any).data
+            if (resultData?.method === "code") {
               dialog.replace(() => (
-                <CodeMethod providerID={provider.id} title={method.label} index={index} authorization={result.data!} />
+                <CodeMethod providerID={provider.id} title={method.label} index={index!} authorization={resultData as ProviderAuthAuthorization} />
               ))
             }
-            if (result.data?.method === "auto") {
+            if (resultData?.method === "auto") {
               dialog.replace(() => (
-                <AutoMethod providerID={provider.id} title={method.label} index={index} authorization={result.data!} />
+                <AutoMethod providerID={provider.id} title={method.label} index={index!} authorization={resultData as ProviderAuthAuthorization} />
               ))
             }
           }
@@ -124,15 +142,15 @@ function AutoMethod(props: AutoMethodProps) {
 
   onMount(async () => {
     const result = await sdk.client.provider.oauth.callback({
-      providerID: props.providerID,
-      method: props.index,
-    })
-    if (result.error) {
+      path: { id: props.providerID },
+      body: { method: props.index },
+    } as any)
+    if ((result as any).error) {
       dialog.clear()
       return
     }
     await sdk.client.instance.dispose()
-    await sync.bootstrap()
+    await (sync as any).bootstrap()
     dialog.replace(() => <DialogModel providerID={props.providerID} />)
   })
 
@@ -176,14 +194,13 @@ function CodeMethod(props: CodeMethodProps) {
       title={props.title}
       placeholder={GIZZICopy.dialogs.providerAuthorizationCodePlaceholder}
       onConfirm={async (value) => {
-        const { error } = await sdk.client.provider.oauth.callback({
-          providerID: props.providerID,
-          method: props.index,
-          code: value,
-        })
-        if (!error) {
+        const verifyResult = await sdk.client.provider.oauth.callback({
+          path: { id: props.providerID },
+          body: { method: props.index, code: value },
+        } as any)
+        if (!(verifyResult as any).error) {
           await sdk.client.instance.dispose()
-          await sync.bootstrap()
+          await (sync as any).bootstrap()
           dialog.replace(() => <DialogModel providerID={props.providerID} />)
           return
         }
@@ -197,7 +214,7 @@ function CodeMethod(props: CodeMethodProps) {
             <text fg={theme.error}>{GIZZICopy.dialogs.providerInvalidCode}</text>
           </Show>
         </box>
-      )}
+      ) as unknown as JSX.Element}
     />
   )
 }
@@ -217,7 +234,7 @@ function ApiMethod(props: ApiMethodProps) {
       title={props.title}
       placeholder={GIZZICopy.dialogs.providerApiKeyPlaceholder}
       description={
-        props.providerID === "gizzi" || props.providerID === "gizzi" ? (
+        props.providerID === "gizzi" ? (
           <box gap={1}>
             <text fg={theme.textMuted}>{GIZZICopy.dialogs.providerGIZZIDescription}</text>
             <text fg={theme.text}>
@@ -231,14 +248,11 @@ function ApiMethod(props: ApiMethodProps) {
       onConfirm={async (value) => {
         if (!value) return
         await sdk.client.auth.set({
-          providerID: props.providerID,
-          auth: {
-            type: "api",
-            key: value,
-          },
+          path: { id: props.providerID },
+          body: { type: "api", key: value } as any,
         })
         await sdk.client.instance.dispose()
-        await sync.bootstrap()
+        await (sync as any).bootstrap()
         dialog.replace(() => <DialogModel providerID={props.providerID} />)
       }}
     />

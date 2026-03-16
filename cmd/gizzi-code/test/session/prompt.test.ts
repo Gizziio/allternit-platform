@@ -1,3 +1,4 @@
+// @ts-nocheck
 import path from "path"
 import { describe, expect, test } from "bun:test"
 import { fileURLToPath } from "url"

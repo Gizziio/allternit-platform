@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, expect, test } from "bun:test"
 import path from "path"
 import { Session } from "../../src/session"

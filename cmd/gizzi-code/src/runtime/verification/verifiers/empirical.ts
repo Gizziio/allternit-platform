@@ -130,9 +130,9 @@ export class EmpiricalVerifier extends BaseVerifier<EmpiricalVerificationResult>
       );
       
       // Parse results
-      const parsedOutput = await this.executePhase(
+      const parsedOutput = await this.executePhase<ParsedTestOutput>(
         "result_parsing",
-        () => this.parseTestOutput(testOutput)
+        async () => this.parseTestOutput(testOutput)
       );
       
       // Collect coverage if enabled

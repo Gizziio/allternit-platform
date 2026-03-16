@@ -36,10 +36,10 @@ export function ContextIndicator(props: ContextIndicatorProps) {
         </For>
       </box>
       <text fg={statusColor()} wrapMode="none">
-        <span style={{ bold: true }}>{Math.round(ratio() * 100)}%</span>
+        <span style={{ bold: true }}>{String(Math.round(ratio() * 100))}%</span>
       </text>
       <text fg={theme.textMuted} wrapMode="none">
-        ({props.used}k/{max()}k)
+        ({String(props.used)}k/{String(max())}k)
       </text>
     </box>
   )

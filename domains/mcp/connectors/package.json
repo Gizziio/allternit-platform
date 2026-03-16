@@ -1,0 +1,30 @@
+{
+  "name": "@a2r/mcp-connectors",
+  "version": "1.0.0",
+  "description": "MCP Connectors - External service integrations",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./connectors/github": "./src/connectors/github.js",
+    "./connectors/slack": "./src/connectors/slack.js",
+    "./connectors/postgresql": "./src/connectors/postgresql.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@a2r/sdk": "workspace:*",
+    "@a2r/types": "workspace:*",
+    "@octokit/rest": "^20.0.0",
+    "@slack/web-api": "^7.0.0",
+    "pg": "^8.11.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  }
+}

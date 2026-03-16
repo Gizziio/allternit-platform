@@ -98,6 +98,63 @@ pub enum EventMode {
     Terminal,
 }
 
+/// A2R Native Project State
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct A2RNativeState {
+    pub project: Option<A2RNativeProject>,
+    pub roadmap: Option<A2RNativeRoadmap>,
+    pub current_state: A2RNativeCurrentState,
+    pub active_plan: Option<A2RNativePlan>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct A2RNativeProject {
+    pub name: String,
+    pub description: String,
+    pub core_value: String,
+    pub last_updated: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct A2RNativeRoadmap {
+    pub milestones: Vec<A2RNativeMilestone>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct A2RNativeMilestone {
+    pub id: String,
+    pub title: String,
+    pub status: String, // pending, active, completed
+    pub requirements: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct A2RNativeCurrentState {
+    pub phase: String,
+    pub plan_index: u32,
+    pub total_plans_in_phase: u32,
+    pub status: String,
+    pub progress_percent: u32,
+    pub last_activity: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct A2RNativePlan {
+    pub id: String,
+    pub objective: String,
+    pub wave: u32,
+    pub tasks: Vec<A2RNativeTask>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct A2RNativeTask {
+    pub id: String,
+    pub name: String,
+    pub status: String, // pending, in_progress, completed, failed
+    pub action: String,
+    pub verify: String,
+}
+
 impl std::fmt::Display for EventMode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -367,6 +424,17 @@ pub trait BrainRuntime: Send + Sync {
 
     /// List active sessions for a tenant
     async fn list_sessions(&self, tenant_id: &str) -> Result<Vec<SessionHandle>, RuntimeError>;
+
+    /// Get A2R Native state (GSD context)
+    async fn get_native_state(
+        &self,
+        tenant_id: &str,
+        session: &SessionHandle,
+    ) -> Result<A2RNativeState, RuntimeError> {
+        // Default implementation returns empty state
+        let _ = (tenant_id, session);
+        Ok(A2RNativeState::default())
+    }
 
     // ========================================================================
     // ChangeSet Methods (for diff-first patch management)

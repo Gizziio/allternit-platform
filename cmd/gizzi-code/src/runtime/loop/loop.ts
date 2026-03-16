@@ -10,11 +10,16 @@ export class AgentLoop {
   private budget = new BudgetManager();
   private turnCount = 0;
   private recentPlanHashes: string[] = [];
+  private sessionId: string;
+  private options: TurnOptions;
 
   constructor(
-    private sessionId: string,
-    private options: TurnOptions = {}
-  ) {}
+    sessionId: string,
+    options: TurnOptions = {}
+  ) {
+    this.sessionId = sessionId;
+    this.options = options;
+  }
 
   async start() {
     this.log.info("Starting production agent loop", { sessionId: this.sessionId });
@@ -48,8 +53,9 @@ export class AgentLoop {
         this.turnCount++;
 
         // 3. Record plan hash for loop detection
-        if (result.planHash) {
-          this.recentPlanHashes.push(result.planHash);
+        const planHash = (result as any).planHash;
+        if (planHash) {
+          this.recentPlanHashes.push(planHash);
           if (this.recentPlanHashes.length > 5) this.recentPlanHashes.shift();
         }
 

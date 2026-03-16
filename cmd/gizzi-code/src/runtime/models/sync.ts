@@ -1,8 +1,8 @@
 import { AuthStore } from "@/runtime/auth/store";
-import { ModelCache, CacheScope } from "./cache";
+import { ModelCache, type CacheScope } from "./cache";
 import { Log } from "@/shared/util/log";
 import { AnthropicAdapter } from "@/runtime/providers/adapters/anthropic";
-import { ProviderAdapter } from "@/runtime/providers/types";
+import type { ProviderAdapter } from "@/runtime/providers/types";
 
 export namespace ModelSync {
   const log = Log.create({ service: "models.sync" });

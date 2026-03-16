@@ -87,7 +87,7 @@ export {
 } from "./utils/timezone";
 
 // Daemon Server
-export { CronDaemon, startDaemon, isDaemonRunning, getRemoteStatus } from "./daemon";
+export { CronDaemon, startDaemon, isDaemonRunning, getRemoteStatus, stopRemoteDaemon } from "./daemon";
 
 // Schedule Parser
 export {
@@ -110,17 +110,11 @@ export { CronDatabase } from "./database";
  * 
  * ```typescript
  * import { CronServiceEnhanced, AgentExecutor, CoworkExecutor } from "./index";
- * import { GIZZIClient } from "@a2r/sdk/v2";
- * 
- * // Initialize SDK
- * const sdk = new GIZZIClient();
- * 
  * // Initialize CronService with executors
  * CronServiceEnhanced.initialize({
  *   dbPath: "~/.a2r/cron.db",
  *   timezone: "America/New_York",
  *   agent: {
- *     sdk,
  *     defaultCwd: process.cwd(),
  *   },
  *   cowork: {

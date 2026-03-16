@@ -1,7 +1,7 @@
 import { ToolDispatcher } from "@/runtime/tools/dispatch";
 import { ToolRegistry } from "@/runtime/tools/builtins/registry";
 import { Log } from "@/shared/util/log";
-import { Plan, PlanStep } from "./planner";
+import type { Plan, PlanStep } from "./planner";
 import { BudgetManager } from "./budget";
 
 export interface ExecutionReceipt {

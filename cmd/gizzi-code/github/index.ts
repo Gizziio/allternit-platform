@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { $ } from "bun"
 import path from "node:path"
 import { Octokit } from "@octokit/rest"

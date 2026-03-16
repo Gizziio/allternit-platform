@@ -1,5 +1,9 @@
+// Note: SDK types are now exported as 'unknown'. Local types are defined below,
+// but sync.tsx context still uses SDK types causing type propagation issues.
+// Full migration requires updating sync.tsx first.
+
 import { BoxRenderable, TextareaRenderable, MouseEvent, PasteEvent, t, dim, fg } from "@opentui/core"
-import { createEffect, createMemo, createSignal, type JSX, onMount, on, Show, Switch, Match } from "solid-js"
+import { createEffect, createMemo, createSignal, type JSX, onMount, onCleanup, on, For, Show, Switch, Match } from "solid-js"
 import "opentui-spinner/solid"
 import path from "path"
 import { Filesystem } from "@/shared/util/filesystem"
@@ -21,7 +25,7 @@ import { useRenderer, useTerminalDimensions } from "@opentui/solid"
 import { Editor } from "@/cli/ui/tui/util/editor"
 import { useExit } from "@/cli/ui/tui/context/exit"
 import { Clipboard } from "@/cli/ui/tui/util/clipboard"
-import type { FilePart, Part } from "@a2r/sdk/v2"
+import type { FilePart, Part } from "@a2r/sdk"
 import { TuiEvent } from "@/cli/ui/tui/event"
 import { iife } from "@/shared/util/iife"
 import { Locale } from "@/shared/util/locale"
@@ -36,7 +40,9 @@ import { Log } from "@/shared/util/log"
 
 const log = Log.create({ service: "tui.prompt" })
 import { GIZZICopy } from "@/shared/brand"
-import type { SessionStatus } from "@a2r/sdk/v2"
+import { Provider } from "@/runtime/providers/provider"
+// Using local SessionStatus type instead of SDK's unknown type
+type SessionStatus = SessionStatusInfo
 
 export type PromptProps = {
   sessionID?: string
@@ -72,6 +78,89 @@ type PromptTimeline = {
 
 type RuntimeMode = "idle" | "queued" | "connecting" | "thinking" | "web" | "tools" | "responding"
 
+// Local type definitions for SDK types that are exported as 'unknown'
+// These match the expected runtime types
+interface SessionStatusInfo {
+  type: "idle" | "busy" | "retry"
+  attempt?: number
+  message?: string
+  next?: number
+}
+
+interface MessageData {
+  id: string
+  role: "user" | "assistant" | "system"
+  agent?: string
+  model?: string
+  variant?: string
+  time: {
+    created: number
+    completed?: number
+  }
+}
+
+interface PartBase {
+  type: "file" | "agent" | "text" | "tool" | "reasoning"
+}
+
+interface ToolPart extends PartBase {
+  type: "tool"
+  tool?: string
+  state?: {
+    status: "pending" | "running" | "completed" | "failed"
+  }
+}
+
+interface TextPart extends PartBase {
+  type: "text"
+  text: string
+  source?: {
+    text?: {
+      start: number
+      end: number
+      value: string
+    }
+  }
+}
+
+interface ReasoningPart extends PartBase {
+  type: "reasoning"
+  text: string
+}
+
+interface FilePartLocal extends PartBase {
+  type: "file"
+  mime?: string
+  filename?: string
+  url?: string
+  source?: {
+    type?: string
+    path?: string
+    text?: {
+      start: number
+      end: number
+      value: string
+    }
+  }
+}
+
+interface AgentPartLocal extends PartBase {
+  type: "agent"
+  name?: string
+  source?: {
+    start: number
+    end: number
+    value: string
+  }
+}
+
+type PartData = ToolPart | TextPart | ReasoningPart | FilePartLocal | AgentPartLocal
+
+// Helper type for agent data in sync
+interface AgentData {
+  name: string
+}
+
 function parseFixtureDelay() {
   const raw = Number(process.env.GIZZI_TUI_UX_FIXTURE_DELAY_MS)
   if (!Number.isFinite(raw) || raw < 1000) return 22_000
@@ -90,7 +179,9 @@ export function Prompt(props: PromptProps) {
   const sync = useSync()
   const dialog = useDialog()
   const toast = useToast()
-  const status = createMemo(() => sync.data.session_status?.[props.sessionID ?? ""] ?? { type: "idle" })
+  const status = createMemo<SessionStatusInfo>(() => 
+    (sync.data.session_status?.[props.sessionID ?? ""] as unknown as SessionStatusInfo | undefined) ?? { type: "idle" }
+  )
   const history = usePromptHistory()
   const stash = usePromptStash()
   const command = useCommandDialog()
@@ -164,19 +255,20 @@ export function Prompt(props: PromptProps) {
 
   const lastUserMessage = createMemo(() => {
     if (!props.sessionID) return undefined
-    const messages = sync.data.message[props.sessionID]
+    const messages = sync.data.message[props.sessionID] as unknown as MessageData[] | undefined
     if (!messages) return undefined
     return messages.findLast((m) => m.role === "user")
   })
 
-  const activeParts = createMemo<Part[]>(() => {
+  const activeParts = createMemo<PartData[]>(() => {
     if (!props.sessionID) return []
-    const message = (sync.data.message[props.sessionID] ?? []).findLast((item) => {
+    const messages = sync.data.message[props.sessionID] as unknown as MessageData[] | undefined
+    const message = (messages ?? []).findLast((item) => {
       if (item.role !== "assistant") return false
       return !item.time.completed
     })
     if (!message) return []
-    return sync.data.part[message.id] ?? []
+    return (sync.data.part[message.id] as PartData[] | undefined) ?? []
   })
   const [timeline, setTimeline] = createSignal<PromptTimeline | undefined>()
   const metricsEnabled = () => process.env.GIZZI_TUI_UX_METRICS === "1"
@@ -190,7 +282,7 @@ export function Prompt(props: PromptProps) {
     return current.submitAt
   })
   const statusVisible = createMemo(() => status().type !== "idle" || !!timeline())
-  const effectiveStatus = createMemo<SessionStatus>(() => {
+  const effectiveStatus = createMemo<SessionStatusInfo>(() => {
     if (timeline() && status().type === "idle") return { type: "busy" }
     return status()
   })
@@ -199,18 +291,30 @@ export function Prompt(props: PromptProps) {
     if (timeline() && status().type === "idle" && parts.length === 0) return "queued"
     if (status().type === "retry") return "connecting"
     const hasRunningTools = parts.some(
-      (part) => part.type === "tool" && (part.state.status === "pending" || part.state.status === "running"),
+      (part) => {
+        if (part.type !== "tool") return false
+        const toolPart = part as ToolPart
+        return toolPart.state?.status === "pending" || toolPart.state?.status === "running"
+      },
     )
     const hasRunningWebTools = parts.some(
-      (part) =>
-        part.type === "tool" &&
-        (part.state.status === "pending" || part.state.status === "running") &&
-        isWebToolName(part.tool),
+      (part) => {
+        if (part.type !== "tool") return false
+        const toolPart = part as ToolPart
+        const status = toolPart.state?.status
+        return (status === "pending" || status === "running") && !!toolPart.tool && isWebToolName(toolPart.tool)
+      },
     )
     if (hasRunningWebTools) return "web"
     if (hasRunningTools) return "tools"
-    const hasReasoning = parts.some((part) => part.type === "reasoning" && part.text.trim().length > 0)
-    const hasVisibleText = parts.some((part) => part.type === "text" && part.text.trim().length > 0)
+    const hasReasoning = parts.some((part) => {
+      if (part.type !== "reasoning") return false
+      return (part as ReasoningPart).text?.trim().length > 0
+    })
+    const hasVisibleText = parts.some((part) => {
+      if (part.type !== "text") return false
+      return (part as TextPart).text?.trim().length > 0
+    })
     if (hasReasoning && !hasVisibleText) return "thinking"
     if (hasVisibleText) return "responding"
     if (status().type === "busy") return "connecting"
@@ -329,6 +433,14 @@ export function Prompt(props: PromptProps) {
     ),
   )
 
+  // Rotate placeholder every 8s while input is empty
+  const placeholderTimer = setInterval(() => {
+    if (!store.prompt.input) {
+      setStore("placeholder", (i) => (i + 1) % PLACEHOLDERS.length)
+    }
+  }, 8000)
+  onCleanup(() => clearInterval(placeholderTimer))
+
   // Initialize agent/model/variant from last user message when session changes
   let syncedSessionID: string | undefined
   createEffect(() => {
@@ -344,7 +456,10 @@ export function Prompt(props: PromptProps) {
       const isPrimaryAgent = local.agent.list().some((x) => x.name === msg.agent)
       if (msg.agent && isPrimaryAgent) {
         local.agent.set(msg.agent)
-        if (msg.model) local.model.set(msg.model)
+        if (msg.model) {
+          const parsed = Provider.parseModel(msg.model)
+          local.model.set(parsed)
+        }
         if (msg.variant) local.model.variant.set(msg.variant)
       }
     }
@@ -417,7 +532,7 @@ export function Prompt(props: PromptProps) {
 
           if (store.interrupt >= 2) {
             sdk.client.session.abort({
-              sessionID: props.sessionID,
+              path: { id: props.sessionID },
             })
             setStore("interrupt", 0)
           }
@@ -762,7 +877,7 @@ export function Prompt(props: PromptProps) {
         }
       }
 
-      const lookup = await sdk.client.session.get({ sessionID: props.sessionID })
+      const lookup = await sdk.client.session.get({ path: { id: props.sessionID } })
       if (lookup.data?.id) {
         return {
           sessionID: props.sessionID,
@@ -849,15 +964,17 @@ export function Prompt(props: PromptProps) {
 
     if (store.mode === "shell") {
       withSessionRetry(() =>
-        sdk.client.session.shell({
-          sessionID,
-          agent: local.agent.current().name,
-          model: {
-            providerID: selectedModel.providerID,
-            modelID: selectedModel.modelID,
+        (sdk.client.session as any).shell({
+          path: { id: sessionID },
+          body: {
+            agent: local.agent.current().name,
+            model: {
+              providerID: selectedModel.providerID,
+              modelID: selectedModel.modelID,
+            },
+            command: inputText,
           },
-          command: inputText,
-        }),
+        } as any),
       )
         .catch((err) => {
           log.debug("Prompt async error", { error: err })
@@ -886,20 +1003,22 @@ export function Prompt(props: PromptProps) {
 
       withSessionRetry(() =>
         sdk.client.session.command({
-          sessionID,
-          command: command.slice(1),
-          arguments: args,
-          agent: local.agent.current().name,
-          model: `${selectedModel.providerID}/${selectedModel.modelID}`,
-          messageID,
-          variant,
-          parts: nonTextParts
-            .filter((x) => x.type === "file")
-            .map((x) => ({
-              id: Identifier.ascending("part"),
-              ...x,
-            })),
-        }),
+          path: { id: sessionID },
+          body: {
+            command: command.slice(1),
+            arguments: args,
+            agent: local.agent.current().name,
+            model: `${selectedModel.providerID}/${selectedModel.modelID}`,
+            messageID,
+            variant,
+            parts: nonTextParts
+              .filter((x) => x.type === "file")
+              .map((x) => ({
+                id: Identifier.ascending("part"),
+                ...x,
+              })),
+          },
+        } as any),
       )
         .catch((err) => {
           log.debug("Command execution error", { error: err })
@@ -913,24 +1032,26 @@ export function Prompt(props: PromptProps) {
     } else {
       withSessionRetry(() =>
         sdk.client.session.prompt({
-          sessionID,
-          ...selectedModel,
-          messageID,
-          agent: local.agent.current().name,
-          model: selectedModel,
-          variant,
-          parts: [
-            {
-              id: Identifier.ascending("part"),
-              type: "text",
-              text: inputText,
-            },
-            ...nonTextParts.map((x) => ({
-              id: Identifier.ascending("part"),
-              ...x,
-            })),
-          ],
-        }),
+          path: { id: sessionID },
+          body: {
+            ...selectedModel,
+            messageID,
+            agent: local.agent.current().name,
+            model: selectedModel,
+            variant,
+            parts: [
+              {
+                id: Identifier.ascending("part"),
+                type: "text",
+                text: inputText,
+              },
+              ...nonTextParts.map((x) => ({
+                id: Identifier.ascending("part"),
+                ...x,
+              })),
+            ],
+          },
+        } as any),
       )
         .then((response) => {
           const data = (response as any).data
@@ -1073,6 +1194,17 @@ export function Prompt(props: PromptProps) {
 
   const isHeightConstrained = createMemo(() => dimensions().height < 28)
 
+  const fileParts = createMemo(() =>
+    store.prompt.parts.filter((p) => p.type === "file") as FilePartLocal[]
+  )
+
+  function chipLabel(part: FilePartLocal): string {
+    if (part.source?.text?.value) return part.source.text.value
+    if (part.filename) return path.basename(part.filename)
+    if (part.mime?.startsWith("image/")) return "image"
+    return "file"
+  }
+
   return (
     <>
       <Autocomplete
@@ -1096,6 +1228,25 @@ export function Prompt(props: PromptProps) {
         promptPartTypeId={() => promptPartTypeId}
       />
       <box ref={(r) => (anchor = r)} visible={props.visible !== false}>
+        <Show when={fileParts().length > 0}>
+          <box flexDirection="row" gap={1} paddingLeft={3} paddingTop={1} flexWrap="wrap">
+            <For each={fileParts()}>
+              {(part) => (
+                <box
+                  flexDirection="row"
+                  paddingLeft={1}
+                  paddingRight={1}
+                  backgroundColor={theme.backgroundPanel}
+                >
+                  <text fg={theme.textMuted}>
+                    {part.mime?.startsWith("image/") ? "▣ " : "◈ "}
+                    {chipLabel(part)}
+                  </text>
+                </box>
+              )}
+            </For>
+          </box>
+        </Show>
         <box
           border={["left"]}
           borderColor={highlight()}
@@ -1259,7 +1410,7 @@ export function Prompt(props: PromptProps) {
                 const lineCount = (pastedContent.match(/\n/g)?.length ?? 0) + 1
                 if (
                   (lineCount >= 3 || pastedContent.length > 150) &&
-                  !sync.data.config.experimental?.disable_paste_summary
+                  !(sync.data.config.experimental as any)?.disable_paste_summary
                 ) {
                   event.preventDefault()
                   pasteText(pastedContent, `[Pasted ~${lineCount} lines]`)
@@ -1340,8 +1491,8 @@ export function Prompt(props: PromptProps) {
           <box flexGrow={1} minWidth={0}>
             <Show when={statusVisible()} fallback={<text />}>
               <GIZZIStatusBar
-                status={effectiveStatus()}
-                parts={activeParts()}
+                status={effectiveStatus() as import("@/runtime/session/status").SessionStatus.Info}
+                parts={activeParts() as import("@/runtime/session/message-v2").MessageV2.Part[]}
                 interrupt={store.interrupt}
                 queuedSince={queuedSince()}
                 startedAt={timeline()?.submitAt}

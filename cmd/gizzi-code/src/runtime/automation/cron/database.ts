@@ -358,9 +358,9 @@ export class CronDatabase {
     );
     const rows = stmt.all(limit) as Record<string, unknown>[];
     return rows.map((r) => ({
-      type: r.type as string,
+      type: r.type as CronEvent["type"],
       timestamp: r.timestamp as string,
-      data: JSON.parse((r.data as string) ?? "{}"),
+      data: JSON.parse((r.data as string) ?? "{}") as unknown,
     }));
   }
 

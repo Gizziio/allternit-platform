@@ -2,11 +2,13 @@ import { createMemo } from "solid-js"
 import { useSync } from "@/cli/ui/tui/context/sync"
 import { Keybind } from "@/shared/util/keybind"
 import { pipe, mapValues } from "remeda"
-import type { KeybindsConfig } from "@a2r/sdk/v2"
 import type { ParsedKey, Renderable } from "@opentui/core"
 import { createStore } from "solid-js/store"
 import { useKeyboard, useRenderer } from "@opentui/solid"
 import { createSimpleContext } from "@/cli/ui/tui/context/helper"
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type KeybindsConfig = any
 
 export type KeybindID = keyof KeybindsConfig | (string & {})
 
@@ -17,7 +19,7 @@ export const { use: useKeybind, provider: KeybindProvider } = createSimpleContex
     const keybinds = createMemo<Record<string, Keybind.Info[]>>(
       () =>
         pipe(
-          sync.data.config.keybinds ?? {},
+          (sync.data.config as Record<string, unknown> | undefined)?.keybinds ?? {},
           mapValues((value) => Keybind.parse(value)),
         ) as Record<string, Keybind.Info[]>,
     )
@@ -82,7 +84,7 @@ export const { use: useKeybind, provider: KeybindProvider } = createSimpleContex
         return Keybind.fromParsedKey(evt, store.leader)
       },
       match(key: KeybindID, evt: ParsedKey) {
-        const keybind = keybinds()[key]
+        const keybind = keybinds()[key as string]
         if (!keybind) return false
         const parsed: Keybind.Info = result.parse(evt)
         for (const key of keybind) {
@@ -92,7 +94,7 @@ export const { use: useKeybind, provider: KeybindProvider } = createSimpleContex
         }
       },
       print(key: KeybindID) {
-        const first = keybinds()[key]?.at(0)
+        const first = keybinds()[key as string]?.at(0)
         if (!first) return ""
         const result = Keybind.toString(first)
         return result.replace("<leader>", Keybind.toString(keybinds().leader![0]!))

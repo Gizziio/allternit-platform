@@ -7,7 +7,7 @@ import { MessageV2 } from "@/runtime/session/message-v2"
 import { Database, eq } from "@/runtime/session/storage/db"
 import { SessionShareTable } from "@/runtime/session/share/share.sql"
 import { Log } from "@/shared/util/log"
-import type * as SDK from "@a2r/sdk/v2"
+import { Snapshot } from "@/runtime/session/snapshot"
 
 export namespace ShareNext {
   const log = Log.create({ service: "share-next" })
@@ -103,23 +103,23 @@ export namespace ShareNext {
   type Data =
     | {
         type: "session"
-        data: SDK.Session
+        data: Session.Info
       }
     | {
         type: "message"
-        data: SDK.Message
+        data: MessageV2.Info
       }
     | {
         type: "part"
-        data: SDK.Part
+        data: MessageV2.Part
       }
     | {
         type: "session_diff"
-        data: SDK.FileDiff[]
+        data: Snapshot.FileDiff[]
       }
     | {
         type: "model"
-        data: SDK.Model[]
+        data: Provider.Model[]
       }
 
   const queue = new Map<string, { timeout: NodeJS.Timeout; data: Map<string, Data> }>()
@@ -184,7 +184,7 @@ export namespace ShareNext {
     const models = await Promise.all(
       messages
         .filter((m) => m.info.role === "user")
-        .map((m) => (m.info as SDK.UserMessage).model)
+        .map((m) => (m.info as MessageV2.User).model)
         .map((m) => Provider.getModel(m.providerID, m.modelID).then((m) => m)),
     )
     await sync(sessionID, [

@@ -12,6 +12,28 @@ import { useKV } from "@/cli/ui/tui/context/kv"
 import { createDebouncedSignal } from "@/cli/ui/tui/util/signal"
 import { Spinner } from "@/cli/ui/tui/component/spinner"
 import { GIZZICopy } from "@/shared/brand"
+import { Log } from "@/shared/util/log"
+
+// Local types since SDK exports 'unknown'
+interface TimeInfo {
+  created: number
+  updated?: number
+  completed?: number
+}
+
+interface SessionStatus {
+  type: "idle" | "busy" | "retry" | "waiting" | "completed" | "failed"
+  message?: string
+  attempt?: number
+  next?: string
+}
+
+interface Session {
+  id: string
+  title?: string
+  parentID?: string
+  time: TimeInfo
+}
 
 export function DialogSessionList() {
   const dialog = useDialog()
@@ -27,38 +49,47 @@ export function DialogSessionList() {
 
   const [searchResults] = createResource(search, async (query) => {
     if (!query) return undefined
-    const result = await sdk.client.session.list({ search: query, limit: 30 })
-    return result.data ?? []
+    const result = await sdk.client.session.list({ query: { search: query, limit: 30 } } as any)
+    return (result.data ?? []) as Session[]
   })
 
   const currentSessionID = createMemo(() => (route.data.type === "session" ? route.data.sessionID : undefined))
 
   const sessions = createMemo(() => {
-    const data = searchResults() ?? sync.data.session
-    Log.Default.info("tui: dialog session list data", { count: data.length })
-    return data
+    const fromSearch = searchResults()
+    const fromSync = sync.data.session
+    const data = Array.isArray(fromSearch) ? fromSearch : (Array.isArray(fromSync) ? fromSync : [])
+    Log.Default.info("tui: dialog session list data", { count: data.length, fromSearch: Array.isArray(fromSearch), fromSync: Array.isArray(fromSync) })
+    return data as Session[]
   })
 
   const options = createMemo(() => {
     const today = new Date().toDateString()
-    return sessions()
-      .filter((x) => x.parentID === undefined)
-      .toSorted((a, b) => b.time.updated - a.time.updated)
+    const sessionList = sessions()
+    if (!Array.isArray(sessionList)) {
+      Log.Default.warn("tui: dialog session list - sessions is not an array", { type: typeof sessionList })
+      return []
+    }
+    const sessionStatus = sync.data.session_status as unknown as Record<string, SessionStatus> | undefined
+    return sessionList
+      .filter((x) => x && x.parentID === undefined)
+      .slice().sort((a, b) => (b.time?.updated || 0) - (a.time?.updated || 0))
+      .filter((x) => x && x.time && typeof x.time.updated === 'number')
       .map((x) => {
-        const date = new Date(x.time.updated)
+        const date = new Date(x.time.updated!)
         let category = date.toDateString()
         if (category === today) {
           category = "Today"
         }
         const isDeleting = toDelete() === x.id
-        const status = sync.data.session_status?.[x.id]
+        const status = sessionStatus?.[x.id]
         const isWorking = status?.type === "busy"
         return {
-          title: isDeleting ? GIZZICopy.dialogs.pressAgainToConfirm({ keybind: keybind.print("session_delete") }) : x.title,
+          title: isDeleting ? GIZZICopy.dialogs.pressAgainToConfirm({ keybind: keybind.print("session_delete") }) : (x.title || "Untitled"),
           bg: isDeleting ? theme.error : undefined,
           value: x.id,
           category,
-          footer: Locale.time(x.time.updated),
+          footer: Locale.time(x.time.updated!),
           gutter: isWorking ? <Spinner /> : undefined,
         }
       })
@@ -92,7 +123,7 @@ export function DialogSessionList() {
           onTrigger: async (option) => {
             if (toDelete() === option.value) {
               sdk.client.session.delete({
-                sessionID: option.value,
+                path: { id: option.value },
               })
               setToDelete(undefined)
               return

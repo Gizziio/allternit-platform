@@ -1,0 +1,37 @@
+#!/usr/bin/expect -f
+
+# Set timeout
+set timeout 20
+
+# Start gizzi-code with a session
+spawn bun run --conditions=browser ./src/cli/main.ts ses_311b7be49ffedE2BLlbAbxvIOE
+
+# Wait for UI to load
+expect {
+    "Loading session" { sleep 1 }
+    timeout { puts "Timeout waiting for load"; exit 1 }
+}
+
+# Wait a bit for UI to fully render
+sleep 3
+
+# Send a test message
+send "test message for debugging\r"
+
+# Wait for response or error
+expect {
+    "TextNodeRenderable only accepts" {
+        puts "\n=== ERROR CAUGHT ==="
+        puts $expect_out(buffer)
+        exit 1
+    }
+    "[OpenTUI DEBUG]" {
+        puts "\n=== DEBUG OUTPUT ==="
+        puts $expect_out(buffer)
+        exit 1
+    }
+    timeout {
+        puts "\n=== No error within timeout ==="
+        exit 0
+    }
+}

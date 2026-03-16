@@ -231,7 +231,13 @@ export class CoworkExecutor {
   }
 
   /**
-   * Execute in VM (Apple Virtualization or Firecracker)
+   * Execute in VM (Apple Virtualization or Firecracker via a2r-api).
+   *
+   * Priority:
+   *   1. GIZZI_SANDBOX_RUNTIME_URL → POST /sandbox/execute on the a2r-api Rust service
+   *      (this calls the real Firecracker/Apple VF drivers via ExecutionDriver trait)
+   *   2. Configured runtimeEndpoint → generic HTTP runtime API
+   *   3. Fallback: bubblewrap sandboxed local execution
    */
   private async executeVM(
     config: {
@@ -245,68 +251,111 @@ export class CoworkExecutor {
     signal: AbortSignal
   ): Promise<void> {
     session.status = "running";
-    
-    // Determine which VM driver to use
+
     const driver = this.config.vmDriver ?? (process.platform === "darwin" ? "apple_vf" : "firecracker");
-    
     log.info("Executing in VM", { driver, commands: config.commands.length });
 
-    // For now, we use the cowork runtime via HTTP API if available
-    if (this.config.runtimeEndpoint) {
-      await this.executeViaRuntimeAPI(config, session, signal);
-    } else {
-      // Fallback: Use local execution with bubblewrap for sandboxing
-      await this.executeSandboxed(config, session, signal);
+    // ── 1. a2r-api sandbox endpoint (real VM drivers) ────────────────────────
+    const sandboxRuntimeUrl = process.env.GIZZI_SANDBOX_RUNTIME_URL ?? this.config.runtimeEndpoint;
+    if (sandboxRuntimeUrl) {
+      await this.executeViaSandboxAPI(config, session, signal, sandboxRuntimeUrl);
+      return;
     }
+
+    // ── 2. Fallback: bubblewrap ───────────────────────────────────────────────
+    log.warn("No VM runtime endpoint configured (set GIZZI_SANDBOX_RUNTIME_URL). Falling back to bubblewrap.");
+    await this.executeSandboxed(config, session, signal);
   }
 
   /**
-   * Execute via Cowork Runtime HTTP API
+   * Execute via the a2r-api sandbox endpoint.
+   *
+   * Request shape matches SandboxExecuteRequest in cmd/a2r-api/src/sandbox_routes.rs:
+   *   POST /sandbox/execute
+   *   { code, language, workdir, env, timeout_secs, resources, network_enabled }
+   *
+   * Response shape matches SandboxExecuteResponse:
+   *   { exit_code, stdout, stderr, duration_ms, session_id }
    */
-  private async executeViaRuntimeAPI(
+  private async executeViaSandboxAPI(
     config: {
+      image?: string;
       commands: string[];
       env?: Record<string, string>;
+      resources?: { cpus?: number; memory?: string; disk?: string };
       timeoutMinutes?: number;
     },
     session: CoworkSession,
-    signal: AbortSignal
+    signal: AbortSignal,
+    baseUrl: string,
   ): Promise<void> {
-    if (!this.config.runtimeEndpoint) {
-      throw new Error("Runtime endpoint not configured");
-    }
+    // Join commands into a single shell script so they run sequentially
+    const code = config.commands.join("\n");
+    const timeoutSecs = (config.timeoutMinutes ?? 30) * 60;
 
-    const response = await fetch(`${this.config.runtimeEndpoint}/execute`, {
+    // Parse memory string like "512m", "2g" into MB
+    const parseMemoryMb = (mem?: string): number | undefined => {
+      if (!mem) return undefined;
+      const n = parseFloat(mem);
+      if (mem.endsWith("g") || mem.endsWith("G")) return Math.round(n * 1024);
+      if (mem.endsWith("m") || mem.endsWith("M")) return Math.round(n);
+      return Math.round(n);
+    };
+
+    const body = {
+      code,
+      language: "shell",
+      workdir: this.config.defaultCwd,
+      env: config.env ?? {},
+      timeout_secs: timeoutSecs,
+      network_enabled: true,
+      ...(config.resources && {
+        resources: {
+          cpu_cores: config.resources.cpus,
+          memory_mb: parseMemoryMb(config.resources.memory),
+        },
+      }),
+    };
+
+    const url = baseUrl.endsWith("/") ? `${baseUrl}sandbox/execute` : `${baseUrl}/sandbox/execute`;
+    log.info("calling a2r-api sandbox", { url, timeoutSecs });
+
+    const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        commands: config.commands,
-        env: config.env,
-        timeout: (config.timeoutMinutes ?? 30) * 60,
-      }),
+      body: JSON.stringify(body),
       signal,
     });
 
     if (!response.ok) {
-      throw new Error(`Runtime API returned ${response.status}: ${await response.text()}`);
+      const text = await response.text().catch(() => response.statusText);
+      throw new Error(`a2r-api sandbox returned ${response.status}: ${text}`);
     }
 
     const result = await response.json() as {
-      exitCode: number;
+      exit_code: number;
       stdout: string;
       stderr: string;
+      duration_ms: number;
+      session_id?: string;
     };
 
     session.output = result.stdout;
     if (result.stderr) {
       session.output += `\n[STDERR]\n${result.stderr}`;
     }
-    session.exitCode = result.exitCode;
-    session.status = result.exitCode === 0 ? "completed" : "failed";
-    
-    if (result.exitCode !== 0) {
-      session.error = `VM execution failed with exit code ${result.exitCode}`;
+    session.exitCode = result.exit_code;
+    session.status = result.exit_code === 0 ? "completed" : "failed";
+
+    if (result.exit_code !== 0) {
+      session.error = `VM execution failed with exit code ${result.exit_code}`;
     }
+
+    log.info("a2r-api sandbox complete", {
+      exitCode: result.exit_code,
+      durationMs: result.duration_ms,
+      vmSessionId: result.session_id,
+    });
   }
 
   /**
@@ -392,13 +441,13 @@ export class CoworkExecutor {
   async healthCheck(): Promise<boolean> {
     // Check Docker if that's the primary runtime
     try {
-      const proc = Bun.spawn({ cmd: ["docker", "version"], stdout: "null", stderr: "null" });
+      const proc = Bun.spawn(["docker", "version"], { stdout: "ignore", stderr: "ignore" });
       await proc.exited;
       return true;
     } catch {
       // Docker not available, check if we can at least run local commands
       try {
-        const proc = Bun.spawn({ cmd: ["bash", "--version"], stdout: "null", stderr: "null" });
+        const proc = Bun.spawn(["bash", "--version"], { stdout: "ignore", stderr: "ignore" });
         await proc.exited;
         return true;
       } catch {

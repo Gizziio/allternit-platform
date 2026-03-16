@@ -1,11 +1,11 @@
 import { BusEvent } from "@/shared/bus/bus-event"
 import { Bus } from "@/shared/bus"
 import z from "zod/v4"
-import { Log } from "@/runtime/tools/guard/util/log"
-import { Identifier } from "@/runtime/tools/guard/id/id"
-import { Plugin } from "@/runtime/tools/guard/plugin"
-import { Instance } from "@/runtime/tools/guard/project/instance"
-import { Wildcard } from "@/runtime/tools/guard/util/wildcard"
+import { Log } from "@/shared/util/log"
+import { Identifier } from "@/shared/id/id"
+import { Plugin } from "@/runtime/integrations/plugin"
+import { Instance } from "@/runtime/context/project/instance"
+import { Wildcard } from "@/shared/util/wildcard"
 
 export namespace Permission {
   const log = Log.create({ service: "permission" })
@@ -36,6 +36,25 @@ export namespace Permission {
     
   export type Info = z.infer<typeof Info>
 
+  interface PendingItem {
+    info: Info
+    resolve: () => void
+    reject: (e: any) => void
+  }
+
+  interface StateShape {
+    pending: {
+      [sessionID: string]: {
+        [permissionID: string]: PendingItem
+      }
+    }
+    approved: {
+      [sessionID: string]: {
+        [permissionID: string]: boolean
+      }
+    }
+  }
+
   export const Event = {
     Updated: BusEvent.define("permission.updated", Info),
     Replied: BusEvent.define(
@@ -48,32 +67,15 @@ export namespace Permission {
     ),
   }
 
-  const state = Instance.state(
+  const state = Instance.state<StateShape>(
     () => {
-      const pending: {
-        [sessionID: string]: {
-          [permissionID: string]: {
-            info: Info
-            resolve: () => void
-            reject: (e: any) => void
-          }
-        }
-      } = {}
-
-      const approved: {
-        [sessionID: string]: {
-          [permissionID: string]: boolean
-        }
-      } = {}
-
-      return {
-        pending,
-        approved,
-      }
+      const pending: StateShape["pending"] = {}
+      const approved: StateShape["approved"] = {}
+      return { pending, approved }
     },
-    async (state) => {
-      for (const pending of Object.values(state.pending)) {
-        for (const item of Object.values(pending)) {
+    async (disposeState: StateShape) => {
+      for (const pending of Object.values(disposeState.pending)) {
+        for (const item of Object.values(pending) as PendingItem[]) {
           item.reject(new RejectedError(item.info.sessionID, item.info.id, item.info.callID, item.info.metadata))
         }
       }
@@ -88,7 +90,7 @@ export namespace Permission {
     const { pending } = state()
     const result: Info[] = []
     for (const items of Object.values(pending)) {
-      for (const item of Object.values(items)) {
+      for (const item of Object.values(items) as PendingItem[]) {
         result.push(item.info)
       }
     }
@@ -128,11 +130,10 @@ export namespace Permission {
       },
     }
 
-    switch (
-      await Plugin.trigger("permission.ask", info, {
-        status: "ask",
-      }).then((x) => x.status)
-    ) {
+    const response = await Plugin.trigger("permission.ask", info, {
+      status: "ask",
+    })
+    switch (response.status) {
       case "deny":
         throw new RejectedError(info.sessionID, info.id, info.callID, info.metadata)
       case "allow":
@@ -177,7 +178,7 @@ export namespace Permission {
       }
       const items = pending[input.sessionID]
       if (!items) return
-      for (const item of Object.values(items)) {
+      for (const item of Object.values(items) as PendingItem[]) {
         const itemKeys = toKeys(item.info.pattern, item.info.type)
         if (covered(itemKeys, approved[input.sessionID])) {
           respond({

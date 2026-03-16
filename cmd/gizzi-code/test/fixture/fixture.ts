@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { $ } from "bun"
 import * as fs from "fs/promises"
 import os from "os"

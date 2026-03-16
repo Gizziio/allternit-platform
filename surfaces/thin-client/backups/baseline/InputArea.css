@@ -1,0 +1,313 @@
+/**
+ * ChatComposer Style Input - Exact A2R Platform Match
+ */
+
+.chat-composer-wrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 16px 12px;
+  position: relative;
+}
+
+/* Gizzi Mascot Container - Positioned above input */
+.gizzi-above-container {
+  position: absolute;
+  bottom: calc(100% - 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  pointer-events: none;
+}
+
+/* Main Input Container */
+.input-composer-container {
+  width: 100%;
+  max-width: 680px;
+  background: #352F29;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  position: relative;
+  z-index: 10;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+/* Agent active state - full container glow like ChatComposer */
+.input-composer-container.agent-active {
+  border-color: rgba(212, 149, 106, 0.5);
+  box-shadow: 
+    0 0 0 1px rgba(212, 149, 106, 0.15),
+    0 12px 36px rgba(212, 149, 106, 0.4);
+}
+
+/* Animated gradient overlay for agent mode - matches ChatComposer */
+.agent-glow-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 24px;
+  pointer-events: none;
+  background: linear-gradient(
+    120deg, 
+    transparent 0%, 
+    rgba(212, 149, 106, 0.15) 20%, 
+    rgba(212, 149, 106, 0.3) 50%, 
+    rgba(212, 149, 106, 0.15) 80%, 
+    transparent 100%
+  );
+  background-size: 200% 200%;
+  animation: agent-glow-sweep 3.2s linear infinite;
+  mix-blend-mode: screen;
+  opacity: 0.36;
+  z-index: 1;
+}
+
+@keyframes agent-glow-sweep {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+/* Top Row: Plus + Textarea + Model + Send */
+.composer-top-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 12px 14px;
+  position: relative;
+  z-index: 2;
+}
+
+/* Plus Menu Container */
+.plus-menu-container {
+  position: relative;
+}
+
+.composer-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #9B9B9B;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.composer-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ECECEC;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.plus-btn {
+  transition: transform 0.2s;
+}
+
+/* Textarea */
+.composer-textarea {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #ECECEC;
+  font-size: 15px;
+  line-height: 1.5;
+  resize: none;
+  font-family: inherit;
+  padding: 8px 0;
+  min-height: 20px;
+  max-height: 120px;
+}
+
+.composer-textarea::placeholder {
+  color: #6B6B6B;
+}
+
+.composer-textarea:focus {
+  outline: none;
+}
+
+/* Model Selector */
+.model-selector-container {
+  position: relative;
+}
+
+.model-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #ECECEC;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.model-badge:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.model-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.model-name-short {
+  font-weight: 600;
+}
+
+/* Send Button */
+.send-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #6B6B6B;
+  cursor: default;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  border: none;
+}
+
+.send-btn.active {
+  background: #D4956A;
+  color: white;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(212, 149, 106, 0.3);
+}
+
+.send-btn.active:hover {
+  background: #E5A87A;
+}
+
+/* Composer Menus - Open Upward */
+.composer-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  min-width: 180px;
+  background: rgba(51, 45, 39, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+  backdrop-filter: blur(20px);
+}
+
+.plus-menu {
+  left: 0;
+  right: auto;
+  min-width: 160px;
+}
+
+.model-menu {
+  right: 0;
+}
+
+.menu-section {
+  margin-bottom: 8px;
+}
+
+.menu-label {
+  display: block;
+  padding: 4px 10px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6B6B6B;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  font-size: 13px;
+  color: #ECECEC;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.menu-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.menu-item.active {
+  color: #D4956A;
+}
+
+/* Bottom Row */
+.composer-bottom-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  position: relative;
+  z-index: 2;
+}
+
+.composer-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Agent Toggle Button */
+.agent-toggle-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #9B9B9B;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.agent-toggle-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ECECEC;
+}
+
+.agent-toggle-button.active {
+  background: rgba(212, 149, 106, 0.15);
+  border-color: rgba(212, 149, 106, 0.5);
+  color: #D4956A;
+  box-shadow: 0 0 12px rgba(212, 149, 106, 0.4);
+}
+
+/* Discretion Text */
+.composer-discretion {
+  font-size: 11px;
+  color: #6B6B6B;
+}

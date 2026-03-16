@@ -499,7 +499,7 @@ export class EvidenceCollector {
     query: string,
     locations: SourceLocation[],
     searchResults: string
-  ): Evidence {
+  ): Promise<Evidence> {
     const evidence: Evidence = {
       description,
       sourceLocations: locations,
@@ -560,7 +560,7 @@ export class VerificationTimeoutError extends VerificationError {
   constructor(
     verifierId: string,
     public readonly timeoutMs: number,
-    public readonly phase: string
+    public override readonly phase: string
   ) {
     super(`Verification timed out after ${timeoutMs}ms in phase ${phase}`, verifierId, phase);
     this.name = "VerificationTimeoutError";

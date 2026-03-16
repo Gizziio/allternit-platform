@@ -66,7 +66,7 @@ describe("Verification System Integration", () => {
       });
 
       const plan = { steps: [] };
-      const receipts = [];
+      const receipts: Array<{ stepId: string; success: boolean; output: string }> = [];
 
       // This will make LLM call - in real test we'd mock it
       // For now just check it doesn't throw
@@ -351,7 +351,7 @@ describe("Verification System Integration", () => {
 
       // This should not throw
       const plan = { steps: [] };
-      const receipts = [];
+      const receipts: Array<{ stepId: string; success: boolean; output: string }> = [];
 
       const result = await orchestrator.verify(plan as any, receipts as any);
       
@@ -412,7 +412,7 @@ describe("Verification End-to-End", () => {
 
     // 2. Run verification
     const plan = { steps: [] };
-    const receipts = [];
+    const receipts: Array<{ stepId: string; success: boolean; output: string }> = [];
     const result = await orchestrator.verify(plan as any, receipts as any);
 
     // 3. Verify result structure

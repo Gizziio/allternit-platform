@@ -1,6 +1,6 @@
 import { Log } from "@/shared/util/log"
 import { Storage } from "@/runtime/session/storage/storage"
-import { CronTypes } from "@/runtime/automation/cron/types"
+import type { CronTypes } from "@/runtime/automation/cron/types"
 
 export namespace CronStore {
   const log = Log.create({ service: "cron-store" })
@@ -32,7 +32,11 @@ export namespace CronStore {
     try {
       // Keep only last 1000 runs to prevent unbounded growth
       const trimmedRuns = runs
-        .sort((a, b) => b.startedAt - a.startedAt)
+        .sort((a, b) => {
+          const aTime = a.startedAt ? new Date(a.startedAt).getTime() : 0;
+          const bTime = b.startedAt ? new Date(b.startedAt).getTime() : 0;
+          return bTime - aTime;
+        })
         .slice(0, 1000)
       
       await Storage.write(RUNS_KEY, trimmedRuns)

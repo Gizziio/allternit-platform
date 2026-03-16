@@ -12,6 +12,7 @@ import matter from "gray-matter"
 import { Instance } from "@/runtime/context/project/instance"
 import { EOL } from "os"
 import type { Argv } from "yargs"
+import { createSkillWithAI, generateInterviewQuestions } from "@/runtime/skills/skill-generator"
 
 type AgentMode = "all" | "primary" | "subagent"
 
@@ -206,7 +207,7 @@ const AgentCreateCommand = cmd({
 
         if (await Filesystem.exists(filePath)) {
           if (isFullyNonInteractive) {
-            process.stderr.write(`Error: Agent file already exists: ${filePath}\n`)
+            process.stderr.write(`Error: Agent file already exists: ${filePath}${EOL}`)
             process.exit(1)
           }
           prompts.log.error(`Agent file already exists: ${filePath}`)
@@ -216,7 +217,7 @@ const AgentCreateCommand = cmd({
         await Filesystem.write(filePath, content)
 
         if (isFullyNonInteractive) {
-          process.stdout.write(filePath + "\n")
+          process.stdout.write(filePath + EOL)
         } else {
           prompts.log.success(`Agent created: ${filePath}`)
           prompts.outro("Done")
@@ -250,9 +251,142 @@ const AgentListCommand = cmd({
   },
 })
 
+/**
+ * Create a new skill with AI assistance
+ * Simple command: gizzi create-skill
+ */
+const CreateSkillCommand = cmd({
+  command: "create-skill",
+  describe: "create a new skill with AI assistance",
+  builder: (yargs: Argv) =>
+    yargs
+      .option("description", {
+        type: "string",
+        alias: "d",
+        describe: "what the skill should do",
+      })
+      .option("path", {
+        type: "string",
+        describe: "directory to create the skill in",
+      })
+      .option("model", {
+        type: "string",
+        alias: "m",
+        describe: "model to use for generation",
+      }),
+  async handler(args) {
+    await Instance.provide({
+      directory: process.cwd(),
+      async fn() {
+        const cliDescription = args.description
+        const cliPath = args.path
+
+        const isNonInteractive = !!cliDescription
+
+        if (!isNonInteractive) {
+          UI.empty()
+          prompts.intro("Create Skill")
+          prompts.log.message("Describe what you want, and I'll build it for you.")
+          UI.empty()
+        }
+
+        // Get description
+        let description: string
+        if (cliDescription) {
+          description = cliDescription
+        } else {
+          const result = await prompts.text({
+            message: "What should this skill do?",
+            placeholder: "e.g., Analyze GitHub PRs and summarize the changes",
+            validate: (x) => {
+              if (!x || x.length < 10) return "Please provide a more detailed description"
+              return undefined
+            },
+          })
+          if (prompts.isCancel(result)) throw new UI.CancelledError()
+          description = result
+        }
+
+        // Determine target path
+        const targetPath = cliPath || "./.gizzi/skills"
+
+        // Optional: Interview questions
+        let interviewAnswers: { question: string; answer: string }[] = []
+        
+        if (!isNonInteractive) {
+          const spinner = prompts.spinner()
+          spinner.start("Thinking of clarifying questions...")
+          
+          const questions = await generateInterviewQuestions(description).catch(() => [])
+          spinner.stop()
+
+          // Ask up to 3 follow-up questions
+          for (let i = 0; i < Math.min(questions.length, 3); i++) {
+            const answer = await prompts.text({
+              message: questions[i],
+              placeholder: "Your answer (or press Enter to skip)",
+            })
+            if (prompts.isCancel(answer)) throw new UI.CancelledError()
+            if (answer && answer.trim()) {
+              interviewAnswers.push({ question: questions[i], answer })
+            }
+          }
+        }
+
+        // Generate skill
+        const spinner = prompts.spinner()
+        spinner.start("Designing your skill...")
+
+        try {
+          const model = args.model ? Provider.parseModel(args.model) : undefined
+          
+          const { skillPath, generated } = await createSkillWithAI({
+            description,
+            interviewAnswers: interviewAnswers.length > 0 ? interviewAnswers : undefined,
+            targetPath,
+            model,
+            onProgress: (msg) => {
+              spinner.message(msg)
+            },
+          })
+
+          spinner.stop(`Skill "${generated.name}" created!`)
+
+          // Show summary
+          if (!isNonInteractive) {
+            UI.empty()
+            prompts.log.success(`Created: ${skillPath}`)
+            prompts.log.message(`Template: ${generated.template}`)
+            
+            if (generated.scripts && Object.keys(generated.scripts).length > 0) {
+              prompts.log.message(`Scripts: ${Object.keys(generated.scripts).join(", ")}`)
+            }
+            
+            if (generated.references && Object.keys(generated.references).length > 0) {
+              prompts.log.message(`References: ${Object.keys(generated.references).join(", ")}`)
+            }
+
+            prompts.outro("Done! Edit the SKILL.md to customize further.")
+          } else {
+            process.stdout.write(skillPath + EOL)
+          }
+        } catch (error) {
+          spinner.stop(`Failed to create skill: ${error instanceof Error ? error.message : String(error)}`, 1)
+          if (isNonInteractive) process.exit(1)
+          throw new UI.CancelledError()
+        }
+      },
+    })
+  },
+})
+
 export const SkillsCommand = cmd({
   command: "skills",
   describe: "manage skills and agents",
-  builder: (yargs) => yargs.command(AgentCreateCommand).command(AgentListCommand).demandCommand(),
+  builder: (yargs) => yargs
+    .command(AgentCreateCommand)
+    .command(AgentListCommand)
+    .command(CreateSkillCommand)
+    .demandCommand(),
   async handler() {},
 })

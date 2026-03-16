@@ -7,6 +7,7 @@ const log = Log.create({ service: "tui.app" })
 import { Selection } from "@/cli/ui/tui/util/selection"
 import { MouseButton, TextAttributes } from "@opentui/core"
 import { RouteProvider, useRoute } from "@/cli/ui/tui/context/route"
+import type { Accessor } from "solid-js"
 import { Switch, Match, createEffect, createMemo, onCleanup, untrack, ErrorBoundary, createSignal, onMount, Show, on } from "solid-js"
 import { win32DisableProcessedInput, win32FlushInputBuffer, win32InstallCtrlCGuard } from "@/cli/ui/tui/win32"
 import { Installation } from "@/shared/installation"
@@ -38,6 +39,7 @@ import { DialogAlert } from "@/cli/ui/tui/ui/dialog-alert"
 import { ToastProvider, useToast } from "@/cli/ui/tui/ui/toast"
 import { ExitProvider, useExit } from "@/cli/ui/tui/context/exit"
 import { Session as SessionApi } from "@/runtime/session"
+import type { Session as SessionType } from "@a2r/sdk"
 import { TuiEvent } from "@/cli/ui/tui/event"
 import { KVProvider, useKV } from "@/cli/ui/tui/context/kv"
 import { Provider } from "@/runtime/providers/provider"
@@ -45,10 +47,11 @@ import { ArgsProvider, useArgs, type Args } from "@/cli/ui/tui/context/args"
 import open from "open"
 import { writeHeapSnapshot } from "v8"
 import { PromptRefProvider, usePromptRef } from "@/cli/ui/tui/context/prompt"
-import { GIZZI_BRAND } from "@/cli/ui/components/gizzi"
+import { GIZZI_BRAND, ShimmeringBanner } from "@/cli/ui/components/gizzi"
 import { GIZZICopy, GIZZIFlag } from "@/shared/brand"
 import { AnimationProvider } from "@/cli/ui/components/animation"
 import { isStartupFlowActive } from "@/cli/ui/tui/component/startup-flow-state"
+import { RGBA } from "@opentui/core"
 
 type SessionErrorShape = {
   name?: unknown
@@ -151,6 +154,10 @@ export function tui(input: {
     // the original console mode which re-enables ENABLE_PROCESSED_INPUT.
     win32DisableProcessedInput()
 
+    // Boot animation: covers the screen for 7 seconds while providers/sync load
+    const [booting, setBooting] = createSignal(true)
+    setTimeout(() => setBooting(false), 7000)
+
     const onExit = async () => {
       unguard?.()
       await input.onExit?.()
@@ -169,6 +176,22 @@ export function tui(input: {
           <ErrorBoundary
             fallback={(error, reset) => <ErrorComponent error={error} reset={reset} onExit={onExit} mode={mode} />}
           >
+            {/* Boot animation overlay — solid background covers all content until ready */}
+            <Show when={booting()}>
+              <box
+                position="absolute"
+                top={0}
+                left={0}
+                width="100%"
+                height="100%"
+                backgroundColor={RGBA.fromInts(10, 10, 15)}
+                alignItems="center"
+                justifyContent="center"
+                zIndex={9999}
+              >
+                <ShimmeringBanner />
+              </box>
+            </Show>
             <ArgsProvider {...input.args}>
               <ExitProvider onExit={onExit}>
                 <KVProvider>
@@ -249,7 +272,7 @@ function App() {
   const { theme, mode, setMode } = themeContext
   Log.Default.info("tui: App component executing", {
     route: route.data.type,
-    sync: sync.status,
+    sync: (sync as any).status,
     themeReady: themeContext.ready,
   })
   const dimensions = useTerminalDimensions()
@@ -309,7 +332,7 @@ function App() {
   )
 
   const hasLiveSessionStatus = createMemo(() =>
-    Object.values(sync.data.session_status).some((status) => status.type === "busy" || status.type === "retry"),
+    Object.values(sync.data.session_status).some((status: any) => status.type === "busy" || status.type === "retry"),
   )
 
   // During live streaming, opportunistically clear the render buffer to avoid
@@ -375,7 +398,8 @@ function App() {
     }
 
     if (route.data.type === "session") {
-      const session = sync.session.get(route.data.sessionID)
+      const session = (sync as any).session?.get?.(route.data.sessionID) || 
+        (sync.data.session as any[]).find((s: any) => s.id === (route.data as any).sessionID)
       if (!session || SessionApi.isDefaultTitle(session.title)) {
         renderer.setTerminalTitle(GIZZI_BRAND.product)
         return
@@ -405,12 +429,13 @@ function App() {
     argsSelectionApplied = true
     const resolveAgentName = (value: string) => {
       const trimmed = value.trim()
-      const exact = local.agent.list().find((agent) => agent.name === trimmed)
+      const agents = local.agent.list() as any[]
+      const exact = agents.find((agent: any) => agent.name === trimmed)
       if (exact) return exact.name
       const normalized = trimmed.toLowerCase()
-      const ci = local.agent.list().find((agent) => agent.name.toLowerCase() === normalized)
+      const ci = agents.find((agent: any) => agent.name.toLowerCase() === normalized)
       if (ci) return ci.name
-      const partial = local.agent.list().find((agent) => agent.name.toLowerCase().includes(normalized))
+      const partial = agents.find((agent: any) => agent.name.toLowerCase().includes(normalized))
       return partial?.name
     }
 
@@ -449,14 +474,15 @@ function App() {
   let continued = false
   createEffect(() => {
     // When using -c, session list is loaded in blocking phase, so we can navigate at "partial"
-    if (continued || sync.status === "loading" || !args.continue) return
-    const match = sync.data.session
-      .toSorted((a, b) => b.time.updated - a.time.updated)
-      .find((x) => x.parentID === undefined)?.id
+    if (continued || (sync as any).status === "loading" || !args.continue) return
+    const sessions = sync.data.session as any[]
+    const match = sessions
+      .toSorted((a: any, b: any) => b.time.updated - a.time.updated)
+      .find((x: any) => x.parentID === undefined)?.id
     if (match) {
       continued = true
       if (args.fork) {
-        sdk.client.session.fork({ sessionID: match }).then((result) => {
+        sdk.client.session.fork({ path: { id: match } }).then((result: any) => {
           if (result.data?.id) {
             route.navigate({ type: "session", sessionID: result.data.id })
           } else {
@@ -474,9 +500,9 @@ function App() {
   // to avoid a race where reconcile overwrites the newly forked session)
   let forked = false
   createEffect(() => {
-    if (forked || sync.status !== "complete" || !args.sessionID || !args.fork) return
+    if (forked || (sync as any).status !== "complete" || !args.sessionID || !args.fork) return
     forked = true
-    sdk.client.session.fork({ sessionID: args.sessionID }).then((result) => {
+    sdk.client.session.fork({ path: { id: args.sessionID } }).then((result: any) => {
       if (result.data?.id) {
         route.navigate({ type: "session", sessionID: result.data.id })
       } else {
@@ -856,6 +882,50 @@ function App() {
         dialog.clear()
       },
     },
+    {
+      title: "Think (extended reasoning)",
+      value: "thinking.think",
+      category: "Agent",
+      slash: {
+        name: "think",
+        aliases: ["think hard"],
+      },
+      description: "Set thinking variant to high",
+      onSelect: (dialog) => {
+        local.model.variant.set("high")
+        toast.show({ message: "Thinking: high", variant: "info" })
+        dialog.clear()
+      },
+    },
+    {
+      title: "Ultrathink (max reasoning)",
+      value: "thinking.ultrathink",
+      category: "Agent",
+      slash: {
+        name: "ultrathink",
+        aliases: ["megathink"],
+      },
+      description: "Set thinking variant to max",
+      onSelect: (dialog) => {
+        local.model.variant.set("max")
+        toast.show({ message: "Thinking: max", variant: "info" })
+        dialog.clear()
+      },
+    },
+    {
+      title: "Default thinking",
+      value: "thinking.default",
+      category: "Agent",
+      slash: {
+        name: "think off",
+      },
+      description: "Reset thinking to default variant",
+      onSelect: (dialog) => {
+        local.model.variant.set(undefined)
+        toast.show({ message: "Thinking: default", variant: "info" })
+        dialog.clear()
+      },
+    },
   ])
 
   createEffect(() => {
@@ -896,7 +966,7 @@ function App() {
         return
       }
 
-      const lookup = await sdk.client.session.get({ sessionID })
+      const lookup = await sdk.client.session.get({ path: { id: sessionID } })
       if (lookup.data?.id) {
         route.navigate({
           type: "session",

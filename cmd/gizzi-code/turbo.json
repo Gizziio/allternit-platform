@@ -8,7 +8,7 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]
     },
-    "opencode#test": {
+    "gizzi#test": {
       "dependsOn": ["^build"],
       "outputs": []
     },

@@ -1,5 +1,5 @@
-import { ModelCatalog, ModelDefinition } from "./catalog";
-import { ModelCache, DiscoveredModel, CacheKey } from "./cache";
+import { ModelCatalog, type ModelDefinition } from "./catalog";
+import { ModelCache, type DiscoveredModel, type CacheKey } from "./cache";
 
 export namespace ModelAvailability {
   export async function getAvailableModels(key: CacheKey): Promise<(ModelDefinition & { available: boolean })[]> {

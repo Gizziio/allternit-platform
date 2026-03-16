@@ -29,14 +29,13 @@ import { VerificationStore } from "../storage/store";
 import {
   MediaCaptureManager,
   MediaReviewWorkflow,
-  CapturedMedia,
-  WorkflowState,
+  type CapturedMedia,
+  type WorkflowState,
 } from "../media";
 import {
   VisualCaptureManager,
   type VisualCaptureManagerOptions,
   type CaptureResult as VisualCaptureResult,
-  artifactToLLMContext,
 } from "../visual";
 import * as path from "path";
 import * as os from "os";
@@ -142,8 +141,8 @@ export class VerificationOrchestrator extends BaseVerifier<OrchestratedVerificat
     
     // Initialize visual capture - enabled by default
     const visualCaptureConfig = this.config.visualCapture ?? { enabled: true };
-    if (visualCaptureConfig.enabled !== false) {
-      this.visualManager = new VisualCaptureManager(visualCaptureConfig);
+    if ((visualCaptureConfig as { enabled?: boolean }).enabled !== false) {
+      this.visualManager = new VisualCaptureManager(visualCaptureConfig as VisualCaptureManagerOptions);
     }
   }
   
@@ -173,7 +172,7 @@ export class VerificationOrchestrator extends BaseVerifier<OrchestratedVerificat
         empiricalMs: 300000,
         totalMs: this.config.totalTimeoutMs,
       },
-      context: context || { scope: {} },
+      context: context || { description: "" },
       features: strategy?.features || {
         enableCaching: true,
         enableParallel: true,
@@ -294,7 +293,7 @@ export class VerificationOrchestrator extends BaseVerifier<OrchestratedVerificat
     if (this.config.persistResults) {
       await this.persistResult(
         result,
-        { steps: [] } as Plan,
+        { steps: [], sessionId: this.id, exitCriteria: [], goal: "" } as Plan,
         { patches: [request.patch1, request.patch2] }
       );
     }

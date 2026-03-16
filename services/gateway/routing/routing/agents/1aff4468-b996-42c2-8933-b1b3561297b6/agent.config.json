@@ -1,0 +1,31 @@
+{
+  "name": "adgf",
+  "description": "agd",
+  "version": "1.0.0",
+  "model": {
+    "provider": "openai",
+    "model": "gpt-4o",
+    "temperature": 0.699999988079071,
+    "maxTokens": 4000
+  },
+  "runtime": {
+    "type": "reactive",
+    "triggers": [
+      "chat",
+      "schedule"
+    ],
+    "capabilities": [
+      "code-generation",
+      "file-operations",
+      "terminal",
+      "planning",
+      "reasoning"
+    ],
+    "tools": []
+  },
+  "memory": {
+    "enabled": true,
+    "persistence": "session",
+    "contextWindow": 100
+  }
+}

@@ -10,7 +10,7 @@
 
 import { Log } from "@/shared/util/log";
 import { Bus } from "@/shared/bus";
-import type { VisualCaptureManager } from "./manager";
+import type { VisualCaptureManager } from "./visual/manager";
 import { EvidenceFileWriter, type EvidenceFile } from "./file-writer";
 import { VerificationGrpcServer, type GrpcServerConfig } from "./grpc-server";
 

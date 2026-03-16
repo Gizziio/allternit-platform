@@ -142,16 +142,8 @@ export function displayErrorInViewport(error: unknown) {
 export async function attemptRecovery(error: UserFriendlyError): Promise<boolean> {
   switch (error.category) {
     case "browser":
-      // Try to restart browser
-      try {
-        const { getBrowserService } = await import("../component/cowork/browser-service")
-        const browser = getBrowserService()
-        await browser.close()
-        await browser.launch()
-        return true
-      } catch {
-        return false
-      }
+      // Browser service not available
+      return false
     
     case "network":
       // Wait and retry

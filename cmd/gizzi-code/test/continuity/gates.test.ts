@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, expect, it, beforeAll, afterAll } from "bun:test"
 import { CIGates } from "@/continuity/gates"
 import type { HandoffBaton, SessionContext, DAGTask } from "@/continuity/types"

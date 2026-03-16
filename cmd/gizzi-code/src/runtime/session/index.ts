@@ -71,6 +71,7 @@ export namespace Session {
       share,
       revert,
       permission: row.permission ?? undefined,
+      agentID: (row as any).agent_id ?? undefined,
       time: {
         created: row.time_created,
         updated: row.time_updated,
@@ -96,6 +97,7 @@ export namespace Session {
       summary_diffs: info.summary?.diffs,
       revert: info.revert ?? null,
       permission: info.permission,
+      agent_id: info.agentID,
       time_created: info.time.created,
       time_updated: info.time.updated,
       time_compacting: info.time.compacting,
@@ -150,6 +152,7 @@ export namespace Session {
           diff: z.string().optional(),
         })
         .optional(),
+      agentID: z.string().optional(),
     })
     
   export type Info = z.output<typeof Info>
@@ -187,6 +190,12 @@ export namespace Session {
         info: Info,
       }),
     ),
+    Cleared: BusEvent.define(
+      "session.cleared",
+      z.object({
+        sessionID: z.string(),
+      }),
+    ),
     Diff: BusEvent.define(
       "session.diff",
       z.object({
@@ -209,6 +218,7 @@ export namespace Session {
         parentID: Identifier.schema("session").optional(),
         title: z.string().optional(),
         permission: Info.shape.permission,
+        agentID: z.string().optional(),
       })
       .optional(),
     async (input) => {
@@ -217,6 +227,7 @@ export namespace Session {
         directory: Instance.directory,
         title: input?.title,
         permission: input?.permission,
+        agentID: input?.agentID,
       })
     },
   )
@@ -284,6 +295,7 @@ export namespace Session {
     parentID?: string
     directory: string
     permission?: PermissionNext.Ruleset
+    agentID?: string
   }) {
     const result: Info = {
       id: Identifier.descending("session", input.id),
@@ -294,6 +306,7 @@ export namespace Session {
       parentID: input.parentID,
       title: input.title ?? createDefaultTitle(!!input.parentID),
       permission: input.permission,
+      agentID: input.agentID,
       time: {
         created: Date.now(),
         updated: Date.now(),
@@ -337,6 +350,7 @@ export namespace Session {
     if (cfg.share === "disabled") {
       throw new Error("Sharing is disabled in configuration")
     }
+    // @ts-expect-error - Module may not exist in all builds
     const { ShareNext } = await import("@/share/share-next")
     const share = await ShareNext.create(id)
     Database.use((db) => {
@@ -350,6 +364,7 @@ export namespace Session {
 
   export const unshare = fn(Identifier.schema("session"), async (id) => {
     // Use ShareNext to remove the share (same as share function uses ShareNext to create)
+    // @ts-expect-error - Module may not exist in all builds
     const { ShareNext } = await import("@/share/share-next")
     await ShareNext.remove(id)
     Database.use((db) => {
@@ -525,6 +540,7 @@ export namespace Session {
     start?: number
     search?: string
     limit?: number
+    agentID?: string
   }) {
     const project = Instance.project
     const conditions = [eq(SessionTable.project_id, project.id)]
@@ -540,6 +556,9 @@ export namespace Session {
     }
     if (input?.search) {
       conditions.push(like(SessionTable.title, `%${input.search}%`))
+    }
+    if (input?.agentID) {
+      conditions.push(eq((SessionTable as any).agent_id, input.agentID))
     }
 
     const limit = input?.limit ?? 100
@@ -638,6 +657,14 @@ export namespace Session {
         .all(),
     )
     return rows.map(fromRow)
+  })
+
+  export const clear = fn(Identifier.schema("session"), async (sessionID) => {
+    Database.use((db) => {
+      db.delete(PartTable).where(eq(PartTable.session_id, sessionID)).run()
+      db.delete(MessageTable).where(eq(MessageTable.session_id, sessionID)).run()
+      Database.effect(() => Bus.publish(Event.Cleared, { sessionID }))
+    })
   })
 
   export const remove = fn(Identifier.schema("session"), async (sessionID) => {

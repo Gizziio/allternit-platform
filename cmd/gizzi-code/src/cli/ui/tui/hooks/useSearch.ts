@@ -1,6 +1,11 @@
 import { createSignal, createMemo, createEffect } from "solid-js"
 import fuzzysort from "fuzzysort"
-import type { Message } from "@a2r/sdk/v2"
+// Local Message type (SDK exports as unknown)
+interface Message {
+  id: string
+  role: "user" | "assistant"
+  [key: string]: any
+}
 
 export interface SearchResult {
   messageID: string

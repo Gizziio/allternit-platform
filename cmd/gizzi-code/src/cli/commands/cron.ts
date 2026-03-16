@@ -13,9 +13,14 @@
  * - a2r cron stop              Stop the cron daemon
  */
 
-import { CronServiceEnhanced, CronDaemon, startDaemon, getRemoteStatus } from "@/runtime/automation/cron";
+import { startDaemon, getRemoteStatus, stopRemoteDaemon } from "@/runtime/automation/cron";
+import { Global } from "@/runtime/context/global";
 import { colors } from "../utils/colors";
 import { cmd } from "./cmd";
+import path from "path";
+
+const DEFAULT_CRON_PORT = 3031;
+const CRON_DB_PATH = path.join(Global.Path.data, "cron.db");
 
 export const CronCommand = cmd({
   command: "cron",
@@ -28,18 +33,33 @@ export const CronCommand = cmd({
         () => {},
         async () => {
           try {
-            const status = await getRemoteStatus();
-            if (status.jobs.total === 0) {
-              console.log(colors.yellow("No scheduled jobs found."));
+            const res = await fetch(`http://127.0.0.1:${DEFAULT_CRON_PORT}/jobs`, {
+              signal: AbortSignal.timeout(2000),
+            });
+            if (!res.ok) {
+              process.stderr.write(colors.red("Failed to connect to cron daemon. Is it running?\n"));
               return;
             }
-
-            console.log(colors.bold("\nScheduled Jobs:"));
-            console.log("=".repeat(80));
-            // In a real implementation, we would fetch the full list from the daemon
-            console.log(`Total: ${status.jobs.total} (${status.jobs.active} active, ${status.jobs.paused} paused)`);
-          } catch (e) {
-            console.error(colors.red("Failed to connect to cron daemon. Is it running?"));
+            const { jobs } = await res.json() as { jobs: Array<{ id: string; name: string; type: string; schedule: string; status: string; lastRun?: string; nextRun?: string }> };
+            if (!jobs || jobs.length === 0) {
+              process.stdout.write(colors.yellow("No scheduled jobs found.\n"));
+              return;
+            }
+            process.stdout.write(colors.bold("\nScheduled Jobs:\n"));
+            process.stdout.write("=".repeat(80) + "\n");
+            for (const job of jobs) {
+              const statusColor = job.status === "active" ? colors.green : job.status === "paused" ? colors.yellow : colors.dim;
+              process.stdout.write(
+                `${colors.bold(job.name)} [${job.id}]\n` +
+                `  Type: ${job.type}  Schedule: ${job.schedule}  Status: ${statusColor(job.status)}\n` +
+                (job.lastRun ? `  Last run: ${job.lastRun}\n` : "") +
+                (job.nextRun ? `  Next run: ${job.nextRun}\n` : "") +
+                "\n"
+              );
+            }
+            process.stdout.write(`Total: ${jobs.length}\n`);
+          } catch {
+            process.stderr.write(colors.red("Failed to connect to cron daemon. Is it running?\n"));
           }
         }
       )
@@ -50,7 +70,7 @@ export const CronCommand = cmd({
           yargs
             .option("port", {
               type: "number",
-              default: 3031,
+              default: DEFAULT_CRON_PORT,
               describe: "Port to run the daemon on",
             })
             .option("background", {
@@ -59,22 +79,29 @@ export const CronCommand = cmd({
               describe: "Run in the background",
             }),
         async (argv) => {
-          console.log(colors.cyan("Starting GIZZI Cron Daemon..."));
-          
+          process.stdout.write(colors.cyan("Starting GIZZI Cron Daemon...\n"));
+
           if (argv.background) {
-            console.log(colors.yellow("Background mode not yet implemented. Running in foreground..."));
+            const { spawn } = await import("child_process");
+            const proc = spawn(process.execPath, process.argv.slice(1).filter(a => a !== "--background"), {
+              detached: true,
+              stdio: "ignore",
+            });
+            proc.unref();
+            process.stdout.write(`Daemon started in background (PID: ${proc.pid})\n`);
+            return;
           }
 
           try {
             await startDaemon({
               port: argv.port as number,
-              dbPath: "~/.a2r/cron.db",
+              dbPath: CRON_DB_PATH,
             });
           } catch (e: any) {
             if (e.message?.includes("already in use")) {
-              console.log(colors.yellow(`Daemon is already running on port ${argv.port}`));
+              process.stdout.write(colors.yellow(`Daemon is already running on port ${argv.port}\n`));
             } else {
-              console.error(colors.red(`Failed to start daemon: ${e.message}`));
+              process.stderr.write(colors.red(`Failed to start daemon: ${e.message}\n`));
             }
           }
         }
@@ -82,9 +109,20 @@ export const CronCommand = cmd({
       .command(
         "stop",
         "Stop the cron daemon",
-        () => {},
-        async () => {
-          console.log(colors.yellow("Stop command not yet implemented."));
+        (yargs) => yargs.option("port", { type: "number", default: DEFAULT_CRON_PORT, describe: "Daemon port" }),
+        async (argv) => {
+          const port = argv.port as number;
+          const running = await getRemoteStatus(port);
+          if (!running) {
+            process.stdout.write(colors.yellow(`No daemon running on port ${port}\n`));
+            return;
+          }
+          const stopped = await stopRemoteDaemon(port);
+          if (stopped) {
+            process.stdout.write(colors.green("Cron daemon stopped.\n"));
+          } else {
+            process.stderr.write(colors.red("Failed to stop daemon — it may have already exited.\n"));
+          }
         }
       )
       .command(
@@ -93,15 +131,190 @@ export const CronCommand = cmd({
         () => {},
         async () => {
           try {
-            const status = await getRemoteStatus();
-            console.log(colors.bold("\nCron Daemon Status:"));
-            console.log("=".repeat(40));
-            console.log(`Status:  ${colors.green("Online")}`);
-            console.log(`Port:    ${status.config.port}`);
-            console.log(`Uptime:  ${formatDuration(Date.now() - new Date(status.startTime).getTime())}`);
-            console.log(`Jobs:    ${status.jobs.total} total, ${colors.green(String(status.jobs.active))} active, ${colors.yellow(String(status.jobs.paused))} paused`);
-          } catch (e) {
-            console.log(`Status:  ${colors.red("Offline")}`);
+            const status = await getRemoteStatus(DEFAULT_CRON_PORT);
+            if (!status) {
+              process.stdout.write(`Status:  ${colors.red("Offline")}\n`);
+              return;
+            }
+            process.stdout.write(colors.bold("\nCron Daemon Status:\n"));
+            process.stdout.write("=".repeat(40) + "\n");
+            process.stdout.write(`Status:  ${colors.green("Online")}\n`);
+            process.stdout.write(`Port:    ${(status as any).config?.port ?? DEFAULT_CRON_PORT}\n`);
+            process.stdout.write(`Uptime:  ${formatDuration(Date.now() - new Date((status as any).startTime ?? Date.now()).getTime())}\n`);
+            process.stdout.write(`Jobs:    ${(status as any).jobs?.total ?? 0} total, ${colors.green(String((status as any).jobs?.active ?? 0))} active, ${colors.yellow(String((status as any).jobs?.paused ?? 0))} paused\n`);
+          } catch {
+            process.stdout.write(`Status:  ${colors.red("Offline")}\n`);
+          }
+        }
+      )
+      .command(
+        "add",
+        "Add a new scheduled job",
+        (yargs) =>
+          yargs
+            .option("name", { type: "string", demandOption: true, describe: "Job name" })
+            .option("type", {
+              type: "string",
+              demandOption: true,
+              choices: ["shell", "http", "agent", "cowork", "function"],
+              describe: "Job type",
+            })
+            .option("schedule", { type: "string", demandOption: true, describe: "Cron expression or natural language (e.g. 'every 5 minutes', '0 * * * *')" })
+            .option("description", { type: "string", describe: "Optional description" })
+            .option("command", { type: "string", describe: "Shell command (for type=shell)" })
+            .option("url", { type: "string", describe: "HTTP URL (for type=http)" })
+            .option("method", { type: "string", default: "GET", describe: "HTTP method (for type=http)" })
+            .option("prompt", { type: "string", describe: "Agent prompt (for type=agent)" })
+            .option("tags", { type: "string", describe: "Comma-separated tags" }),
+        async (argv) => {
+          let config: Record<string, unknown>;
+          if (argv.type === "shell") {
+            if (!argv.command) {
+              process.stderr.write(colors.red("--command is required for type=shell\n"));
+              process.exit(1);
+            }
+            config = { command: argv.command };
+          } else if (argv.type === "http") {
+            if (!argv.url) {
+              process.stderr.write(colors.red("--url is required for type=http\n"));
+              process.exit(1);
+            }
+            config = { url: argv.url, method: argv.method ?? "GET" };
+          } else if (argv.type === "agent") {
+            if (!argv.prompt) {
+              process.stderr.write(colors.red("--prompt is required for type=agent\n"));
+              process.exit(1);
+            }
+            config = { prompt: argv.prompt };
+          } else if (argv.type === "cowork") {
+            config = { runtime: "local", commands: [] };
+          } else {
+            config = {};
+          }
+
+          const body = {
+            name: argv.name,
+            description: argv.description,
+            type: argv.type,
+            schedule: argv.schedule,
+            config,
+            tags: argv.tags ? argv.tags.split(",").map((t: string) => t.trim()) : [],
+          };
+
+          try {
+            const res = await fetch(`http://127.0.0.1:${DEFAULT_CRON_PORT}/jobs`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(body),
+              signal: AbortSignal.timeout(3000),
+            });
+            if (!res.ok) {
+              const err = await res.json() as { error: string };
+              process.stderr.write(colors.red(`Failed to create job: ${err.error}\n`));
+              return;
+            }
+            const { job } = await res.json() as { job: { id: string; name: string; scheduleDescription: string } };
+            process.stdout.write(colors.green(`Job created: ${colors.bold(job.name)} [${job.id}]\n`));
+            process.stdout.write(`  Schedule: ${job.scheduleDescription}\n`);
+          } catch {
+            process.stderr.write(colors.red("Failed to connect to cron daemon. Is it running?\n"));
+          }
+        }
+      )
+      .command(
+        "remove <id>",
+        "Remove a scheduled job",
+        (yargs) => yargs.positional("id", { type: "string", demandOption: true, describe: "Job ID" }),
+        async (argv) => {
+          try {
+            const res = await fetch(`http://127.0.0.1:${DEFAULT_CRON_PORT}/jobs/${argv.id}`, {
+              method: "DELETE",
+              signal: AbortSignal.timeout(3000),
+            });
+            if (res.status === 404) {
+              process.stderr.write(colors.red(`Job not found: ${argv.id}\n`));
+              return;
+            }
+            if (!res.ok) {
+              process.stderr.write(colors.red("Failed to remove job.\n"));
+              return;
+            }
+            process.stdout.write(colors.green(`Job removed: ${argv.id}\n`));
+          } catch {
+            process.stderr.write(colors.red("Failed to connect to cron daemon. Is it running?\n"));
+          }
+        }
+      )
+      .command(
+        "run <id>",
+        "Run a job immediately",
+        (yargs) => yargs.positional("id", { type: "string", demandOption: true, describe: "Job ID" }),
+        async (argv) => {
+          try {
+            const res = await fetch(`http://127.0.0.1:${DEFAULT_CRON_PORT}/jobs/${argv.id}/run`, {
+              method: "POST",
+              signal: AbortSignal.timeout(3000),
+            });
+            if (res.status === 404) {
+              process.stderr.write(colors.red(`Job not found: ${argv.id}\n`));
+              return;
+            }
+            if (!res.ok) {
+              process.stderr.write(colors.red("Failed to trigger job.\n"));
+              return;
+            }
+            const { run } = await res.json() as { run: { id: string; status: string } };
+            process.stdout.write(colors.green(`Job triggered. Run ID: ${run.id}  Status: ${run.status}\n`));
+          } catch {
+            process.stderr.write(colors.red("Failed to connect to cron daemon. Is it running?\n"));
+          }
+        }
+      )
+      .command(
+        "pause <id>",
+        "Pause a scheduled job",
+        (yargs) => yargs.positional("id", { type: "string", demandOption: true, describe: "Job ID" }),
+        async (argv) => {
+          try {
+            const res = await fetch(`http://127.0.0.1:${DEFAULT_CRON_PORT}/jobs/${argv.id}/pause`, {
+              method: "POST",
+              signal: AbortSignal.timeout(3000),
+            });
+            if (res.status === 404) {
+              process.stderr.write(colors.red(`Job not found: ${argv.id}\n`));
+              return;
+            }
+            if (!res.ok) {
+              process.stderr.write(colors.red("Failed to pause job.\n"));
+              return;
+            }
+            process.stdout.write(colors.yellow(`Job paused: ${argv.id}\n`));
+          } catch {
+            process.stderr.write(colors.red("Failed to connect to cron daemon. Is it running?\n"));
+          }
+        }
+      )
+      .command(
+        "resume <id>",
+        "Resume a paused job",
+        (yargs) => yargs.positional("id", { type: "string", demandOption: true, describe: "Job ID" }),
+        async (argv) => {
+          try {
+            const res = await fetch(`http://127.0.0.1:${DEFAULT_CRON_PORT}/jobs/${argv.id}/resume`, {
+              method: "POST",
+              signal: AbortSignal.timeout(3000),
+            });
+            if (res.status === 404) {
+              process.stderr.write(colors.red(`Job not found: ${argv.id}\n`));
+              return;
+            }
+            if (!res.ok) {
+              process.stderr.write(colors.red("Failed to resume job.\n"));
+              return;
+            }
+            process.stdout.write(colors.green(`Job resumed: ${argv.id}\n`));
+          } catch {
+            process.stderr.write(colors.red("Failed to connect to cron daemon. Is it running?\n"));
           }
         }
       )

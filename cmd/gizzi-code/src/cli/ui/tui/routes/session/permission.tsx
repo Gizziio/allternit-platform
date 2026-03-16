@@ -1,10 +1,12 @@
+
 import { createStore } from "solid-js/store"
 import { createMemo, For, Match, Show, Switch } from "solid-js"
 import { Portal, useKeyboard, useRenderer, useTerminalDimensions, type JSX } from "@opentui/solid"
 import type { TextareaRenderable } from "@opentui/core"
 import { useKeybind } from "@/cli/ui/tui/context/keybind"
 import { useTheme, selectedForeground } from "@/cli/ui/tui/context/theme"
-import type { PermissionRequest } from "@a2r/sdk/v2"
+// PermissionRequest is an internal event bus type, not exported by the SDK
+type PermissionRequest = unknown
 import { useSDK } from "@/cli/ui/tui/context/sdk"
 import { SplitBorder } from "@/cli/ui/tui/component/border"
 import { useSync } from "@/cli/ui/tui/context/sync"
@@ -16,6 +18,41 @@ import { Locale } from "@/shared/util/locale"
 import { Global } from "@/runtime/context/global"
 import { useDialog } from "@/cli/ui/tui/ui/dialog"
 import { GIZZICopy, sanitizeBrandSurface } from "@/shared/brand"
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnySDKType = any
+
+interface LocalPermissionRequest {
+  id: string
+  sessionID: string
+  permission: string
+  tool?: {
+    messageID: string
+    callID: string
+  }
+  metadata?: Record<string, unknown>
+  always: string[]
+  patterns?: string[]
+}
+
+interface SyncPart {
+  id: string
+  type: string
+  callID?: string
+  state?: {
+    status: string
+    input?: Record<string, unknown>
+  }
+}
+
+type SyncSession = {
+  id: string
+  parentID?: string
+}
+
+type SyncConfig = {
+  tui?: { diff_style?: string }
+}
 
 type PermissionStage = "permission" | "always" | "reject"
 
@@ -51,12 +88,13 @@ function EditBody(props: { request: PermissionRequest }) {
   const syntax = themeState.syntax
   const sync = useSync()
   const dimensions = useTerminalDimensions()
+  const request = createMemo(() => props.request as unknown as LocalPermissionRequest)
 
-  const filepath = createMemo(() => (props.request.metadata?.filepath as string) ?? "")
-  const diff = createMemo(() => (props.request.metadata?.diff as string) ?? "")
+  const filepath = createMemo(() => (request().metadata?.filepath as string) ?? "")
+  const diff = createMemo(() => (request().metadata?.diff as string) ?? "")
 
   const view = createMemo(() => {
-    const diffStyle = sync.data.config.tui?.diff_style
+    const diffStyle = (sync.data.config as SyncConfig).tui?.diff_style
     if (diffStyle === "stacked") return "unified"
     return dimensions().width > 120 ? "split" : "unified"
   })
@@ -129,19 +167,20 @@ function TextBody(props: { title: string; description?: string; icon?: string })
 export function PermissionPrompt(props: { request: PermissionRequest }) {
   const sdk = useSDK()
   const sync = useSync()
+  const request = createMemo(() => props.request as unknown as LocalPermissionRequest)
   const [store, setStore] = createStore({
     stage: "permission" as PermissionStage,
   })
 
-  const session = createMemo(() => sync.data.session.find((s) => s.id === props.request.sessionID))
+  const session = createMemo(() => (sync.data.session as SyncSession[]).find((s) => s.id === request().sessionID))
 
   const input = createMemo(() => {
-    const tool = props.request.tool
+    const tool = request().tool
     if (!tool) return {}
-    const parts = sync.data.part[tool.messageID] ?? []
+    const parts = (sync.data.part[tool.messageID] ?? []) as SyncPart[]
     for (const part of parts) {
-      if (part.type === "tool" && part.callID === tool.callID && part.state.status !== "pending") {
-        return part.state.input ?? {}
+      if (part.type === "tool" && part.callID === tool.callID && part.state?.status !== "pending") {
+        return part.state?.input ?? {}
       }
     }
     return {}
@@ -156,14 +195,14 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
           title={GIZZICopy.permission.alwaysAllowTitle}
           body={
             <Switch>
-              <Match when={props.request.always.length === 1 && props.request.always[0] === "*"}>
-                <TextBody title={"This will allow " + props.request.permission + " until GIZZI Code is restarted."} />
+              <Match when={request().always.length === 1 && request().always[0] === "*"}>
+                <TextBody title={"This will allow " + request().permission + " until GIZZI Code is restarted."} />
               </Match>
               <Match when={true}>
                 <box paddingLeft={1} gap={1}>
                   <text fg={theme.textMuted}>This will allow the following patterns until GIZZI Code is restarted</text>
                   <box>
-                    <For each={props.request.always}>
+                    <For each={request().always}>
                       {(pattern) => (
                         <text fg={theme.text}>
                           {"- "}
@@ -182,8 +221,8 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
             setStore("stage", "permission")
             if (option === "cancel") return
             sdk.client.permission.reply({
-              reply: "always",
-              requestID: props.request.id,
+              path: { requestID: request().id },
+              body: { reply: "always" },
             })
           }}
         />
@@ -192,9 +231,8 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
         <RejectPrompt
           onConfirm={(message) => {
             sdk.client.permission.reply({
-              reply: "reject",
-              requestID: props.request.id,
-              message: message || undefined,
+              path: { requestID: request().id },
+              body: { reply: "reject", message: message || undefined },
             })
           }}
           onCancel={() => {
@@ -205,11 +243,11 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
       <Match when={store.stage === "permission"}>
         {(() => {
           const info = () => {
-            const permission = props.request.permission
+            const permission = request().permission
             const data = input()
 
             if (permission === "edit") {
-              const raw = props.request.metadata?.filepath
+              const raw = request().metadata?.filepath
               const filepath = typeof raw === "string" ? raw : ""
               return {
                 icon: "→",
@@ -359,16 +397,16 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
             }
 
             if (permission === "external_directory") {
-              const meta = props.request.metadata ?? {}
+              const meta = request().metadata ?? {}
               const parent = typeof meta["parentDir"] === "string" ? meta["parentDir"] : undefined
               const filepath = typeof meta["filepath"] === "string" ? meta["filepath"] : undefined
-              const pattern = props.request.patterns?.[0]
+              const pattern = request().patterns?.[0]
               const derived =
                 typeof pattern === "string" ? (pattern.includes("*") ? path.dirname(pattern) : pattern) : undefined
 
               const raw = parent ?? filepath ?? derived
               const dir = normalizePath(raw)
-              const patterns = (props.request.patterns ?? []).filter((p): p is string => typeof p === "string")
+              const patterns = (request().patterns ?? []).filter((p: unknown): p is string => typeof p === "string")
 
               return {
                 icon: "←",
@@ -445,14 +483,14 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
                     return
                   }
                   sdk.client.permission.reply({
-                    reply: "reject",
-                    requestID: props.request.id,
+                    path: { requestID: request().id },
+                    body: { reply: "reject" },
                   })
                   return
                 }
                 sdk.client.permission.reply({
-                  reply: "once",
-                  requestID: props.request.id,
+                  path: { requestID: request().id },
+                  body: { reply: "once" },
                 })
               }}
             />

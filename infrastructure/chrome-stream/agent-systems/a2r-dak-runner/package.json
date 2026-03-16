@@ -1,0 +1,67 @@
+{
+  "name": "@a2r/dak-runner",
+  "version": "0.1.0",
+  "description": "Deterministic Agent Kernel (DAK) - Execution runtime for A2R agent systems",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./types": {
+      "types": "./dist/types/index.d.ts",
+      "default": "./dist/types/index.js"
+    },
+    "./adapters": {
+      "types": "./dist/adapters/rails_unified.d.ts",
+      "default": "./dist/adapters/rails_unified.js"
+    },
+    "./policy": {
+      "types": "./dist/policy/bundle-builder.d.ts",
+      "default": "./dist/policy/bundle-builder.js"
+    }
+  },
+  "bin": {
+    "dak": "./dist/cli.js",
+    "dak-daemon": "./dist/daemon.js",
+    "dak-mcp": "./dist/mcp-server.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build",
+    "test": "jest",
+    "lint": "eslint src/**/*.ts"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.13.5",
+    "js-yaml": "^4.1.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.19.33",
+    "@types/uuid": "^9.0.0",
+    "@types/ws": "^8.18.1",
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "a2r",
+    "agent-runner",
+    "dak",
+    "deterministic",
+    "orchestration",
+    "agent-systems"
+  ],
+  "license": "MIT"
+}

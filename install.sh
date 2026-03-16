@@ -1,313 +1,490 @@
-#!/bin/sh
-# A2R (A2rchitect Runtime) Installer
-# One-liner install: curl -fsSL https://raw.githubusercontent.com/a2rchitech/a2rchitech/main/install.sh | sh
+#!/bin/bash
+#
+# A2R System Installer
+# Sets up the complete A2R stack: Cloud Backend, Desktop, Extension, and Thin Client
+#
 
 set -e
 
-# Configuration
-REPO="a2rchitech/a2rchitech"
-BINARY_NAME="a2r"
-CLI_BINARY_NAME="a2rchitech"
-INSTALL_DIR="${INSTALL_DIR:-/usr/local/bin}"
-VERSION="${VERSION:-latest}"
-
-# Colors (if terminal supports it)
+# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Detect if stdout is a terminal
-if [ -t 1 ]; then
-    HAS_COLOR=1
-else
-    HAS_COLOR=0
-fi
+# Configuration
+INSTALL_DIR="${INSTALL_DIR:-$HOME/.a2r}"
+CONFIG_DIR="${CONFIG_DIR:-$HOME/.config/a2r}"
+LOG_DIR="${LOG_DIR:-$HOME/.logs/a2r}"
+CLOUD_PORT=8080
+DESKTOP_PORT=3010
+NATIVE_PORT=3011
 
-print_error() {
-    if [ "$HAS_COLOR" -eq 1 ]; then
-        printf "%sError: %s%s\n" "$RED" "$1" "$NC" >&2
-    else
-        printf "Error: %s\n" "$1" >&2
-    fi
+# Detect OS
+OS="unknown"
+ARCH="$(uname -m)"
+case "$(uname -s)" in
+    Linux*)     OS="linux";;
+    Darwin*)    OS="macos";;
+    CYGWIN*|MINGW*|MSYS*) OS="windows";;
+esac
+
+print_header() {
+    echo -e "${BLUE}"
+    echo "╔═══════════════════════════════════════════════════════════╗"
+    echo "║          A2R System Installer                             ║"
+    echo "║  Cloud-Native Computer Use Architecture                   ║"
+    echo "╚═══════════════════════════════════════════════════════════╝"
+    echo -e "${NC}"
 }
 
 print_success() {
-    if [ "$HAS_COLOR" -eq 1 ]; then
-        printf "%s✓ %s%s\n" "$GREEN" "$1" "$NC"
-    else
-        printf "✓ %s\n" "$1"
-    fi
+    echo -e "${GREEN}✓${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}✗${NC} $1"
 }
 
 print_info() {
-    if [ "$HAS_COLOR" -eq 1 ]; then
-        printf "%s→ %s%s\n" "$BLUE" "$1" "$NC"
-    else
-        printf "→ %s\n" "$1"
-    fi
+    echo -e "${BLUE}ℹ${NC} $1"
 }
 
 print_warning() {
-    if [ "$HAS_COLOR" -eq 1 ]; then
-        printf "%s⚠ %s%s\n" "$YELLOW" "$1" "$NC"
-    else
-        printf "⚠ %s\n" "$1"
-    fi
+    echo -e "${YELLOW}⚠${NC} $1"
 }
 
-# Detect operating system
-detect_os() {
-    OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-    case "$OS" in
-        linux)
-            OS="linux"
-            ;;
-        darwin)
-            OS="darwin"
-            ;;
-        mingw*|cygwin*|msys*|windows*)
-            OS="windows"
-            ;;
-        *)
-            print_error "Unsupported operating system: $OS"
-            exit 1
-            ;;
-    esac
-    echo "$OS"
-}
-
-# Detect architecture
-detect_arch() {
-    ARCH=$(uname -m)
-    case "$ARCH" in
-        x86_64|amd64)
-            ARCH="x86_64"
-            ;;
-        arm64|aarch64)
-            if [ "$(detect_os)" = "darwin" ]; then
-                ARCH="universal"
-            else
-                ARCH="aarch64"
-            fi
-            ;;
-        armv7l|armhf)
-            ARCH="armv7"
-            ;;
-        *)
-            print_error "Unsupported architecture: $ARCH"
-            exit 1
-            ;;
-    esac
-    echo "$ARCH"
-}
-
-# Get the latest release version from GitHub API
-get_latest_version() {
-    if command -v curl >/dev/null 2>&1; then
-        curl -s "https://api.github.com/repos/$REPO/releases/latest" | \
-            grep '"tag_name":' | \
-            sed -E 's/.*"v?([^"]+)".*/\1/'
-    elif command -v wget >/dev/null 2>&1; then
-        wget -qO- "https://api.github.com/repos/$REPO/releases/latest" | \
-            grep '"tag_name":' | \
-            sed -E 's/.*"v?([^"]+)".*/\1/'
-    else
-        print_error "Either curl or wget is required"
-        exit 1
-    fi
-}
-
-# Download file with fallback to wget
-download() {
-    url="$1"
-    output="$2"
-    if command -v curl >/dev/null 2>&1; then
-        curl -fsSL "$url" -o "$output"
-    elif command -v wget >/dev/null 2>&1; then
-        wget -q "$url" -O "$output"
-    else
-        print_error "Either curl or wget is required"
-        exit 1
-    fi
-}
-
-# Main installation function
-main() {
-    print_info "A2R (A2rchitect Runtime) Installer"
-    print_info "====================================="
-    echo
-
-    # Detect platform
-    OS=$(detect_os)
-    ARCH=$(detect_arch)
+# Check prerequisites
+check_prerequisites() {
+    print_info "Checking prerequisites..."
     
-    print_info "Detected platform: $OS ($ARCH)"
-
-    # Determine version
-    if [ "$VERSION" = "latest" ]; then
-        print_info "Checking for latest version..."
-        VERSION=$(get_latest_version)
-        if [ -z "$VERSION" ]; then
-            print_error "Could not determine latest version"
-            exit 1
+    # Check Node.js
+    if ! command -v node &> /dev/null; then
+        print_error "Node.js is not installed. Please install Node.js 18+ first."
+        exit 1
+    fi
+    
+    NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
+    if [ "$NODE_VERSION" -lt 18 ]; then
+        print_error "Node.js 18+ required. Found: $(node -v)"
+        exit 1
+    fi
+    print_success "Node.js $(node -v)"
+    
+    # Check npm/pnpm
+    if command -v pnpm &> /dev/null; then
+        PKG_MANAGER="pnpm"
+        print_success "Package manager: pnpm"
+    elif command -v npm &> /dev/null; then
+        PKG_MANAGER="npm"
+        print_success "Package manager: npm"
+    else
+        print_error "No package manager found (npm or pnpm)"
+        exit 1
+    fi
+    
+    # Check Chrome (for extension)
+    CHROME_FOUND=false
+    if [ "$OS" = "macos" ]; then
+        if [ -d "/Applications/Google Chrome.app" ] || [ -d "$HOME/Applications/Google Chrome.app" ]; then
+            CHROME_FOUND=true
+        fi
+    elif [ "$OS" = "linux" ]; then
+        if command -v google-chrome &> /dev/null || command -v chromium &> /dev/null; then
+            CHROME_FOUND=true
         fi
     fi
-    print_info "Installing version: $VERSION"
-
-    # Create temporary directory
-    TMP_DIR=$(mktemp -d)
-    # shellcheck disable=SC2064
-    trap "rm -rf $TMP_DIR" EXIT
-
-    # Construct download URL
-    if [ "$OS" = "windows" ]; then
-        FILENAME="a2r-${VERSION}-${ARCH}-${OS}.zip"
+    
+    if [ "$CHROME_FOUND" = true ]; then
+        print_success "Google Chrome detected"
     else
-        FILENAME="a2r-${VERSION}-${ARCH}-${OS}.tar.gz"
+        print_warning "Google Chrome not detected. Extension will need manual installation."
     fi
     
-    URL="https://github.com/${REPO}/releases/download/v${VERSION}/${FILENAME}"
+    print_success "Prerequisites check complete"
+}
+
+# Create directories
+setup_directories() {
+    print_info "Creating directories..."
     
-    print_info "Downloading from: $URL"
+    mkdir -p "$INSTALL_DIR"
+    mkdir -p "$CONFIG_DIR"
+    mkdir -p "$LOG_DIR"
+    mkdir -p "$CONFIG_DIR/chrome-extension"
     
-    # Download
-    if ! download "$URL" "$TMP_DIR/$FILENAME"; then
-        print_error "Failed to download $FILENAME"
-        print_info "Make sure version $VERSION exists for your platform ($OS/$ARCH)"
-        exit 1
+    print_success "Directories created in $INSTALL_DIR"
+}
+
+# Install Cloud Backend
+install_cloud_backend() {
+    print_info "Installing Cloud Backend..."
+    
+    cd "7-apps/cloud-backend"
+    
+    # Install dependencies
+    if [ "$PKG_MANAGER" = "pnpm" ]; then
+        pnpm install
+    else
+        npm install
     fi
     
-    print_success "Download complete"
-
-    # Extract
-    print_info "Extracting..."
-    cd "$TMP_DIR"
+    # Build
+    npm run build
     
-    case "$FILENAME" in
-        *.tar.gz)
-            tar xzf "$FILENAME"
-            EXTRACTED_DIR=$(tar tzf "$FILENAME" | head -1 | cut -f1 -d"/")
-            ;;
-        *.zip)
-            if command -v unzip >/dev/null 2>&1; then
-                unzip -q "$FILENAME"
-                EXTRACTED_DIR=$(unzip -Z -1 "$FILENAME" | head -1 | cut -f1 -d"/")
-            else
-                print_error "unzip is required to extract .zip files"
-                exit 1
-            fi
-            ;;
-    esac
-
-    # Find binary
-    if [ -f "$EXTRACTED_DIR/a2r" ]; then
-        BINARY_PATH="$EXTRACTED_DIR/a2r"
-    elif [ -f "$EXTRACTED_DIR/a2rchitech" ]; then
-        BINARY_PATH="$EXTRACTED_DIR/a2rchitech"
-    elif [ -f "$EXTRACTED_DIR/a2r.exe" ]; then
-        BINARY_PATH="$EXTRACTED_DIR/a2r.exe"
-    else
-        print_error "Could not find binary in archive"
-        exit 1
+    # Create systemd service file (Linux only)
+    if [ "$OS" = "linux" ]; then
+        create_cloud_service
     fi
-
-    print_success "Extracted to: $BINARY_PATH"
-
-    # Install
-    print_info "Installing to $INSTALL_DIR..."
     
-    # Check if we need sudo
-    if [ -w "$INSTALL_DIR" ]; then
-        SUDO=""
+    cd ../..
+    print_success "Cloud Backend installed"
+}
+
+# Create systemd service for cloud backend (Linux)
+create_cloud_service() {
+    cat > "$INSTALL_DIR/a2r-cloud.service" << EOF
+[Unit]
+Description=A2R Cloud Backend
+After=network.target
+
+[Service]
+Type=simple
+User=$USER
+WorkingDirectory=$PWD
+ExecStart=$(which node) $PWD/dist/index.js
+Restart=always
+RestartSec=10
+Environment=PORT=$CLOUD_PORT
+Environment=HOST=0.0.0.0
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    print_info "Systemd service created at $INSTALL_DIR/a2r-cloud.service"
+    print_info "To enable: sudo cp $INSTALL_DIR/a2r-cloud.service /etc/systemd/system/"
+}
+
+# Install Desktop App
+install_desktop() {
+    print_info "Installing A2R Desktop..."
+    
+    cd "7-apps/shell/desktop"
+    
+    # Install dependencies
+    if [ "$PKG_MANAGER" = "pnpm" ]; then
+        pnpm install
     else
-        if command -v sudo >/dev/null 2>&1; then
-            SUDO="sudo"
-            print_warning "Installation requires elevated permissions"
+        npm install
+    fi
+    
+    # Build native host
+    cd native-host
+    if [ "$PKG_MANAGER" = "pnpm" ]; then
+        pnpm install
+    else
+        npm install
+    fi
+    cd ..
+    
+    cd ../../..
+    print_success "A2R Desktop installed"
+}
+
+# Register native messaging host
+register_native_host() {
+    print_info "Registering Native Messaging Host..."
+    
+    NATIVE_HOST_DIR="7-apps/shell/desktop/native-host"
+    EXTENSION_ID="com.a2r.desktop"
+    
+    if [ "$OS" = "macos" ]; then
+        # macOS Chrome native messaging location
+        NATIVE_PATH="$HOME/Library/Application Support/Google/Chrome/NativeMessagingHosts"
+        mkdir -p "$NATIVE_PATH"
+        
+        cat > "$NATIVE_PATH/$EXTENSION_ID.json" << EOF
+{
+  "name": "$EXTENSION_ID",
+  "description": "A2R Desktop Native Messaging Host",
+  "path": "$PWD/$NATIVE_HOST_DIR/dist/native-host.js",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://*/"
+  ]
+}
+EOF
+        
+    elif [ "$OS" = "linux" ]; then
+        # Linux Chrome native messaging location
+        NATIVE_PATH="$HOME/.config/google-chrome/NativeMessagingHosts"
+        mkdir -p "$NATIVE_PATH"
+        
+        cat > "$NATIVE_PATH/$EXTENSION_ID.json" << EOF
+{
+  "name": "$EXTENSION_ID",
+  "description": "A2R Desktop Native Messaging Host",
+  "path": "$PWD/$NATIVE_HOST_DIR/dist/native-host.js",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://*/"
+  ]
+}
+EOF
+    fi
+    
+    # Make native host executable
+    chmod +x "$NATIVE_HOST_DIR/native-host.ts"
+    
+    print_success "Native Messaging Host registered"
+}
+
+# Install Chrome Extension
+install_extension() {
+    print_info "Installing Chrome Extension..."
+    
+    cd "7-apps/chrome-extension"
+    
+    # Install dependencies
+    if [ "$PKG_MANAGER" = "pnpm" ]; then
+        pnpm install
+    else
+        npm install
+    fi
+    
+    # Build extension
+    npm run build
+    
+    # Copy to install directory
+    cp -r dist "$CONFIG_DIR/chrome-extension/"
+    
+    cd ../..
+    print_success "Chrome Extension built and copied"
+    
+    print_info "To load the extension:"
+    print_info "  1. Open Chrome → chrome://extensions"
+    print_info "  2. Enable 'Developer mode'"
+    print_info "  3. Click 'Load unpacked'"
+    print_info "  4. Select: $CONFIG_DIR/chrome-extension"
+}
+
+# Install Thin Client
+install_thin_client() {
+    print_info "Installing Thin Client..."
+    
+    cd "7-apps/thin-client"
+    
+    # Install dependencies
+    if [ "$PKG_MANAGER" = "pnpm" ]; then
+        pnpm install
+    else
+        npm install
+    fi
+    
+    # Build
+    npm run build
+    
+    cd ../..
+    
+    # Copy pre-built packages if available
+    if [ "$OS" = "macos" ]; then
+        if [ "$ARCH" = "arm64" ]; then
+            PKG_PATTERN="*-arm64.dmg"
         else
-            print_error "Cannot write to $INSTALL_DIR and sudo is not available"
-            exit 1
+            PKG_PATTERN="*-x64.dmg"
+        fi
+        
+        if ls 7-apps/thin-client/release/$PKG_PATTERN 1> /dev/null 2>&1; then
+            cp 7-apps/thin-client/release/$PKG_PATTERN "$INSTALL_DIR/"
+            print_success "Thin Client package copied to $INSTALL_DIR"
         fi
     fi
-
-    # Copy binary
-    if [ "$OS" = "windows" ]; then
-        $SUDO cp "$BINARY_PATH" "$INSTALL_DIR/${BINARY_NAME}.exe"
-        chmod +x "$INSTALL_DIR/${BINARY_NAME}.exe"
-    else
-        $SUDO cp "$BINARY_PATH" "$INSTALL_DIR/$BINARY_NAME"
-        $SUDO chmod +x "$INSTALL_DIR/$BINARY_NAME"
-    fi
-
-    print_success "Installed to $INSTALL_DIR/$BINARY_NAME"
-
-    # Verify installation
-    if command -v "$BINARY_NAME" >/dev/null 2>&1; then
-        INSTALLED_VERSION=$("$BINARY_NAME" --version 2>/dev/null || echo "unknown")
-        print_success "A2R installed successfully! ($INSTALLED_VERSION)"
-    else
-        print_warning "A2R installed but not in PATH"
-        print_info "Add $INSTALL_DIR to your PATH or run: export PATH=\"$INSTALL_DIR:\$PATH\""
-    fi
-
-    # Initialize A2R if running interactively
-    if [ -t 0 ] && [ -t 1 ]; then
-        echo
-        print_info "Would you like to initialize A2R now? (y/n)"
-        read -r response
-        case "$response" in
-            [Yy]*)
-                print_info "Initializing A2R..."
-                if "$BINARY_NAME" init 2>/dev/null; then
-                    print_success "A2R initialized successfully!"
-                else
-                    print_warning "Could not initialize A2R. Run 'a2r init' manually."
-                fi
-                ;;
-            *)
-                print_info "Skipped initialization. Run 'a2r init' when ready."
-                ;;
-        esac
-    fi
-
-    echo
-    print_success "Installation complete!"
-    print_info "Get started with: a2r --help"
+    
+    print_success "Thin Client installed"
 }
 
-# Handle arguments
-while [ $# -gt 0 ]; do
-    case "$1" in
-        --version|-v)
-            VERSION="$2"
-            shift 2
-            ;;
-        --install-dir|-d)
-            INSTALL_DIR="$2"
-            shift 2
-            ;;
-        --help|-h)
-            echo "A2R (A2rchitect Runtime) Installer"
-            echo ""
-            echo "Usage: install.sh [OPTIONS]"
-            echo ""
-            echo "Options:"
-            echo "  -v, --version VERSION    Install specific version (default: latest)"
-            echo "  -d, --install-dir DIR    Install directory (default: /usr/local/bin)"
-            echo "  -h, --help               Show this help message"
-            echo ""
-            echo "Environment variables:"
-            echo "  VERSION                  Version to install"
-            echo "  INSTALL_DIR              Installation directory"
-            exit 0
-            ;;
-        *)
-            print_error "Unknown option: $1"
-            exit 1
-            ;;
-    esac
-done
+# Create launcher scripts
+create_launchers() {
+    print_info "Creating launcher scripts..."
+    
+    # Cloud Backend launcher
+    cat > "$INSTALL_DIR/start-cloud.sh" << 'EOF'
+#!/bin/bash
+# Start A2R Cloud Backend
+
+CLOUD_DIR="$(dirname "$0")/../7-apps/cloud-backend"
+cd "$CLOUD_DIR"
+
+export PORT=8080
+export HOST=0.0.0.0
+
+echo "Starting A2R Cloud Backend on port $PORT..."
+node dist/index.js
+EOF
+    chmod +x "$INSTALL_DIR/start-cloud.sh"
+    
+    # Desktop launcher
+    cat > "$INSTALL_DIR/start-desktop.sh" << 'EOF'
+#!/bin/bash
+# Start A2R Desktop
+
+DESKTOP_DIR="$(dirname "$0")/../7-apps/shell/desktop"
+cd "$DESKTOP_DIR"
+
+echo "Starting A2R Desktop..."
+npm run dev
+EOF
+    chmod +x "$INSTALL_DIR/start-desktop.sh"
+    
+    # Thin Client launcher
+    cat > "$INSTALL_DIR/start-thin-client.sh" << 'EOF'
+#!/bin/bash
+# Start A2R Thin Client
+
+THIN_CLIENT_DIR="$(dirname "$0")/../7-apps/thin-client"
+cd "$THIN_CLIENT_DIR"
+
+echo "Starting A2R Thin Client..."
+npm start
+EOF
+    chmod +x "$INSTALL_DIR/start-thin-client.sh"
+    
+    # Full stack launcher
+    cat > "$INSTALL_DIR/start-all.sh" << 'EOF'
+#!/bin/bash
+# Start all A2R components
+
+SCRIPT_DIR="$(dirname "$0")"
+
+echo "╔═══════════════════════════════════════════════════════════╗"
+echo "║          Starting A2R System                              ║"
+echo "╚═══════════════════════════════════════════════════════════╝"
+echo ""
+
+# Start Cloud Backend
+echo "[1/3] Starting Cloud Backend..."
+$SCRIPT_DIR/start-cloud.sh &
+CLOUD_PID=$!
+sleep 2
+
+# Start Desktop
+echo "[2/3] Starting Desktop..."
+$SCRIPT_DIR/start-desktop.sh &
+DESKTOP_PID=$!
+sleep 3
+
+# Start Thin Client
+echo "[3/3] Starting Thin Client..."
+$SCRIPT_DIR/start-thin-client.sh &
+THIN_PID=$!
+
+echo ""
+echo "All components started!"
+echo "  - Cloud Backend PID: $CLOUD_PID"
+echo "  - Desktop PID: $DESKTOP_PID"
+echo "  - Thin Client PID: $THIN_PID"
+echo ""
+echo "Press Ctrl+C to stop all components"
+echo ""
+
+# Wait for all processes
+wait
+EOF
+    chmod +x "$INSTALL_DIR/start-all.sh"
+    
+    print_success "Launcher scripts created in $INSTALL_DIR"
+}
+
+# Create configuration file
+create_config() {
+    print_info "Creating configuration..."
+    
+    cat > "$CONFIG_DIR/config.json" << EOF
+{
+  "version": "1.0.0",
+  "installed_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "components": {
+    "cloud_backend": {
+      "enabled": true,
+      "port": $CLOUD_PORT,
+      "host": "0.0.0.0"
+    },
+    "desktop": {
+      "enabled": true,
+      "port": $DESKTOP_PORT,
+      "cowork_enabled": true
+    },
+    "thin_client": {
+      "backend": "cloud",
+      "cloud_url": "ws://localhost:$CLOUD_PORT/ws/extension",
+      "desktop_port": $DESKTOP_PORT
+    },
+    "extension": {
+      "mode": "cloud",
+      "cloud_url": "ws://localhost:$CLOUD_PORT/ws/extension",
+      "desktop_native_port": $NATIVE_PORT
+    }
+  }
+}
+EOF
+    
+    print_success "Configuration saved to $CONFIG_DIR/config.json"
+}
+
+# Print summary
+print_summary() {
+    echo ""
+    echo -e "${GREEN}╔═══════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${GREEN}║          Installation Complete!                           ║${NC}"
+    echo -e "${GREEN}╚═══════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    echo "Installation directory: $INSTALL_DIR"
+    echo "Configuration: $CONFIG_DIR"
+    echo "Logs: $LOG_DIR"
+    echo ""
+    echo "Quick Start:"
+    echo "  1. Start Cloud Backend:  $INSTALL_DIR/start-cloud.sh"
+    echo "  2. Start Desktop:         $INSTALL_DIR/start-desktop.sh"
+    echo "  3. Load Chrome Extension: chrome://extensions → Load unpacked"
+    echo "     Location: $CONFIG_DIR/chrome-extension"
+    echo "  4. Start Thin Client:     $INSTALL_DIR/start-thin-client.sh"
+    echo ""
+    echo "Or start everything at once:"
+    echo "  $INSTALL_DIR/start-all.sh"
+    echo ""
+    echo "Ports:"
+    echo "  - Cloud Backend:    $CLOUD_PORT"
+    echo "  - Desktop Cowork:   $DESKTOP_PORT"
+    echo "  - Native Messaging: $NATIVE_PORT"
+    echo ""
+    print_warning "Don't forget to load the Chrome Extension!"
+    echo ""
+}
+
+# Main installation
+main() {
+    print_header
+    
+    # Check if running from correct directory
+    if [ ! -d "7-apps" ]; then
+        print_error "Please run this script from the project root directory"
+        print_info "Expected: 7-apps/ directory should be present"
+        exit 1
+    fi
+    
+    check_prerequisites
+    setup_directories
+    install_cloud_backend
+    install_desktop
+    register_native_host
+    install_extension
+    install_thin_client
+    create_launchers
+    create_config
+    
+    print_summary
+}
 
 # Run main function
-main
+main "$@"

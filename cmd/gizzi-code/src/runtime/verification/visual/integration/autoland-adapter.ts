@@ -74,13 +74,22 @@ export function configure(options: Partial<VisualAutolandConfig>): void {
   log.info("Visual autoland adapter configured", config);
 }
 
+/** Alias for configure with more explicit naming */
+export const configureVisualAutoland = configure;
+
 export function setVisualManager(manager: VisualCaptureManager): void {
   visualManager = manager;
 }
 
+/** Alias for setVisualManager with more explicit naming */
+export const setVisualManagerForAutoland = setVisualManager;
+
 export function getConfig(): VisualAutolandConfig {
   return { ...config };
 }
+
+/** Alias for getConfig with more explicit naming */
+export const getVisualAutolandConfig = getConfig;
 
 // ============================================================================
 // Core Integration Functions
@@ -326,6 +335,9 @@ export function initialize(): void {
   log.info("Visual autoland adapter initialized");
 }
 
+/** Alias for initialize with more explicit naming */
+export const initializeVisualAutoland = initialize;
+
 /**
  * Clean up old evidence
  */
@@ -342,4 +354,32 @@ export function cleanup(maxAgeHours: number = 24): number {
   }
 
   return cleaned;
+}
+
+/** Alias for cleanup with more explicit naming */
+export const cleanupVisualAutoland = cleanup;
+
+/**
+ * Get adapter status
+ */
+export function getAdapterStatus(): {
+  enabled: boolean;
+  hasManager: boolean;
+  evidenceCount: number;
+  config: VisualAutolandConfig;
+} {
+  return {
+    enabled: config.enabled,
+    hasManager: !!visualManager,
+    evidenceCount: wihEvidence.size,
+    config: { ...config },
+  };
+}
+
+/**
+ * Called when a WIH is closed
+ */
+export function onWihClosed(wihId: string): void {
+  // Optional: clean up evidence when WIH is closed
+  wihEvidence.delete(wihId);
 }

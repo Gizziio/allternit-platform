@@ -141,7 +141,7 @@ export class PlaywrightBrowser {
         });
       }
 
-      const accessibilityTree = await page.accessibility.snapshot();
+      const accessibilityTree = await (page as unknown as { accessibility: { snapshot: () => Promise<unknown> } }).accessibility.snapshot();
 
       return {
         screenshotPath,

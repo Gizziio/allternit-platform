@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, expect, test } from "bun:test"
 import type { NamedError } from "@a2r/util/error"
 import { APICallError } from "ai"

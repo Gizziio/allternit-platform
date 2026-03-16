@@ -1,0 +1,762 @@
+"use client";
+
+/**
+ * NativeAgentView - N20 Native OpenClaw Agent View (Reconstructed)
+ *
+ * A high-fidelity, split-pane component featuring:
+ * - Left side: Chat interface with streaming support
+ * - Right side: Canvas panel for tool visualization and content
+ * - Session management with dropdown selector
+ * - A2R Native Milestone Progress (Protocol Layer)
+ * - Full integration with native-agent.store
+ */
+
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+
+// Store
+import {
+  useNativeAgentStore,
+  useActiveSession,
+  useActiveMessages,
+  useStreamingState,
+  useSessionSyncState,
+  useSessionCanvases,
+  isLocalDraftSession,
+  type NativeMessage,
+  type NativeSession,
+  type RuntimeExecutionModeStatus,
+  type SessionUpdateInput,
+  type ToolCall,
+  type Canvas,
+} from "@/lib/agents";
+import { useWorkspace } from "@/agent-workspace/useWorkspace";
+import { MilestoneProgress } from "@/components/A2RNative/MilestoneProgress";
+import {
+  ToolCallVisualization,
+  useToolCallAccent,
+  ToolConfirmation,
+  ToolQuestionDisplay,
+} from "@/components/agents";
+
+// UI Components
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Separator } from "@/components/ui/separator";
+
+// Icons
+import {
+  Send,
+  Plus,
+  Trash2,
+  Square,
+  Bot,
+  User,
+  Loader2,
+  Copy,
+  Download,
+  PanelLeft,
+  PanelRight,
+  Layout,
+  Code,
+  FileText,
+  Image,
+  Terminal,
+  Radio,
+  Activity,
+  Clock3,
+  Layers3,
+  Type,
+  FileJson,
+  Check,
+  X,
+  AlertCircle,
+  Sparkles,
+  MessageSquare,
+  ChevronDown,
+  Wrench,
+  ArrowUpRight,
+  Monitor,
+  Maximize2,
+  Minimize2,
+  Save,
+  RotateCcw,
+  Zap,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+
+// ============================================================================
+// Types & Helpers
+// ============================================================================
+
+interface NativeAgentViewProps {
+  initialSessionId?: string;
+  defaultLayout?: number[];
+  bootstrapStrategy?: "auto" | "manual";
+  syncSessions?: boolean;
+  onOpenRuntimeOps?: () => void;
+}
+
+type ViewMode = "split" | "chat-only" | "canvas-only";
+
+function formatSessionTimestamp(value?: string): string {
+  if (!value) return "Awaiting activity";
+  const timestamp = Date.parse(value);
+  if (Number.isNaN(timestamp)) return "Awaiting activity";
+
+  const elapsedMinutes = Math.max(0, Math.round((Date.now() - timestamp) / 60000));
+  if (elapsedMinutes < 1) return "Updated just now";
+  if (elapsedMinutes < 60) return `Updated ${elapsedMinutes}m ago`;
+  const elapsedHours = Math.floor(elapsedMinutes / 60);
+  if (elapsedHours < 24) return `Updated ${elapsedHours}h ago`;
+  const elapsedDays = Math.floor(elapsedHours / 24);
+  if (elapsedDays < 7) return `Updated ${elapsedDays}d ago`;
+
+  return `Updated ${new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+  }).format(new Date(timestamp))}`;
+}
+
+// ============================================================================
+// Main Component
+// ============================================================================
+
+export function NativeAgentView({
+  initialSessionId,
+  defaultLayout = [50, 50],
+  bootstrapStrategy = "auto",
+  syncSessions = true,
+  onOpenRuntimeOps,
+}: NativeAgentViewProps) {
+  const {
+    sessions,
+    activeSessionId,
+    createSession,
+    updateSession = async () => {},
+    deleteSession,
+    setActiveSession,
+    fetchSessions,
+    executionMode = null,
+    fetchExecutionMode = async () => {},
+    connectSessionSync = () => () => {},
+    isLoadingSessions = false,
+    isUpdatingSession = false,
+    isLoadingExecutionMode = false,
+  } = useNativeAgentStore();
+
+  // A2R Native Context Integration
+  const { a2rNativeState } = useWorkspace(activeSessionId || "");
+
+  const { isStreaming } = useStreamingState();
+  const { isConnected: isSessionSyncConnected, error: sessionSyncError } = useSessionSyncState();
+  
+  const [viewMode, setViewMode] = useState<ViewMode>("split");
+  const [hasFetchedSessions, setHasFetchedSessions] = useState(false);
+  const hasAutoCreatedWelcomeSession = useRef(false);
+  
+  const activeSession = useMemo(() => 
+    sessions.find((session) => session.id === activeSessionId) || null
+  , [sessions, activeSessionId]);
+
+  // Initialization
+  useEffect(() => {
+    if (bootstrapStrategy === "manual") {
+      setHasFetchedSessions(true);
+      return;
+    }
+
+    let isMounted = true;
+    void (async () => {
+      try {
+        await fetchSessions();
+      } finally {
+        if (isMounted) setHasFetchedSessions(true);
+      }
+    })();
+
+    return () => { isMounted = false; };
+  }, [bootstrapStrategy, fetchSessions]);
+
+  useEffect(() => {
+    if (!syncSessions) return;
+    return connectSessionSync();
+  }, [connectSessionSync, syncSessions]);
+
+  useEffect(() => {
+    void fetchExecutionMode().catch(() => {});
+  }, [fetchExecutionMode]);
+
+  // Auto-select session
+  useEffect(() => {
+    if (!hasFetchedSessions || isLoadingSessions || activeSessionId) return;
+
+    if (initialSessionId && sessions.some(s => s.id === initialSessionId)) {
+      setActiveSession(initialSessionId);
+      return;
+    }
+
+    if (sessions.length > 0) {
+      setActiveSession(sessions[0].id);
+      return;
+    }
+
+    if (bootstrapStrategy === "manual") return;
+
+    if (!hasAutoCreatedWelcomeSession.current) {
+      hasAutoCreatedWelcomeSession.current = true;
+      void createSession("Welcome Session");
+    }
+  }, [activeSessionId, createSession, hasFetchedSessions, initialSessionId, isLoadingSessions, sessions, setActiveSession, bootstrapStrategy]);
+
+  const handleNewSession = useCallback(async () => {
+    const newSession = await createSession();
+    if (newSession?.id) setActiveSession(newSession.id);
+  }, [createSession, setActiveSession]);
+
+  const handleDeleteSession = useCallback(async (sessionId: string) => {
+    if (confirm("Delete this session?")) await deleteSession(sessionId);
+  }, [deleteSession]);
+
+  const toggleViewMode = useCallback(() => {
+    const modes: ViewMode[] = ["split", "chat-only", "canvas-only"];
+    const nextMode = modes[(modes.indexOf(viewMode) + 1) % modes.length];
+    setViewMode(nextMode);
+  }, [viewMode]);
+
+  return (
+    <TooltipProvider>
+      <div className="flex h-full flex-col overflow-hidden bg-[color:var(--bg-primary)]">
+        <WorkspaceHeader
+          sessions={sessions}
+          activeSession={activeSession}
+          activeSessionId={activeSessionId}
+          executionMode={executionMode}
+          onSelectSession={setActiveSession}
+          viewMode={viewMode}
+          onToggleViewMode={toggleViewMode}
+          isStreaming={isStreaming}
+          isSessionSyncConnected={isSessionSyncConnected}
+          sessionSyncError={sessionSyncError}
+          onOpenRuntimeOps={onOpenRuntimeOps}
+          a2rNativeState={a2rNativeState}
+        />
+
+        <div className="flex-1 min-h-0 overflow-hidden p-4 pt-0">
+          <div className="flex h-full min-h-0 flex-col gap-4 lg:flex-row">
+            <SessionWorkbenchRail
+              sessions={sessions}
+              activeSession={activeSession}
+              activeSessionId={activeSessionId}
+              onSelectSession={setActiveSession}
+              onNewSession={handleNewSession}
+              onUpdateSession={updateSession}
+              onDeleteSession={handleDeleteSession}
+              executionMode={executionMode}
+              isLoadingSessions={isLoadingSessions}
+              isUpdatingSession={isUpdatingSession}
+              isLoadingExecutionMode={isLoadingExecutionMode}
+              isSessionSyncConnected={isSessionSyncConnected}
+              sessionSyncError={sessionSyncError}
+              onOpenRuntimeOps={onOpenRuntimeOps}
+            />
+
+            <div className="flex h-full min-h-0 min-w-0 flex-1 overflow-hidden rounded-[28px] border border-[color:var(--border-subtle)] bg-[color:var(--glass-bg-elevated)] shadow-[var(--shadow-lg)] backdrop-blur-xl">
+              {viewMode === "chat-only" && <ChatPanel sessionId={activeSessionId} />}
+              {viewMode === "canvas-only" && <CanvasPanel sessionId={activeSessionId} />}
+              {viewMode === "split" && (
+                <div className="flex h-full min-h-0 w-full min-w-0">
+                  <div className="min-h-0 min-w-0" style={{ flex: `${defaultLayout[0]} 1 0%` }}>
+                    <ChatPanel sessionId={activeSessionId} />
+                  </div>
+                  <div className="w-px bg-[color:var(--border-subtle)]" />
+                  <div className="min-h-0 min-w-0" style={{ flex: `${defaultLayout[1]} 1 0%` }}>
+                    <CanvasPanel sessionId={activeSessionId} />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </TooltipProvider>
+  );
+}
+
+// ============================================================================
+// Header Component
+// ============================================================================
+
+interface WorkspaceHeaderProps {
+  sessions: NativeSession[];
+  activeSession: NativeSession | null;
+  activeSessionId: string | null;
+  executionMode: RuntimeExecutionModeStatus | null;
+  onSelectSession: (id: string) => void;
+  viewMode: ViewMode;
+  onToggleViewMode: () => void;
+  isStreaming: boolean;
+  isSessionSyncConnected: boolean;
+  sessionSyncError: string | null;
+  onOpenRuntimeOps?: () => void;
+  a2rNativeState: any | null; // Use real type from workspace
+}
+
+function WorkspaceHeader({
+  activeSession,
+  activeSessionId,
+  executionMode,
+  viewMode,
+  onToggleViewMode,
+  isStreaming,
+  isSessionSyncConnected,
+  onOpenRuntimeOps,
+  a2rNativeState,
+}: WorkspaceHeaderProps) {
+  const messages = useActiveMessages();
+  const canvases = useSessionCanvases(activeSessionId || "");
+  const isLocalDraft = isLocalDraftSession(activeSession);
+
+  const ViewModeIcon = { split: Layout, "chat-only": PanelLeft, "canvas-only": PanelRight }[viewMode];
+
+  return (
+    <div className="relative overflow-hidden border-b border-[color:var(--border-subtle)] bg-[color:var(--glass-bg-thick)] px-5 py-5 backdrop-blur-xl">
+      <div className="relative flex flex-col gap-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[24px] border border-[color:rgba(217,119,87,0.18)] bg-[linear-gradient(135deg,rgba(217,119,87,0.16),rgba(176,141,110,0.08))] shadow-[0_10px_32px_rgba(42,31,22,0.14)]">
+              <Bot className="h-5 w-5 text-[color:var(--accent-primary)]" />
+            </div>
+            <div className="min-w-0 space-y-1">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="h-5 bg-accent-primary/10 text-accent-primary border-accent-primary/20 text-[10px] uppercase tracking-wider">
+                  Agent Workspace
+                </Badge>
+                {isStreaming && (
+                  <Badge className="h-5 animate-pulse bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[9px] uppercase">
+                    Streaming
+                  </Badge>
+                )}
+              </div>
+              <h1 className="truncate text-lg font-bold text-[color:var(--text-primary)]">
+                {activeSession?.name || "Initializing..."}
+              </h1>
+              <div className="flex items-center gap-3 text-xs text-[color:var(--text-tertiary)]">
+                <span className="flex items-center gap-1"><MessageSquare className="h-3 w-3" /> {messages.length} messages</span>
+                <span className="flex items-center gap-1"><Layers3 className="h-3 w-3" /> {canvases.length} canvases</span>
+                {isLocalDraft && <span className="text-amber-500 font-medium">● Local Draft</span>}
+              </div>
+            </div>
+          </div>
+
+          {/* A2R Native Milestone Progress - The "Layer" */}
+          {a2rNativeState && (
+            <div className="flex-1 lg:max-w-xl mx-4">
+              <MilestoneProgress state={a2rNativeState} />
+            </div>
+          )}
+
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={onToggleViewMode} className="rounded-xl hover:bg-white/10">
+              <ViewModeIcon className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={onOpenRuntimeOps} className="rounded-xl hover:bg-white/10 text-accent-primary">
+              <Zap className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Sidebar / Rail Component
+// ============================================================================
+
+interface SessionWorkbenchRailProps {
+  sessions: NativeSession[];
+  activeSession: NativeSession | null;
+  activeSessionId: string | null;
+  onSelectSession: (id: string) => void;
+  onNewSession: () => void;
+  onUpdateSession: (id: string, updates: SessionUpdateInput) => Promise<void>;
+  onDeleteSession: (id: string) => Promise<void>;
+  executionMode: RuntimeExecutionModeStatus | null;
+  isLoadingSessions: boolean;
+  isUpdatingSession: boolean;
+  isLoadingExecutionMode: boolean;
+  isSessionSyncConnected: boolean;
+  sessionSyncError: string | null;
+  onOpenRuntimeOps?: () => void;
+}
+
+function SessionWorkbenchRail({
+  sessions,
+  activeSessionId,
+  onSelectSession,
+  onNewSession,
+  isLoadingSessions,
+}: SessionWorkbenchRailProps) {
+  return (
+    <div className="flex w-full flex-col gap-4 lg:w-64 lg:shrink-0">
+      <Button 
+        onClick={onNewSession}
+        className="w-full justify-start gap-2 rounded-[20px] bg-accent-primary hover:bg-accent-primary/90 text-black font-bold h-12 shadow-lg"
+      >
+        <Plus className="h-4 w-4" />
+        New Session
+      </Button>
+
+      <div className="flex-1 min-h-0 flex flex-col rounded-[28px] border border-white/5 bg-black/20 backdrop-blur-md overflow-hidden">
+        <div className="p-4 border-b border-white/5 bg-white/5">
+          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">Recent Threads</span>
+        </div>
+        <ScrollArea className="flex-1">
+          <div className="p-2 space-y-1">
+            {isLoadingSessions && sessions.length === 0 ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-5 w-5 animate-spin text-white/20" />
+              </div>
+            ) : (
+              sessions.map((session) => (
+                <button
+                  key={session.id}
+                  onClick={() => onSelectSession(session.id)}
+                  className={cn(
+                    "w-full flex flex-col gap-1 p-3 rounded-2xl text-left transition-all group",
+                    activeSessionId === session.id 
+                      ? "bg-white/10 ring-1 ring-white/10 shadow-inner" 
+                      : "hover:bg-white/5"
+                  )}
+                >
+                  <span className={cn(
+                    "text-sm font-medium truncate",
+                    activeSessionId === session.id ? "text-white" : "text-white/60 group-hover:text-white/80"
+                  )}>
+                    {session.name || "Untitled Session"}
+                  </span>
+                  <span className="text-[10px] text-white/30">
+                    {formatSessionTimestamp(session.updatedAt)}
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
+        </ScrollArea>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Chat Panel Component
+// ============================================================================
+
+function ChatPanel({ sessionId }: { sessionId: string | null }) {
+  const messages = useActiveMessages();
+  const { isStreaming, currentMessageId, streamBuffer } = useStreamingState();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  
+  const { sendMessageStream, abortGeneration } = useNativeAgentStore();
+
+  const scrollToBottom = useCallback(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, streamBuffer, scrollToBottom]);
+
+  const handleSend = async (content: string) => {
+    if (!sessionId || !content.trim()) return;
+    await sendMessageStream(sessionId, content.trim());
+  };
+
+  return (
+    <div className="flex h-full flex-col bg-transparent relative">
+      <ScrollArea ref={scrollRef} className="flex-1 p-6">
+        <div className="max-w-3xl mx-auto space-y-8 pb-32">
+          {messages.length === 0 && !isStreaming && (
+            <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 opacity-40">
+              <div className="h-16 w-16 rounded-3xl bg-white/5 flex items-center justify-center">
+                <Sparkles className="h-8 w-8" />
+              </div>
+              <h3 className="text-xl font-medium">How can I assist you?</h3>
+              <p className="text-sm max-w-xs">Start a conversation or use the A2R Native protocol to build your project.</p>
+            </div>
+          )}
+
+          {messages.map((msg) => (
+            <ChatMessage key={msg.id} message={msg} />
+          ))}
+
+          {isStreaming && streamBuffer && (
+            <ChatMessage 
+              message={{
+                id: currentMessageId || "streaming",
+                role: "assistant",
+                content: streamBuffer,
+                timestamp: new Date().toISOString()
+              }}
+              isStreaming={true}
+            />
+          )}
+        </div>
+      </ScrollArea>
+
+      <div className="absolute bottom-0 inset-x-0 p-6 bg-gradient-to-t from-[color:var(--glass-bg-elevated)] via-[color:var(--glass-bg-elevated)] to-transparent pointer-events-none">
+        <div className="max-w-2xl mx-auto pointer-events-auto">
+          <ChatInput onSend={handleSend} isLoading={isStreaming} onStop={abortGeneration} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ChatMessage({ message, isStreaming }: { message: NativeMessage; isStreaming?: boolean }) {
+  const isAssistant = message.role === "assistant";
+  
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={cn(
+        "flex gap-4",
+        isAssistant ? "items-start" : "items-start flex-row-reverse"
+      )}
+    >
+      <div className={cn(
+        "h-8 w-8 rounded-full flex items-center justify-center shrink-0 mt-1",
+        isAssistant ? "bg-accent-primary text-black" : "bg-white/10 text-white/60"
+      )}>
+        {isAssistant ? <Bot className="h-4 w-4" /> : <User className="h-4 w-4" />}
+      </div>
+      
+      <div className={cn(
+        "flex flex-col gap-2 max-w-[85%]",
+        isAssistant ? "items-start" : "items-end"
+      )}>
+        <div className={cn(
+          "px-4 py-3 rounded-3xl text-sm leading-relaxed",
+          isAssistant 
+            ? "bg-white/[0.03] border border-white/5 text-white/90" 
+            : "bg-accent-primary/10 border border-accent-primary/20 text-accent-primary"
+        )}>
+          {message.content}
+          {isStreaming && <span className="inline-block w-1 h-4 ml-1 bg-accent-primary animate-pulse align-middle" />}
+        </div>
+        
+        {message.toolCalls && message.toolCalls.length > 0 && (
+          <div className="space-y-2 w-full">
+            {message.toolCalls.map(tc => (
+              <ToolCallVisualization key={tc.id} toolCall={tc} />
+            ))}
+          </div>
+        )}
+        
+        <span className="text-[10px] text-white/20 uppercase tracking-tighter px-2">
+          {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </span>
+      </div>
+    </motion.div>
+  );
+}
+
+function ChatInput({ onSend, isLoading, onStop }: { onSend: (val: string) => void; isLoading: boolean; onStop?: () => void }) {
+  const [value, setValue] = useState("");
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleSubmit = () => {
+    if (!value.trim() || isLoading) return;
+    onSend(value);
+    setValue("");
+  };
+
+  return (
+    <div className="relative rounded-[24px] border border-white/10 bg-black/40 p-2 backdrop-blur-xl shadow-2xl transition-all focus-within:border-accent-primary/30">
+      <Textarea
+        ref={inputRef}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            handleSubmit();
+          }
+        }}
+        placeholder="Type a message..."
+        className="min-h-[44px] max-h-32 w-full resize-none bg-transparent border-none focus-visible:ring-0 py-3 px-4 text-sm"
+      />
+      <div className="flex items-center justify-between px-2 pb-1">
+        <div className="flex items-center gap-1">
+           <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-white/30 hover:text-white/60">
+             <Paperclip className="h-4 w-4" />
+           </Button>
+        </div>
+        <div className="flex items-center gap-2">
+          {isLoading ? (
+            <Button onClick={onStop} size="sm" variant="outline" className="h-8 rounded-full bg-white/5 border-white/10 hover:bg-white/10">
+              <Square className="h-3 w-3 mr-2" /> Stop
+            </Button>
+          ) : (
+            <Button onClick={handleSubmit} disabled={!value.trim()} size="sm" className="h-8 w-8 rounded-full bg-accent-primary hover:bg-accent-primary/90 text-black p-0 shadow-lg">
+              <Send className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Canvas Panel Component
+// ============================================================================
+
+function CanvasPanel({ sessionId }: { sessionId: string | null }) {
+  const canvases = useSessionCanvases(sessionId || "");
+  const { canvases: canvasMap, updateCanvas, deleteCanvas } = useNativeAgentStore();
+  const [activeCanvasId, setActiveCanvasId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (canvases.length > 0 && !activeCanvasId) {
+      setActiveCanvasId(canvases[canvases.length - 1]);
+    }
+  }, [canvases, activeCanvasId]);
+
+  const activeCanvas = activeCanvasId ? canvasMap[activeCanvasId] : null;
+
+  if (canvases.length === 0) {
+    return (
+      <div className="flex h-full items-center justify-center p-12 text-center">
+        <div className="max-w-xs space-y-4 opacity-20">
+          <Layers3 className="h-12 w-12 mx-auto" />
+          <h3 className="text-lg font-medium">No Active Canvases</h3>
+          <p className="text-xs">Canvases created by the agent for documents, code, or terminals will appear here.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-full flex-col bg-black/10">
+      {/* Canvas Tabs */}
+      <div className="flex items-center gap-1 p-2 border-b border-white/5 bg-white/5 overflow-x-auto no-scrollbar">
+        {canvases.map((id) => {
+          const canvas = canvasMap[id];
+          const isActive = activeCanvasId === id;
+          const Icon = canvas?.type === "terminal" ? Terminal : canvas?.type === "code" ? Code : FileText;
+          
+          return (
+            <button
+              key={id}
+              onClick={() => setActiveCanvasId(id)}
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap",
+                isActive ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/60 hover:bg-white/5"
+              )}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {canvas?.title || "Untitled"}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Canvas Content */}
+      <div className="flex-1 min-h-0 relative group">
+        {activeCanvas ? (
+          <div className="h-full flex flex-col">
+            <div className="flex items-center justify-between px-6 py-3 border-b border-white/5">
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-bold uppercase tracking-widest text-white/20">{activeCanvas.type}</span>
+                <Separator orientation="vertical" className="h-3 bg-white/10" />
+                <span className="text-sm font-medium text-white/80">{activeCanvas.title}</span>
+              </div>
+              <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg"><Copy className="h-3.5 w-3.5" /></Button>
+                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg"><Download className="h-3.5 w-3.5" /></Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-7 w-7 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-400/10"
+                  onClick={() => activeCanvasId && deleteCanvas(activeCanvasId)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+            <ScrollArea className="flex-1 bg-black/20">
+              <pre className="p-6 font-mono text-sm leading-relaxed text-white/70 overflow-x-auto">
+                <code>{activeCanvas.content}</code>
+              </pre>
+            </ScrollArea>
+          </div>
+        ) : (
+          <div className="flex h-full items-center justify-center">
+            <Loader2 className="h-6 w-6 animate-spin text-white/10" />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Error Banner Component
+// ============================================================================
+
+function ErrorBanner() {
+  const { error, clearError } = useNativeAgentStore();
+
+  return (
+    <AnimatePresence>
+      {error && (
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: "auto", opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          className="bg-red-500/10 border-b border-red-500/20 overflow-hidden"
+        >
+          <div className="px-6 py-2 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-red-400 text-xs font-medium">
+              <AlertCircle className="h-3.5 w-3.5" />
+              <span>{error}</span>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={clearError}
+              className="h-6 w-6 rounded-md hover:bg-red-500/20 text-red-400"
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+export default NativeAgentView;
+

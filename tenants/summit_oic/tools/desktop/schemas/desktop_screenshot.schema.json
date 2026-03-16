@@ -1,8 +1,0 @@
-{
-  "type": "object",
-  "required": ["session_id"],
-  "properties": {
-    "session_id": {"type": "string"},
-    "scope": {"type": "string", "enum": ["full", "active_window"], "default": "active_window"}
-  }
-}

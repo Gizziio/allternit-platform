@@ -1,0 +1,17 @@
+[Unit]
+Description=Gizzi AI Terminal Service
+Documentation=https://docs.gizzi.sh
+After=network.target
+
+[Service]
+Type=simple
+User=%I
+ExecStart=%h/.local/bin/gizzi daemon start
+ExecStop=%h/.local/bin/gizzi daemon stop
+Restart=on-failure
+RestartSec=5
+Environment="HOME=%h"
+Environment="GIZZI_LOG_LEVEL=info"
+
+[Install]
+WantedBy=default.target

@@ -122,10 +122,11 @@ export namespace BootSequence {
     const baton = await AgentWorkspace.getLatestBaton(workspace)
     if (baton) {
       log.info("Existing handoff found", { baton })
+      const batonObj = typeof baton === "object" ? (baton as Record<string, unknown>) : { raw: baton }
       return {
-        sessionId: typeof baton === "object" && baton.sessionId ? String(baton.sessionId) : "",
+        sessionId: typeof batonObj === "object" && "sessionId" in batonObj ? String(batonObj.sessionId) : "",
         workspace,
-        metadata: typeof baton === "object" ? (baton as Record<string, unknown>) : { raw: baton },
+        metadata: batonObj,
       }
     }
     return undefined

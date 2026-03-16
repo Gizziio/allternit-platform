@@ -40,10 +40,10 @@ export function OnboardingModeSelection(props: OnboardingModeSelectionProps) {
     >
       {/* Header */}
       <box flexDirection="column" alignItems="center" gap={1}>
-        <text fg={accent} attributes={TextAttributes.BOLD} style={{ fontSize: 1.5 }}>
+        <text fg={accent} attributes={TextAttributes.BOLD}>
           Choose Your Mode
         </text>
-        <text fg={theme.textMuted} textAlign="center">
+        <text fg={theme.textMuted}>
           Select your preferred working environment
         </text>
       </box>
@@ -77,18 +77,18 @@ export function OnboardingModeSelection(props: OnboardingModeSelectionProps) {
               <text fg={RGBA.fromInts(107, 154, 123)} attributes={TextAttributes.BOLD}>
                 💻 Code Mode
               </text>
-              <text fg={theme.text} wrap="wrap">
+              <text fg={theme.text}>
                 Traditional terminal coding experience. Perfect for developers who want
                 a clean, focused environment for writing and running code.
               </text>
               <box height={1} />
-              <text fg={theme.textMuted} style={{ fontSize: 0.9 }}>
+              <text fg={theme.textMuted}>
                 ✓ Standard terminal interface
               </text>
-              <text fg={theme.textMuted} style={{ fontSize: 0.9 }}>
+              <text fg={theme.textMuted}>
                 ✓ Code editing and execution
               </text>
-              <text fg={theme.textMuted} style={{ fontSize: 0.9 }}>
+              <text fg={theme.textMuted}>
                 ✓ Agent can be toggled on/off
               </text>
             </box>
@@ -97,21 +97,21 @@ export function OnboardingModeSelection(props: OnboardingModeSelectionProps) {
               <text fg={RGBA.fromInts(154, 123, 170)} attributes={TextAttributes.BOLD}>
                 🤝 Cowork Mode
               </text>
-              <text fg={theme.text} wrap="wrap">
+              <text fg={theme.text}>
                 Collaborative workspace with dynamic viewport. See browser previews,
                 artifacts, and rich content alongside your terminal.
               </text>
               <box height={1} />
-              <text fg={theme.textMuted} style={{ fontSize: 0.9 }}>
+              <text fg={theme.textMuted}>
                 ✓ Dynamic computer viewport (right side)
               </text>
-              <text fg={theme.textMuted} style={{ fontSize: 0.9 }}>
+              <text fg={theme.textMuted}>
                 ✓ Browser previews and web content
               </text>
-              <text fg={theme.textMuted} style={{ fontSize: 0.9 }}>
+              <text fg={theme.textMuted}>
                 ✓ Artifacts, images, and media display
               </text>
-              <text fg={theme.textMuted} style={{ fontSize: 0.9 }}>
+              <text fg={theme.textMuted}>
                 ✓ Agent can be toggled on/off
               </text>
             </box>
@@ -128,7 +128,6 @@ export function OnboardingModeSelection(props: OnboardingModeSelectionProps) {
           paddingRight={2}
           borderStyle="single"
           borderColor={theme.border}
-          cursor="pointer"
         >
           <text fg={theme.text}>← Back</text>
         </box>
@@ -141,7 +140,6 @@ export function OnboardingModeSelection(props: OnboardingModeSelectionProps) {
           backgroundColor={step() === 0 ? theme.border : accent}
           borderStyle="single"
           borderColor={step() === 0 ? theme.border : accent}
-          cursor="pointer"
         >
           <text fg={step() === 0 ? theme.text : RGBA.fromInts(255, 255, 255)}>
             {step() === 0 ? "Continue" : "Confirm →"}

@@ -12,13 +12,13 @@
  */
 
 import { Log } from "@/shared/util/log";
-import { Plan } from "./planner";
-import { ExecutionReceipt } from "./executor";
-import { Verifier, VerificationResult as StandardVerificationResult } from "./verifier";
+import type { Plan } from "./planner";
+import type { ExecutionReceipt } from "./executor";
+import { Verifier, type VerificationResult as StandardVerificationResult } from "./verifier";
 import { 
   SemiFormalVerifier, 
-  SemiFormalVerificationResult,
-  VerificationCertificate,
+  type SemiFormalVerificationResult,
+  type VerificationCertificate,
   formatCertificate 
 } from "./semi-formal-verifier";
 import { VisualCaptureManager, type CaptureResult as VisualCaptureResult } from "@/runtime/verification/visual";
@@ -105,11 +105,15 @@ export class VerificationOrchestrator {
   private semiFormalVerifier: SemiFormalVerifier;
   private visualManager?: VisualCaptureManager;
   private visualResult?: VisualCaptureResult;
+  private sessionId: string;
+  private strategy: VerificationStrategy;
 
   constructor(
-    private sessionId: string,
-    private strategy: VerificationStrategy = { mode: "adaptive" }
+    sessionId: string,
+    strategy: VerificationStrategy = { mode: "adaptive" }
   ) {
+    this.sessionId = sessionId;
+    this.strategy = strategy;
     this.empiricalVerifier = new Verifier(sessionId);
     this.semiFormalVerifier = new SemiFormalVerifier(sessionId, {
       model: strategy.model,
@@ -133,7 +137,8 @@ export class VerificationOrchestrator {
    */
   async verify(
     plan: Plan,
-    receipts: ExecutionReceipt[]
+    receipts: ExecutionReceipt[],
+    context?: VerificationStrategy["context"]
   ): Promise<OrchestratedVerificationResult> {
     this.log.info("Starting orchestrated verification", {
       sessionId: this.sessionId,
@@ -408,8 +413,8 @@ export class VerificationOrchestrator {
       return {
         passed: empirical.passed,
         reason: consensus
-          ? empirical.reason || semiFormal.reason
-          : `Semi-formal (${semiFormal.passed}) and empirical (${empirical.passed}) disagree. Using empirical: ${empirical.reason}`,
+          ? (empirical.reason || semiFormal.reason || "Verification complete")
+          : `Semi-formal (${semiFormal.passed}) and empirical (${empirical.passed}) disagree. Using empirical: ${empirical.reason || "no reason"}`,
         nextAction: consensus ? empirical.nextAction : "ask_user",
         methodsUsed: ["semi-formal", "empirical"],
         empiricalResult: empirical,
@@ -468,7 +473,7 @@ export class VerificationOrchestrator {
 
     return {
       passed: result.passed,
-      reason: result.reason,
+      reason: result.reason || "Patch equivalence verification complete",
       nextAction: result.nextAction,
       methodsUsed: ["semi-formal"],
       semiFormalResult: result,
@@ -494,14 +499,14 @@ export class VerificationOrchestrator {
       });
     }
   }
-  
+
   /**
    * Get visual evidence from the last verification
    */
   getVisualEvidence(): VisualCaptureResult | undefined {
     return this.visualResult;
   }
-  
+
   /**
    * Get visual evidence formatted for LLM prompting
    */

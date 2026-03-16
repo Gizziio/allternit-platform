@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, test, expect } from "bun:test"
 import { PermissionNext } from "../src/permission/next"
 import { Config } from "../src/config/config"

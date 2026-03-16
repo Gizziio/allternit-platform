@@ -2,12 +2,12 @@ import { Log } from "@/shared/util/log";
 import { Planner } from "./planner";
 import { Executor } from "./executor";
 import { ContextPacker } from "@/runtime/context/pack";
-import { BudgetManager } from "./budget";
-import { 
-  VerificationOrchestrator, 
-  type VerificationStrategy,
-  type OrchestratedVerificationResult,
+import type { BudgetManager } from "./budget";
+import type { 
+  VerificationStrategy,
+  OrchestratedVerificationResult,
 } from "./verification";
+import { VerificationOrchestrator } from "./verification-orchestrator";
 import { storeVerification } from "./verification/store";
 import type { VisualCaptureManagerOptions } from "@/runtime/verification/visual";
 
@@ -15,6 +15,8 @@ export interface TurnResult {
   status: "continue" | "completed" | "failed" | "needs_user";
   error?: Error;
   verification?: OrchestratedVerificationResult;
+  /** Hash of the plan for loop detection */
+  planHash?: string;
 }
 
 export interface TurnOptions {
@@ -55,12 +57,19 @@ export interface TurnOptions {
 
 export class Turn {
   private log = Log.create({ service: "runtime.turn" });
+  private sessionId: string;
+  private budget: BudgetManager;
+  private options: TurnOptions;
 
   constructor(
-    private sessionId: string,
-    private budget: BudgetManager,
-    private options: TurnOptions = {}
-  ) {}
+    sessionId: string,
+    budget: BudgetManager,
+    options: TurnOptions = {}
+  ) {
+    this.sessionId = sessionId;
+    this.budget = budget;
+    this.options = options;
+  }
 
   async execute(): Promise<TurnResult> {
     this.log.info("Executing production turn", { 
@@ -92,7 +101,7 @@ export class Turn {
       };
 
       const orchestrator = new VerificationOrchestrator(this.sessionId, {
-        defaultMode: strategy.mode,
+        mode: strategy.mode,
         visualCapture: this.options.visualCapture ?? { enabled: true },
       });
       const verification = await orchestrator.verify(plan, receipts, strategy.context);

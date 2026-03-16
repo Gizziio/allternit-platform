@@ -5,7 +5,18 @@ import { useSDK } from "@/cli/ui/tui/context/sdk"
 import { useRoute } from "@/cli/ui/tui/context/route"
 import { Clipboard } from "@/cli/ui/tui/util/clipboard"
 import type { PromptInfo } from "@/cli/ui/tui/component/prompt/history"
+import type { Message, Part } from "@a2r/sdk"
 import { GIZZICopy } from "@/shared/brand"
+
+type TextPart = Part & {
+  type: "text"
+  text: string
+  synthetic?: boolean
+}
+
+type FilePart = Part & {
+  type: "file"
+}
 
 export function DialogMessage(props: {
   messageID: string
@@ -14,7 +25,7 @@ export function DialogMessage(props: {
 }) {
   const sync = useSync()
   const sdk = useSDK()
-  const message = createMemo(() => sync.data.message[props.sessionID]?.find((x) => x.id === props.messageID))
+  const message = createMemo(() => ((sync.data.message as Record<string, (Message & { id?: string })[]>)[props.sessionID] ?? []).find((x) => (x as { id?: string }).id === props.messageID))
   const route = useRoute()
 
   return (
@@ -30,18 +41,19 @@ export function DialogMessage(props: {
             if (!msg) return
 
             sdk.client.session.revert({
-              sessionID: props.sessionID,
-              messageID: msg.id,
+              path: { id: props.sessionID },
+              body: { messageID: (msg as { id?: string }).id! },
             })
 
             if (props.setPrompt) {
-              const parts = sync.data.part[msg.id]
-              const promptInfo = parts.reduce(
-                (agg, part) => {
-                  if (part.type === "text") {
-                    if (!part.synthetic) agg.input += part.text
+              const parts = (sync.data.part as Record<string, Part[]>)[(msg as { id?: string }).id!]
+              const promptInfo = (parts as Part[]).reduce(
+                (agg: { input: string; parts: PromptInfo["parts"] }, part: Part) => {
+                  const p = part as TextPart | FilePart
+                  if (p.type === "text") {
+                    if (!p.synthetic) agg.input += (p as TextPart).text
                   }
-                  if (part.type === "file") agg.parts.push(part)
+                  if (p.type === "file") agg.parts.push(p as FilePart)
                   return agg
                 },
                 { input: "", parts: [] as PromptInfo["parts"] },
@@ -60,10 +72,11 @@ export function DialogMessage(props: {
             const msg = message()
             if (!msg) return
 
-            const parts = sync.data.part[msg.id]
-            const text = parts.reduce((agg, part) => {
-              if (part.type === "text" && !part.synthetic) {
-                agg += part.text
+            const parts = (sync.data.part as Record<string, Part[]>)[(msg as { id?: string }).id!]
+            const text = (parts as Part[]).reduce((agg: string, part: Part) => {
+              const p = part as TextPart
+              if (p.type === "text" && !p.synthetic) {
+                agg += p.text
               }
               return agg
             }, "")
@@ -78,19 +91,20 @@ export function DialogMessage(props: {
           description: GIZZICopy.dialogs.messageForkDescription,
           onSelect: async (dialog) => {
             const result = await sdk.client.session.fork({
-              sessionID: props.sessionID,
-              messageID: props.messageID,
+              path: { id: props.sessionID },
+              body: { messageID: props.messageID },
             })
             const initialPrompt = (() => {
               const msg = message()
               if (!msg) return undefined
-              const parts = sync.data.part[msg.id]
-              return parts.reduce(
-                (agg, part) => {
-                  if (part.type === "text") {
-                    if (!part.synthetic) agg.input += part.text
+              const parts = (sync.data.part as Record<string, Part[]>)[(msg as { id?: string }).id!]
+              return (parts as Part[]).reduce(
+                (agg: { input: string; parts: PromptInfo["parts"] }, part: Part) => {
+                  const p = part as TextPart | FilePart
+                  if (p.type === "text") {
+                    if (!p.synthetic) agg.input += (p as TextPart).text
                   }
-                  if (part.type === "file") agg.parts.push(part)
+                  if (p.type === "file") agg.parts.push(p as FilePart)
                   return agg
                 },
                 { input: "", parts: [] as PromptInfo["parts"] },

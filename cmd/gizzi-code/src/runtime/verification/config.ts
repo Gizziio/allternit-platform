@@ -32,7 +32,7 @@ export const VerificationConfigSchema = z.object({
     path: z.string().default("./.verification"),
     /** Maximum entries to keep */
     maxEntries: z.number().optional(),
-  }).default({}),
+  }),
   
   /**
    * Semi-formal verification settings
@@ -50,7 +50,7 @@ export const VerificationConfigSchema = z.object({
     requireCounterexample: z.boolean().default(true),
     /** Timeout for reasoning (ms) */
     timeout: z.number().default(60000),
-  }).default({}),
+  }),
   
   /**
    * Empirical verification settings
@@ -64,7 +64,7 @@ export const VerificationConfigSchema = z.object({
     requireCoverage: z.boolean().default(false),
     /** Minimum coverage percentage */
     minCoverage: z.number().default(80),
-  }).default({}),
+  }),
   
   /**
    * Orchestrator settings
@@ -80,8 +80,8 @@ export const VerificationConfigSchema = z.object({
       evidenceQuality: z.number().default(0.25),
       traceCompleteness: z.number().default(0.20),
       alternativeCheck: z.number().default(0.20),
-    }).default({}),
-  }).default({}),
+    }),
+  }),
   
   /**
    * API settings
@@ -91,7 +91,7 @@ export const VerificationConfigSchema = z.object({
     enabled: z.boolean().default(true),
     /** API route prefix */
     prefix: z.string().default("/verification"),
-  }).default({}),
+  }),
   
   /**
    * CLI settings
@@ -101,7 +101,7 @@ export const VerificationConfigSchema = z.object({
     outputFormat: z.enum(["table", "json", "markdown"]).default("table"),
     /** Whether to include certificates in output */
     includeCertificates: z.boolean().default(false),
-  }).default({}),
+  }),
   
   /**
    * Visual capture settings
@@ -119,17 +119,17 @@ export const VerificationConfigSchema = z.object({
     viewport: z.object({
       width: z.number().default(1280),
       height: z.number().default(720),
-    }).default({}),
+    }),
     /** Include base64 image data in artifacts */
     includeBase64: z.boolean().default(false),
     /** Maximum image dimensions */
     maxImageDimensions: z.object({
       width: z.number().default(1920),
       height: z.number().default(1080),
-    }).default({}),
+    }),
     /** Screenshot quality (0-100) */
     quality: z.number().default(90),
-  }).default({ enabled: true }),
+  }),
   
   /**
    * Integration settings
@@ -140,20 +140,20 @@ export const VerificationConfigSchema = z.object({
       enabled: z.boolean().default(false),
       postComment: z.boolean().default(true),
       setStatus: z.boolean().default(true),
-    }).default({}),
+    }),
     
     /** GitLab CI integration */
     gitlabCI: z.object({
       enabled: z.boolean().default(false),
       postComment: z.boolean().default(true),
       setStatus: z.boolean().default(true),
-    }).default({}),
+    }),
     
     /** MCP server integration */
     mcp: z.object({
       enabled: z.boolean().default(false),
-    }).default({}),
-  }).default({}),
+    }),
+  }),
 });
 
 export type VerificationConfig = z.infer<typeof VerificationConfigSchema>;
@@ -334,6 +334,14 @@ export function detectEnvironment(): DetectedEnvironment {
             postComment: true,
             setStatus: true,
           },
+          gitlabCI: {
+            enabled: false,
+            postComment: true,
+            setStatus: true,
+          },
+          mcp: {
+            enabled: false,
+          },
         },
       },
     };
@@ -347,10 +355,18 @@ export function detectEnvironment(): DetectedEnvironment {
       defaults: {
         storage: { backend: "file", path: "./.verification" },
         integrations: {
+          githubActions: {
+            enabled: false,
+            postComment: true,
+            setStatus: true,
+          },
           gitlabCI: {
             enabled: true,
             postComment: true,
             setStatus: true,
+          },
+          mcp: {
+            enabled: false,
           },
         },
       },

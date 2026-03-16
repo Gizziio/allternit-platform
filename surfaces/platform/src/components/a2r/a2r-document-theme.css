@@ -1,0 +1,353 @@
+/**
+ * A2R Document Theme
+ * 
+ * Custom theme overrides for BlockNote to match A2R design system.
+ * All BlockNote UI elements are themed to look native to A2Rchitect.
+ */
+
+/* ===== Base Editor Styles ===== */
+.a2r-document-theme .bn-editor {
+  background: #1a1a1a !important;
+  color: #ECECEC !important;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+  font-size: 15px !important;
+  line-height: 1.7 !important;
+  padding: 24px 32px !important;
+}
+
+/* ===== Block Styles ===== */
+.a2r-document-theme .bn-block {
+  margin-bottom: 4px !important;
+}
+
+.a2r-document-theme .bn-block-content {
+  color: #ECECEC !important;
+}
+
+/* Headings */
+.a2r-document-theme h1.bn-block-content {
+  font-size: 2em !important;
+  font-weight: 700 !important;
+  color: #ECECEC !important;
+  margin-bottom: 16px !important;
+  letter-spacing: -0.02em !important;
+}
+
+.a2r-document-theme h2.bn-block-content {
+  font-size: 1.5em !important;
+  font-weight: 600 !important;
+  color: #ECECEC !important;
+  margin-top: 24px !important;
+  margin-bottom: 12px !important;
+  letter-spacing: -0.01em !important;
+}
+
+.a2r-document-theme h3.bn-block-content {
+  font-size: 1.25em !important;
+  font-weight: 600 !important;
+  color: #D4956A !important; /* A2R accent */
+  margin-top: 20px !important;
+  margin-bottom: 10px !important;
+}
+
+/* Paragraphs */
+.a2r-document-theme p.bn-block-content {
+  color: #b8b8b8 !important;
+  margin-bottom: 12px !important;
+}
+
+/* ===== Lists ===== */
+.a2r-document-theme .bn-bullet-list-item,
+.a2r-document-theme .bn-numbered-list-item {
+  color: #b8b8b8 !important;
+}
+
+.a2r-document-theme .bn-bullet-list-item::before,
+.a2r-document-theme .bn-numbered-list-item::before {
+  color: #D4956A !important; /* A2R accent for bullets */
+}
+
+/* ===== Code Blocks ===== */
+.a2r-document-theme .bn-code-block {
+  background: #141414 !important;
+  border: 1px solid #2a2a2a !important;
+  border-radius: 8px !important;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+  font-size: 13px !important;
+  padding: 16px !important;
+  margin: 16px 0 !important;
+}
+
+.a2r-document-theme .bn-code-block code {
+  color: #ECECEC !important;
+  background: transparent !important;
+}
+
+/* Code language label */
+.a2r-document-theme .bn-code-block::before {
+  content: attr(data-language);
+  display: block;
+  font-size: 11px;
+  color: #666;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+/* ===== Blockquotes ===== */
+.a2r-document-theme .bn-blockquote {
+  border-left: 3px solid #D4956A !important; /* A2R accent */
+  background: rgba(212, 149, 106, 0.05) !important;
+  padding: 12px 16px !important;
+  margin: 16px 0 !important;
+  border-radius: 0 6px 6px 0 !important;
+  color: #b8b8b8 !important;
+  font-style: italic !important;
+}
+
+/* ===== Slash Menu / Command Palette ===== */
+.a2r-document-theme .bn-suggestion-menu {
+  background: #242424 !important;
+  border: 1px solid #333 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4) !important;
+  padding: 8px !important;
+}
+
+.a2r-document-theme .bn-suggestion-menu-item {
+  color: #ECECEC !important;
+  padding: 8px 12px !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.a2r-document-theme .bn-suggestion-menu-item:hover,
+.a2r-document-theme .bn-suggestion-menu-item[aria-selected="true"] {
+  background: rgba(212, 149, 106, 0.15) !important; /* A2R accent tint */
+  color: #D4956A !important;
+}
+
+.a2r-document-theme .bn-suggestion-menu-item-icon {
+  color: #666 !important;
+}
+
+.a2r-document-theme .bn-suggestion-menu-item:hover .bn-suggestion-menu-item-icon,
+.a2r-document-theme .bn-suggestion-menu-item[aria-selected="true"] .bn-suggestion-menu-item-icon {
+  color: #D4956A !important;
+}
+
+/* ===== Formatting Toolbar ===== */
+.a2r-document-theme .bn-formatting-toolbar {
+  background: #242424 !important;
+  border: 1px solid #333 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+  padding: 4px !important;
+}
+
+.a2r-document-theme .bn-toolbar-button {
+  color: #888 !important;
+  background: transparent !important;
+  border-radius: 4px !important;
+  padding: 6px !important;
+  transition: all 0.15s ease !important;
+}
+
+.a2r-document-theme .bn-toolbar-button:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #ECECEC !important;
+}
+
+.a2r-document-theme .bn-toolbar-button[data-active="true"] {
+  background: rgba(212, 149, 106, 0.2) !important;
+  color: #D4956A !important;
+}
+
+/* ===== Link Menu ===== */
+.a2r-document-theme .bn-link-menu {
+  background: #242424 !important;
+  border: 1px solid #333 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+  padding: 12px !important;
+}
+
+.a2r-document-theme .bn-link-menu input {
+  background: #1a1a1a !important;
+  border: 1px solid #333 !important;
+  color: #ECECEC !important;
+  border-radius: 6px !important;
+  padding: 8px 12px !important;
+  font-size: 14px !important;
+}
+
+.a2r-document-theme .bn-link-menu input:focus {
+  border-color: #D4956A !important;
+  outline: none !important;
+}
+
+/* ===== Placeholders ===== */
+.a2r-document-theme .bn-placeholder {
+  color: #555 !important;
+  font-style: italic !important;
+}
+
+/* ===== Drag Handle / Side Menu ===== */
+.a2r-document-theme .bn-side-menu {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.a2r-document-theme .bn-block:hover .bn-side-menu {
+  opacity: 1;
+}
+
+.a2r-document-theme .bn-side-menu-button {
+  color: #555 !important;
+  background: transparent !important;
+  padding: 4px !important;
+  border-radius: 4px !important;
+}
+
+.a2r-document-theme .bn-side-menu-button:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #888 !important;
+}
+
+/* ===== Block Selection ===== */
+.a2r-document-theme .bn-block-selected .bn-block-content {
+  background: rgba(212, 149, 106, 0.08) !important;
+  border-radius: 4px !important;
+}
+
+/* ===== Inline Text Styling ===== */
+.a2r-document-theme .bn-inline-content strong {
+  color: #ECECEC !important;
+  font-weight: 600 !important;
+}
+
+.a2r-document-theme .bn-inline-content em {
+  color: #b8b8b8 !important;
+}
+
+.a2r-document-theme .bn-inline-content code {
+  background: #2a2a2a !important;
+  color: #D4956A !important; /* A2R accent */
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 0.9em !important;
+}
+
+.a2r-document-theme .bn-inline-content a {
+  color: #D4956A !important; /* A2R accent */
+  text-decoration: none !important;
+  border-bottom: 1px solid rgba(212, 149, 106, 0.3) !important;
+  transition: border-color 0.15s ease !important;
+}
+
+.a2r-document-theme .bn-inline-content a:hover {
+  border-bottom-color: #D4956A !important;
+}
+
+/* ===== Images ===== */
+.a2r-document-theme .bn-image {
+  border-radius: 8px !important;
+  overflow: hidden !important;
+  margin: 16px 0 !important;
+}
+
+.a2r-document-theme .bn-image img {
+  border-radius: 8px !important;
+}
+
+/* ===== Dividers ===== */
+.a2r-document-theme .bn-divider {
+  border-top: 1px solid #333 !important;
+  margin: 24px 0 !important;
+}
+
+/* ===== Table of Contents (if enabled) ===== */
+.a2r-document-theme .bn-table-of-contents {
+  background: rgba(212, 149, 106, 0.05) !important;
+  border: 1px solid rgba(212, 149, 106, 0.15) !important;
+  border-radius: 8px !important;
+  padding: 16px !important;
+  margin: 16px 0 !important;
+}
+
+.a2r-document-theme .bn-table-of-contents-title {
+  color: #D4956A !important;
+  font-weight: 600 !important;
+  margin-bottom: 12px !important;
+}
+
+.a2r-document-theme .bn-table-of-contents-item {
+  color: #888 !important;
+  padding: 4px 0 !important;
+  cursor: pointer !important;
+  transition: color 0.15s ease !important;
+}
+
+.a2r-document-theme .bn-table-of-contents-item:hover {
+  color: #D4956A !important;
+}
+
+/* ===== Scrollbar Styling ===== */
+.a2r-document-theme ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.a2r-document-theme ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.a2r-document-theme ::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 4px;
+}
+
+.a2r-document-theme ::-webkit-scrollbar-thumb:hover {
+  background: #444;
+}
+
+/* ===== Focus States ===== */
+.a2r-document-theme .bn-editor:focus {
+  outline: none !important;
+}
+
+.a2r-document-theme .bn-editor:focus .bn-block-focused {
+  /* Subtle focus indicator */
+}
+
+/* ===== Animation for Block Appearance ===== */
+@keyframes a2r-block-appear {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.a2r-document-theme .bn-block {
+  animation: a2r-block-appear 0.2s ease;
+}
+
+/* ===== Read-Only Mode ===== */
+.a2r-document-theme[data-read-only="true"] .bn-editor {
+  background: transparent !important;
+}
+
+.a2r-document-theme[data-read-only="true"] .bn-side-menu {
+  display: none !important;
+}
+
+.a2r-document-theme[data-read-only="true"] .bn-formatting-toolbar {
+  display: none !important;
+}

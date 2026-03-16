@@ -192,7 +192,7 @@ export namespace AgentCommunicate {
       message.to.agentId === agentId ||
       message.to.agentRole === agentRole ||
       message.to.channel === "broadcast" ||
-      (message.mentions && message.mentions.some((m) => m === agentId || m === agentRole))
+      (message.mentions?.some((m) => m === agentId || m === agentRole) ?? false)
     )
   }
 
@@ -240,7 +240,7 @@ export namespace AgentCommunicate {
     }
 
     const message: AgentMessage = {
-      id: Identifier.ascending("msg"),
+      id: Identifier.ascending("message"),
       from: {
         agentId: input.agentId,
         agentName: input.agentName,
@@ -369,7 +369,7 @@ export namespace AgentCommunicate {
     const state = getSessionState(input.sessionID)
 
     const channel: CommunicationChannel = {
-      id: Identifier.ascending("channel"),
+      id: Identifier.ascending("part"),
       name: input.name,
       description: input.description,
       members: input.members || [input.createdBy],
@@ -499,6 +499,20 @@ export namespace AgentCommunicate {
 // Tool Definition
 // ============================================================================
 
+interface AgentCommunicateMetadata {
+  messageId?: string
+  timestamp?: number
+  mentions?: string[]
+  messageCount?: number
+  messages?: { id: string; from: string; content: string; timestamp: number; read: boolean }[]
+  channelId?: string
+  name?: string
+  members?: string[]
+  channelCount?: number
+  channels?: { id: string; name: string; members: number }[]
+  unreadCount?: number
+}
+
 export const AgentCommunicateTool = Tool.define("agent_communicate", {
   description: DESCRIPTION,
   parameters: z.object({
@@ -532,7 +546,7 @@ export const AgentCommunicateTool = Tool.define("agent_communicate", {
     const agent = await Agent.get(ctx.agent)
     const agentId = ctx.agent
     const agentName = agent?.name || ctx.agent
-    const agentRole = agent?.role || "agent"
+    const agentRole = "agent"
 
     switch (params.action) {
       case "send": {
@@ -551,14 +565,15 @@ export const AgentCommunicateTool = Tool.define("agent_communicate", {
           correlationId: params.correlationId,
         })
 
+        const sendMetadata: AgentCommunicateMetadata = {
+          messageId: message.id,
+          timestamp: message.timestamp,
+          mentions: message.mentions,
+        }
         return {
           title: `Message sent to ${params.to?.agentName || params.to?.agentRole || params.to?.channel || "broadcast"}`,
+          metadata: sendMetadata,
           output: `Message sent successfully. ID: ${message.id}`,
-          metadata: {
-            messageId: message.id,
-            timestamp: message.timestamp,
-            mentions: message.mentions,
-          },
         }
       }
 
@@ -574,19 +589,20 @@ export const AgentCommunicateTool = Tool.define("agent_communicate", {
 
         const formatted = messages.map((m) => AgentCommunicate.formatMessageForDisplay(m)).join("\n")
 
+        const readMetadata: AgentCommunicateMetadata = {
+          messageCount: messages.length,
+          messages: messages.map((m) => ({
+            id: m.id,
+            from: m.from.agentName,
+            content: m.content,
+            timestamp: m.timestamp,
+            read: m.read,
+          })),
+        }
         return {
           title: `Read ${messages.length} message${messages.length !== 1 ? "s" : ""}`,
+          metadata: readMetadata,
           output: formatted || "No messages found",
-          metadata: {
-            messageCount: messages.length,
-            messages: messages.map((m) => ({
-              id: m.id,
-              from: m.from.agentName,
-              content: m.content,
-              timestamp: m.timestamp,
-              read: m.read,
-            })),
-          },
         }
       }
 
@@ -601,14 +617,15 @@ export const AgentCommunicateTool = Tool.define("agent_communicate", {
           createdBy: agentId,
         })
 
+        const createMetadata: AgentCommunicateMetadata = {
+          channelId: channel.id,
+          name: channel.name,
+          members: channel.members,
+        }
         return {
           title: `Channel created: ${params.channel}`,
+          metadata: createMetadata,
           output: `Channel "${params.channel}" created successfully. ID: ${channel.id}`,
-          metadata: {
-            channelId: channel.id,
-            name: channel.name,
-            members: channel.members,
-          },
         }
       }
 
@@ -631,13 +648,14 @@ export const AgentCommunicateTool = Tool.define("agent_communicate", {
           agentId,
         })
 
+        const joinMetadata: AgentCommunicateMetadata = {
+          channelId: channel.id,
+          name: channel.name,
+        }
         return {
           title: `Joined channel: ${params.channel}`,
+          metadata: joinMetadata,
           output: `Successfully joined channel "${params.channel}"`,
-          metadata: {
-            channelId: channel.id,
-            name: channel.name,
-          },
         }
       }
 
@@ -648,17 +666,18 @@ export const AgentCommunicateTool = Tool.define("agent_communicate", {
           .map((c) => `#${c.name} (${c.members.length} members)`)
           .join("\n")
 
+        const listMetadata: AgentCommunicateMetadata = {
+          channelCount: channels.length,
+          channels: channels.map((c) => ({
+            id: c.id,
+            name: c.name,
+            members: c.members.length,
+          })),
+        }
         return {
           title: `Found ${channels.length} channel${channels.length !== 1 ? "s" : ""}`,
+          metadata: listMetadata,
           output: formatted || "No channels found",
-          metadata: {
-            channelCount: channels.length,
-            channels: channels.map((c) => ({
-              id: c.id,
-              name: c.name,
-              members: c.members.length,
-            })),
-          },
         }
       }
 
@@ -670,12 +689,13 @@ export const AgentCommunicateTool = Tool.define("agent_communicate", {
           channel: params.channel,
         })
 
+        const unreadMetadata: AgentCommunicateMetadata = {
+          unreadCount: count,
+        }
         return {
           title: `${count} unread message${count !== 1 ? "s" : ""}`,
+          metadata: unreadMetadata,
           output: `You have ${count} unread message${count !== 1 ? "s" : ""}${params.channel ? ` in #${params.channel}` : ""}`,
-          metadata: {
-            unreadCount: count,
-          },
         }
       }
 

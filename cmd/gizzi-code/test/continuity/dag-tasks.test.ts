@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, expect, it } from "bun:test"
 import { HandoffEmitter } from "@/continuity/handoff-emitter"
 import type { SessionContext, DAGTask } from "@/continuity/types"

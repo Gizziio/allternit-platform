@@ -113,17 +113,16 @@ export class AnimationDriver {
     // 2. Expression Selection
     let selectedFrame: string
 
-    // Blinking (Staggered/Semi-random)
-    const blinkBucket = tick / 80n
-    const blinkHash = Number((blinkBucket * 7n + 13n) % 5n)
-    const tickInBucket = tick % 80n
-    
+    // Blinking (Natural rhythm - ~1 blink per 8-12 seconds, none when focused)
+    const canBlink = state === "idle" || state === "steady" || state === "pleased" || state === "proud" || state === "curious"
+    const blinkBucket = tick / 120n  // 6-second windows at 20fps
+    const blinkHash = Number((blinkBucket * 11n + 7n) % 9n)  // 2 of 9 windows blink
+    const tickInBucket = tick % 120n
+
     // Choose the base animation
-    if (blinkHash === 0 && tickInBucket < 3n) {
+    if (canBlink && blinkHash === 0 && tickInBucket < 2n) {
       selectedFrame = this.frame(`${animBase}.blink`)
-    } else if (blinkHash === 1 && (tickInBucket < 3n || (tickInBucket > 8n && tickInBucket < 11n))) {
-      selectedFrame = this.frame(`${animBase}.blink`)
-    } else if (blinkHash === 2 && tickInBucket < 6n) {
+    } else if (canBlink && blinkHash === 4 && (tickInBucket < 2n || (tickInBucket > 8n && tickInBucket < 10n))) {
       selectedFrame = this.frame(`${animBase}.blink`)
     } else if (isWalking) {
       selectedFrame = this.frame(`${animBase}.walking`)

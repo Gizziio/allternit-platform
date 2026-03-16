@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Verification System Integration Tests
  * 

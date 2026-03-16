@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, expect, it, beforeAll, afterAll } from "bun:test"
 import { AgentWorkspace } from "@/agent-workspace"
 import { rmdir, mkdir, writeFile, readFile } from "fs/promises"

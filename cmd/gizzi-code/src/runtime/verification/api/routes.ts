@@ -5,7 +5,6 @@
  */
 
 import { Hono } from "hono";
-import { zValidator } from "@hono/zod-validator";
 import z from "zod/v4";
 import { Log } from "@/shared/util/log";
 
@@ -27,7 +26,7 @@ const VerifyRequestSchema = z.object({
     steps: z.array(z.object({
       id: z.string(),
       toolId: z.string(),
-      args: z.record(z.any()).default({}),
+      args: z.record(z.string(), z.any()).default({}),
     })),
   }),
   receipts: z.array(z.object({
@@ -35,7 +34,7 @@ const VerifyRequestSchema = z.object({
     toolId: z.string(),
     success: z.boolean(),
     output: z.string(),
-    metadata: z.record(z.any()).optional(),
+    metadata: z.record(z.string(), z.any()).optional(),
   })).default([]),
   context: z.object({
     patches: z.array(z.object({
@@ -76,7 +75,7 @@ const PatchEquivalenceRequestSchema = z.object({
     testPatch: z.string().optional(),
     repositoryContext: z.string(),
     relevantTests: z.array(z.string()),
-    testDescriptions: z.record(z.string()).optional(),
+    testDescriptions: z.record(z.string(), z.string()).optional(),
   }),
   options: z.object({
     requireCounterexample: z.boolean().default(true),
@@ -114,9 +113,18 @@ export const verificationApiRoutes = new Hono()
   .get("/health", (c) => c.json({ status: "ok", service: "verification" }))
   
   // Verify execution
-  .post("/verify", zValidator("json", VerifyRequestSchema), async (c) => {
+  .post("/verify", async (c) => {
     try {
-      const body = c.req.valid("json");
+      const bodyRaw = await c.req.json();
+      const parseResult = VerifyRequestSchema.safeParse(bodyRaw);
+      if (!parseResult.success) {
+        return c.json({
+          success: false,
+          error: "Invalid request body",
+          details: parseResult.error,
+        }, 400);
+      }
+      const body = parseResult.data;
       const sessionId = c.req.header("X-Session-ID") || "anonymous";
       
       log.info("Verification request", {
@@ -128,15 +136,17 @@ export const verificationApiRoutes = new Hono()
       const orchestrator = new VerificationOrchestrator(`api_${sessionId}`);
       
       const strategy: Partial<VerificationStrategy> = {
-        mode: body.mode,
-        ...body.strategy,
+        mode: body.mode as VerificationStrategy["mode"],
+        confidenceThreshold: body.strategy?.confidenceThreshold,
+        fallbackOnUncertainty: body.strategy?.fallbackOnUncertainty,
+        timeouts: body.strategy?.timeouts as { semiFormalMs: number; empiricalMs: number; totalMs: number; } | undefined,
       };
       
       const context: VerificationContext | undefined = body.context;
       
       const result = await orchestrator.verify(
-        body.plan as any,
-        body.receipts as any,
+        body.plan as unknown as import("../types").VerificationRequest["plan"],
+        body.receipts as unknown as import("../types").VerificationRequest["receipts"],
         context,
         strategy
       );
@@ -166,9 +176,18 @@ export const verificationApiRoutes = new Hono()
   })
   
   // Patch equivalence
-  .post("/patch-equivalence", zValidator("json", PatchEquivalenceRequestSchema), async (c) => {
+  .post("/patch-equivalence", async (c) => {
     try {
-      const body = c.req.valid("json");
+      const bodyRaw = await c.req.json();
+      const parseResult = PatchEquivalenceRequestSchema.safeParse(bodyRaw);
+      if (!parseResult.success) {
+        return c.json({
+          success: false,
+          error: "Invalid request body",
+          details: parseResult.error,
+        }, 400);
+      }
+      const body = parseResult.data;
       const sessionId = c.req.header("X-Session-ID") || "anonymous";
       
       log.info("Patch equivalence request", {
@@ -196,7 +215,10 @@ export const verificationApiRoutes = new Hono()
           diff: body.patch2.diff,
           state: "modified",
         },
-        testContext: body.testContext,
+        testContext: {
+          ...body.testContext,
+          testDescriptions: body.testContext.testDescriptions as Record<string, string> | undefined,
+        },
         options: body.options || {
           requireCounterexample: true,
           traceDepth: 10,
@@ -224,9 +246,31 @@ export const verificationApiRoutes = new Hono()
   })
   
   // Query verifications
-  .get("/verifications", zValidator("query", QueryRequestSchema), async (c) => {
+  .get("/verifications", async (c) => {
     try {
-      const query = c.req.valid("query");
+      const queryRaw = {
+        sessionId: c.req.query("sessionId"),
+        type: c.req.query("type"),
+        passed: c.req.query("passed") === "true" ? true : c.req.query("passed") === "false" ? false : undefined,
+        confidence: c.req.query("confidence"),
+        tags: c.req.query("tags")?.split(","),
+        since: c.req.query("since"),
+        until: c.req.query("until"),
+        search: c.req.query("search"),
+        limit: c.req.query("limit") ? parseInt(c.req.query("limit")!, 10) : undefined,
+        offset: c.req.query("offset") ? parseInt(c.req.query("offset")!, 10) : undefined,
+        sortBy: c.req.query("sortBy"),
+        sortOrder: c.req.query("sortOrder"),
+      };
+      const parseResult = QueryRequestSchema.safeParse(queryRaw);
+      if (!parseResult.success) {
+        return c.json({
+          success: false,
+          error: "Invalid query parameters",
+          details: parseResult.error,
+        }, 400);
+      }
+      const query = parseResult.data;
       const store = VerificationStore.getInstance();
       
       const results = await store.query({
@@ -291,10 +335,19 @@ export const verificationApiRoutes = new Hono()
   })
   
   // Confirm verification
-  .post("/verifications/:id/confirm", zValidator("json", ConfirmRequestSchema), async (c) => {
+  .post("/verifications/:id/confirm", async (c) => {
     try {
       const id = c.req.param("id");
-      const body = c.req.valid("json");
+      const bodyRaw = await c.req.json();
+      const parseResult = ConfirmRequestSchema.safeParse(bodyRaw);
+      if (!parseResult.success) {
+        return c.json({
+          success: false,
+          error: "Invalid request body",
+          details: parseResult.error,
+        }, 400);
+      }
+      const body = parseResult.data;
       const store = VerificationStore.getInstance();
       
       await store.confirm(id, body.correct, body.confirmedBy, body.notes);
@@ -341,7 +394,7 @@ export const verificationApiRoutes = new Hono()
   .get("/certificates/:id/export", async (c) => {
     try {
       const id = c.req.param("id");
-      const format = (c.req.query("format") as any) || "json";
+      const format = (c.req.query("format") as "json" | "markdown" | "html") || "json";
       const includeMetadata = c.req.query("includeMetadata") !== "false";
       const includeRawEvidence = c.req.query("includeRawEvidence") === "true";
       
@@ -363,11 +416,12 @@ export const verificationApiRoutes = new Hono()
       });
       
       // Set content type based on format
-      const contentType = {
+      const contentTypeMap: Record<string, string> = {
         json: "application/json",
         markdown: "text/markdown",
         html: "text/html",
-      }[format] || "text/plain";
+      };
+      const contentType = contentTypeMap[format] || "text/plain";
       
       c.header("Content-Type", contentType);
       
@@ -387,7 +441,7 @@ export const verificationApiRoutes = new Hono()
   
   // Get template
   .get("/template", async (c) => {
-    const type = (c.req.query("type") as any) || "general";
+    const type = (c.req.query("type") as string) || "general";
     
     const templates: Record<string, string> = {
       general: "General verification template",

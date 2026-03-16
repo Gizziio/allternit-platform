@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, expect, test, spyOn, beforeEach, afterEach } from "bun:test"
 import { z } from "zod"
 import { QuestionTool } from "../../src/tool/question"

@@ -1,13 +1,33 @@
 import { useDialog } from "@/cli/ui/tui/ui/dialog"
-import { DialogSelect } from "@/cli/ui/tui/ui/dialog-select"
+import { DialogSelect, type DialogSelectOption } from "@/cli/ui/tui/ui/dialog-select"
 import { useSync } from "@/cli/ui/tui/context/sync"
-import { createMemo, createResource, createSignal, Show, Switch, Match } from "solid-js"
+import { createMemo, createResource, createSignal, Show, Switch, Match, type JSX } from "solid-js"
 import { useTheme } from "@/cli/ui/tui/context/theme"
 import { useSDK } from "@/cli/ui/tui/context/sdk"
 import { useLocal } from "@/cli/ui/tui/context/local"
 import { DialogPrompt } from "@/cli/ui/tui/ui/dialog-prompt"
 import { GIZZICopy, sanitizeBrandSurface } from "@/shared/brand"
 import * as AgentWorkspaceBridge from "@/runtime/kernel/bridge"
+
+interface WorkspaceAgentConfig {
+  name: string
+  config?: {
+    purpose?: string
+    permissions?: {
+      spawn_agents?: boolean
+    }
+    authority_level?: string
+  }
+}
+
+interface WorkspaceInfo {
+  type: string
+  path: string
+  identity?: {
+    name: string
+    systemPrompt?: string
+  }
+}
 
 export function DialogAgentManager() {
   const dialog = useDialog()
@@ -19,23 +39,24 @@ export function DialogAgentManager() {
   const [toDelete, setToDelete] = createSignal<string>()
   const [showWorkspaceAgents, setShowWorkspaceAgents] = createSignal(false)
 
-  const agents = createMemo(() => sync.data.agent)
+  const agents = createMemo<any[]>(() => sync.data.agent as any[])
+  const config = createMemo<any>(() => sync.data.config as any)
 
   // Detect workspace context
-  const [workspace] = createResource(async () => {
+  const [workspace] = createResource<WorkspaceInfo | null>(async () => {
     return await AgentWorkspaceBridge.detectWorkspace()
   })
 
   // Load workspace agents
   const [workspaceAgents] = createResource(workspace, async (ws) => {
     if (!ws) return []
-    return await AgentWorkspaceBridge.getWorkspaceAgents(ws.path, ws.type)
+    return await AgentWorkspaceBridge.getWorkspaceAgents(ws.path, ws.type as "gizzi" | "openclaw")
   })
 
-  const options = createMemo(() =>
-    agents().map((agent) => {
+  const options = createMemo<DialogSelectOption<string>[]>(() =>
+    agents().map((agent: any) => {
       const isDeleting = toDelete() === agent.name
-      const isDefault = sync.data.config.default_agent === agent.name
+      const isDefault = config()?.default_agent === agent.name
       return {
         title: isDeleting 
           ? `Press again to delete "${agent.name}"` 
@@ -61,7 +82,7 @@ export function DialogAgentManager() {
             Workspace: {ws!.identity!.name} ({ws!.type})
           </text>
         </Show>
-      ),
+      ) as unknown as JSX.Element,
     })
     
     if (!name || !/^[a-z0-9_-]+$/.test(name)) {
@@ -74,7 +95,7 @@ export function DialogAgentManager() {
       placeholder: "What this agent does...",
       description: () => (
         <text fg={theme.textMuted}>Brief description of the agent's purpose</text>
-      ),
+      ) as unknown as JSX.Element,
     })
     
     if (description === null) {
@@ -100,7 +121,7 @@ export function DialogAgentManager() {
             <text fg={theme.textMuted}>Detailed instructions that define the agent's behavior</text>
           </Match>
         </Switch>
-      ),
+      ) as unknown as JSX.Element,
     })
     
     if (prompt === null) {
@@ -171,7 +192,7 @@ export function DialogAgentManager() {
     dialog.replace(() => <DialogAgentManager />)
   }
 
-  const handleImportWorkspaceAgent = async (agentConfig: { name: string; config?: any }) => {
+  const handleImportWorkspaceAgent = async (agentConfig: WorkspaceAgentConfig) => {
     try {
       const ws = workspace()
       if (!ws) return
@@ -180,7 +201,7 @@ export function DialogAgentManager() {
       const basePrompt = agentConfig.config?.purpose 
         ? `Purpose: ${agentConfig.config.purpose}` 
         : ""
-      const enhancedPrompt = await AgentWorkspaceBridge.generateWorkspaceAwarePrompt(basePrompt, ws)
+      const enhancedPrompt = await AgentWorkspaceBridge.generateWorkspaceAwarePrompt(basePrompt, ws as any)
 
       // Create permissions from config
       const permissions = agentConfig.config?.permissions || {}
@@ -226,7 +247,7 @@ export function DialogAgentManager() {
           description: `${workspaceAgents()!.length} agents from ${workspace()?.type} workspace`,
         }] : []),
       ]}
-      current={local.agent.current().name}
+      current={(local.agent.current() as any)?.name}
       onMove={() => setToDelete(undefined)}
       onSelect={(option) => {
         if (option.value === "__create__") {
@@ -245,7 +266,7 @@ export function DialogAgentManager() {
     <Show when={showWorkspaceAgents() && workspaceAgents()}>
       <box flexDirection="column" gap={1} paddingTop={1}>
         <text fg={theme.textMuted}>Workspace Agents:</text>
-        {workspaceAgents()?.map((agent: { name: string; config?: { purpose?: string } }) => (
+        {workspaceAgents()?.map((agent: WorkspaceAgentConfig) => (
           <box 
             flexDirection="row" 
             gap={1}

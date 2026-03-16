@@ -25,14 +25,14 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
 
     function isModelValid(model: { providerID: string; modelID: string }) {
       // Check both configured providers and all available providers
-      const provider = sync.data.provider.find((x) => x.id === model.providerID) || 
-                       sync.data.provider_next.all.find((x) => x.id === model.providerID)
+      const provider = sync.data.provider.find((x: any) => x.id === model.providerID) || 
+                       (sync.data.provider_next as any).all?.find((x: any) => x.id === model.providerID)
       return !!provider?.models[model.modelID]
     }
 
     function getBlockedModelReason(model: { providerID: string; modelID: string }) {
-      const provider = sync.data.provider.find((x) => x.id === model.providerID) ||
-                       sync.data.provider_next.all.find((x) => x.id === model.providerID)
+      const provider = sync.data.provider.find((x: any) => x.id === model.providerID) ||
+                       (sync.data.provider_next as any).all?.find((x: any) => x.id === model.providerID)
       const info = provider?.models[model.modelID]
       return blockedModelReason({
         providerID: model.providerID,
@@ -42,8 +42,8 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
     }
 
     function isBlockedAgentDefaultModel(model: { providerID: string; modelID: string }) {
-      const provider = sync.data.provider.find((x) => x.id === model.providerID) ||
-                       sync.data.provider_next.all.find((x) => x.id === model.providerID)
+      const provider = sync.data.provider.find((x: any) => x.id === model.providerID) ||
+                       (sync.data.provider_next as any).all?.find((x: any) => x.id === model.providerID)
       const info = provider?.models[model.modelID]
       return isModelBlocked({
         providerID: model.providerID,
@@ -76,12 +76,18 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
     }
 
     const agent = iife(() => {
-      const agents = createMemo(() => sync.data.agent.filter((x) => x.mode !== "subagent" && !x.hidden))
-      const visibleAgents = createMemo(() => sync.data.agent.filter((x) => !x.hidden))
+      const agents = createMemo(() => (sync.data.agent as any[]).filter((x: any) => x.mode !== "subagent" && !x.hidden))
+      const visibleAgents = createMemo(() => (sync.data.agent as any[]).filter((x: any) => !x.hidden))
       const [agentStore, setAgentStore] = createStore<{
         current: string
       }>({
-        current: agents()[0].name,
+        current: agents()[0]?.name ?? "",
+      })
+      // When agents arrive from sync (initially empty), auto-select the first one
+      createEffect(() => {
+        if (agentStore.current === "" && agents().length > 0) {
+          setAgentStore("current", agents()[0].name)
+        }
       })
       const { theme } = useTheme()
       const colors = createMemo(() => [
@@ -98,10 +104,10 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           return agents()
         },
         current() {
-          return agents().find((x) => x.name === agentStore.current)!
+          return agents().find((x: any) => x.name === agentStore.current) ?? agents()[0]
         },
         set(name: string) {
-          if (!agents().some((x) => x.name === name))
+          if (!agents().some((x: any) => x.name === name))
             return toast.show({
               variant: "warning",
               message: `Agent not found: ${name}`,
@@ -121,10 +127,10 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
         color(name: string) {
           const index = visibleAgents().findIndex((x) => x.name === name)
           if (index === -1) return colors()[0]
-          const agent = visibleAgents()[index]
+          const agent = visibleAgents()[index] as any
 
           if (agent?.color) {
-            const color = agent.color
+            const color = (agent as any).color
             if (color.startsWith("#")) return RGBA.fromHex(color)
             // already validated by config, just satisfying TS here
             return theme[color as keyof typeof theme] as RGBA
@@ -203,8 +209,8 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           }
         }
 
-        if (sync.data.config.model) {
-          const { providerID, modelID } = Provider.parseModel(sync.data.config.model)
+        if ((sync.data.config as any)?.model) {
+          const { providerID, modelID } = Provider.parseModel((sync.data.config as any).model)
           if (isModelValid({ providerID, modelID }) && !isBlockedAgentDefaultModel({ providerID, modelID })) {
             return {
               providerID,
@@ -223,9 +229,9 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
         if (preferred) return preferred
 
         // Combine configured providers with all available providers for fallback selection
-        const allProviders = [...sync.data.provider, ...sync.data.provider_next.all]
+        const allProviders = [...(sync.data.provider as any[]), ...(sync.data.provider_next as any).all]
         // Remove duplicates (prefer configured providers)
-        const uniqueProviders = Array.from(new Map(allProviders.map(p => [p.id, p])).values())
+        const uniqueProviders = Array.from(new Map(allProviders.map((p: any) => [p.id, p])).values())
         
         for (const provider of uniqueProviders) {
           const defaultModel = sync.data.provider_default[provider.id]
@@ -233,10 +239,10 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
             defaultModel && !isBlockedAgentDefaultModel({ providerID: provider.id, modelID: defaultModel })
               ? defaultModel
               : undefined
-          const firstModel = Object.values(provider.models).find(
-            (entry) => !isBlockedAgentDefaultModel({ providerID: provider.id, modelID: entry.id }),
+          const firstModel = Object.values(provider.models as any).find(
+            (entry: any) => !isBlockedAgentDefaultModel({ providerID: provider.id, modelID: entry.id }),
           )
-          const model = defaultModelAllowed ?? firstModel?.id
+          const model = defaultModelAllowed ?? (firstModel as any)?.id
           if (!model) continue
           return {
             providerID: provider.id,
@@ -281,9 +287,9 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
             }
           }
           // Check both configured providers and all available providers
-          const provider = sync.data.provider.find((x) => x.id === value.providerID) ||
-                          sync.data.provider_next.all.find((x) => x.id === value.providerID)
-          const info = provider?.models[value.modelID]
+          const provider = sync.data.provider.find((x: any) => x.id === value.providerID) ||
+                          (sync.data.provider_next as any).all?.find((x: any) => x.id === value.providerID)
+          const info = (provider as any)?.models?.[value.modelID]
           // Handle both Provider.Model (with capabilities.reasoning) and ModelsDev.Model (with direct reasoning)
           const reasoning = info && ('capabilities' in info) 
             ? (info as any).capabilities?.reasoning 
@@ -386,6 +392,10 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
               )
               save()
             }
+            // Persist selected model to server so it's the default for new sessions
+            sdk.client.config.update({
+              body: { model: `${model.providerID}/${model.modelID}` },
+            }).catch(() => {})
           })
         },
         toggleFavorite(model: { providerID: string; modelID: string }) {
@@ -410,7 +420,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
               (x) => x.providerID === model.providerID && x.modelID === model.modelID,
             )
             const next = exists
-              ? modelStore.favorite.filter((x) => x.providerID !== model.providerID || x.modelID !== model.modelID)
+              ? modelStore.favorite.filter((x: any) => x.providerID !== model.providerID || x.modelID !== model.modelID)
               : [model, ...modelStore.favorite]
             setModelStore(
               "favorite",
@@ -429,8 +439,8 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           list() {
             const m = currentModel()
             if (!m) return []
-            const provider = sync.data.provider.find((x) => x.id === m.providerID)
-            const info = provider?.models[m.modelID]
+            const provider = sync.data.provider.find((x: any) => x.id === m.providerID)
+            const info = (provider as any)?.models?.[m.modelID]
             if (!info?.variants) return []
             return Object.keys(info.variants)
           },
@@ -462,17 +472,17 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
 
     const mcp = {
       isEnabled(name: string) {
-        const status = sync.data.mcp[name]
-        return status?.status === "connected"
+        const status = (sync.data.mcp as any)?.[name]
+        return (status as any)?.status === "connected"
       },
       async toggle(name: string) {
         const status = sync.data.mcp[name]
-        if (status?.status === "connected") {
+        if ((status as any)?.status === "connected") {
           // Disable: disconnect the MCP
-          await sdk.client.mcp.disconnect({ name })
+          await sdk.client.mcp.remove({ path: { name }, throwOnError: true } as any)
         } else {
           // Enable/Retry: connect the MCP (handles disabled, failed, and other states)
-          await sdk.client.mcp.connect({ name })
+          await sdk.client.mcp.add({ body: { name }, throwOnError: true } as any)
         }
       },
     }

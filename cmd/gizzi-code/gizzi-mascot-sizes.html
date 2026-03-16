@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GIZZI Mascot - Size Options</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #0a0a0f;
+            color: #d4b08c;
+            font-family: 'Courier New', monospace;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        h1 {
+            color: #d97757;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+        
+        .subtitle {
+            color: #8f6f56;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px;
+            max-width: 1400px;
+        }
+        
+        .mascot-card {
+            background: #111318;
+            border: 1px solid #2a2a35;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .mascot-card h3 {
+            color: #d97757;
+            margin-bottom: 15px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .mascot-card .dimensions {
+            color: #666;
+            font-size: 12px;
+            margin-bottom: 15px;
+        }
+        
+        pre {
+            background: #0d0d12;
+            border: 1px solid #1a1a25;
+            border-radius: 4px;
+            padding: 15px;
+            overflow-x: auto;
+            line-height: 1.2;
+            color: #d4b08c;
+            display: inline-block;
+            text-align: left;
+        }
+        
+        /* Color coding for reference */
+        .legend {
+            margin-top: 40px;
+            padding: 20px;
+            background: #111318;
+            border-radius: 8px;
+            max-width: 1400px;
+        }
+        
+        .legend h2 {
+            color: #d97757;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .legend-item {
+            display: inline-block;
+            margin-right: 30px;
+            margin-bottom: 10px;
+        }
+        
+        .color-box {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
+            vertical-align: middle;
+            border-radius: 3px;
+        }
+        
+        .beacon { background: #d97757; }
+        .shell { background: #d4b08c; }
+        .structure { background: #8f6f56; }
+        .eye-bg { background: #111318; border: 1px solid #333; }
+        .eye-fg { background: #d97757; }
+    </style>
+</head>
+<body>
+    <h1>🎭 GIZZI Mascot - Size Options</h1>
+    <p class="subtitle">All versions maintain the original proportions: beacon → antenna → head → body → legs</p>
+    
+    <div class="grid">
+        <!-- Original Full Size (14x8) -->
+        <div class="mascot-card">
+            <h3>Original Full Size</h3>
+            <p class="dimensions">14 chars wide × 8 lines</p>
+            <pre>
+      ▄▄      
+   ▄▄▄  ▄▄▄   
+ ▄██████████▄ 
+ █  ●    ●  █ 
+ █  A : / / █ 
+  ▀████████▀  
+   █ █  █ █   
+   ▀ ▀  ▀ ▀   </pre>
+        </div>
+        
+        <!-- Option 1: 12x7 (86% scale) -->
+        <div class="mascot-card">
+            <h3>Option 1: Large</h3>
+            <p class="dimensions">12 chars × 7 lines (86%)</p>
+            <pre>
+     ▄▄     
+  ▄▄▄  ▄▄▄  
+ ▄████████▄ 
+ █ ●    ● █ 
+ █ A: / / █ 
+ ▀████████▀ 
+  █ █ █ █  </pre>
+        </div>
+        
+        <!-- Option 2: 10x6 (71% scale) -->
+        <div class="mascot-card">
+            <h3>Option 2: Medium-Large</h3>
+            <p class="dimensions">10 chars × 6 lines (71%)</p>
+            <pre>
+    ▄▄    
+  ▄▄  ▄▄  
+ ▄██████▄ 
+ █ ●  ● █ 
+ █ A:/ /█ 
+ ▀██████▀ 
+   █  █   </pre>
+        </div>
+        
+        <!-- Option 3: 8x5 (57% scale) - Similar to compact but proper proportions -->
+        <div class="mascot-card">
+            <h3>Option 3: Medium</h3>
+            <p class="dimensions">8 chars × 5 lines (57%)</p>
+            <pre>
+   ▄▄   
+  ▄██▄  
+ █●  ●█ 
+ █A://█ 
+ ▀██▀▀█ 
+  █  █  </pre>
+        </div>
+        
+        <!-- Option 4: 6x4 (43% scale) -->
+        <div class="mascot-card">
+            <h3>Option 4: Small-Medium</h3>
+            <p class="dimensions">6 chars × 4 lines (43%)</p>
+            <pre>
+  ▄▄  
+ ▄██▄ 
+ █●●█ 
+ ▀██▀ </pre>
+        </div>
+        
+        <!-- Option 5: 5x3 (36% scale) -->
+        <div class="mascot-card">
+            <h3>Option 5: Small</h3>
+            <p class="dimensions">5 chars × 3 lines (36%)</p>
+            <pre>
+ ▄▄ 
+▄█▄
+▀▀▀</pre>
+        </div>
+        
+        <!-- Option 6: 4x2 (29% scale) -->
+        <div class="mascot-card">
+            <h3>Option 6: Extra Small</h3>
+            <p class="dimensions">4 chars × 2 lines (29%)</p>
+            <pre>
+▄██▄
+▀██▀</pre>
+        </div>
+        
+        <!-- Option 7: 3x2 (21% scale) -->
+        <div class="mascot-card">
+            <h3>Option 7: Tiny</h3>
+            <p class="dimensions">3 chars × 2 lines (21%)</p>
+            <pre>
+▄█▄
+▀▀▀</pre>
+        </div>
+        
+        <!-- Option 8: 2x1 (14% scale) - Icon -->
+        <div class="mascot-card">
+            <h3>Option 8: Icon</h3>
+            <p class="dimensions">2 chars × 1 line (14%)</p>
+            <pre>▗▄</pre>
+        </div>
+    </div>
+    
+    <div class="legend">
+        <h2>🎨 Color Reference</h2>
+        <div class="legend-item">
+            <span class="color-box beacon"></span>
+            <span>Beacon (coral #d97757)</span>
+        </div>
+        <div class="legend-item">
+            <span class="color-box shell"></span>
+            <span>Shell (sand #d4b08c)</span>
+        </div>
+        <div class="legend-item">
+            <span class="color-box structure"></span>
+            <span>Structure (dark sand #8f6f56)</span>
+        </div>
+        <div class="legend-item">
+            <span class="color-box eye-bg"></span>
+            <span>Eye BG (obsidian #111318)</span>
+        </div>
+        <div class="legend-item">
+            <span class="color-box eye-fg"></span>
+            <span>Eye FG (coral #d97757)</span>
+        </div>
+    </div>
+</body>
+</html>

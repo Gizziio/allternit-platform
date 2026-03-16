@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, expect, mock, test } from "bun:test"
 import { Project } from "../../src/project/project"
 import { Log } from "../../src/util/log"

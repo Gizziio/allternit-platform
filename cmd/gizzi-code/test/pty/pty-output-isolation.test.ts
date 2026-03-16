@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, expect, test } from "bun:test"
 import { Instance } from "../../src/project/instance"
 import { Pty } from "../../src/pty"

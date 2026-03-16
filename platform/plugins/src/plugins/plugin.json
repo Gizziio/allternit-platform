@@ -1,0 +1,19 @@
+{
+  "name": "counter",
+  "version": "1.0.0",
+  "description": "Simple counter plugin for demonstration",
+  "main": "counter",
+  "author": "A2R Team",
+  "license": "MIT",
+  "engines": {
+    "a2r": ">=1.0.0"
+  },
+  "capabilities": {
+    "commands": [
+      "counter.increment",
+      "counter.decrement",
+      "counter.reset",
+      "counter.get"
+    ]
+  }
+}

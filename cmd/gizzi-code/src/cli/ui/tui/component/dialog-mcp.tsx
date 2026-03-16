@@ -1,4 +1,5 @@
 import { createMemo, createSignal } from "solid-js"
+import { reconcile } from "solid-js/store"
 import { useLocal } from "@/cli/ui/tui/context/local"
 import { useSync } from "@/cli/ui/tui/context/sync"
 import { map, pipe, entries, sortBy } from "remeda"
@@ -11,6 +12,12 @@ import { GIZZICopy } from "@/shared/brand"
 import { Log } from "@/shared/util/log"
 
 const log = Log.create({ service: "tui.dialog-mcp" })
+
+// Local type definition (replaces @a2r/sdk/v2)
+interface McpStatus {
+  status: "connected" | "failed" | "disabled" | "needs_auth" | "needs_client_registration"
+  error?: unknown
+}
 
 function Status(props: { enabled: boolean; loading: boolean }) {
   const { theme } = useTheme()
@@ -30,16 +37,16 @@ export function DialogMcp() {
   const [, setRef] = createSignal<DialogSelectRef<unknown>>()
   const [loading, setLoading] = createSignal<string | null>(null)
 
-  const options = createMemo(() => {
+  const options = createMemo<DialogSelectOption<string>[]>(() => {
     // Track sync data and loading state to trigger re-render when they change
-    const mcpData = sync.data.mcp
+    const mcpData = sync.data.mcp as Record<string, McpStatus>
     const loadingMcp = loading()
 
     return pipe(
       mcpData ?? {},
       entries(),
-      sortBy(([name]) => name),
-      map(([name, status]) => ({
+      sortBy(([name]: [string, McpStatus]) => name),
+      map(([name, status]: [string, McpStatus]) => ({
         value: name,
         title: name,
         description: status.status === "failed" ? GIZZICopy.dialogs.failed : status.status,
@@ -61,9 +68,9 @@ export function DialogMcp() {
         try {
           await local.mcp.toggle(option.value)
           // Refresh MCP status from server
-          const status = await sdk.client.mcp.status()
-          if (status.data) {
-            sync.set("mcp", status.data)
+          const result = await sdk.client.mcp.status()
+          if ((result as any).data) {
+            sync.set("mcp", reconcile((result as any).data) as any)
           } else {
             log.debug("Failed to refresh MCP status: no data returned")
           }
@@ -82,7 +89,7 @@ export function DialogMcp() {
       title={GIZZICopy.dialogs.mcpsTitle}
       options={options()}
       keybind={keybinds()}
-      onSelect={(option) => {
+      onSelect={() => {
         // Don't close on select, only on escape
       }}
     />

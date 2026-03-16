@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.a2rchitech.capsule-runtime</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/python3</string>
+        <string>src/main.py</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>{{WORKING_DIR}}/.logs/capsule-runtime.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>{{WORKING_DIR}}/.logs/capsule-runtime.err.log</string>
+    <key>WorkingDirectory</key>
+    <string>{{WORKING_DIR}}/4-services/runtime/capsule-runtime</string>
+</dict>
+</plist>

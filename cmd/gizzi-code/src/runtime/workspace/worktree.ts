@@ -6,13 +6,9 @@ import { NamedError } from "@a2r/util/error"
 import { Global } from "@/runtime/context/global"
 import { Instance } from "@/runtime/context/project/instance"
 import { InstanceBootstrap } from "@/runtime/context/project/bootstrap"
-import { Project } from "@/runtime/context/project/project"
-import { Database, eq } from "@/runtime/session/storage/db"
-import { ProjectTable } from "@/runtime/context/project/project.sql"
 import { fn } from "@/shared/util/fn"
 import { Log } from "@/shared/util/log"
 import { BusEvent } from "@/shared/bus/bus-event"
-import { GlobalBus } from "@/shared/bus/global"
 
 export namespace Worktree {
   const log = Log.create({ service: "worktree" })
@@ -78,10 +74,11 @@ export namespace Worktree {
   }
 
   export const create = fn(
-    async (input: CreateInput): Promise<Info> => {
+    CreateInput,
+    async (input): Promise<Info> => {
       await initRoot()
-      const branch = input.branch || (await Vcs.branch())
-      const name = input.name || `wt-${Date.now()}`
+      const branch: string = input.branch || (await Vcs.branch()) || "main"
+      const name: string = input.name || `wt-${Date.now()}`
       const directory = path.join(Path.root, name)
 
       log.info("creating worktree", { name, branch, directory })
@@ -108,13 +105,11 @@ export namespace Worktree {
         throw error
       }
     },
-    {
-      name: "Worktree.create",
-    },
   )
 
   export const list = fn(
-    async (input: ListInput = {}): Promise<Info[]> => {
+    ListInput,
+    async (input): Promise<Info[]> => {
       await initRoot()
       const entries = await fs.readdir(Path.root, { withFileTypes: true })
       const result: Info[] = []
@@ -127,7 +122,7 @@ export namespace Worktree {
             .quiet()
             .cwd(directory)
             .text()
-            .then((x) => x.trim())
+            .then((x: string) => x.trim())
           result.push({ name: entry.name, branch, directory })
         } catch {
           // Not a git repo or directory removed
@@ -136,13 +131,11 @@ export namespace Worktree {
 
       return result
     },
-    {
-      name: "Worktree.list",
-    },
   )
 
   export const remove = fn(
-    async (input: RemoveInput): Promise<void> => {
+    RemoveInput,
+    async (input): Promise<void> => {
       const directory = path.join(Path.root, input.name)
       log.info("removing worktree", { name: input.name, directory })
 
@@ -153,9 +146,6 @@ export namespace Worktree {
         log.error("failed to remove worktree", { name: input.name, error })
         throw error
       }
-    },
-    {
-      name: "Worktree.remove",
     },
   )
 }

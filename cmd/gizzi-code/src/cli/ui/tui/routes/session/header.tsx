@@ -1,10 +1,28 @@
+
 import { type Accessor, createMemo, createSignal, Match, Show, Switch } from "solid-js"
 import { useRouteData } from "@/cli/ui/tui/context/route"
 import { useSync } from "@/cli/ui/tui/context/sync"
 import { pipe, sumBy } from "remeda"
 import { useTheme } from "@/cli/ui/tui/context/theme"
 import { SplitBorder } from "@/cli/ui/tui/component/border"
-import type { AssistantMessage } from "@a2r/sdk/v2"
+
+// Local type definition (replaces @a2r/sdk/v2)
+interface AssistantMessage {
+  role: "assistant"
+  id: string
+  providerID: string
+  modelID: string
+  cost: number
+  tokens: {
+    input: number
+    output: number
+    reasoning: number
+    cache: {
+      read: number
+      write: number
+    }
+  }
+}
 import { useCommandDialog } from "@/cli/ui/tui/component/dialog-command"
 import { useKeybind } from "@/cli/ui/tui/context/keybind"
 import { useTerminalDimensions } from "@opentui/solid"
@@ -31,13 +49,13 @@ const ContextInfo = (props: { context: Accessor<string | undefined>; cost: Acces
 export function Header() {
   const route = useRouteData("session")
   const sync = useSync()
-  const session = createMemo(() => sync.session.get(route.sessionID)!)
+  const session = createMemo(() => (sync as any).session.get(route.sessionID)!)
   const messages = createMemo(() => sync.data.message[route.sessionID] ?? [])
 
   const cost = createMemo(() => {
     const total = pipe(
-      messages(),
-      sumBy((x) => (x.role === "assistant" ? x.cost : 0)),
+      messages() as any[],
+      sumBy((x: any) => (x.role === "assistant" ? x.cost : 0)),
     )
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -46,11 +64,11 @@ export function Header() {
   })
 
   const context = createMemo(() => {
-    const last = messages().findLast((x) => x.role === "assistant" && x.tokens.output > 0) as AssistantMessage
+    const last = messages().findLast((x: any) => x.role === "assistant" && x.tokens.output > 0) as unknown as AssistantMessage
     if (!last) return
     const total =
       last.tokens.input + last.tokens.output + last.tokens.reasoning + last.tokens.cache.read + last.tokens.cache.write
-    const model = sync.data.provider.find((x) => x.id === last.providerID)?.models[last.modelID]
+    const model = (sync.data.provider as any[]).find((x: any) => x.id === last.providerID)?.models[last.modelID]
     let result = total.toLocaleString()
     if (model?.limit.context) {
       result += "  " + Math.round((total / model.limit.context) * 100) + "%"

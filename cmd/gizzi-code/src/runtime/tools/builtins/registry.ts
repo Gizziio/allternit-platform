@@ -13,6 +13,8 @@ import { WriteTool } from "@/runtime/tools/builtins/write"
 import { InvalidTool } from "@/runtime/tools/builtins/invalid"
 import { SkillTool } from "@/runtime/tools/builtins/skill"
 import { AgentCommunicateTool } from "@/runtime/tools/builtins/agent-communicate"
+import { ListTool } from "@/runtime/tools/builtins/ls"
+import { MultiEditTool } from "@/runtime/tools/builtins/multiedit"
 import type { Agent } from "@/runtime/loop/agent"
 import { Tool } from "@/runtime/tools/builtins/tool"
 import { Instance } from "@/runtime/context/project/instance"
@@ -26,10 +28,13 @@ import { CodeSearchTool } from "@/runtime/tools/builtins/codesearch"
 import { Flag } from "@/runtime/context/flag/flag"
 import { Log } from "@/shared/util/log"
 import { LspTool } from "@/runtime/tools/builtins/lsp"
+import { BrowserTool } from "@/runtime/tools/builtins/browser"
 import { Truncate } from "@/runtime/tools/builtins/truncation"
 import { PlanExitTool, PlanEnterTool } from "@/runtime/tools/builtins/plan"
 import { ApplyPatchTool } from "@/runtime/tools/builtins/apply_patch"
 import { NotebookEditTool } from "@/runtime/tools/builtins/notebook"
+import { MemoryWriteTool } from "@/runtime/tools/builtins/memory-write"
+import { MemoryRecallTool } from "@/runtime/tools/builtins/memory-recall"
 import { Glob } from "@/shared/util/glob"
 
 export namespace ToolRegistry {
@@ -110,20 +115,24 @@ export namespace ToolRegistry {
       ReadTool,
       GlobTool,
       GrepTool,
+      ListTool,
       EditTool,
+      MultiEditTool,
       WriteTool,
       TaskTool,
       WebFetchTool,
       TodoWriteTool,
-      // TodoReadTool,
       WebSearchTool,
       CodeSearchTool,
       SkillTool,
       ApplyPatchTool,
       NotebookEditTool,
+      MemoryWriteTool,
+      MemoryRecallTool,
       ...(Flag.GIZZI_EXPERIMENTAL_LSP_TOOL ? [LspTool] : []),
       ...(config.experimental?.batch_tool === true ? [BatchTool] : []),
-      ...(Flag.GIZZI_EXPERIMENTAL_PLAN_MODE && Flag.GIZZI_CLIENT === "cli" ? [PlanExitTool, PlanEnterTool] : []),
+      ...(Flag.GIZZI_CLIENT === "cli" ? [PlanExitTool, PlanEnterTool] : []),
+      ...(Flag.GIZZI_ENABLE_BROWSER_TOOL ? [BrowserTool] : []),
       ...custom,
     ]
   }
@@ -143,16 +152,11 @@ export namespace ToolRegistry {
     const result = await Promise.all(
       tools
         .filter((t) => {
-          // Enable websearch/codesearch for zen users OR via enable flag
-          if (t.id === "codesearch" || t.id === "websearch") {
-            return model.providerID === "gizzi" || Flag.GIZZI_ENABLE_EXA
-          }
-
           // use apply tool in same format as codex
           const usePatch =
             model.modelID.includes("gpt-") && !model.modelID.includes("oss") && !model.modelID.includes("gpt-4")
           if (t.id === "apply_patch") return usePatch
-          if (t.id === "edit" || t.id === "write") return !usePatch
+          if (t.id === "edit" || t.id === "write" || t.id === "multiedit") return !usePatch
 
           return true
         })

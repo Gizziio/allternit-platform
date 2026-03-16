@@ -1,3 +1,4 @@
+
 import yargs from "yargs"
 import { hideBin } from "yargs/helpers"
 import { RunCommand } from "@/cli/commands/run"
@@ -37,11 +38,21 @@ import { AgentHubCommand } from "@/cli/commands/agent-hub"
 import { AcCommand } from "@/cli/commands/ac"
 import { CoworkCommand } from "@/cli/commands/cowork"
 import { AgentCommand } from "@/cli/commands/agent"
+import { ProviderCommand } from "@/cli/commands/provider"
 import path from "path"
 import { Global } from "@/runtime/context/global"
 import { JsonMigration } from "@/runtime/session/storage/json-migration"
 import { Database } from "@/runtime/session/storage/db"
-import { ResolveMessage } from "bun"
+// ResolveMessage is a global class from bun-types
+declare class ResolveMessage {
+  readonly name: "ResolveMessage"
+  readonly position: { line: number; column: number } | null
+  readonly code: string
+  readonly message: string
+  readonly referrer: string
+  readonly specifier: string
+  readonly importKind: "entry_point" | "stmt" | "require" | "import" | "dynamic" | "require_resolve"
+}
 
 process.on("unhandledRejection", (e) => {
   Log.Default.error("rejection", {
@@ -140,6 +151,7 @@ const cli = yargs(hideBin(process.argv))
   .command(AcCommand)
   .command(CoworkCommand)
   .command(AgentCommand)
+  .command(ProviderCommand)
   .fail((msg, err) => {
     if (
       msg?.startsWith("Unknown argument") ||
@@ -200,3 +212,11 @@ try {
   // Explicitly exit to avoid any hanging subprocesses.
   process.exit()
 }
+// Sat Mar 14 17:36:51 CDT 2026
+// force recompile Sat Mar 14 17:51:09 CDT 2026
+// force recompile Sat Mar 14 17:52:07 CDT 2026
+// force recompile Sat Mar 14 21:34:16 CDT 2026
+// force Sat Mar 14 21:39:31 CDT 2026
+// force Sat Mar 14 21:39:52 CDT 2026
+// force recompile Sat Mar 14 21:40:25 CDT 2026
+// force Sat Mar 14 21:47:35 CDT 2026

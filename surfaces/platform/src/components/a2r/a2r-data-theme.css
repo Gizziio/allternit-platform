@@ -1,0 +1,458 @@
+/**
+ * A2R Data Theme
+ * 
+ * Custom theme overrides for AG-Grid to match A2R design system.
+ */
+
+/* ===== AG-Grid A2R Theme ===== */
+.ag-theme-a2r {
+  /* Core colors */
+  --ag-background-color: #1a1a1a;
+  --ag-foreground-color: #ECECEC;
+  --ag-border-color: #333;
+  
+  /* Header */
+  --ag-header-background-color: #1e1e1e;
+  --ag-header-foreground-color: #D4956A; /* A2R accent */
+  --ag-header-cell-hover-background-color: #2a2a2a;
+  
+  /* Rows */
+  --ag-row-hover-color: rgba(212, 149, 106, 0.08);
+  --ag-selected-row-background-color: rgba(212, 149, 106, 0.15);
+  --ag-odd-row-background-color: #1a1a1a;
+  --ag-even-row-background-color: #1a1a1a;
+  
+  /* Cells */
+  --ag-cell-horizontal-padding: 12px;
+  --ag-cell-vertical-padding: 8px;
+  --ag-cell-focus-border: 1px solid #D4956A;
+  
+  /* Inputs */
+  --ag-input-focus-border-color: #D4956A;
+  --ag-input-focus-box-shadow: 0 0 0 2px rgba(212, 149, 106, 0.2);
+  
+  /* Scrollbars */
+  --ag-scrollbar-background: transparent;
+  --ag-scrollbar-thumb: #333;
+  --ag-scrollbar-thumb-hover: #444;
+  
+  /* Fonts */
+  --ag-font-family: 'Inter', system-ui, sans-serif;
+  --ag-font-size: 13px;
+  
+  /* Tooltips */
+  --ag-tooltip-background-color: #242424;
+  --ag-tooltip-border-color: #333;
+  --ag-tooltip-border-radius: 6px;
+  --ag-tooltip-padding: 8px 12px;
+  --ag-tooltip-foreground-color: #ECECEC;
+  
+  /* Filters */
+  --ag-filter-tool-panel-group-indent: 16px;
+  --ag-row-group-indent-size: 16px;
+  
+  /* Checkbox */
+  --ag-checkbox-checked-color: #D4956A;
+  --ag-checkbox-unchecked-color: #444;
+  --ag-checkbox-background-color: transparent;
+  --ag-checkbox-border-radius: 4px;
+  
+  /* Range selection */
+  --ag-range-selection-border-color: #D4956A;
+  --ag-range-selection-background-color: rgba(212, 149, 106, 0.15);
+  
+  /* Side panels */
+  --ag-side-button-selected-background-color: rgba(212, 149, 106, 0.15);
+  --ag-side-button-selected-border-color: #D4956A;
+  
+  /* Modal/popups */
+  --ag-modal-overlay-background-color: rgba(0, 0, 0, 0.6);
+  
+  /* General */
+  --ag-border-radius: 6px;
+  --ag-header-column-resize-handle-color: #444;
+  --ag-header-column-resize-handle-width: 2px;
+  --ag-header-column-resize-handle-height: 30%;
+}
+
+/* ===== Grid Container ===== */
+.ag-theme-a2r .ag-root-wrapper {
+  border: none;
+  background: var(--ag-background-color);
+}
+
+/* ===== Header ===== */
+.ag-theme-a2r .ag-header {
+  background: var(--ag-header-background-color);
+  border-bottom: 1px solid var(--ag-border-color);
+}
+
+.ag-theme-a2r .ag-header-cell {
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0 var(--ag-cell-horizontal-padding);
+}
+
+.ag-theme-a2r .ag-header-cell-text {
+  color: var(--ag-header-foreground-color);
+}
+
+.ag-theme-a2r .ag-header-cell:hover {
+  background: var(--ag-header-cell-hover-background-color);
+}
+
+.ag-theme-a2r .ag-header-icon {
+  color: var(--ag-header-foreground-color);
+}
+
+/* Header resize handle */
+.ag-theme-a2r .ag-header-cell-resize::after {
+  background: var(--ag-header-column-resize-handle-color);
+  width: var(--ag-header-column-resize-handle-width);
+  height: var(--ag-header-column-resize-handle-height);
+  top: 35%;
+}
+
+/* ===== Rows ===== */
+.ag-theme-a2r .ag-row {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  transition: background-color 0.15s ease;
+}
+
+.ag-theme-a2r .ag-row:hover {
+  background: var(--ag-row-hover-color) !important;
+}
+
+.ag-theme-a2r .ag-row-selected {
+  background: var(--ag-selected-row-background-color) !important;
+}
+
+.ag-theme-a2r .ag-row-odd {
+  background: #1a1a1a;
+}
+
+.ag-theme-a2r .ag-row-even {
+  background: #1a1a1a;
+}
+
+/* ===== Cells ===== */
+.ag-theme-a2r .ag-cell {
+  color: #b8b8b8;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: var(--ag-cell-vertical-padding) var(--ag-cell-horizontal-padding);
+  border-right: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.ag-theme-a2r .ag-cell:focus {
+  outline: none;
+  border: var(--ag-cell-focus-border);
+}
+
+.ag-theme-a2r .ag-cell-inline-editing {
+  background: #242424 !important;
+  color: #ECECEC;
+  padding: 4px 8px;
+}
+
+.ag-theme-a2r .ag-cell-inline-editing input {
+  background: transparent;
+  border: 1px solid #D4956A;
+  color: #ECECEC;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+/* ===== Row Numbers ===== */
+.ag-theme-a2r .ag-row-number-cell {
+  color: #555;
+  font-size: 11px;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* ===== Selection Checkboxes ===== */
+.ag-theme-a2r .ag-selection-checkbox {
+  margin-right: 8px;
+}
+
+.ag-theme-a2r .ag-checkbox-input-wrapper {
+  border-radius: 4px;
+  border: 1px solid #444;
+  background: transparent;
+  width: 16px;
+  height: 16px;
+}
+
+.ag-theme-a2r .ag-checkbox-input-wrapper.ag-checked {
+  background: var(--ag-checkbox-checked-color);
+  border-color: var(--ag-checkbox-checked-color);
+}
+
+.ag-theme-a2r .ag-checkbox-input-wrapper.ag-checked::after {
+  color: #1a1a1a;
+  font-size: 11px;
+}
+
+/* ===== Sort Icons ===== */
+.ag-theme-a2r .ag-sort-indicator-icon {
+  color: #D4956A;
+  opacity: 0.8;
+}
+
+.ag-theme-a2r .ag-sort-indicator-container:hover .ag-sort-indicator-icon {
+  opacity: 1;
+}
+
+/* ===== Filter Icons ===== */
+.ag-theme-a2r .ag-filter-icon {
+  color: #666;
+}
+
+.ag-theme-a2r .ag-filter-active .ag-filter-icon {
+  color: #D4956A;
+}
+
+/* ===== Menu / Dropdowns ===== */
+.ag-theme-a2r .ag-menu {
+  background: #242424;
+  border: 1px solid #333;
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+}
+
+.ag-theme-a2r .ag-menu-option {
+  color: #ECECEC;
+  padding: 8px 12px;
+}
+
+.ag-theme-a2r .ag-menu-option:hover {
+  background: rgba(212, 149, 106, 0.1);
+}
+
+.ag-theme-a2r .ag-menu-option-active {
+  background: rgba(212, 149, 106, 0.15) !important;
+}
+
+.ag-theme-a2r .ag-menu-separator {
+  border-top: 1px solid #333;
+  margin: 4px 0;
+}
+
+/* ===== Tool Panels (Columns, Filters) ===== */
+.ag-theme-a2r .ag-tool-panel-wrapper {
+  background: #1e1e1e;
+  border-left: 1px solid #333;
+}
+
+.ag-theme-a2r .ag-tool-panel-header {
+  background: #242424;
+  border-bottom: 1px solid #333;
+  color: #ECECEC;
+  padding: 12px;
+  font-weight: 600;
+}
+
+.ag-theme-a2r .ag-column-select-header {
+  background: #1e1e1e;
+  border-bottom: 1px solid #333;
+  padding: 8px 12px;
+}
+
+.ag-theme-a2r .ag-column-select-column {
+  color: #b8b8b8;
+  padding: 6px 12px;
+}
+
+.ag-theme-a2r .ag-column-select-column:hover {
+  background: rgba(255, 255, 255, 0.03);
+  color: #ECECEC;
+}
+
+/* ===== Pagination ===== */
+.ag-theme-a2r .ag-paging-panel {
+  background: #1e1e1e;
+  border-top: 1px solid #333;
+  color: #888;
+  padding: 8px 12px;
+}
+
+.ag-theme-a2r .ag-paging-button {
+  background: transparent;
+  border: 1px solid #333;
+  color: #888;
+  border-radius: 4px;
+  padding: 4px 8px;
+  margin: 0 2px;
+}
+
+.ag-theme-a2r .ag-paging-button:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #ECECEC;
+  border-color: #444;
+}
+
+.ag-theme-a2r .ag-paging-button.ag-disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.ag-theme-a2r .ag-paging-row-summary-panel {
+  color: #666;
+}
+
+.ag-theme-a2r .ag-paging-page-summary-panel {
+  color: #888;
+}
+
+/* ===== Scrollbars ===== */
+.ag-theme-a2r ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.ag-theme-a2r ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ag-theme-a2r ::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 4px;
+}
+
+.ag-theme-a2r ::-webkit-scrollbar-thumb:hover {
+  background: #444;
+}
+
+.ag-theme-a2r ::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ===== Range Selection ===== */
+.ag-theme-a2r .ag-cell-range-selected {
+  background: rgba(212, 149, 106, 0.2) !important;
+  border: 1px solid #D4956A !important;
+}
+
+.ag-theme-a2r .ag-cell-range-selected-1:not(.ag-cell-focus) {
+  background: rgba(212, 149, 106, 0.15);
+}
+
+.ag-theme-a2r .ag-cell-range-selected-2:not(.ag-cell-focus) {
+  background: rgba(212, 149, 106, 0.2);
+}
+
+.ag-theme-a2r .ag-cell-range-selected-3:not(.ag-cell-focus) {
+  background: rgba(212, 149, 106, 0.25);
+}
+
+.ag-theme-a2r .ag-cell-range-selected-4:not(.ag-cell-focus) {
+  background: rgba(212, 149, 106, 0.3);
+}
+
+/* ===== Floating Filter ===== */
+.ag-theme-a2r .ag-floating-filter {
+  background: #242424;
+  border-top: 1px solid #333;
+}
+
+.ag-theme-a2r .ag-floating-filter input {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: #ECECEC;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.ag-theme-a2r .ag-floating-filter input:focus {
+  border-color: #D4956A;
+  outline: none;
+}
+
+.ag-theme-a2r .ag-floating-filter-button {
+  color: #666;
+}
+
+.ag-theme-a2r .ag-floating-filter-button:hover {
+  color: #D4956A;
+}
+
+/* ===== Loading Overlay ===== */
+.ag-theme-a2r .ag-overlay-loading-wrapper {
+  background: rgba(26, 26, 26, 0.9);
+}
+
+.ag-theme-a2r .ag-loading {
+  color: #888;
+  font-size: 14px;
+}
+
+/* ===== No Rows Overlay ===== */
+.ag-theme-a2r .ag-overlay-no-rows-wrapper {
+  background: transparent;
+}
+
+.ag-theme-a2r .ag-overlay-no-rows-center {
+  color: #555;
+  font-size: 14px;
+}
+
+/* ===== Context Menu ===== */
+.ag-theme-a2r .ag-context-menu {
+  background: #242424;
+  border: 1px solid #333;
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* ===== Drag and Drop ===== */
+.ag-theme-a2r .ag-row-drag {
+  color: #444;
+  cursor: grab;
+}
+
+.ag-theme-a2r .ag-row-drag:hover {
+  color: #666;
+}
+
+.ag-theme-a2r .ag-row-dragging {
+  opacity: 0.5;
+}
+
+.ag-theme-a2r .ag-row-drag ghost {
+  background: #242424;
+  border: 1px solid #D4956A;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* ===== Tooltip ===== */
+.ag-theme-a2r .ag-tooltip {
+  background: #242424;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #ECECEC;
+  padding: 8px 12px;
+  font-size: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+/* ===== Status Bar (if used) ===== */
+.ag-theme-a2r .ag-status-bar {
+  background: #1e1e1e;
+  border-top: 1px solid #333;
+  color: #666;
+  padding: 8px 12px;
+}
+
+.ag-theme-a2r .ag-status-bar-item {
+  color: #888;
+}
+
+.ag-theme-a2r .ag-status-bar-value {
+  color: #ECECEC;
+  font-weight: 600;
+}

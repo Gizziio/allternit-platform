@@ -72,7 +72,8 @@ export const McpRoutes = lazy(() =>
       validator("json", z.any()),
       async (c) => {
         const input = c.req.valid("json") as any
-        const status = await MCP.add(input)
+        const { name, ...config } = input
+        const status = await MCP.add(name, config)
         return c.json(status)
       },
     )
@@ -97,7 +98,7 @@ export const McpRoutes = lazy(() =>
       validator("param", z.any()),
       async (c) => {
         const { name } = c.req.valid("param") as any
-        await MCP.remove(name)
+        await MCP.disconnect(name)
         return c.json(true)
       },
     ),

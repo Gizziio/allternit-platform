@@ -6,7 +6,8 @@
  */
 
 import { Log } from "@/shared/util/log";
-import { VerificationOrchestrator, type OrchestratedVerificationResult } from "./index";
+import { VerificationOrchestrator } from "./verifiers";
+import type { OrchestratedVerificationResult } from "./types";
 import * as fs from "fs/promises";
 import * as path from "path";
 

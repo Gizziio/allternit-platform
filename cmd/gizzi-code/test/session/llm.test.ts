@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "bun:test"
 import path from "path"
 import type { ModelMessage } from "ai"

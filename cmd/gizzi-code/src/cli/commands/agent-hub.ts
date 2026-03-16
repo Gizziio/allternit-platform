@@ -20,6 +20,7 @@ import { bootstrap } from "@/cli/bootstrap"
 import * as prompts from "@clack/prompts"
 import { SPECIALIST_TEMPLATES, getTemplateById, createAgentFromTemplate } from "@/lib/agents/agent-templates.specialist"
 import type { SpecialistTemplate, AgentCategory } from "@/lib/agents/agent-templates.specialist"
+import { AgentManager } from "@/runtime/loop/manager"
 import { writeFileSync, readFileSync, existsSync } from "fs"
 import path from "path"
 
@@ -42,7 +43,7 @@ export const AgentHubCommand = cmd({
   },
   async handler() {
     // Default to interactive mode
-    await AgentHubInteractiveCommand.handler()
+    await AgentHubInteractiveCommand.handler!({} as any)
   },
 })
 
@@ -159,7 +160,7 @@ export const AgentHubCreateCommand = cmd({
       const agentName = (args.name as string) || template.name
 
       if (args.json) {
-        const config = createAgentFromTemplate(template.id, { name: agentName })
+        const config = createAgentFromTemplate(template.id)
         process.stdout.write(JSON.stringify(config, null, 2) + "\n")
         return
       }
@@ -174,18 +175,27 @@ export const AgentHubCreateCommand = cmd({
         return
       }
 
-      // Create agent configuration
-      const config = createAgentFromTemplate(template.id, { name: agentName })
-      
-      // TODO: Integrate with actual agent creation API
-      // For now, save config to file
-      const outputDir = (args.output as string) || process.cwd()
-      const outputFile = path.join(outputDir, `${agentName.toLowerCase().replace(/\s+/g, "-")}-agent.json`)
-      
-      writeFileSync(outputFile, JSON.stringify(config, null, 2))
-      
-      prompts.log.success(`Agent configuration saved to: ${outputFile}`)
-      prompts.outro("Next: Import this config into your agent system")
+      const config = createAgentFromTemplate(template.id)
+
+      try {
+        const agent = await AgentManager.create({
+          name: agentName as string,
+          description: config.description,
+          prompt: config.instructions || undefined,
+          model: config.model,
+          mode: template.agentConfig.mode,
+        })
+        prompts.log.success(`Agent "${agent.name}" created successfully`)
+        prompts.outro(`Run: gizzi-code agent ${agent.name}`)
+      } catch (err) {
+        // Fallback: save config file if API unavailable
+        const outputDir = (args.output as string) || process.cwd()
+        const outputFile = path.join(outputDir, `${agentName.toLowerCase().replace(/\s+/g, "-")}-agent.json`)
+        writeFileSync(outputFile, JSON.stringify(config, null, 2))
+        prompts.log.warn(`Could not register agent via API: ${err instanceof Error ? err.message : err}`)
+        prompts.log.success(`Agent configuration saved to: ${outputFile}`)
+        prompts.outro("Run 'gizzi-code agent-hub import' to register it when the server is running")
+      }
     })
   },
 })
@@ -215,10 +225,14 @@ export const AgentHubExportCommand = cmd({
       const agentId = args.agentId as string
       const outputFile = (args.output as string) || `agent-${agentId}.json`
 
-      // TODO: Fetch agent from API
-      // For now, this is a placeholder
-      prompts.log.warn("Agent export requires backend integration")
-      prompts.outro("This feature will be available after API integration")
+      const agent = await AgentManager.get(agentId)
+      if (!agent) {
+        prompts.log.error(`Agent not found: ${agentId}`)
+        process.exit(1)
+      }
+
+      writeFileSync(outputFile, JSON.stringify(agent, null, 2))
+      prompts.log.success(`Agent "${agent.name}" exported to: ${outputFile}`)
     })
   },
 })
@@ -249,12 +263,24 @@ export const AgentHubImportCommand = cmd({
 
       try {
         const config = JSON.parse(readFileSync(inputFile, "utf-8"))
-        
+
         prompts.intro(`Importing agent: ${config.name || "Unknown"}`)
-        
-        // TODO: Validate config and create agent via API
-        prompts.log.warn("Agent import requires backend integration")
-        prompts.outro("This feature will be available after API integration")
+
+        if (!config.name) {
+          prompts.log.error("Agent config is missing required 'name' field")
+          process.exit(1)
+        }
+
+        const validModes = ["subagent", "primary", "all"] as const
+        const agent = await AgentManager.create({
+          name: config.name,
+          description: config.description,
+          prompt: config.prompt,
+          model: config.model,
+          mode: validModes.includes(config.mode) ? config.mode : "primary",
+        })
+        prompts.log.success(`Agent "${agent.name}" imported successfully`)
+        prompts.outro(`Run: gizzi-code agent ${agent.name}`)
       } catch (error) {
         prompts.log.error(`Failed to parse agent file: ${error}`)
         process.exit(1)
@@ -268,7 +294,7 @@ export const AgentHubImportCommand = cmd({
 // ============================================================================
 
 export const AgentHubInteractiveCommand = cmd({
-  command: "*",
+  command: "$0",
   describe: false,
   handler: async () => {
     await bootstrap(process.cwd(), async () => {
@@ -324,7 +350,7 @@ export const AgentHubInteractiveCommand = cmd({
       prompts.note(
         `${template.longDescription}\n\n` +
         `Success Metrics:\n` +
-        template.successMetrics.slice(0, 2).map(m => `  • ${m.name}: ${m.target}`).join("\n") +
+        template.successMetrics.slice(0, 2).map((m: any) => `  • ${m.name}: ${m.target}`).join("\n") +
         `\n\nExample: "${template.exampleInvocation}"`,
         template.name,
       )
@@ -332,7 +358,7 @@ export const AgentHubInteractiveCommand = cmd({
       // Step 4: Confirm creation
       const agentName = await prompts.text({
         message: "Agent name",
-        defaultValue: template.name,
+        initialValue: template.name,
       })
 
       if (prompts.isCancel(agentName)) {
@@ -350,7 +376,7 @@ export const AgentHubInteractiveCommand = cmd({
       }
 
       // Create agent config
-      const config = createAgentFromTemplate(template.id, { name: agentName as string })
+      const config = createAgentFromTemplate(template.id)
       
       // Save to file
       const outputFile = path.join(process.cwd(), `${(agentName as string).toLowerCase().replace(/\s+/g, "-")}-agent.json`)

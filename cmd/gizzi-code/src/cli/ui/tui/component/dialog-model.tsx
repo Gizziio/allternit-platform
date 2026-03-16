@@ -1,8 +1,8 @@
-import { createMemo, createSignal } from "solid-js"
+import { createMemo, createSignal, type JSX } from "solid-js"
 import { useLocal } from "@/cli/ui/tui/context/local"
 import { useSync } from "@/cli/ui/tui/context/sync"
 import { map, pipe, flatMap, entries, filter, sortBy, take } from "remeda"
-import { DialogSelect } from "@/cli/ui/tui/ui/dialog-select"
+import { DialogSelect, type DialogSelectOption } from "@/cli/ui/tui/ui/dialog-select"
 import { useDialog } from "@/cli/ui/tui/ui/dialog"
 import { createDialogProviderOptions, DialogProvider } from "@/cli/ui/tui/component/dialog-provider"
 import { useKeybind } from "@/cli/ui/tui/context/keybind"
@@ -10,10 +10,33 @@ import * as fuzzysort from "fuzzysort"
 import { GIZZICopy } from "@/shared/brand"
 import { blockedModelReason } from "@/shared/util/model-safety"
 
+interface ModelValue {
+  providerID: string
+  modelID: string
+}
+
+interface FavoriteItem {
+  providerID: string
+  modelID: string
+}
+
+interface ProviderModel {
+  id: string
+  name: string
+  status?: string
+  cost?: { input: number; output?: number }
+}
+
+interface ProviderInfo {
+  id: string
+  name: string
+  models: Record<string, ProviderModel>
+}
+
 export function useConnected() {
   const sync = useSync()
   return createMemo(() =>
-    sync.data.provider_next.connected.length > 0,
+    ((sync.data.provider_next as any)?.connected?.length ?? 0) > 0,
   )
 }
 
@@ -29,16 +52,18 @@ export function DialogModel(props: { providerID?: string }) {
 
   const showExtra = createMemo(() => connected() && !props.providerID)
 
-  const options = createMemo(() => {
+  const providerNext = createMemo<any>(() => sync.data.provider_next)
+
+  const options = createMemo<DialogSelectOption<ModelValue>[]>(() => {
     const needle = query().trim()
     const showSections = showExtra() && needle.length === 0
     const favorites = connected() ? local.model.favorite() : []
     const recents = local.model.recent()
 
-    function toOptions(items: typeof favorites, category: string) {
+    function toOptions(items: FavoriteItem[], category: string): DialogSelectOption<ModelValue>[] {
       if (!showSections) return []
       return items.flatMap((item) => {
-        const provider = sync.data.provider_next.all.find((x) => x.id === item.providerID)
+        const provider = (providerNext()?.all as ProviderInfo[] | undefined)?.find((x) => x.id === item.providerID)
         if (!provider) return []
         const model = provider.models[item.modelID]
         if (!model) return []
@@ -49,7 +74,7 @@ export function DialogModel(props: { providerID?: string }) {
         })
         return [
           {
-            key: item,
+            key: `${item.providerID}/${item.modelID}`,
             value: { providerID: provider.id, modelID: model.id },
             title: model.name ?? item.modelID,
             description: provider.name,
@@ -57,7 +82,7 @@ export function DialogModel(props: { providerID?: string }) {
             disabled: !!blockedReason,
             footer: blockedReason
               ? GIZZICopy.model.blockedModelHint
-              : model.cost?.input === 0 && (provider.id === "gizzi" || provider.id === "gizzi")
+              : model.cost?.input === 0 && provider.id === "gizzi"
                 ? GIZZICopy.dialog.free
                 : undefined,
             onSelect: () => {
@@ -77,19 +102,19 @@ export function DialogModel(props: { providerID?: string }) {
       GIZZICopy.dialog.recent,
     )
 
-    const providerOptions = pipe(
-      sync.data.provider_next.all,
+    const providerOptions: DialogSelectOption<ModelValue>[] = pipe(
+      (providerNext()?.all as ProviderInfo[] | undefined) ?? [],
       sortBy(
-        (provider) => provider.id !== "gizzi" && provider.id !== "gizzi",
-        (provider) => provider.name,
+        (provider: ProviderInfo) => provider.id !== "gizzi",
+        (provider: ProviderInfo) => provider.name,
       ),
-      flatMap((provider) =>
+      flatMap((provider: ProviderInfo) =>
         pipe(
           provider.models,
           entries(),
           filter(([_, info]) => info.status !== "deprecated"),
           filter(() => (props.providerID ? provider.id === props.providerID : true)),
-          map(([model, info]) => {
+          map(([model, info]: [string, ProviderModel]) => {
             const blockedReason = blockedModelReason({
               providerID: provider.id,
               modelID: model,
@@ -105,7 +130,7 @@ export function DialogModel(props: { providerID?: string }) {
               disabled: !!blockedReason,
               footer: blockedReason
                 ? GIZZICopy.model.blockedModelHint
-                : info.cost?.input === 0 && (provider.id === "gizzi" || provider.id === "gizzi")
+                : info.cost?.input === 0 && provider.id === "gizzi"
                   ? GIZZICopy.dialog.free
                   : undefined,
               onSelect() {
@@ -114,7 +139,7 @@ export function DialogModel(props: { providerID?: string }) {
               },
             }
           }),
-          filter((x) => {
+          filter((x: DialogSelectOption<ModelValue>) => {
             if (!showSections) return true
             if (favorites.some((item) => item.providerID === x.value.providerID && item.modelID === x.value.modelID))
               return false
@@ -123,14 +148,14 @@ export function DialogModel(props: { providerID?: string }) {
             return true
           }),
           sortBy(
-            (x) => x.footer !== GIZZICopy.dialog.free,
-            (x) => x.title,
+            (x: DialogSelectOption<ModelValue>) => x.footer !== GIZZICopy.dialog.free,
+            (x: DialogSelectOption<ModelValue>) => x.title,
           ),
         ),
       ),
     )
 
-    const popularProviders = !connected()
+    const popularProviders: DialogSelectOption<string>[] = !connected()
       ? pipe(
           providers(),
           map((option) => ({
@@ -144,21 +169,21 @@ export function DialogModel(props: { providerID?: string }) {
     if (needle) {
       return [
         ...fuzzysort.go(needle, providerOptions, { keys: ["title", "category"] }).map((x) => x.obj),
-        ...fuzzysort.go(needle, popularProviders, { keys: ["title"] }).map((x) => x.obj),
+        ...fuzzysort.go(needle, popularProviders as unknown as DialogSelectOption<ModelValue>[], { keys: ["title"] }).map((x) => x.obj),
       ]
     }
 
-    return [...favoriteOptions, ...recentOptions, ...providerOptions, ...popularProviders]
+    return [...favoriteOptions, ...recentOptions, ...providerOptions, ...(popularProviders as unknown as DialogSelectOption<ModelValue>[])]
   })
 
   const provider = createMemo(() =>
-    props.providerID ? sync.data.provider_next.all.find((x) => x.id === props.providerID) : null,
+    props.providerID ? (providerNext()?.all as ProviderInfo[] | undefined)?.find((x) => x.id === props.providerID) : null,
   )
 
   const title = createMemo(() => provider()?.name ?? GIZZICopy.dialog.selectModel)
 
   return (
-    <DialogSelect<ReturnType<typeof options>[number]["value"]>
+    <DialogSelect<ModelValue>
       options={options()}
       keybind={[
         {
@@ -173,7 +198,7 @@ export function DialogModel(props: { providerID?: string }) {
           title: GIZZICopy.dialog.favorite,
           disabled: !connected(),
           onTrigger: (option) => {
-            local.model.toggleFavorite(option.value as { providerID: string; modelID: string })
+            local.model.toggleFavorite(option.value)
           },
         },
       ]}

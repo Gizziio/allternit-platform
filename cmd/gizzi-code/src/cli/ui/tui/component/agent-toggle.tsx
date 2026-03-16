@@ -30,8 +30,6 @@ export function AgentToggle(props: AgentToggleProps) {
   
   return (
     <box
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       onMouseUp={(event) => {
         if (event.button === 0) { // Left click only
           props.onToggle(!props.enabled)
@@ -44,8 +42,6 @@ export function AgentToggle(props: AgentToggleProps) {
       backgroundColor={props.enabled ? RGBA.fromInts(134, 239, 172, 38) : "transparent"}
       borderStyle="single"
       borderColor={currentColor()}
-      borderRadius={999}
-      cursor="pointer"
     >
       <box flexDirection="row" gap={1} alignItems="center">
         {/* Status dot */}
@@ -53,14 +49,12 @@ export function AgentToggle(props: AgentToggleProps) {
           width={1}
           height={1}
           backgroundColor={currentColor()}
-          borderRadius={999}
         />
         
         {/* Label */}
         <text 
           fg={props.enabled ? enabledColor : (hovered() ? accentColor : theme.textMuted)}
           attributes={props.enabled ? TextAttributes.BOLD : undefined}
-          style={{ fontSize: props.size === "small" ? 0.8 : 1 }}
         >
           {props.enabled ? "AGENT ON" : "AGENT OFF"}
         </text>
@@ -78,8 +72,6 @@ export function AgentToggleWithTooltip(props: AgentToggleProps) {
     <box 
       flexDirection="column" 
       gap={0}
-      onMouseEnter={() => setShowTooltip(true)}
-      onMouseLeave={() => setShowTooltip(false)}
     >
       <AgentToggle {...props} />
       
@@ -87,10 +79,9 @@ export function AgentToggleWithTooltip(props: AgentToggleProps) {
         <box
           backgroundColor={RGBA.fromInts(0, 0, 0, 128)}
           padding={1}
-          borderRadius={2}
           marginTop={1}
         >
-          <text fg={theme.text} style={{ fontSize: 0.7 }} wrap="wrap">
+          <text fg={theme.text}>
             {props.enabled 
               ? "Agent is active and monitoring. Press A or click to disable."
               : "Agent is disabled. Press A or click to enable agent assistance."}

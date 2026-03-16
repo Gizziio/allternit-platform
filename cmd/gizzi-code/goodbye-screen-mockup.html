@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Gizzi Code Goodbye Screen Mockup</title>
+  <style>
+    body {
+      background-color: #0a0a0a;
+      color: #eeeeee;
+      font-family: 'SF Mono', Monaco, Inconsolata, 'Fira Code', monospace;
+      font-size: 14px;
+      line-height: 1.4;
+      padding: 40px;
+      margin: 0;
+    }
+    .terminal {
+      background-color: #111318;
+      border-radius: 8px;
+      padding: 20px;
+      max-width: 700px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+    .dim { color: #6e6e6e; }
+    .normal { color: #eeeeee; }
+    .bold { color: #eeeeee; font-weight: bold; }
+    .accent { color: #d4b08c; }  /* Sand color */
+    .coral { color: #d97757; }   /* Coral color */
+    .success { color: #4caf50; }
+    pre { margin: 0; }
+    .logo-line { color: #d4b08c; }
+    .section { margin-top: 8px; }
+    .label { 
+      color: #6e6e6e; 
+      display: inline-block; 
+      width: 140px;
+    }
+    .value { color: #eeeeee; }
+    .value-bold { color: #eeeeee; font-weight: bold; }
+    .footer { margin-top: 16px; color: #6e6e6e; }
+    
+    /* ASCII Logo styling */
+    .ascii-logo {
+      color: #d4b08c;
+      line-height: 1.2;
+      margin-bottom: 8px;
+    }
+    .mascot { color: #d97757; }
+    
+    /* Stats box */
+    .stats-box {
+      border-left: 2px solid #d4b08c;
+      padding-left: 16px;
+      margin: 12px 0;
+    }
+    
+    /* Title */
+    h2 {
+      color: #eeeeee;
+      font-size: 14px;
+      font-weight: bold;
+      margin: 16px 0 8px 0;
+    }
+    
+    /* Comparison */
+    .comparison {
+      display: flex;
+      gap: 40px;
+      margin-top: 40px;
+    }
+    .version {
+      flex: 1;
+    }
+    .version h3 {
+      color: #d4b08c;
+      font-size: 12px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="terminal">
+  <!-- OPTION 1: CURRENT IMPLEMENTATION (Session Exit with Full Telemetry) -->
+  <div class="version">
+    <h3>Current Implementation — Session Exit</h3>
+    
+    <!-- GIZZI Logo ASCII Art -->
+    <pre class="ascii-logo">
+  <span class="logo-line">      ▄▄      </span><span class="logo-line"> ▄████▄  ▄█  ██████  ██████  ▄█  ▄█  ▄████▄ </span>
+  <span class="logo-line">   ▄▄▄  ▄▄▄   </span><span class="logo-line"> ██  ▀▀  ██     ▄█▀     ▄█▀  ██  ██  ██  ██ </span>
+  <span class="logo-line"> ▄██████████▄ </span><span class="logo-line"> ██  ▄▄  ██   ▄█▀     ▄█▀    ██  ██  ██  ██ </span>
+  <span class="mascot"> █  ●    ●  █ </span><span class="logo-line"> ▀████▀  ▀█  ██████  ██████  ▀█  ▀█  ▀████▀ </span>
+  <span class="logo-line"> █  A : / / █ </span>
+  <span class="logo-line">  ▀████████▀  </span>
+  <span class="logo-line">   █ █  █ █   </span>
+  <span class="logo-line">   ▀ ▀  ▀ ▀   </span>
+    </pre>
+
+    <div class="section"></div>
+    
+    <h2>Session Summary</h2>
+    
+    <div class="stats-box">
+      <div><span class="label">Session</span><span class="value-bold">Implement new feature</span></div>
+      <div><span class="label">Continue</span><span class="value">gizzi-code -s sess_abc123xyz</span></div>
+      <div><span class="label">Duration</span><span class="value">45m 23s</span></div>
+      <div><span class="label">Messages</span><span class="value">28</span></div>
+      <div><span class="label">Tokens</span><span class="value">145.2K</span></div>
+      <div><span class="label">Cost</span><span class="value">$0.87</span></div>
+    </div>
+    
+    <div class="footer">
+      Thank you for using Gizzi Code
+    </div>
+  </div>
+</div>
+
+<div class="terminal" style="margin-top: 40px;">
+  <!-- OPTION 2: HOME/OTHER SCREENS (Simple Goodbye) -->
+  <div class="version">
+    <h3>Home/Cowork Screen Exit</h3>
+    
+    <pre class="ascii-logo">
+  <span class="logo-line">      ▄▄      </span><span class="logo-line"> ▄████▄  ▄█  ██████  ██████  ▄█  ▄█  ▄████▄ </span>
+  <span class="logo-line">   ▄▄▄  ▄▄▄   </span><span class="logo-line"> ██  ▀▀  ██     ▄█▀     ▄█▀  ██  ██  ██  ██ </span>
+  <span class="logo-line"> ▄██████████▄ </span><span class="logo-line"> ██  ▄▄  ██   ▄█▀     ▄█▀    ██  ██  ██  ██ </span>
+  <span class="mascot"> █  ●    ●  █ </span><span class="logo-line"> ▀████▀  ▀█  ██████  ██████  ▀█  ▀█  ▀████▀ </span>
+  <span class="logo-line"> █  A : / / █ </span>
+  <span class="logo-line">  ▀████████▀  </span>
+  <span class="logo-line">   █ █  █ █   </span>
+  <span class="logo-line">   ▀ ▀  ▀ ▀   </span>
+    </pre>
+    
+    <div class="section"></div>
+    <div class="footer">
+      <span class="dim">Thank you for using</span> <span class="bold">Gizzi Code</span><br>
+      <span class="dim">See you next time!</span>
+    </div>
+  </div>
+</div>
+
+<div class="terminal" style="margin-top: 40px;">
+  <!-- OPTION 3: WHAT THE USER MIGHT WANT (More Visual) -->
+  <div class="version">
+    <h3>Alternative — More Visual Style (Is this what you want?)</h3>
+    
+    <pre class="ascii-logo">
+<span class="accent">╔══════════════════════════════════════════════════════════════════╗</span>
+<span class="accent">║</span>                                                                  <span class="accent">║</span>
+<span class="accent">║</span>   <span class="logo-line">      ▄▄      </span><span class="logo-line"> ▄████▄  ▄█  ██████  ██████  ▄█  ▄█  ▄████▄ </span>  <span class="accent">║</span>
+<span class="accent">║</span>   <span class="logo-line">   ▄▄▄  ▄▄▄   </span><span class="logo-line"> ██  ▀▀  ██     ▄█▀     ▄█▀  ██  ██  ██  ██ </span>  <span class="accent">║</span>
+<span class="accent">║</span>   <span class="logo-line"> ▄██████████▄ </span><span class="logo-line"> ██  ▄▄  ██   ▄█▀     ▄█▀    ██  ██  ██  ██ </span>  <span class="accent">║</span>
+<span class="accent">║</span>   <span class="mascot"> █  ●    ●  █ </span><span class="logo-line"> ▀████▀  ▀█  ██████  ██████  ▀█  ▀█  ▀████▀ </span>  <span class="accent">║</span>
+<span class="accent">║</span>   <span class="logo-line"> █  A : / / █ </span>                                                 <span class="accent">║</span>
+<span class="accent">║</span>   <span class="logo-line">  ▀████████▀  </span>                                                 <span class="accent">║</span>
+<span class="accent">║</span>                                                                  <span class="accent">║</span>
+<span class="accent">╠══════════════════════════════════════════════════════════════════╣</span>
+<span class="accent">║</span>  <span class="bold">SESSION SUMMARY</span>                                                <span class="accent">║</span>
+<span class="accent">║</span>                                                                  <span class="accent">║</span>
+<span class="accent">║</span>   <span class="dim">Session  │</span> <span class="value-bold">Implement new feature</span>                              <span class="accent">║</span>
+<span class="accent">║</span>   <span class="dim">Resume   │</span> <span class="value">gizzi-code -s sess_abc123xyz</span>                     <span class="accent">║</span>
+<span class="accent">║</span>   <span class="dim">Duration │</span> <span class="value accent">45m 23s</span>                                            <span class="accent">║</span>
+<span class="accent">║</span>   <span class="dim">Messages │</span> <span class="value accent">28</span>                                                   <span class="accent">║</span>
+<span class="accent">║</span>   <span class="dim">Tokens   │</span> <span class="value accent">145.2K</span>                                               <span class="accent">║</span>
+<span class="accent">║</span>   <span class="dim">Cost     │</span> <span class="value coral">$0.87</span>                                                <span class="accent">║</span>
+<span class="accent">║</span>                                                                  <span class="accent">║</span>
+<span class="accent">╚══════════════════════════════════════════════════════════════════╝</span>
+    </pre>
+    
+    <div class="footer" style="text-align: center; margin-top: 16px;">
+      <span class="dim">Thank you for using</span> <span class="bold accent">Gizzi Code</span> <span class="dim">— See you next time!</span>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top: 40px; color: #6e6e6e; font-size: 12px;">
+  <p><strong>Notes:</strong></p>
+  <ul>
+    <li>Option 1 shows what currently happens when exiting a session</li>
+    <li>Option 2 shows what happens on home/cowork screen exit</li>
+    <li>Option 3 is a more visual alternative with box drawing characters</li>
+    <li>The GIZZI mascot appears in the logo (the face with ● ● eyes and A : / / mouth)</li>
+    <li>Telemetry is real data from actual LLM API responses</li>
+  </ul>
+  <p>Which style matches what you saw in your reference screenshots?</p>
+</div>
+
+</body>
+</html>

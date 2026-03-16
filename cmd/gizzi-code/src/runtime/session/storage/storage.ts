@@ -59,7 +59,7 @@ export namespace Storage {
                 .split("\n")
                 .filter(Boolean)
                 .map((x) => x.trim())
-                .toSorted(),
+                .slice().sort(),
             )
           if (!id) continue
           projectID = id

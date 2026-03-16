@@ -1,0 +1,310 @@
+/**
+ * A2R Deck Theme
+ * 
+ * Custom theme overrides for Reveal.js to match A2R design system.
+ */
+
+/* ===== Base Reveal.js A2R Theme ===== */
+.reveal.a2r-deck-dark {
+  --r-background-color: #1a1a1a;
+  --r-main-font: 'Inter', system-ui, sans-serif;
+  --r-heading-font: 'Inter', system-ui, sans-serif;
+  --r-main-font-size: 28px;
+  --r-main-color: #ECECEC;
+  --r-heading-color: #ECECEC;
+  --r-heading-line-height: 1.3;
+  --r-heading-letter-spacing: -0.02em;
+  --r-heading-text-transform: none;
+  --r-heading-text-shadow: none;
+  --r-heading-font-weight: 600;
+  --r-link-color: #D4956A;
+  --r-link-color-hover: #E5B080;
+  --r-selection-background-color: rgba(212, 149, 106, 0.3);
+  --r-selection-color: #ECECEC;
+}
+
+.reveal.a2r-deck-light {
+  --r-background-color: #f5f5f5;
+  --r-main-font: 'Inter', system-ui, sans-serif;
+  --r-heading-font: 'Inter', system-ui, sans-serif;
+  --r-main-font-size: 28px;
+  --r-main-color: #1a1a1a;
+  --r-heading-color: #1a1a1a;
+  --r-link-color: #D97757;
+  --r-link-color-hover: #E08E6D;
+  --r-selection-background-color: rgba(212, 149, 106, 0.3);
+}
+
+.reveal.a2r-deck-amber {
+  --r-background-color: #1f1a16;
+  --r-main-font: 'Inter', system-ui, sans-serif;
+  --r-heading-font: 'Inter', system-ui, sans-serif;
+  --r-main-font-size: 28px;
+  --r-main-color: #ECECEC;
+  --r-heading-color: #D4956A;
+  --r-link-color: #E5B080;
+  --r-link-color-hover: #F0C8AA;
+  --r-selection-background-color: rgba(212, 149, 106, 0.3);
+}
+
+/* ===== Slide Container ===== */
+.reveal .slides {
+  text-align: left;
+}
+
+.reveal .slides section {
+  padding: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== Typography ===== */
+.reveal h1 {
+  font-size: 2.5em;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin-bottom: 0.3em;
+}
+
+.reveal h2 {
+  font-size: 1.8em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.5em;
+}
+
+.reveal h3 {
+  font-size: 1.3em;
+  font-weight: 600;
+  color: #D4956A;
+  margin-bottom: 0.5em;
+}
+
+.reveal p {
+  font-size: 0.9em;
+  line-height: 1.6;
+  margin-bottom: 0.8em;
+  color: #b8b8b8;
+}
+
+.reveal ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.reveal li {
+  font-size: 0.85em;
+  line-height: 1.5;
+  margin-bottom: 0.5em;
+  color: #b8b8b8;
+  position: relative;
+  padding-left: 1.2em;
+}
+
+.reveal li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.5em;
+  width: 6px;
+  height: 6px;
+  background: #D4956A;
+  border-radius: 50%;
+}
+
+/* ===== Slide Types ===== */
+.reveal .a2r-slide-title {
+  text-align: center;
+}
+
+.reveal .a2r-slide-title h1 {
+  font-size: 3em;
+  margin-bottom: 0.2em;
+}
+
+.reveal .a2r-slide-quote {
+  text-align: center;
+}
+
+.reveal .a2r-slide-quote blockquote {
+  border: none;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  font-style: italic;
+}
+
+/* ===== Code Blocks ===== */
+.reveal pre {
+  background: #0d0d0d;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.reveal pre code {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.6em;
+  line-height: 1.5;
+  color: #ECECEC;
+}
+
+/* ===== Images ===== */
+.reveal img {
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+/* ===== Links ===== */
+.reveal a {
+  color: #D4956A;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(212, 149, 106, 0.3);
+  transition: border-color 0.2s ease;
+}
+
+.reveal a:hover {
+  border-bottom-color: #D4956A;
+}
+
+/* ===== Selection ===== */
+.reveal ::selection {
+  background: rgba(212, 149, 106, 0.3);
+  color: #ECECEC;
+}
+
+/* ===== Progress Bar ===== */
+.reveal .progress {
+  background: rgba(255, 255, 255, 0.05);
+  height: 3px;
+}
+
+.reveal .progress span {
+  background: #D4956A;
+  transition: width 0.3s ease;
+}
+
+/* ===== Controls (hidden, we use custom) ===== */
+.reveal .controls {
+  display: none !important;
+}
+
+/* ===== Slide Number ===== */
+.reveal .slide-number {
+  background: transparent;
+  color: #666;
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+  padding: 8px 12px;
+  border-radius: 4px;
+}
+
+.reveal .slide-number a {
+  color: #666;
+  border: none;
+}
+
+/* ===== Backgrounds ===== */
+.reveal .slide-background {
+  background-size: cover;
+  background-position: center;
+}
+
+/* ===== Fragments (animations) ===== */
+.reveal .slides section .fragment {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.4s ease;
+}
+
+.reveal .slides section .fragment.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ===== Print Styles ===== */
+@media print {
+  .reveal .slides section {
+    height: auto;
+    page-break-after: always;
+  }
+  
+  .reveal .slides section:last-child {
+    page-break-after: avoid;
+  }
+}
+
+/* ===== Transitions ===== */
+.reveal .slides > section {
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.reveal .slides > section.past {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+.reveal .slides > section.future {
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+/* ===== Speaker Notes (hidden) ===== */
+.reveal .speaker-notes {
+  display: none;
+}
+
+/* ===== Overview Mode ===== */
+.reveal.overview .slides {
+  perspective: 1000px;
+}
+
+.reveal.overview .slides section {
+  transform-style: preserve-3d;
+  cursor: pointer;
+}
+
+.reveal.overview .slides section:hover {
+  outline: 2px solid #D4956A;
+  outline-offset: 4px;
+}
+
+/* ===== Pause Overlay ===== */
+.reveal .pause-overlay {
+  background: rgba(26, 26, 26, 0.95);
+  backdrop-filter: blur(10px);
+}
+
+/* ===== A2R-Specific Classes ===== */
+.a2r-slide {
+  background: var(--r-background-color);
+}
+
+.a2r-slide-dark {
+  background: #1a1a1a;
+}
+
+.a2r-slide-gradient {
+  background: linear-gradient(135deg, #1a1a1a 0%, #242424 100%);
+}
+
+.a2r-slide-accent {
+  border-left: 4px solid #D4956A;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+  .reveal h1 {
+    font-size: 1.8em;
+  }
+  
+  .reveal h2 {
+    font-size: 1.4em;
+  }
+  
+  .reveal p,
+  .reveal li {
+    font-size: 0.8em;
+  }
+}

@@ -16,7 +16,18 @@ import { promises as fs } from 'fs'
 import path from 'path'
 import { Log } from '@/shared/util/log'
 import { Global } from '@/runtime/context/global'
-import type { AgentMessage } from '@/runtime/tools/builtins/agent-communicate'
+
+// Define AgentMessage type locally to match expected structure
+interface AgentMessage {
+  id: string
+  timestamp: number
+  from: { agentId: string; agentName: string; agentRole: string }
+  to: { agentName?: string; agentRole?: string; channel?: string }
+  content: string
+  type: 'direct' | 'channel' | 'broadcast'
+  correlationId?: string
+  mentions?: string[]
+}
 
 export namespace AgentWorkspaceCommunication {
   const log = Log.create({ service: 'agent-workspace-comm' })

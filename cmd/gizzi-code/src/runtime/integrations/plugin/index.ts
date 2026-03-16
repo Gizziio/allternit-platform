@@ -10,15 +10,16 @@ import { Flag } from "@/runtime/context/flag/flag"
 import { CodexAuthPlugin } from "@/runtime/integrations/plugin/codex"
 import { Session } from "@/runtime/session"
 import { NamedError } from "@a2r/util/error"
-import { gitlabAuthPlugin as GitlabAuthPlugin } from "@gitlab/opencode-gitlab-auth"
+
+// Extend Hooks interface to include optional name property
+interface HooksWithName extends Hooks {
+  name?: string
+}
 
 export namespace Plugin {
   const log = Log.create({ service: "plugin" })
 
-  const BUILTIN = ["opencode-anthropic-auth@0.0.13"]
-
-  // Built-in plugins that are directly imported (not installed from npm)
-  const INTERNAL_PLUGINS: PluginInstance[] = [CodexAuthPlugin, GitlabAuthPlugin]
+  const BUILTIN: string[] = []
 
   // Per-session disabled plugin tracking
   const disabledPlugins = new Set<string>()
@@ -27,13 +28,12 @@ export namespace Plugin {
     const client = createA2RClient({
       baseUrl: "http://localhost:4096",
       directory: Instance.directory,
-      // @ts-ignore - fetch type incompatibility
-      fetch: async (...args) => Server.App().fetch(...args),
+      fetch: ((input: URL | RequestInfo, init?: RequestInit) => Server.App().fetch(input as Request, init)) as typeof fetch,
     })
     const config = await Config.get()
-    const hooks: Hooks[] = []
+    const hooks: HooksWithName[] = []
     const input: PluginInput = {
-      client,
+      client: client as any,
       project: Instance.project,
       worktree: Instance.worktree,
       directory: Instance.directory,
@@ -41,18 +41,18 @@ export namespace Plugin {
       $: Bun.$,
     }
 
-    for (const plugin of INTERNAL_PLUGINS) {
-      log.info("loading internal plugin", { name: plugin.name })
-      const init = await plugin(input).catch((err) => {
-        log.error("failed to load internal plugin", { name: plugin.name, error: err })
-      })
-      if (init) hooks.push(init)
+    // Load built-in Codex auth plugin
+    try {
+      const codex = await CodexAuthPlugin(input)
+      if (codex) hooks.push(codex as HooksWithName)
+    } catch (err) {
+      log.error("failed to load CodexAuthPlugin", { error: err })
     }
 
-    let plugins = config.plugin ?? []
+    const plugins = (config as any).plugin ?? []
     if (plugins.length) await Config.waitForDependencies()
     if (!Flag.GIZZI_DISABLE_DEFAULT_PLUGINS) {
-      plugins = [...BUILTIN, ...plugins]
+      plugins.unshift(...BUILTIN)
     }
 
     for (let plugin of plugins) {
@@ -83,7 +83,7 @@ export namespace Plugin {
           for (const [_name, fn] of Object.entries<PluginInstance>(mod)) {
             if (seen.has(fn)) continue
             seen.add(fn)
-            hooks.push(await fn(input))
+            hooks.push(await fn(input) as HooksWithName)
           }
         })
         .catch((err) => {

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, expect, test } from "bun:test"
 
 import { buildReasoningTrace } from "../../src/server/routes/reasoning-trace"

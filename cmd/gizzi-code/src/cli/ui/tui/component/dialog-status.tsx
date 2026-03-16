@@ -7,8 +7,56 @@ import { For, Match, Switch, Show, createMemo } from "solid-js"
 import { GIZZICopy } from "@/shared/brand"
 import { useLocal } from "@/cli/ui/tui/context/local"
 import { useRoute } from "@/cli/ui/tui/context/route"
+import type { RGBA } from "@opentui/core"
 
 export type DialogStatusProps = {}
+
+// Local type definitions (SDK exports as unknown)
+interface SessionStatus {
+  type: "idle" | "busy" | "retry" | "error"
+}
+
+interface ToolPart {
+  type: "tool"
+  state: {
+    status: "pending" | "running" | "completed" | "failed"
+  }
+}
+
+type Part = ToolPart | { type: string }
+
+interface MessageTokens {
+  input: number
+  output: number
+  reasoning: number
+  cache: {
+    read: number
+    write: number
+  }
+  total?: number
+}
+
+interface AssistantMessage {
+  role: "assistant"
+  tokens: MessageTokens
+  cost: number
+}
+
+interface FormatterStatus {
+  name: string
+  enabled: boolean
+}
+
+interface LspStatus {
+  id: string
+  status: "connected" | "error"
+  root: string
+}
+
+interface McpStatus {
+  status: "connected" | "failed" | "disabled" | "needs_auth" | "needs_client_registration"
+  error?: string
+}
 
 export function DialogStatus() {
   const sync = useSync()
@@ -17,18 +65,18 @@ export function DialogStatus() {
   const local = useLocal()
   const route = useRoute()
 
-  const enabledFormatters = createMemo(() => sync.data.formatter.filter((f) => f.enabled))
+  const enabledFormatters = createMemo(() => (sync.data.formatter as FormatterStatus[]).filter((f) => f.enabled))
   const parsedModel = createMemo(() => local.model.parsed())
   const busySessions = createMemo(
-    () => Object.values(sync.data.session_status).filter((status) => status.type === "busy").length,
+    () => Object.values(sync.data.session_status as unknown as Record<string, SessionStatus>).filter((status) => status.type === "busy").length,
   )
   const retryingSessions = createMemo(
-    () => Object.values(sync.data.session_status).filter((status) => status.type === "retry").length,
+    () => Object.values(sync.data.session_status as unknown as Record<string, SessionStatus>).filter((status) => status.type === "retry").length,
   )
   const activeTools = createMemo(() =>
-    Object.values(sync.data.part).reduce((count, parts) => {
+    Object.values(sync.data.part as unknown as Record<string, Part[]>).reduce((count, parts) => {
       const running = parts.filter(
-        (part) => part.type === "tool" && (part.state.status === "pending" || part.state.status === "running"),
+        (part): part is ToolPart => part.type === "tool" && ((part as ToolPart).state.status === "pending" || (part as ToolPart).state.status === "running"),
       )
       return count + running.length
     }, 0),
@@ -38,8 +86,8 @@ export function DialogStatus() {
     const sessionID = currentSessionID()
     if (!sessionID) return undefined
     const messages = sync.data.message[sessionID] ?? []
-    return messages.findLast(
-      (message): message is typeof messages[number] & { role: "assistant"; tokens: { input: number; output: number; reasoning: number; cache: { read: number; write: number }; total?: number }; cost: number } =>
+    return (messages as unknown as AssistantMessage[]).findLast(
+      (message): message is AssistantMessage =>
         message.role === "assistant",
     )
   })
@@ -62,8 +110,8 @@ export function DialogStatus() {
   })
 
   const plugins = createMemo(() => {
-    const list = sync.data.config.plugin ?? []
-    const result = list.map((value) => {
+    const list = (sync.data.config as { plugin?: string[] }).plugin ?? []
+    const result = list.map((value: string) => {
       if (value.startsWith("file://")) {
         const path = fileURLToPath(value)
         const parts = path.split("/")
@@ -83,7 +131,7 @@ export function DialogStatus() {
       const version = value.substring(index + 1)
       return { name, version }
     })
-    return result.toSorted((a, b) => a.name.localeCompare(b.name))
+    return result.slice().sort((a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name))
   })
 
   return (
@@ -109,15 +157,15 @@ export function DialogStatus() {
           </text>
           <text fg={theme.text}>
             <span style={{ fg: theme.textMuted }}>{GIZZICopy.dialog.runtimeBusySessions}</span>{" "}
-            <span style={{ fg: theme.text }}>{busySessions()}</span>
+            <span style={{ fg: theme.text }}>{String(busySessions())}</span>
           </text>
           <text fg={theme.text}>
             <span style={{ fg: theme.textMuted }}>{GIZZICopy.dialog.runtimeRetryingSessions}</span>{" "}
-            <span style={{ fg: retryingSessions() > 0 ? theme.warning : theme.text }}>{retryingSessions()}</span>
+            <span style={{ fg: retryingSessions() > 0 ? theme.warning : theme.text }}>{String(retryingSessions())}</span>
           </text>
           <text fg={theme.text}>
             <span style={{ fg: theme.textMuted }}>{GIZZICopy.dialog.runtimeActiveTools}</span>{" "}
-            <span style={{ fg: activeTools() > 0 ? theme.accent : theme.text }}>{activeTools()}</span>
+            <span style={{ fg: activeTools() > 0 ? theme.accent : theme.text }}>{String(activeTools())}</span>
           </text>
           <Show when={latestTurnMetrics()}>
             {(metrics) => (
@@ -155,8 +203,8 @@ export function DialogStatus() {
                         disabled: theme.textMuted,
                         needs_auth: theme.warning,
                         needs_client_registration: theme.error,
-                      } as Record<string, typeof theme.success>
-                    )[item.status],
+                      } as Record<string, RGBA>
+                    )[(item as McpStatus).status],
                   }}
                 >
                   •
@@ -164,15 +212,15 @@ export function DialogStatus() {
                 <text fg={theme.text} wrapMode="word">
                   <b>{key}</b>{" "}
                   <span style={{ fg: theme.textMuted }}>
-                    <Switch fallback={item.status}>
-                      <Match when={item.status === "connected"}>{GIZZICopy.sidebar.connected}</Match>
-                      <Match when={item.status === "failed" && item}>{(val) => val().error}</Match>
-                      <Match when={item.status === "disabled"}>{GIZZICopy.dialog.mcpDisabled}</Match>
-                      <Match when={(item.status as string) === "needs_auth"}>
+                    <Switch fallback={(item as McpStatus).status}>
+                      <Match when={(item as McpStatus).status === "connected"}>{GIZZICopy.sidebar.connected}</Match>
+                      <Match when={(item as McpStatus).status === "failed" && item}>{(val) => (val() as McpStatus).error}</Match>
+                      <Match when={(item as McpStatus).status === "disabled"}>{GIZZICopy.dialog.mcpDisabled}</Match>
+                      <Match when={(item as McpStatus).status === "needs_auth"}>
                         {GIZZICopy.dialog.mcpNeedsAuth({ name: key })}
                       </Match>
-                      <Match when={(item.status as string) === "needs_client_registration" && item}>
-                        {(val) => (val() as { error: string }).error}
+                      <Match when={(item as McpStatus).status === "needs_client_registration" && item}>
+                        {(val) => (val() as McpStatus).error}
                       </Match>
                     </Switch>
                   </span>
@@ -185,7 +233,7 @@ export function DialogStatus() {
       {sync.data.lsp.length > 0 && (
         <box>
           <text fg={theme.text}>{GIZZICopy.dialog.lspServers({ count: sync.data.lsp.length })}</text>
-          <For each={sync.data.lsp}>
+          <For each={sync.data.lsp as LspStatus[]}>
             {(item) => (
               <box flexDirection="row" gap={1}>
                 <text

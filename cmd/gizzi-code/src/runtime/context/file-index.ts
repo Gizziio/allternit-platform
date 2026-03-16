@@ -51,7 +51,7 @@ export namespace FileIndex {
         // Compute hash for smaller files, use size+mtime for large ones
         let hash: string;
         if (stat.size < 1_000_000) {
-          const hasher = new Bun.CryptoHasher("xxhash64");
+          const hasher = new Bun.CryptoHasher("sha256");
           hasher.update(await file.arrayBuffer());
           hash = hasher.digest("hex");
         } else {

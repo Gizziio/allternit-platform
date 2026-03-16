@@ -5,7 +5,7 @@ import { onMount } from "solid-js"
 import { createStore, produce, unwrap } from "solid-js/store"
 import { createSimpleContext } from "@/cli/ui/tui/context/helper"
 import { appendFile, writeFile } from "fs/promises"
-import type { AgentPart, FilePart, TextPart } from "@a2r/sdk/v2"
+import type { AgentPart, FilePart, TextPart } from "@a2r/sdk"
 
 export type PromptInfo = {
   input: string

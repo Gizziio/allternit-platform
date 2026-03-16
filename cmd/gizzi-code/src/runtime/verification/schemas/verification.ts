@@ -4,7 +4,7 @@
  * Zod validation schemas for verification operations.
  */
 
-import z from "zod/v4";
+import * as z from "zod/v4";
 import { VerificationCertificateSchema } from "./certificate";
 
 // ============================================================================
@@ -100,7 +100,7 @@ export const CodeCoverageSchema = z.object({
       covered: z.number().int().nonnegative(),
     }).optional(),
   })),
-  uncoveredLines: z.record(z.array(z.number().int().positive())).optional(),
+  uncoveredLines: z.record(z.string(), z.array(z.number().int())).optional(),
 });
 
 export const EmpiricalVerificationResultSchema = z.object({
@@ -195,8 +195,8 @@ export const PatchEquivalenceRequestSchema = z.object({
   testContext: z.object({
     testPatch: z.string().optional(),
     repositoryContext: z.string(),
-    relevantTests: z.array(z.string()).min(1, "At least one relevant test is required"),
-    testDescriptions: z.record(z.string()).optional(),
+    relevantTests: z.array(z.string()).min(1),
+    testDescriptions: z.record(z.string(), z.string()).optional(),
   }),
   options: z.object({
     requireCounterexample: z.boolean().default(true),
@@ -242,7 +242,7 @@ export const VerificationProgressSchema = z.object({
     description: z.string(),
     startedAt: z.string().datetime(),
   }).optional(),
-  intermediateResults: z.record(z.any()).optional(),
+  intermediateResults: z.record(z.string(), z.any()).optional(),
   errors: z.array(z.object({
     phase: z.string(),
     message: z.string(),
@@ -317,8 +317,8 @@ export const VerificationStatisticsSchema = z.object({
     medium: z.number().int().nonnegative(),
     low: z.number().int().nonnegative(),
   }),
-  byMethod: z.record(z.number().int().nonnegative()),
-  byType: z.record(z.number().int().nonnegative()),
+  byMethod: z.record(z.string(), z.number().int()),
+  byType: z.record(z.string(), z.number().int()),
   confirmation: z.object({
     confirmedCorrect: z.number().int().nonnegative(),
     confirmedIncorrect: z.number().int().nonnegative(),

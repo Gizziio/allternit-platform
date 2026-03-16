@@ -4,9 +4,43 @@
  * Provides real-time verification progress and notifications.
  */
 
-import { WebSocketServer, WebSocket } from "ws";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import type { IncomingMessage } from "http";
 import { Log } from "@/shared/util/log";
 import type { VerificationProgress, OrchestratedVerificationResult } from "../types";
+
+// Type declarations for WebSocket types
+interface WebSocketClient {
+  readyState: number;
+  on(event: "message" | "close" | "error", callback: (data: any) => void): void;
+  send(data: string): void;
+  close(): void;
+}
+
+interface WebSocketServerInstance {
+  on(event: "connection", callback: (ws: WebSocketClient, req: IncomingMessage) => void): void;
+  close(): void;
+}
+
+type WebSocketServerClass = new (options: { port: number }) => WebSocketServerInstance;
+
+// Dynamic import to avoid type issues
+let WebSocketServerClass: WebSocketServerClass;
+const WebSocketReadyState = { OPEN: 1 };
+
+try {
+  const ws = require("ws");
+  WebSocketServerClass = ws.WebSocketServer;
+} catch {
+  // Fallback for when ws is not installed
+  WebSocketServerClass = class MockWebSocketServer {
+    constructor() {
+      throw new Error("ws module not installed");
+    }
+    on(): void {}
+    close(): void {}
+  } as unknown as WebSocketServerClass;
+}
 
 const log = Log.create({ service: "verification.websocket" });
 
@@ -42,8 +76,8 @@ export interface VerificationAlert {
 // ============================================================================
 
 export class VerificationWebSocketManager {
-  private wss?: WebSocketServer;
-  private clients: Map<string, WebSocket> = new Map();
+  private wss?: WebSocketServerInstance;
+  private clients: Map<string, WebSocketClient> = new Map();
   private sessionSubscriptions: Map<string, Set<string>> = new Map();
   private log = Log.create({ service: "verification.websocket" });
   
@@ -51,9 +85,9 @@ export class VerificationWebSocketManager {
    * Initialize WebSocket server
    */
   initialize(port: number = 8080): void {
-    this.wss = new WebSocketServer({ port });
+    this.wss = new WebSocketServerClass({ port });
     
-    this.wss.on("connection", (ws, req) => {
+    this.wss.on("connection", (ws: WebSocketClient, req: IncomingMessage) => {
       const clientId = this.generateClientId();
       this.clients.set(clientId, ws);
       
@@ -67,7 +101,7 @@ export class VerificationWebSocketManager {
       });
       
       // Handle messages
-      ws.on("message", (data) => {
+      ws.on("message", (data: Buffer | string) => {
         this.handleMessage(clientId, ws, data.toString());
       });
       
@@ -77,7 +111,7 @@ export class VerificationWebSocketManager {
       });
       
       // Handle errors
-      ws.on("error", (error) => {
+      ws.on("error", (error: Error) => {
         this.log.error("WebSocket error", { clientId, error });
       });
     });
@@ -190,7 +224,7 @@ export class VerificationWebSocketManager {
   // Private Methods
   // ========================================================================
   
-  private handleMessage(clientId: string, ws: WebSocket, data: string): void {
+  private handleMessage(clientId: string, ws: WebSocketClient, data: string): void {
     try {
       const message = JSON.parse(data);
       
@@ -248,7 +282,7 @@ export class VerificationWebSocketManager {
     
     for (const clientId of subscribers) {
       const client = this.clients.get(clientId);
-      if (client && client.readyState === WebSocket.OPEN) {
+      if (client && client.readyState === WebSocketReadyState.OPEN) {
         this.send(client, message);
       }
     }
@@ -256,13 +290,13 @@ export class VerificationWebSocketManager {
   
   private broadcast(message: WebSocketMessage): void {
     for (const [, client] of this.clients) {
-      if (client.readyState === WebSocket.OPEN) {
+      if (client.readyState === WebSocketReadyState.OPEN) {
         this.send(client, message);
       }
     }
   }
   
-  private send(ws: WebSocket, message: WebSocketMessage): void {
+  private send(ws: WebSocketClient, message: WebSocketMessage): void {
     try {
       ws.send(JSON.stringify(message));
     } catch (error) {

@@ -212,6 +212,7 @@ import type { WebFetchTool } from "@/runtime/tools/builtins/webfetch"
 import type { TaskTool } from "@/runtime/tools/builtins/task"
 import type { QuestionTool } from "@/runtime/tools/builtins/question"
 import type { SkillTool } from "@/runtime/tools/builtins/skill"
+import type { MultiEditTool } from "@/runtime/tools/builtins/multiedit"
 import { useKeyboard, useRenderer, useTerminalDimensions, type JSX } from "@opentui/solid"
 import { useSDK } from "@/cli/ui/tui/context/sdk"
 import { useCommandDialog } from "@/cli/ui/tui/component/dialog-command"
@@ -243,7 +244,10 @@ import { DialogFileRefs } from "@/cli/ui/tui/component/dialog-file-refs"
 import { DialogPinned } from "@/cli/ui/tui/component/dialog-pinned"
 import { DialogExport } from "@/cli/ui/tui/component/dialog-export"
 import { DialogMcp } from "@/cli/ui/tui/component/dialog-mcp"
+import { DialogPluginMarketplace } from "@/cli/ui/tui/component/dialog-plugin-marketplace"
 import { DialogMemoryExplorer } from "@/cli/ui/tui/component/dialog-memory-explorer"
+import { DialogSkillEval } from "@/cli/ui/tui/component/dialog-skill-eval"
+import { DialogGwsSetup } from "@/cli/ui/tui/component/dialog-gws-setup"
 import { DialogVerificationStatus } from "@/cli/ui/tui/component/dialog-verification-status"
 import { DialogAcpRelay } from "@/cli/ui/tui/component/dialog-acp-relay"
 import { DialogSwarmTree } from "@/cli/ui/tui/component/dialog-swarm-tree"
@@ -831,10 +835,27 @@ export function Session() {
     ))
   }
 
+  // Ctrl+C / Ctrl+D exit handler for root sessions (child sessions use app_exit to go back to parent)
   useKeyboard((evt) => {
-    if (!session()?.parentID) return
+    if (session()?.parentID) {
+      // Child session: app_exit goes back to parent
+      if (keybind.match("app_exit", evt)) {
+        exit()
+      }
+      return
+    }
+    // Root session: Ctrl+C / Ctrl+D exits the whole app
     if (keybind.match("app_exit", evt)) {
+      const sessionStatus = (sync.data.session_status?.[route.sessionID] ?? { type: "idle" }) as unknown as SessionStatus
+      const isIdle = sessionStatus.type === "idle"
+      if (!isIdle) {
+        // Session is running: Ctrl+C aborts first, user must press again to exit
+        sdk.client.session.abort({ path: { id: route.sessionID } }).catch(() => {})
+        evt.preventDefault()
+        return
+      }
       exit()
+      evt.preventDefault()
     }
     // Copy code block with 'y'
     if (evt.name === "y") {
@@ -2138,31 +2159,23 @@ export function Session() {
         dialog.clear()
       },
     },
-    // Plugin management
+    // Plugin marketplace
     {
-      title: "Manage plugins",
+      title: "Plugin Marketplace",
       value: "session.plugins",
       category: "System",
       slash: { name: "plugins" },
-      onSelect: async (dialog) => {
-        const lines: string[] = ["# Installed Plugins\n"]
-        const config = sync.data.config
-        const plugins = (config as any).plugin ?? []
-        if (plugins.length === 0) {
-          lines.push("No plugins configured.\n")
-          lines.push("Add plugins to gizzi.json:")
-          lines.push('  "plugin": ["plugin-name@version"]')
-        } else {
-          for (const p of plugins) {
-            lines.push(`  - ${p}`)
-          }
-        }
-        lines.push("")
-        lines.push("## Search plugins")
-        lines.push("Use `gizzi-code plugin search <query>` to find plugins")
-        lines.push("Use `gizzi-code plugin install <name>` to install")
-        await Editor.open({ value: lines.join("\n"), renderer })
-        dialog.clear()
+      onSelect: (dialog) => {
+        dialog.replace(() => <DialogPluginMarketplace />)
+      },
+    },
+    {
+      title: "Plugin Marketplace",
+      value: "session.marketplace",
+      category: "System",
+      slash: { name: "marketplace" },
+      onSelect: (dialog) => {
+        dialog.replace(() => <DialogPluginMarketplace />)
       },
     },
     // File search
@@ -2225,7 +2238,81 @@ export function Session() {
         dialog.replace(() => <DialogMemoryExplorer />)
       },
     },
-    // Loop — run a prompt on a recurring interval (creates a cron job)
+    // Sandbox — wrap all bash subprocesses in bwrap/sandbox-exec
+    {
+      title: "Toggle shell sandbox (bwrap / sandbox-exec)",
+      value: "session.sandbox",
+      category: "System",
+      slash: { name: "sandbox" },
+      onSelect: async (dialog) => {
+        dialog.clear()
+        const sessionId = session()?.id
+        if (!sessionId) {
+          toast.show({ message: "No active session", variant: "error", duration: 2000 })
+          return
+        }
+        try {
+          const res = await fetch(`${sdk.url}/v1/sandbox/${encodeURIComponent(sessionId)}/toggle`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({}),
+          })
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({ error: res.statusText })) as { error?: string }
+            toast.show({ message: err?.error ?? "Failed to toggle sandbox", variant: "error", duration: 3000 })
+            return
+          }
+          const state = await res.json() as { enabled: boolean; driver: string }
+          toast.show({
+            message: state.enabled
+              ? `Sandbox ON (${state.driver}) — bash subprocesses are now isolated`
+              : "Sandbox OFF — bash runs unsandboxed",
+            variant: state.enabled ? "success" : "info",
+            duration: 4000,
+          })
+        } catch {
+          toast.show({ message: "Sandbox toggle failed", variant: "error", duration: 3000 })
+        }
+      },
+    },
+    // VM Session — provision / destroy a full VM for the agent session
+    {
+      title: "Toggle VM session (full VM isolation)",
+      value: "session.vm",
+      category: "System",
+      slash: { name: "vm" },
+      onSelect: async (dialog) => {
+        dialog.clear()
+        const sessionId = session()?.id
+        if (!sessionId) {
+          toast.show({ message: "No active session", variant: "error", duration: 2000 })
+          return
+        }
+        try {
+          const res = await fetch(`${sdk.url}/v1/vm-session/${encodeURIComponent(sessionId)}/toggle`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({}),
+          })
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({ error: res.statusText })) as { error?: string }
+            toast.show({ message: err?.error ?? "Failed to toggle VM session", variant: "error", duration: 3000 })
+            return
+          }
+          const state = await res.json() as { enabled: boolean; vm_backed: boolean }
+          toast.show({
+            message: state.enabled
+              ? `VM session ON${state.vm_backed ? " (real microVM)" : " (process fallback)"} — bash runs inside VM`
+              : "VM session OFF — bash runs locally",
+            variant: state.enabled ? "success" : "info",
+            duration: 4000,
+          })
+        } catch {
+          toast.show({ message: "VM session toggle failed", variant: "error", duration: 3000 })
+        }
+      },
+    },
+    // Loop — session-scoped recurring prompt (CC2.0 /loop parity)
     {
       title: "Loop a prompt on interval",
       value: "session.loop",
@@ -2234,49 +2321,73 @@ export function Session() {
       onSelect: async (dialog) => {
         const { DialogPrompt } = await import("@/cli/ui/tui/ui/dialog-prompt")
 
-        // Step 1: Get interval
-        const intervalInput = await DialogPrompt.show(dialog, "Interval (e.g., 5m, 1h, 30s)", {
-          placeholder: "10m",
+        // Single NL input: "every 10 minutes check my inbox" or "in 5 minutes remind me..."
+        const input = await DialogPrompt.show(dialog, "Loop (natural language)", {
+          placeholder: "every 10 minutes check my inbox",
+          description: () => (
+            <text fg={theme.textMuted}>
+              Examples: "every 5m check deploys" · "every hour summarize emails" · "in 30m remind me to review PR"
+            </text>
+          ) as any,
         })
-        if (!intervalInput) {
-          dialog.clear()
-          return
-        }
+        if (!input) { dialog.clear(); return }
 
-        const match = intervalInput.trim().match(/^(\d+)(s|m|h)$/)
-        if (!match) {
-          toast.show({ message: "Invalid interval. Use format: 5m, 1h, 30s", variant: "error", duration: 3000 })
-          dialog.clear()
-          return
-        }
+        // Parse: extract leading schedule phrase vs trailing prompt
+        // Patterns: "every N unit X", "in N unit X", "daily X", "hourly X"
+        const nlScheduleRe = /^(every\s+\d+\s*(?:s|sec|second|m|min|minute|h|hr|hour|d|day|w|week)s?|in\s+\d+\s*(?:s|sec|second|m|min|minute|h|hr|hour|d|day)s?|every\s+(?:day|hour|minute|morning|evening|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|daily|hourly|weekly)\s+/i
+        const scheduleMatch = input.match(nlScheduleRe)
 
-        const val = parseInt(match[1])
-        const unit = match[2]
-        const intervalMs = unit === "s" ? val * 1000 : unit === "m" ? val * 60000 : val * 3600000
+        let scheduleStr: string
+        let promptText: string
 
-        // Step 2: Get prompt
-        const promptText = await DialogPrompt.show(dialog, "Prompt or slash command to run", {
-          placeholder: "/commit or check deploy status",
-        })
-        if (!promptText) {
-          dialog.clear()
-          return
-        }
-
-        // Convert interval to a cron schedule
-        const intervalSec = Math.round(intervalMs / 1000)
-        let schedule: string
-        if (intervalSec < 60) {
-          schedule = "* * * * *"
-        } else if (intervalSec < 3600) {
-          const mins = Math.round(intervalSec / 60)
-          schedule = `*/${mins} * * * *`
+        if (scheduleMatch) {
+          scheduleStr = scheduleMatch[0].trim()
+          promptText = input.slice(scheduleMatch[0].length).trim()
         } else {
-          const hours = Math.round(intervalSec / 3600)
-          schedule = `0 */${hours} * * *`
+          // Fallback: ask for schedule separately
+          const sep = await DialogPrompt.show(dialog, "Schedule (e.g. every 10m)", { placeholder: "every 10m" })
+          if (!sep) { dialog.clear(); return }
+          scheduleStr = sep
+          promptText = input
         }
 
-        const durationLabel = unit === "s" ? `${val}s` : unit === "m" ? `${val}m` : `${val}h`
+        if (!promptText) { dialog.clear(); return }
+
+        // Convert NL schedule to cron expression (reuse parser patterns)
+        let schedule: string
+        const everyNUnit = scheduleStr.match(/(?:every\s+)?(\d+)\s*(s|sec|second|m|min|minute|h|hr|hour|d|day|w|week)s?/i)
+        const inN = scheduleStr.match(/in\s+(\d+)\s*(s|sec|second|m|min|minute|h|hr|hour)s?/i)
+
+        if (everyNUnit) {
+          const n = parseInt(everyNUnit[1])
+          const u = everyNUnit[2].toLowerCase()
+          if (u.startsWith("s")) schedule = `* * * * *`          // sub-minute → every minute
+          else if (u.startsWith("m")) schedule = `*/${n} * * * *`
+          else if (u.startsWith("h")) schedule = `0 */${n} * * *`
+          else if (u.startsWith("d")) schedule = `0 9 */${n} * *`
+          else if (u.startsWith("w")) schedule = `0 9 * * 1`
+          else schedule = `*/${n} * * * *`
+        } else if (inN) {
+          const n = parseInt(inN[1])
+          const u = inN[2].toLowerCase()
+          const ms = u.startsWith("s") ? n * 1000 : u.startsWith("m") ? n * 60000 : n * 3600000
+          // One-shot: use maxRuns=1 with a near-future interval
+          const mins = Math.max(1, Math.round(ms / 60000))
+          schedule = `*/${mins} * * * *`
+          // Will create with maxRuns: 1 below
+        } else if (/daily|every\s+day/i.test(scheduleStr)) {
+          schedule = "0 9 * * *"
+        } else if (/hourly|every\s+hour/i.test(scheduleStr)) {
+          schedule = "0 * * * *"
+        } else if (/weekly|every\s+week/i.test(scheduleStr)) {
+          schedule = "0 9 * * 1"
+        } else {
+          schedule = scheduleStr // pass raw to cron parser
+        }
+
+        const isOneShot = inN !== null
+        const sessionId = session()?.id
+        const expiresAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()
 
         try {
           await sdk.client.cron.create({
@@ -2284,18 +2395,18 @@ export function Session() {
             schedule,
             prompt: promptText,
             wakeMode: "main",
-          })
+            ...(isOneShot ? { maxRuns: 1 } : {}),
+            scope: "session",
+            sessionId,
+            expiresAt,
+          } as any)
           toast.show({
-            message: `Loop started: "${promptText.slice(0, 30)}" every ${durationLabel}`,
+            message: `Loop started: "${promptText.slice(0, 30)}" · expires in 3 days`,
             variant: "success",
             duration: 3000,
           })
-        } catch (e) {
-          toast.show({
-            message: `Failed to create loop`,
-            variant: "error",
-            duration: 3000,
-          })
+        } catch {
+          toast.show({ message: `Failed to create loop`, variant: "error", duration: 3000 })
         }
         dialog.clear()
       },
@@ -2337,6 +2448,68 @@ export function Session() {
         const message = await buildExitMessage()
         exit.message.set(message)
         exit()
+      },
+    },
+    // Skills 2.0 — add skill from URL
+    {
+      title: "Add skill from URL",
+      value: "skills.add",
+      category: "Skills",
+      slash: { name: "skills-add" },
+      onSelect: async (dialog) => {
+        const { DialogPrompt } = await import("@/cli/ui/tui/ui/dialog-prompt")
+        const url = await DialogPrompt.show(dialog, "Skill index URL", {
+          placeholder: "https://skills.example.com/index.json",
+          description: () => (
+            <text fg={theme.textMuted}>URL to a skills index.json (see Discovery format)</text>
+          ) as any,
+        })
+        if (!url) { dialog.clear(); return }
+        try {
+          const res = await fetch(`${sdk.url}/v1/skill/add`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url }),
+          })
+          if (!res.ok) throw new Error(`${res.status}`)
+          const data = await res.json() as { added: number }
+          toast.show({
+            message: `Added ${data.added} skill${data.added !== 1 ? "s" : ""} from URL`,
+            variant: "success",
+            duration: 3000,
+          })
+        } catch {
+          toast.show({ message: "Failed to add skills", variant: "error", duration: 3000 })
+        }
+        dialog.clear()
+      },
+    },
+    // Skills 2.0 — evaluate a skill
+    {
+      title: "Evaluate skill (Skills 2.0)",
+      value: "skills.eval",
+      category: "Skills",
+      slash: { name: "skills-eval" },
+      onSelect: async (dialog) => {
+        // Pick a skill first, then open eval dialog
+        const { DialogSkill } = await import("@/cli/ui/tui/component/dialog-skill")
+        dialog.replace(() => (
+          <DialogSkill
+            onSelect={(name) => {
+              dialog.replace(() => <DialogSkillEval skillName={name} />)
+            }}
+          />
+        ))
+      },
+    },
+    // Google Workspace CLI setup wizard
+    {
+      title: "Google Workspace setup",
+      value: "skills.gws",
+      category: "Skills",
+      slash: { name: "gws" },
+      onSelect: (dialog) => {
+        dialog.replace(() => <DialogGwsSetup />)
       },
     },
   ])
@@ -2393,6 +2566,27 @@ export function Session() {
   
   // Memoized values for SessionMount
   const sessionMountTools = createMemo(() => activeTools())
+
+  // Most recent todo list from the last todowrite tool call (any status)
+  const currentTodos = createMemo(() => {
+    const msgs = messages()
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      const parts = (sync.data.part[msgs[i]!.id] ?? []) as SyncPart[]
+      for (let j = parts.length - 1; j >= 0; j--) {
+        const p = parts[j] as any
+        if (
+          p?.type === "tool" &&
+          p?.tool === "todowrite" &&
+          Array.isArray(p?.state?.input?.todos) &&
+          p.state.input.todos.length > 0
+        ) {
+          return p.state.input.todos as Array<{ content: string; status: string }>
+        }
+      }
+    }
+    return [] as Array<{ content: string; status: string }>
+  })
+
   const sessionMountStatus = createMemo<"idle" | "thinking" | "executing" | "responding" | "compacting">(() => {
     if (!pending()) return "idle"
     const status = sync.data.session_status?.[route.sessionID] ?? { type: "idle" }
@@ -2406,6 +2600,16 @@ export function Session() {
       if (hasText) return "responding"
     }
     return "thinking"
+  })
+
+  // Clean up session-scoped cron loops, sandbox state, and VM when session unmounts
+  onCleanup(() => {
+    const sessionId = session()?.id
+    if (!sessionId) return
+    fetch(`${sdk.url}/v1/cron/session/${encodeURIComponent(sessionId)}`, { method: "DELETE" }).catch(() => {})
+    fetch(`${sdk.url}/v1/sandbox/${encodeURIComponent(sessionId)}/disable`, { method: "POST" }).catch(() => {})
+    // Destroy the VM session if one was provisioned — tears down the microVM
+    fetch(`${sdk.url}/v1/vm-session/${encodeURIComponent(sessionId)}`, { method: "DELETE" }).catch(() => {})
   })
 
   // Session-level elapsed time (from session creation or first message)
@@ -2649,6 +2853,7 @@ export function Session() {
                 sessionTokens={sessionTokens()}
                 thoughtSeconds={thoughtSeconds()}
                 lastRunMs={lastRunMs()}
+                todos={currentTodos()}
               />
               <Prompt
                 visible={(session() ? !session()?.parentID : true) && permissions().length === 0 && questions().length === 0}
@@ -2887,7 +3092,9 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
       if (tokens.cache?.read && tokens.cache.read > 0) parts.push(`${Locale.number(tokens.cache.read)} cached`)
       if (parts.length > 0) line += ` | ${parts.join(", ")}`
     }
-    if (props.message.cost && props.message.cost > 0) line += ` | $${props.message.cost.toFixed(4)}`
+    if (props.message.cost !== undefined) {
+      line += ` | ${props.message.cost > 0 ? `$${props.message.cost.toFixed(4)}` : "$0.00"}`
+    }
     if (props.message.error?.name === "MessageAbortedError") line += ` | ${GIZZICopy.session.interrupted}`
     return truncateInline(line, Math.max(24, ctx.width - 14))
   })
@@ -3558,8 +3765,11 @@ function toolThreadDetail(part: ToolPart): string {
   if (id === "webfetch") {
     return sanitizeBrandSurface(toInlineText(payload.url))
   }
-  if (id === "read" || id === "write" || id === "edit") {
+  if (id === "read" || id === "write" || id === "edit" || id === "multiedit") {
     return sanitizeBrandSurface(normalizePath(toInlineText(payload.filePath || payload.path)))
+  }
+  if (id === "list") {
+    return sanitizeBrandSurface(normalizePath(toInlineText(payload.path ?? "")))
   }
   if (id === "bash") {
     const command = sanitizeBrandSurface(toInlineText(payload.command))
@@ -3859,6 +4069,9 @@ function ToolPart(props: { last: boolean; part: ToolPart; message: AssistantMess
         <Match when={props.part.tool === "skill"}>
           <Skill {...toolprops} />
         </Match>
+        <Match when={props.part.tool === "multiedit"}>
+          <MultiEdit {...toolprops} />
+        </Match>
         <Match when={true}>
           <GenericTool {...toolprops} />
         </Match>
@@ -4096,6 +4309,12 @@ function Bash(props: ToolProps<typeof BashTool>) {
     return match ? absolute.replace(home, "~") : absolute
   })
 
+  const exitCode = createMemo(() => {
+    const code = (props.metadata as any).exit
+    if (code === undefined || code === null || code === 0) return null
+    return code as number
+  })
+
   const title = createMemo(() => {
     const desc = props.input.description ?? GIZZICopy.tool.shellDefault
     const wd = workdirDisplay()
@@ -4122,6 +4341,9 @@ function Bash(props: ToolProps<typeof BashTool>) {
               <text fg={theme.textMuted}>
                 {expanded() ? GIZZICopy.tool.collapse : `… +${overflowCount()} lines ${GIZZICopy.tool.expand}`}
               </text>
+            </Show>
+            <Show when={exitCode() !== null}>
+              <text fg={theme.error}>exit {String(exitCode())}</text>
             </Show>
           </box>
         </BlockTool>
@@ -4181,13 +4403,46 @@ function Write(props: ToolProps<typeof WriteTool>) {
 }
 
 function Glob(props: ToolProps<typeof GlobTool>) {
+  const { theme } = useTheme()
+  const tone = useGIZZITheme()
+  const MAX_PREVIEW = 5
+  const previewFiles = createMemo(() => {
+    if (!props.output) return []
+    return props.output
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => l && !l.startsWith("(Results"))
+      .slice(0, MAX_PREVIEW)
+      .map((f) => normalizePath(f))
+  })
+  const hasPreview = createMemo(() => previewFiles().length > 0)
+
   return (
-    <InlineTool icon="✱" pending={GIZZICopy.tool.pending.glob} complete={props.input.pattern} part={props.part}>
-      {GIZZICopy.tool.labels.glob} "{props.input.pattern}" <Show when={props.input.path}>in {normalizePath(props.input.path)} </Show>
-      <Show when={props.metadata.count}>
-        ({GIZZICopy.tool.matches({ count: props.metadata.count ?? 0 })})
-      </Show>
-    </InlineTool>
+    <Switch>
+      <Match when={hasPreview()}>
+        <BlockTool
+          title={`# ${GIZZICopy.tool.labels.glob} "${props.input.pattern}"${props.metadata.count ? `  ${props.metadata.count} files` : ""}`}
+          part={props.part}
+        >
+          <box gap={tone().space.sm}>
+            <For each={previewFiles()}>
+              {(file) => <text fg={theme.textMuted}>{file}</text>}
+            </For>
+            <Show when={(props.metadata.count ?? 0) > MAX_PREVIEW}>
+              <text fg={theme.textMuted}>… +{(props.metadata.count ?? 0) - MAX_PREVIEW} more</text>
+            </Show>
+          </box>
+        </BlockTool>
+      </Match>
+      <Match when={true}>
+        <InlineTool icon="✱" pending={GIZZICopy.tool.pending.glob} complete={props.input.pattern} part={props.part}>
+          {GIZZICopy.tool.labels.glob} "{props.input.pattern}" <Show when={props.input.path}>in {normalizePath(props.input.path)} </Show>
+          <Show when={props.metadata.count}>
+            ({GIZZICopy.tool.matches({ count: props.metadata.count ?? 0 })})
+          </Show>
+        </InlineTool>
+      </Match>
+    </Switch>
   )
 }
 
@@ -4220,63 +4475,192 @@ function Read(props: ToolProps<typeof ReadTool>) {
 }
 
 function Grep(props: ToolProps<typeof GrepTool>) {
+  const { theme } = useTheme()
+  const tone = useGIZZITheme()
+  const MAX_PREVIEW = 5
+  const previewFiles = createMemo(() => {
+    if (!props.output) return []
+    // Grep output: "Found N matches\n<filepath>:<line>: content\n..."
+    return props.output
+      .split("\n")
+      .filter((l) => l && !l.startsWith("Found ") && !l.startsWith("(Results"))
+      .slice(0, MAX_PREVIEW)
+  })
+  const hasPreview = createMemo(() => previewFiles().length > 0)
+
   return (
-    <InlineTool icon="✱" pending={GIZZICopy.tool.pending.grep} complete={props.input.pattern} part={props.part}>
-      {GIZZICopy.tool.labels.grep} "{props.input.pattern}" <Show when={props.input.path}>in {normalizePath(props.input.path)} </Show>
-      <Show when={props.metadata.matches}>
-        ({GIZZICopy.tool.matches({ count: props.metadata.matches ?? 0 })})
-      </Show>
-    </InlineTool>
+    <Switch>
+      <Match when={hasPreview()}>
+        <BlockTool
+          title={`# ${GIZZICopy.tool.labels.grep} "${props.input.pattern}"${props.metadata.matches ? `  ${props.metadata.matches} matches` : ""}`}
+          part={props.part}
+        >
+          <box gap={tone().space.sm}>
+            <For each={previewFiles()}>
+              {(line) => <text fg={theme.textMuted}>{line}</text>}
+            </For>
+            <Show when={(props.metadata.matches ?? 0) > MAX_PREVIEW}>
+              <text fg={theme.textMuted}>… +{(props.metadata.matches ?? 0) - MAX_PREVIEW} more</text>
+            </Show>
+          </box>
+        </BlockTool>
+      </Match>
+      <Match when={true}>
+        <InlineTool icon="✱" pending={GIZZICopy.tool.pending.grep} complete={props.input.pattern} part={props.part}>
+          {GIZZICopy.tool.labels.grep} "{props.input.pattern}" <Show when={props.input.path}>in {normalizePath(props.input.path)} </Show>
+          <Show when={props.metadata.matches}>
+            ({GIZZICopy.tool.matches({ count: props.metadata.matches ?? 0 })})
+          </Show>
+        </InlineTool>
+      </Match>
+    </Switch>
   )
 }
 
 function List(props: ToolProps<typeof ListTool>) {
-  const dir = createMemo(() => {
-    if (props.input.path) {
-      return normalizePath(props.input.path)
-    }
-    return ""
+  const { theme } = useTheme()
+  const tone = useGIZZITheme()
+  const MAX_PREVIEW = 6
+  const dir = createMemo(() => (props.input.path ? normalizePath(props.input.path) : ""))
+  const previewLines = createMemo(() => {
+    if (!props.output) return []
+    return props.output
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => l)
+      .slice(0, MAX_PREVIEW)
   })
+  const totalLines = createMemo(() => props.output?.split("\n").filter((l) => l.trim()).length ?? 0)
+
   return (
-    <InlineTool icon="→" pending={GIZZICopy.tool.pending.list} complete={props.input.path !== undefined} part={props.part}>
-      {GIZZICopy.tool.labels.list} {dir()}
-    </InlineTool>
+    <Switch>
+      <Match when={previewLines().length > 0}>
+        <BlockTool
+          title={`# ${GIZZICopy.tool.labels.list} ${dir()}  ${totalLines()} items`}
+          part={props.part}
+        >
+          <box gap={tone().space.sm}>
+            <For each={previewLines()}>
+              {(line) => <text fg={theme.textMuted}>{line}</text>}
+            </For>
+            <Show when={totalLines() > MAX_PREVIEW}>
+              <text fg={theme.textMuted}>… +{totalLines() - MAX_PREVIEW} more</text>
+            </Show>
+          </box>
+        </BlockTool>
+      </Match>
+      <Match when={true}>
+        <InlineTool icon="→" pending={GIZZICopy.tool.pending.list} complete={props.input.path !== undefined} part={props.part}>
+          {GIZZICopy.tool.labels.list} {dir()}
+        </InlineTool>
+      </Match>
+    </Switch>
   )
 }
 
 function WebFetch(props: ToolProps<typeof WebFetchTool>) {
+  const { theme } = useTheme()
+  const tone = useGIZZITheme()
   const input = props.input as any
   const url = toInlineText(input.url)
+  const preview = createMemo(() => {
+    if (!props.output) return ""
+    // Show first ~120 chars of output as a content preview
+    const text = props.output.replace(/\s+/g, " ").trim()
+    return text.length > 120 ? text.slice(0, 119) + "…" : text
+  })
+
   return (
-    <InlineTool icon="%" pending={GIZZICopy.tool.pending.webFetch} complete={url} part={props.part}>
-      {url ? `Fetched web content from ${url}` : "Fetched web content"}
-    </InlineTool>
+    <Switch>
+      <Match when={!!preview()}>
+        <BlockTool title={`# Fetched ${url || "web content"}`} part={props.part}>
+          <text fg={theme.textMuted}>{preview()}</text>
+        </BlockTool>
+      </Match>
+      <Match when={true}>
+        <InlineTool icon="%" pending={GIZZICopy.tool.pending.webFetch} complete={url} part={props.part}>
+          {url ? `Fetched web content from ${url}` : "Fetched web content"}
+        </InlineTool>
+      </Match>
+    </Switch>
   )
 }
 
 function CodeSearch(props: ToolProps<any>) {
+  const { theme } = useTheme()
+  const tone = useGIZZITheme()
   const input = props.input as any
   const metadata = props.metadata as any
   const query = toInlineText(input.query)
-  const results = toInlineText(metadata.results)
-  const suffix = results ? ` (${results} results)` : ""
+  const resultCount = metadata.results
+  const MAX_PREVIEW = 4
+  const previewLines = createMemo(() => {
+    if (!props.output) return []
+    return props.output
+      .split("\n")
+      .filter((l: string) => l.trim())
+      .slice(0, MAX_PREVIEW)
+  })
+
   return (
-    <InlineTool icon="◇" pending={GIZZICopy.tool.pending.codeSearch} complete={query} part={props.part}>
-      {query ? `Searched code for "${query}"${suffix}` : `Searched code${suffix}`}
-    </InlineTool>
+    <Switch>
+      <Match when={previewLines().length > 0}>
+        <BlockTool
+          title={`# Searched code for "${query}"${resultCount ? `  ${resultCount} results` : ""}`}
+          part={props.part}
+        >
+          <box gap={tone().space.sm}>
+            <For each={previewLines()}>
+              {(line: string) => <text fg={theme.textMuted}>{line}</text>}
+            </For>
+          </box>
+        </BlockTool>
+      </Match>
+      <Match when={true}>
+        <InlineTool icon="◇" pending={GIZZICopy.tool.pending.codeSearch} complete={query} part={props.part}>
+          {query ? `Searched code for "${query}"${resultCount ? ` (${resultCount} results)` : ""}` : `Searched code`}
+        </InlineTool>
+      </Match>
+    </Switch>
   )
 }
 
 function WebSearch(props: ToolProps<any>) {
+  const { theme } = useTheme()
+  const tone = useGIZZITheme()
   const input = props.input as any
   const metadata = props.metadata as any
   const query = toInlineText(input.query)
-  const results = toInlineText(metadata.numResults)
-  const suffix = results ? ` (${results} results)` : ""
+  const numResults = metadata.numResults
+  const MAX_PREVIEW = 4
+  const previewLines = createMemo(() => {
+    if (!props.output) return []
+    return props.output
+      .split("\n")
+      .filter((l: string) => l.trim())
+      .slice(0, MAX_PREVIEW)
+  })
+
   return (
-    <InlineTool icon="@" pending={GIZZICopy.tool.pending.webSearch} complete={query} part={props.part}>
-      {query ? `Searched web for "${query}"${suffix}` : `Searched web${suffix}`}
-    </InlineTool>
+    <Switch>
+      <Match when={previewLines().length > 0}>
+        <BlockTool
+          title={`# Searched web for "${query}"${numResults ? `  ${numResults} results` : ""}`}
+          part={props.part}
+        >
+          <box gap={tone().space.sm}>
+            <For each={previewLines()}>
+              {(line: string) => <text fg={theme.textMuted}>{line}</text>}
+            </For>
+          </box>
+        </BlockTool>
+      </Match>
+      <Match when={true}>
+        <InlineTool icon="@" pending={GIZZICopy.tool.pending.webSearch} complete={query} part={props.part}>
+          {query ? `Searched web for "${query}"${numResults ? ` (${numResults} results)` : ""}` : `Searched web`}
+        </InlineTool>
+      </Match>
+    </Switch>
   )
 }
 
@@ -4368,6 +4752,17 @@ function Edit(props: ToolProps<typeof EditTool>) {
 
   const diffContent = createMemo(() => props.metadata.diff)
 
+  const diffStats = createMemo(() => {
+    const fd = (props.metadata as any).filediff
+    if (!fd) return ""
+    const added = fd.additions ?? 0
+    const removed = fd.deletions ?? 0
+    const parts: string[] = []
+    if (added > 0) parts.push(`+${added}`)
+    if (removed > 0) parts.push(`-${removed}`)
+    return parts.join(" ")
+  })
+
   const diagnostics = createMemo(() => {
     const filePath = Filesystem.normalizePath(props.input.filePath ?? "")
     const arr = props.metadata.diagnostics?.[filePath] ?? []
@@ -4377,7 +4772,7 @@ function Edit(props: ToolProps<typeof EditTool>) {
   return (
     <Switch>
       <Match when={props.metadata.diff !== undefined}>
-        <BlockTool title={"← " + GIZZICopy.tool.labels.edit + " " + normalizePath(props.input.filePath!)} part={props.part}>
+        <BlockTool title={"← " + GIZZICopy.tool.labels.edit + " " + normalizePath(props.input.filePath!) + (diffStats() ? `  ${diffStats()}` : "")} part={props.part}>
           <box paddingLeft={tone().space.sm}>
             <diff
               diff={diffContent()}
@@ -4416,6 +4811,39 @@ function Edit(props: ToolProps<typeof EditTool>) {
       <Match when={true}>
         <InlineTool icon="←" pending={GIZZICopy.tool.pending.edit} complete={props.input.filePath} part={props.part}>
           {GIZZICopy.tool.labels.edit} {normalizePath(props.input.filePath!)} {input({ replaceAll: props.input.replaceAll })}
+        </InlineTool>
+      </Match>
+    </Switch>
+  )
+}
+
+function MultiEdit(props: ToolProps<typeof MultiEditTool>) {
+  const { theme } = useTheme()
+  const tone = useGIZZITheme()
+  const edits = createMemo(() => (props.input as any).edits ?? [])
+  const completed = createMemo(() => props.part.state.status === "completed")
+
+  return (
+    <Switch>
+      <Match when={edits().length > 0}>
+        <BlockTool
+          title={`← ${GIZZICopy.tool.labels.multiEdit} ${normalizePath((props.input as any).filePath ?? "")}  ${edits().length} edits`}
+          part={props.part}
+        >
+          <box gap={tone().space.sm}>
+            <For each={edits()}>
+              {(edit: any, i) => (
+                <text fg={completed() ? theme.success : theme.textMuted}>
+                  {String(i() + 1)}. {edit.oldString ? truncateInline(edit.oldString, 40) : "(empty)"} → {edit.newString ? truncateInline(edit.newString, 40) : "(empty)"}
+                </text>
+              )}
+            </For>
+          </box>
+        </BlockTool>
+      </Match>
+      <Match when={true}>
+        <InlineTool icon="←" pending={GIZZICopy.tool.pending.multiEdit} complete={(props.input as any).filePath} part={props.part}>
+          {GIZZICopy.tool.labels.multiEdit} {normalizePath((props.input as any).filePath ?? "")}
         </InlineTool>
       </Match>
     </Switch>
@@ -4499,12 +4927,20 @@ function ApplyPatch(props: ToolProps<typeof ApplyPatchTool>) {
 }
 
 function TodoWrite(props: ToolProps<typeof TodoWriteTool>) {
+  const { theme } = useTheme()
   const tone = useGIZZITheme()
   const todos = createMemo(() => props.input.todos ?? props.metadata.todos ?? [])
+  const doneCount = createMemo(() => todos().filter((t) => t.status === "completed").length)
+  const totalCount = createMemo(() => todos().length)
+  const title = createMemo(() => {
+    const base = "# " + GIZZICopy.tool.labels.todos
+    if (totalCount() === 0) return base
+    return `${base}  ${doneCount()}/${totalCount()}`
+  })
   return (
     <Switch>
       <Match when={todos().length > 0}>
-        <BlockTool title={"# " + GIZZICopy.tool.labels.todos} part={props.part}>
+        <BlockTool title={title()} part={props.part}>
           <box gap={tone().space.sm}>
             <For each={todos()}>
               {(todo) => <TodoItem status={todo.status} content={todo.content} />}
@@ -4557,10 +4993,31 @@ function Question(props: ToolProps<typeof QuestionTool>) {
 }
 
 function Skill(props: ToolProps<typeof SkillTool>) {
+  const { theme } = useTheme()
+  const tone = useGIZZITheme()
+  const MAX_LINES = 6
+  const outputLines = createMemo(() => {
+    if (!props.output) return []
+    return props.output.split("\n").filter((l) => l.trim()).slice(0, MAX_LINES)
+  })
+
   return (
-    <InlineTool icon="→" pending={GIZZICopy.tool.pending.skill} complete={props.input.name} part={props.part}>
-      {GIZZICopy.tool.labels.skill} "{props.input.name}"
-    </InlineTool>
+    <Switch>
+      <Match when={outputLines().length > 0}>
+        <BlockTool title={`# ${GIZZICopy.tool.labels.skill} "${props.input.name ?? ""}"`} part={props.part}>
+          <box gap={tone().space.sm}>
+            <For each={outputLines()}>
+              {(line) => <text fg={theme.textMuted}>{line}</text>}
+            </For>
+          </box>
+        </BlockTool>
+      </Match>
+      <Match when={true}>
+        <InlineTool icon="→" pending={GIZZICopy.tool.pending.skill} complete={props.input.name} part={props.part}>
+          {GIZZICopy.tool.labels.skill} "{props.input.name}"
+        </InlineTool>
+      </Match>
+    </Switch>
   )
 }
 

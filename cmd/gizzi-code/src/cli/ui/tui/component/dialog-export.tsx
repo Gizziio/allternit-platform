@@ -6,7 +6,11 @@ import { useSync } from "@/cli/ui/tui/context/sync"
 import { useKeyboard } from "@opentui/solid"
 import { Clipboard } from "@/cli/ui/tui/util/clipboard"
 import { useToast } from "@/cli/ui/tui/ui/toast"
-import type { Message } from "@a2r/sdk/v2"
+interface UIMessage {
+  id: string
+  role: "user" | "assistant" | "system"
+  text?: string
+}
 
 export type ExportFormat = "markdown" | "json" | "text" | "html"
 
@@ -25,7 +29,7 @@ export function DialogExport(props: { sessionID: string }) {
   const [customEnd, setCustomEnd] = createSignal("")
   const [preview, setPreview] = createSignal(false)
 
-  const messages = createMemo(() => sync.data.message[props.sessionID] ?? [])
+  const messages = createMemo(() => (sync.data.message[props.sessionID] ?? []) as UIMessage[])
 
   const filteredMessages = createMemo(() => {
     const msgs = messages()
@@ -200,7 +204,7 @@ export function DialogExport(props: { sessionID: string }) {
       {/* Summary */}
       <box flexDirection="row" gap={tone().space.sm} marginTop={tone().space.sm}>
         <text fg={theme.textMuted}>
-          Will export {filteredMessages().length} messages
+          Will export {String(filteredMessages().length)} messages
         </text>
       </box>
 
@@ -238,7 +242,7 @@ export function DialogExport(props: { sessionID: string }) {
 
 // Export format generators
 function exportAsMarkdown(
-  messages: Message[],
+  messages: UIMessage[],
   parts: Record<string, any[]>,
   includeSystem: boolean
 ): string {
@@ -272,7 +276,7 @@ function exportAsMarkdown(
 }
 
 function exportAsJSON(
-  messages: Message[],
+  messages: UIMessage[],
   parts: Record<string, any[]>,
   includeSystem: boolean
 ): string {
@@ -287,7 +291,7 @@ function exportAsJSON(
   return JSON.stringify(export_, null, 2)
 }
 
-function exportAsText(messages: Message[], parts: Record<string, any[]>): string {
+function exportAsText(messages: UIMessage[], parts: Record<string, any[]>): string {
   let output = `Session Export\n`
   output += `==============\n\n`
 
@@ -314,7 +318,7 @@ function exportAsText(messages: Message[], parts: Record<string, any[]>): string
 }
 
 function exportAsHTML(
-  messages: Message[],
+  messages: UIMessage[],
   parts: Record<string, any[]>,
   includeSystem: boolean
 ): string {

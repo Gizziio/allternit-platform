@@ -4,8 +4,13 @@ import { useTheme } from "@/cli/ui/tui/context/theme"
 import { useGIZZITheme } from "@/cli/ui/components/gizzi"
 import { useSync } from "@/cli/ui/tui/context/sync"
 import { usePinned } from "@/cli/ui/tui/hooks/usePinned"
-import type { Message } from "@a2r/sdk/v2"
 import { useKeyboard } from "@opentui/solid"
+
+interface UIMessage {
+  id: string
+  role: "user" | "assistant" | "system"
+  text?: string
+}
 
 export function DialogPinned(props: { 
   sessionID: string
@@ -17,7 +22,7 @@ export function DialogPinned(props: {
   const sync = useSync()
   const pinned = usePinned(props.sessionID)
 
-  const messages = createMemo(() => sync.data.message[props.sessionID] ?? [])
+  const messages = createMemo(() => (sync.data.message[props.sessionID] ?? []) as UIMessage[])
 
   const pinnedMessages = createMemo(() => {
     const msgList = messages()
@@ -26,7 +31,7 @@ export function DialogPinned(props: {
         pin,
         message: msgList.find((m) => m.id === pin.messageID),
       }))
-      .filter((item): item is { pin: typeof item.pin; message: Message } => 
+      .filter((item): item is { pin: typeof item.pin; message: UIMessage } => 
         item.message !== undefined
       )
       .sort((a, b) => a.pin.pinnedAt - b.pin.pinnedAt)
@@ -39,7 +44,7 @@ export function DialogPinned(props: {
     }
   })
 
-  const getPreview = (message: Message): string => {
+  const getPreview = (message: UIMessage): string => {
     if (message.role === "user") {
       const text = (message as any).text ?? ""
       return text.split("\n")[0].slice(0, 50) || "(no text)"
@@ -76,7 +81,7 @@ export function DialogPinned(props: {
       <box flexDirection="row" gap={tone().space.sm} marginBottom={tone().space.md}>
         <span style={{ fg: theme.accent, bold: true }}>📌 Pinned Messages</span>
         <Show when={pinned.count() > 0}>
-          <text fg={theme.textMuted}>({pinned.count()})</text>
+          <text fg={theme.textMuted}>({String(pinned.count() ?? 0)})</text>
         </Show>
       </box>
 

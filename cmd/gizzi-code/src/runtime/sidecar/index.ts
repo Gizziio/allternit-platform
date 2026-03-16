@@ -19,6 +19,11 @@ const log = Log.create({ service: "sidecar" })
 
 const SIDECAR_PORT = 11435
 const SIDECAR_HOST = "127.0.0.1"
+/**
+ * If A2R_SIDECAR_URL is set (e.g. "http://my-vps.example.com:11434"),
+ * the sidecar skips local Ollama startup and points directly at the remote server.
+ */
+const REMOTE_SIDECAR_URL = process.env["A2R_SIDECAR_URL"]?.replace(/\/$/, "")
 
 // Default embedded model — shipped with gizzi-code
 const EMBEDDED_MODEL = {
@@ -33,7 +38,9 @@ const EMBEDDED_MODEL = {
 export namespace Sidecar {
   export const Port = SIDECAR_PORT
   export const Host = SIDECAR_HOST
-  export const BaseURL = `http://${SIDECAR_HOST}:${SIDECAR_PORT}/v1`
+  export const BaseURL = REMOTE_SIDECAR_URL
+    ? `${REMOTE_SIDECAR_URL}/v1`
+    : `http://${SIDECAR_HOST}:${SIDECAR_PORT}/v1`
   export const Model = EMBEDDED_MODEL
 
   const paths = {
@@ -241,6 +248,22 @@ export namespace Sidecar {
     modelID: string
   }> {
     const result = { available: false, baseURL: BaseURL, modelID: EMBEDDED_MODEL.id }
+
+    // Remote sidecar: skip local Ollama startup, probe the remote endpoint directly.
+    if (REMOTE_SIDECAR_URL) {
+      try {
+        const resp = await fetch(`${REMOTE_SIDECAR_URL}/api/tags`, { signal: AbortSignal.timeout(4000) })
+        if (resp.ok) {
+          result.available = true
+          log.info("remote sidecar connected", { url: REMOTE_SIDECAR_URL })
+        } else {
+          log.warn("remote sidecar responded with error", { status: resp.status, url: REMOTE_SIDECAR_URL })
+        }
+      } catch (err) {
+        log.warn("remote sidecar unreachable", { url: REMOTE_SIDECAR_URL, error: err })
+      }
+      return result
+    }
 
     // Check if already running (could be a shared Ollama instance or previous sidecar)
     if (await isRunning()) {

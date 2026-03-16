@@ -1,5 +1,5 @@
 import type { McpServer } from "@agentclientprotocol/sdk"
-import type { GIZZIClient } from "@a2r/sdk/v2"
+import type { A2RClient } from "@a2r/sdk"
 
 export interface ACPSessionState {
   id: string
@@ -14,8 +14,11 @@ export interface ACPSessionState {
   modeId?: string
 }
 
+// Use the real A2RClient type
+export type A2RClientLike = A2RClient
+
 export interface ACPConfig {
-  sdk: GIZZIClient
+  sdk: A2RClientLike
   defaultModel?: {
     providerID: string
     modelID: string

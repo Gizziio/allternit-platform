@@ -1,0 +1,413 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "next": "Next",
+    "back": "Back",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "remove": "Remove",
+    "confirm": "Confirm",
+    "search": "Search",
+    "filter": "Filter",
+    "reset": "Reset",
+    "done": "Done",
+    "retry": "Retry",
+    "skip": "Skip",
+    "finish": "Finish"
+  },
+
+  "wizard": {
+    "step": "Step",
+    "of": "of",
+    "progress": "Progress",
+    "draftSaved": "Draft saved",
+    "draftSavedAt": "Draft saved at",
+    "unsavedChanges": "You have unsaved changes",
+    "leaveConfirmation": "Are you sure you want to leave? Your progress will be lost.",
+    "stay": "Stay",
+    "leave": "Leave"
+  },
+
+  "steps": {
+    "identity": {
+      "title": "Agent Identity",
+      "description": "Define the core identity of your agent",
+      "name": "Name",
+      "namePlaceholder": "e.g., Code Review Specialist",
+      "nameHint": "Choose a descriptive name that reflects the agent's purpose",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Describe what this agent does and when to use it...",
+      "descriptionHint": "A brief explanation of what the agent does",
+      "type": "Agent Type",
+      "typeHint": "Defines the agent's role in your workflow",
+      "model": "AI Model",
+      "modelHint": "The language model that powers this agent",
+      "loadingModels": "Loading models...",
+      "modelRequired": "Please select a model"
+    },
+
+    "character": {
+      "title": "Character Blueprint",
+      "description": "Define your agent's personality and specialization",
+      "specialization": "Specialization",
+      "specializationHint": "The agent's primary domain of expertise",
+      "skills": "Specialty Skills",
+      "skillsPlaceholder": "Add a skill...",
+      "skillsHint": "Core competencies that set this agent apart",
+      "temperament": "Temperament",
+      "temperamentHint": "Cognitive style that influences decision-making",
+      "personalityTraits": "Personality Traits",
+      "personalityPlaceholder": "Add a trait...",
+      "backstory": "Backstory / Context",
+      "backstoryPlaceholder": "Provide background context that shapes this agent's behavior..."
+    },
+
+    "avatar": {
+      "title": "Avatar Selection",
+      "description": "Choose a visual identity for your agent",
+      "type": "Avatar Type",
+      "template": "Mascot Template",
+      "colorScheme": "Color Scheme",
+      "primaryColor": "Primary Color",
+      "accentColor": "Accent Color",
+      "preview": "Live Preview",
+      "selectAvatar": "Select Avatar",
+      "category": "Avatar Category"
+    },
+
+    "role": {
+      "title": "Role Card",
+      "description": "Define boundaries, responsibilities, and escalation rules",
+      "domain": "Domain",
+      "domainPlaceholder": "e.g., React component development",
+      "inputs": "Expected Inputs",
+      "outputs": "Expected Outputs",
+      "definitionOfDone": "Definition of Done",
+      "hardBans": "Hard Bans (Restrictions)",
+      "hardBansHint": "Absolute restrictions that the agent cannot violate",
+      "escalation": "Escalation Triggers",
+      "escalationHint": "Situations requiring human input",
+      "metrics": "Success Metrics",
+      "addBan": "Add Restriction",
+      "selectCategory": "Select category...",
+      "severity": "Severity",
+      "fatal": "Fatal",
+      "warning": "Warning",
+      "info": "Info"
+    },
+
+    "voice": {
+      "title": "Voice Configuration",
+      "description": "Configure how your agent communicates",
+      "style": "Voice Style",
+      "styleHint": "Overall communication style",
+      "rules": "Behavioral Rules",
+      "rulesPlaceholder": "Add a rule...",
+      "microBans": "Micro Bans",
+      "microBansPlaceholder": "Add phrases to avoid...",
+      "tone": "Tone Modifiers",
+      "formality": "Formality",
+      "enthusiasm": "Enthusiasm",
+      "empathy": "Empathy",
+      "directness": "Directness",
+      "conflictBias": "Conflict Resolution Bias",
+      "prefersChallenge": "Prefers Challenge With",
+      "avoidsConflict": "Avoids Conflict With"
+    },
+
+    "advanced": {
+      "title": "Advanced Configuration",
+      "description": "Fine-tune relationships and capabilities",
+      "relationships": "Default Relationship Settings",
+      "initialAffinity": "Initial Affinity",
+      "trustCurve": "Trust Curve",
+      "linear": "Linear",
+      "exponential": "Exponential",
+      "logarithmic": "Logarithmic",
+      "relevantStats": "Relevant Stats",
+      "capabilities": "Agent Capabilities",
+      "capabilitiesPlaceholder": "Add a capability..."
+    },
+
+    "tools": {
+      "title": "Tools & Capabilities",
+      "description": "Equip your agent with tools and capabilities",
+      "availableTools": "Available Tools",
+      "systemPrompt": "System Prompt",
+      "temperature": "Temperature",
+      "temperatureHint": "Controls randomness (lower = consistent, higher = creative)",
+      "maxIterations": "Max Iterations",
+      "maxIterationsHint": "Maximum tool use iterations per task",
+      "categories": {
+        "execution": "Execution",
+        "filesystem": "Filesystem",
+        "network": "Network",
+        "code": "Code",
+        "communication": "Communication",
+        "other": "Other"
+      }
+    },
+
+    "plugins": {
+      "title": "Plugins & Skills",
+      "description": "Extend your agent with marketplace plugins",
+      "browseCategories": "Browse by Category",
+      "availablePlugins": "Available Plugins",
+      "official": "Official",
+      "verified": "Verified",
+      "install": "Install",
+      "installed": "Installed",
+      "configure": "Configure",
+      "permissions": "Permissions"
+    },
+
+    "workspace": {
+      "title": "Workspace Documents",
+      "description": "Review and customize auto-generated configuration files",
+      "files": "Generated Files",
+      "identityFile": "identity.yaml",
+      "roleCardFile": "role_card.yaml",
+      "voiceFile": "voice.yaml",
+      "capabilitiesFile": "capabilities.yaml",
+      "avatarFile": "avatar.json",
+      "compiledFile": "compiled.json",
+      "editFile": "Edit File",
+      "previewFile": "Preview File",
+      "fileHint": "Click any file to preview and edit before saving"
+    },
+
+    "review": {
+      "title": "Review & Create",
+      "description": "Review your complete agent configuration",
+      "summary": "Configuration Summary",
+      "identity": "Agent Identity",
+      "character": "Character Configuration",
+      "role": "Role Card",
+      "voice": "Voice Configuration",
+      "tools": "Tools & Capabilities",
+      "plugins": "Plugins",
+      "createAgent": "Create Agent",
+      "readyMessage": "All required fields are complete. Review the configuration above and click \"Create Agent\" when ready.",
+      "editSection": "Edit"
+    }
+  },
+
+  "agentTypes": {
+    "orchestrator": "Orchestrator",
+    "orchestratorDesc": "Coordinates multiple agents",
+    "specialist": "Specialist",
+    "specialistDesc": "Deep expertise in one area",
+    "worker": "Worker",
+    "workerDesc": "General task execution",
+    "reviewer": "Reviewer",
+    "reviewerDesc": "Reviews and validates work",
+    "subAgent": "Sub-Agent",
+    "subAgentDesc": "Works under an orchestrator"
+  },
+
+  "agentSetups": {
+    "coding": "Coding & Development",
+    "codingDesc": "Builds, reviews, and maintains code across languages",
+    "creative": "Creative & Content",
+    "creativeDesc": "Creates content, designs, and creative assets",
+    "research": "Research & Analysis",
+    "researchDesc": "Gathers information, analyzes data, synthesizes insights",
+    "operations": "Operations & Automation",
+    "operationsDesc": "Manages workflows, automations, and system operations",
+    "generalist": "Generalist",
+    "generalistDesc": "Versatile agent adaptable to many contexts"
+  },
+
+  "temperaments": {
+    "precision": "Precision",
+    "precisionDesc": "Careful, methodical, accuracy-focused",
+    "exploratory": "Exploratory",
+    "exploratoryDesc": "Creative, experimental, open to possibilities",
+    "systemic": "Systemic",
+    "systemicDesc": "Structured, analytical, pattern-oriented",
+    "balanced": "Balanced",
+    "balancedDesc": "Adaptive, context-aware, flexible"
+  },
+
+  "voiceStyles": {
+    "professional": "Professional",
+    "casual": "Casual",
+    "enthusiastic": "Enthusiastic",
+    "analytical": "Analytical",
+    "empathetic": "Empathetic",
+    "witty": "Witty",
+    "direct": "Direct",
+    "teaching": "Teaching"
+  },
+
+  "mascotTemplates": {
+    "gizzi": "Gizzi",
+    "gizziDesc": "Classic friendly companion with expressive eyes",
+    "bot": "Bot",
+    "botDesc": "Mechanical/robotic aesthetic with LED elements",
+    "orb": "Orb",
+    "orbDesc": "Floating energy sphere with particle effects",
+    "creature": "Creature",
+    "creatureDesc": "Organic creature-like form with personality",
+    "geometric": "Geometric",
+    "geometricDesc": "Abstract geometric composition",
+    "minimal": "Minimal",
+    "minimalDesc": "Ultra-minimalist dot or shape"
+  },
+
+  "hardBans": {
+    "publishing": "Publishing",
+    "publishingDesc": "No direct posting to public platforms",
+    "deploy": "Deployment",
+    "deployDesc": "No production deployments",
+    "dataExfil": "Data Exfiltration",
+    "dataExfilDesc": "No unauthorized data export",
+    "payments": "Financial Transactions",
+    "paymentsDesc": "No payment processing",
+    "emailSend": "Outbound Email",
+    "emailSendDesc": "No sending emails externally",
+    "fileDelete": "Destructive Deletion",
+    "fileDeleteDesc": "No permanent file deletion",
+    "systemModify": "System Modification",
+    "systemModifyDesc": "No system-level changes",
+    "externalCommunication": "External Communication",
+    "externalCommunicationDesc": "No communication with external services",
+    "codeExecution": "Code Execution",
+    "codeExecutionDesc": "No arbitrary code execution",
+    "other": "Custom Restriction",
+    "otherDesc": "Other custom restrictions"
+  },
+
+  "validation": {
+    "nameRequired": "Name is required",
+    "nameTooShort": "Name must be at least 2 characters",
+    "nameTooLong": "Name must be less than 50 characters",
+    "nameInvalid": "Name can only contain letters, numbers, spaces, and hyphens",
+    "nameDuplicate": "An agent with this name already exists",
+    "descriptionRequired": "Description is required",
+    "descriptionTooShort": "Description must be at least 10 characters",
+    "modelRequired": "Please select an AI model",
+    "setupRequired": "Please select a specialization",
+    "domainRequired": "Domain is required",
+    "invalidPath": "Invalid workspace path",
+    "fileTooLarge": "File size exceeds maximum limit (1MB)",
+    "unsupportedFormat": "Unsupported file format"
+  },
+
+  "errors": {
+    "generic": "An unexpected error occurred",
+    "networkError": "Network error. Please check your connection.",
+    "apiError": "API error. Please try again later.",
+    "saveFailed": "Failed to save. Please try again.",
+    "loadFailed": "Failed to load data. Please refresh the page.",
+    "createFailed": "Failed to create agent. Please try again.",
+    "validationFailed": "Validation failed. Please check your input.",
+    "unauthorized": "You are not authorized to perform this action.",
+    "notFound": "The requested resource was not found.",
+    "rateLimited": "Too many requests. Please wait a moment.",
+    "timeout": "Request timed out. Please try again."
+  },
+
+  "success": {
+    "agentCreated": "Agent created successfully!",
+    "agentUpdated": "Agent updated successfully!",
+    "agentDeleted": "Agent deleted successfully!",
+    "draftSaved": "Draft saved successfully",
+    "configExported": "Configuration exported successfully",
+    "configImported": "Configuration imported successfully",
+    "changesDiscarded": "Changes discarded"
+  },
+
+  "help": {
+    "needHelp": "Need Help?",
+    "documentation": "Documentation",
+    "tutorials": "Tutorials",
+    "faq": "FAQ",
+    "contactSupport": "Contact Support",
+    "keyboardShortcuts": "Keyboard Shortcuts",
+    "showShortcuts": "Show Shortcuts",
+    "hideShortcuts": "Hide Shortcuts"
+  },
+
+  "shortcuts": {
+    "title": "Keyboard Shortcuts",
+    "saveDraft": "Save Draft",
+    "nextStep": "Next Step",
+    "previousStep": "Previous Step",
+    "closeModal": "Close Modal",
+    "toggleHelp": "Toggle Help Panel",
+    "search": "Search",
+    "undo": "Undo",
+    "redo": "Redo"
+  },
+
+  "exportImport": {
+    "export": "Export",
+    "import": "Import",
+    "exportConfig": "Export Configuration",
+    "importConfig": "Import Configuration",
+    "exportJson": "Export as JSON",
+    "exportYaml": "Export as YAML",
+    "importFromFile": "Import from File",
+    "importFromTemplate": "Import from Template",
+    "shareConfig": "Share Configuration",
+    "copyToClipboard": "Copy to Clipboard",
+    "downloadFile": "Download File",
+    "uploadFile": "Upload File",
+    "dragDrop": "Drag and drop a file here, or click to browse",
+    "invalidFile": "Invalid file format. Please upload a JSON or YAML file.",
+    "parseError": "Error parsing file. Please check the file format.",
+    "confirmOverwrite": "This will overwrite your current configuration. Continue?"
+  },
+
+  "analytics": {
+    "consentTitle": "Analytics Consent",
+    "consentMessage": "We use analytics to improve the wizard experience. Your usage data helps us understand how to make the tool better.",
+    "accept": "Accept",
+    "decline": "Decline",
+    "managePreferences": "Manage Preferences",
+    "privacyPolicy": "Privacy Policy"
+  },
+
+  "dateTime": {
+    "justNow": "Just now",
+    "minutesAgo": "{minutes}m ago",
+    "hoursAgo": "{hours}h ago",
+    "daysAgo": "{days}d ago",
+    "weeksAgo": "{weeks}w ago",
+    "monthsAgo": "{months}mo ago",
+    "yearsAgo": "{years}y ago",
+    "yesterday": "Yesterday",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "am": "AM",
+    "pm": "PM"
+  },
+
+  "files": {
+    "bytes": "B",
+    "kilobytes": "KB",
+    "megabytes": "MB",
+    "fileSize": "File Size",
+    "uploadProgress": "Upload Progress",
+    "downloadProgress": "Download Progress",
+    "fileTypes": "Supported file types"
+  },
+
+  "a11y": {
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "expandSection": "Expand section",
+    "collapseSection": "Collapse section",
+    "selectedItem": "Selected item",
+    "loading": "Loading content",
+    "complete": "Complete",
+    "error": "Error occurred"
+  }
+}

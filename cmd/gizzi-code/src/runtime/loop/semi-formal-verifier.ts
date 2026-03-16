@@ -15,11 +15,12 @@
  */
 
 import { Log } from "@/shared/util/log";
-import { Plan } from "./planner";
-import { ExecutionReceipt } from "./executor";
+import type { Plan } from "./planner";
+import type { ExecutionReceipt } from "./executor";
 import { generateObject, type ModelMessage } from "ai";
 import { Provider } from "@/runtime/providers/provider";
 import z from "zod/v4";
+import type { LanguageModelV2 } from "@/runtime/providers/adapters/bundled";
 
 // ============================================================================
 // Types for Semi-Formal Verification
@@ -270,15 +271,24 @@ Remember: The certificate acts as proof. It should be detailed enough that anoth
 
 export class SemiFormalVerifier {
   private log = Log.create({ service: "runtime.semi-formal-verifier" });
+  private sessionId: string;
+  private options: {
+    maxSteps?: number;
+    confidenceThreshold?: number;
+    model?: { providerID: string; modelID: string };
+  };
 
   constructor(
-    private sessionId: string,
-    private options: {
+    sessionId: string,
+    options: {
       maxSteps?: number;
       confidenceThreshold?: number;
       model?: { providerID: string; modelID: string };
     } = {}
-  ) {}
+  ) {
+    this.sessionId = sessionId;
+    this.options = options;
+  }
 
   /**
    * Perform semi-formal verification of execution results
@@ -405,8 +415,10 @@ export class SemiFormalVerifier {
   private async generateCertificate(
     context: string
   ): Promise<VerificationCertificate> {
-    const model = this.options.model ?? (await Provider.defaultModel());
-    const language = await Provider.getModel(model.providerID, model.modelID);
+    const defaultModel = await Provider.defaultModel();
+    const modelDef = this.options.model ?? defaultModel;
+    const modelInfo = await Provider.getModel(modelDef.providerID, modelDef.modelID);
+    const language = await Provider.getLanguage(modelInfo) as LanguageModelV2;
 
     const messages: ModelMessage[] = [
       {
@@ -428,7 +440,7 @@ export class SemiFormalVerifier {
       },
     });
 
-    return result.object;
+    return result.object as VerificationCertificate;
   }
 
   /**

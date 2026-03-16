@@ -204,9 +204,9 @@ function DailyView(props: { summary: SessionUsage.UsageSummary }) {
                 </text>
               </box>
               <box flexDirection="row" gap={tone().space.md}>
-                <text fg={theme.textMuted}>{day.sessions.length} sessions</text>
+                <text fg={theme.textMuted}>{String(day.sessions.length ?? 0)} sessions</text>
                 <text fg={theme.textMuted}>•</text>
-                <text fg={theme.textMuted}>{day.total.messages} messages</text>
+                <text fg={theme.textMuted}>{String(day.total.messages ?? 0)} messages</text>
                 <text fg={theme.textMuted}>•</text>
                 <text fg={theme.textMuted}>{SessionUsage.formatTokens(day.total.tokens)} tokens</text>
               </box>
@@ -255,7 +255,7 @@ function SessionsView(props: { summary: SessionUsage.UsageSummary; detailed?: bo
                 </text>
               </box>
               <box flexDirection="row" gap={tone().space.md}>
-                <text fg={theme.textMuted}>{session.messageCount} messages</text>
+                <text fg={theme.textMuted}>{String(session.messageCount ?? 0)} messages</text>
                 <text fg={theme.textMuted}>•</text>
                 <text fg={theme.textMuted}>{SessionUsage.formatTokens(session.total.tokens)} tokens</text>
                 <Show when={props.detailed}>

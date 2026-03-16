@@ -3,30 +3,66 @@
  * 
  * Production-grade gRPC server for visual evidence gathering.
  * Provides real-time evidence streaming and health monitoring.
+ * 
+ * Note: gRPC modules are optional dependencies. If not installed,
+ * the server will throw an error at runtime when started.
  */
 
-import * as grpc from "@grpc/grpc-js";
-import * as protoLoader from "@grpc/proto-loader";
 import * as path from "path";
 import { Log } from "@/shared/util/log";
-import { captureVisualEvidenceDeterministic } from "./integration/deterministic";
-import type { VisualCaptureManager } from "./manager";
-import type { VisualArtifact } from "./types";
+import { captureVisualEvidenceDeterministic } from "./visual/integration/deterministic";
+import type { VisualCaptureManager } from "./visual/manager";
+import type { VisualArtifact } from "./visual/types";
 
 const log = Log.create({ service: "verification.grpc" });
 
+// ============================================================================
+// gRPC Types (defined locally to avoid dependency on @grpc/grpc-js types)
+// ============================================================================
+
+type GrpcStatus = { INTERNAL: number };
+type ServerUnaryCall<Req, Res> = { request: Req };
+type ServerWritableStream<Req, Res> = { 
+  request: Req;
+  write(data: unknown): void; 
+  end(): void; 
+  destroy(error?: Error): void; 
+};
+type SendUnaryData<Res> = (error: { code: number; message: string; details?: string } | null, response?: Res) => void;
+
+interface GrpcServer {
+  addService(service: unknown, implementation: unknown): void;
+  bindAsync(address: string, creds: unknown, callback: (err: Error | null, port: number) => void): void;
+  start(): void;
+  tryShutdown(callback: () => void): void;
+}
+
+interface GrpcModule {
+  status: GrpcStatus;
+  Server: new (options?: unknown) => GrpcServer;
+  loadPackageDefinition(def: unknown): unknown;
+  ServerCredentials: { createInsecure(): unknown; };
+}
+
+interface ProtoLoaderModule {
+  loadSync(path: string, options?: unknown): unknown;
+}
+
+// Load gRPC modules dynamically
+let grpcModule: GrpcModule | null = null;
+let protoLoaderModule: ProtoLoaderModule | null = null;
+
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  grpcModule = require("@grpc/grpc-js") as GrpcModule;
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  protoLoaderModule = require("@grpc/proto-loader") as ProtoLoaderModule;
+} catch {
+  log.warn("@grpc/grpc-js or @grpc/proto-loader not installed. gRPC server will not be available.");
+}
+
 // Load protobuf
 const PROTO_PATH = path.join(__dirname, "proto", "verification.proto");
-
-const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
-  keepCase: true,
-  longs: String,
-  enums: String,
-  defaults: true,
-  oneofs: true,
-});
-
-const verificationProto = grpc.loadPackageDefinition(packageDefinition).verification as any;
 
 // ============================================================================
 // Type Definitions
@@ -56,7 +92,9 @@ interface EvidenceResponse {
   overall_confidence: number;
 }
 
-interface HealthRequest {}
+interface HealthRequest {
+  // empty
+}
 
 interface HealthResponse {
   healthy: boolean;
@@ -83,8 +121,8 @@ class VerificationProviderService {
    * Main evidence gathering endpoint
    */
   async gatherEvidence(
-    call: grpc.ServerUnaryCall<EvidenceRequest, EvidenceResponse>,
-    callback: grpc.sendUnaryData<EvidenceResponse>,
+    call: ServerUnaryCall<EvidenceRequest, EvidenceResponse>,
+    callback: SendUnaryData<EvidenceResponse>,
   ): Promise<void> {
     const wihId = call.request.wih_id;
     const metadata = call.request.metadata || {};
@@ -98,7 +136,7 @@ class VerificationProviderService {
         wihId,
         {
           waitForServer: true,
-          serverTimeout: parseInt(metadata.timeout_ms || "30000"),
+          serverTimeout: parseInt(metadata.timeout_ms || "30000", 10),
           changedFiles: metadata.changed_files?.split(","),
           injectIntoContext: false, // We want the raw result
         },
@@ -107,7 +145,7 @@ class VerificationProviderService {
       if (!result.success) {
         log.warn("[gRPC] Evidence gathering failed", { wihId, errors: result.errors });
         callback({
-          code: grpc.status.INTERNAL,
+          code: 13, // grpc.status.INTERNAL
           message: `Evidence gathering failed: ${result.errors.join(", ")}`,
           details: JSON.stringify({ errors: result.errors }),
         });
@@ -116,14 +154,14 @@ class VerificationProviderService {
 
       // Calculate overall confidence
       const overallConfidence = result.artifacts.length > 0
-        ? result.artifacts.reduce((sum, a) => sum + (a.confidence || 0), 0) / result.artifacts.length
+        ? result.artifacts.reduce((sum: number, a: VisualArtifact) => sum + (a.confidence || 0), 0) / result.artifacts.length
         : 1.0;
 
       // Convert to gRPC response
       const response: EvidenceResponse = {
         evidence_id: `ev_${Date.now()}_${wihId}`,
         wih_id: wihId,
-        artifacts: result.artifacts.map(a => this.convertArtifact(a)),
+        artifacts: result.artifacts.map((a: VisualArtifact) => this.convertArtifact(a)),
         captured_at: new Date().toISOString(),
         provider_id: "visual-capture-ts-grpc",
         overall_confidence: overallConfidence,
@@ -140,7 +178,7 @@ class VerificationProviderService {
       const message = error instanceof Error ? error.message : String(error);
       log.error("[gRPC] Error gathering evidence", { wihId, error: message });
       callback({
-        code: grpc.status.INTERNAL,
+        code: 13, // grpc.status.INTERNAL
         message: `Internal error: ${message}`,
       });
     }
@@ -150,7 +188,7 @@ class VerificationProviderService {
    * Streaming evidence endpoint for real-time updates
    */
   async streamEvidence(
-    call: grpc.ServerWritableStream<EvidenceRequest, Artifact>,
+    call: ServerWritableStream<EvidenceRequest, Artifact>,
   ): Promise<void> {
     const wihId = call.request.wih_id;
     log.info("[gRPC] Streaming evidence", { wihId });
@@ -187,8 +225,8 @@ class VerificationProviderService {
    * Health check endpoint
    */
   healthCheck(
-    _call: grpc.ServerUnaryCall<HealthRequest, HealthResponse>,
-    callback: grpc.sendUnaryData<HealthResponse>,
+    _call: ServerUnaryCall<HealthRequest, HealthResponse>,
+    callback: SendUnaryData<HealthResponse>,
   ): void {
     const uptime = Date.now() - this.startTime.getTime();
     
@@ -224,6 +262,7 @@ class VerificationProviderService {
     // Include image data if available
     if (artifact.image?.path) {
       try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
         const fs = require("fs");
         protoArtifact.image_data = fs.readFileSync(artifact.image.path);
       } catch (e) {
@@ -270,7 +309,7 @@ export interface GrpcServerConfig {
 }
 
 export class VerificationGrpcServer {
-  private server: grpc.Server | null = null;
+  private server: GrpcServer | null = null;
   private service: VerificationProviderService;
   private config: GrpcServerConfig;
 
@@ -285,18 +324,48 @@ export class VerificationGrpcServer {
   }
 
   async start(): Promise<void> {
+    if (!grpcModule || !protoLoaderModule) {
+      throw new Error("@grpc/grpc-js and @grpc/proto-loader are required but not installed");
+    }
+
     return new Promise((resolve, reject) => {
-      this.server = new grpc.Server({
+      this.server = new grpcModule!.Server({
         "grpc.max_concurrent_streams": this.config.maxConcurrentStreams,
       });
 
+      // Load protobuf
+      const packageDefinition = protoLoaderModule!.loadSync(PROTO_PATH, {
+        keepCase: true,
+        longs: String,
+        enums: String,
+        defaults: true,
+        oneofs: true,
+      });
+
+      const verificationProto = grpcModule!.loadPackageDefinition(packageDefinition) as {
+        verification?: { VerificationProvider?: { service: unknown } };
+      };
+      
+      const serviceDef = verificationProto.verification?.VerificationProvider?.service;
+      if (!serviceDef) {
+        reject(new Error("Failed to load verification service from protobuf"));
+        return;
+      }
+
       // Add service
-      this.server.addService(verificationProto.VerificationProvider.service, {
-        gatherEvidence: (call: any, callback: any) =>
-          this.service.gatherEvidence(call, callback),
-        streamEvidence: (call: any) => this.service.streamEvidence(call),
-        healthCheck: (call: any, callback: any) =>
-          this.service.healthCheck(call, callback),
+      this.server.addService(serviceDef, {
+        gatherEvidence: (call: unknown, callback: unknown) =>
+          this.service.gatherEvidence(
+            call as ServerUnaryCall<EvidenceRequest, EvidenceResponse>, 
+            callback as SendUnaryData<EvidenceResponse>
+          ),
+        streamEvidence: (call: unknown) => 
+          this.service.streamEvidence(call as ServerWritableStream<EvidenceRequest, Artifact>),
+        healthCheck: (call: unknown, callback: unknown) =>
+          this.service.healthCheck(
+            call as ServerUnaryCall<HealthRequest, HealthResponse>,
+            callback as SendUnaryData<HealthResponse>
+          ),
       });
 
       // Bind and start
@@ -304,8 +373,8 @@ export class VerificationGrpcServer {
       
       this.server.bindAsync(
         address,
-        grpc.ServerCredentials.createInsecure(),
-        (err, boundPort) => {
+        grpcModule!.ServerCredentials.createInsecure(),
+        (err: Error | null, boundPort: number) => {
           if (err) {
             log.error("[gRPC] Failed to bind server", { error: err.message });
             reject(err);
@@ -336,7 +405,7 @@ export class VerificationGrpcServer {
     });
   }
 
-  getServer(): grpc.Server | null {
+  getServer(): GrpcServer | null {
     return this.server;
   }
 }
@@ -350,7 +419,7 @@ export async function startVerificationServer(
   port?: number,
 ): Promise<VerificationGrpcServer> {
   const config: GrpcServerConfig = {
-    port: port || parseInt(process.env.VERIFICATION_GRPC_PORT || "50051"),
+    port: port || parseInt(process.env.VERIFICATION_GRPC_PORT || "50051", 10),
   };
 
   const server = new VerificationGrpcServer(visualManager, config);

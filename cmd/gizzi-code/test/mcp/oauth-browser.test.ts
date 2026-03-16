@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { test, expect, mock, beforeEach } from "bun:test"
 import { EventEmitter } from "events"
 

@@ -24,6 +24,7 @@ import { BUNDLED_PROVIDERS, NoSuchModelError, type SDK, type LanguageModelV2 } f
 // Provider-specific loaders — each provider's config/auth/model logic in its own file
 import { CUSTOM_LOADERS } from "@/runtime/providers/adapters/loaders"
 import type { CustomModelLoader } from "@/runtime/providers/types"
+import { Discovery } from "@/runtime/providers/discovery"
 
 export namespace Provider {
   const log = Log.create({ service: "provider" })
@@ -115,10 +116,18 @@ export namespace Provider {
       source: z.enum(["env", "config", "custom", "api"]),
       env: z.string().array(),
       key: z.string().optional(),
+      // Auth type controls how llm_config is forwarded to the operator:
+      //   "api_key"    — standard secret key (default)
+      //   "none"       — local model, no auth (Ollama, LM Studio, vLLM)
+      //   "bearer"     — OAuth / subscription token in Authorization: Bearer
+      //   "subprocess" — CLI tool already authed in OS (claude, llm, aichat)
+      auth_type: z.enum(["api_key", "none", "bearer", "subprocess"]).optional(),
+      token: z.string().optional(),          // bearer auth token
+      subprocess_cmd: z.string().optional(), // e.g. "claude -p" or "/usr/local/bin/llm -m gpt-4o"
       options: z.record(z.string(), z.any()),
       models: z.record(z.string(), Model),
     })
-    
+
   export type Info = z.infer<typeof Info>
 
   function fromModelsDevModel(provider: ModelsDev.Provider, model: ModelsDev.Model): Model {
@@ -265,7 +274,7 @@ export namespace Provider {
               existingModel?.api.npm ??
               modelsDev[providerID]?.npm ??
               "@ai-sdk/openai-compatible",
-            url: model.provider?.api ?? provider?.api ?? existingModel?.api.url ?? modelsDev[providerID]?.api,
+            url: model.provider?.api ?? provider?.api ?? provider?.options?.["baseURL"] ?? existingModel?.api.url ?? modelsDev[providerID]?.api,
           },
           status: model.status ?? existingModel?.status ?? "active",
           name,
@@ -379,6 +388,9 @@ export namespace Provider {
       if (provider.env) partial.env = provider.env
       if (provider.name) partial.name = provider.name
       if (provider.options) partial.options = provider.options
+      if (provider.auth_type) partial.auth_type = provider.auth_type
+      if (provider.token) partial.token = provider.token
+      if (provider.subprocess_cmd) partial.subprocess_cmd = provider.subprocess_cmd
       mergeProvider(providerID, partial)
     }
 
@@ -422,6 +434,57 @@ export namespace Provider {
         }
         log.info("registered sidecar provider", { models: Object.keys(sidecarModels) })
       }
+    }
+
+    // ── Auto-discovery: subprocess CLIs + local HTTP servers ──────────────
+    // Runs in parallel with provider loading. Discovered providers are injected
+    // here with lower priority — user config and env always win.
+    const discovered = await Discovery.run()
+    for (const dp of discovered) {
+      if (providers[dp.id]) continue             // user-configured takes priority
+      if (!isProviderAllowed(dp.id)) continue
+      const dpModels: Record<string, Model> = {}
+      for (const m of dp.models) {
+        dpModels[m.id] = {
+          id: m.id,
+          providerID: dp.id,
+          name: m.name,
+          family: "",
+          api: {
+            id: m.id,
+            url: dp.base_url ?? "",
+            npm: "@ai-sdk/openai-compatible",
+          },
+          status: "active",
+          headers: {},
+          options: {},
+          release_date: "",
+          capabilities: {
+            temperature: true,
+            reasoning: false,
+            attachment: false,
+            toolcall: true,
+            input:  { text: true, audio: false, image: false, video: false, pdf: false },
+            output: { text: true, audio: false, image: false, video: false, pdf: false },
+            interleaved: false,
+          },
+          cost: { input: 0, output: 0, cache: { read: 0, write: 0 } },
+          limit: { context: m.context ?? 32768, output: m.output ?? 4096 },
+          variants: {},
+        }
+      }
+      if (Object.keys(dpModels).length === 0) continue
+      providers[dp.id] = {
+        id: dp.id,
+        name: dp.name,
+        source: "custom",
+        env: [],
+        auth_type: dp.auth_type,
+        subprocess_cmd: dp.subprocess_cmd,
+        options: {},
+        models: dpModels,
+      }
+      log.info("discovered", { providerID: dp.id, source: dp.source, models: Object.keys(dpModels).length })
     }
 
     for (const [providerID, provider] of Object.entries(providers)) {
@@ -773,3 +836,7 @@ export namespace Provider {
     }),
   )
 }
+
+// Re-export so any module can register discovery hooks without reaching
+// into the discovery internals.
+export { Discovery } from "@/runtime/providers/discovery"

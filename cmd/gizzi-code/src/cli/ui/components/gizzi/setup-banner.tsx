@@ -1,4 +1,5 @@
 import { createMemo } from "solid-js"
+import { TextAttributes } from "@opentui/core"
 import { useAnimation } from "@/cli/ui/components/animation"
 import { useGIZZITheme } from "@/cli/ui/components/gizzi/theme"
 
@@ -17,7 +18,7 @@ export function SetupBanner(props: { stepId: string }) {
 
   return (
     <box flexDirection="column" alignItems="center" gap={1}>
-      <text fg={tone().accent} style={{ bold: true }}>
+      <text fg={tone().accent} attributes={TextAttributes.BOLD}>
         {badge()}
       </text>
     </box>

@@ -1,8 +1,9 @@
-import { createA2RClient, type Event } from "@a2r/sdk/v2"
+import { createA2RClient, type Event as SDKEvent } from "@a2r/sdk"
 import { createSimpleContext } from "@/cli/ui/tui/context/helper"
 import { createGlobalEmitter } from "@solid-primitives/event-bus"
 import { batch, onCleanup, onMount } from "solid-js"
 
+export type Event = SDKEvent
 export type EventSource = {
   on: (handler: (event: Event) => void) => () => void
 }
@@ -22,7 +23,7 @@ export const { use: useSDK, provider: SDKProvider } = createSimpleContext({
       signal: abort.signal,
       directory: props.directory,
       fetch: props.fetch,
-      headers: props.headers,
+      headers: props.headers as Record<string, string> | undefined,
     })
 
     const emitter = createGlobalEmitter<{
@@ -72,14 +73,7 @@ export const { use: useSDK, provider: SDKProvider } = createSimpleContext({
       // Fall back to SSE
       while (true) {
         if (abort.signal.aborted) break
-        const events = await sdk.event.subscribe(
-          {},
-          {
-            signal: abort.signal,
-          },
-        )
-
-        for await (const event of events.stream) {
+        for await (const event of sdk.events({ signal: abort.signal })) {
           handleEvent(event)
         }
 

@@ -1,7 +1,7 @@
-import { ModelCatalog, ModelDefinition, getCanonicalModel } from "./catalog";
+import { ModelCatalog, getCanonicalModel, type ModelDefinition } from "./catalog";
 import { ModelAvailability } from "./availability";
 import { Config } from "@/runtime/context/config/config";
-import { CacheKey } from "./cache";
+import type { CacheKey } from "./cache";
 import { AuthStore } from "@/runtime/auth/store";
 
 export namespace ModelResolver {
@@ -33,7 +33,7 @@ export namespace ModelResolver {
     }
 
     // 3. Check project default
-    const config = await Config.get();
+    const config = await Config.get() as any;
     if (config.default_model) {
       const model = getCanonicalModel(config.default_model);
       if (model && await checkAvailability(model.id)) return model;

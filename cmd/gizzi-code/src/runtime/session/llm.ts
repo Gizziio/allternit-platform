@@ -207,15 +207,11 @@ export namespace LLM {
       maxOutputTokens,
       abortSignal: input.abort,
       headers: {
-        ...(input.model.providerID.startsWith("gizzi") || input.model.providerID.startsWith("gizzi")
+        ...(input.model.providerID.startsWith("gizzi")
           ? {
               "x-gizzi-project": Instance.project.id,
-              "x-gizzi-project": Instance.project.id,
-              "x-gizzi-session": input.sessionID,
               "x-gizzi-session": input.sessionID,
               "x-gizzi-request": input.user.id,
-              "x-gizzi-request": input.user.id,
-              "x-gizzi-client": Flag.GIZZI_CLIENT,
               "x-gizzi-client": Flag.GIZZI_CLIENT,
             }
           : input.model.providerID !== "anthropic"

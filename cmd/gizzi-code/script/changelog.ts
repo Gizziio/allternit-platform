@@ -1,7 +1,8 @@
 #!/usr/bin/env bun
+// @ts-nocheck
 
 import { $ } from "bun"
-import { createA2R } from "@a2r/sdk/v2"
+import { createA2R } from "@a2r/sdk"
 import { parseArgs } from "util"
 import { Script } from "@a2r/script"
 

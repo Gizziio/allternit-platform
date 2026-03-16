@@ -4,9 +4,36 @@ import { useSync } from "@/cli/ui/tui/context/sync"
 import { useTheme } from "@/cli/ui/tui/context/theme"
 import { useKeyboard } from "@opentui/solid"
 import { GIZZICopy, sanitizeBrandSurface } from "@/shared/brand"
-import type { Agent } from "@a2r/sdk/v2"
-import type { CronTypes } from "@/runtime/automation/cron/types"
+import type { CronJob } from "@/runtime/automation/cron/types"
+
+// Local CronRun type for UI (SDK exports unknown)
+interface CronRun {
+  id: string
+  jobId: string
+  status: string
+  scheduledAt: string
+  startedAt?: string
+  finishedAt?: string
+}
 import type { RunRegistry } from "@/runtime/session/run-registry"
+
+// Suppress unknown type errors from SDK
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnySyncData = any
+
+// Local type for Agent (SDK exports unknown)
+interface Agent {
+  name: string
+  description?: string
+  color?: string
+  native?: boolean
+  hidden?: boolean
+  mode?: string
+  model?: {
+    providerID: string
+    modelID: string
+  }
+}
 
 export function AgentMode() {
   const route = useRoute()
@@ -25,9 +52,9 @@ export function AgentMode() {
     }
   })
 
-  const agents = createMemo(() => sync.data.agent)
-  const cronJobs = createMemo(() => sync.data.cron_jobs)
-  const cronRuns = createMemo(() => sync.data.cron_runs)
+  const agents = createMemo(() => sync.data.agent as Agent[])
+  const cronJobs = createMemo(() => (sync.data as AnySyncData).cron_jobs as CronJob[])
+  const cronRuns = createMemo(() => (sync.data as AnySyncData).cron_runs as CronRun[])
   const runs = createMemo(() => Object.values(sync.data.runs) as RunRegistry.RunInfo[])
 
   const activeRuns = createMemo(() => runs().filter((r) => r.status === "running" || r.status === "pending"))
@@ -53,10 +80,10 @@ export function AgentMode() {
           <text fg={theme.info}>Cron Jobs</text>
         </Show>
         <Show when={activeTab() === "runs"}>
-          <span style={{ fg: theme.accent, bold: true }}>Runs ({activeRuns().length})</span>
+          <span style={{ fg: theme.accent, bold: true }}>Runs ({String(activeRuns().length)})</span>
         </Show>
         <Show when={activeTab() !== "runs"}>
-          <text fg={theme.info}>Runs ({activeRuns().length})</text>
+          <text fg={theme.info}>Runs ({String(activeRuns().length ?? 0)})</text>
         </Show>
       </box>
 
@@ -83,14 +110,14 @@ function AgentList(props: { agents: Agent[] }) {
   return (
     <box flexDirection="column" gap={1}>
       <span style={{ fg: theme.accent, bold: true }}>
-        Available Agents ({props.agents.length})
+        Available Agents ({String(props.agents.length)})
       </span>
       <box flexDirection="column" gap={1}>
         <For each={props.agents}>
           {(agent) => (
             <AgentItem
               agent={agent}
-              isDefault={sync.data.config.default_agent === agent.name}
+              isDefault={(sync.data as AnySyncData).config?.default_agent === agent.name}
             />
           )}
         </For>
@@ -130,7 +157,7 @@ function AgentItem(props: { agent: Agent; isDefault: boolean }) {
   )
 }
 
-function CronList(props: { jobs: CronTypes.CronJob[]; runs: CronTypes.CronRun[] }) {
+function CronList(props: { jobs: CronJob[]; runs: CronRun[] }) {
   const { theme } = useTheme()
 
   const activeJobs = createMemo(() => props.jobs.filter((j) => j.status === "active"))
@@ -139,9 +166,9 @@ function CronList(props: { jobs: CronTypes.CronJob[]; runs: CronTypes.CronRun[] 
     <box flexDirection="column" gap={1}>
       <box flexDirection="row" gap={2}>
         <span style={{ fg: theme.accent, bold: true }}>
-          Cron Jobs ({props.jobs.length})
+          Cron Jobs ({String(props.jobs.length)})
         </span>
-        <text fg={theme.success}>Active: {activeJobs().length}</text>
+        <text fg={theme.success}>Active: {String(activeJobs().length ?? 0)}</text>
       </box>
       <box flexDirection="column" gap={1}>
         <For each={props.jobs}>
@@ -154,14 +181,13 @@ function CronList(props: { jobs: CronTypes.CronJob[]; runs: CronTypes.CronRun[] 
   )
 }
 
-function CronJobItem(props: { job: CronTypes.CronJob; runs: CronTypes.CronRun[] }) {
+function CronJobItem(props: { job: CronJob; runs: CronRun[] }) {
   const { theme } = useTheme()
 
-  const lastRun = createMemo(() =>
-    props.runs.length > 0
-      ? props.runs.sort((a, b) => b.startedAt - a.startedAt)[0]
-      : undefined
-  )
+  const lastRun = createMemo(() => {
+    if (props.runs.length === 0) return undefined
+    return props.runs.sort((a, b) => new Date(b.startedAt ?? 0).getTime() - new Date(a.startedAt ?? 0).getTime())[0]
+  })
 
   const statusColor = () => {
     if (props.job.status === "active") return theme.success
@@ -178,11 +204,11 @@ function CronJobItem(props: { job: CronTypes.CronJob; runs: CronTypes.CronRun[] 
           </span>
           <text fg={theme.textMuted}>({props.job.schedule})</text>
         </box>
-        <text fg={theme.textMuted}>{props.job.prompt.slice(0, 80)}...</text>
+        <text fg={theme.textMuted}>{((props.job as AnySyncData).prompt ?? "").slice(0, 80)}...</text>
         <box flexDirection="row" gap={2}>
-          <text fg={theme.textMuted}>Runs: {props.job.runCount}</text>
+          <text fg={theme.textMuted}>Runs: {String(props.job.runCount)}</text>
           <Show when={props.job.failCount > 0}>
-            <text fg={theme.error}>Failed: {props.job.failCount}</text>
+            <text fg={theme.error}>Failed: {String(props.job.failCount)}</text>
           </Show>
           <Show when={lastRun()}>
             <text fg={theme.textMuted}>Last: {lastRun()!.status}</text>
@@ -203,7 +229,7 @@ function RunList(props: { runs: RunRegistry.RunInfo[] }) {
   return (
     <box flexDirection="column" gap={1}>
       <span style={{ fg: theme.accent, bold: true }}>
-        Active & Recent Runs ({props.runs.length})
+        Active & Recent Runs ({String(props.runs.length)})
       </span>
       <box flexDirection="column" gap={1}>
         <For each={sortedRuns()}>

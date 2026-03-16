@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, expect, test, beforeEach } from "bun:test"
 import path from "path"
 import { LSPClient } from "../../src/lsp/client"

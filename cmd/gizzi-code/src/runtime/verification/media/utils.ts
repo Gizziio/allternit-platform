@@ -4,8 +4,8 @@
  * Convenience functions for common capture scenarios.
  */
 
-import { MediaCaptureManager, MediaCaptureOptions, CapturedMedia } from "./capture";
-import { MediaReviewWorkflow, WorkflowState } from "./workflow";
+import { MediaCaptureManager, type MediaCaptureOptions, type CapturedMedia } from "./capture";
+import { MediaReviewWorkflow, type WorkflowState } from "./workflow";
 
 export interface CaptureDuringVerificationOptions {
   sessionId: string;

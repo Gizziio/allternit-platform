@@ -1,0 +1,28 @@
+{
+  "name": "@a2r/gizziclaw",
+  "version": "1.0.0",
+  "description": "GizziClaw - Agent Workspace System (OpenCLAW port)",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./workspace": "./src/workspace/workspace.ts",
+    "./skills": "./src/skills/skill-loader.ts"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@a2r/sdk": "workspace:*",
+    "@a2r/types": "workspace:*",
+    "zod": "^3.22.0",
+    "fast-glob": "^3.3.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  }
+}

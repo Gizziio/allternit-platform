@@ -1,0 +1,56 @@
+[package]
+name = "a2r-api"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "a2r-api"
+path = "src/main.rs"
+
+[dependencies]
+# Web framework
+axum = { version = "0.7", features = ["ws"] }
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+tower = "0.4"
+
+# Internal crates - Rails & Cowork
+a2r-agent-system-rails = { path = "../../Desktop/a2rchitech-workspace/a2rchitech/0-substrate/a2r-agent-system-rails" }
+a2r-cowork-runtime = { path = "../../1-kernel/cowork/a2r-cowork-runtime" }
+a2r-scheduler = { path = "../../1-kernel/cowork/a2r-scheduler" }
+
+# Internal crates - Execution (commented out - paths don't exist)
+# a2r-driver-interface = { path = "../../1-kernel/infrastructure/a2r-driver-interface" }
+# a2r-firecracker-driver = { path = "../../1-kernel/execution/a2r-firecracker-driver" }
+# a2r-session-manager = { path = "../../1-kernel/execution/a2r-session-manager" }
+
+# WebSocket
+tokio-tungstenite = "0.21"
+futures = "0.3"
+
+# Utilities
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "1"
+anyhow = "1"
+dirs = "5"
+
+# PNG Rendering dependencies
+resvg = "0.41"
+usvg = "0.41"
+tiny-skia = "0.11"
+image = "0.24"
+base64 = "0.22"
+
+# PDF Rendering dependencies
+printpdf = "0.6"
+
+# Testing
+[dev-dependencies]
+axum-test = "14"
+
+# Make this package independent from the root workspace
+[workspace]

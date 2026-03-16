@@ -17,6 +17,9 @@ import { Shell } from "@/runtime/integrations/shell/shell"
 import { BashArity } from "@/runtime/tools/guard/permission/arity"
 import { Truncate } from "@/runtime/tools/builtins/truncation"
 import { Plugin } from "@/runtime/integrations/plugin"
+import { SessionSandbox } from "@/runtime/context/sandbox/session-sandbox"
+import { Sandbox } from "@/runtime/integrations/shell/sandbox"
+import { VmSession } from "@/runtime/context/vm/vm-session"
 
 const MAX_METADATA_LENGTH = 30_000
 const DEFAULT_TIMEOUT = Flag.GIZZI_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS || 2 * 60 * 1000
@@ -169,16 +172,152 @@ export const BashTool = Tool.define("bash", async () => {
         { cwd, sessionID: ctx.sessionID, callID: ctx.callID },
         { env: {} },
       )
-      const proc = spawn(params.command, {
-        shell,
-        cwd,
-        env: {
-          ...process.env,
-          ...shellEnv.env,
-        },
-        stdio: ["ignore", "pipe", "pipe"],
-        detached: process.platform !== "win32",
-      })
+
+      // ── VM Session execution ───────────────────────────────────────────────
+      // When GIZZI_VM_SESSIONS is enabled (or the session has an active VM),
+      // route ALL bash execution through the provisioned VM instead of spawning
+      // a local subprocess. This matches Claude Code's cloud session model where
+      // the entire agent session runs inside a dedicated VM.
+      //
+      // Auto-provision on first bash call when GIZZI_VM_SESSIONS is set.
+      if (!VmSession.get(ctx.sessionID) && VmSession.isEnabled()) {
+        try {
+          await VmSession.provision(ctx.sessionID, {
+            workdir: cwd,
+            networkEnabled: true,
+          })
+        } catch (err) {
+          log.warn("VM auto-provision failed, falling back to local execution", {
+            error: err instanceof Error ? err.message : String(err),
+            sessionID: ctx.sessionID,
+          })
+        }
+      }
+      const vmState = VmSession.get(ctx.sessionID)
+      if (vmState) {
+        log.info("routing through VM session", {
+          sessionID: ctx.sessionID,
+          vmSessionId: vmState.sessionId,
+          vmBacked: vmState.vmBacked,
+          command: params.command.slice(0, 100),
+        })
+
+        ctx.metadata({ metadata: { output: "", description: params.description } })
+
+        // Translate the host absolute cwd to a VM-relative path inside /workspace.
+        // git-cloned: /host/project/src  →  /workspace/src
+        // bind-mounted: path is the same inside the VM
+        const vmWorkdir = params.workdir
+          ? (() => {
+              const rel = path.relative(vmState.workdir, params.workdir)
+              // If relative escapes the workdir root, fall back to workspace root
+              return rel.startsWith("..") ? vmState.workspacePath : path.join(vmState.workspacePath, rel)
+            })()
+          : undefined
+
+        const vmResult = await VmSession.exec(
+          ctx.sessionID,
+          params.command,
+          {
+            env: shellEnv.env as Record<string, string>,
+            timeoutSecs: Math.ceil(timeout / 1000),
+            workdir: vmWorkdir,
+          },
+          ctx.abort,
+        )
+
+        const combinedOutput = vmResult.stderr
+          ? `${vmResult.stdout}\n[STDERR]\n${vmResult.stderr}`
+          : vmResult.stdout
+
+        ctx.metadata({
+          metadata: {
+            output:
+              combinedOutput.length > MAX_METADATA_LENGTH
+                ? combinedOutput.slice(0, MAX_METADATA_LENGTH) + "\n\n..."
+                : combinedOutput,
+            exit: vmResult.exitCode,
+            description: params.description,
+            vm_backed: vmResult.vmBacked,
+          },
+        })
+
+        return {
+          title: params.description,
+          metadata: {
+            output:
+              combinedOutput.length > MAX_METADATA_LENGTH
+                ? combinedOutput.slice(0, MAX_METADATA_LENGTH) + "\n\n..."
+                : combinedOutput,
+            exit: vmResult.exitCode,
+            description: params.description,
+          },
+          output: combinedOutput,
+        }
+      }
+      // ── End VM Session execution ───────────────────────────────────────────
+
+      // ── Sandbox wrapping ───────────────────────────────────────────────────
+      // If the session has sandbox enabled (or GIZZI_SANDBOX is set globally),
+      // wrap the subprocess with bwrap (Linux) or sandbox-exec (macOS) so all
+      // child processes inherit the isolation boundary — same as Claude Code.
+      const sandboxState = SessionSandbox.get(ctx.sessionID)
+      const sandboxEnabled =
+        sandboxState?.enabled ??
+        (Flag.GIZZI_SANDBOX ? (() => {
+          // Auto-enable for this session with defaults if the flag is set globally
+          SessionSandbox.enable(ctx.sessionID, {
+            allowWritePaths: [cwd],
+            allowNetwork: Flag.GIZZI_SANDBOX_ALLOW_NETWORK,
+          })
+          return true
+        })() : false)
+
+      let proc: ReturnType<typeof spawn>
+
+      if (sandboxEnabled && process.platform !== "win32") {
+        const policy = sandboxState?.policy ?? {
+          allowWritePaths: [cwd],
+          allowNetwork: Flag.GIZZI_SANDBOX_ALLOW_NETWORK,
+        }
+        const wrapped = await Sandbox.wrap({
+          command: params.command,
+          shell,
+          cwd,
+          sessionID: ctx.sessionID,
+          policy,
+        })
+
+        if (wrapped) {
+          log.info("sandbox active", { driver: Sandbox.detect(), sessionID: ctx.sessionID })
+          proc = spawn(wrapped.bin, wrapped.args, {
+            cwd,
+            env: { ...process.env, ...shellEnv.env },
+            stdio: ["ignore", "pipe", "pipe"],
+            // Don't use detached with bwrap/sandbox-exec — --die-with-parent handles cleanup
+            detached: false,
+          })
+        } else {
+          // Driver unavailable — fall through to unsandboxed spawn
+          log.warn("sandbox requested but driver returned null, running unsandboxed")
+          proc = spawn(params.command, {
+            shell,
+            cwd,
+            env: { ...process.env, ...shellEnv.env },
+            stdio: ["ignore", "pipe", "pipe"],
+            detached: process.platform !== "win32",
+          })
+        }
+      } else {
+        proc = spawn(params.command, {
+          shell,
+          cwd,
+          env: { ...process.env, ...shellEnv.env },
+          stdio: ["ignore", "pipe", "pipe"],
+          detached: process.platform !== "win32",
+        })
+      }
+      // ── End sandbox wrapping ───────────────────────────────────────────────
 
       let output = ""
 

@@ -7,7 +7,8 @@
  * - Comprehensive run tracking
  */
 
-import type { Database } from "bun:sqlite";
+// @ts-ignore - Bun types may not be available in all contexts
+type Database = import("bun:sqlite").Database;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Job Types
@@ -63,23 +64,29 @@ export interface BaseJob {
   type: JobType;
   status: JobStatus;
   schedule: Schedule;
-  
+
   // Timing
   createdAt: string;
   updatedAt: string;
   lastRunAt?: string;
   nextRunAt?: string;
-  
+
   // Execution limits
   maxRuns?: number;        // Maximum number of runs (null = unlimited)
   runCount: number;        // Number of successful runs
   failCount: number;       // Number of failed runs
-  
+
   // Timeout and retry
   timeoutSeconds?: number; // Default: 300 (5 minutes)
   maxRetries?: number;     // Default: 0
   retryDelaySeconds?: number; // Default: 60
-  
+
+  // Loop vs Scheduled distinction
+  scope?: "session" | "persistent"; // "session" = loop (dies with session), "persistent" = scheduled task
+  sessionId?: string;      // For session-scoped loops: owning session ID
+  expiresAt?: string;      // ISO timestamp — auto-disable after this time (loops: 3 days)
+  catchUpMissed?: boolean; // For persistent jobs: run missed fires on wake (default false)
+
   // Metadata
   tags: string[];
   metadata: Record<string, unknown>;
@@ -198,6 +205,11 @@ export interface CreateJobInput {
   maxRetries?: number;
   tags?: string[];
   metadata?: Record<string, unknown>;
+  // Loop / Scheduled distinction
+  scope?: "session" | "persistent";
+  sessionId?: string;
+  expiresAt?: string;
+  catchUpMissed?: boolean;
 }
 
 export interface UpdateJobInput {
@@ -309,6 +321,15 @@ export interface DatabaseSchema {
     timestamp: string;
     data: string;  // JSON
   };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// CronTypes Namespace (for CronStore compatibility)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export namespace CronTypes {
+  export type CronJob = import("./types").CronJob;
+  export type CronRun = import("./types").CronRun;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

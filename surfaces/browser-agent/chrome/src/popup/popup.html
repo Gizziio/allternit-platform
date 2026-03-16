@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A2R Browser Capsule</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 360px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      font-size: 14px;
+      color: #1f2937;
+      background: #f9fafb;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+      color: white;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo {
+      width: 40px;
+      height: 40px;
+      background: white;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    .title {
+      flex: 1;
+    }
+
+    .title h1 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .title p {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+
+    .status-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 8px #22c55e;
+      animation: pulse 2s infinite;
+    }
+
+    .status-indicator.disconnected {
+      background: #ef4444;
+      box-shadow: none;
+      animation: none;
+    }
+
+    .status-indicator.connecting {
+      background: #f59e0b;
+      box-shadow: 0 0 8px #f59e0b;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    .content {
+      padding: 16px 20px;
+    }
+
+    .section {
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: #6b7280;
+      margin-bottom: 12px;
+      letter-spacing: 0.5px;
+    }
+
+    .mode-selector {
+      display: flex;
+      gap: 8px;
+      background: #e5e7eb;
+      padding: 4px;
+      border-radius: 10px;
+    }
+
+    .mode-btn {
+      flex: 1;
+      padding: 10px 8px;
+      border: none;
+      background: transparent;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #4b5563;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .mode-btn:hover {
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    .mode-btn.active {
+      background: white;
+      color: #3b82f6;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .mode-btn .icon {
+      font-size: 18px;
+    }
+
+    .connection-status {
+      background: white;
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .status-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    .status-icon.connected {
+      background: #dcfce7;
+    }
+
+    .status-icon.disconnected {
+      background: #fee2e2;
+    }
+
+    .status-icon.connecting {
+      background: #fef3c7;
+    }
+
+    .status-details {
+      flex: 1;
+    }
+
+    .status-details h3 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .status-details p {
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: #3b82f6;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #2563eb;
+    }
+
+    .btn-secondary {
+      background: white;
+      color: #374151;
+      border: 1px solid #d1d5db;
+    }
+
+    .btn-secondary:hover {
+      background: #f9fafb;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .info-box {
+      background: #eff6ff;
+      border: 1px solid #dbeafe;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 12px;
+      color: #1e40af;
+    }
+
+    .settings-link {
+      display: block;
+      text-align: center;
+      padding: 12px;
+      color: #3b82f6;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .settings-link:hover {
+      text-decoration: underline;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">🌐</div>
+    <div class="title">
+      <h1>A2R Browser Capsule</h1>
+      <p>Agent-powered browsing</p>
+    </div>
+    <div class="status-indicator" id="statusIndicator"></div>
+  </div>
+
+  <div class="content">
+    <!-- Connection Mode Selection -->
+    <div class="section">
+      <div class="section-title">Connection Mode</div>
+      <div class="mode-selector">
+        <button class="mode-btn" data-mode="cloud" id="btnCloud">
+          <span class="icon">☁️</span>
+          <span>Cloud</span>
+        </button>
+        <button class="mode-btn" data-mode="local" id="btnLocal">
+          <span class="icon">💻</span>
+          <span>Local</span>
+        </button>
+        <button class="mode-btn" data-mode="cowork" id="btnCowork">
+          <span class="icon">🤝</span>
+          <span>Cowork</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Connection Status -->
+    <div class="section">
+      <div class="section-title">Status</div>
+      <div class="connection-status">
+        <div class="status-icon" id="statusIcon">📡</div>
+        <div class="status-details">
+          <h3 id="statusTitle">Connecting...</h3>
+          <p id="statusDesc">Establishing connection to backend</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mode-specific Info -->
+    <div class="section" id="cloudInfo">
+      <div class="info-box">
+        Connected to A2R cloud backend. All automation runs remotely.
+      </div>
+    </div>
+
+    <div class="section hidden" id="localInfo">
+      <div class="info-box">
+        Connected to local A2R Desktop app on your machine.
+      </div>
+    </div>
+
+    <div class="section hidden" id="coworkInfo">
+      <div class="info-box">
+        Desktop is controlling the browser. Automation requests come from your Desktop app.
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="section actions">
+      <button class="btn btn-secondary" id="btnReconnect">Reconnect</button>
+      <button class="btn btn-primary" id="btnSettings">Settings</button>
+    </div>
+
+    <a href="#" class="settings-link" id="linkOptions">Open Full Settings</a>
+  </div>
+
+  <script src="popup.js" type="module"></script>
+</body>
+</html>

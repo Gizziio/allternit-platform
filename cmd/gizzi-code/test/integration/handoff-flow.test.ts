@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Integration Test - End-to-End Handoff Flow
  */

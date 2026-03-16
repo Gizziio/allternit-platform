@@ -10,11 +10,12 @@
  */
 
 import { createSignal, createEffect, onCleanup, For, Show } from "solid-js"
+import { RGBA, TextAttributes } from "@opentui/core"
 import {
   getArsContextaRuntime,
   type ArsContextaOperation,
   type ArsContextaOperationType,
-} from "../../ui/gizzi/ars-contexta-runtime"
+} from "@/cli/ui/components/gizzi/ars-contexta-runtime"
 
 interface ArsContextaPanelProps {
   maxHeight?: number
@@ -28,11 +29,11 @@ const operationIcons: Record<ArsContextaOperationType, string> = {
   "knowledge-graph-update": "◉",
 }
 
-const statusColors: Record<string, number> = {
-  pending: 0xcccc00,
-  running: 0x5599ff,
-  completed: 0x55cc55,
-  failed: 0xff5555,
+const statusColors: Record<string, RGBA> = {
+  pending: RGBA.fromInts(204, 204, 0),
+  running: RGBA.fromInts(85, 153, 255),
+  completed: RGBA.fromInts(85, 204, 85),
+  failed: RGBA.fromInts(255, 85, 85),
 }
 
 export function ArsContextaPanel(props: ArsContextaPanelProps) {
@@ -40,8 +41,8 @@ export function ArsContextaPanel(props: ArsContextaPanelProps) {
   const [operations, setOperations] = createSignal<ArsContextaOperation[]>([])
 
   createEffect(() => {
-    const unsubscribe = runtime.subscribe((ops) => {
-      setOperations(props.showCompleted ? ops : ops.filter((o) => o.status !== "completed"))
+    const unsubscribe = runtime.subscribe((ops: ArsContextaOperation[]) => {
+      setOperations(props.showCompleted ? ops : ops.filter((o: ArsContextaOperation) => o.status !== "completed"))
     })
     onCleanup(unsubscribe)
   })
@@ -64,7 +65,7 @@ export function ArsContextaPanel(props: ArsContextaPanelProps) {
       <box flexDirection="column" height={props.maxHeight}>
         <box flexDirection="row" gap={1}>
           <text>◐</text>
-          <text style={{ bold: true }}>Ars Contexta</text>
+          <text attributes={TextAttributes.BOLD}>Ars Contexta</text>
         </box>
 
         <box flexDirection="column">
@@ -72,38 +73,38 @@ export function ArsContextaPanel(props: ArsContextaPanelProps) {
             {(op) => (
               <box flexDirection="column" paddingLeft={1}>
                 <box flexDirection="row" gap={1}>
-                  <text>{operationIcons[op.type]}</text>
-                  <text>{op.label}</text>
-                  <text fg={statusColors[op.status] ?? 0xaaaaaa}>
-                    {op.status}
+                  <text>{String(operationIcons[op.type] ?? "")}</text>
+                  <text>{String(op.label ?? "")}</text>
+                  <text fg={statusColors[op.status] ?? RGBA.fromInts(170, 170, 170)}>
+                    {String(op.status ?? "")}
                   </text>
                 </box>
 
                 <Show when={op.detail}>
-                  <text fg={0x888888} paddingLeft={2}>{op.detail}</text>
+                  <text fg={RGBA.fromInts(136, 136, 136)} paddingLeft={2}>{String(op.detail ?? "")}</text>
                 </Show>
 
                 <Show when={op.status === "running" && op.progress !== undefined}>
                   <box flexDirection="row" gap={1} paddingLeft={2}>
-                    <text fg={0x5599ff}>{renderProgressBar(op.progress!)}</text>
-                    <text>{op.progress}%</text>
+                    <text fg={RGBA.fromInts(85, 153, 255)}>{renderProgressBar(op.progress!)}</text>
+                    <text>{String(op.progress ?? 0)}%</text>
                   </box>
                 </Show>
 
                 <Show when={op.status === "completed"}>
                   <box flexDirection="row" gap={1} paddingLeft={2}>
                     <Show when={op.entityCount}>
-                      <text fg={0x55cc55}>
-                        {op.entityCount} entities
+                      <text fg={RGBA.fromInts(85, 204, 85)}>
+                        {String(op.entityCount ?? 0)} entities
                       </text>
                     </Show>
                     <Show when={op.insightCount}>
-                      <text fg={0x55cc55}>
-                        {op.insightCount} insights
+                      <text fg={RGBA.fromInts(85, 204, 85)}>
+                        {String(op.insightCount ?? 0)} insights
                       </text>
                     </Show>
                     <Show when={op.processingTimeMs}>
-                      <text fg={0x888888}>
+                      <text fg={RGBA.fromInts(136, 136, 136)}>
                         {formatDuration(op.processingTimeMs)}
                       </text>
                     </Show>

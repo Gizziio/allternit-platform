@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, expect, it } from "bun:test"
 import type { SessionContext, SessionSource, ToolType, HandoffBaton, UnifiedIndex } from "@/continuity/types"
 

@@ -4,7 +4,45 @@ import { useTheme } from "@/cli/ui/tui/context/theme"
 import { useGIZZITheme } from "@/cli/ui/components/gizzi"
 import { useSync } from "@/cli/ui/tui/context/sync"
 import { useKeyboard } from "@opentui/solid"
-import type { Part, FilePart } from "@a2r/sdk/v2"
+
+// Local type definitions (SDK types are now unknown)
+interface FilePartSourceFile {
+  type: "file"
+  path: string
+}
+
+interface FilePartSourceSymbol {
+  type: "symbol"
+  path: string
+}
+
+interface FilePartSource {
+  type: "file" | "symbol"
+  path?: string
+}
+
+interface FilePart {
+  type: "file"
+  filename?: string
+  mime?: string
+  source?: FilePartSource
+}
+
+interface ToolPartState {
+  status: string
+  input?: {
+    path?: string
+  }
+  output?: string
+}
+
+interface ToolPart {
+  type: "tool"
+  state: ToolPartState
+  tool: string
+}
+
+type Part = FilePart | ToolPart | { type: string }
 
 type FileAction = "read" | "edited" | "created" | "mentioned"
 
@@ -22,22 +60,22 @@ export function DialogFileRefs(props: { sessionID: string }) {
   const sync = useSync()
   const [filter, setFilter] = createSignal<"all" | FileAction>("all")
 
-  const messages = createMemo(() => sync.data.message[props.sessionID] ?? [])
+  const messages = createMemo(() => (sync.data.message[props.sessionID] ?? []) as Array<{ id: string }>)
 
   const fileRefs = createMemo(() => {
     const refs = new Map<string, FileReference>()
 
     messages().forEach((msg) => {
-      const parts = sync.data.part[msg.id] ?? []
+      const parts = (sync.data.part[msg.id] ?? []) as Part[]
 
-      parts.forEach((part: Part) => {
+      parts.forEach((part) => {
         // File parts (attachments)
         if (part.type === "file") {
           const filePart = part as FilePart
           let path = filePart.filename || "unknown"
           // Check if source exists and has path (for file or symbol types)
           if (filePart.source && (filePart.source.type === "file" || filePart.source.type === "symbol")) {
-            path = (filePart.source as any).path || path
+            path = filePart.source.path || path
           }
           const existing = refs.get(path)
           if (existing) {
@@ -54,8 +92,8 @@ export function DialogFileRefs(props: { sessionID: string }) {
         }
 
         // Tool parts that reference files
-        if (part.type === "tool" && part.state.status === "completed") {
-          const toolPart = part as any
+        if (part.type === "tool" && (part as ToolPart).state?.status === "completed") {
+          const toolPart = part as ToolPart
           const tool = toolPart.tool
 
           // Read tool
@@ -179,7 +217,7 @@ export function DialogFileRefs(props: { sessionID: string }) {
       <text fg={filter() === props.value ? theme.accent : theme.textMuted}>
         {props.label}
       </text>
-      <text fg={theme.textMuted}>({props.count})</text>
+      <text fg={theme.textMuted}>({String(props.count ?? 0)})</text>
     </box>
   )
 
@@ -196,7 +234,7 @@ export function DialogFileRefs(props: { sessionID: string }) {
       {/* Header */}
       <box flexDirection="row" gap={tone().space.sm} marginBottom={tone().space.md}>
         <span style={{ fg: theme.accent, bold: true }}>📁 Files in Session</span>
-        <text fg={theme.textMuted}>({stats().total} total)</text>
+        <text fg={theme.textMuted}>({String(stats().total ?? 0)} total)</text>
       </box>
 
       {/* Filters */}

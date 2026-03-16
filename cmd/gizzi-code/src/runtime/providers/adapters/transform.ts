@@ -1,7 +1,6 @@
 import type { ModelMessage } from "ai"
 import { mergeDeep, unique } from "remeda"
 import type { JSONSchema7 } from "@ai-sdk/provider"
-import type { JSONSchema } from "zod/v4"
 import type { Provider } from "@/runtime/providers/provider"
 import type { ModelsDev } from "@/runtime/providers/adapters/models"
 import { iife } from "@/shared/util/iife"
@@ -522,7 +521,7 @@ export namespace ProviderTransform {
     return Math.min(model.limit.output, OUTPUT_TOKEN_MAX) || OUTPUT_TOKEN_MAX
   }
 
-  export function schema(model: Provider.Model, schema: JSONSchema.BaseSchema | JSONSchema7): JSONSchema7 {
+  export function schema(model: Provider.Model, inputSchema: JSONSchema7): JSONSchema7 {
     // Convert integer enums to string enums for Google/Gemini
     if (model.providerID === "google" || model.api.id.includes("gemini")) {
       const sanitizeGemini = (obj: any): any => {
@@ -575,9 +574,9 @@ export namespace ProviderTransform {
         return result
       }
 
-      schema = sanitizeGemini(schema)
+      return sanitizeGemini(inputSchema)
     }
 
-    return schema as JSONSchema7
+    return inputSchema
   }
 }

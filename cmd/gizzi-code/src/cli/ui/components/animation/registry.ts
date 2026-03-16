@@ -48,15 +48,18 @@ function renderGridFirstMascotFrame(frame: GridFirstMascotFrameSpec) {
 }
 
 function renderCompactMascotFrame(frame: { beacon: string; eyes: string; mouth: string }) {
+  // Option 1: 12x7 size mascot - properly scaled from full size
   const b = frame.beacon.length >= 2 ? frame.beacon.slice(0, 2) : frame.beacon.padEnd(2, " ")
-  const e = frame.eyes.length >= 2 ? frame.eyes.slice(0, 2) : frame.eyes.padEnd(2, " ")
-  const m = frame.mouth.length >= 2 ? frame.mouth.slice(0, 2) : frame.mouth.padEnd(2, " ")
+  const e = frame.eyes.padEnd(6, " ").slice(0, 6)  // 6 chars for eyes like " ●    ●"
+  const m = frame.mouth.padEnd(6, " ").slice(0, 6)  // 6 chars for mouth
   return [
-    `   ${b}   `,     // 8 wide
-    " ▄▀▀█▀▀▄",     // 8 wide
-    `█  ${e}  █`,     // 8 wide
-    `█  ${m}  █`,     // 8 wide
-    " ▀█▀▀█▀ ",     // 8 wide
+    `     ${b}     `,     // 12 wide - floating beacon
+    `  ▄▄▄  ▄▄▄  `,      // 12 wide - antenna blocks
+    ` ▄████████▄ `,      // 12 wide - head top
+    ` █ ${e} █ `,        // 12 wide - eyes (1 + 1 + 6 + 1 + 1 = 10 inside █)
+    ` █ ${m} █ `,        // 12 wide - mouth
+    ` ▀████████▀ `,      // 12 wide - head bottom
+    `  █ █  █ █  `,      // 12 wide - legs
   ].join("\n")
 }
 
@@ -297,6 +300,45 @@ export function createGIZZIRegistry(): AnimationRegistry {
     mode: "loop",
   })
 
+  // BRANDED TERMINAL PHASER
+  // Source minimized logo: ▄█▄ / █ █
+  // One-line compressed idle mark: █▀█
+  // Animation represents full taller logo phasing in/out
+  registry.register({
+    id: "gizzi.phaser.idle",
+    frames: ["█▀█"],
+    intervalTicks: 1,
+    mode: "loop",
+  })
+
+  registry.register({
+    id: "gizzi.phaser.active",
+    frames: [
+      "█▀█",  // crown state
+      "█▁█",  // lower structure begins
+      "█▂█",  // mid-energy / partial reveal
+      "█▄█",  // full active / strongest reveal
+      "█▂█",  // retract
+      "█▁█",  // fade lower
+    ],
+    intervalTicks: 2,
+    mode: "loop",
+  })
+
+  registry.register({
+    id: "gizzi.phaser.success",
+    frames: ["█▄█"],
+    intervalTicks: 1,
+    mode: "loop",
+  })
+
+  registry.register({
+    id: "gizzi.phaser.error",
+    frames: ["█▚█"],
+    intervalTicks: 1,
+    mode: "loop",
+  })
+
   // Runtime mascot scenes (chat companion)
   // These base animations are mostly single-frame because the 'Alive' driver 
   // implements its own staggered timing for blinking and looking around.
@@ -514,7 +556,7 @@ export function createGIZZIRegistry(): AnimationRegistry {
   registry.register({
     id: "gizzi.mascot.compact.idle",
     frames: [
-      renderCompactMascotFrame({ beacon: "▄▄", eyes: "▀▀", mouth: "--" }),
+      renderCompactMascotFrame({ beacon: "▄▄", eyes: "●    ●", mouth: "A: / /" }),
     ],
     intervalTicks: 1,
     mode: "loop",
@@ -523,7 +565,7 @@ export function createGIZZIRegistry(): AnimationRegistry {
   registry.register({
     id: "gizzi.mascot.compact.blink",
     frames: [
-      renderCompactMascotFrame({ beacon: "▄▄", eyes: "--", mouth: "--" }),
+      renderCompactMascotFrame({ beacon: "▄▄", eyes: "-    -", mouth: "A: / /" }),
     ],
     intervalTicks: 1,
     mode: "loop",
@@ -532,8 +574,8 @@ export function createGIZZIRegistry(): AnimationRegistry {
   registry.register({
     id: "gizzi.mascot.compact.thinking",
     frames: [
-      renderCompactMascotFrame({ beacon: "▄▄", eyes: "??", mouth: "--" }),
-      renderCompactMascotFrame({ beacon: "▄▄", eyes: "--", mouth: "--" }),
+      renderCompactMascotFrame({ beacon: "▄▄", eyes: "?    ?", mouth: "A: / /" }),
+      renderCompactMascotFrame({ beacon: "▄▄", eyes: "-    -", mouth: "A: / /" }),
     ],
     intervalTicks: 3,
     mode: "loop",
@@ -542,8 +584,8 @@ export function createGIZZIRegistry(): AnimationRegistry {
   registry.register({
     id: "gizzi.mascot.compact.executing",
     frames: [
-      renderCompactMascotFrame({ beacon: "▄▄", eyes: "!!", mouth: "▄▄" }),
-      renderCompactMascotFrame({ beacon: "▄▄", eyes: "!!", mouth: "▀▀" }),
+      renderCompactMascotFrame({ beacon: "▄▄", eyes: "!    !", mouth: "A: ---" }),
+      renderCompactMascotFrame({ beacon: "▄▄", eyes: "!    !", mouth: "A: / /" }),
     ],
     intervalTicks: 2,
     mode: "loop",
@@ -552,7 +594,7 @@ export function createGIZZIRegistry(): AnimationRegistry {
   registry.register({
     id: "gizzi.mascot.compact.responding",
     frames: [
-      renderCompactMascotFrame({ beacon: "▄▄", eyes: "^^", mouth: "◡◡" }),
+      renderCompactMascotFrame({ beacon: "▄▄", eyes: "^    ^", mouth: "A: ▭▭" }),
     ],
     intervalTicks: 3,
     mode: "loop",
@@ -561,7 +603,7 @@ export function createGIZZIRegistry(): AnimationRegistry {
   registry.register({
     id: "gizzi.mascot.compact.alert",
     frames: [
-      renderCompactMascotFrame({ beacon: "▄▄", eyes: "oO", mouth: "▭ " }),
+      renderCompactMascotFrame({ beacon: "▄▄", eyes: "!    !", mouth: "A:▭▭▭" }),
     ],
     intervalTicks: 4,
     mode: "loop",
@@ -570,7 +612,7 @@ export function createGIZZIRegistry(): AnimationRegistry {
   registry.register({
     id: "gizzi.mascot.compact.curious",
     frames: [
-      renderCompactMascotFrame({ beacon: "▄▄", eyes: "oO", mouth: "--" }),
+      renderCompactMascotFrame({ beacon: "▄▄", eyes: "o    O", mouth: "A: / /" }),
     ],
     intervalTicks: 8,
     mode: "loop",
@@ -579,7 +621,7 @@ export function createGIZZIRegistry(): AnimationRegistry {
   registry.register({
     id: "gizzi.mascot.compact.focused",
     frames: [
-      renderCompactMascotFrame({ beacon: "▄▄", eyes: "●●", mouth: "--" }),
+      renderCompactMascotFrame({ beacon: "▄▄", eyes: "◉    ◉", mouth: "A: / /" }),
     ],
     intervalTicks: 6,
     mode: "loop",
@@ -588,7 +630,7 @@ export function createGIZZIRegistry(): AnimationRegistry {
   registry.register({
     id: "gizzi.mascot.compact.steady",
     frames: [
-      renderCompactMascotFrame({ beacon: "▄▄", eyes: "◉◉", mouth: "--" }),
+      renderCompactMascotFrame({ beacon: "▄▄", eyes: "●    ●", mouth: "A: / /" }),
     ],
     intervalTicks: 10,
     mode: "loop",
@@ -597,7 +639,7 @@ export function createGIZZIRegistry(): AnimationRegistry {
   registry.register({
     id: "gizzi.mascot.compact.pleased",
     frames: [
-      renderCompactMascotFrame({ beacon: "▄▄", eyes: "^^", mouth: "▀▀" }),
+      renderCompactMascotFrame({ beacon: "▄▄", eyes: "^    ^", mouth: "A:◡◡◡" }),
     ],
     intervalTicks: 5,
     mode: "loop",
@@ -606,7 +648,7 @@ export function createGIZZIRegistry(): AnimationRegistry {
   registry.register({
     id: "gizzi.mascot.compact.skeptical",
     frames: [
-      renderCompactMascotFrame({ beacon: "▄▄", eyes: "--", mouth: "--" }),
+      renderCompactMascotFrame({ beacon: "▄▄", eyes: "O    o", mouth: "A: ---" }),
     ],
     intervalTicks: 7,
     mode: "loop",
@@ -615,7 +657,7 @@ export function createGIZZIRegistry(): AnimationRegistry {
   registry.register({
     id: "gizzi.mascot.compact.mischief",
     frames: [
-      renderCompactMascotFrame({ beacon: "▄▄", eyes: "!!", mouth: "﹏ " }),
+      renderCompactMascotFrame({ beacon: "▄▄", eyes: "!    !", mouth: "A:﹏﹏" }),
     ],
     intervalTicks: 4,
     mode: "loop",
@@ -624,7 +666,7 @@ export function createGIZZIRegistry(): AnimationRegistry {
   registry.register({
     id: "gizzi.mascot.compact.proud",
     frames: [
-      renderCompactMascotFrame({ beacon: "▄▄", eyes: "^^", mouth: "▄▄" }),
+      renderCompactMascotFrame({ beacon: "▄▄", eyes: "^    ^", mouth: "A: / /" }),
     ],
     intervalTicks: 6,
     mode: "loop",
@@ -633,7 +675,7 @@ export function createGIZZIRegistry(): AnimationRegistry {
   registry.register({
     id: "gizzi.mascot.compact.dizzy",
     frames: [
-      renderCompactMascotFrame({ beacon: "▄▄", eyes: "XX", mouth: "--" }),
+      renderCompactMascotFrame({ beacon: "▄▄", eyes: "X    X", mouth: "A: / /" }),
     ],
     intervalTicks: 3,
     mode: "loop",
@@ -642,7 +684,7 @@ export function createGIZZIRegistry(): AnimationRegistry {
   registry.register({
     id: "gizzi.mascot.compact.startled",
     frames: [
-      renderCompactMascotFrame({ beacon: "▄▄", eyes: "!!", mouth: "▭ " }),
+      renderCompactMascotFrame({ beacon: "▄▄", eyes: "!    !", mouth: "A:▭▭▭" }),
     ],
     intervalTicks: 2,
     mode: "loop",
@@ -651,7 +693,7 @@ export function createGIZZIRegistry(): AnimationRegistry {
   registry.register({
     id: "gizzi.mascot.compact.locked-on",
     frames: [
-      renderCompactMascotFrame({ beacon: "▄▄", eyes: "●●", mouth: "▀▀" }),
+      renderCompactMascotFrame({ beacon: "▄▄", eyes: "●    ●", mouth: "A:▀▀" }),
     ],
     intervalTicks: 4,
     mode: "loop",

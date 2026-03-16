@@ -92,8 +92,13 @@ Use this when:
       expectedBehavior: params.expectedBehavior,
     };
     
-    const plan = { steps: [] };
-    const receipts = [];
+    const plan: import("../types").VerificationRequest["plan"] = { 
+      sessionId: `mcp_${Date.now()}`,
+      steps: [],
+      exitCriteria: [],
+      goal: params.description,
+    };
+    const receipts: import("../types").VerificationRequest["receipts"] = [];
     
     const result = await orchestrator.verify(
       plan as any,

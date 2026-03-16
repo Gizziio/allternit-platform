@@ -2,7 +2,7 @@ import { Hono } from "hono"
 import { describeRoute, validator, resolver } from "hono-openapi"
 import z from "zod/v4"
 import { CronService } from "@/runtime/automation/cron/service"
-import { CronTypes } from "@/runtime/automation/cron/types"
+
 import { errors } from "@/runtime/server/error"
 import { lazy } from "@/shared/util/lazy"
 
@@ -170,7 +170,7 @@ export const CronRoutes = lazy(() =>
       ),
       async (c) => {
         const { id } = c.req.valid("param")
-        CronService.remove(id)
+        CronService.delete(id)
         return c.body(null, 204)
       },
     )
@@ -200,7 +200,7 @@ export const CronRoutes = lazy(() =>
       ),
       async (c) => {
         const { id } = c.req.valid("param")
-        CronService.setStatus(id, "paused")
+        CronService.pause(id)
         const job = CronService.get(id)
         return c.json(job)
       },
@@ -231,7 +231,7 @@ export const CronRoutes = lazy(() =>
       ),
       async (c) => {
         const { id } = c.req.valid("param")
-        CronService.setStatus(id, "active")
+        CronService.resume(id)
         const job = CronService.get(id)
         return c.json(job)
       },
@@ -262,7 +262,7 @@ export const CronRoutes = lazy(() =>
       ),
       async (c) => {
         const { id } = c.req.valid("param")
-        const run = await CronService.trigger(id, "manual")
+        const run = await CronService.run(id, "manual")
         return c.json(run)
       },
     )
@@ -313,7 +313,7 @@ export const CronRoutes = lazy(() =>
         },
       }),
       async (c) => {
-        const runs = CronService.getRuns()
+        const runs = CronService.getRecentRuns()
         return c.json(runs)
       },
     )
@@ -373,8 +373,32 @@ export const CronRoutes = lazy(() =>
         },
       }),
       async (c) => {
-        const result = await CronService.wake("api")
+        const result = CronService.wake()
         return c.json(result)
+      },
+    )
+    .delete(
+      "/session/:sessionId",
+      describeRoute({
+        summary: "Cleanup session loops",
+        description: "Delete all session-scoped cron jobs for a session (called on session close).",
+        operationId: "cron.cleanupSession",
+        responses: {
+          200: {
+            description: "Session jobs cleaned up",
+            content: {
+              "application/json": {
+                schema: resolver(z.object({ deleted: z.number() })),
+              },
+            },
+          },
+        },
+      }),
+      validator("param", z.object({ sessionId: z.string() })),
+      async (c) => {
+        const { sessionId } = c.req.valid("param")
+        const deleted = CronService.cleanupSessionJobs(sessionId)
+        return c.json({ deleted })
       },
     ),
 )

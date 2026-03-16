@@ -9,6 +9,18 @@
         "A2R_RAILS_CLI": "a2r",
         "A2R_PROJECT_PATH": "."
       }
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest"]
+    },
+    "superpowers": {
+      "command": "node",
+      "args": ["tools/mcp-servers/superpowers/superpowers-mcp.js"]
     }
   }
 }

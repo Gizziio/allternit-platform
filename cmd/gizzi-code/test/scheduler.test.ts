@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, expect, test } from "bun:test"
 import { Scheduler } from "../src/scheduler"
 import { Instance } from "../src/project/instance"

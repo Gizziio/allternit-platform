@@ -29,7 +29,7 @@ export function GIZZIMascot(props: {
   const tone = useGIZZITheme()
   const { theme } = useTheme()
   const color = createMemo(() => props.color ?? tone().accent)
-  const shellColor = createMemo(() => (props.compact ? theme.textMuted : RGBA.fromInts(212, 176, 140)))
+  const shellColor = createMemo(() => RGBA.fromInts(212, 176, 140))
   const eyeColor = createMemo(() => (props.compact ? theme.text : RGBA.fromInts(217, 119, 87)))
   const coreColor = createMemo(() => (props.compact ? tone().accent : RGBA.fromInts(217, 119, 87)))
 
@@ -44,7 +44,8 @@ export function GIZZIMascot(props: {
     const obsidian = RGBA.fromInts(17, 19, 24)
     const sand = RGBA.fromInts(212, 176, 140)
     const structuralSand = RGBA.fromInts(143, 111, 86)
-    const coral = RGBA.fromInts(217, 119, 87)
+    // GIZZI accent: teal/cyan from gizzi theme darkCyan (#56B6C2) — NOT coral
+    const gizziAccent = RGBA.fromInts(86, 182, 194)
 
     const isCompact = !!props.compact
 
@@ -54,10 +55,10 @@ export function GIZZIMascot(props: {
       if (index === 0 && line.includes("▄▄")) {
         const parts = line.split("▄▄")
         return (
-          <text fg={coral}>
-            <span>{parts[0]}</span>
+          <text fg={gizziAccent}>
+            <span>{parts[0] ?? ""}</span>
             <span style={{ bold: true }}>▄▄</span>
-            <span>{parts[1]}</span>
+            <span>{parts[1] ?? ""}</span>
           </text>
         )
       }
@@ -67,11 +68,11 @@ export function GIZZIMascot(props: {
         const parts = line.split("▄▄▄")
         return (
           <text fg={sand}>
-            <span>{parts[0]}</span>
+            <span>{parts[0] ?? ""}</span>
             <span style={{ bold: true }}>▄▄▄</span>
-            <span>{parts[1]}</span>
+            <span>{parts[1] ?? ""}</span>
             <span style={{ bold: true }}>▄▄▄</span>
-            <span>{parts[2]}</span>
+            <span>{parts[2] ?? ""}</span>
           </text>
         )
       }
@@ -82,9 +83,9 @@ export function GIZZIMascot(props: {
         const parts = line.split(eyeToken)
         return (
           <text fg={sand}>
-            <span>{parts[0]}</span>
-            <span style={{ bg: obsidian, fg: coral, bold: true }}>{eyeToken}</span>
-            <span>{parts[1]}</span>
+            <span>{parts[0] ?? ""}</span>
+            <span style={{ bg: obsidian, fg: gizziAccent, bold: true }}>{eyeToken}</span>
+            <span>{parts[1] ?? ""}</span>
           </text>
         )
       }
@@ -95,9 +96,9 @@ export function GIZZIMascot(props: {
         const parts = line.split(mouthToken)
         return (
           <text fg={sand}>
-            <span>{parts[0]}</span>
-            <span style={{ bg: obsidian, fg: coral, bold: true }}>{mouthToken}</span>
-            <span>{parts[1]}</span>
+            <span>{parts[0] ?? ""}</span>
+            <span style={{ bg: obsidian, fg: gizziAccent, bold: true }}>{mouthToken}</span>
+            <span>{parts[1] ?? ""}</span>
           </text>
         )
       }
@@ -118,7 +119,7 @@ export function GIZZIMascot(props: {
       // 1. Beacon (Line 0)
       if (index === 0 && line.includes("▄▄")) {
         return (
-          <text fg={coral}>
+          <text fg={gizziAccent}>
             <span style={{ bold: true }}>{line}</span>
           </text>
         )
@@ -130,9 +131,9 @@ export function GIZZIMascot(props: {
         const parts = line.split(eyeToken)
         return (
           <text fg={shellColor()}>
-            <span>{parts[0]}</span>
-            <span style={{ fg: coral, bold: true }}>{eyeToken}</span>
-            <span>{parts[1]}</span>
+            <span>{parts[0] ?? ""}</span>
+            <span style={{ fg: gizziAccent, bold: true }}>{eyeToken}</span>
+            <span>{parts[1] ?? ""}</span>
           </text>
         )
       }
@@ -143,9 +144,9 @@ export function GIZZIMascot(props: {
         const parts = line.split(mouthToken)
         return (
           <text fg={shellColor()}>
-            <span>{parts[0]}</span>
-            <span style={{ fg: coral, bold: true }}>{mouthToken}</span>
-            <span>{parts[1]}</span>
+            <span>{parts[0] ?? ""}</span>
+            <span style={{ fg: gizziAccent, bold: true }}>{mouthToken}</span>
+            <span>{parts[1] ?? ""}</span>
           </text>
         )
       }

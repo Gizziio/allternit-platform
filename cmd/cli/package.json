@@ -1,0 +1,28 @@
+{
+  "name": "@a2r/cli",
+  "version": "1.0.0",
+  "description": "A2R Command Line Interface",
+  "type": "module",
+  "bin": {
+    "a2r": "./bin/a2r.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node bin/a2r.js",
+    "dev": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "commander": "^11.0.0",
+    "chalk": "^5.3.0",
+    "ora": "^7.0.0",
+    "@a2r/sdk": "workspace:*",
+    "@a2r/gizziclaw": "workspace:*",
+    "@a2r/types": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0",
+    "tsx": "^4.0.0",
+    "@types/node": "^20.0.0"
+  }
+}

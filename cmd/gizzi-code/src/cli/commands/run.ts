@@ -1,3 +1,4 @@
+
 import type { Argv } from "yargs"
 import path from "path"
 import { pathToFileURL } from "bun"
@@ -7,7 +8,25 @@ import { Flag } from "@/runtime/context/flag/flag"
 import { bootstrap } from "@/cli/bootstrap"
 import { EOL } from "os"
 import { Filesystem } from "@/shared/util/filesystem"
-import { createA2RClient, type Message, type GIZZIClient, type ToolPart } from "@a2r/sdk/v2"
+import { createA2RClient, type A2RClient } from "@a2r/sdk"
+type Client = A2RClient
+
+// Local type definitions (SDK exports unknown)
+type ToolPart = {
+  id: string
+  sessionID: string
+  messageID: string
+  type: "tool"
+  tool: string
+  state: {
+    status: "pending" | "running" | "completed" | "error"
+    input?: Record<string, unknown>
+    output?: string
+    error?: string
+    title?: string
+    metadata?: Record<string, unknown>
+  }
+}
 import { Server } from "@/runtime/server/server"
 import { Provider } from "@/runtime/providers/provider"
 import { Agent } from "@/runtime/loop/agent"
@@ -45,170 +64,156 @@ function props<T extends Tool.Info>(part: ToolPart): ToolProps<T> {
 }
 
 type Inline = {
-  icon: string
   title: string
   description?: string
 }
 
+const SAND = "\x1b[38;2;212;176;140m"
+const BULLET = `${UI.Style.TEXT_INFO_BOLD}⏺${UI.Style.TEXT_NORMAL}`
+const RESULT_CONNECTOR = `${UI.Style.TEXT_DIM}⎿ ${UI.Style.TEXT_NORMAL}`
+const RESULT_INDENT = "   "
+const BLOCK_PREVIEW_LINES = 10
+
 function inline(info: Inline) {
-  const suffix = info.description ? UI.Style.TEXT_DIM + ` ${info.description}` + UI.Style.TEXT_NORMAL : ""
-  UI.println(UI.Style.TEXT_NORMAL + info.icon, UI.Style.TEXT_NORMAL + info.title + suffix)
+  const desc = info.description ? `${UI.Style.TEXT_DIM} ${info.description}${UI.Style.TEXT_NORMAL}` : ""
+  UI.println(`${BULLET} ${UI.Style.TEXT_NORMAL_BOLD}${info.title}${UI.Style.TEXT_NORMAL}${desc}`)
 }
 
 function block(info: Inline, output?: string) {
   UI.empty()
   inline(info)
   if (!output?.trim()) return
-  UI.println(output)
+  const lines = output.trim().split("\n")
+  const shown = lines.slice(0, BLOCK_PREVIEW_LINES)
+  const remaining = lines.length - BLOCK_PREVIEW_LINES
+  for (let i = 0; i < shown.length; i++) {
+    const prefix = i === 0 ? `  ${RESULT_CONNECTOR}` : `  ${RESULT_INDENT}`
+    UI.println(`${prefix}${shown[i]!}`)
+  }
+  if (remaining > 0) {
+    UI.println(`  ${RESULT_INDENT}${UI.Style.TEXT_DIM}… +${remaining} lines${UI.Style.TEXT_NORMAL}`)
+  }
   UI.empty()
+}
+
+function header(agent: string, modelID: string) {
+  const D = UI.Style.TEXT_DIM
+  const N = UI.Style.TEXT_NORMAL
+  const B = UI.Style.TEXT_NORMAL_BOLD
+  UI.empty()
+  UI.println(`${SAND}──${N} ${B}${agent}${N}${D} · ${N}${modelID} ${SAND}──${N}`)
+  UI.empty()
+}
+
+function runningLine(part: ToolPart) {
+  const D = UI.Style.TEXT_DIM
+  const N = UI.Style.TEXT_NORMAL
+  const toolName = Locale.titlecase(part.tool.replace(/_/g, " "))
+  const input = "input" in part.state ? part.state.input : undefined
+  const args = input && typeof input === "object" && Object.keys(input).length > 0
+    ? String(Object.values(input)[0] ?? "").slice(0, 60)
+    : ""
+  UI.println(`${D}⏺ ${toolName}(${args})  …${N}`)
+}
+
+function fmtNum(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`
+  return String(n)
 }
 
 function fallback(part: ToolPart) {
   const state = part.state
   const input = "input" in state ? state.input : undefined
-  const title =
+  const args =
     ("title" in state && state.title ? state.title : undefined) ||
-    (input && typeof input === "object" && Object.keys(input).length > 0 ? JSON.stringify(input) : "Unknown")
-  inline({
-    icon: "⚙",
-    title: `${part.tool} ${title}`,
-  })
+    (input && typeof input === "object" && Object.keys(input).length > 0 ? JSON.stringify(input) : "")
+  const tool = Locale.titlecase(part.tool.replace(/_/g, " "))
+  inline({ title: `${tool}(${args})` })
 }
 
 function glob(info: ToolProps<typeof GlobTool>) {
   const root = info.input.path ?? ""
-  const title = `Glob "${info.input.pattern}"`
-  const suffix = root ? `in ${normalizePath(root)}` : ""
+  const suffix = root ? ` in ${normalizePath(root)}` : ""
   const num = info.metadata.count
-  const description =
-    num === undefined ? suffix : `${suffix}${suffix ? " · " : ""}${num} ${num === 1 ? "match" : "matches"}`
-  inline({
-    icon: "✱",
-    title,
-    ...(description && { description }),
-  })
+  const count = num === undefined ? "" : ` · ${num} ${num === 1 ? "match" : "matches"}`
+  inline({ title: `Glob("${info.input.pattern}")`, description: `${suffix}${count}`.trim() || undefined })
 }
 
 function grep(info: ToolProps<typeof GrepTool>) {
   const root = info.input.path ?? ""
-  const title = `Grep "${info.input.pattern}"`
-  const suffix = root ? `in ${normalizePath(root)}` : ""
+  const suffix = root ? ` in ${normalizePath(root)}` : ""
   const num = info.metadata.matches
-  const description =
-    num === undefined ? suffix : `${suffix}${suffix ? " · " : ""}${num} ${num === 1 ? "match" : "matches"}`
-  inline({
-    icon: "✱",
-    title,
-    ...(description && { description }),
-  })
+  const count = num === undefined ? "" : ` · ${num} ${num === 1 ? "match" : "matches"}`
+  inline({ title: `Grep("${info.input.pattern}")`, description: `${suffix}${count}`.trim() || undefined })
 }
 
 function list(info: ToolProps<typeof ListTool>) {
-  const dir = info.input.path ? normalizePath(info.input.path) : ""
-  inline({
-    icon: "→",
-    title: dir ? `List ${dir}` : "List",
-  })
+  const dir = info.input.path ? normalizePath(info.input.path) : "."
+  inline({ title: `List(${dir})` })
 }
 
 function read(info: ToolProps<typeof ReadTool>) {
   const file = normalizePath(info.input.filePath)
-  const pairs = Object.entries(info.input).filter(([key, value]) => {
-    if (key === "filePath") return false
-    return typeof value === "string" || typeof value === "number" || typeof value === "boolean"
-  })
-  const description = pairs.length ? `[${pairs.map(([key, value]) => `${key}=${value}`).join(", ")}]` : undefined
-  inline({
-    icon: "→",
-    title: `Read ${file}`,
-    ...(description && { description }),
-  })
+  const extras = Object.entries(info.input)
+    .filter(([key, value]) => key !== "filePath" && (typeof value === "string" || typeof value === "number" || typeof value === "boolean"))
+    .map(([key, value]) => `${key}=${value}`)
+    .join(", ")
+  inline({ title: `Read(${file})`, description: extras || undefined })
 }
 
 function write(info: ToolProps<typeof WriteTool>) {
   block(
-    {
-      icon: "←",
-      title: `Write ${normalizePath(info.input.filePath)}`,
-    },
+    { title: `Write(${normalizePath(info.input.filePath)})` },
     info.part.state.status === "completed" ? info.part.state.output : undefined,
   )
 }
 
 function webfetch(info: ToolProps<typeof WebFetchTool>) {
-  inline({
-    icon: "%",
-    title: `WebFetch ${info.input.url}`,
-  })
+  inline({ title: `WebFetch(${info.input.url})` })
 }
 
 function edit(info: ToolProps<typeof EditTool>) {
-  const title = normalizePath(info.input.filePath)
-  const diff = info.metadata.diff
   block(
-    {
-      icon: "←",
-      title: `Edit ${title}`,
-    },
-    diff,
+    { title: `Edit(${normalizePath(info.input.filePath)})` },
+    info.metadata.diff,
   )
 }
 
 function codesearch(info: ToolProps<typeof CodeSearchTool>) {
-  inline({
-    icon: "◇",
-    title: `Exa Code Search "${info.input.query}"`,
-  })
+  inline({ title: `CodeSearch("${info.input.query}")` })
 }
 
 function websearch(info: ToolProps<typeof WebSearchTool>) {
-  inline({
-    icon: "◈",
-    title: `Exa Web Search "${info.input.query}"`,
-  })
+  inline({ title: `WebSearch("${info.input.query}")` })
 }
 
 function task(info: ToolProps<typeof TaskTool>) {
   const input = info.part.state.input
-  const status = info.part.state.status
   const subagent =
-    typeof input.subagent_type === "string" && input.subagent_type.trim().length > 0 ? input.subagent_type : "unknown"
+    typeof input?.subagent_type === "string" && input.subagent_type.trim().length > 0 ? input.subagent_type : "unknown"
   const agent = Locale.titlecase(subagent)
   const desc =
-    typeof input.description === "string" && input.description.trim().length > 0 ? input.description : undefined
-  const icon = status === "error" ? "✗" : status === "running" ? "•" : "✓"
-  const name = desc ?? `${agent} Task`
-  inline({
-    icon,
-    title: name,
-    description: desc ? `${agent} Agent` : undefined,
-  })
+    typeof input?.description === "string" && input.description.trim().length > 0 ? input.description : undefined
+  inline({ title: `Agent(${agent})`, description: desc })
 }
 
 function skill(info: ToolProps<typeof SkillTool>) {
-  inline({
-    icon: "→",
-    title: `Skill "${info.input.name}"`,
-  })
+  inline({ title: `Skill("${info.input.name}")` })
 }
 
 function bash(info: ToolProps<typeof BashTool>) {
   const output = info.part.state.status === "completed" ? info.part.state.output?.trim() : undefined
+  const desc = info.input.description
   block(
-    {
-      icon: "$",
-      title: `${info.input.command}`,
-    },
+    { title: `Bash(${info.input.command})`, description: desc || undefined },
     output,
   )
 }
 
 function todo(info: ToolProps<typeof TodoWriteTool>) {
   block(
-    {
-      icon: "#",
-      title: "Todos",
-    },
+    { title: "TodoWrite" },
     info.input.todos.map((item) => `${item.status === "completed" ? "[x]" : "[ ]"} ${item.content}`).join("\n"),
   )
 }
@@ -499,37 +504,43 @@ export const RunCommand = cmd({
       return message.slice(0, 50) + (message.length > 50 ? "..." : "")
     }
 
-    async function session(sdk: GIZZIClient) {
-      const baseID = args.continue ? (await sdk.session.list()).data?.find((s) => !s.parentID)?.id : args.session
+    async function session(sdk: Client) {
+      const baseID = args.continue
+        ? (await sdk.session.list()).data?.find((s: { parentID?: string }) => !s.parentID)?.id
+        : args.session
 
       if (baseID && args.fork) {
-        const forked = await sdk.session.fork({ sessionID: baseID })
-        return forked.data?.id
+        const forked = await sdk.session.fork({ path: { sessionID: baseID }, body: {} })
+        return (forked.data as { id?: string } | undefined)?.id
       }
 
       if (baseID) return baseID
 
       const name = title()
-      const result = await sdk.session.create({ title: name, permission: rules })
-      return result.data?.id
+      const result = await sdk.session.create({
+        body: { title: name, permission: rules } as any,
+      })
+      return (result.data as { id?: string } | undefined)?.id
     }
 
-    async function share(sdk: GIZZIClient, sessionID: string) {
+    async function share(sdk: Client, sessionID: string) {
       const cfg = await sdk.config.get()
       if (!cfg.data) return
-      if (cfg.data.share !== "auto" && !Flag.GIZZI_AUTO_SHARE && !args.share) return
-      const res = await sdk.session.share({ sessionID }).catch((error) => {
+      const cfgData = cfg.data as { share?: string }
+      if (cfgData.share !== "auto" && !Flag.GIZZI_AUTO_SHARE && !args.share) return
+      const res = await sdk.session.share({ path: { sessionID } }).catch((error: unknown) => {
         if (error instanceof Error && error.message.includes("disabled")) {
           UI.println(UI.Style.TEXT_DANGER_BOLD + "!  " + error.message)
         }
         return { error }
       })
-      if (!res.error && "data" in res && res.data?.share?.url) {
-        UI.println(UI.Style.TEXT_INFO_BOLD + "~  " + res.data.share.url)
+      const resData = (res as { data?: { share?: { url?: string } } }).data
+      if (!(res as { error?: unknown }).error && resData?.share?.url) {
+        UI.println(UI.Style.TEXT_INFO_BOLD + "~  " + resData.share.url)
       }
     }
 
-    async function execute(sdk: GIZZIClient) {
+    async function execute(sdk: Client) {
       function tool(part: ToolPart) {
         try {
           if (part.tool === "bash") return bash(props<typeof BashTool>(part))
@@ -568,37 +579,45 @@ export const RunCommand = cmd({
         return false
       }
 
-      const events = await sdk.event.subscribe()
+      const eventStream = sdk.events()
       let error: string | undefined
       let totalCost = 0
+      let totalTokensIn = 0
+      let totalTokensOut = 0
 
       async function loop() {
-        const toggles = new Map<string, boolean>()
+        const toggles = new Map<string, string>()
+        let lastMessageHeaderID = ""
 
-        for await (const event of events.stream) {
+        for await (const event of eventStream) {
+          // Per-message assistant header
           if (
             event.type === "message.updated" &&
             event.properties.info.role === "assistant" &&
-            !jsonMode && !streamJsonMode && !printMode &&
-            toggles.get("start") !== true
+            !jsonMode && !streamJsonMode && !printMode
           ) {
-            UI.empty()
-            UI.println(`> ${event.properties.info.agent} · ${event.properties.info.modelID}`)
-            UI.empty()
-            toggles.set("start", true)
+            const info = event.properties.info as any
+            if (info.id && info.id !== lastMessageHeaderID) {
+              lastMessageHeaderID = info.id
+              header(info.agent ?? "gizzi", info.modelID ?? "unknown")
+            }
           }
 
-          // Track cost for budget limit
+          // Track cost + tokens for budget limit and summary
           if (
             event.type === "message.updated" &&
             event.properties.info.role === "assistant" &&
             event.properties.info.time.completed
           ) {
-            const msg = event.properties.info as { cost?: number }
+            const msg = event.properties.info as { cost?: number; tokens?: { input?: number; output?: number } }
             if (msg.cost) totalCost += msg.cost
+            if (msg.tokens) {
+              totalTokensIn += msg.tokens.input ?? 0
+              totalTokensOut += msg.tokens.output ?? 0
+            }
             if (args.maxBudgetUsd && totalCost >= args.maxBudgetUsd) {
               UI.error(`Budget limit reached: $${totalCost.toFixed(4)} >= $${args.maxBudgetUsd}`)
-              await sdk.session.abort?.({ sessionID }).catch(() => {})
+              await sdk.session.abort({ path: { sessionID: sessionID! } }).catch(() => {})
               break
             }
           }
@@ -607,29 +626,27 @@ export const RunCommand = cmd({
             const part = event.properties.part
             if (part.sessionID !== sessionID) continue
 
+            // Running indicator (show once per tool part)
+            if (part.type === "tool" && part.state.status === "running" && args.format !== "json") {
+              if (!toggles.has(part.id)) {
+                toggles.set(part.id, "running")
+                if (!emit("tool_running", { part }) && !printMode) {
+                  runningLine(part)
+                }
+              }
+              continue
+            }
+
             if (part.type === "tool" && (part.state.status === "completed" || part.state.status === "error")) {
+              toggles.set(part.id, "done")
               if (emit("tool_use", { part })) continue
               if (printMode) continue
               if (part.state.status === "completed") {
                 tool(part)
                 continue
               }
-              inline({
-                icon: "✗",
-                title: `${part.tool} failed`,
-              })
+              inline({ title: `${Locale.titlecase(part.tool.replace(/_/g, " "))} failed` })
               UI.error(part.state.error)
-            }
-
-            if (
-              part.type === "tool" &&
-              part.tool === "task" &&
-              part.state.status === "running" &&
-              args.format !== "json"
-            ) {
-              if (toggles.get(part.id) === true) continue
-              task(props<typeof TaskTool>(part))
-              toggles.set(part.id, true)
             }
 
             if (part.type === "step-start") {
@@ -648,12 +665,13 @@ export const RunCommand = cmd({
                 printBuffer.push(text)
                 continue
               }
+              const rendered = process.stderr.isTTY ? UI.markdown(text) : text
               if (!process.stdout.isTTY) {
-                process.stdout.write(text + EOL)
+                process.stdout.write(rendered + EOL)
                 continue
               }
               UI.empty()
-              UI.println(text)
+              UI.println(rendered)
               UI.empty()
             }
 
@@ -676,8 +694,8 @@ export const RunCommand = cmd({
             const props = event.properties
             if (props.sessionID !== sessionID || !props.error) continue
             let err = String(props.error.name)
-            if ("data" in props.error && props.error.data && "message" in props.error.data) {
-              err = String(props.error.data.message)
+            if ("data" in props.error && props.error.data && typeof props.error.data === "object" && "message" in (props.error.data as object)) {
+              err = String((props.error.data as any).message)
             }
             error = error ? error + EOL + err : err
             if (emit("error", { error: props.error })) continue
@@ -693,11 +711,21 @@ export const RunCommand = cmd({
             if (printMode && printBuffer.length > 0) {
               process.stdout.write(printBuffer.join("\n") + EOL)
             }
+            // Cost + token summary
+            if (!jsonMode && !streamJsonMode && !printMode && (totalCost > 0 || totalTokensIn > 0)) {
+              const D = UI.Style.TEXT_DIM
+              const N = UI.Style.TEXT_NORMAL
+              const parts: string[] = []
+              if (totalCost > 0) parts.push(`$${totalCost.toFixed(4)}`)
+              if (totalTokensIn > 0) parts.push(`${fmtNum(totalTokensIn)} in · ${fmtNum(totalTokensOut)} out`)
+              UI.empty()
+              UI.println(`${D}∑  ${parts.join("  ·  ")}${N}`)
+            }
             break
           }
 
-          if (event.type === "permission.asked") {
-            const permission = event.properties
+          if ((event as any).type === "permission.asked") {
+            const permission = (event as any).properties
             if (permission.sessionID !== sessionID) continue
             if (!printMode) {
               UI.println(
@@ -707,9 +735,9 @@ export const RunCommand = cmd({
               )
             }
             await sdk.permission.reply({
-              requestID: permission.id,
-              reply: "reject",
-            })
+              path: { requestID: permission.id },
+              body: { reply: "reject" },
+            }).catch(() => {})
           }
         }
       }
@@ -744,19 +772,21 @@ export const RunCommand = cmd({
       }
       await share(sdk, sessionID)
 
-      loop().catch((e) => {
+      const loopDone = loop().catch((e) => {
         process.stderr.write(String(e?.stack ?? e) + "\n")
         process.exit(1)
       })
 
       if (args.command) {
         await sdk.session.command({
-          sessionID,
-          agent,
-          model: args.model,
-          command: args.command,
-          arguments: message,
-          variant: args.variant,
+          path: { sessionID },
+          body: {
+            agent,
+            model: args.model,
+            command: args.command,
+            arguments: message,
+            variant: args.variant,
+          } as any,
         })
       } else {
         const model = args.model ? Provider.parseModel(args.model) : undefined
@@ -822,15 +852,19 @@ export const RunCommand = cmd({
         })()
 
         await sdk.session.prompt({
-          sessionID,
-          agent,
-          model,
-          variant: args.variant,
-          ...(systemOverride ? { system: systemOverride } : {}),
-          ...(format ? { format } : {}),
-          parts: [...files, { type: "text", text: fullMessage }],
+          path: { sessionID },
+          body: {
+            agent,
+            model,
+            variant: args.variant,
+            ...(systemOverride ? { system: systemOverride } : {}),
+            ...(format ? { format } : {}),
+            parts: [...files, { type: "text", text: fullMessage }],
+          } as any,
         })
       }
+
+      await loopDone
     }
 
     if (args.attach) {

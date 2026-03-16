@@ -1,9 +1,10 @@
-import type { Part, SessionStatus } from "@a2r/sdk/v2"
+import type { MessageV2 } from "@/runtime/session/message-v2"
+import type { SessionStatus } from "@/runtime/session/status"
 import type { GIZZIRuntimeState } from "@/cli/ui/components/gizzi/theme"
 import { isWebToolName } from "@/cli/ui/components/gizzi/runtime-mode"
 import { GIZZICopy } from "@/shared/brand"
 
-export function resolveRuntimeState(status: SessionStatus, parts: Part[], queued: boolean): GIZZIRuntimeState {
+export function resolveRuntimeState(status: SessionStatus.Info, parts: MessageV2.Part[], queued: boolean): GIZZIRuntimeState {
   if (queued && status.type === "idle") return "connecting"
   if (status.type === "idle") return "idle"
   if (status.type === "retry") return "connecting"
@@ -11,7 +12,7 @@ export function resolveRuntimeState(status: SessionStatus, parts: Part[], queued
   if (parts.some((part) => part.type === "compaction")) return "compacting"
   const runningTools = parts
     .filter(
-      (part): part is Extract<Part, { type: "tool" }> =>
+      (part): part is Extract<MessageV2.Part, { type: "tool" }> =>
         part.type === "tool" && (part.state.status === "pending" || part.state.status === "running"),
     )
     .map((part) => part.tool)

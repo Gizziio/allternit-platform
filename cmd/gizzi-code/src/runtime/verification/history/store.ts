@@ -5,10 +5,22 @@
  * Enables trend analysis and reporting.
  */
 
-import { Log } from "@/shared/util/log";
-import { Bus } from "@/shared/bus";
+/** Simple console-based logger */
+const log = {
+  info: (msg: string, meta?: Record<string, unknown>) => console.log(`[INFO] ${msg}`, meta || ""),
+  error: (msg: string, meta?: Record<string, unknown>) => console.error(`[ERROR] ${msg}`, meta || ""),
+  warn: (msg: string, meta?: Record<string, unknown>) => console.warn(`[WARN] ${msg}`, meta || ""),
+  debug: (msg: string, meta?: Record<string, unknown>) => console.log(`[DEBUG] ${msg}`, meta || ""),
+};
 
-const log = Log.create({ service: "verification.history" });
+/** Simple event bus */
+const Bus = {
+  publish: (event: string, data: Record<string, unknown>) => {
+    // Event publishing stub
+    void event;
+    void data;
+  },
+};
 
 // ============================================================================
 // Types

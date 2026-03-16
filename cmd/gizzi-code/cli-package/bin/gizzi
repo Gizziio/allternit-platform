@@ -1,0 +1,69 @@
+#!/usr/bin/env node
+
+/**
+ * Gizzi CLI Entry Point
+ * 
+ * This wrapper handles the runtime detection and launches
+ * the appropriate binary for the platform.
+ * 
+ * Commands:
+ *   gizzi              Start the TUI
+ *   gizzi --version    Show version
+ *   gizzi --help       Show help
+ */
+
+import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+import { existsSync } from 'node:fs';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const platform = process.platform;
+const arch = process.arch;
+
+// Determine the binary name
+function getBinaryName() {
+  const base = 'gizzi';
+  
+  if (platform === 'win32') {
+    return `${base}.exe`;
+  }
+  
+  return base;
+}
+
+const binaryName = getBinaryName();
+const binaryPath = join(__dirname, '..', 'dist', binaryName);
+
+// Check if bundled binary exists
+if (existsSync(binaryPath)) {
+  // Use bundled binary
+  const child = spawn(binaryPath, process.argv.slice(2), {
+    stdio: 'inherit',
+    env: process.env,
+  });
+  
+  child.on('exit', (code) => {
+    process.exit(code ?? 0);
+  });
+} else {
+  // Fallback to Node.js version
+  const scriptPath = join(__dirname, '..', 'dist', 'gizzi.js');
+  
+  if (!existsSync(scriptPath)) {
+    console.error('Error: Gizzi binary not found.');
+    console.error('Please reinstall: npm install -g @a2r/gizzi');
+    process.exit(1);
+  }
+  
+  const child = spawn(process.execPath, [scriptPath, ...process.argv.slice(2)], {
+    stdio: 'inherit',
+    env: process.env,
+  });
+  
+  child.on('exit', (code) => {
+    process.exit(code ?? 0);
+  });
+}

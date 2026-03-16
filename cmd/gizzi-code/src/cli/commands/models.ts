@@ -2,9 +2,17 @@ import type { Argv } from "yargs"
 import { Instance } from "@/runtime/context/project/instance"
 import { Provider } from "@/runtime/providers/provider"
 import { ModelsDev } from "@/runtime/providers/adapters/models"
+import { Discovery } from "@/runtime/providers/discovery"
 import { cmd } from "@/cli/commands/cmd"
 import { UI } from "@/cli/ui"
 import { EOL } from "os"
+
+const SOURCE_BADGE: Record<string, string> = {
+  subprocess: UI.Style.TEXT_INFO_BOLD + "[cli]" + UI.Style.TEXT_NORMAL,
+  local:      UI.Style.TEXT_WARNING_BOLD + "[local]" + UI.Style.TEXT_NORMAL,
+  platform:   UI.Style.TEXT_SUCCESS_BOLD + "[platform]" + UI.Style.TEXT_NORMAL,
+  plugin:     UI.Style.TEXT_SUCCESS_BOLD + "[plugin]" + UI.Style.TEXT_NORMAL,
+}
 
 export const ModelsCommand = cmd({
   command: "models [provider]",
@@ -39,45 +47,71 @@ export const ModelsCommand = cmd({
     await Instance.provide({
       directory: process.cwd(),
       async fn() {
-        // Get all providers from models.dev (not just configured ones)
         const modelsDev = await ModelsDev.get()
         const configured = await Provider.list()
+
+        // Auto-discovered CLI/local providers
+        const discovered = await Discovery.run()
+        const discoveredMap: Record<string, typeof discovered[0]> = {}
+        for (const dp of discovered) discoveredMap[dp.id] = dp
 
         function printModels(providerID: string, verbose?: boolean) {
           const devProvider = modelsDev[providerID]
           const configuredProvider = configured[providerID]
           const provider = configuredProvider || devProvider
-          if (!provider) return
-          
-          const sortedModels = Object.entries(provider.models).sort(([a], [b]) => a.localeCompare(b))
-          for (const [modelID, model] of sortedModels) {
-            process.stdout.write(`${providerID}/${modelID}`)
-            process.stdout.write(EOL)
-            if (verbose) {
-              process.stdout.write(JSON.stringify(model, null, 2))
+          if (provider) {
+            const sortedModels = Object.entries(provider.models).sort(([a], [b]) => a.localeCompare(b))
+            for (const [modelID, model] of sortedModels) {
+              process.stdout.write(`${providerID}/${modelID}`)
               process.stdout.write(EOL)
+              if (verbose) {
+                process.stdout.write(JSON.stringify(model, null, 2))
+                process.stdout.write(EOL)
+              }
+            }
+            return
+          }
+
+          // Discovered but not in models.dev (CLI/local providers)
+          const dp = discoveredMap[providerID]
+          if (dp) {
+            const badge = SOURCE_BADGE[dp.source] ?? ""
+            for (const m of dp.models) {
+              process.stdout.write(`${providerID}/${m.id}  ${badge}`)
+              process.stdout.write(EOL)
+              if (verbose) {
+                process.stdout.write(JSON.stringify({ context: m.context, output: m.output }, null, 2))
+                process.stdout.write(EOL)
+              }
             }
           }
         }
 
-        // Use models.dev as the source of truth for available providers
-        const providersToShow = args.all ? modelsDev : configured
+        // Build combined provider ID list
+        const allProviderIDs = new Set<string>([
+          ...(args.all ? Object.keys(modelsDev) : Object.keys(configured)),
+          ...Object.keys(discoveredMap),
+        ])
 
         if (args.provider) {
-          if (!providersToShow[args.provider]) {
+          if (!allProviderIDs.has(args.provider)) {
             UI.error(`Provider not found: ${args.provider}`)
             return
           }
-
           printModels(args.provider, args.verbose)
           return
         }
 
-        const providerIDs = Object.keys(providersToShow).sort((a, b) => {
+        const providerIDs = [...allProviderIDs].sort((a, b) => {
           const aIsGIZZI = a.startsWith("gizzi")
           const bIsGIZZI = b.startsWith("gizzi")
           if (aIsGIZZI && !bIsGIZZI) return -1
           if (!aIsGIZZI && bIsGIZZI) return 1
+          // discovered CLI/local providers last
+          const aDiscovered = !modelsDev[a] && !configured[a]
+          const bDiscovered = !modelsDev[b] && !configured[b]
+          if (aDiscovered && !bDiscovered) return 1
+          if (!aDiscovered && bDiscovered) return -1
           return a.localeCompare(b)
         })
 

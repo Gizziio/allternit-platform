@@ -63,11 +63,29 @@ export namespace Flag {
   export const GIZZI_EXPERIMENTAL_OXFMT = GIZZI_EXPERIMENTAL || truthy("GIZZI_EXPERIMENTAL_OXFMT")
   export const GIZZI_EXPERIMENTAL_LSP_TY = truthy("GIZZI_EXPERIMENTAL_LSP_TY")
   export const GIZZI_EXPERIMENTAL_LSP_TOOL = GIZZI_EXPERIMENTAL || truthy("GIZZI_EXPERIMENTAL_LSP_TOOL")
+  export const GIZZI_ENABLE_BROWSER_TOOL = !truthy("GIZZI_DISABLE_BROWSER_TOOL")
   export const GIZZI_DISABLE_FILETIME_CHECK = truthy("GIZZI_DISABLE_FILETIME_CHECK")
   export const GIZZI_EXPERIMENTAL_PLAN_MODE = GIZZI_EXPERIMENTAL || truthy("GIZZI_EXPERIMENTAL_PLAN_MODE")
   export const GIZZI_EXPERIMENTAL_MARKDOWN = truthy("GIZZI_EXPERIMENTAL_MARKDOWN")
   export const GIZZI_MODELS_URL = env("GIZZI_MODELS_URL")
   export const GIZZI_MODELS_PATH = env("GIZZI_MODELS_PATH")
+
+  // Sandbox — enable OS-level subprocess isolation (bwrap on Linux, sandbox-exec on macOS)
+  // When set, ALL agent bash sessions start sandboxed. Individual sessions can still toggle.
+  export const GIZZI_SANDBOX = truthy("GIZZI_SANDBOX")
+  // When sandbox is on, allow outbound network (default true — agents need npm/pip/cargo)
+  export const GIZZI_SANDBOX_ALLOW_NETWORK = !truthy("GIZZI_SANDBOX_BLOCK_NETWORK")
+
+  // Cowork VM runtime endpoint (a2r-api POST /sandbox/execute)
+  export const GIZZI_SANDBOX_RUNTIME_URL = env("GIZZI_SANDBOX_RUNTIME_URL")
+
+  // VM session mode — provision a full VM per gizzi-code session (like CC cloud sessions).
+  // When set, every new agent session gets a dedicated VM. All Bash tool calls execute
+  // inside the VM rather than on the host. Project dir is shared in via bind mount / VirtioFS.
+  export const GIZZI_VM_SESSIONS = truthy("GIZZI_VM_SESSIONS")
+  // a2r-api base URL for VM session API (POST /vm-session etc.)
+  // Defaults to GIZZI_SANDBOX_RUNTIME_URL if not set separately.
+  export const GIZZI_VM_API_URL = env("GIZZI_VM_API_URL") ?? env("GIZZI_SANDBOX_RUNTIME_URL")
 
   function number(key: string) {
     const value = env(key)

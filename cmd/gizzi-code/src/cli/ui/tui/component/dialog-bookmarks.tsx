@@ -4,8 +4,13 @@ import { DialogSelect, type DialogSelectOption } from "@/cli/ui/tui/ui/dialog-se
 import { useSync } from "@/cli/ui/tui/context/sync"
 import { useTheme } from "@/cli/ui/tui/context/theme"
 import { useGIZZITheme } from "@/cli/ui/components/gizzi"
-import type { Message } from "@a2r/sdk/v2"
 import { useBookmarks } from "@/cli/ui/tui/hooks/useBookmarks"
+
+interface UIMessage {
+  id: string
+  role: "user" | "assistant" | "system"
+  text?: string
+}
 import { GIZZICopy } from "@/shared/brand"
 
 export function DialogBookmarks(props: { sessionID: string }) {
@@ -15,14 +20,14 @@ export function DialogBookmarks(props: { sessionID: string }) {
   const tone = useGIZZITheme()
   const bookmarks = useBookmarks(props.sessionID)
 
-  const messages = createMemo(() => sync.data.message[props.sessionID] ?? [])
+  const messages = createMemo(() => (sync.data.message[props.sessionID] ?? []) as UIMessage[])
 
   const bookmarkedMessages = createMemo(() => {
     const msgList = messages()
     const bookmarkedIDs = bookmarks.getBookmarkedMessageIDs()
     return bookmarkedIDs
       .map((id) => msgList.find((m) => m.id === id))
-      .filter((m): m is Message => m !== undefined)
+      .filter((m): m is UIMessage => m !== undefined)
       .sort((a, b) => a.id.localeCompare(b.id))
   })
 
@@ -47,13 +52,13 @@ export function DialogBookmarks(props: { sessionID: string }) {
     })
   })
 
-  function getUserPreview(message: Message): string {
+  function getUserPreview(message: UIMessage): string {
     // Get first line of user message
     const text = (message as any).text ?? ""
     return text.split("\n")[0].slice(0, 60) || "(no text)"
   }
 
-  function getAssistantPreview(message: Message, parts: any[]): string {
+  function getAssistantPreview(message: UIMessage, parts: any[]): string {
     // Get first text part
     const textPart = parts.find((p) => p.type === "text" && p.text?.trim())
     if (textPart) {

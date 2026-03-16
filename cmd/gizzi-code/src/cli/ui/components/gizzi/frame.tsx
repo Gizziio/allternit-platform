@@ -12,7 +12,9 @@ export function GIZZIFrame(props: { children: JSX.Element; isHeightConstrained?:
     <box
       flexDirection="column"
       flexGrow={1}
+      flexShrink={1}
       width="100%"
+      height="100%"
       minWidth={0}
       paddingLeft={tone().space.md}
       paddingRight={tone().space.md}

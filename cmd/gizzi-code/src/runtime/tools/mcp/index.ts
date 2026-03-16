@@ -23,6 +23,7 @@ import { BusEvent } from "@/shared/bus/bus-event"
 import { Bus } from "@/shared/bus"
 import { TuiEvent } from "@/cli/ui/tui/event"
 import open from "open"
+import { withBundledMcpServers } from "@/runtime/tools/mcp/bundled"
 
 export namespace MCP {
   const log = Log.create({ service: "mcp" })
@@ -157,7 +158,7 @@ export namespace MCP {
   const state = Instance.state(
     async () => {
       const cfg = await Config.get()
-      const config = cfg.mcp ?? {}
+      const config = withBundledMcpServers(cfg.mcp ?? {})
       const clients: Record<string, MCPClient> = {}
       const status: Record<string, Status> = {}
 
@@ -518,7 +519,7 @@ export namespace MCP {
   export async function status() {
     const s = await state()
     const cfg = await Config.get()
-    const config = cfg.mcp ?? {}
+    const config = withBundledMcpServers(cfg.mcp ?? {})
     const result: Record<string, Status> = {}
 
     // Include all configured MCPs from config, not just connected ones
@@ -536,7 +537,7 @@ export namespace MCP {
 
   export async function connect(name: string) {
     const cfg = await Config.get()
-    const config = cfg.mcp ?? {}
+    const config = withBundledMcpServers(cfg.mcp ?? {})
     const mcp = config[name]
     if (!mcp) {
       log.error("MCP config not found", { name })
@@ -589,7 +590,7 @@ export namespace MCP {
     const result: Record<string, Tool> = {}
     const s = await state()
     const cfg = await Config.get()
-    const config = cfg.mcp ?? {}
+    const config = withBundledMcpServers(cfg.mcp ?? {})
     const clientsSnapshot = await clients()
     const defaultTimeout = cfg.experimental?.mcp_timeout
 
@@ -890,7 +891,7 @@ export namespace MCP {
 
       // Now try to reconnect
       const cfg = await Config.get()
-      const mcpConfig = cfg.mcp?.[mcpName]
+      const mcpConfig = withBundledMcpServers(cfg.mcp ?? {})[mcpName]
 
       if (!mcpConfig) {
         throw new Error(`MCP server not found: ${mcpName}`)

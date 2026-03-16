@@ -188,32 +188,99 @@ export class MediaCaptureManager {
   private async captureVideo(captureId: string, outputDir: string, options: MediaCaptureOptions): Promise<void> {
     const capture = this.captures.get(captureId);
     if (!capture) return;
-    
+
     const videoPath = path.join(outputDir, `capture_${captureId}.webm`);
-    // Placeholder - would use actual video capture
+    const duration = options.maxDuration || 300;
+    const bitrate = options.videoQuality === "low" ? "500k" : options.videoQuality === "high" ? "3M" : "1M";
+    const platform = process.platform;
+
+    let ffmpegArgs: string[];
+    if (platform === "darwin") {
+      ffmpegArgs = [
+        "-f", "avfoundation", "-framerate", "30", "-i", "1:none",
+        "-t", String(duration), "-vcodec", "libvpx", "-b:v", bitrate, "-an",
+        videoPath,
+      ];
+    } else if (platform === "linux") {
+      const display = process.env.DISPLAY || ":0.0";
+      ffmpegArgs = [
+        "-f", "x11grab", "-framerate", "30", "-video_size", "1920x1080", "-i", display,
+        "-t", String(duration), "-vcodec", "libvpx", "-b:v", bitrate, "-an",
+        videoPath,
+      ];
+    } else {
+      log.warn("Video capture not supported on this platform", { platform });
+      return;
+    }
+
+    const startTime = Date.now();
+    const proc = spawn("ffmpeg", ["-y", ...ffmpegArgs]);
+
+    const controller = this.activeCaptures.get(captureId);
+    if (controller) {
+      controller.signal.addEventListener("abort", () => proc.kill("SIGTERM"));
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      proc.on("exit", (code) => (code === 0 || code === null ? resolve() : reject(new Error(`ffmpeg exited ${code}`))));
+      proc.on("error", reject);
+    });
+
     capture.video = {
       path: videoPath,
       format: "webm",
-      duration: options.maxDuration || 0,
+      duration: (Date.now() - startTime) / 1000,
       width: 1920,
       height: 1080,
       fps: 30,
     };
   }
-  
+
   private async generateGif(captureId: string, outputDir: string): Promise<void> {
     const capture = this.captures.get(captureId);
-    if (!capture?.video) return;
-    
+    if (!capture) return;
+
     const gifPath = path.join(outputDir, `capture_${captureId}.gif`);
-    // Placeholder - would use FFmpeg
-    capture.gif = {
-      path: gifPath,
-      duration: capture.video.duration,
-      width: 480,
-      height: 270,
-      frameCount: Math.floor(capture.video.duration * 10),
-    };
+    const filterGraph = "fps=10,scale=480:-1:flags=lanczos";
+
+    const spawnFfmpeg = (args: string[]) =>
+      new Promise<void>((resolve, reject) => {
+        const proc = spawn("ffmpeg", ["-y", ...args]);
+        proc.on("exit", (code) => (code === 0 || code === null ? resolve() : reject(new Error(`ffmpeg exited ${code}`))));
+        proc.on("error", reject);
+      });
+
+    if (capture.screenshots.length > 0) {
+      // Build gif from captured screenshot frames
+      const framePattern = path.join(outputDir, "screenshot_*.png");
+      await spawnFfmpeg([
+        "-framerate", "10", "-pattern_type", "glob", "-i", framePattern,
+        "-vf", filterGraph, gifPath,
+      ]);
+      capture.gif = {
+        path: gifPath,
+        duration: capture.screenshots.length / 10,
+        width: 480,
+        height: 270,
+        frameCount: capture.screenshots.length,
+      };
+    } else if (capture.video) {
+      // Two-pass palette gif from video
+      const palettePath = path.join(outputDir, `palette_${captureId}.png`);
+      await spawnFfmpeg(["-i", capture.video.path, "-vf", `${filterGraph},palettegen`, palettePath]);
+      await spawnFfmpeg([
+        "-i", capture.video.path, "-i", palettePath,
+        "-lavfi", `${filterGraph} [x]; [x][1:v] paletteuse`, gifPath,
+      ]);
+      await fs.unlink(palettePath).catch(() => {});
+      capture.gif = {
+        path: gifPath,
+        duration: capture.video.duration,
+        width: 480,
+        height: 270,
+        frameCount: Math.floor(capture.video.duration * 10),
+      };
+    }
   }
   
   async reviewCapture(captureId: string, decision: ReviewDecision): Promise<CapturedMedia | null> {

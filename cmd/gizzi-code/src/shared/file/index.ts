@@ -366,7 +366,7 @@ export namespace File {
           }
         }
 
-        result.dirs = Array.from(dirs).toSorted()
+        result.dirs = Array.from(dirs).slice().sort()
         cache = result
         fetching = false
         return
@@ -620,7 +620,7 @@ export namespace File {
     }
     if (!query) {
       if (kind === "file") return result.files.slice(0, limit)
-      return sortHiddenLast(result.dirs.toSorted()).slice(0, limit)
+      return sortHiddenLast(result.dirs.slice().sort()).slice(0, limit)
     }
 
     const items =

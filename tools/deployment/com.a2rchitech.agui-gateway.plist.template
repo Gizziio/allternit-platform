@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.a2rchitech.agui-gateway</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/bin/pnpm</string>
+        <string>run</string>
+        <string>dev</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>{{WORKING_DIR}}/.logs/agui-gateway.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>{{WORKING_DIR}}/.logs/agui-gateway.err.log</string>
+    <key>WorkingDirectory</key>
+    <string>{{WORKING_DIR}}/4-services/gateway/agui-gateway</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>PORT</key>
+        <string>8013</string>
+    </dict>
+</dict>
+</plist>

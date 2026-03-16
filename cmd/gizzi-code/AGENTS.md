@@ -1,4 +1,4 @@
-# opencode database guide
+# gizzi-code database guide
 
 ## Database
 

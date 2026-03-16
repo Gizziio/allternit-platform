@@ -1,4 +1,5 @@
-import type { Part, SessionStatus } from "@a2r/sdk/v2"
+import type { MessageV2 } from "@/runtime/session/message-v2"
+import type { SessionStatus } from "@/runtime/session/status"
 import { createEffect, createMemo, createSignal, For, onCleanup, Show } from "solid-js"
 import { GIZZISpinner } from "@/cli/ui/components/gizzi/spinner"
 import { type GIZZIRuntimeState, useGIZZITheme } from "@/cli/ui/components/gizzi/theme"
@@ -8,8 +9,8 @@ import { useAnimation, useStatusFrame } from "@/cli/ui/components/animation"
 import { formatRetryStatus } from "@/shared/util/provider-error"
 
 export function GIZZIStatusBar(props: {
-  status: SessionStatus
-  parts?: Part[]
+  status: SessionStatus.Info
+  parts?: MessageV2.Part[]
   interrupt?: number
   queuedSince?: number
   startedAt?: number
@@ -60,7 +61,7 @@ export function GIZZIStatusBar(props: {
   const tools = createMemo(() =>
     fixture()?.tools ??
       (props.parts ?? [])
-        .filter((part): part is Extract<Part, { type: "tool" }> => part.type === "tool")
+        .filter((part): part is Extract<MessageV2.Part, { type: "tool" }> => part.type === "tool")
         .filter((part) => part.state.status === "pending" || part.state.status === "running")
         .map((part) => part.tool),
   )
@@ -143,7 +144,7 @@ export function GIZZIStatusBar(props: {
       <box flexDirection="row" gap={1} flexShrink={0}>
         <Show when={elapsed() !== undefined && !micro()}>
           <text fg={tone().muted} wrapMode="none">
-            {elapsed()}s
+            {formatElapsed(elapsed()!)}
           </text>
         </Show>
         <Show when={props.status.type !== "idle" || props.runId}>
@@ -192,6 +193,13 @@ function hint(state: GIZZIRuntimeState) {
   if (state === "executing") return GIZZICopy.session.hintExecuting
   if (state === "responding") return GIZZICopy.session.hintResponding
   return GIZZICopy.session.hintCompacting
+}
+
+function formatElapsed(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return `${m}m ${s}s`
 }
 
 function truncateStatus(value: string, max: number) {

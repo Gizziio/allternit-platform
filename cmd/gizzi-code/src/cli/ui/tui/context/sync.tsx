@@ -7,17 +7,19 @@ import type {
   Config,
   Todo,
   Command,
-  PermissionRequest,
-  QuestionRequest,
   LspStatus,
   McpStatus,
-  McpResource,
   FormatterStatus,
   SessionStatus,
   ProviderListResponse,
   ProviderAuthMethod,
   VcsInfo,
-} from "@a2r/sdk/v2"
+} from "@a2r/sdk"
+
+// These types exist only in the internal event bus, not in the generated SDK
+type PermissionRequest = unknown
+type QuestionRequest = unknown
+type McpResource = unknown
 import type { UserData } from "@/runtime/context/user"
 import type { RunRegistry } from "@/runtime/session/run-registry"
 import type { CronTypes } from "@/runtime/automation/cron/types"
@@ -83,6 +85,18 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       cron_runs: CronTypes.CronRun[]
       cron_status: { jobs: number; active: number; pendingRuns: number; runningRuns: number }
       user: UserData | null
+      workspace: {
+        type: "gizzi" | "openclaw"
+        format: "layered" | "flat"
+        path: string
+        name?: string
+        emoji?: string
+        vibe?: string
+        hasMemory?: boolean
+        hasSoul?: boolean
+        hasBrain?: boolean
+        layered?: boolean
+      } | null
     }>({
       provider_next: {
         all: [],
@@ -109,13 +123,14 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       mcp_resource: {},
       formatter: [],
       vcs: undefined,
-      path: { state: "", config: "", worktree: "", directory: "" },
+      path: { state: "", config: "", worktree: "", directory: "", root: "", home: "", data: "" } as any,
       // Run and cron state
       runs: {} as Record<string, RunRegistry.RunInfo>,
       cron_jobs: [] as CronTypes.CronJob[],
       cron_runs: [] as CronTypes.CronRun[],
       cron_status: { jobs: 0, active: 0, pendingRuns: 0, runningRuns: 0 },
       user: null,
+      workspace: null,
     })
 
     const sdk = useSDK()
@@ -129,7 +144,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
         case "permission.replied": {
           const requests = store.permission[event.properties.sessionID]
           if (!requests) break
-          const match = Binary.search(requests, event.properties.requestID, (r) => r.id)
+          const match = Binary.search(requests, event.properties.requestID, (r: any) => r.id)
           if (!match.found) break
           setStore(
             "permission",
@@ -148,7 +163,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
             setStore("permission", request.sessionID, [request])
             break
           }
-          const match = Binary.search(requests, request.id, (r) => r.id)
+          const match = Binary.search(requests, request.id, (r: any) => r.id)
           if (match.found) {
             setStore("permission", request.sessionID, match.index, reconcile(request))
             break
@@ -167,7 +182,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
         case "question.rejected": {
           const requests = store.question[event.properties.sessionID]
           if (!requests) break
-          const match = Binary.search(requests, event.properties.requestID, (r) => r.id)
+          const match = Binary.search(requests, event.properties.requestID, (r: any) => r.id)
           if (!match.found) break
           setStore(
             "question",
@@ -186,7 +201,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
             setStore("question", request.sessionID, [request])
             break
           }
-          const match = Binary.search(requests, request.id, (r) => r.id)
+          const match = Binary.search(requests, request.id, (r: any) => r.id)
           if (match.found) {
             setStore("question", request.sessionID, match.index, reconcile(request))
             break
@@ -210,7 +225,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           break
 
         case "session.deleted": {
-          const result = Binary.search(store.session, event.properties.info.id, (s) => s.id)
+          const result = Binary.search(store.session, event.properties.info.id, (s: any) => s.id)
           if (result.found) {
             setStore(
               "session",
@@ -222,7 +237,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           break
         }
         case "session.updated": {
-          const result = Binary.search(store.session, event.properties.info.id, (s) => s.id)
+          const result = Binary.search(store.session, event.properties.info.id, (s: any) => s.id)
           if (result.found) {
             setStore("session", result.index, reconcile(event.properties.info))
             break
@@ -247,7 +262,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
             setStore("message", event.properties.info.sessionID, [event.properties.info])
             break
           }
-          const result = Binary.search(messages, event.properties.info.id, (m) => m.id)
+          const result = Binary.search(messages, event.properties.info.id, (m: any) => m.id)
           if (result.found) {
             setStore("message", event.properties.info.sessionID, result.index, reconcile(event.properties.info))
             break
@@ -261,7 +276,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           )
           const updated = store.message[event.properties.info.sessionID]
           if (updated.length > 100) {
-            const oldest = updated[0]
+            const oldest: any = updated[0]
             batch(() => {
               setStore(
                 "message",
@@ -282,7 +297,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
         }
         case "message.removed": {
           const messages = store.message[event.properties.sessionID]
-          const result = Binary.search(messages, event.properties.messageID, (m) => m.id)
+          const result = Binary.search(messages, event.properties.messageID, (m: any) => m.id)
           if (result.found) {
             setStore(
               "message",
@@ -300,7 +315,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
             setStore("part", event.properties.part.messageID, [event.properties.part])
             break
           }
-          const result = Binary.search(parts, event.properties.part.id, (p) => p.id)
+          const result = Binary.search(parts, event.properties.part.id, (p: any) => p.id)
           if (result.found) {
             setStore("part", event.properties.part.messageID, result.index, reconcile(event.properties.part))
             break
@@ -318,13 +333,13 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
         case "message.part.delta": {
           const parts = store.part[event.properties.messageID]
           if (!parts) break
-          const result = Binary.search(parts, event.properties.partID, (p) => p.id)
+          const result = Binary.search(parts, event.properties.partID, (p: any) => p.id)
           if (!result.found) break
           setStore(
             "part",
             event.properties.messageID,
             produce((draft) => {
-              const part = draft[result.index]
+              const part: any = draft[result.index]
               const field = event.properties.field as keyof typeof part
               const existing = part[field] as string | undefined
               ;(part[field] as string) = (existing ?? "") + event.properties.delta
@@ -335,7 +350,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
 
         case "message.part.removed": {
           const parts = store.part[event.properties.messageID]
-          const result = Binary.search(parts, event.properties.partID, (p) => p.id)
+          const result = Binary.search(parts, event.properties.partID, (p: any) => p.id)
           if (result.found)
             setStore(
               "part",
@@ -348,7 +363,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
         }
 
         case "lsp.updated": {
-          sdk.client.lsp.status().then((x) => setStore("lsp", x.data!))
+          sdk.client.lsp.status().then((x: any) => setStore("lsp", x.data!))
           break
         }
 
@@ -383,22 +398,22 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       const start = Date.now() - 30 * 24 * 60 * 60 * 1000
       const projectId = Instance.project.id
       const sessionListPromise = sdk.client.session
-        .list({ start: start })
-        .then((x) => {
+        .list()
+        .then((x: any) => {
           Log.Default.info("tui: sync session list received", { 
             count: Array.isArray(x.data) ? x.data.length : 0,
             error: x.error?.message,
             projectId 
           })
           const sessions = Array.isArray(x.data) ? x.data : []
-          return sessions.slice().sort((a, b) => a.id.localeCompare(b.id))
+          return sessions.slice().sort((a: any, b: any) => (b.time?.updated ?? 0) - (a.time?.updated ?? 0))
         })
 
       // blocking - include session.list when continuing a session
-      const providersPromise = sdk.client.config.providers({}, { throwOnError: true })
-      const providerListPromise = sdk.client.provider.list({}, { throwOnError: true })
-      const agentsPromise = sdk.client.app.agents({}, { throwOnError: true })
-      const configPromise = sdk.client.config.get({}, { throwOnError: true })
+      const providersPromise = sdk.client.config.providers({ throwOnError: true })
+      const providerListPromise = sdk.client.provider.list({ throwOnError: true })
+      const agentsPromise = sdk.client.agent.list({ throwOnError: true })
+      const configPromise = sdk.client.config.get({ throwOnError: true })
       const blockingRequests: Promise<unknown>[] = [
         providersPromise,
         providerListPromise,
@@ -409,10 +424,10 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
 
       await Promise.all(blockingRequests)
         .then(() => {
-          const providersResponse = providersPromise.then((x) => x.data!)
-          const providerListResponse = providerListPromise.then((x) => x.data!)
-          const agentsResponse = agentsPromise.then((x) => x.data ?? [])
-          const configResponse = configPromise.then((x) => x.data!)
+          const providersResponse = providersPromise.then((x: any) => x.data!)
+          const providerListResponse = providerListPromise.then((x: any) => x.data!)
+          const agentsResponse = agentsPromise.then((x: any) => x.data ?? [])
+          const configResponse = configPromise.then((x: any) => x.data!)
           const sessionListResponse = sessionListPromise
 
           return Promise.all([
@@ -437,12 +452,12 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
             }
             const transformedProviderList = {
               ...providerList,
-              all: providerList.all.map((p) => ({ ...p, name: transformProviderName(p.name) })),
+              all: providerList.all.map((p: any) => ({ ...p, name: transformProviderName(p.name) })),
             }
-            const transformedProviders = providers.providers.map((p) => ({ ...p, name: transformProviderName(p.name) }))
+            const transformedProviders = providers.providers.map((p: any) => ({ ...p, name: transformProviderName(p.name) }))
 
             // Sanitize agent descriptions to remove GIZZI branding
-            const sanitizedAgents = agents.map((agent) => ({
+            const sanitizedAgents = agents.map((agent: any) => ({
               ...agent,
               description: agent.description ? sanitizeBrandSurface(agent.description) : agent.description,
             }))
@@ -462,19 +477,20 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           // non-blocking
           Log.Default.info("tui: starting non-blocking sync requests")
           Promise.allSettled([
-            sdk.client.command.list().then((x) => { Log.Default.info("tui: sync command list done"); setStore("command", reconcile(x.data ?? []))}),
-            sdk.client.lsp.status().then((x) => { Log.Default.info("tui: sync lsp status done"); setStore("lsp", reconcile(x.data ?? []))}),
-            sdk.client.mcp.status().then((x) => { Log.Default.info("tui: sync mcp status done"); setStore("mcp", reconcile(x.data ?? {}))}),
-            sdk.client.experimental.resource.list().then((x) => { Log.Default.info("tui: sync mcp resource done"); setStore("mcp_resource", reconcile(x.data ?? {}))}),
-            sdk.client.formatter.status().then((x) => { Log.Default.info("tui: sync formatter status done"); setStore("formatter", reconcile(x.data ?? []))}),
-            sdk.client.session.allstatus().then((x) => {
+            (sdk.client as any).command?.list().then((x: any) => { Log.Default.info("tui: sync command list done"); setStore("command", reconcile(x.data ?? []))}),
+            sdk.client.lsp.status().then((x: any) => { Log.Default.info("tui: sync lsp status done"); setStore("lsp", reconcile(x.data ?? []))}),
+            sdk.client.mcp.status().then((x: any) => { Log.Default.info("tui: sync mcp status done"); setStore("mcp", reconcile(x.data ?? {}))}),
+            (sdk.client as any).experimental.resource.list().then((x: any) => { Log.Default.info("tui: sync mcp resource done"); setStore("mcp_resource", reconcile(x.data ?? {}))}),
+            sdk.client.formatter.status().then((x: any) => { Log.Default.info("tui: sync formatter status done"); setStore("formatter", reconcile(x.data ?? []))}),
+            sdk.client.session.allstatus().then((x: any) => {
               Log.Default.info("tui: sync session status done")
               setStore("session_status", reconcile(x.data ?? {}))
             }),
-            sdk.client.provider.auth().then((x) => { Log.Default.info("tui: sync provider auth done"); setStore("provider_auth", reconcile(x.data ?? {}))}),
-            sdk.client.vcs.get().then((x) => { Log.Default.info("tui: sync vcs done"); setStore("vcs", reconcile(x.data))}),
-            sdk.client.path.get().then((x) => { Log.Default.info("tui: sync path done"); setStore("path", reconcile(x.data ?? { state: "", config: "", worktree: "", directory: "" }))}),
-            sdk.client.user.get().then((x) => { 
+            sdk.client.provider.auth().then((x: any) => { Log.Default.info("tui: sync provider auth done"); setStore("provider_auth", reconcile(x.data ?? {}))}),
+            sdk.client.vcs.get().then((x: any) => { Log.Default.info("tui: sync vcs done"); setStore("vcs", reconcile(x.data))}),
+            sdk.client.path.get().then((x: any) => { Log.Default.info("tui: sync path done"); setStore("path", reconcile(x.data ?? { state: "", config: "", worktree: "", directory: "" }))}),
+            (sdk.client as any).instance?.workspace?.().then((x: any) => { Log.Default.info("tui: sync workspace done"); setStore("workspace", reconcile(x.data ?? null)) }).catch(() => {}),
+            (sdk.client as any).user.get().then((x: any) => {
               Log.Default.info("tui: sync user done")
               setStore("user", reconcile(x.data ?? null))
             }),
@@ -509,35 +525,35 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       },
       session: {
         get(sessionID: string) {
-          const match = Binary.search(store.session, sessionID, (s) => s.id)
+          const match = Binary.search(store.session, sessionID, (s: any) => s.id)
           if (match.found) return store.session[match.index]
           return undefined
         },
         status(sessionID: string) {
-          const session = result.session.get(sessionID)
+          const session = result.session.get(sessionID) as any
           if (!session) return "idle"
-          if (session.time.compacting) return "compacting"
+          if (session?.time?.compacting) return "compacting"
           const messages = store.message[sessionID] ?? []
-          const last = messages.at(-1)
+          const last = messages.at(-1) as any
           if (!last) return "idle"
-          if (last.role === "user") return "working"
-          return last.time.completed ? "idle" : "working"
+          if (last?.role === "user") return "working"
+          return last?.time?.completed ? "idle" : "working"
         },
         async sync(sessionID: string) {
           if (fullSyncedSessions.has(sessionID)) return
           const [session, messages, todo, diff] = await Promise.all([
-            sdk.client.session.get({ sessionID }, { throwOnError: true }),
-            sdk.client.session.messages({ sessionID, limit: 100 }),
-            sdk.client.session.todo({ sessionID }),
-            sdk.client.session.diff({ sessionID }),
+            sdk.client.session.get({ path: { id: sessionID }, throwOnError: true } as any),
+            sdk.client.session.messages({ path: { id: sessionID }, query: { limit: 100 } } as any),
+            sdk.client.session.todo({ path: { id: sessionID } } as any),
+            sdk.client.session.diff({ path: { id: sessionID } } as any),
           ])
           setStore(
             produce((draft) => {
-              const match = Binary.search(draft.session, sessionID, (s) => s.id)
+              const match = Binary.search(draft.session, sessionID, (s: any) => s.id)
               if (match.found) draft.session[match.index] = session.data!
               if (!match.found) draft.session.splice(match.index, 0, session.data!)
               draft.todo[sessionID] = todo.data ?? []
-              draft.message[sessionID] = messages.data!.map((x) => x.info)
+              draft.message[sessionID] = messages.data!.map((x: any) => x.info)
               for (const message of messages.data!) {
                 draft.part[message.info.id] = message.parts
               }

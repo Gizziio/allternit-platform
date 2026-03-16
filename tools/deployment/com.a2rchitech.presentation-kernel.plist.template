@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.a2rchitech.presentation-kernel</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>{{WORKING_DIR}}/target/release/presentation-kernel</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>{{WORKING_DIR}}/.logs/presentation-kernel.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>{{WORKING_DIR}}/.logs/presentation-kernel.err.log</string>
+    <key>WorkingDirectory</key>
+    <string>{{WORKING_DIR}}/4-services/ui-services/presentation-kernel</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>A2_BIND_PORT</key>
+        <string>3007</string>
+        <key>RUST_LOG</key>
+        <string>info</string>
+    </dict>
+</dict>
+</plist>

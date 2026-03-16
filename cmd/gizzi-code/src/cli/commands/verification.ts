@@ -1,3 +1,4 @@
+
 /**
  * Verification CLI Commands
  * 
@@ -119,7 +120,7 @@ export const VerificationVerifyCommand = cmd({
   },
   handler: async (args) => {
     await bootstrap(process.cwd(), async () => {
-      const sessionId = Instance.session?.id || `cli_${Date.now()}`
+      const sessionId = `cli_${Date.now()}`
       
       log.info("Starting verification", { 
         mode: args.mode, 
@@ -153,7 +154,7 @@ export const VerificationVerifyCommand = cmd({
       
       // Create minimal plan/receipts for CLI context
       const plan = { steps: [] }
-      const receipts = []
+      const receipts: any[] = []
 
       const startTime = Date.now()
       const result = await orchestrator.verify(plan as any, receipts as any)

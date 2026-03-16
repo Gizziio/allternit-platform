@@ -178,8 +178,6 @@ export class UIStateCaptureProvider extends VisualCaptureProvider {
         data: {
           componentName: component.name,
           viewport: this.options.viewport || { width: 1280, height: 720 },
-          consoleLogs: renderResult.consoleLogs.slice(0, 10),
-          pageErrors: renderResult.errors.slice(0, 5),
         },
       };
       
@@ -232,8 +230,6 @@ export class UIStateCaptureProvider extends VisualCaptureProvider {
         data: {
           url: `http://localhost:${runningPort}`,
           viewport: this.options.viewport || { width: 1280, height: 720 },
-          consoleLogs: renderResult.consoleLogs.slice(0, 10),
-          pageErrors: renderResult.errors.slice(0, 5),
         },
       };
     } catch (error) {
@@ -317,7 +313,7 @@ export class UIStateCaptureProvider extends VisualCaptureProvider {
       llmContext: `Component ${component.name} was found in ${component.file} but screenshot capture failed: ${error.message}. Code analysis only.`,
       data: {
         componentName: component.name,
-        error: error.message,
+        viewport: this.options.viewport || { width: 1280, height: 720 },
       },
     };
   }

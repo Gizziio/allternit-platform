@@ -109,8 +109,8 @@ export class ErrorStateCaptureProvider extends VisualCaptureProvider {
           errorType: "test-failure" as const,
           message: failure.message,
           stackTrace: failure.stack,
-          codeContext: codeContext || undefined,
-          screenshot: renderResult.screenshot.path,
+          codeContext: codeContext ? { ...codeContext, column: codeContext.column ?? 0 } : undefined,
+          screenshot: await this.createImageData(renderResult.screenshot.path, "png"),
           consoleOutput: renderResult.consoleLogs.map(l => `[${l.type}] ${l.text}`).join("\n").slice(0, 2000),
         },
       };
@@ -166,8 +166,7 @@ export class ErrorStateCaptureProvider extends VisualCaptureProvider {
         data: {
           errorType: "runtime" as const,
           message: renderResult.errors[0] || "Runtime error",
-          pageErrors: renderResult.errors,
-          consoleErrors: renderResult.consoleLogs.filter(l => l.type === "error"),
+          consoleOutput: renderResult.consoleLogs.filter(l => l.type === "error").map(l => l.text).join("\n"),
         },
       };
     } catch {
@@ -248,7 +247,7 @@ export class ErrorStateCaptureProvider extends VisualCaptureProvider {
   private parseStackTrace(
     stack: string | undefined,
     cwd: string
-  ): { file: string; line: number; column?: number; lines: Array<{ number: number; code: string; isErrorLine: boolean }> } | null {
+  ): { file: string; line: number; column: number; lines: Array<{ number: number; code: string; isErrorLine: boolean }> } | null {
     if (!stack) return null;
     
     const match = stack.match(/at\s+.+\s+\((.+?):(\d+):(\d+)\)/) ||

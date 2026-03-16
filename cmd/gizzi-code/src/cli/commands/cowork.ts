@@ -17,11 +17,13 @@
  */
 
 import type { Argv } from "yargs"
+import yargs from "yargs"
 import { cmd } from "@/cli/commands/cmd"
 import { bootstrap } from "@/cli/bootstrap"
 import { UI } from "@/cli/ui"
 import * as prompts from "@clack/prompts"
 import { Global } from "@/runtime/context/global"
+import open from "open"
 
 // ============================================================================
 // Types
@@ -154,11 +156,12 @@ export const CoworkCommand = cmd({
       .command(CoworkScheduleCommand)
       .command(CoworkApprovalCommand)
       .command(CoworkCheckpointCommand)
+      .command(CoworkWebCommand)
       .demandCommand(1, "Choose a command")
   },
   async handler() {
     // Show help if no subcommand
-    UI.println(UI.Style.TEXT_BOLD + "Cowork Runtime Management" + UI.Style.TEXT_NORMAL)
+    UI.println(UI.Style.TEXT_NORMAL_BOLD + "Cowork Runtime Management" + UI.Style.TEXT_NORMAL)
     UI.println("")
     UI.println("Commands:")
     UI.println("  list, ls          List all runs")
@@ -173,8 +176,9 @@ export const CoworkCommand = cmd({
     UI.println("  schedule          Manage schedules")
     UI.println("  approval          Manage approvals")
     UI.println("  checkpoint        Manage checkpoints")
+    UI.println("  web               Mirror session to web browser")
     UI.println("")
-    UI.println(`Run ${UI.Style.TEXT_BOLD}gizzi cowork <command> --help${UI.Style.TEXT_NORMAL} for more information`)
+    UI.println(`Run ${UI.Style.TEXT_NORMAL_BOLD}gizzi cowork <command> --help${UI.Style.TEXT_NORMAL} for more information`)
   },
 })
 
@@ -234,7 +238,7 @@ export const CoworkListCommand = cmd({
         }
 
         // Table output
-        UI.println(`${UI.Style.TEXT_BOLD}${"ID".padEnd(10)} ${"NAME".padEnd(20)} ${"MODE".padEnd(8)} ${"STATUS".padEnd(12)} ${"PROGRESS".padEnd(10)} ${"CREATED"}${UI.Style.TEXT_NORMAL}`)
+        UI.println(`${UI.Style.TEXT_NORMAL_BOLD}${"ID".padEnd(10)} ${"NAME".padEnd(20)} ${"MODE".padEnd(8)} ${"STATUS".padEnd(12)} ${"PROGRESS".padEnd(10)} ${"CREATED"}${UI.Style.TEXT_NORMAL}`)
         UI.println("-".repeat(90))
 
         for (const run of runs) {
@@ -446,7 +450,7 @@ async function attachToRun(runId: string): Promise<void> {
   // Get run details first
   const run = await apiCall<RunDetails>("GET", `/api/v1/runs/${runId}`)
 
-  UI.println(`${UI.Style.TEXT_BOLD}Attaching to run:${UI.Style.TEXT_NORMAL} ${run.name} (${run.id.slice(0, 8)})`)
+  UI.println(`${UI.Style.TEXT_NORMAL_BOLD}Attaching to run:${UI.Style.TEXT_NORMAL} ${run.name} (${run.id.slice(0, 8)})`)
   UI.println(`Status: ${run.status}`)
   UI.println("")
   UI.println(`${UI.Style.TEXT_DIM}Press Ctrl+C to detach (run will continue in background)${UI.Style.TEXT_NORMAL}`)
@@ -517,7 +521,7 @@ function printEvent(event: Event): void {
     }
     case "step_started": {
       const name = event.payload.step_name as string
-      if (name) UI.println(`\n${UI.Style.TEXT_BOLD}[STEP] Starting:${UI.Style.TEXT_NORMAL} ${name}`)
+      if (name) UI.println(`\n${UI.Style.TEXT_NORMAL_BOLD}[STEP] Starting:${UI.Style.TEXT_NORMAL} ${name}`)
       break
     }
     case "step_completed": {
@@ -527,7 +531,7 @@ function printEvent(event: Event): void {
     }
     case "step_failed": {
       const name = event.payload.step_name as string
-      if (name) UI.println(`${UI.Style.TEXT_ERROR}[STEP] Failed:${UI.Style.TEXT_NORMAL} ${name}`)
+      if (name) UI.println(`${UI.Style.TEXT_WARNING_BOLD}[STEP] Failed:${UI.Style.TEXT_NORMAL} ${name}`)
       break
     }
     case "approval_needed": {
@@ -539,13 +543,13 @@ function printEvent(event: Event): void {
       UI.println(`${UI.Style.TEXT_SUCCESS}[APPROVAL]${UI.Style.TEXT_NORMAL} Approved`)
       break
     case "approval_denied":
-      UI.println(`${UI.Style.TEXT_ERROR}[APPROVAL]${UI.Style.TEXT_NORMAL} Denied`)
+      UI.println(`${UI.Style.TEXT_WARNING_BOLD}[APPROVAL]${UI.Style.TEXT_NORMAL} Denied`)
       break
     case "run_completed":
       UI.println(`\n${UI.Style.TEXT_SUCCESS}✓ Run completed${UI.Style.TEXT_NORMAL}`)
       break
     case "run_failed":
-      UI.println(`\n${UI.Style.TEXT_ERROR}✗ Run failed${UI.Style.TEXT_NORMAL}`)
+      UI.println(`\n${UI.Style.TEXT_WARNING_BOLD}✗ Run failed${UI.Style.TEXT_NORMAL}`)
       break
   }
 }
@@ -669,35 +673,35 @@ export const CoworkShowCommand = cmd({
       try {
         const run = await apiCall<RunDetails>("GET", `/api/v1/runs/${args["run-id"]}`)
 
-        UI.println(`${UI.Style.TEXT_BOLD}Run:${UI.Style.TEXT_NORMAL} ${run.name}`)
-        UI.println(`${UI.Style.TEXT_BOLD}ID:${UI.Style.TEXT_NORMAL} ${run.id}`)
-        UI.println(`${UI.Style.TEXT_BOLD}Status:${UI.Style.TEXT_NORMAL} ${run.status}`)
-        UI.println(`${UI.Style.TEXT_BOLD}Mode:${UI.Style.TEXT_NORMAL} ${run.mode}`)
+        UI.println(`${UI.Style.TEXT_NORMAL_BOLD}Run:${UI.Style.TEXT_NORMAL} ${run.name}`)
+        UI.println(`${UI.Style.TEXT_NORMAL_BOLD}ID:${UI.Style.TEXT_NORMAL} ${run.id}`)
+        UI.println(`${UI.Style.TEXT_NORMAL_BOLD}Status:${UI.Style.TEXT_NORMAL} ${run.status}`)
+        UI.println(`${UI.Style.TEXT_NORMAL_BOLD}Mode:${UI.Style.TEXT_NORMAL} ${run.mode}`)
 
         if (run.description) {
-          UI.println(`${UI.Style.TEXT_BOLD}Description:${UI.Style.TEXT_NORMAL} ${run.description}`)
+          UI.println(`${UI.Style.TEXT_NORMAL_BOLD}Description:${UI.Style.TEXT_NORMAL} ${run.description}`)
         }
 
         if (run.step_cursor) {
-          UI.println(`${UI.Style.TEXT_BOLD}Step:${UI.Style.TEXT_NORMAL} ${run.step_cursor}`)
+          UI.println(`${UI.Style.TEXT_NORMAL_BOLD}Step:${UI.Style.TEXT_NORMAL} ${run.step_cursor}`)
         }
 
         if (run.total_steps !== undefined) {
-          UI.println(`${UI.Style.TEXT_BOLD}Progress:${UI.Style.TEXT_NORMAL} ${run.completed_steps}/${run.total_steps}`)
+          UI.println(`${UI.Style.TEXT_NORMAL_BOLD}Progress:${UI.Style.TEXT_NORMAL} ${run.completed_steps}/${run.total_steps}`)
         }
 
-        UI.println(`${UI.Style.TEXT_BOLD}Created:${UI.Style.TEXT_NORMAL} ${new Date(run.created_at).toLocaleString()}`)
+        UI.println(`${UI.Style.TEXT_NORMAL_BOLD}Created:${UI.Style.TEXT_NORMAL} ${new Date(run.created_at).toLocaleString()}`)
 
         if (run.started_at) {
-          UI.println(`${UI.Style.TEXT_BOLD}Started:${UI.Style.TEXT_NORMAL} ${new Date(run.started_at).toLocaleString()}`)
+          UI.println(`${UI.Style.TEXT_NORMAL_BOLD}Started:${UI.Style.TEXT_NORMAL} ${new Date(run.started_at).toLocaleString()}`)
         }
 
         if (run.completed_at) {
-          UI.println(`${UI.Style.TEXT_BOLD}Completed:${UI.Style.TEXT_NORMAL} ${new Date(run.completed_at).toLocaleString()}`)
+          UI.println(`${UI.Style.TEXT_NORMAL_BOLD}Completed:${UI.Style.TEXT_NORMAL} ${new Date(run.completed_at).toLocaleString()}`)
         }
 
         if (run.error_message) {
-          UI.println(`${UI.Style.TEXT_ERROR}Error:${UI.Style.TEXT_NORMAL} ${run.error_message}`)
+          UI.println(`${UI.Style.TEXT_WARNING_BOLD}Error:${UI.Style.TEXT_NORMAL} ${run.error_message}`)
         }
       } catch (error) {
         UI.error(`Failed to get run details: ${error instanceof Error ? error.message : String(error)}`)
@@ -772,7 +776,8 @@ export const CoworkScheduleCommand = cmd({
   },
   async handler() {
     // Show schedule help
-    CoworkScheduleCommand.builder!(yargs).showHelp()
+    UI.println("Available schedule commands: list, create, enable, disable, delete, trigger")
+    UI.println("Use --help with any command for more information")
   },
 })
 
@@ -799,7 +804,7 @@ export const CoworkScheduleListCommand = cmd({
           return
         }
 
-        UI.println(`${UI.Style.TEXT_BOLD}${"ID".padEnd(10)} ${"NAME".padEnd(20)} ${"ENABLED".padEnd(8)} ${"NEXT RUN".padEnd(20)} ${"SCHEDULE"}${UI.Style.TEXT_NORMAL}`)
+        UI.println(`${UI.Style.TEXT_NORMAL_BOLD}${"ID".padEnd(10)} ${"NAME".padEnd(20)} ${"ENABLED".padEnd(8)} ${"NEXT RUN".padEnd(20)} ${"SCHEDULE"}${UI.Style.TEXT_NORMAL}`)
         UI.println("-".repeat(90))
 
         for (const s of schedules) {
@@ -1016,7 +1021,8 @@ export const CoworkApprovalCommand = cmd({
       .demandCommand(1, "Choose an approval command")
   },
   async handler() {
-    CoworkApprovalCommand.builder!(yargs).showHelp()
+    UI.println("Available approval commands: list, show, approve, deny")
+    UI.println("Use --help with any command for more information")
   },
 })
 
@@ -1053,7 +1059,7 @@ export const CoworkApprovalListCommand = cmd({
           return
         }
 
-        UI.println(`${UI.Style.TEXT_BOLD}${"ID".padEnd(10)} ${"STATUS".padEnd(10)} ${"PRIORITY".padEnd(10)} ${"TITLE".padEnd(25)} ${"ACTION"}${UI.Style.TEXT_NORMAL}`)
+        UI.println(`${UI.Style.TEXT_NORMAL_BOLD}${"ID".padEnd(10)} ${"STATUS".padEnd(10)} ${"PRIORITY".padEnd(10)} ${"TITLE".padEnd(25)} ${"ACTION"}${UI.Style.TEXT_NORMAL}`)
         UI.println("-".repeat(90))
 
         for (const a of approvals) {
@@ -1102,25 +1108,25 @@ export const CoworkApprovalShowCommand = cmd({
           created_at: string
         }>("GET", `/api/v1/approvals/${args["approval-id"]}`)
 
-        UI.println(`${UI.Style.TEXT_BOLD}Approval:${UI.Style.TEXT_NORMAL} ${approval.title}`)
-        UI.println(`${UI.Style.TEXT_BOLD}ID:${UI.Style.TEXT_NORMAL} ${approval.id}`)
-        UI.println(`${UI.Style.TEXT_BOLD}Run:${UI.Style.TEXT_NORMAL} ${approval.run_id}`)
-        UI.println(`${UI.Style.TEXT_BOLD}Status:${UI.Style.TEXT_NORMAL} ${approval.status}`)
-        UI.println(`${UI.Style.TEXT_BOLD}Priority:${UI.Style.TEXT_NORMAL} ${approval.priority}`)
+        UI.println(`${UI.Style.TEXT_NORMAL_BOLD}Approval:${UI.Style.TEXT_NORMAL} ${approval.title}`)
+        UI.println(`${UI.Style.TEXT_NORMAL_BOLD}ID:${UI.Style.TEXT_NORMAL} ${approval.id}`)
+        UI.println(`${UI.Style.TEXT_NORMAL_BOLD}Run:${UI.Style.TEXT_NORMAL} ${approval.run_id}`)
+        UI.println(`${UI.Style.TEXT_NORMAL_BOLD}Status:${UI.Style.TEXT_NORMAL} ${approval.status}`)
+        UI.println(`${UI.Style.TEXT_NORMAL_BOLD}Priority:${UI.Style.TEXT_NORMAL} ${approval.priority}`)
 
         if (approval.description) {
-          UI.println(`${UI.Style.TEXT_BOLD}Description:${UI.Style.TEXT_NORMAL} ${approval.description}`)
+          UI.println(`${UI.Style.TEXT_NORMAL_BOLD}Description:${UI.Style.TEXT_NORMAL} ${approval.description}`)
         }
 
         if (approval.action_type) {
-          UI.println(`${UI.Style.TEXT_BOLD}Action:${UI.Style.TEXT_NORMAL} ${approval.action_type}`)
+          UI.println(`${UI.Style.TEXT_NORMAL_BOLD}Action:${UI.Style.TEXT_NORMAL} ${approval.action_type}`)
         }
 
         if (approval.reasoning) {
-          UI.println(`${UI.Style.TEXT_BOLD}Reasoning:${UI.Style.TEXT_NORMAL} ${approval.reasoning}`)
+          UI.println(`${UI.Style.TEXT_NORMAL_BOLD}Reasoning:${UI.Style.TEXT_NORMAL} ${approval.reasoning}`)
         }
 
-        UI.println(`${UI.Style.TEXT_BOLD}Created:${UI.Style.TEXT_NORMAL} ${new Date(approval.created_at).toLocaleString()}`)
+        UI.println(`${UI.Style.TEXT_NORMAL_BOLD}Created:${UI.Style.TEXT_NORMAL} ${new Date(approval.created_at).toLocaleString()}`)
       } catch (error) {
         UI.error(`Failed to get approval: ${error instanceof Error ? error.message : String(error)}`)
         process.exit(1)
@@ -1208,7 +1214,8 @@ export const CoworkCheckpointCommand = cmd({
       .demandCommand(1, "Choose a checkpoint command")
   },
   async handler() {
-    CoworkCheckpointCommand.builder!(yargs).showHelp()
+    UI.println("Available checkpoint commands: list, create, restore, delete")
+    UI.println("Use --help with any command for more information")
   },
 })
 
@@ -1236,7 +1243,7 @@ export const CoworkCheckpointListCommand = cmd({
           return
         }
 
-        UI.println(`${UI.Style.TEXT_BOLD}${"ID".padEnd(10)} ${"NAME".padEnd(20)} ${"STEP".padEnd(20)} ${"RESUMABLE".padEnd(10)} ${"CREATED"}${UI.Style.TEXT_NORMAL}`)
+        UI.println(`${UI.Style.TEXT_NORMAL_BOLD}${"ID".padEnd(10)} ${"NAME".padEnd(20)} ${"STEP".padEnd(20)} ${"RESUMABLE".padEnd(10)} ${"CREATED"}${UI.Style.TEXT_NORMAL}`)
         UI.println("-".repeat(90))
 
         for (const ckpt of checkpoints) {
@@ -1375,3 +1382,186 @@ export const CoworkCheckpointDeleteCommand = cmd({
     })
   },
 })
+
+// ============================================================================
+// Web Mirror Command (Session Mirroring)
+// ============================================================================
+
+export const CoworkWebCommand = cmd({
+  command: "web [run-id]",
+  describe: "mirror current terminal session to web browser (Kimi /web equivalent)",
+  builder: (yargs: Argv) => {
+    return yargs
+      .positional("run-id", {
+        describe: "Run ID to mirror (defaults to current/active run)",
+        type: "string",
+      })
+      .option("port", {
+        alias: "p",
+        describe: "Local port for Cowork controller (default: 3010)",
+        type: "number",
+        default: 3010,
+      })
+      .option("open", {
+        alias: "o",
+        describe: "Automatically open browser",
+        type: "boolean",
+        default: true,
+      })
+      .option("qr", {
+        describe: "Display QR code for mobile access",
+        type: "boolean",
+        default: true,
+      })
+  },
+  handler: async (args) => {
+    await bootstrap(process.cwd(), async () => {
+      try {
+        // 1. Resolve run ID (get current/active if not provided)
+        let runId = args["run-id"]
+        if (!runId) {
+          // Get most recent running run
+          const runs = await apiCall<RunSummary[]>("GET", "/api/v1/runs?status=running&limit=1")
+          if (runs.length === 0) {
+            UI.error("No active run found. Start a run with 'gizzi cowork start' or provide a run-id.")
+            process.exit(1)
+          }
+          runId = runs[0].id
+        }
+
+        // 2. Get run details
+        const run = await apiCall<RunDetails>("GET", `/api/v1/runs/${runId}`)
+
+        // 3. Request mirror session from Cowork controller
+        const mirrorResponse = await apiCall<{
+          mirror_url: string
+          session_token: string
+          expires_at: string
+        }>("POST", `/api/v1/runs/${runId}/mirror`, {
+          port: args.port,
+        })
+
+        const mirrorUrl = mirrorResponse.mirror_url
+
+        // 4. Display mirror information
+        UI.println("")
+        UI.println(UI.Style.TEXT_NORMAL_BOLD + "🔮 Session Mirroring Enabled" + UI.Style.TEXT_NORMAL)
+        UI.println("")
+        UI.println(`${UI.Style.TEXT_INFO_BOLD}Run:${UI.Style.TEXT_NORMAL} ${run.name} (${run.id.slice(0, 8)})`)
+        UI.println(`${UI.Style.TEXT_INFO_BOLD}Status:${UI.Style.TEXT_NORMAL} ${run.status}`)
+        UI.println("")
+        UI.println(`${UI.Style.TEXT_SUCCESS_BOLD}Web URL:${UI.Style.TEXT_NORMAL} ${mirrorUrl}`)
+        UI.println("")
+
+        // 5. Display QR code if requested (ASCII representation)
+        if (args.qr) {
+          UI.println("Scan to open on your device:")
+          UI.println("")
+          // Simple ASCII QR representation or use qrcode-terminal if available
+          const qr = generateSimpleQR(mirrorUrl)
+          UI.println(qr)
+          UI.println("")
+        }
+
+        // 6. Open browser if requested
+        if (args.open) {
+          await open(mirrorUrl)
+          UI.println(`${UI.Style.TEXT_DIM}Opening browser...${UI.Style.TEXT_NORMAL}`)
+        }
+
+        // 7. Show instructions
+        UI.println(`${UI.Style.TEXT_DIM}Press Ctrl+C to stop mirroring (run will continue)${UI.Style.TEXT_NORMAL}`)
+        UI.println("")
+
+        // 8. Keep alive and stream events
+        await streamMirrorEvents(runId, args.port)
+      } catch (error) {
+        UI.error(`Failed to start web mirror: ${error instanceof Error ? error.message : String(error)}`)
+        process.exit(1)
+      }
+    })
+  },
+})
+
+/**
+ * Generate a simple ASCII representation of content for terminal display
+ * In production, this could use a proper QR code library
+ */
+function generateSimpleQR(url: string): string {
+  // For now, return a bordered box with the URL
+  // In production, integrate with qrcode-terminal or similar
+  const width = Math.min(url.length + 4, 50)
+  const line = "█".repeat(width)
+  const padding = " ".repeat(width - 2)
+  
+  const result = []
+  result.push(line)
+  result.push("█" + padding + "█")
+  
+  // Split URL into chunks if too long
+  const chunks = url.match(/.{1,46}/g) || [url]
+  for (const chunk of chunks) {
+    const padded = chunk.padEnd(width - 2, " ")
+    result.push("█ " + padded + " █")
+  }
+  
+  result.push("█" + padding + "█")
+  result.push(line)
+  
+  return result.join("\n")
+}
+
+/**
+ * Stream events to keep the mirror connection alive
+ */
+async function streamMirrorEvents(runId: string, port: number): Promise<void> {
+  const token = process.env.A2R_API_TOKEN
+  const url = `${API_BASE}/api/v1/runs/${runId}/events/stream`
+
+  const headers: Record<string, string> = {
+    Accept: "text/event-stream",
+  }
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`
+  }
+
+  try {
+    const response = await fetch(url, { headers })
+
+    if (!response.ok) {
+      throw new Error(`Failed to start event stream: ${response.status}`)
+    }
+
+    if (!response.body) {
+      throw new Error("No response body")
+    }
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+
+      const text = decoder.decode(value)
+      const lines = text.split("\n")
+
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          try {
+            const event = JSON.parse(line.slice(6))
+            // Events are being streamed to the web client via Cowork controller
+            // We just keep the connection alive here
+            if (event.event_type === "mirror" && event.payload?.status === "disconnected") {
+              UI.println(`${UI.Style.TEXT_WARNING}Mirror client disconnected${UI.Style.TEXT_NORMAL}`)
+            }
+          } catch {
+            // Ignore parse errors
+          }
+        }
+      }
+    }
+  } catch (error) {
+    UI.error(`Event stream error: ${error instanceof Error ? error.message : String(error)}`)
+  }
+}

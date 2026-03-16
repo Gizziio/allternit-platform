@@ -1,0 +1,9 @@
+{
+  "name": "com.a2r.native_host",
+  "description": "A2R Desktop Native Messaging Host - Enables browser extension communication",
+  "path": "HOST_PATH",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://*/"
+  ]
+}

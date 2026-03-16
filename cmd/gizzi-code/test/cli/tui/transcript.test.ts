@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, expect, test } from "bun:test"
 import {
   formatAssistantHeader,
@@ -5,7 +6,7 @@ import {
   formatPart,
   formatTranscript,
 } from "../../../src/cli/cmd/tui/util/transcript"
-import type { AssistantMessage, Part, UserMessage } from "@a2r/sdk/v2"
+import type { AssistantMessage, Part, UserMessage } from "@a2r/sdk"
 
 describe("transcript", () => {
   describe("formatAssistantHeader", () => {

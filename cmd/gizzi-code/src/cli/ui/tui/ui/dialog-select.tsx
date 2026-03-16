@@ -56,6 +56,9 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
     input: "keyboard" as "keyboard" | "mouse",
   })
 
+  // Ensure options is always an array
+  const safeOptions = createMemo(() => props.options ?? [])
+
   createEffect(
     on(
       () => props.current,
@@ -73,10 +76,10 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
   let input: InputRenderable
 
   const filtered = createMemo(() => {
-    if (props.skipFilter) return props.options.filter((x) => x.disabled !== true)
+    if (props.skipFilter) return safeOptions().filter((x) => x.disabled !== true)
     const needle = store.filter.toLowerCase()
     const options = pipe(
-      props.options,
+      safeOptions(),
       filter((x) => x.disabled !== true),
     )
     if (!needle) return options
@@ -104,9 +107,11 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
   const flatten = createMemo(() => props.flat && store.filter.length > 0)
 
   const grouped = createMemo<[string, DialogSelectOption<T>[]][]>(() => {
-    if (flatten()) return [["", filtered()]]
+    const items = filtered()
+    if (!items || items.length === 0) return []
+    if (flatten()) return [["", items]]
     const result = pipe(
-      filtered(),
+      items,
       groupBy((x) => x.category ?? ""),
       // mapValues((x) => x.sort((a, b) => a.title.localeCompare(b.title))),
       entries(),
@@ -264,7 +269,7 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
         </box>
       </box>
       <Show
-        when={grouped().length > 0}
+        when={grouped() && grouped().length > 0}
         fallback={
           <box paddingLeft={4} paddingRight={4} paddingTop={1}>
             <text fg={theme.textMuted}>No results found</text>

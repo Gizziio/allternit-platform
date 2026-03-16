@@ -49,23 +49,28 @@ export function ModeProvider(props: { children: any }) {
     }
   })
   
-  // Save mode when it changes
+  // Save mode when it changes AND persist to KV
   createEffect(() => {
     const currentMode = mode()
+    console.log("[ModeContext] Mode changed to:", currentMode)
     if (kv.ready) {
+      console.log("[ModeContext] Saving to KV store")
       kv.set(MODE_STORAGE_KEY, currentMode)
     }
   })
-  
+
   const value = createMemo<ModeContextValue>(() => ({
     mode: mode(),
     setMode: (newMode: AppMode) => {
+      console.log("[ModeContext] setMode called with:", newMode)
       setModeState(newMode)
     },
     isCode: mode() === "code",
     isCowork: mode() === "cowork",
     toggle: () => {
-      setModeState(mode() === "code" ? "cowork" : "code")
+      const newMode = mode() === "code" ? "cowork" : "code"
+      console.log("[ModeContext] toggle called, new mode:", newMode)
+      setModeState(newMode)
     },
   }))
   

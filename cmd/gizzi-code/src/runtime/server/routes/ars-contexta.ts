@@ -77,8 +77,8 @@ export interface LlmResponse {
   content: string;
   finishReason?: string;
   usage?: {
-    promptTokens: number;
-    completionTokens: number;
+    inputTokens: number;
+    outputTokens: number;
   };
 }
 
@@ -97,9 +97,15 @@ export async function createLlmClientWithFallback(_model?: string): Promise<LlmC
   // Try to use the runtime provider system for real LLM calls
   try {
     const { Provider } = await import("@/runtime/providers/provider")
-    const model = _model
-      ? await Provider.getModel(...Provider.parseModel(_model))
-      : await Provider.defaultModel()
+    type Model = Awaited<ReturnType<typeof Provider.getModel>>;
+    let model: Model | undefined;
+    if (_model) {
+      const parsed = Provider.parseModel(_model);
+      model = await Provider.getModel(parsed.providerID, parsed.modelID);
+    } else {
+      const defaultModel = await Provider.defaultModel();
+      model = await Provider.getModel(defaultModel.providerID, defaultModel.modelID);
+    }
 
     if (model) {
       const { generateText } = await import("ai")
@@ -111,14 +117,14 @@ export async function createLlmClientWithFallback(_model?: string): Promise<LlmC
             model: languageModel,
             system: request.messages.find(m => m.role === 'system')?.content,
             prompt: request.messages.filter(m => m.role === 'user').map(m => m.content).join('\n'),
-            maxTokens: request.maxTokens ?? 2000,
+            maxOutputTokens: request.maxTokens ?? 2000,
           })
           return {
             content: result.text,
             finishReason: result.finishReason ?? 'stop',
             usage: {
-              promptTokens: result.usage?.promptTokens ?? 0,
-              completionTokens: result.usage?.completionTokens ?? 0,
+              inputTokens: result.usage?.inputTokens ?? 0,
+              outputTokens: result.usage?.outputTokens ?? 0,
             },
           }
         },
@@ -128,7 +134,7 @@ export async function createLlmClientWithFallback(_model?: string): Promise<LlmC
             model: languageModel,
             system: request.messages.find(m => m.role === 'system')?.content,
             prompt: request.messages.filter(m => m.role === 'user').map(m => m.content).join('\n'),
-            maxTokens: request.maxTokens ?? 2000,
+            maxOutputTokens: request.maxTokens ?? 2000,
           })
           for await (const chunk of result.textStream) {
             yield { delta: chunk }
@@ -225,10 +231,10 @@ export const TerminalProviderAdapter = {
     try {
       const { Provider } = await import("@/runtime/providers/provider")
       const providers = await Provider.list()
-      return providers.map(p => ({
-        id: p.id,
-        name: p.name ?? p.id,
-        models: p.models.map(m => `${p.id}/${m.id}`),
+      return Object.entries(providers).map(([id, p]) => ({
+        id,
+        name: (p as any).name ?? id,
+        models: Object.keys((p as any).models || {}).map((mId: string) => `${id}/${mId}`),
       }))
     } catch {
       return []
@@ -236,12 +242,10 @@ export const TerminalProviderAdapter = {
   },
 };
 
-// Import TUI bridge for progress tracking
-import {
-  trackEntityExtraction,
-  trackInsightGeneration,
-  trackContentEnrichment,
-} from "./ars-contexta-tui-bridge"
+// TUI bridge stub - progress tracking disabled when TUI bridge is not available
+function trackInsightGeneration<T>(fn: () => Promise<T>): Promise<T> { return fn(); }
+function trackEntityExtraction<T>(fn: () => Promise<T>): Promise<T> { return fn(); }
+function trackContentEnrichment<T>(fn: () => Promise<T>): Promise<T> { return fn(); }
 
 const log = Log.create({ service: "ars-contexta" })
 
@@ -455,7 +459,7 @@ export const ArsContextaRoutes = lazy(() =>
             maxTokens: 2000,
           }
 
-          const response = await client.complete(request)
+          const response = await trackInsightGeneration(() => client.complete(request))
 
           // Parse LLM response (expecting JSON)
           let insights: Insight[] = []

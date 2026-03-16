@@ -7,8 +7,20 @@ import { useSearch } from "@/cli/ui/tui/hooks/useSearch"
 import { useKeyboard } from "@opentui/solid"
 import type { TextareaRenderable } from "@opentui/core"
 
+interface Message {
+  id: string
+  role: "user" | "assistant"
+  [key: string]: any
+}
+
+interface SearchResult {
+  messageID: string
+  messageIndex: number
+  preview: string
+}
+
 export function DialogSearch(props: { sessionID: string; onNavigate?: (messageID: string) => void }) {
-  let inputRef: TextareaRenderable
+  let inputRef: TextareaRenderable | undefined
   
   const dialog = useDialog()
   const { theme } = useTheme()
@@ -16,10 +28,10 @@ export function DialogSearch(props: { sessionID: string; onNavigate?: (messageID
   const sync = useSync()
   const [queryInput, setQueryInput] = createSignal("")
 
-  const messages = createMemo(() => sync.data.message[props.sessionID] ?? [])
+  const messages = createMemo<Message[]>(() => (sync.data.message[props.sessionID] ?? []) as Message[])
   const getParts = (messageID: string) => sync.data.part[messageID] ?? []
 
-  const search = useSearch(messages, getParts)
+  const search = useSearch(messages as any, getParts)
 
   // Sync query input with search
   const handleQueryChange = () => {
@@ -111,7 +123,7 @@ export function DialogSearch(props: { sessionID: string; onNavigate?: (messageID
               {(result, index) => {
                 const isActive = createMemo(() => index() === search.currentIndex())
                 const message = createMemo(() =>
-                  messages().find((m) => m.id === result.messageID)
+                  messages().find((m: any) => m.id === result.messageID)
                 )
                 const role = createMemo(() =>
                   message()?.role === "user" ? "You" : "Assistant"
@@ -137,7 +149,7 @@ export function DialogSearch(props: { sessionID: string; onNavigate?: (messageID
                         <text fg={role() === "You" ? theme.text : theme.accent}>
                           {role()}
                         </text>
-                        <text fg={theme.textMuted}>#{result.messageIndex + 1}</text>
+                        <text fg={theme.textMuted}>#{String(result.messageIndex + 1)}</text>
                       </box>
                       <text fg={theme.textMuted} wrapMode="word">
                         {result.preview}

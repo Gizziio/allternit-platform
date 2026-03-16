@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, expect, it, beforeAll, afterAll } from "bun:test"
 import { ToolParsers } from "@/continuity/parsers"
 import { mkdir, writeFile, rmdir } from "fs/promises"

@@ -68,7 +68,7 @@ Examples:
         },
         signal: AbortSignal.timeout(120_000),
       })
-      .then((x) => x.data?.parts?.find((y) => y.type === "text")?.text ?? "")
+      .then((x: any) => x.data?.parts?.find((y: any) => y.type === "text")?.text ?? "")
 
     console.log(result.trim())
   } finally {

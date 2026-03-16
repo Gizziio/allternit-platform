@@ -12,5 +12,22 @@
       "@/*": ["./src/*"],
       "@tui/*": ["./src/cli/ui/tui/*"]
     }
-  }
+  },
+  "include": [
+    "src/**/*",
+    "test/**/*",
+    "github/**/*",
+    "packages/**/*",
+    "sdks/**/*",
+    "shared/**/*",
+    "script/**/*"
+  ],
+  "exclude": [
+    "dist",
+    "infra",
+    "node_modules",
+    "output",
+    "migration",
+    "packages/sdk/dist"
+  ]
 }

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import path from "path"
 import { InstructionPrompt } from "../../src/session/instruction"

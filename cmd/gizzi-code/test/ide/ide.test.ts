@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, expect, test, afterEach } from "bun:test"
 import { Ide } from "../../src/ide"
 

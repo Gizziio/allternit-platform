@@ -113,7 +113,7 @@ export function DialogJump(props: {
       </box>
 
       <box flexDirection="row" gap={tone().space.sm} marginBottom={tone().space.sm}>
-        <text fg={theme.textMuted}>Message # (1-{props.totalMessages}):</text>
+        <text fg={theme.textMuted}>Message # (1-{String(props.totalMessages ?? 0)}):</text>
       </box>
 
       <box flexDirection="row" gap={tone().space.sm} marginBottom={tone().space.md}>
@@ -153,7 +153,7 @@ export function DialogJump(props: {
                 backgroundColor={theme.backgroundElement}
                 onMouseUp={() => handleJump(suggestion.index)}
               >
-                <text fg={theme.accent}>{suggestion.index + 1}</text>
+                <text fg={theme.accent}>{String(suggestion.index + 1)}</text>
                 <text fg={theme.textMuted}>{suggestion.label}</text>
               </box>
             )}

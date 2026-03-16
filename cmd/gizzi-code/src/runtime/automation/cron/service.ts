@@ -16,6 +16,8 @@
 
 import { CronDatabase } from "./database";
 import { parseScheduleToType, getNextRunTime, describeSchedule } from "./parser";
+import { AgentExecutor } from "./executors/agent-executor";
+import { CoworkExecutor } from "./executors/cowork-executor";
 import type {
   CronJob,
   CronRun,
@@ -26,9 +28,12 @@ import type {
   CronEvent,
   DaemonStatus,
 } from "./types";
-import { homedir } from "os";
+import { Global } from "@/runtime/context/global";
+import { Log } from "@/shared/util/log";
 import { join } from "path";
 import { randomUUID } from "crypto";
+
+const log = Log.create({ service: "cron-service" });
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // State Management
@@ -44,7 +49,7 @@ interface ServiceState {
 }
 
 const DEFAULT_CONFIG: Required<CronServiceConfig> = {
-  dbPath: join(homedir(), ".a2r", "cron.db"),
+  dbPath: join(Global.Path.data, "cron.db"),
   checkIntervalMs: 60000,      // Check every minute
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   maxConcurrentJobs: 10,
@@ -87,7 +92,7 @@ export const CronService = {
       data: { dbPath: state.config.dbPath },
     });
     
-    console.log(`[CronService] Initialized with database: ${state.config.dbPath}`);
+    log.info("initialized", { dbPath: state.config.dbPath });
   },
 
   /**
@@ -96,21 +101,56 @@ export const CronService = {
   start(): void {
     if (state.isRunning) return;
     if (!state.db) throw new Error("CronService not initialized. Call initialize() first.");
-    
+
     state.isRunning = true;
-    
-    // Schedule next runs for all active jobs
+
+    const now = new Date().toISOString();
+
+    // Schedule next runs for all active jobs; catch up missed persistent runs
     const jobs = state.db.getActiveJobs();
     for (const job of jobs) {
+      // Disable expired session loops on startup
+      if ((job as any).expiresAt && (job as any).expiresAt < now) {
+        job.status = "disabled";
+        state.db.saveJob(job);
+        log.info("expired loop disabled on startup", { name: job.name });
+        continue;
+      }
+
       if (!job.nextRunAt) {
         this._scheduleNextRun(job);
+        continue;
+      }
+
+      // Catch up missed fires for persistent jobs with catchUpMissed enabled
+      if ((job as any).catchUpMissed && (job as any).scope !== "session" && job.nextRunAt < now) {
+        log.info("catching up missed run", { name: job.name, missedAt: job.nextRunAt });
+        this._executeJob(job, "wake");
       }
     }
-    
+
     // Start the check timer
     state.timer = setInterval(() => this._checkDueJobs(), state.config.checkIntervalMs);
-    
-    console.log(`[CronService] Started scheduler (checking every ${state.config.checkIntervalMs}ms)`);
+
+    log.info("scheduler started", { intervalMs: state.config.checkIntervalMs });
+  },
+
+  /**
+   * Delete all session-scoped loop jobs for a given session.
+   * Call this when a session closes.
+   */
+  cleanupSessionJobs(sessionId: string): number {
+    if (!state.db) return 0;
+    const jobs = state.db.getAllJobs();
+    let removed = 0;
+    for (const job of jobs) {
+      if ((job as any).scope === "session" && (job as any).sessionId === sessionId) {
+        this.delete(job.id);
+        removed++;
+      }
+    }
+    if (removed > 0) log.info("session loops cleaned up", { sessionId, count: removed });
+    return removed;
   },
 
   /**
@@ -135,7 +175,7 @@ export const CronService = {
       data: {},
     });
     
-    console.log("[CronService] Stopped scheduler");
+    log.info("scheduler stopped");
   },
 
   /**
@@ -174,7 +214,11 @@ export const CronService = {
     }
 
     const now = new Date().toISOString();
-    const job: CronJob = {
+    // Session-scoped loops expire after 3 days by default
+    const defaultExpiry = input.scope === "session"
+      ? new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()
+      : undefined;
+    const job = {
       id: randomUUID(),
       name: input.name,
       description: input.description,
@@ -191,7 +235,11 @@ export const CronService = {
       maxRetries: input.maxRetries ?? state.config.defaultMaxRetries,
       tags: input.tags ?? [],
       metadata: input.metadata ?? {},
-    };
+      scope: input.scope ?? "persistent",
+      sessionId: input.sessionId,
+      expiresAt: input.expiresAt ?? defaultExpiry,
+      catchUpMissed: input.catchUpMissed ?? false,
+    } as CronJob;
 
     // Calculate next run
     job.nextRunAt = getNextRunTime(schedule, undefined, new Date()).toISOString();
@@ -205,7 +253,7 @@ export const CronService = {
       data: { jobId: job.id, name: job.name },
     });
 
-    console.log(`[CronService] Created job: ${job.name} (${describeSchedule(schedule)})`);
+    log.info("job created", { name: job.name, schedule: describeSchedule(schedule) });
     return job;
   },
 
@@ -276,7 +324,7 @@ export const CronService = {
       data: { jobId: job.id },
     });
 
-    console.log(`[CronService] Updated job: ${job.name}`);
+    log.info("job updated", { name: job.name });
     return job;
   },
 
@@ -320,7 +368,7 @@ export const CronService = {
         timestamp: new Date().toISOString(),
         data: { jobId: id },
       });
-      console.log(`[CronService] Deleted job: ${id}`);
+      log.info("job deleted", { id });
     }
     return success;
   },
@@ -433,6 +481,14 @@ export const CronService = {
     let executed = 0;
 
     for (const job of dueJobs) {
+      // Skip expired jobs (session loops past TTL)
+      if ((job as any).expiresAt && (job as any).expiresAt < now) {
+        job.status = "disabled";
+        state.db.saveJob(job);
+        log.info("job expired, disabling", { name: job.name, expiresAt: (job as any).expiresAt });
+        continue;
+      }
+
       // Skip if max runs reached
       if (job.maxRuns && job.runCount >= job.maxRuns) {
         job.status = "disabled";
@@ -442,7 +498,7 @@ export const CronService = {
 
       // Skip if too many concurrent jobs
       if (state.runningJobs.size >= state.config.maxConcurrentJobs) {
-        console.log(`[CronService] Max concurrent jobs reached, skipping: ${job.name}`);
+        log.warn("max concurrent jobs reached, skipping", { name: job.name });
         continue;
       }
 
@@ -452,7 +508,7 @@ export const CronService = {
     }
 
     if (executed > 0) {
-      console.log(`[CronService] Executed ${executed} due jobs`);
+      log.debug("due jobs executed", { count: executed });
     }
 
     return executed;
@@ -641,26 +697,13 @@ export const CronService = {
   },
 
   async _executeAgent(job: CronJob, run: CronRun, signal: AbortSignal): Promise<void> {
-    // This is a placeholder - actual implementation depends on Agent system
-    const config = job.config as { prompt: string; agentId?: string; model?: string };
-    
-    run.output = `Agent task would execute: ${config.prompt}`;
-    run.agentId = config.agentId ?? "default";
-    
-    // TODO: Integrate with actual agent system
-    // For now, just simulate
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    const executor = new AgentExecutor({ defaultCwd: (state.config as any).cwd ?? process.cwd() })
+    await executor.execute(job, run, signal)
   },
 
   async _executeCowork(job: CronJob, run: CronRun, signal: AbortSignal): Promise<void> {
-    // This is a placeholder - actual implementation depends on Cowork system
-    const config = job.config as { runtime: string; commands: string[] };
-    
-    run.output = `Cowork run would execute: ${config.commands.join("; ")}`;
-    
-    // TODO: Integrate with actual cowork system
-    // For now, just simulate
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    const executor = new CoworkExecutor({ defaultCwd: (state.config as any).cwd ?? process.cwd() })
+    await executor.execute(job, run, signal)
   },
 
   async _executeFunction(job: CronJob, run: CronRun, signal: AbortSignal): Promise<void> {
@@ -694,7 +737,7 @@ function emitEvent(event: CronEvent): void {
     try {
       handler(event);
     } catch (e) {
-      console.error("[CronService] Event handler error:", e);
+      log.error("event handler error", { error: e instanceof Error ? e.message : e });
     }
   }
   

@@ -1,7 +1,8 @@
-import { PromptContext } from "@/runtime/context/pack";
+import type { PromptContext } from "@/runtime/context/pack";
 import { Provider } from "@/runtime/providers/provider";
 import { ModelResolver } from "@/runtime/models/resolve";
 import { Log } from "@/shared/util/log";
+// @ts-ignore - raw text import
 import PROMPT_PLAN from "./prompts/generate.txt"; // Re-using existing template
 
 export interface PlanStep {
@@ -20,15 +21,19 @@ export interface Plan {
 
 export class Planner {
   private log = Log.create({ service: "runtime.planner" });
+  private sessionId: string;
 
-  constructor(private sessionId: string) {}
+  constructor(sessionId: string) {
+    this.sessionId = sessionId;
+  }
 
   async generatePlan(context: PromptContext): Promise<Plan> {
     this.log.info("Generating real plan via LLM", { sessionId: this.sessionId });
 
     // 1. Resolve the best model for planning (e.g. gizzi.anthropic.sonnet)
     const modelDef = await ModelResolver.resolve("gizzi.anthropic.sonnet", { sessionId: this.sessionId });
-    const model = await Provider.getModel(modelDef.provider, modelDef.providerModelId);
+    const modelInfo = await Provider.getModel(modelDef.provider, modelDef.providerModelIds[0]);
+    const model = await Provider.getLanguage(modelInfo);
 
     // 2. Prepare the Prompt
     const systemPrompt = `You are the GIZZI Code Planner. Your goal is to break down the user's request into a structured plan.
@@ -51,7 +56,7 @@ You must return a JSON object with this structure:
 
     // 3. Call LLM (Simplified for this environment, assuming Provider.generate exists or equivalent)
     // In a real implementation, we would use the session processor or provider stream
-    this.log.debug("Calling model for planning", { provider: modelDef.provider, model: modelDef.providerModelId });
+    this.log.debug("Calling model for planning", { provider: modelDef.provider, model: modelDef.providerModelIds[0] });
     
     // For the sake of "production code" without being able to run real inference in this turn:
     // We implement the structural parsing logic that would handle the LLM output.

@@ -8,6 +8,7 @@ import { Flag } from "@/runtime/context/flag/flag"
 import { Log } from "@/shared/util/log"
 import { Glob } from "@/shared/util/glob"
 import type { MessageV2 } from "@/runtime/session/message-v2"
+import { parseFrontmatter } from "@/runtime/memory/memory-service"
 
 const log = Log.create({ service: "instruction" })
 
@@ -70,6 +71,36 @@ async function discoverTopicMemoryFiles(): Promise<string[]> {
     }
   }
   return results
+}
+
+/** Score a topic file's relevance to a session title using frontmatter description */
+async function scoreTopicRelevance(filepath: string, queryTerms: string[]): Promise<number> {
+  if (queryTerms.length === 0) return 1 // no filter — include all
+  const content = await Filesystem.readText(filepath).catch(() => "")
+  if (!content) return 0
+  const { fm } = parseFrontmatter(content)
+  // If no frontmatter, include by default (legacy files)
+  if (!fm.description) return 1
+  const haystack = [fm.name ?? "", fm.description, fm.type ?? ""].join(" ").toLowerCase()
+  return queryTerms.filter((t) => haystack.includes(t)).length
+}
+
+/**
+ * Filter topic files by relevance to the current session title.
+ * Files with frontmatter are scored; files without frontmatter pass through.
+ */
+async function relevantTopicFiles(files: string[], sessionTitle?: string): Promise<string[]> {
+  if (!sessionTitle) return files
+  const terms = sessionTitle
+    .toLowerCase()
+    .split(/[\s\-_/\\.,;:!?()[\]{}'"]+/)
+    .filter((t) => t.length > 2)
+  if (terms.length === 0) return files
+
+  const scored = await Promise.all(
+    files.map(async (f) => ({ f, score: await scoreTopicRelevance(f, terms) })),
+  )
+  return scored.filter((s) => s.score > 0).map((s) => s.f)
 }
 
 async function loadMemoryFile(filepath: string): Promise<string> {
@@ -135,7 +166,7 @@ export namespace InstructionPrompt {
     state().claims.delete(messageID)
   }
 
-  export async function systemPaths() {
+  export async function systemPaths(sessionTitle?: string) {
     const config = await Config.get()
     const paths = new Set<string>()
 
@@ -166,7 +197,9 @@ export namespace InstructionPrompt {
     }
 
     // Auto-load topic-specific memory files (*.md in memory dir, excluding MEMORY.md)
-    const topicFiles = await discoverTopicMemoryFiles()
+    // Filter by session title relevance when frontmatter is present
+    const allTopicFiles = await discoverTopicMemoryFiles()
+    const topicFiles = await relevantTopicFiles(allTopicFiles, sessionTitle)
     for (const file of topicFiles) {
       paths.add(file)
     }
@@ -193,14 +226,14 @@ export namespace InstructionPrompt {
     return paths
   }
 
-  export async function system() {
+  export async function system(sessionTitle?: string) {
     const config = await Config.get()
-    const paths = await systemPaths()
+    const paths = await systemPaths(sessionTitle)
 
-    const topicFiles = await discoverTopicMemoryFiles()
+    const allTopicFiles = await discoverTopicMemoryFiles()
     const memoryPaths = new Set([
       ...workspaceMemoryFiles().map((f) => path.resolve(f)),
-      ...topicFiles,
+      ...allTopicFiles,
     ])
     const files = Array.from(paths).map(async (p) => {
       if (memoryPaths.has(p)) return loadMemoryFile(p)

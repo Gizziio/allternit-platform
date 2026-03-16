@@ -10,8 +10,8 @@ import { serveStatic } from "hono/bun";
 import { zValidator } from "@hono/zod-validator";
 import z from "zod";
 import { Log } from "@/shared/util/log";
-import { getEvidencePath, readEvidenceFile } from "./verification/file-writer";
-import { ConfidenceHistoryStore } from "./verification/history/store";
+import { EvidenceFileWriter, type EvidenceFile } from "./verification/file-writer";
+import { ConfidenceHistoryService } from "./verification/history/store";
 
 const log = Log.create({ service: "visual-verification.api" });
 
@@ -57,7 +57,8 @@ visualVerificationRouter.get("/:wihId", async (c) => {
   const wihId = c.req.param("wihId");
   
   try {
-    const evidence = await readEvidenceFile(wihId);
+    const writer = new EvidenceFileWriter({} as any);
+    const evidence = await writer.readEvidence(wihId);
     
     if (!evidence) {
       return c.json({
@@ -75,17 +76,17 @@ visualVerificationRouter.get("/:wihId", async (c) => {
       status: evidence.success ? "completed" : "failed",
       overallConfidence: evidence.overall_confidence,
       threshold: 0.7,
-      artifacts: evidence.artifacts.map(a => ({
+      artifacts: evidence.artifacts.map((a: EvidenceFile['artifacts'][number]) => ({
         id: a.id,
         type: a.type,
         confidence: a.confidence,
         timestamp: a.timestamp,
         data: {
-          imageUrl: a.image?.path,
-          textContent: a.text?.content,
-          jsonData: a.json?.data,
+          imageUrl: a.image_path,
+          textContent: undefined,
+          jsonData: a.data,
         },
-        metadata: a.metadata,
+        metadata: undefined,
       })),
       startedAt: evidence.captured_at,
       completedAt: evidence.captured_at,
@@ -170,13 +171,13 @@ visualVerificationRouter.get("/:wihId/trend", async (c) => {
   const limit = parseInt(c.req.query("limit") || "100", 10);
   
   try {
-    const store = new ConfidenceHistoryStore();
-    const trend = await store.getTrendForWih(wihId, days);
+    const store = new ConfidenceHistoryService();
+    const trend = await store.getHistory(wihId, { days, limit });
     
-    return c.json(trend.map(t => ({
+    return c.json(trend.map((t: { timestamp: number; confidence: number; wihId: string }) => ({
       timestamp: t.timestamp,
       confidence: t.confidence,
-      wihId: t.wih_id,
+      wihId: t.wihId,
     })));
   } catch (error) {
     log.error("Failed to get trend data", { wihId, error });
@@ -190,20 +191,21 @@ visualVerificationRouter.get("/:wihId/artifacts/:artifactId", async (c) => {
   const artifactId = c.req.param("artifactId");
   
   try {
-    const evidence = await readEvidenceFile(wihId);
+    const writer = new EvidenceFileWriter({} as any);
+    const evidence = await writer.readEvidence(wihId);
     
     if (!evidence) {
       return c.json({ error: "Evidence not found" }, 404);
     }
     
-    const artifact = evidence.artifacts.find(a => a.id === artifactId);
+    const artifact = evidence.artifacts.find((a: EvidenceFile['artifacts'][number]) => a.id === artifactId);
     
-    if (!artifact || !artifact.image?.path) {
+    if (!artifact || !artifact.image_path) {
       return c.json({ error: "Artifact not found" }, 404);
     }
     
     // Serve the image file
-    const file = Bun.file(artifact.image.path);
+    const file = Bun.file(artifact.image_path);
     
     if (!await file.exists()) {
       return c.json({ error: "Image file not found" }, 404);
@@ -222,7 +224,8 @@ visualVerificationRouter.get("/:wihId/export", async (c) => {
   const format = c.req.query("format") || "json";
   
   try {
-    const evidence = await readEvidenceFile(wihId);
+    const writer = new EvidenceFileWriter({} as any);
+    const evidence = await writer.readEvidence(wihId);
     
     if (!evidence) {
       return c.json({ error: "Evidence not found" }, 404);
@@ -231,9 +234,90 @@ visualVerificationRouter.get("/:wihId/export", async (c) => {
     if (format === "json") {
       return c.json(evidence);
     }
-    
-    // For PDF/HTML formats, would generate and return file
-    return c.json({ error: "Format not yet supported" }, 400);
+
+    if (format === "html") {
+      const statusColor = evidence.success ? "#22c55e" : "#ef4444"
+      const statusText = evidence.success ? "PASSED" : "FAILED"
+      const artifactRows = evidence.artifacts
+        .map(
+          (a) =>
+            `<tr>
+              <td>${a.type}</td>
+              <td>${a.description}</td>
+              <td>${(a.confidence * 100).toFixed(0)}%</td>
+              <td>${a.verification_claim}</td>
+            </tr>`,
+        )
+        .join("")
+      const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Verification Report – ${evidence.wih_id}</title>
+  <style>
+    body{font-family:system-ui,sans-serif;max-width:900px;margin:2rem auto;color:#1e293b}
+    h1{font-size:1.5rem}
+    .badge{display:inline-block;padding:.25rem .75rem;border-radius:9999px;color:#fff;font-weight:700;background:${statusColor}}
+    table{width:100%;border-collapse:collapse;margin-top:1rem}
+    th,td{border:1px solid #e2e8f0;padding:.5rem .75rem;text-align:left;font-size:.875rem}
+    th{background:#f8fafc;font-weight:600}
+    .meta{color:#64748b;font-size:.875rem;margin:.5rem 0}
+    .errors{background:#fef2f2;border:1px solid #fca5a5;padding:1rem;border-radius:.5rem;margin-top:1rem}
+  </style>
+</head>
+<body>
+  <h1>Verification Report <span class="badge">${statusText}</span></h1>
+  <p class="meta">WIH: <code>${evidence.wih_id}</code> · Provider: ${evidence.provider_id} · Captured: ${evidence.captured_at}</p>
+  <p class="meta">Overall confidence: <strong>${(evidence.overall_confidence * 100).toFixed(1)}%</strong></p>
+  ${evidence.errors.length ? `<div class="errors"><strong>Errors:</strong><ul>${evidence.errors.map((e) => `<li>${e}</li>`).join("")}</ul></div>` : ""}
+  <h2>Artifacts (${evidence.artifacts.length})</h2>
+  <table>
+    <thead><tr><th>Type</th><th>Description</th><th>Confidence</th><th>Claim</th></tr></thead>
+    <tbody>${artifactRows}</tbody>
+  </table>
+</body>
+</html>`
+      return new Response(html, {
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "Content-Disposition": `attachment; filename="verification-${evidence.wih_id}.html"`,
+        },
+      })
+    }
+
+    if (format === "markdown" || format === "md") {
+      const statusEmoji = evidence.success ? "✅" : "❌"
+      const lines = [
+        `# Verification Report ${statusEmoji}`,
+        ``,
+        `| Field | Value |`,
+        `|---|---|`,
+        `| WIH ID | \`${evidence.wih_id}\` |`,
+        `| Provider | ${evidence.provider_id} |`,
+        `| Status | ${evidence.success ? "PASSED" : "FAILED"} |`,
+        `| Confidence | ${(evidence.overall_confidence * 100).toFixed(1)}% |`,
+        `| Captured | ${evidence.captured_at} |`,
+        ``,
+        `## Artifacts`,
+        ``,
+        ...evidence.artifacts.map(
+          (a) =>
+            `### ${a.type}: ${a.description}\n- Confidence: ${(a.confidence * 100).toFixed(0)}%\n- Claim: ${a.verification_claim}`,
+        ),
+        ...(evidence.errors.length
+          ? [``, `## Errors`, ``, ...evidence.errors.map((e) => `- ${e}`)]
+          : []),
+      ]
+      const md = lines.join("\n")
+      return new Response(md, {
+        headers: {
+          "Content-Type": "text/markdown; charset=utf-8",
+          "Content-Disposition": `attachment; filename="verification-${evidence.wih_id}.md"`,
+        },
+      })
+    }
+
+    return c.json({ error: `Unsupported format: ${format}. Use json, html, or markdown.` }, 400);
   } catch (error) {
     log.error("Failed to export report", { wihId, error });
     return c.json({ error: "Failed to export report" }, 500);
@@ -243,12 +327,13 @@ visualVerificationRouter.get("/:wihId/export", async (c) => {
 // Batch verification
 visualVerificationRouter.post("/batch", async (c) => {
   const body = await c.req.json();
-  const { wihIds, options } = body;
+  const { wihIds } = body;
   
   try {
+    const writer = new EvidenceFileWriter({} as any);
     const results = await Promise.all(
       wihIds.map(async (wihId: string) => {
-        const evidence = await readEvidenceFile(wihId);
+        const evidence = await writer.readEvidence(wihId);
         return {
           wihId,
           status: evidence?.success ? "completed" : "failed",

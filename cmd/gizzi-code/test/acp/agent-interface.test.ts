@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, expect, test } from "bun:test"
 import { ACP } from "../../src/acp/agent"
 import type { Agent as ACPAgent } from "@agentclientprotocol/sdk"

@@ -228,7 +228,7 @@ export function LayerExplorer(props: LayerExplorerProps) {
                 
                 {/* Layer Content */}
                 <Show when={expanded()[layer.id]}>
-                  <box flexDirection="column" paddingLeft={4} gap={0}>
+                  <box flexDirection="column" paddingLeft={2} gap={0}>
                     <text fg={theme.textMuted}>{layer.description}</text>
                     <box flexDirection="column" gap={0}>
                       <For each={layer.files}>
@@ -271,9 +271,9 @@ function LayerFileItem(props: LayerFileItemProps) {
   const { theme, file, layerId, depth = 0 } = props
   
   const icon = () => {
-    if (file.type === "directory") return expanded() ? "📂" : "📁"
-    if (file.name.endsWith(".md")) return "📝"
-    return "📄"
+    if (file.type === "directory") return expanded() ? "v" : ">"
+    if (file.name.endsWith(".md")) return "●"
+    return "○"
   }
   
   const handleClick = () => {
@@ -289,7 +289,7 @@ function LayerFileItem(props: LayerFileItemProps) {
       <box
         flexDirection="row"
         gap={1}
-        paddingLeft={depth * 2}
+        paddingLeft={depth}
         onMouseDown={handleClick}
       >
         <text fg={theme.textMuted}>{icon()}</text>

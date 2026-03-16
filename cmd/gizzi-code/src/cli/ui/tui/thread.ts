@@ -4,14 +4,15 @@ import { Rpc } from "@/shared/util/rpc"
 import { type rpc } from "@/cli/ui/tui/worker"
 import path from "path"
 import { fileURLToPath } from "url"
-import { UI } from "@/cli/ui"
 import { iife } from "@/shared/util/iife"
 import { Log } from "@/shared/util/log"
 import { withNetworkOptions, resolveNetworkOptions } from "@/cli/network"
 import { Filesystem } from "@/shared/util/filesystem"
-import type { Event } from "@a2r/sdk/v2"
 import type { EventSource } from "@/cli/ui/tui/context/sdk"
 import { win32DisableProcessedInput, win32InstallCtrlCGuard } from "@/cli/ui/tui/win32"
+
+// Local Event type since SDK Event is now unknown
+type Event = any
 
 declare global {
   const GIZZI_WORKER_PATH: string
@@ -89,7 +90,7 @@ export const TuiThreadCommand = cmd({
       win32DisableProcessedInput()
 
       if (args.fork && !args.continue && !args.session) {
-        UI.error("--fork requires --continue or --session")
+        console.error("--fork requires --continue or --session")
         process.exitCode = 1
         return
       }
@@ -108,7 +109,8 @@ export const TuiThreadCommand = cmd({
       try {
         process.chdir(cwd)
       } catch (e) {
-        UI.error("Failed to change directory to " + cwd)
+        console.error("Failed to change directory to " + cwd)
+        process.exitCode = 1
         return
       }
 
@@ -183,6 +185,8 @@ export const TuiThreadCommand = cmd({
         },
         onExit: async () => {
           await client.call("shutdown", undefined)
+          // Note: Session exits have telemetry shown via exit.message in session/index.tsx
+          // This is for non-session exits (home screen, etc)
         },
       })
 

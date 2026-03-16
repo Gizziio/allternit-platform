@@ -1,0 +1,18 @@
+{
+  "$schema": "https://gizzi.io/config.json",
+  "model": "moonshotai/kimi-k2-thinking",
+  "mcp": {
+    "sequential-thinking": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-sequential-thinking"]
+    },
+    "context7": {
+      "type": "local",
+      "command": ["npx", "-y", "@upstash/context7-mcp@latest"]
+    },
+    "superpowers": {
+      "type": "local",
+      "command": ["node", "tools/mcp-servers/superpowers/superpowers-mcp.js"]
+    }
+  }
+}

@@ -7,9 +7,12 @@ import { Rpc } from "@/shared/util/rpc"
 import { upgrade } from "@/cli/upgrade"
 import { Config } from "@/runtime/context/config/config"
 import { GlobalBus } from "@/shared/bus/global"
-import { createA2RClient, type Event } from "@a2r/sdk/v2"
+import { createA2RClient } from "@a2r/sdk"
 import type { BunWebSocketData } from "hono/bun"
 import { GIZZIFlag } from "@/shared/brand/flags"
+
+// Local Event type since SDK Event is now unknown
+type Event = any
 
 await Log.init({
   print: process.argv.includes("--print-logs"),
@@ -64,30 +67,31 @@ const startEventStream = (directory: string) => {
     baseUrl: "http://gizzi.internal",
     directory,
     fetch: fetchFn,
-    signal,
   })
 
   ;(async () => {
     Log.Default.info("worker: event stream loop started")
+    let backoff = 1000
     while (!signal.aborted) {
       try {
-        const events = await sdk.event.subscribe(
-          {},
-          {
-            signal,
-          },
-        )
-
-        for await (const event of events.stream) {
-          Rpc.emit("event", event as Event)
+        for await (const event of sdk.events({ signal })) {
+          backoff = 1000 // reset on successful event
+          Rpc.emit("event", event)
         }
+        backoff = 1000 // reset on clean end
       } catch (error) {
-         if (!signal.aborted) {
-            Log.Default.error("worker: event stream error", {
-              error: error instanceof Error ? error.message : error,
-            })
-            await Bun.sleep(1000)
-         }
+        if (!signal.aborted) {
+          const msg = error instanceof Error ? error.message : String(error)
+          const isConnRefused = msg.includes("ECONNREFUSED") || msg.includes("connection refused") || msg.includes("fetch failed")
+          if (isConnRefused) {
+            Log.Default.debug("worker: event stream disconnected, retrying", { backoff })
+          } else {
+            Log.Default.error("worker: event stream error", { error: msg })
+          }
+          await Bun.sleep(backoff)
+          backoff = Math.min(backoff * 2, 30000)
+        }
+        continue
       }
 
       if (!signal.aborted) {

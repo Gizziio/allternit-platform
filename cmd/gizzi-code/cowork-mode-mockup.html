@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gizzi Code - Cowork Mode</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #0a0a0f;
+            color: #e4e4e7;
+            font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        
+        /* Color Palette */
+        :root {
+            --obsidian: #0F1115;
+            --obsidian-light: #14161c;
+            --obsidian-lighter: #1a1d24;
+            --purple: #A888FF;
+            --purple-dim: #6B5B95;
+            --purple-glow: rgba(168, 136, 255, 0.3);
+            --gold: #D4B08C;
+            --gold-dim: #8F6F56;
+            --success: #4ade80;
+            --warn: #fbbf24;
+            --error: #f87171;
+            --text: #e4e4e7;
+            --text-muted: #71717a;
+            --border: #27272a;
+        }
+        
+        /* Main Container */
+        .app {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background: var(--obsidian);
+        }
+        
+        /* Header - Purple Cowork Identity */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 16px;
+            background: var(--obsidian);
+            border-bottom: 1px solid var(--purple-dim);
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .logo-icon {
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, var(--purple), var(--purple-dim));
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+            color: white;
+        }
+        
+        .mode-badge {
+            background: linear-gradient(90deg, var(--purple), var(--purple-dim));
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .session-name {
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: var(--success);
+        }
+        
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Session Mount - Task Progress */
+        .session-mount {
+            background: linear-gradient(180deg, var(--obsidian-light), var(--obsidian));
+            border-bottom: 1px solid var(--border);
+            padding: 12px 16px;
+        }
+        
+        .mount-content {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .phaser {
+            font-size: 18px;
+            color: var(--purple);
+            font-weight: bold;
+            animation: phaser-pulse 1.2s infinite;
+            text-shadow: 0 0 10px var(--purple-glow);
+        }
+        
+        @keyframes phaser-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        .task-info {
+            flex: 1;
+        }
+        
+        .task-label {
+            font-size: 10px;
+            color: var(--purple);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+        }
+        
+        .task-name {
+            color: var(--text);
+            font-weight: 500;
+        }
+        
+        .active-tools {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .tool-chip {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: var(--obsidian-lighter);
+            border: 1px solid var(--purple-dim);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            color: var(--purple);
+        }
+        
+        /* Main Layout */
+        .main {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        /* Work Blocks Area */
+        .workspace {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        /* Work Block - Message */
+        .work-block {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .actor-name {
+            font-weight: bold;
+            color: var(--purple);
+        }
+        
+        .actor-name.user {
+            color: var(--gold);
+        }
+        
+        .message-content {
+            padding-left: 16px;
+            color: var(--text);
+            line-height: 1.6;
+        }
+        
+        /* Tool Block */
+        .tool-block {
+            background: var(--obsidian-light);
+            border-left: 3px solid var(--purple);
+            border-radius: 0 8px 8px 0;
+            overflow: hidden;
+        }
+        
+        .tool-block.bash {
+            border-left-color: var(--purple);
+        }
+        
+        .tool-block.write {
+            border-left-color: #60a5fa;
+        }
+        
+        .tool-block.read {
+            border-left-color: var(--warn);
+        }
+        
+        .tool-block.edit {
+            border-left-color: var(--gold);
+        }
+        
+        .tool-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: rgba(168, 136, 255, 0.1);
+        }
+        
+        .tool-icon {
+            font-size: 14px;
+        }
+        
+        .tool-name {
+            font-weight: bold;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .tool-path {
+            color: var(--text-muted);
+            font-size: 11px;
+            margin-left: auto;
+        }
+        
+        .tool-content {
+            padding: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+        }
+        
+        .code-block {
+            background: var(--obsidian);
+            padding: 12px;
+            border-radius: 4px;
+            overflow-x: auto;
+            color: var(--text);
+        }
+        
+        /* Right Sidebar */
+        .sidebar {
+            width: 280px;
+            background: var(--obsidian-light);
+            border-left: 1px solid var(--purple-dim);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+        
+        .sidebar-section {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .section-title {
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--purple);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .progress-stats {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+        }
+        
+        .stat-completed {
+            color: var(--success);
+            font-weight: bold;
+        }
+        
+        .stat-divider {
+            color: var(--text-muted);
+        }
+        
+        .stat-total {
+            color: var(--text);
+        }
+        
+        .current-task {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+        
+        /* File List */
+        .file-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            padding: 2px 0;
+        }
+        
+        .file-status {
+            color: var(--success);
+        }
+        
+        .file-path {
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        /* Schedule List */
+        .schedule-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .schedule-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+        }
+        
+        .schedule-status {
+            color: var(--success);
+        }
+        
+        .schedule-status.inactive {
+            color: var(--text-muted);
+        }
+        
+        .schedule-name {
+            color: var(--text);
+        }
+        
+        /* Context Panel */
+        .context-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .context-item {
+            font-size: 11px;
+            color: var(--text-muted);
+            padding: 2px 0;
+        }
+        
+        /* Prompt Area */
+        .prompt-area {
+            background: var(--obsidian-light);
+            border-top: 1px solid var(--border);
+            padding: 12px 16px;
+        }
+        
+        .prompt-container {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            background: var(--obsidian);
+            border: 1px solid var(--purple-dim);
+            border-radius: 8px;
+            padding: 12px;
+        }
+        
+        .prompt-icon {
+            color: var(--purple);
+            font-size: 16px;
+        }
+        
+        .prompt-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 13px;
+            resize: none;
+            outline: none;
+            min-height: 20px;
+        }
+        
+        .prompt-input::placeholder {
+            color: var(--text-muted);
+        }
+        
+        .prompt-hints {
+            display: flex;
+            gap: 12px;
+            margin-top: 8px;
+            padding-left: 28px;
+        }
+        
+        .hint {
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+        
+        .hint-key {
+            background: var(--obsidian-lighter);
+            padding: 1px 4px;
+            border-radius: 3px;
+            border: 1px solid var(--border);
+        }
+        
+        /* Empty State */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            flex: 1;
+            color: var(--text-muted);
+        }
+        
+        .mascot {
+            font-size: 48px;
+            color: var(--purple);
+            opacity: 0.5;
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--obsidian);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--obsidian-lighter);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--purple-dim);
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-left">
+                <div class="logo">
+                    <div class="logo-icon">G</div>
+                    <span class="mode-badge">Cowork</span>
+                    <span class="session-name">Cowork Session</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="status-indicator">
+                    <span class="status-dot"></span>
+                    <span>● Connected</span>
+                </div>
+                <span style="color: var(--text-muted); font-size: 11px;">claude-3-5-sonnet</span>
+            </div>
+        </div>
+        
+        <!-- Session Mount -->
+        <div class="session-mount">
+            <div class="mount-content">
+                <div class="phaser">█▀█</div>
+                <div class="task-info">
+                    <div class="task-label">Current Task</div>
+                    <div class="task-name">Analyzing project structure and creating components...</div>
+                </div>
+                <div class="active-tools">
+                    <div class="tool-chip">
+                        <span>⚡</span>
+                        <span>bash</span>
+                    </div>
+                    <div class="tool-chip">
+                        <span>✎</span>
+                        <span>write</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="main">
+            <!-- Work Blocks Area -->
+            <div class="workspace">
+                <!-- User Message -->
+                <div class="work-block">
+                    <div class="message-header">
+                        <span class="actor-name user">You</span>
+                    </div>
+                    <div class="message-content">
+                        Create a new component for the dashboard that shows user analytics with charts
+                    </div>
+                </div>
+                
+                <!-- Gizzi Response -->
+                <div class="work-block">
+                    <div class="message-header">
+                        <span class="actor-name">Gizzi</span>
+                    </div>
+                    <div class="message-content">
+                        I'll create a user analytics component with charts for the dashboard. Let me start by examining the existing structure.
+                    </div>
+                </div>
+                
+                <!-- Bash Tool Block -->
+                <div class="work-block">
+                    <div class="tool-block bash">
+                        <div class="tool-header">
+                            <span class="tool-icon">⚡</span>
+                            <span class="tool-name" style="color: var(--purple);">BASH</span>
+                            <span class="tool-path">ls -la src/components/dashboard/</span>
+                        </div>
+                        <div class="tool-content">
+                            <div class="code-block">
+total 24<br>
+drwxr-xr-x  5 user  staff   160 Mar 13 14:32 .<br>
+drwxr-xr-x  12 user  staff   384 Mar 13 14:30 ..<br>
+-rw-r--r--  1 user  staff  2847 Mar 13 14:28 index.tsx<br>
+-rw-r--r--  1 user  staff  1923 Mar 13 14:28 stats.tsx<br>
+-rw-r--r--  1 user  staff  1547 Mar 13 14:28 overview.tsx
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Read Tool Block -->
+                <div class="work-block">
+                    <div class="tool-block read">
+                        <div class="tool-header">
+                            <span class="tool-icon">📖</span>
+                            <span class="tool-name" style="color: var(--warn);">READ</span>
+                            <span class="tool-path">src/components/dashboard/index.tsx</span>
+                        </div>
+                        <div class="tool-content">
+                            <div class="code-block">
+export { DashboardStats } from './stats'<br>
+export { DashboardOverview } from './overview'
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Write Tool Block -->
+                <div class="work-block">
+                    <div class="tool-block write">
+                        <div class="tool-header">
+                            <span class="tool-icon">✎</span>
+                            <span class="tool-name" style="color: #60a5fa;">WRITE</span>
+                            <span class="tool-path">src/components/dashboard/analytics.tsx</span>
+                        </div>
+                        <div class="tool-content">
+                            <div class="code-block">
+import { useState } from 'react'<br>
+import { Chart } from '@/components/ui/chart'<br>
+<br>
+export function UserAnalytics() {<br>
+&nbsp;&nbsp;const [data, setData] = useState([])<br>
+&nbsp;&nbsp;// ...<br>
+}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Edit Tool Block -->
+                <div class="work-block">
+                    <div class="tool-block edit">
+                        <div class="tool-header">
+                            <span class="tool-icon">✏</span>
+                            <span class="tool-name" style="color: var(--gold);">EDIT</span>
+                            <span class="tool-path">src/components/dashboard/index.tsx</span>
+                        </div>
+                        <div class="tool-content">
+                            <div class="code-block">
++<br>
++ export { UserAnalytics } from './analytics'
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Success Message -->
+                <div class="work-block">
+                    <div class="message-header">
+                        <span class="actor-name">Gizzi</span>
+                    </div>
+                    <div class="message-content">
+                        ✅ Created <code>UserAnalytics</code> component with chart integration. The component is now exported from the dashboard index.
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Sidebar -->
+            <div class="sidebar">
+                <!-- Progress -->
+                <div class="sidebar-section">
+                    <div class="section-title">
+                        <span>▸</span>
+                        <span>Progress</span>
+                    </div>
+                    <div class="progress-stats">
+                        <span class="stat-completed">3</span>
+                        <span class="stat-divider">/</span>
+                        <span class="stat-total">5</span>
+                        <span style="color: var(--text-muted);">tasks</span>
+                    </div>
+                    <div class="current-task">Creating analytics component...</div>
+                </div>
+                
+                <!-- Files -->
+                <div class="sidebar-section">
+                    <div class="section-title">
+                        <span>▸</span>
+                        <span>Files</span>
+                    </div>
+                    <div class="file-list">
+                        <div class="file-item">
+                            <span class="file-status">~</span>
+                            <span class="file-path">src/components/dashboard/analytics.tsx</span>
+                        </div>
+                        <div class="file-item">
+                            <span class="file-status">~</span>
+                            <span class="file-path">src/components/dashboard/index.tsx</span>
+                        </div>
+                        <div class="file-item">
+                            <span class="file-status">~</span>
+                            <span class="file-path">src/lib/chart-utils.ts</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Schedules -->
+                <div class="sidebar-section">
+                    <div class="section-title">
+                        <span>▸</span>
+                        <span>Schedules</span>
+                    </div>
+                    <div class="schedule-list">
+                        <div class="schedule-item">
+                            <span class="schedule-status">●</span>
+                            <span class="schedule-name">sync-repos</span>
+                        </div>
+                        <div class="schedule-item">
+                            <span class="schedule-status inactive">○</span>
+                            <span class="schedule-name">backup-db</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Context -->
+                <div class="sidebar-section">
+                    <div class="section-title">
+                        <span>▸</span>
+                        <span>Context</span>
+                    </div>
+                    <div class="context-list">
+                        <div class="context-item">dashboard/index.tsx</div>
+                        <div class="context-item">dashboard/stats.tsx</div>
+                        <div class="context-item">ui/chart.tsx</div>
+                        <div class="context-item">lib/analytics.ts</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Prompt Area -->
+        <div class="prompt-area">
+            <div class="prompt-container">
+                <span class="prompt-icon">❯</span>
+                <textarea class="prompt-input" placeholder="Type a message to collaborate..." rows="1"></textarea>
+            </div>
+            <div class="prompt-hints">
+                <span class="hint"><span class="hint-key">↑↓</span> history</span>
+                <span class="hint"><span class="hint-key">@</span> mention</span>
+                <span class="hint"><span class="hint-key">/</span> commands</span>
+                <span class="hint"><span class="hint-key">esc</span> cancel</span>
+                <span class="hint"><span class="hint-key">ctrl+c</span> exit</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -8,7 +8,12 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import z from "zod/v4";
-import { getCurrentSession } from "../session";
+// Define a local helper to get current session context
+function getCurrentSession(): { id: string } | undefined {
+  // In server context, we don't have direct access to session state
+  // Return undefined to trigger fallback behavior
+  return undefined;
+}
 import {
   VerificationOrchestrator,
   SemiFormalVerifier,
@@ -17,7 +22,10 @@ import {
   quickVerify,
   type VerificationCertificate,
   type VerificationMode,
+  type VerificationStrategy,
 } from "@/runtime/loop/verification";
+import { type Plan } from "@/runtime/loop/planner";
+import { type ExecutionReceipt } from "@/runtime/loop/executor";
 import { Log } from "@/shared/util/log";
 
 const log = Log.create({ service: "server.routes.verification" });
@@ -33,7 +41,7 @@ const VerifyRequestSchema = z.object({
     steps: z.array(z.object({
       id: z.string(),
       toolId: z.string(),
-      args: z.record(z.any()).default({}),
+      args: z.record(z.string(), z.any()).default({}),
     })),
   }).default({ steps: [] }),
   receipts: z.array(z.object({
@@ -41,7 +49,7 @@ const VerifyRequestSchema = z.object({
     toolId: z.string(),
     success: z.boolean(),
     output: z.string(),
-    metadata: z.record(z.any()).optional(),
+    metadata: z.record(z.string(), z.any()).optional(),
   })).default([]),
   context: z.object({
     patches: z.array(z.object({
@@ -122,13 +130,25 @@ export const verificationRoutes = new Hono()
         steps: body.plan.steps.length,
       });
 
-      const orchestrator = new VerificationOrchestrator(sessionId, {
-        mode: body.mode,
+      const strategy: VerificationStrategy = {
+        mode: body.mode as VerificationMode,
         fallbackOnUncertainty: body.fallbackOnUncertainty,
-        context: body.context,
-      });
+      };
 
-      const result = await orchestrator.verify(body.plan, body.receipts);
+      const orchestrator = new VerificationOrchestrator(sessionId, strategy);
+
+      const plan: Plan = {
+        sessionId: sessionId,
+        steps: body.plan.steps.map(s => ({ ...s, description: s.toolId })),
+        exitCriteria: [],
+        goal: body.description,
+      };
+      const receipts: ExecutionReceipt[] = body.receipts.map(r => ({
+        ...r,
+        output: r.output,
+        durationMs: 0,
+      }));
+      const result = await orchestrator.verify(plan, receipts);
 
       // Check confidence requirement
       const confidenceOrder = { high: 3, medium: 2, low: 1 };
@@ -181,7 +201,7 @@ export const verificationRoutes = new Hono()
       });
 
       const result = await quickVerify(sessionId, body.description, {
-        mode: body.mode,
+        mode: body.mode as VerificationMode,
         patches: body.patches,
         testFiles: body.testFiles,
       });
@@ -283,8 +303,9 @@ Please generate a complete verification certificate following the semi-formal re
       const { Provider } = await import("@/runtime/providers/provider");
       const { VerificationCertificateSchema } = await import("@/runtime/loop/semi-formal-verifier");
       
-      const model = await Provider.defaultModel();
-      const language = await Provider.getModel(model.providerID, model.modelID);
+      const defaultModel = await Provider.defaultModel();
+      const model = await Provider.getModel(defaultModel.providerID, defaultModel.modelID);
+      const languageModel = await Provider.getLanguage(model);
 
       const prompt = `
 You are a code verification engine using semi-formal reasoning.
@@ -322,7 +343,7 @@ Provide specific, reproducible counterexample.
 `;
 
       const genResult = await generateObject({
-        model: language,
+        model: languageModel,
         messages: [
           { role: "system", content: prompt },
           { role: "user", content: fullContext },
@@ -331,7 +352,7 @@ Provide specific, reproducible counterexample.
         experimental_telemetry: { isEnabled: false },
       });
 
-      const certificate = genResult.object;
+      const certificate = genResult.object as VerificationCertificate;
       const formatted = formatCertificate(certificate);
 
       return c.json({

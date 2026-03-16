@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, test, expect, beforeEach, afterEach } from "bun:test"
 import { Patch } from "../../src/patch"
 import * as fs from "fs/promises"

@@ -1,10 +1,10 @@
+
 import { useSync } from "@/cli/ui/tui/context/sync"
 import { createMemo, createSignal, For, Show, Switch, Match, onMount, createResource } from "solid-js"
 import { createStore } from "solid-js/store"
 import { useTheme } from "@/cli/ui/tui/context/theme"
 import { Locale } from "@/shared/util/locale"
 import path from "path"
-import type { AssistantMessage } from "@a2r/sdk/v2"
 import { Global } from "@/runtime/context/global"
 import { Installation } from "@/shared/installation"
 import { useKeybind } from "@/cli/ui/tui/context/keybind"
@@ -12,7 +12,61 @@ import { useDirectory } from "@/cli/ui/tui/context/directory"
 import { useKV } from "@/cli/ui/tui/context/kv"
 import { TodoItem } from "@/cli/ui/tui/component/todo-item"
 import { GIZZICopy, GIZZIBrand, sanitizeBrandSurface } from "@/shared/brand"
-import type { McpStatus } from "@a2r/sdk/v2"
+import { useToast } from "@/cli/ui/tui/ui/toast"
+
+// Local type definitions (replaces @a2r/sdk/v2)
+interface AssistantMessage {
+  role: "assistant"
+  id: string
+  providerID: string
+  modelID: string
+  cost: number
+  tokens: {
+    input: number
+    output: number
+    reasoning: number
+    cache: {
+      read: number
+      write: number
+    }
+  }
+}
+
+interface McpStatus {
+  status: "connected" | "failed" | "disabled" | "needs_auth" | "needs_client_registration"
+  error?: unknown
+}
+
+// Type helpers for sync data
+type SyncSession = {
+  id: string
+  title?: string
+  share?: { url?: string }
+}
+
+type SyncMessage = {
+  id: string
+  role: "user" | "assistant" | "system"
+  cost: number
+  tokens: {
+    input: number
+    output: number
+    reasoning: number
+    cache: { read: number; write: number }
+  }
+  providerID: string
+  modelID: string
+}
+
+type SyncProvider = {
+  id: string
+  name: string
+  models: Record<string, { cost?: { input: number }; limit?: { context?: number } }>
+}
+
+type SyncMcpStatus = {
+  status: "connected" | "failed" | "disabled" | "needs_auth" | "needs_client_registration"
+}
 import { SessionUsage } from "@/runtime/session/usage"
 import { useDialog } from "@/cli/ui/tui/ui/dialog"
 import { DialogUsage } from "@/cli/ui/tui/component/dialog-usage"
@@ -40,10 +94,10 @@ function mcpStatusText(item: McpStatus): string {
 export function Sidebar(props: { sessionID: string; overlay?: boolean }) {
   const sync = useSync()
   const { theme } = useTheme()
-  const session = createMemo(() => sync.session.get(props.sessionID)!)
+  const session = createMemo(() => (sync.data.session as SyncSession[]).find(s => s.id === props.sessionID)!)
   const diff = createMemo(() => sync.data.session_diff[props.sessionID] ?? [])
   const todo = createMemo(() => sync.data.todo[props.sessionID] ?? [])
-  const messages = createMemo(() => sync.data.message[props.sessionID] ?? [])
+  const messages = createMemo(() => (sync.data.message[props.sessionID] ?? []) as unknown as SyncMessage[])
 
   const [expanded, setExpanded] = createStore({
     mcp: true,
@@ -63,20 +117,20 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean }) {
   })
 
   // Sort MCP servers alphabetically for consistent display order
-  const mcpEntries = createMemo(() => Object.entries(sync.data.mcp).sort(([a], [b]) => a.localeCompare(b)))
+  const mcpEntries = createMemo(() => Object.entries(sync.data.mcp as Record<string, SyncMcpStatus>).sort(([a], [b]) => a.localeCompare(b)))
 
   // Count connected and error MCP servers for collapsed header display
-  const connectedMcpCount = createMemo(() => mcpEntries().filter(([_, item]) => item.status === "connected").length)
+  const connectedMcpCount = createMemo(() => mcpEntries().filter(([_, item]) => item?.status === "connected").length)
   const errorMcpCount = createMemo(
     () =>
       mcpEntries().filter(
         ([_, item]) =>
-          item.status === "failed" || item.status === "needs_auth" || item.status === "needs_client_registration",
+          item?.status === "failed" || item?.status === "needs_auth" || item?.status === "needs_client_registration",
       ).length,
   )
 
   const cost = createMemo(() => {
-    const total = messages().reduce((sum, x) => sum + (x.role === "assistant" ? x.cost : 0), 0)
+    const total = messages().reduce((sum: number, x: SyncMessage) => sum + (x.role === "assistant" ? x.cost : 0), 0)
     return total
   })
 
@@ -85,11 +139,11 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean }) {
     if (!last) return
     const total =
       last.tokens.input + last.tokens.output + last.tokens.reasoning + last.tokens.cache.read + last.tokens.cache.write
-    const model = sync.data.provider.find((x) => x.id === last.providerID)?.models[last.modelID]
+    const model = (sync.data.provider as SyncProvider[]).find((x: SyncProvider) => x.id === last.providerID)?.models[last.modelID]
     return {
       tokens: total,
-      percentage: model?.limit.context ? Math.round((total / model.limit.context) * 100) : null,
-      limit: model?.limit.context,
+      percentage: model?.limit?.context ? Math.round((total / model.limit.context) * 100) : null,
+      limit: model?.limit?.context,
     }
   })
 
@@ -113,6 +167,7 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean }) {
 
   const directory = useDirectory()
   const kv = useKV()
+  const toast = useToast()
   
   // Workspace path for agent workspace integration
   const workspacePath = createMemo(() => sync.data.path.directory || process.cwd())
@@ -139,15 +194,20 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean }) {
         .text()
         .then((content) => {
           const preview = content.slice(0, 500)
-          const dialog = useDialog()
-          dialog.alert(`${filePath}\n\n${preview}${content.length > 500 ? "\n..." : ""}`)
+          const d = useDialog()
+          d.replace(() => (
+            <box padding={1}>
+              <text>{filePath}</text>
+              <text>{preview}{content.length > 500 ? "\n..." : ""}</text>
+            </box>
+          ))
         })
         .catch(() => {})
     }
   }
 
   const hasProviders = createMemo(() =>
-    sync.data.provider.some((x) => (x.id !== "gizzi" && x.id !== "gizzi") || Object.values(x.models).some((y) => y.cost?.input !== 0)),
+    (sync.data.provider as SyncProvider[]).some((x: SyncProvider) => (x.id !== "gizzi" && x.id !== "gizzi") || Object.values(x.models).some((y) => y.cost?.input !== 0)),
   )
   const gettingStartedDismissed = createMemo(() => kv.get("dismissed_getting_started", false))
 
@@ -178,7 +238,22 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean }) {
                 <b>{session().title}</b>
               </text>
               <Show when={session().share?.url}>
-                <text fg={theme.textMuted}>{session().share!.url}</text>
+                <text
+                  fg={theme.accent}
+                  onMouseDown={async () => {
+                    const url = session().share?.url
+                    if (!url) return
+                    try {
+                      const { Clipboard } = await import("@/cli/ui/tui/util/clipboard")
+                      await Clipboard.write(url)
+                      toast.add({ type: "success", message: GIZZICopy.toast.shareUrlCopied })
+                    } catch {
+                      toast.add({ type: "error", message: GIZZICopy.toast.shareUrlCopyFailed })
+                    }
+                  }}
+                >
+                  ⎘ {session().share!.url}
+                </text>
               </Show>
             </box>
             
@@ -261,7 +336,7 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean }) {
                     </box>
                     <box flexDirection="column">
                       <text fg={theme.info}>
-                        <span style={{ bold: true }}>{sessionUsage()?.messageCount ?? messages().filter(m => m.role === "assistant").length}</span>
+                        <span style={{ bold: true }}>{String(sessionUsage()?.messageCount ?? messages().filter(m => m.role === "assistant").length)}</span>
                       </text>
                       <text fg={theme.textMuted}>messages</text>
                     </box>
@@ -272,7 +347,7 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean }) {
                     <box flexDirection="column" gap={1}>
                       <box flexDirection="row" justifyContent="space-between">
                         <text fg={theme.textMuted}>Context</text>
-                        <text fg={theme.textMuted}>{context()?.percentage ?? 0}%</text>
+                        <text fg={theme.textMuted}>{String(context()?.percentage ?? 0)}%</text>
                       </box>
                       <ContextProgressBar
                         percentage={context()?.percentage ?? 0}
@@ -287,20 +362,40 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean }) {
 
                   {/* Guard State Indicator */}
                   <box
-                    flexDirection="row"
-                    gap={1}
+                    flexDirection="column"
+                    gap={0}
                     padding={1}
                     backgroundColor={theme.backgroundElement}
                   >
-                    <text fg={theme.textMuted}>Guard:</text>
-                    <text fg={guardState().color}>
-                      <span style={{ bold: true }}>{guardState().state}</span>
-                    </text>
-                    <Show when={guardState().state !== "OK"}>
-                      <text fg={theme.textMuted}>
-                        (Press <span style={{ fg: theme.accent }}>C</span> to compact)
+                    <box flexDirection="row" gap={1}>
+                      <text fg={theme.textMuted}>Guard</text>
+                      <text fg={guardState().color}>
+                        <span style={{ bold: true }}>{guardState().state}</span>
                       </text>
-                    </Show>
+                    </box>
+                    <Switch>
+                      <Match when={guardState().state === "HANDOFF"}>
+                        <text fg={theme.error}>
+                          Context critical — handoff needed
+                        </text>
+                        <text fg={theme.textMuted}>
+                          Press <span style={{ fg: theme.accent }}>H</span> to handoff
+                        </text>
+                      </Match>
+                      <Match when={guardState().state === "COMPACT"}>
+                        <text fg={theme.warning}>
+                          Context high — compaction recommended
+                        </text>
+                        <text fg={theme.textMuted}>
+                          Press <span style={{ fg: theme.accent }}>C</span> to compact
+                        </text>
+                      </Match>
+                      <Match when={guardState().state === "WARN"}>
+                        <text fg={theme.warning}>
+                          Context filling up — watch usage
+                        </text>
+                      </Match>
+                    </Switch>
                   </box>
 
                   {/* Token Breakdown */}
@@ -391,34 +486,34 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean }) {
               <Show when={sync.data.lsp.length <= 2 || expanded.lsp}>
                 <Show when={sync.data.lsp.length === 0}>
                   <text fg={theme.textMuted}>
-                    {sync.data.config.lsp === false
+                    {(sync.data.config as { lsp?: boolean }).lsp === false
                       ? GIZZICopy.sidebar.runtimeDisabled
                       : GIZZICopy.sidebar.runtimeActivate}
                   </text>
                 </Show>
-                <For each={sync.data.lsp}>
+                <For each={sync.data.lsp as { status: "connected" | "error"; id: string; root: string }[]}>
                   {(item) => (
                     <box flexDirection="row" gap={1}>
                       <text
                         flexShrink={0}
                         style={{
-                          fg: {
+                          fg: ({
                             connected: theme.success,
                             error: theme.error,
-                          }[item.status],
+                          } as Record<string, typeof theme.success>)[item?.status ?? ""] ?? theme.textMuted,
                         }}
                       >
                         •
                       </text>
                       <text fg={theme.textMuted}>
-                        {item.id} {item.root}
+                        {item?.id} {item?.root}
                       </text>
                     </box>
                   )}
                 </For>
               </Show>
             </box>
-            <Show when={todo().length > 0 && todo().some((t) => t.status !== "completed")}>
+            <Show when={todo().length > 0 && (todo() as { status: string }[]).some((t) => t.status !== "completed")}>
               <box>
                 <box
                   flexDirection="row"
@@ -433,7 +528,7 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean }) {
                   </text>
                 </box>
                 <Show when={todo().length <= 2 || expanded.todo}>
-                  <For each={todo()}>{(todo) => <TodoItem status={todo.status} content={todo.content} />}</For>
+                  <For each={todo() as { status: string; content: string }[]}>{(t) => <TodoItem status={t.status} content={t.content} />}</For>
                 </Show>
               </box>
             </Show>
@@ -461,10 +556,10 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean }) {
                           </text>
                           <box flexDirection="row" gap={1} flexShrink={0}>
                             <Show when={item.additions}>
-                              <text fg={theme.diffAdded}>+{item.additions}</text>
+                              <text fg={theme.diffAdded}>+{String(item.additions ?? 0)}</text>
                             </Show>
                             <Show when={item.deletions}>
-                              <text fg={theme.diffRemoved}>-{item.deletions}</text>
+                              <text fg={theme.diffRemoved}>-{String(item.deletions ?? 0)}</text>
                             </Show>
                           </box>
                         </box>
@@ -496,7 +591,7 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean }) {
                   <text fg={theme.text}>
                     <b>{GIZZICopy.sidebar.onboardingTitle}</b>
                   </text>
-                  <text fg={theme.textMuted} onMouseDown={() => kv.set("dismissed_getting_started", true)}>
+                  <text fg={theme.textMuted} onMouseDown={() => { kv.set("dismissed_getting_started", true); toast.add({ type: "success", message: GIZZICopy.toast.onboardingDismissed }) }}>
                     ✕
                   </text>
                 </box>
@@ -511,7 +606,7 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean }) {
           </Show>
           <text>
             <span style={{ fg: theme.textMuted }}>{directory().split("/").slice(0, -1).join("/")}/</span>
-            <span style={{ fg: theme.text }}>{directory().split("/").at(-1)}</span>
+            <span style={{ fg: theme.text }}>{directory().split("/").at(-1) ?? ""}</span>
           </text>
           <text fg={theme.textMuted}>
             <span style={{ fg: theme.success }}>•</span> <b>{GIZZIBrand.name}</b>
@@ -592,7 +687,7 @@ function TokenBreakdown(props: {
       </box>
       <box flexDirection="row" justifyContent="space-between">
         <text fg={theme.textMuted}>Messages</text>
-        <text fg={theme.text}>{usage.messageCount}</text>
+        <text fg={theme.text}>{String(usage.messageCount ?? 0)}</text>
       </box>
       <For each={Object.entries(usage.byModel).slice(0, 3)}>
         {([model, data]) => (

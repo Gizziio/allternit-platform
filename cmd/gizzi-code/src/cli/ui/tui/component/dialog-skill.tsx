@@ -1,8 +1,15 @@
 import { DialogSelect, type DialogSelectOption } from "@/cli/ui/tui/ui/dialog-select"
-import { createResource, createMemo } from "solid-js"
+import { createResource, createMemo, Show } from "solid-js"
 import { useDialog } from "@/cli/ui/tui/ui/dialog"
 import { useSDK } from "@/cli/ui/tui/context/sdk"
 import { GIZZICopy, sanitizeBrandSurface } from "@/shared/brand"
+import { useTheme } from "@/cli/ui/tui/context/theme"
+
+// Local type definition since SDK exports unknown
+ type Skill = {
+  name: string
+  description?: string
+}
 
 export type DialogSkillProps = {
   onSelect: (skill: string) => void
@@ -11,15 +18,17 @@ export type DialogSkillProps = {
 export function DialogSkill(props: DialogSkillProps) {
   const dialog = useDialog()
   const sdk = useSDK()
+  const { theme } = useTheme()
   dialog.setSize("large")
 
   const [skills] = createResource(async () => {
-    const result = await sdk.client.app.skills()
-    return result.data ?? []
+    const res = await sdk.client.app.skills()
+    return ((res.data ?? []) as Skill[])
   })
 
+
   const options = createMemo<DialogSelectOption<string>[]>(() => {
-    const list = skills() ?? []
+    const list = (skills() ?? []) as Skill[]
     const maxWidth = Math.max(0, ...list.map((s) => s.name.length))
     return list.map((skill) => ({
       title: skill.name.padEnd(maxWidth),
@@ -34,10 +43,26 @@ export function DialogSkill(props: DialogSkillProps) {
   })
 
   return (
-    <DialogSelect
-      title={GIZZICopy.dialogs.skillsTitle}
-      placeholder={GIZZICopy.dialogs.skillsSearchPlaceholder}
-      options={options()}
-    />
+    <Show
+      when={!skills.error}
+      fallback={
+        <DialogSelect
+          title={GIZZICopy.dialogs.skillsTitle}
+          placeholder=""
+          options={[{
+            title: "Failed to load skills",
+            description: String(skills.error?.message ?? "Unknown error"),
+            value: "",
+            onSelect: () => dialog.clear(),
+          }]}
+        />
+      }
+    >
+      <DialogSelect
+        title={GIZZICopy.dialogs.skillsTitle}
+        placeholder={skills.loading ? GIZZICopy.dialogs.loading : GIZZICopy.dialogs.skillsSearchPlaceholder}
+        options={options()}
+      />
+    </Show>
   )
 }

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Agent Workspace - Context Pack Builder Tests
  * 

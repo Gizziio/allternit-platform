@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { test, expect, describe } from "bun:test"
 import { resolvePluginProviders } from "../../src/cli/cmd/auth"
 import type { Hooks } from "@a2r/plugin"

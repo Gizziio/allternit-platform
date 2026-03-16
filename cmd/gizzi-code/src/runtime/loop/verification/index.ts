@@ -46,6 +46,10 @@ export {
   verifyWithoutExecution,
 } from "../verification-orchestrator";
 
+// Import for internal use
+import { VerificationOrchestrator } from "../verification-orchestrator";
+import { storeVerification } from "./store";
+
 // Store
 export {
   VerificationStore,
@@ -224,7 +228,7 @@ export async function quickVerify(
   });
   
   const plan = { steps: [] };
-  const receipts = [];
+  const receipts: any[] = [];
   
   const result = await orchestrator.verify(plan as any, receipts as any);
   

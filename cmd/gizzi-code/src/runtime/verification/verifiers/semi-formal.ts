@@ -197,7 +197,7 @@ export class SemiFormalVerifier extends BaseVerifier<SemiFormalVerificationResul
       };
       
       // Generate certificate with patch equivalence template
-      const certificate = await this.generateCertificate(task, context, "patch_equivalence");
+      const certificate = await this.generateCertificate(task, context, undefined, "patch_equivalence");
       
       // Validate
       const validation = await this.validateCertificate(certificate);
@@ -277,7 +277,7 @@ export class SemiFormalVerifier extends BaseVerifier<SemiFormalVerificationResul
       };
       
       // Generate certificate with fault localization template
-      const certificate = await this.generateCertificate(task, context, "fault_localization");
+      const certificate = await this.generateCertificate(task, context, undefined, "fault_localization");
       
       // Extract suspicious locations from certificate
       const suspiciousLocations = this.extractSuspiciousLocations(certificate);
@@ -355,8 +355,9 @@ export class SemiFormalVerifier extends BaseVerifier<SemiFormalVerificationResul
     });
     
     // Get model
-    const model = this.options.model || await Provider.defaultModel();
-    const language = await Provider.getModel(model.providerId, model.modelId);
+    const defaultModel = await Provider.defaultModel();
+    const model = this.options.model || { providerId: (defaultModel as any).providerID || (defaultModel as any).providerId, modelId: (defaultModel as any).modelID || (defaultModel as any).modelId };
+    const language = await Provider.getLanguage({ providerID: model.providerId, id: model.modelId } as any);
     
     // Import schema
     const { VerificationCertificateSchema } = await import("../schemas/certificate");
@@ -373,7 +374,7 @@ export class SemiFormalVerifier extends BaseVerifier<SemiFormalVerificationResul
       ],
       schema: VerificationCertificateSchema,
       temperature: 0.2, // Low temperature for more deterministic reasoning
-      maxTokens: 8000,
+      maxOutputTokens: 8000,
     });
     
     // Race against timeout
@@ -386,7 +387,7 @@ export class SemiFormalVerifier extends BaseVerifier<SemiFormalVerificationResul
     const result = await Promise.race([generatePromise, timeoutPromise]);
     
     // Enhance certificate with metadata
-    const certificate = result.object;
+    const certificate = result.object as VerificationCertificate & { visualEvidence?: VisualEvidence[]; metadata?: any };
     certificate.id = `cert_${randomUUID()}`;
     certificate.timestamp = new Date().toISOString();
     certificate.metadata = {
@@ -396,7 +397,7 @@ export class SemiFormalVerifier extends BaseVerifier<SemiFormalVerificationResul
       },
       parameters: {
         temperature: 0.2,
-        maxTokens: 8000,
+        maxOutputTokens: 8000,
       },
       timing: {
         startedAt: new Date(startTime).toISOString(),
@@ -534,7 +535,7 @@ export class SemiFormalVerifier extends BaseVerifier<SemiFormalVerificationResul
       })),
       sourceRefs: artifact.sourceRefs,
       data: artifact.data,
-    }));
+    })) as VisualEvidence[];
   }
   
   /**

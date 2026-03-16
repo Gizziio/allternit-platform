@@ -55,9 +55,22 @@ import {
   type VerificationStrategy,
 } from "@/runtime/loop/verification"
 import { storeVerification } from "@/runtime/loop/verification/store"
-import type { Plan, ExecutionReceipt } from "@/runtime/loop"
+import type { Plan } from "@/runtime/loop/planner"
+import type { ExecutionReceipt } from "@/runtime/loop/executor"
 
 const log = Log.create({ service: "verify-tool" })
+
+interface VerificationMetadata {
+  passed: boolean
+  confidence: "high" | "medium" | "low"
+  confidenceMet: boolean
+  methodsUsed: ("semi-formal" | "empirical")[]
+  consensus: boolean
+  nextAction: "stop" | "continue" | "replan" | "ask_user"
+  certificateId: string | undefined
+  hasCertificate: boolean
+  error?: string
+}
 
 /**
  * Verify tool definition
@@ -175,7 +188,12 @@ The tool will fail if the actual confidence is below the required confidence.`,
 
         // Create minimal plan/receipts since we're verifying the current state
         // In the future, this could pull from the actual session state
-        const plan: Plan = { steps: [] }
+        const plan: Plan = { 
+          sessionId: ctx.sessionID,
+          steps: [],
+          exitCriteria: [],
+          goal: params.description,
+        }
         const receipts: ExecutionReceipt[] = []
 
         // Run verification
@@ -233,33 +251,42 @@ The tool will fail if the actual confidence is below the required confidence.`,
         lines.push(`Next Action: ${result.nextAction}`)
         lines.push("━".repeat(60))
 
-        const output = lines.join("\n")
-
         // Return result
+        const resultOutput = lines.join("\n")
+        const successMetadata: VerificationMetadata = {
+          passed: result.passed && confidenceMet,
+          confidence: result.confidence,
+          confidenceMet,
+          methodsUsed: result.methodsUsed,
+          consensus: result.consensus,
+          nextAction: result.nextAction,
+          certificateId,
+          hasCertificate: !!result.certificate,
+        }
         return {
           title: `Verification ${result.passed && confidenceMet ? "PASSED" : "FAILED"} (${result.confidence})`,
-          output,
-          metadata: {
-            passed: result.passed && confidenceMet,
-            confidence: result.confidence,
-            confidenceMet,
-            methodsUsed: result.methodsUsed,
-            consensus: result.consensus,
-            nextAction: result.nextAction,
-            certificateId,
-            hasCertificate: !!result.certificate,
-          },
+          metadata: successMetadata,
+          output: resultOutput,
         }
       } catch (error) {
         log.error("Verify tool failed", { error })
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        const errorMetadata: VerificationMetadata = {
+          passed: false,
+          confidence: "low",
+          confidenceMet: false,
+          methodsUsed: [],
+          consensus: false,
+          nextAction: "ask_user",
+          certificateId: undefined,
+          hasCertificate: false,
+          error: errorMessage,
+        }
         
         return {
           title: "Verification Error",
-          output: `Verification failed with error: ${error instanceof Error ? error.message : String(error)}`,
-          metadata: {
-            passed: false,
-            error: error instanceof Error ? error.message : String(error),
-          },
+          metadata: errorMetadata,
+          output: `Verification failed with error: ${errorMessage}`,
         }
       }
     },

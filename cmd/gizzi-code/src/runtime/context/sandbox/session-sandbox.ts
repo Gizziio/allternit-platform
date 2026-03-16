@@ -1,0 +1,105 @@
+/**
+ * Per-Session Sandbox State
+ *
+ * Tracks whether the shell sandbox is enabled for each session and
+ * what the active policy is (write paths, network access).
+ *
+ * State is in-memory — it dies with the server process. That's intentional:
+ * sandbox opt-in is a session-level decision, not a persistent config.
+ *
+ * The `/sandbox` slash command toggles this per session.
+ * The GIZZI_SANDBOX env var enables it globally for all sessions.
+ */
+import type { SandboxPolicy } from "@/runtime/integrations/shell/sandbox"
+import { Sandbox } from "@/runtime/integrations/shell/sandbox"
+import { Log } from "@/shared/util/log"
+import { Instance } from "@/runtime/context/project/instance"
+
+const log = Log.create({ service: "session-sandbox" })
+
+export interface SandboxState {
+  enabled: boolean
+  policy: SandboxPolicy
+  driver: ReturnType<typeof Sandbox.detect>
+}
+
+const states = new Map<string, SandboxState>()
+
+function defaultPolicy(): SandboxPolicy {
+  return {
+    allowWritePaths: [Instance.directory],
+    allowNetwork: true,  // agents need npm/pip/cargo — network on by default
+  }
+}
+
+export namespace SessionSandbox {
+  /** Get the current sandbox state for a session. Returns null if not configured. */
+  export function get(sessionID: string): SandboxState | null {
+    return states.get(sessionID) ?? null
+  }
+
+  /**
+   * Enable sandbox for a session.
+   * Merges the provided policy with defaults.
+   */
+  export function enable(sessionID: string, policy?: Partial<SandboxPolicy>): SandboxState {
+    const driver = Sandbox.detect()
+    const merged: SandboxPolicy = {
+      ...defaultPolicy(),
+      ...policy,
+      allowWritePaths: [
+        ...defaultPolicy().allowWritePaths,
+        ...(policy?.allowWritePaths ?? []),
+      ],
+    }
+    const state: SandboxState = { enabled: true, policy: merged, driver }
+    states.set(sessionID, state)
+    log.info("sandbox enabled", { sessionID, driver, allowNetwork: merged.allowNetwork })
+    return state
+  }
+
+  /** Disable sandbox for a session. Cleans up any profile files. */
+  export async function disable(sessionID: string): Promise<void> {
+    const state = states.get(sessionID)
+    if (!state) return
+    state.enabled = false
+    states.set(sessionID, state)
+    // Clean up macOS profile file if one was written
+    await Sandbox.cleanupProfile(sessionID)
+    log.info("sandbox disabled", { sessionID })
+  }
+
+  /** Toggle sandbox on/off. Returns the new state. */
+  export async function toggle(sessionID: string, policy?: Partial<SandboxPolicy>): Promise<SandboxState> {
+    const current = states.get(sessionID)
+    if (current?.enabled) {
+      await disable(sessionID)
+      return { ...current, enabled: false }
+    }
+    return enable(sessionID, policy)
+  }
+
+  /** Add an extra write path to an active session's policy. */
+  export function allowWritePath(sessionID: string, p: string): void {
+    const state = states.get(sessionID)
+    if (!state) return
+    if (!state.policy.allowWritePaths.includes(p)) {
+      state.policy.allowWritePaths.push(p)
+    }
+  }
+
+  /** Update network access for an active session. */
+  export function setNetwork(sessionID: string, allow: boolean): void {
+    const state = states.get(sessionID)
+    if (!state) return
+    state.policy.allowNetwork = allow
+    // Invalidate the macOS profile so it gets regenerated with new rules
+    void Sandbox.cleanupProfile(sessionID)
+  }
+
+  /** Remove all state for a session (called on session close). */
+  export async function cleanup(sessionID: string): Promise<void> {
+    await disable(sessionID)
+    states.delete(sessionID)
+  }
+}

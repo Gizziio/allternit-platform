@@ -13,19 +13,41 @@ import { Log } from "@/shared/util/log"
 import { Filesystem } from "@/shared/util/filesystem"
 import { Glob } from "@/shared/util/glob"
 import { CIGates } from "@/runtime/session/continuity/gates"
-import type { 
-  HandoffBaton, 
-  SessionContext, 
-  ToolType,
-  FileChange,
-  CommandsByCategory,
-  TodoItem,
-  DAGTask,
-  NextAction,
-  ErrorItem,
-  GIZZIConventions,
-  LimitsSnapshot,
-} from "@/continuity/types"
+// Types from continuity module - declared locally since module may not exist
+type ToolType = string
+type FileChange = { path: string; action: "created" | "modified" | "deleted" | "renamed"; summary: string }
+type CommandsByCategory = { build: string[]; test: string[]; lint: string[]; git: string[]; other: string[] }
+type TodoItem = { task: string; priority: "low" | "medium" | "high"; blocking: boolean }
+type DAGTask = { id: string; name: string; description: string; status: "pending" | "in_progress" | "completed" | "blocked" | "failed"; dependencies: string[]; priority: "low" | "medium" | "high" | "critical"; blocking: boolean }
+type NextAction = { action: "edit" | "test" | "read" | "commit" | "review"; description: string; target?: string; estimated_tokens?: number }
+type ErrorItem = { message: string; tool: string; recoverable: boolean }
+type LimitsSnapshot = { context_ratio?: number; quota_ratio?: number; tokens_input?: number; tokens_output?: number; tokens_total?: number; context_window?: number; throttle_count?: number }
+
+interface SessionContext {
+  session_id: string
+  source_tool: ToolType
+  workspace_path: string
+  time_start: number
+  objective: string
+  progress_summary: string[]
+  decisions: string[]
+  open_todos: TodoItem[]
+  dag_tasks: DAGTask[]
+  blockers: string[]
+  files_changed: FileChange[]
+  commands_executed: CommandsByCategory
+  errors_seen: ErrorItem[]
+  next_actions: NextAction[]
+  limits?: LimitsSnapshot
+}
+
+interface HandoffBaton {
+  version: string
+  session_context: SessionContext
+  generated_at: number
+  compact_reason: "manual" | "threshold" | "quota" | "error"
+  target_tool?: ToolType
+}
 import type { Session } from "@/runtime/session"
 
 const log = Log.create({ service: "agent_workspace.resume" })
@@ -221,9 +243,10 @@ export namespace ResumeSession {
   ): Promise<ValidationResult> {
     log.info("Validating resume context", { sessionId: context.metadata.sessionId })
 
-    const report = await CIGates.validate(context.baton, {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const report = await CIGates.validate(context.baton as any, {
       strict: options?.strict,
-      targetTool: options?.targetTool,
+      targetTool: options?.targetTool as any,
       maxContextTokens: options?.maxContextTokens,
     })
 
@@ -324,8 +347,8 @@ export namespace ResumeSession {
     }
 
     // Open TODOs
-    const blockingTodos = ctx.open_todos.filter(t => t.blocking)
-    const nonBlockingTodos = ctx.open_todos.filter(t => !t.blocking)
+    const blockingTodos = ctx.open_todos.filter((t: TodoItem) => t.blocking)
+    const nonBlockingTodos = ctx.open_todos.filter((t: TodoItem) => !t.blocking)
     
     if (blockingTodos.length > 0 || nonBlockingTodos.length > 0) {
       lines.push(`┌─ Open TODOs (${ctx.open_todos.length}) ────────────────────────────────────┐`)
@@ -345,10 +368,10 @@ export namespace ResumeSession {
     }
 
     // DAG Tasks
-    const inProgressTasks = ctx.dag_tasks?.filter(t => t.status === "in_progress") || []
-    const pendingTasks = ctx.dag_tasks?.filter(t => t.status === "pending") || []
-    const blockedTasks = ctx.dag_tasks?.filter(t => t.status === "blocked" || t.status === "failed") || []
-    const completedTasks = ctx.dag_tasks?.filter(t => t.status === "completed") || []
+    const inProgressTasks = ctx.dag_tasks?.filter((t: DAGTask) => t.status === "in_progress") || []
+    const pendingTasks = ctx.dag_tasks?.filter((t: DAGTask) => t.status === "pending") || []
+    const blockedTasks = ctx.dag_tasks?.filter((t: DAGTask) => t.status === "blocked" || t.status === "failed") || []
+    const completedTasks = ctx.dag_tasks?.filter((t: DAGTask) => t.status === "completed") || []
 
     if (ctx.dag_tasks.length > 0) {
       lines.push(`┌─ Workflow Tasks (${ctx.dag_tasks.length}) ───────────────────────────────────┐`)

@@ -5,7 +5,7 @@
  * Deferred subscription registration to avoid initialization order issues.
  */
 
-import type { BusEventDefinition } from "@/shared/bus/bus-event"
+import type { BusEvent } from "@/shared/bus/bus-event"
 
 export namespace AgentCommunicationRuntime {
   // Deferred initialization state
@@ -104,7 +104,7 @@ export namespace AgentCommunicationRuntime {
       
       if (sessionID && status) {
         const agents = MentionRouter.getAllAgents()
-        const agent = agents.find(a => a.sessionId === sessionID)
+        const agent = agents.find((a: { sessionId: string }) => a.sessionId === sessionID)
         if (agent) {
           MentionRouter.updateAgentStatus(agent.agentId, status === "busy" ? "busy" : "idle")
         }
@@ -116,7 +116,7 @@ export namespace AgentCommunicationRuntime {
       const sessionID = event.properties?.sessionID
       if (sessionID) {
         const agents = MentionRouter.getAllAgents()
-        const agent = agents.find(a => a.sessionId === sessionID)
+        const agent = agents.find((a: { sessionId: string }) => a.sessionId === sessionID)
         if (agent) {
           MentionRouter.updateAgentStatus(agent.agentId, "idle")
         }
@@ -128,7 +128,7 @@ export namespace AgentCommunicationRuntime {
       const sessionID = event.properties?.info?.id
       if (sessionID) {
         const agents = MentionRouter.getAllAgents()
-        const agent = agents.find(a => a.sessionId === sessionID)
+        const agent = agents.find((a: { sessionId: string }) => a.sessionId === sessionID)
         if (agent) {
           MentionRouter.unregisterAgentSession(agent.agentId)
           console.log(`[AgentCommunicationRuntime] Agent unregistered: ${agent.agentId}`)

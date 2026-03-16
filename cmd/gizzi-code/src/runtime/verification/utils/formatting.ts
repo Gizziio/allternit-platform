@@ -7,9 +7,11 @@
 import type {
   VerificationCertificate,
   OrchestratedVerificationResult,
-  AggregatedVerificationResult,
   VerificationConfidence,
 } from "../types";
+
+/** Aggregated result type - alias for orchestrated result */
+type AggregatedVerificationResult = OrchestratedVerificationResult;
 
 /**
  * Format a certificate as markdown

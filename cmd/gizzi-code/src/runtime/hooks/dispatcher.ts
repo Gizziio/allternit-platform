@@ -1,6 +1,6 @@
 import { Config } from "@/runtime/context/config/config";
 import { Wildcard } from "@/shared/util/wildcard";
-import { HookEvent, HookResponse } from "./types";
+import type { HookEvent, HookResponse } from "./types";
 import { HttpHookSender } from "./http/sender";
 import { CommandHookExecutor } from "./command/executor";
 

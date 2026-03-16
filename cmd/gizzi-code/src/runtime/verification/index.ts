@@ -16,17 +16,17 @@
 export type {
   VisualArtifact,
   VisualArtifactType,
-} from "./types";
+} from "./visual/types";
 
 // ============================================================================
 // Manager & Core
 // ============================================================================
 
-export { VisualCaptureManager } from "./manager";
+export { VisualCaptureManager } from "./visual/manager";
 export type {
   VisualCaptureManagerOptions,
   CaptureResult,
-} from "./manager";
+} from "./visual/manager";
 
 // ============================================================================
 // Base Types
@@ -35,17 +35,17 @@ export type {
 export type {
   CaptureContext,
   CaptureOptions,
-} from "./providers/base";
+} from "./visual/providers/base";
 
 // ============================================================================
 // Providers
 // ============================================================================
 
-export { CoverageCaptureProvider } from "./providers/coverage";
-export { ConsoleCaptureProvider } from "./providers/console";
-export { UIStateCaptureProvider } from "./providers/ui-state";
-export { VisualDiffCaptureProvider } from "./providers/visual-diff";
-export { ErrorStateCaptureProvider } from "./providers/error-state";
+export { CoverageCaptureProvider } from "./visual/providers/coverage";
+export { ConsoleCaptureProvider } from "./visual/providers/console";
+export { UIStateCaptureProvider } from "./visual/providers/ui-state";
+export { VisualDiffCaptureProvider } from "./visual/providers/visual-diff";
+export { ErrorStateCaptureProvider } from "./visual/providers/error-state";
 
 // ============================================================================
 // Browser Adapter
@@ -54,12 +54,12 @@ export { ErrorStateCaptureProvider } from "./providers/error-state";
 export {
   BrowserAdapter,
   checkDevServer,
-} from "./browser/adapter";
+} from "./visual/browser/adapter";
 export type { 
   BrowserAdapterOptions,
   ScreenshotResult,
   RenderResult,
-} from "./browser/adapter";
+} from "./visual/browser/adapter";
 
 // ============================================================================
 // Server Integration (runs in gizzi-code server)
@@ -73,8 +73,8 @@ export {
   executeHooks,
   registerHook,
   withVisualCapture,
-} from "./integration/server-hooks";
-export type { VisualCaptureHooksOptions } from "./integration/server-hooks";
+} from "./visual/integration/server-hooks";
+export type { VisualCaptureHooksOptions } from "./visual/integration/server-hooks";
 
 // ============================================================================
 // Deterministic Integration (SessionProcessor path)
@@ -86,11 +86,11 @@ export {
   injectVisualEvidence,
   requiresVisualVerification,
   getFilesFromPatches,
-} from "./integration/deterministic";
+} from "./visual/integration/deterministic";
 export type {
   DeterministicCaptureOptions,
   DeterministicCaptureResult,
-} from "./integration/deterministic";
+} from "./visual/integration/deterministic";
 
 // ============================================================================
 // SessionProcessor Adapter
@@ -101,7 +101,7 @@ export {
   createSessionVisualCapture,
   type SessionProcessorVisualConfig,
   type SessionVisualContext,
-} from "./integration/session-processor-adapter";
+} from "./visual/integration/session-processor-adapter";
 
 // ============================================================================
 // A2R Autoland Integration
@@ -134,7 +134,7 @@ export {
   // Types
   type VisualAutolandConfig,
   type WihVisualEvidence,
-} from "./integration/autoland-adapter";
+} from "./visual/integration/autoland-adapter";
 
 // ============================================================================
 // Verification Service (Unified)
@@ -159,7 +159,7 @@ export type {
 // Utilities
 // ============================================================================
 
-export { buildPromptContext, formatArtifactForLLM } from "./prompt";
+export { buildPromptContext, formatArtifactForLLM } from "./visual/prompt";
 
 // ============================================================================
 // Quick Start Guide

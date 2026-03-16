@@ -1,4 +1,12 @@
 packages:
+  # New functional structure (Phase 1-6)
+  - 'cmd/*'
+  - 'domains/*/*'
+  - 'services/*/*'
+  - 'surfaces/*/*'
+  - 'platform/*/*'
+  
+  # Legacy structure (still active during migration)
   - packages/*
   - apps/*
   - 6-ui/*
@@ -17,6 +25,7 @@ packages:
   - 1-kernel/*/*
   - 4-services/*
   - 4-services/*/*
+  - cmd/gizzi-code/packages/*
 
 onlyBuiltDependencies:
   - '@whiskeysockets/baileys'

@@ -3,13 +3,53 @@ import { useDialog } from "@/cli/ui/tui/ui/dialog"
 import { DialogSelect } from "@/cli/ui/tui/ui/dialog-select"
 import { useTheme } from "@/cli/ui/tui/context/theme"
 import { useSync } from "@/cli/ui/tui/context/sync"
-import type { Message, AssistantMessage, UserMessage, Part } from "@a2r/sdk/v2"
 import { useBookmarks } from "@/cli/ui/tui/hooks/useBookmarks"
 import { Clipboard } from "@/cli/ui/tui/util/clipboard"
 import { useToast } from "@/cli/ui/tui/ui/toast"
 import { getFirstCodeBlock, getAllCodeBlocks } from "@/shared/util/code-blocks"
 import { useGIZZITheme } from "@/cli/ui/components/gizzi"
 import type { RGBA } from "@opentui/core"
+
+// Local type definitions (SDK types are now unknown)
+interface TextPart {
+  type: "text"
+  text: string
+}
+
+interface MessageBase {
+  id: string
+  sessionID: string
+  role: "user" | "assistant"
+  time: {
+    created: number
+    completed?: number
+  }
+}
+
+interface UserMessage extends MessageBase {
+  role: "user"
+}
+
+interface AssistantMessage extends MessageBase {
+  role: "assistant"
+  providerID: string
+  modelID: string
+  agent: string
+  tokens: {
+    input: number
+    output: number
+    reasoning: number
+    cache: {
+      read: number
+      write: number
+    }
+  }
+  cost: number
+}
+
+type Message = UserMessage | AssistantMessage
+
+type Part = TextPart | { type: string }
 
 export type MessageAction = 
   | "copy"
@@ -33,10 +73,10 @@ export function DialogMessageActions(props: {
   const bookmarks = useBookmarks(props.sessionID)
   const toast = useToast()
 
-  const parts = createMemo(() => sync.data.part[props.message.id] ?? [])
+  const parts = createMemo(() => (sync.data.part[props.message.id] ?? []) as Part[])
   
   const codeBlocks = createMemo(() => {
-    const textParts = parts().filter((p): p is Extract<Part, { type: "text" }> => p.type === "text")
+    const textParts = parts().filter((p): p is TextPart => (p as TextPart).type === "text")
     const allText = textParts.map(p => p.text).join("\n")
     return getAllCodeBlocks(allText)
   })
@@ -49,7 +89,7 @@ export function DialogMessageActions(props: {
   const handleAction = async (action: MessageAction) => {
     switch (action) {
       case "copy": {
-        const textParts = parts().filter((p): p is Extract<Part, { type: "text" }> => p.type === "text")
+        const textParts = parts().filter((p): p is TextPart => (p as TextPart).type === "text")
         const text = textParts.map(p => p.text).join("\n")
         await Clipboard.copy(text)
         toast.show({ message: "Message copied!", variant: "success", duration: 2000 })
@@ -57,7 +97,7 @@ export function DialogMessageActions(props: {
       }
       
       case "copy-code": {
-        const textParts = parts().filter((p): p is Extract<Part, { type: "text" }> => p.type === "text")
+        const textParts = parts().filter((p): p is TextPart => (p as TextPart).type === "text")
         const allText = textParts.map(p => p.text).join("\n")
         const code = getFirstCodeBlock(allText)
         if (code) {
@@ -85,9 +125,6 @@ export function DialogMessageActions(props: {
         return
       }
       
-      case "view-metadata":
-        // Already handled above, don't close dialog
-        break
       case "delete":
       case "edit":
       case "pin":
@@ -162,7 +199,7 @@ function DialogMessageMetadata(props: { message: AssistantMessage }) {
   const sync = useSync()
 
   const assistant = props.message
-  const model = sync.data.provider
+  const model = (sync.data.provider as unknown as Array<{ id: string; models: Record<string, { limit: { context: number } }> }>)
     .find(p => p.id === assistant.providerID)
     ?.models[assistant.modelID]
 

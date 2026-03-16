@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GIZZI Matrix Phaser - 10 Options</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #0a0a0f;
+            color: #d4b08c;
+            font-family: 'Courier New', monospace;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        h1 {
+            color: #d97757;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+        
+        .subtitle {
+            color: #8f6f56;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .reference {
+            background: #1a1a25;
+            border: 1px solid #333;
+            padding: 15px;
+            margin-bottom: 30px;
+            border-radius: 8px;
+        }
+        
+        .reference h3 {
+            color: #d97757;
+            margin-bottom: 10px;
+        }
+        
+        .claude-example {
+            color: #d4b08c;
+            font-size: 20px;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            max-width: 1400px;
+        }
+        
+        .phaser-card {
+            background: #111318;
+            border: 1px solid #2a2a35;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .phaser-card h3 {
+            color: #d97757;
+            margin-bottom: 10px;
+            font-size: 14px;
+            text-transform: uppercase;
+        }
+        
+        .phaser-card .size {
+            color: #666;
+            font-size: 11px;
+            margin-bottom: 15px;
+        }
+        
+        .phaser-demo {
+            background: #0d0d12;
+            border: 1px solid #1a1a25;
+            border-radius: 4px;
+            padding: 20px;
+            font-size: 16px;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        /* Animation classes */
+        .anim-blink {
+            animation: blink 1s infinite;
+        }
+        
+        .anim-pulse {
+            animation: pulse 1.5s infinite;
+        }
+        
+        .anim-scan {
+            animation: scan 1s infinite;
+        }
+        
+        .anim-wave {
+            animation: wave 0.8s infinite;
+        }
+        
+        .anim-glow {
+            animation: glow 1.2s infinite;
+        }
+        
+        .anim-shimmer {
+            animation: shimmer 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.2; }
+        }
+        
+        @keyframes scan {
+            0% { opacity: 0.2; }
+            50% { opacity: 1; }
+            100% { opacity: 0.2; }
+        }
+        
+        @keyframes wave {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        @keyframes glow {
+            0%, 100% { 
+                opacity: 0.4;
+                text-shadow: 0 0 5px #d97757;
+            }
+            50% { 
+                opacity: 1;
+                text-shadow: 0 0 20px #d97757, 0 0 30px #d97757;
+            }
+        }
+        
+        @keyframes shimmer {
+            0% { opacity: 0.3; }
+            25% { opacity: 0.8; }
+            50% { opacity: 1; }
+            75% { opacity: 0.8; }
+            100% { opacity: 0.3; }
+        }
+        
+        .legend {
+            margin-top: 40px;
+            padding: 20px;
+            background: #111318;
+            border-radius: 8px;
+            max-width: 1400px;
+        }
+        
+        .legend h2 {
+            color: #d97757;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .legend p {
+            color: #8f6f56;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎭 GIZZI Matrix Phaser - 10 Options</h1>
+    <p class="subtitle">Branded phaser animations like Claude's asterisk, but GIZZI-themed</p>
+    
+    <div class="reference">
+        <h3>Reference: Claude Code Phaser</h3>
+        <div class="claude-example">* Thinking...</div>
+        <p style="color: #666; font-size: 12px; margin-top: 10px;">Simple asterisk that pulses/blinks</p>
+    </div>
+    
+    <div class="grid">
+        <!-- Option 1: Single Block Pulse -->
+        <div class="phaser-card">
+            <h3>Option 1: Single Block</h3>
+            <p class="size">1 char - Minimal</p>
+            <div class="phaser-demo">
+                <span class="anim-pulse" style="color: #d97757; font-size: 24px;">▇</span>
+            </div>
+        </div>
+        
+        <!-- Option 2: Monolith G -->
+        <div class="phaser-card">
+            <h3>Option 2: Monolith G</h3>
+            <p class="size">2 chars - Branded</p>
+            <div class="phaser-demo">
+                <span class="anim-glow" style="color: #d97757; font-size: 20px;">▗▄</span>
+            </div>
+        </div>
+        
+        <!-- Option 3: Dot Pulse -->
+        <div class="phaser-card">
+            <h3>Option 3: Dot Pulse</h3>
+            <p class="size">1 char - Clean</p>
+            <div class="phaser-demo">
+                <span class="anim-pulse" style="color: #d97757; font-size: 24px;">●</span>
+            </div>
+        </div>
+        
+        <!-- Option 4: Mini Beacon -->
+        <div class="phaser-card">
+            <h3>Option 4: Mini Beacon</h3>
+            <p class="size">2 chars - GIZZI Head</p>
+            <div class="phaser-demo">
+                <span class="anim-blink" style="color: #d97757; font-size: 20px;">▄▄</span>
+            </div>
+        </div>
+        
+        <!-- Option 5: Scanning Bracket -->
+        <div class="phaser-card">
+            <h3>Option 5: Scanning Bracket</h3>
+            <p class="size">3 chars - Technical</p>
+            <div class="phaser-demo">
+                <span class="anim-scan" style="color: #d4b08c; font-size: 20px;">[</span>
+                <span class="anim-glow" style="color: #d97757; font-size: 20px;">▓</span>
+                <span class="anim-scan" style="color: #d4b08c; font-size: 20px;">]</span>
+            </div>
+        </div>
+        
+        <!-- Option 6: Shimmer Blocks -->
+        <div class="phaser-card">
+            <h3>Option 6: Shimmer</h3>
+            <p class="size">4 chars - Matrix style</p>
+            <div class="phaser-demo">
+                <span class="anim-shimmer" style="color: #d97757; font-size: 18px;">░▒▓█</span>
+            </div>
+        </div>
+        
+        <!-- Option 7: Mini GIZZI Face -->
+        <div class="phaser-card">
+            <h3>Option 7: Mini Face</h3>
+            <p class="size">4 chars - Character</p>
+            <div class="phaser-demo">
+                <span class="anim-blink" style="color: #d4b08c; font-size: 16px;">▄▀▀▄</span>
+            </div>
+        </div>
+        
+        <!-- Option 8: Wave Dots -->
+        <div class="phaser-card">
+            <h3>Option 8: Wave Dots</h3>
+            <p class="size">3 chars - Classic</p>
+            <div class="phaser-demo">
+                <span class="anim-blink" style="color: #d97757; font-size: 20px;">● ● ●</span>
+            </div>
+        </div>
+        
+        <!-- Option 9: Core Pulse -->
+        <div class="phaser-card">
+            <h3>Option 9: Core Pulse</h3>
+            <p class="size">3 chars - GIZZI Core</p>
+            <div class="phaser-demo">
+                <span class="anim-glow" style="color: #d97757; font-size: 20px;">◉</span>
+            </div>
+        </div>
+        
+        <!-- Option 10: Geometric Spin -->
+        <div class="phaser-card">
+            <h3>Option 10: Geometric</h3>
+            <p class="size">1 char - Shapes</p>
+            <div class="phaser-demo">
+                <span class="anim-blink" style="color: #d97757; font-size: 24px;">◆</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="legend">
+        <h2>🎨 Recommendations</h2>
+        <p>
+            <strong>For inline text (like "Thinking..."):</strong> Options 1, 2, 3, or 9 work best - they're small and don't break the text flow.<br><br>
+            <strong>For the "most GIZZI-branded" feel:</strong> Option 2 (Monolith G) or Option 7 (Mini Face) - these visually connect to the mascot.<br><br>
+            <strong>For a clean Claude-like experience:</strong> Option 3 (Dot Pulse) or Option 1 (Single Block) - simple, recognizable, professional.<br><br>
+            <strong>All use the GIZZI coral (#d97757) as the primary color with sand (#d4b08c) accents.</strong>
+        </p>
+    </div>
+</body>
+</html>

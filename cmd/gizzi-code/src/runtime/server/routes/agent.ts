@@ -27,7 +27,7 @@ export const AgentRoutes = () =>
         },
       }),
       async (c) => {
-        const agents = await Agent.list()
+        const agents = await AgentWorkspaceLoader.loadAllAgents().catch(() => Agent.list())
         return c.json(agents)
       },
     )
@@ -104,7 +104,7 @@ export const AgentRoutes = () =>
       async (c) => {
         const { agentID } = c.req.valid("param") as any
         const input = c.req.valid("json") as any
-        const agent = await AgentManager.update({ ...input, agentID })
+        const agent = await AgentManager.update(agentID, input)
         return c.json(agent)
       },
     )

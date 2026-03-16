@@ -1,15 +1,16 @@
 import { RequestError, type McpServer } from "@agentclientprotocol/sdk"
 import type { ACPSessionState } from "@/runtime/integrations/acp/types"
 import { Log } from "@/shared/util/log"
-import type { GIZZIClient } from "@a2r/sdk/v2"
+import type { A2RClientLike } from "@/runtime/integrations/acp/types"
+import { Session } from "@/runtime/session"
 
 const log = Log.create({ service: "acp-session-manager" })
 
 export class ACPSessionManager {
   private sessions = new Map<string, ACPSessionState>()
-  private sdk: GIZZIClient
+  private sdk: A2RClientLike
 
-  constructor(sdk: GIZZIClient) {
+  constructor(sdk: A2RClientLike) {
     this.sdk = sdk
   }
 
@@ -18,28 +19,18 @@ export class ACPSessionManager {
   }
 
   async create(cwd: string, mcpServers: McpServer[], model?: ACPSessionState["model"]): Promise<ACPSessionState> {
-    const session = await this.sdk.session
-      .create(
-        {
-          directory: cwd,
-        },
-        { throwOnError: true },
-      )
-      .then((x) => x.data!)
-
-    const sessionId = session.id
-    const resolvedModel = model
+    const session = await Session.createNext({ directory: cwd })
 
     const state: ACPSessionState = {
-      id: sessionId,
+      id: session.id,
       cwd,
       mcpServers,
       createdAt: new Date(),
-      model: resolvedModel,
+      model,
     }
     log.info("creating_session", { state })
 
-    this.sessions.set(sessionId, state)
+    this.sessions.set(session.id, state)
     return state
   }
 
@@ -49,24 +40,14 @@ export class ACPSessionManager {
     mcpServers: McpServer[],
     model?: ACPSessionState["model"],
   ): Promise<ACPSessionState> {
-    const session = await this.sdk.session
-      .get(
-        {
-          sessionID: sessionId,
-          directory: cwd,
-        },
-        { throwOnError: true },
-      )
-      .then((x) => x.data!)
-
-    const resolvedModel = model
+    const session = await Session.get(sessionId)
 
     const state: ACPSessionState = {
       id: sessionId,
       cwd,
       mcpServers,
       createdAt: new Date(session.time.created),
-      model: resolvedModel,
+      model,
     }
     log.info("loading_session", { state })
 

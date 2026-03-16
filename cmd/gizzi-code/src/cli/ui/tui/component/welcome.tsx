@@ -91,14 +91,14 @@ export function WelcomeScreen() {
             }
           >
             <text fg={theme.success}>
-              <span style={{ fg: theme.success }}>●</span> {sync.data.provider.length} provider
+              <span style={{ fg: theme.success }}>●</span> {String(sync.data.provider.length)} provider
               {sync.data.provider.length > 1 ? "s" : ""} connected
             </text>
           </Show>
           <Show when={hasSessions()}>
             <text fg={theme.textMuted}>|</text>
             <text fg={theme.text}>
-              {sync.data.session.length} session
+              {String(sync.data.session.length)} session
               {sync.data.session.length > 1 ? "s" : ""}
             </text>
           </Show>

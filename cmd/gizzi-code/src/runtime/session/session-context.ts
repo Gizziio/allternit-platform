@@ -1,93 +1,39 @@
 /**
  * Workspace Context for Sessions
- * 
- * Provides workspace-aware system prompt injection for sessions.
- * Caches workspace detection results to avoid repeated filesystem checks.
+ *
+ * Injects workspace identity (SOUL.md, IDENTITY.md, USER.md, MEMORY.md, AGENTS.md)
+ * into session system prompts. Caches workspace detection per directory.
  */
 
-import * as AgentWorkspaceBridge from "@/runtime/kernel/bridge"
+import * as Bridge from "@/runtime/kernel/bridge"
 
-// Cache workspace detection results by directory
-const workspaceCache = new Map<string, AgentWorkspaceBridge.DetectedWorkspace | null>()
+// Cache by directory. Cleared when workspace files change.
+const workspaceCache = new Map<string, Bridge.DetectedWorkspace | null>()
 
 /**
- * Get workspace context for a directory (cached)
+ * Get workspace context for a directory (cached).
  */
 export async function getWorkspaceContext(
-  directory: string
-): Promise<AgentWorkspaceBridge.DetectedWorkspace | null> {
-  // Check cache first
-  const cached = workspaceCache.get(directory)
-  if (cached !== undefined) {
-    return cached
-  }
-
-  // Detect workspace
-  const workspace = await AgentWorkspaceBridge.detectWorkspace(directory)
-  
-  // Cache result (even if null)
+  directory: string,
+): Promise<Bridge.DetectedWorkspace | null> {
+  if (workspaceCache.has(directory)) return workspaceCache.get(directory) ?? null
+  const workspace = await Bridge.detectWorkspace(directory)
   workspaceCache.set(directory, workspace)
-  
   return workspace
 }
 
 /**
- * Get workspace system prompt for a directory
- * Returns empty string if no workspace detected
+ * Build and return the workspace system prompt for a directory.
+ * Returns empty string if no workspace detected or workspace has no content.
  */
 export async function getWorkspaceSystemPrompt(directory: string): Promise<string> {
   const workspace = await getWorkspaceContext(directory)
-  
-  if (!workspace) {
-    return ""
-  }
-
-  // Build workspace context prompt
-  const parts: string[] = []
-  parts.push("# Workspace Context")
-  
-  if (workspace.identity) {
-    parts.push(`You are operating in the ${workspace.identity.name} workspace.`)
-    
-    if (workspace.identity.creature) {
-      parts.push(`Identity: ${workspace.identity.creature}`)
-    }
-    
-    if (workspace.identity.vibe) {
-      parts.push(`Vibe: ${workspace.identity.vibe}`)
-    }
-    
-    if (workspace.identity.systemPrompt) {
-      parts.push("")
-      parts.push("## Base Identity")
-      parts.push(workspace.identity.systemPrompt)
-    }
-  }
-  
-  parts.push("")
-  parts.push("## Workspace Layers")
-  
-  if (workspace.type === "gizzi") {
-    parts.push("- L1-COGNITIVE: Task graph, memory, state")
-    parts.push("- L2-IDENTITY: Identity, conventions, values")
-    parts.push("- L3-GOVERNANCE: Rules, playbooks, tools")
-    parts.push("- L4-SKILLS: Skill definitions")
-    parts.push("- L5-BUSINESS: Client/project context (if enabled)")
-  } else if (workspace.type === "openclaw") {
-    parts.push("- workspace/agents/: Agent configurations")
-    parts.push("- workspace/docs/: Identity and soul documents")
-    parts.push("- workspace/memory/: Persistent memory")
-    parts.push("- workspace/skills/: Skill definitions")
-  }
-  
-  parts.push("")
-  parts.push(`Workspace path: ${workspace.path}`)
-  
-  return parts.join("\n")
+  if (!workspace?.identity) return ""
+  return Bridge.buildWorkspaceSystemPrompt(workspace.identity)
 }
 
 /**
- * Clear workspace cache for a directory (useful when workspace files change)
+ * Invalidate the cache for a directory (call when workspace files change).
  */
 export function clearWorkspaceCache(directory?: string): void {
   if (directory) {

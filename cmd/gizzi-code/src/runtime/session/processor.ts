@@ -90,8 +90,6 @@ export namespace SessionProcessor {
 
                   // FORCE IMMEDIATE BUS PUBLISH
                   Bus.publish(MessageV2.Event.PartUpdated, {
-                    messageID: reasoningPart.messageID,
-                    sessionID: reasoningPart.sessionID,
                     part: reasoningPart,
                   })
                   break
@@ -124,8 +122,6 @@ export namespace SessionProcessor {
                     await Session.updatePart(part)
                     
                     Bus.publish(MessageV2.Event.PartUpdated, {
-                      messageID: part.messageID,
-                      sessionID: part.sessionID,
                       part,
                     })
                     
@@ -150,8 +146,6 @@ export namespace SessionProcessor {
                   toolcalls[value.id] = part
                   
                   Bus.publish(MessageV2.Event.PartUpdated, {
-                    messageID: part.messageID,
-                    sessionID: part.sessionID,
                     part,
                   })
                   break
@@ -180,8 +174,6 @@ export namespace SessionProcessor {
                     toolcalls[value.toolCallId] = part
 
                     Bus.publish(MessageV2.Event.PartUpdated, {
-                      messageID: part.messageID,
-                      sessionID: part.sessionID,
                       part,
                     })
 
@@ -234,8 +226,6 @@ export namespace SessionProcessor {
                     })) as MessageV2.ToolPart
 
                     Bus.publish(MessageV2.Event.PartUpdated, {
-                      messageID: part.messageID,
-                      sessionID: part.sessionID,
                       part,
                     })
 
@@ -261,8 +251,6 @@ export namespace SessionProcessor {
                     })) as MessageV2.ToolPart
 
                     Bus.publish(MessageV2.Event.PartUpdated, {
-                      messageID: part.messageID,
-                      sessionID: part.sessionID,
                       part,
                     })
 
@@ -416,8 +404,8 @@ export namespace SessionProcessor {
                         }
                         
                         // Transition to thinking
-                        if (currentText) {
-                          await Session.updatePart({ ...currentText, time: { ...currentText.time, end: Date.now() } })
+                        if (currentText && currentText.time) {
+                          await Session.updatePart({ ...currentText, time: { start: currentText.time.start, end: Date.now() } })
                           currentText = undefined
                         }
                         mode = "thinking"
@@ -432,8 +420,6 @@ export namespace SessionProcessor {
                         
                         // Emit PartUpdated for the new reasoning part
                         Bus.publish(MessageV2.Event.PartUpdated, {
-                          messageID: currentReasoning.messageID,
-                          sessionID: currentReasoning.sessionID,
                           part: currentReasoning,
                         })
 
@@ -470,7 +456,7 @@ export namespace SessionProcessor {
                         
                         // Transition
                         if (currentReasoning) {
-                          await Session.updatePart({ ...currentReasoning, time: { ...currentReasoning.time, end: Date.now() } })
+                          await Session.updatePart({ ...currentReasoning, time: { start: currentReasoning.time.start, end: Date.now() } })
                           currentReasoning = undefined
                         }
                         mode = "text"
@@ -487,8 +473,6 @@ export namespace SessionProcessor {
                         currentText = newTextPart
                         
                         Bus.publish(MessageV2.Event.PartUpdated, {
-                          messageID: currentText.messageID,
-                          sessionID: currentText.sessionID,
                           part: currentText,
                         })
 
@@ -520,8 +504,6 @@ export namespace SessionProcessor {
                     await Session.updatePart(currentText)
 
                     Bus.publish(MessageV2.Event.PartUpdated, {
-                      messageID: currentText.messageID,
-                      sessionID: currentText.sessionID,
                       part: currentText,
                     })
                   }

@@ -1,0 +1,386 @@
+/**
+ * A2R Backend Manager - Desktop Integration
+ * 
+ * Automatically installs/starts A2R Backend on first launch
+ * for a seamless "one download, works immediately" experience
+ */
+
+import { app } from 'electron';
+import { spawn, exec } from 'child_process';
+import path from 'path';
+import fs from 'fs';
+import os from 'os';
+import https from 'https';
+import { createWriteStream } from 'fs';
+import extract from 'extract-zip';
+import { promisify } from 'util';
+import { pipeline } from 'stream';
+
+const streamPipeline = promisify(pipeline);
+
+interface BackendConfig {
+  version: string;
+  installDir: string;
+  configDir: string;
+  dataDir: string;
+  logDir: string;
+  apiPort: number;
+  webPort: number;
+}
+
+interface BackendStatus {
+  installed: boolean;
+  running: boolean;
+  version?: string;
+  apiUrl?: string;
+  webUrl?: string;
+}
+
+export class BackendManager {
+  private config: BackendConfig;
+  private process: ReturnType<typeof spawn> | null = null;
+  private downloadProgress: number = 0;
+
+  constructor() {
+    const userData = app.getPath('userData');
+    
+    this.config = {
+      version: '1.0.0',
+      installDir: path.join(userData, 'backend'),
+      configDir: path.join(userData, 'config'),
+      dataDir: path.join(userData, 'data'),
+      logDir: path.join(userData, 'logs'),
+      apiPort: 4096,
+      webPort: 3001,
+    };
+  }
+
+  /**
+   * Check if backend is installed and running
+   */
+  async getStatus(): Promise<BackendStatus> {
+    const apiBinary = path.join(this.config.installDir, 'bin', this.getBinaryName('a2r-api'));
+    const installed = fs.existsSync(apiBinary);
+    
+    // Check if API is responding
+    let running = false;
+    if (installed) {
+      try {
+        const response = await fetch(`http://127.0.0.1:${this.config.apiPort}/health`, {
+          signal: AbortSignal.timeout(1000)
+        });
+        running = response.ok;
+      } catch {
+        running = false;
+      }
+    }
+
+    return {
+      installed,
+      running,
+      version: installed ? this.config.version : undefined,
+      apiUrl: installed ? `http://127.0.0.1:${this.config.apiPort}` : undefined,
+      webUrl: installed ? `http://127.0.0.1:${this.config.webPort}` : undefined,
+    };
+  }
+
+  /**
+   * Ensure backend is installed and running
+   * This is called on app launch
+   */
+  async ensureBackend(): Promise<string> {
+    const status = await this.getStatus();
+    
+    if (status.running) {
+      console.log('[BackendManager] Backend already running at:', status.apiUrl);
+      return status.apiUrl!;
+    }
+
+    if (!status.installed) {
+      console.log('[BackendManager] Backend not installed, downloading...');
+      await this.downloadAndInstall();
+    }
+
+    console.log('[BackendManager] Starting backend...');
+    await this.startBackend();
+
+    // Wait for backend to be ready
+    await this.waitForReady();
+
+    return `http://127.0.0.1:${this.config.apiPort}`;
+  }
+
+  /**
+   * Download and install backend binaries
+   */
+  private async downloadAndInstall(): Promise<void> {
+    const platform = this.getPlatform();
+    const arch = this.getArch();
+    const filename = `a2r-backend-${this.config.version}-${arch}-${platform}`;
+    const archiveName = `${filename}.tar.gz`;
+    const downloadUrl = `https://github.com/a2r/backend/releases/download/v${this.config.version}/${archiveName}`;
+    
+    const tempDir = path.join(os.tmpdir(), 'a2r-download');
+    const archivePath = path.join(tempDir, archiveName);
+
+    // Create directories
+    fs.mkdirSync(tempDir, { recursive: true });
+    fs.mkdirSync(this.config.installDir, { recursive: true });
+    fs.mkdirSync(this.config.configDir, { recursive: true });
+    fs.mkdirSync(this.config.dataDir, { recursive: true });
+    fs.mkdirSync(this.config.logDir, { recursive: true });
+
+    // Download with progress
+    console.log(`[BackendManager] Downloading from ${downloadUrl}`);
+    await this.downloadWithProgress(downloadUrl, archivePath);
+
+    // Extract
+    console.log('[BackendManager] Extracting...');
+    await this.extractArchive(archivePath, this.config.installDir);
+
+    // Create config
+    await this.createConfig();
+
+    // Cleanup
+    fs.rmSync(tempDir, { recursive: true, force: true });
+
+    console.log('[BackendManager] Installation complete');
+  }
+
+  /**
+   * Download file with progress tracking
+   */
+  private async downloadWithProgress(url: string, dest: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const file = createWriteStream(dest);
+      let downloadedBytes = 0;
+      let totalBytes = 0;
+
+      https.get(url, (response) => {
+        if (response.statusCode !== 200) {
+          reject(new Error(`Download failed: ${response.statusCode}`));
+          return;
+        }
+
+        totalBytes = parseInt(response.headers['content-length'] || '0', 10);
+
+        response.on('data', (chunk: Buffer) => {
+          downloadedBytes += chunk.length;
+          if (totalBytes > 0) {
+            this.downloadProgress = Math.round((downloadedBytes / totalBytes) * 100);
+            // Emit progress event for UI
+            console.log(`[BackendManager] Download progress: ${this.downloadProgress}%`);
+          }
+        });
+
+        response.pipe(file);
+
+        file.on('finish', () => {
+          file.close();
+          resolve();
+        });
+
+        file.on('error', reject);
+      }).on('error', reject);
+    });
+  }
+
+  /**
+   * Extract tar.gz archive
+   */
+  private async extractArchive(archivePath: string, destDir: string): Promise<void> {
+    // Use system tar for extraction
+    return new Promise((resolve, reject) => {
+      const tar = spawn('tar', ['-xzf', archivePath, '-C', destDir, '--strip-components=1']);
+      
+      tar.on('close', (code) => {
+        if (code === 0) {
+          resolve();
+        } else {
+          reject(new Error(`Extraction failed with code ${code}`));
+        }
+      });
+
+      tar.on('error', reject);
+    });
+  }
+
+  /**
+   * Create default backend configuration
+   */
+  private async createConfig(): Promise<void> {
+    const jwtSecret = this.generateSecret();
+    const apiKey = this.generateSecret(32);
+
+    const config = `
+server:
+  host: 127.0.0.1
+  port: ${this.config.apiPort}
+
+api:
+  cors_origins:
+    - "http://localhost:3000"
+    - "http://localhost:5173"
+
+security:
+  jwt_secret: "${jwtSecret}"
+  api_key: "${apiKey}"
+
+database:
+  type: sqlite
+  path: ${path.join(this.config.dataDir, 'a2r.db').replace(/\\/g, '/')}
+
+storage:
+  data_dir: ${this.config.dataDir.replace(/\\/g, '/')}
+  logs_dir: ${this.config.logDir.replace(/\\/g, '/')}
+
+services:
+  kernel:
+    enabled: true
+    port: 3004
+  memory:
+    enabled: true
+    port: 3200
+  workspace:
+    enabled: true
+    port: 3021
+  web_ui:
+    enabled: true
+    port: ${this.config.webPort}
+
+logging:
+  level: info
+  format: json
+  file: ${path.join(this.config.logDir, 'a2r.log').replace(/\\/g, '/')}
+`;
+
+    fs.writeFileSync(path.join(this.config.configDir, 'backend.yaml'), config);
+  }
+
+  /**
+   * Start backend processes
+   */
+  private async startBackend(): Promise<void> {
+    const binDir = path.join(this.config.installDir, 'bin');
+    const configPath = path.join(this.config.configDir, 'backend.yaml');
+
+    // Start API server
+    const apiBinary = path.join(binDir, this.getBinaryName('a2r-api'));
+    
+    this.process = spawn(apiBinary, [], {
+      env: {
+        ...process.env,
+        A2R_CONFIG: configPath,
+        RUST_LOG: 'info',
+      },
+      detached: false,
+      windowsHide: true,
+    });
+
+    // Log output
+    this.process.stdout?.on('data', (data) => {
+      console.log('[Backend]', data.toString());
+    });
+
+    this.process.stderr?.on('data', (data) => {
+      console.error('[Backend Error]', data.toString());
+    });
+
+    this.process.on('exit', (code) => {
+      console.log(`[BackendManager] Backend exited with code ${code}`);
+    });
+  }
+
+  /**
+   * Wait for backend to be ready
+   */
+  private async waitForReady(timeoutMs: number = 30000): Promise<void> {
+    const startTime = Date.now();
+    
+    while (Date.now() - startTime < timeoutMs) {
+      try {
+        const response = await fetch(`http://127.0.0.1:${this.config.apiPort}/health`, {
+          signal: AbortSignal.timeout(500)
+        });
+        if (response.ok) {
+          console.log('[BackendManager] Backend is ready');
+          return;
+        }
+      } catch {
+        // Not ready yet
+      }
+      await new Promise(r => setTimeout(r, 100));
+    }
+
+    throw new Error('Backend failed to start within timeout');
+  }
+
+  /**
+   * Stop backend processes
+   */
+  async stopBackend(): Promise<void> {
+    if (this.process) {
+      this.process.kill();
+      this.process = null;
+    }
+  }
+
+  /**
+   * Get download progress (0-100)
+   */
+  getDownloadProgress(): number {
+    return this.downloadProgress;
+  }
+
+  /**
+   * Platform detection
+   */
+  private getPlatform(): string {
+    switch (process.platform) {
+      case 'darwin': return 'macos';
+      case 'linux': return 'linux';
+      case 'win32': return 'windows';
+      default: throw new Error(`Unsupported platform: ${process.platform}`);
+    }
+  }
+
+  /**
+   * Architecture detection
+   */
+  private getArch(): string {
+    switch (process.arch) {
+      case 'x64': return 'x86_64';
+      case 'arm64': return 'aarch64';
+      default: throw new Error(`Unsupported architecture: ${process.arch}`);
+    }
+  }
+
+  /**
+   * Binary name with extension
+   */
+  private getBinaryName(name: string): string {
+    return process.platform === 'win32' ? `${name}.exe` : name;
+  }
+
+  /**
+   * Generate random secret
+   */
+  private generateSecret(length: number = 64): string {
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  }
+}
+
+// Singleton instance
+let backendManager: BackendManager | null = null;
+
+export function getBackendManager(): BackendManager {
+  if (!backendManager) {
+    backendManager = new BackendManager();
+  }
+  return backendManager;
+}

@@ -15,6 +15,58 @@ import { sanitizeBrandSurface } from "@/shared/brand"
 import type { PromptInfo } from "@/cli/ui/tui/component/prompt/history"
 import { useFrecency } from "@/cli/ui/tui/component/prompt/frecency"
 
+// Local type definitions for SDK types that are exported as 'unknown'
+interface PartBase {
+  type: "file" | "agent" | "text"
+}
+
+interface FilePart extends PartBase {
+  type: "file"
+  url?: string
+  mime?: string
+  source?: {
+    type?: string
+    path?: string
+    text?: {
+      start: number
+      end: number
+      value: string
+    }
+  }
+}
+
+interface AgentPart extends PartBase {
+  type: "agent"
+  name?: string
+  source?: {
+    start: number
+    end: number
+    value: string
+  }
+}
+
+type Part = FilePart | AgentPart | PartBase
+
+interface McpResourceData {
+  name: string
+  uri: string
+  mimeType?: string
+  description?: string
+  client: string
+}
+
+interface ServerCommandData {
+  name: string
+  description?: string
+  source?: string
+}
+
+interface AgentData {
+  name: string
+  hidden?: boolean
+  mode?: string
+}
+
 function removeLineRange(input: string) {
   const hashIndex = input.lastIndexOf("#")
   return hashIndex !== -1 ? input.substring(0, hashIndex) : input
@@ -169,7 +221,8 @@ export function Autocomplete(props: {
     const extmarkStart = store.index
     const extmarkEnd = extmarkStart + Bun.stringWidth(virtualText)
 
-    const styleId = part.type === "file" ? props.fileStyleId : part.type === "agent" ? props.agentStyleId : undefined
+    const typedPart = part as Part
+    const styleId = typedPart.type === "file" ? props.fileStyleId : typedPart.type === "agent" ? props.agentStyleId : undefined
 
     const extmarkId = input.extmarks.create({
       start: extmarkStart,
@@ -180,16 +233,19 @@ export function Autocomplete(props: {
     })
 
     props.setPrompt((draft) => {
-      if (part.type === "file") {
-        const existingIndex = draft.parts.findIndex((p) => p.type === "file" && "url" in p && p.url === part.url)
+      const draftPart = part as Part
+      if (draftPart.type === "file") {
+        const filePart = draftPart as FilePart
+        const existingIndex = draft.parts.findIndex((p) => {
+          const fp = p as FilePart
+          return fp.type === "file" && fp.url === filePart.url
+        })
         if (existingIndex !== -1) {
-          const existing = draft.parts[existingIndex]
+          const existing = draft.parts[existingIndex] as FilePart
           if (
-            part.source?.text &&
+            filePart.source?.text &&
             existing &&
-            "source" in existing &&
             existing.source &&
-            "text" in existing.source &&
             existing.source.text
           ) {
             existing.source.text.start = extmarkStart
@@ -200,22 +256,31 @@ export function Autocomplete(props: {
         }
       }
 
-      if (part.type === "file" && part.source?.text) {
-        part.source.text.start = extmarkStart
-        part.source.text.end = extmarkEnd
-        part.source.text.value = virtualText
-      } else if (part.type === "agent" && part.source) {
-        part.source.start = extmarkStart
-        part.source.end = extmarkEnd
-        part.source.value = virtualText
+      if (draftPart.type === "file") {
+        const filePart = draftPart as FilePart
+        if (filePart.source?.text) {
+          filePart.source.text.start = extmarkStart
+          filePart.source.text.end = extmarkEnd
+          filePart.source.text.value = virtualText
+        }
+      } else if (draftPart.type === "agent") {
+        const agentPart = draftPart as AgentPart
+        if (agentPart.source) {
+          agentPart.source.start = extmarkStart
+          agentPart.source.end = extmarkEnd
+          agentPart.source.value = virtualText
+        }
       }
       const partIndex = draft.parts.length
       draft.parts.push(part)
       props.setExtmark(partIndex, extmarkId)
     })
 
-    if (part.type === "file" && part.source && part.source.type === "file") {
-      frecency.updateFrecency(part.source.path)
+    if (typedPart.type === "file") {
+      const filePart = typedPart as FilePart
+      if (filePart.source && filePart.source.type === "file" && filePart.source.path) {
+        frecency.updateFrecency(filePart.source.path)
+      }
     }
   }
 
@@ -227,15 +292,16 @@ export function Autocomplete(props: {
       const { lineRange, baseQuery } = extractLineRange(query ?? "")
 
       // Get files from SDK
-      const result = await sdk.client.find.files({
-        query: baseQuery,
+      const result = await (sdk.client as any).find.files({
+        query: { pattern: baseQuery ? `**/*${baseQuery}*` : "**/*" },
       })
 
       const options: AutocompleteOption[] = []
 
       // Add file options
       if (!result.error && result.data) {
-        const sortedFiles = result.data.sort((a, b) => {
+        const fileData = result.data as string[]
+        const sortedFiles = fileData.sort((a: string, b: string) => {
           const aScore = frecency.getFrecency(a)
           const bScore = frecency.getFrecency(b)
           if (aScore !== bScore) return bScore - aScore
@@ -247,7 +313,7 @@ export function Autocomplete(props: {
 
         const width = props.anchor().width - 4
         options.push(
-          ...sortedFiles.map((item): AutocompleteOption => {
+          ...sortedFiles.map((item: string): AutocompleteOption => {
             const baseDir = (sync.data.path.directory || process.cwd()).replace(/\/+$/, "")
             const fullPath = `${baseDir}/${item}`
             const urlObj = pathToFileURL(fullPath)
@@ -302,7 +368,7 @@ export function Autocomplete(props: {
     const options: AutocompleteOption[] = []
     const width = props.anchor().width - 4
 
-    for (const res of Object.values(sync.data.mcp_resource)) {
+    for (const res of Object.values(sync.data.mcp_resource) as McpResourceData[]) {
       const text = `${res.name} (${res.uri})`
       options.push({
         display: Locale.truncateMiddle(text, width),
@@ -324,7 +390,7 @@ export function Autocomplete(props: {
               clientName: res.client,
               uri: res.uri,
             },
-          })
+          } as any)
         },
       })
     }
@@ -333,8 +399,8 @@ export function Autocomplete(props: {
   })
 
   const agents = createMemo(() => {
-    const agents = sync.data.agent
-    return agents
+    const agentsData = sync.data.agent as AgentData[]
+    return agentsData
       .filter((agent) => !agent.hidden && agent.mode !== "primary")
       .map(
         (agent): AutocompleteOption => ({
@@ -348,7 +414,7 @@ export function Autocomplete(props: {
                 end: 0,
                 value: "",
               },
-            })
+            } as any)
           },
         }),
       )
@@ -356,8 +422,9 @@ export function Autocomplete(props: {
 
   const commands = createMemo((): AutocompleteOption[] => {
     const results: AutocompleteOption[] = [...command.slashes()]
+    const commandsData = sync.data.command as ServerCommandData[]
 
-    for (const serverCommand of sync.data.command) {
+    for (const serverCommand of commandsData) {
       if (serverCommand.source === "skill") continue
       const label = serverCommand.source === "mcp" ? ":mcp" : ""
       results.push({

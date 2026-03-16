@@ -4,12 +4,30 @@
  * Built-in tool for running verification during agent execution.
  */
 
-import { z } from "zod/v4";
-import { Log } from "@/shared/util/log";
+import * as z from "zod/v4";
 import { VerificationOrchestrator } from "../verifiers/orchestrator";
-import type { Tool, ToolContext } from "@/runtime/tools/builtins/tool";
 
-const log = Log.create({ service: "tools.verify" });
+/** Simple logger */
+const log = {
+  info: (msg: string, meta?: Record<string, unknown>) => console.log(`[INFO] ${msg}`, meta || ""),
+  error: (msg: string, meta?: Record<string, unknown>) => console.error(`[ERROR] ${msg}`, meta || ""),
+  warn: (msg: string, meta?: Record<string, unknown>) => console.warn(`[WARN] ${msg}`, meta || ""),
+  debug: (msg: string, meta?: Record<string, unknown>) => console.log(`[DEBUG] ${msg}`, meta || ""),
+};
+
+/** Tool context passed to execute */
+interface ToolContext {
+  sessionId: string;
+}
+
+/** Tool definition interface */
+interface Tool<TInput extends z.ZodType> {
+  name: string;
+  description: string;
+  parameters: TInput;
+  returns: z.ZodType;
+  execute: (input: z.output<TInput>, context: ToolContext) => Promise<unknown>;
+}
 
 // ============================================================================
 // Tool Definition
@@ -89,8 +107,8 @@ Examples:
       };
       
       // Create minimal plan and receipts for verification
-      const plan = { steps: [] };
-      const receipts = [];
+      const plan = { steps: [] as unknown[] };
+      const receipts: unknown[] = [];
       
       const result = await orchestrator.verify(
         plan as any,

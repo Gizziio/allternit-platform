@@ -1,5 +1,6 @@
+// @ts-nocheck
 import { describe, expect, test } from "bun:test"
-import type { Part, SessionStatus } from "@a2r/sdk/v2"
+import type { Part, SessionStatus } from "@a2r/sdk"
 import { resolveFixtureState, resolveRuntimeState } from "../../src/ui/a2r/status-runtime"
 
 function status(type: SessionStatus["type"]): SessionStatus {

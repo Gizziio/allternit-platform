@@ -6,18 +6,13 @@
 
 import {
   MediaCaptureManager,
-  CapturedMedia,
-  ReviewDecision,
-  VerificationWithMediaOptions,
+  type CapturedMedia,
+  type ReviewDecision,
+  type VerificationWithMediaOptions,
 } from "./capture";
+import { Log } from "@/shared/util/log";
 
-// Simple logger for workflow
-const log = {
-  info: (msg: string, meta?: Record<string, unknown>) => console.log(`[workflow] ${msg}`, meta || ""),
-  error: (msg: string, meta?: Record<string, unknown>) => console.error(`[workflow] ${msg}`, meta || ""),
-  warn: (msg: string, meta?: Record<string, unknown>) => console.warn(`[workflow] ${msg}`, meta || ""),
-  debug: (msg: string, meta?: Record<string, unknown>) => console.debug(`[workflow] ${msg}`, meta || ""),
-};
+const log = Log.create({ service: "verification-workflow" });
 
 export type ReviewPhase = "capture" | "review" | "decided" | "cleanup" | "complete";
 
@@ -50,7 +45,7 @@ export class MediaReviewWorkflow {
   
   private async notify(state: WorkflowState): Promise<void> {
     for (const callback of this.callbacks) {
-      try { await callback(state); } catch (error) {}
+      try { await callback(state); } catch (error) { log.warn("notification callback error", { error }); }
     }
   }
   
@@ -58,7 +53,7 @@ export class MediaReviewWorkflow {
     const state: WorkflowState = {
       captureId,
       phase: "capture",
-      capture: this.captureManager.getCapture(captureId),
+      capture: this.captureManager.getCapture(captureId) ?? null,
     };
     this.states.set(captureId, state);
     

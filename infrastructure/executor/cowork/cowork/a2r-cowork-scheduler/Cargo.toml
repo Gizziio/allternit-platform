@@ -1,0 +1,49 @@
+[package]
+name = "a2r-cowork-scheduler"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "A2R Scheduler - Cron-based job scheduling using tokio-cron-scheduler"
+
+[[bin]]
+name = "a2r-cowork-scheduler"
+path = "src/main.rs"
+
+[lib]
+name = "a2r_cowork_scheduler"
+path = "src/lib.rs"
+
+[dependencies]
+# Workspace dependencies
+tokio = { workspace = true }
+async-trait = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+clap = { workspace = true }
+
+# Cron scheduling
+tokio-cron-scheduler = "0.10"
+cron-parser = "0.9"
+
+# HTTP client for API calls
+reqwest = { version = "0.11", features = ["json"] }
+
+# HTTP server for API
+axum = "0.7"
+tower = "0.4"
+
+# Database
+sqlx = { version = "0.7", features = ["sqlite", "runtime-tokio", "chrono", "uuid"] }
+
+[dependencies.tracing-subscriber]
+version = "0.3"
+
+[dev-dependencies]
+tokio-test = { workspace = true }

@@ -5,7 +5,8 @@
  * Based on Meta's Agentic Code Reasoning paper (arXiv:2603.01896)
  */
 
-import type { JsonValue } from "@/shared/util/json";
+/** JSON value type */
+type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
 // ============================================================================
 // Core Certificate Types

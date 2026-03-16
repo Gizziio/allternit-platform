@@ -1,5 +1,5 @@
 import { Log } from "@/shared/util/log";
-import { HookEvent, HookResponse } from "../types";
+import type { HookEvent, HookResponse } from "../types";
 
 export class HttpHookSender {
   private static log = Log.create({ service: "hooks.http" });

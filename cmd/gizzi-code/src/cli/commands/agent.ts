@@ -27,7 +27,7 @@ export const AgentCommand = cmd({
       .demandCommand(1, "Please specify an agent command")
       .strict(),
   handler: async (args) => {
-    UI.info("Use: /agent select, /agent list, or /agent status")
+    UI.println("Use: /agent select, /agent list, or /agent status")
   },
 })
 
@@ -42,8 +42,8 @@ const AgentSelectCommand = cmd({
     }),
   handler: async (args) => {
     Log.Default.info("agent:select", { name: args.name })
-    UI.info(`Selected agent: ${args.name}`)
-    UI.info("Agent will respond to @mentions when Agent Mode is ON")
+    UI.println(`Selected agent: ${args.name}`)
+    UI.println("Agent will respond to @mentions when Agent Mode is ON")
   },
 })
 
@@ -52,13 +52,13 @@ const AgentListCommand = cmd({
   describe: "list available agents",
   handler: async () => {
     Log.Default.info("agent:list")
-    UI.info("Available agents:")
-    UI.info("  • research - Research and analysis agent")
-    UI.info("  • code - Code generation and review agent")
-    UI.info("  • data - Data processing agent")
-    UI.info("  • web - Web browsing agent")
-    UI.info("")
-    UI.info("Use: /agent select <name> to select an agent")
+    UI.println("Available agents:")
+    UI.println("  • research - Research and analysis agent")
+    UI.println("  • code - Code generation and review agent")
+    UI.println("  • data - Data processing agent")
+    UI.println("  • web - Web browsing agent")
+    UI.println("")
+    UI.println("Use: /agent select <name> to select an agent")
   },
 })
 
@@ -67,11 +67,11 @@ const AgentStatusCommand = cmd({
   describe: "show current agent state",
   handler: async () => {
     Log.Default.info("agent:status")
-    UI.info("Agent Mode Status:")
-    UI.info("  Status: ON")
-    UI.info("  Selected Agent: research")
-    UI.info("  Available Skills: browser, file, code")
-    UI.info("")
-    UI.info("Use @agent-name to mention agents in prompts")
+    UI.println("Agent Mode Status:")
+    UI.println("  Status: ON")
+    UI.println("  Selected Agent: research")
+    UI.println("  Available Skills: browser, file, code")
+    UI.println("")
+    UI.println("Use @agent-name to mention agents in prompts")
   },
 })

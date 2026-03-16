@@ -108,7 +108,7 @@ export namespace Project {
                 .split("\n")
                 .filter(Boolean)
                 .map((x) => x.trim())
-                .toSorted(),
+                .slice().sort(),
             )
             .catch(() => undefined)
 
