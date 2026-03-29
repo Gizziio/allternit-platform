@@ -11,30 +11,28 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Shield,
-  AlertTriangle,
+  Warning,
   CheckCircle,
   Clock,
-  Activity,
+  Pulse as Activity,
   Lock,
-  Unlock,
-  FileWarning,
+  LockOpen,
   User,
-  Bot,
+  Robot,
   Globe,
-  Server,
-  RefreshCw,
+  HardDrives,
+  ArrowsClockwise,
   Bell,
-  Filter,
-  ChevronRight,
-  AlertCircle,
-  TrendingUp,
-  TrendingDown,
+  Funnel,
+  CaretRight,
+  TrendUp,
+  TrendDown,
   X,
   Eye,
-  EyeOff,
-  Settings,
+  EyeSlash,
+  GearSix,
   XCircle,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import {
   getSecurityOverview,
   listSecurityEvents,
@@ -54,12 +52,12 @@ import type {
 // Event type configurations
 const EVENT_TYPES: { value: SecurityEventType; label: string; color: string; icon: React.ReactNode }[] = [
   { value: 'authentication', label: 'Auth', color: '#3b82f6', icon: <Lock size={14} /> },
-  { value: 'authorization', label: 'Access', color: '#8b5cf6', icon: <Unlock size={14} /> },
-  { value: 'policy_violation', label: 'Policy', color: '#ef4444', icon: <AlertTriangle size={14} /> },
+  { value: 'authorization', label: 'Access', color: '#8b5cf6', icon: <LockOpen size={14} /> },
+  { value: 'policy_violation', label: 'Policy', color: '#ef4444', icon: <Warning size={14} /> },
   { value: 'anomaly', label: 'Anomaly', color: '#f59e0b', icon: <Activity size={14} /> },
-  { value: 'threat', label: 'Threat', color: '#dc2626', icon: <AlertCircle size={14} /> },
+  { value: 'threat', label: 'Threat', color: '#dc2626', icon: <Warning size={14} /> },
   { value: 'compliance', label: 'Compliance', color: '#10b981', icon: <CheckCircle size={14} /> },
-  { value: 'system', label: 'System', color: '#6b7280', icon: <Server size={14} /> },
+  { value: 'system', label: 'System', color: '#6b7280', icon: <HardDrives size={14} /> },
 ];
 
 const SEVERITY_CONFIG: Record<SecurityEventSeverity, { color: string; bgColor: string; label: string }> = {
@@ -202,7 +200,7 @@ export function SecurityDashboard() {
               gap: 8,
             }}
           >
-            <RefreshCw size={16} />
+            <ArrowsClockwise size={16} />
             Refresh
           </button>
         </div>
@@ -378,7 +376,7 @@ function OverviewTab({
         <MetricCard
           label="Unresolved Violations"
           value={overview.unresolvedViolations}
-          icon={<AlertTriangle size={20} />}
+          icon={<Warning size={20} />}
           color="#f59e0b"
         />
         <MetricCard
@@ -715,7 +713,7 @@ function ComplianceTab({
             ) : control.status === 'failed' ? (
               <XCircle size={18} color="#ef4444" />
             ) : (
-              <AlertCircle size={18} color="#888" />
+              <Warning size={18} color="#888" />
             )}
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 14, color: '#fff' }}>{control.name}</div>
@@ -1038,7 +1036,7 @@ function MetricCard({
       </div>
       {trend && (
         <div style={{ color: trend === 'up' ? '#22c55e' : '#ef4444' }}>
-          {trend === 'up' ? <TrendingUp size={20} /> : <TrendingDown size={20} />}
+          {trend === 'up' ? <TrendUp size={20} /> : <TrendDown size={20} />}
         </div>
       )}
     </div>
@@ -1062,7 +1060,7 @@ function StatBox({ label, value, color }: { label: string; value: number | strin
 function LoadingState() {
   return (
     <div style={{ textAlign: 'center', padding: 60, color: '#666' }}>
-      <RefreshCw size={32} style={{ animation: 'spin 1s linear infinite' }} />
+      <ArrowsClockwise size={32} style={{ animation: 'spin 1s linear infinite' }} />
       <p>Loading security data...</p>
     </div>
   );
@@ -1071,7 +1069,7 @@ function LoadingState() {
 function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
     <div style={{ textAlign: 'center', padding: 60 }}>
-      <AlertCircle size={32} color="#ef4444" />
+      <Warning size={32} color="#ef4444" />
       <p style={{ color: '#ef4444', marginBottom: 16 }}>{message}</p>
       <button
         onClick={onRetry}

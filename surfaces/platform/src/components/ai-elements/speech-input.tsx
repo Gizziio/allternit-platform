@@ -5,7 +5,10 @@ import type { ComponentProps } from "react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
-import { MicIcon, SquareIcon } from "lucide-react";
+import {
+  Microphone as MicIcon,
+  Square as SquareIcon,
+} from '@phosphor-icons/react';
 import { useCallback, useEffect, useRef, useState } from "react";
 import { speechToText } from "@/services/voice";
 

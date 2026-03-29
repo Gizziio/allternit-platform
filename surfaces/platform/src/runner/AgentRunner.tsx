@@ -2,7 +2,21 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useRunnerStore } from "./runner.store";
-import { Plus, ArrowUp, X, Bot, ChevronDown, Square, Check, Wrench, Info, AlertCircle, CheckCircle, ChevronRight, Loader2 } from "lucide-react";
+import {
+  Plus,
+  ArrowUp,
+  X,
+  Robot,
+  CaretDown,
+  Square,
+  Check,
+  Wrench,
+  Info,
+  Warning,
+  CheckCircle,
+  CaretRight,
+  CircleNotch,
+} from '@phosphor-icons/react';
 import { GizziMascot } from "@/components/ai-elements/GizziMascot";
 
 const THEME = {
@@ -87,7 +101,7 @@ function getKindIcon(kind: TraceEntry['kind']) {
     case 'info':
       return <Info {...iconProps} style={{ color: '#3b82f6' }} />;
     case 'error':
-      return <AlertCircle {...iconProps} style={{ color: '#ef4444' }} />;
+      return <Warning {...iconProps} style={{ color: '#ef4444' }} />;
     case 'success':
       return <CheckCircle {...iconProps} style={{ color: '#22c55e' }} />;
     default:
@@ -111,7 +125,7 @@ function getStatusIndicator(status: TraceEntry['status']) {
     case 'success':
       return <CheckCircle size={12} style={{ color: '#22c55e' }} />;
     case 'error':
-      return <AlertCircle size={12} style={{ color: '#ef4444' }} />;
+      return <Warning size={12} style={{ color: '#ef4444' }} />;
     default:
       return null;
   }
@@ -175,7 +189,7 @@ function TraceEntryItem({ entry }: { entry: TraceEntry }) {
       >
         {/* Expand/collapse chevron (only if has details) */}
         {hasDetails ? (
-          <ChevronRight 
+          <CaretRight 
             size={14} 
             style={{
               color: THEME.textMuted,
@@ -289,7 +303,7 @@ function PlanPreview({ plan, onApprove, onReject }: {
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Bot size={16} color={THEME.accent} />
+          <Robot size={16} color={THEME.accent} />
           <span style={{ fontSize: 13, fontWeight: 600, color: THEME.textPrimary }}>Proposed Operator Plan</span>
         </div>
         <div style={{ 
@@ -448,7 +462,7 @@ export function AgentRunner() {
   if (!open) return null;
   
   // Style tag for Gizzi animations
-  const animationStyle = <style dangerouslySetInnerHTML={{ __html: GIZZI_ANIMATIONS }} />;
+  const animationStyle = <style>{GIZZI_ANIMATIONS}</style>;
   
   const hasActiveSession = activeRun || isLoading;
   const isExpanded = hasActiveSession || isPlanning;
@@ -538,7 +552,7 @@ export function AgentRunner() {
                   <div className="gizzi-focused"><GizziMascot size={32} emotion="focused" /></div>
                 </div>
               ) : (
-                <Bot size={20} color={THEME.textMuted} />
+                <Robot size={20} color={THEME.textMuted} />
               )}
             </button>
             
@@ -623,7 +637,7 @@ export function AgentRunner() {
                 }}
               >
                 <span>{selectedModel.name}</span>
-                <ChevronDown size={12} style={{ transform: showModelMenu ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', opacity: 0.6 }} />
+                <CaretDown size={12} style={{ transform: showModelMenu ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', opacity: 0.6 }} />
               </button>
               
               {/* Model Dropdown Menu */}
@@ -758,7 +772,7 @@ export function AgentRunner() {
                 transition: 'all 0.2s ease',
               }}
             >
-              <Bot size={14} />
+              <Robot size={14} />
               {agentEnabled ? 'Agent On' : 'Agent Off'}
             </button>
             
@@ -911,7 +925,7 @@ export function AgentRunner() {
         )}
         
         {/* Trace entries */}
-        {trace.map((entry) => (
+        {trace.map((entry: TraceEntry) => (
           <TraceEntryItem key={entry.id} entry={entry as unknown as TraceEntry} />
         ))}
         
@@ -939,7 +953,7 @@ export function AgentRunner() {
             </span>
           </div>
         )}
-        <style dangerouslySetInnerHTML={{ __html: '@keyframes spin { to { transform: rotate(360deg); } }' }} />
+        <style>{'@keyframes spin { to { transform: rotate(360deg); } }'}</style>
         
         <div ref={messagesEndRef} />
       </div>
@@ -984,7 +998,7 @@ export function AgentRunner() {
                 <div className={isLoading ? "gizzi-focused" : "gizzi-pleased"}><GizziMascot size={32} emotion={isLoading ? "focused" : "pleased"} /></div>
               </div>
             ) : (
-              <Bot size={20} color={THEME.textMuted} />
+              <Robot size={20} color={THEME.textMuted} />
             )}
           </button>
           
@@ -1069,7 +1083,7 @@ export function AgentRunner() {
               }}
             >
               <span>{selectedModel.name}</span>
-              <ChevronDown size={12} style={{ transform: showModelMenu ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', opacity: 0.6 }} />
+              <CaretDown size={12} style={{ transform: showModelMenu ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', opacity: 0.6 }} />
             </button>
             
             {/* Model Dropdown Menu */}
@@ -1204,7 +1218,7 @@ export function AgentRunner() {
               transition: 'all 0.2s ease',
             }}
           >
-            <Bot size={14} />
+            <Robot size={14} />
             {agentEnabled ? 'Agent On' : 'Agent Off'}
           </button>
           

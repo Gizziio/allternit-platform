@@ -18,25 +18,24 @@ import React, { useState, useCallback, useEffect, useRef, type ChangeEvent, type
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Globe,
-  Download,
-  Upload,
-  FileJson,
+  DownloadSimple,
+  UploadSimple,
   FileCode,
   Copy,
   Check,
   X,
   Keyboard,
-  HelpCircle,
-  AlertCircle,
-  CheckCircle2,
-  Wifi,
-  WifiOff,
-  RefreshCw,
-  Share2,
-  Zap,
+  Question as HelpCircle,
+  Warning,
+  CheckCircle,
+  WifiHigh,
+  WifiSlash,
+  ArrowsClockwise,
+  ShareNetwork,
+  Lightning,
   Clock,
-  BarChart3,
-} from 'lucide-react';
+  ChartBar,
+} from '@phosphor-icons/react';
 
 import { TEXT, MODE_COLORS } from '@/design/a2r.tokens';
 import { useTranslation, getAvailableLanguages, getLanguageInfo, type LanguageCode } from '@/lib/i18n';
@@ -368,7 +367,7 @@ export function ExportImportPanel({
         }}
         aria-label="Export or import configuration"
       >
-        <Download size={16} />
+        <DownloadSimple size={16} />
         <span className="hidden sm:inline">Import/Export</span>
       </button>
 
@@ -420,7 +419,7 @@ export function ExportImportPanel({
                   {/* Export Section */}
                   <div>
                     <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: TEXT.primary }}>
-                      <Download size={16} />
+                      <DownloadSimple size={16} />
                       Export Configuration
                     </h3>
                     <div className="grid grid-cols-2 gap-3">
@@ -433,7 +432,7 @@ export function ExportImportPanel({
                           color: '#60A5FA',
                         }}
                       >
-                        <FileJson size={18} />
+                        <FileCode size={18} />
                         Export JSON
                       </button>
                       <button
@@ -471,7 +470,7 @@ export function ExportImportPanel({
                           color: TEXT.secondary,
                         }}
                       >
-                        <Share2 size={16} />
+                        <ShareNetwork size={16} />
                         Share
                       </button>
                     </div>
@@ -480,7 +479,7 @@ export function ExportImportPanel({
                   {/* Import Section */}
                   <div>
                     <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: TEXT.primary }}>
-                      <Upload size={16} />
+                      <UploadSimple size={16} />
                       Import Configuration
                     </h3>
                     <div
@@ -493,7 +492,7 @@ export function ExportImportPanel({
                       }}
                     >
                       <div className="text-center">
-                        <Upload size={32} className="mx-auto mb-3" style={{ color: TEXT.tertiary }} />
+                        <UploadSimple size={32} className="mx-auto mb-3" style={{ color: TEXT.tertiary }} />
                         <p className="text-sm font-medium" style={{ color: TEXT.secondary }}>
                           Drag and drop a file here
                         </p>
@@ -518,7 +517,7 @@ export function ExportImportPanel({
                           border: `1px solid rgba(239, 68, 68, 0.3)`,
                         }}
                       >
-                        <AlertCircle size={16} className="flex-shrink-0 mt-0.5" style={{ color: '#EF4444' }} />
+                        <Warning size={16} className="flex-shrink-0 mt-0.5" style={{ color: '#EF4444' }} />
                         <p className="text-sm" style={{ color: '#EF4444' }}>
                           {importError}
                         </p>
@@ -661,7 +660,7 @@ export function ApiHealthIndicator({ modeColors, onClick }: ApiHealthIndicatorPr
   if (loading) {
     return (
       <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)' }}>
-        <RefreshCw size={14} className="animate-spin" style={{ color: TEXT.tertiary }} />
+        <ArrowsClockwise size={14} className="animate-spin" style={{ color: TEXT.tertiary }} />
         <span className="text-xs" style={{ color: TEXT.tertiary }}>Checking API...</span>
       </div>
     );
@@ -681,7 +680,7 @@ export function ApiHealthIndicator({ modeColors, onClick }: ApiHealthIndicatorPr
       }}
       aria-label={isHealthy ? 'API is healthy' : 'API has issues'}
     >
-      {isHealthy ? <Wifi size={14} /> : <WifiOff size={14} />}
+      {isHealthy ? <WifiHigh size={14} /> : <WifiSlash size={14} />}
       <span className="hidden sm:inline">
         {isHealthy ? 'API Connected' : isFallback ? 'Fallback Mode' : 'API Issues'}
       </span>
@@ -734,7 +733,7 @@ export function AnalyticsConsentBanner({ onAccept, onDecline, modeColors }: Anal
             className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
             style={{ background: 'rgba(59, 130, 246, 0.1)' }}
           >
-            <BarChart3 size={20} style={{ color: '#3B82F6' }} />
+            <ChartBar size={20} style={{ color: '#3B82F6' }} />
           </div>
           <div className="flex-1">
             <h3 className="text-sm font-semibold mb-1" style={{ color: TEXT.primary }}>

@@ -12,13 +12,12 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { ErrorBoundary } from '@/components/error-boundary';
 import {
-  Clock3,
+  Clock,
   FolderOpen,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Sparkles,
+  SidebarSimple,
+  Sparkle,
   Wrench,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Chat components
@@ -33,10 +32,12 @@ import { AttachmentPreview, AttachmentPreviewModal, type AttachmentPreviewItem }
 import { useRustStreamAdapter, type ChatMessage } from '@/lib/ai/rust-stream-adapter';
 
 // Cowork-specific components
-import { useCoworkStore, connectCoworkStream, type CoworkStreamConnection } from './CoworkStore';
+import { useCoworkStore } from './CoworkStore';
 import { CoworkRightRail } from './CoworkRightRail';
 import { CoworkLaunchpad } from './CoworkLaunchpad';
 import { CoworkProjectView } from './CoworkProjectView';
+import { PermissionModal } from './PermissionModal';
+import { QuestionModal } from './QuestionModal';
 
 // Providers (matching ChatRoot structure)
 import { ChatIdProvider } from '@/providers/chat-id-provider';
@@ -59,9 +60,9 @@ import {
   useEmbeddedAgentSessionStore,
   useNativeAgentStore,
 } from '@/lib/agents';
-import { useAgentSurfaceModeStore } from '@/stores/agent-surface-mode.store';
 import { AgentModeBackdrop } from '../chat/agentModeSurfaceTheme';
 import { useModeCanvasBridge } from '@/hooks/useModeCanvasBridge';
+import { ACIComputerUseBar } from '@/capsules/browser/ACIComputerUseSidecar';
 
 // Theme (matching ChatView)
 const THEME = {
@@ -136,11 +137,8 @@ function CoworkRootContent() {
   // FINGERPRINT: Verify this file is actually running
   console.log("COWORKROOT_CHATFIRST_FINGERPRINT");
   
-  const { 
-    session, 
-    startSession, 
-    endSession, 
-    addEvent,
+  const {
+    session,
     activeProjectId,
   } = useCoworkStore();
   
@@ -187,40 +185,30 @@ function CoworkRootContent() {
     setPreviewItem(item);
     setPreviewModalOpen(true);
   }, []);
-  const streamRef = useRef<CoworkStreamConnection | null>(null);
   const embeddedAgentSession = useEmbeddedAgentSession('cowork');
-  const coworkAgentModeEnabled = useAgentSurfaceModeStore(
-    (state) => state.enabledBySurface.cowork,
-  );
+  const coworkAgentModeEnabled = embeddedAgentSession.isEmbedded && embeddedAgentSession.descriptor.sessionMode === 'agent';
 
   // If there's an active project, show CoworkProjectView instead
   if (activeProjectId && !embeddedAgentSession.isEmbedded) {
     return <CoworkProjectView />;
   }
   
-  // Start a new cowork session
-  const handleStartCowork = useCallback((task: string) => {
-    const sessionId = startSession('browser', task);
-    
-    // Store the initial message to be sent once Chat mounts
-    setInitialMessage(task);
-    
-    // Connect to backend event stream
-    streamRef.current = connectCoworkStream(
-      sessionId,
-      (event) => addEvent(event),
-      (error) => {
-        console.error('[Cowork] Stream error:', error);
-        endSession('error', error.message);
-      }
-    );
-  }, [startSession, addEvent, endSession]);
-  
-  // Cleanup stream on unmount
-  useEffect(() => {
-    return () => {
-      streamRef.current?.disconnect();
-    };
+  // Start a new cowork session via gizzi runtime
+  const handleStartCowork = useCallback(async (task: string) => {
+    try {
+      const session = await useNativeAgentStore.getState().createSession(
+        task.slice(0, 64) || 'New Cowork Session',
+        undefined,
+        {
+          sessionMode: 'regular',
+          originSurface: 'cowork',
+        },
+      );
+      useNativeAgentStore.getState().setSurfaceSession('cowork', session.id);
+      void useNativeAgentStore.getState().sendMessageStream(session.id, task);
+    } catch (err) {
+      console.error('[CoworkRoot] Failed to create cowork session:', err);
+    }
   }, []);
   
   // Show launchpad if no active session
@@ -325,12 +313,22 @@ function CoworkRootContent() {
                           />
                           
                           {/* Cowork Chat - Transcript + Composer integrated */}
-                          <CoworkChat 
-                            sessionId={session?.id || embeddedAgentSession.sessionId || 'cowork-embedded'} 
+                          <CoworkChat
+                            sessionId={session?.id || embeddedAgentSession.sessionId || 'cowork-embedded'}
                             initialMessage={initialMessage}
                             onInitialMessageSent={() => setInitialMessage(null)}
                           />
-                          
+
+                          {/* Permission + Question gate modals — float above transcript.
+                            Only meaningful when using a native gizzi-code session (embedded agent),
+                            but harmless to render for legacy CoworkStore sessions (empty pending lists). */}
+                          {(embeddedAgentSession.sessionId || session?.id) && (
+                            <div className="coworkGateOverlay">
+                              <PermissionModal sessionId={embeddedAgentSession.sessionId || session!.id} />
+                              <QuestionModal sessionId={embeddedAgentSession.sessionId || session!.id} />
+                            </div>
+                          )}
+
                           {/* Slider handle for right rail - always visible when rail is collapsed */}
                           {!showRail && (
                             <button
@@ -399,6 +397,20 @@ const coworkStyles = `
   position: relative;
   display: flex;
   flex-direction: column;
+}
+
+/* Permission / question gate — floats above transcript near the bottom */
+.coworkGateOverlay {
+  position: absolute;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(480px, calc(100% - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 50;
+  pointer-events: auto;
 }
 
 /* Slider handle - visible when rail is shown */
@@ -540,7 +552,9 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
   const fetchNativeMessages = useNativeAgentStore((state) => state.fetchMessages);
   const fetchNativeCanvases = useNativeAgentStore((state) => state.fetchSessionCanvases);
   const abortNativeGeneration = useNativeAgentStore((state) => state.abortGeneration);
-  const nativeStreaming = useNativeAgentStore((state) => state.streaming);
+  const nativeStreaming = useNativeAgentStore((state) => ({
+    isStreaming: state.streamingBySession[embeddedAgentSession.sessionId ?? '']?.isStreaming ?? false,
+  }));
   const nativeMessages = useNativeAgentStore((state) =>
     embeddedAgentSession.sessionId
       ? state.messages[embeddedAgentSession.sessionId] || []
@@ -876,10 +890,11 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
           boxSizing: 'border-box',
         }}>
           {embeddedAgentStrip}
-          <CoworkTranscript 
+          <CoworkTranscript
             messages={displayMessages}
             isLoading={displayIsLoading}
             onRegenerate={handleRegenerate}
+            sessionId={embeddedAgentSession.sessionId ?? undefined}
           />
           <div ref={messagesEndRef} />
         </div>
@@ -900,10 +915,11 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
         paddingBottom: '12px',
         zIndex: 40,
       }}>
-        <div style={{ 
-          width: '100%', 
-          pointerEvents: 'auto', 
+        <div style={{
+          width: '100%',
+          pointerEvents: 'auto',
         }}>
+          <ACIComputerUseBar suppressInBrowserMode />
           <ChatComposer
             onSend={handleSend}
             isLoading={displayIsLoading}
@@ -995,7 +1011,7 @@ function EmbeddedCoworkAgentRail() {
       </div>
       <EmbeddedRailCard
         title="Session"
-        icon={<Sparkles size={15} />}
+        icon={<Sparkle size={15} />}
         rows={[
           ['Mode', embeddedAgentSession.session?.metadata?.a2r_local_draft === true ? 'Local Draft' : embeddedAgentSession.session?.isActive ? 'Live' : 'Paused'],
           ['Messages', `${embeddedAgentSession.session?.messageCount ?? 0}`],
@@ -1012,7 +1028,7 @@ function EmbeddedCoworkAgentRail() {
       />
       <EmbeddedRailCard
         title="Controls"
-        icon={<Clock3 size={15} />}
+        icon={<Clock size={15} />}
         rows={[
           ['Tools', descriptor.agentFeatures?.tools ? 'Enabled' : 'Not configured'],
           ['Automation', descriptor.agentFeatures?.automation ? 'Reserved' : 'Pending'],

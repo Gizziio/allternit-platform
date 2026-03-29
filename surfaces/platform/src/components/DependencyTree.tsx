@@ -10,14 +10,13 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
 import {
-  ChevronRight,
-  ChevronDown,
-  CheckCircle2,
-  AlertCircle,
-  HelpCircle,
+  CaretRight,
+  CaretDown,
+  CheckCircle,
+  Warning,
+  Question as HelpCircle,
   Package,
-  AlertTriangle,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import type { DependencyTreeNode, DependencyResolutionResult } from '../plugins/dependencies';
 
 // ============================================================================
@@ -102,11 +101,11 @@ function getStatusIcon(status: DependencyTreeNode['status']): React.ReactNode {
   
   switch (status) {
     case 'installed':
-      return <CheckCircle2 size={size} color={color} />;
+      return <CheckCircle size={size} color={color} />;
     case 'missing':
-      return <AlertCircle size={size} color={color} />;
+      return <Warning size={size} color={color} />;
     case 'conflict':
-      return <AlertTriangle size={size} color={color} />;
+      return <Warning size={size} color={color} />;
     case 'optional':
       return <HelpCircle size={size} color={color} />;
     default:
@@ -203,9 +202,9 @@ function TreeNode({
         <div style={{ width: 16, flexShrink: 0 }}>
           {hasChildren ? (
             isExpanded ? (
-              <ChevronDown size={14} color={THEME.textSecondary} />
+              <CaretDown size={14} color={THEME.textSecondary} />
             ) : (
-              <ChevronRight size={14} color={THEME.textSecondary} />
+              <CaretRight size={14} color={THEME.textSecondary} />
             )
           ) : (
             <div style={{ width: 14 }} />
@@ -560,15 +559,15 @@ export function DependencyTree({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <CheckCircle2 size={12} color={THEME.success} />
+          <CheckCircle size={12} color={THEME.success} />
           <span style={{ fontSize: 11, color: THEME.textSecondary }}>Installed</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <AlertCircle size={12} color={THEME.danger} />
+          <Warning size={12} color={THEME.danger} />
           <span style={{ fontSize: 11, color: THEME.textSecondary }}>Missing</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <AlertTriangle size={12} color={THEME.warning} />
+          <Warning size={12} color={THEME.warning} />
           <span style={{ fontSize: 11, color: THEME.textSecondary }}>Conflict</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -643,7 +642,7 @@ export function CompactDependencyTree({
           ...style,
         }}
       >
-        <CheckCircle2 size={14} color={THEME.success} />
+        <CheckCircle size={14} color={THEME.success} />
         <span style={{ fontSize: 12, color: THEME.success }}>No dependencies</span>
       </div>
     );
@@ -665,19 +664,19 @@ export function CompactDependencyTree({
     >
       {stats.installed > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <CheckCircle2 size={12} color={THEME.success} />
+          <CheckCircle size={12} color={THEME.success} />
           <span style={{ fontSize: 11, color: THEME.success }}>{stats.installed}</span>
         </div>
       )}
       {stats.missing > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <AlertCircle size={12} color={THEME.danger} />
+          <Warning size={12} color={THEME.danger} />
           <span style={{ fontSize: 11, color: THEME.danger }}>{stats.missing}</span>
         </div>
       )}
       {stats.conflict > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <AlertTriangle size={12} color={THEME.warning} />
+          <Warning size={12} color={THEME.warning} />
           <span style={{ fontSize: 11, color: THEME.warning }}>{stats.conflict}</span>
         </div>
       )}

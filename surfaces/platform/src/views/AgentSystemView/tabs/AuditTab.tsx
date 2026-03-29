@@ -10,21 +10,21 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { 
-  History, 
-  Search, 
-  Filter, 
-  Download, 
+import {
+  ClockCounterClockwise,
+  MagnifyingGlass,
+  Funnel,
+  DownloadSimple,
   Calendar,
-  ChevronDown,
-  ChevronUp,
+  CaretDown,
+  CaretUp,
   FileText,
   Hash,
   User,
   Clock,
-  RefreshCw,
-  ArrowUpRight
-} from "lucide-react";
+  ArrowsClockwise,
+  ArrowUpRight,
+} from '@phosphor-icons/react';
 import { useUnifiedStore } from "@/lib/agents/unified.store";
 import type { LedgerEvent, ContextPack, Receipt } from "@/lib/agents";
 
@@ -149,7 +149,7 @@ export function AuditTab() {
                 gap: 8,
               }}
             >
-              <History size={18} />
+              <ClockCounterClockwise size={18} />
               Event Timeline
             </h3>
             <button
@@ -161,7 +161,7 @@ export function AuditTab() {
                 cursor: "pointer",
               }}
             >
-              <RefreshCw size={14} color="#888" />
+              <ArrowsClockwise size={14} color="#888" />
             </button>
           </div>
 
@@ -184,7 +184,7 @@ export function AuditTab() {
                 borderRadius: 6,
               }}
             >
-              <Search size={14} color="#888" />
+              <MagnifyingGlass size={14} color="#888" />
               <input
                 type="text"
                 value={searchQuery}
@@ -238,7 +238,7 @@ export function AuditTab() {
                 color: "#666",
               }}
             >
-              <History size={48} style={{ marginBottom: 16, opacity: 0.3 }} />
+              <ClockCounterClockwise size={48} style={{ marginBottom: 16, opacity: 0.3 }} />
               <p>No events found</p>
             </div>
           ) : (
@@ -287,7 +287,7 @@ export function AuditTab() {
               gap: 6,
             }}
           >
-            <Download size={14} />
+            <DownloadSimple size={14} />
             Export JSON
           </button>
           <button
@@ -307,7 +307,7 @@ export function AuditTab() {
               gap: 6,
             }}
           >
-            <Download size={14} />
+            <DownloadSimple size={14} />
             Export CSV
           </button>
         </div>
@@ -369,7 +369,7 @@ export function AuditTab() {
               color: "#666",
             }}
           >
-            <History size={64} style={{ marginBottom: 16, opacity: 0.3 }} />
+            <ClockCounterClockwise size={64} style={{ marginBottom: 16, opacity: 0.3 }} />
             <p>Select an event to view details</p>
           </div>
         )}
@@ -654,7 +654,7 @@ function ContextPackDetail({
             </div>
           </div>
         </div>
-        {isExpanded ? <ChevronUp size={16} color="#888" /> : <ChevronDown size={16} color="#888" />}
+        {isExpanded ? <CaretUp size={16} color="#888" /> : <CaretDown size={16} color="#888" />}
       </div>
 
       {isExpanded && (

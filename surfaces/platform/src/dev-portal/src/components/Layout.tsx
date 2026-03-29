@@ -1,29 +1,28 @@
 import { useState } from 'react';
 import { NavLink, Link } from 'react-router-dom';
-import { 
-  Home, 
-  BookOpen, 
-  Code2, 
-  LayoutTemplate, 
-  Upload,
-  Menu,
-  X,
-  Github,
-  Twitter,
-  ExternalLink,
-  ChevronRight
-} from 'lucide-react';
+import {
+  House,
+  BookOpen,
+  Code,
+  Browsers,
+  UploadSimple,
+  List,
+  GithubLogo as Github,
+  TwitterLogo as Twitter,
+  ArrowSquareOut,
+  CaretRight,
+} from '@phosphor-icons/react';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
 const navItems = [
-  { path: '/', label: 'Home', icon: Home },
+  { path: '/', label: 'Home', icon: House },
   { path: '/docs', label: 'Documentation', icon: BookOpen },
-  { path: '/api', label: 'API Explorer', icon: Code2 },
-  { path: '/templates', label: 'Templates', icon: LayoutTemplate },
-  { path: '/publish', label: 'Publish Guide', icon: Upload },
+  { path: '/api', label: 'API Explorer', icon: Code },
+  { path: '/templates', label: 'Templates', icon: Browsers },
+  { path: '/publish', label: 'Publish Guide', icon: UploadSimple },
 ];
 
 export default function Layout({ children }: LayoutProps) {
@@ -82,7 +81,7 @@ export default function Layout({ children }: LayoutProps) {
                   }
                 `}
               >
-                <Icon className="w-4 h-4" />
+                <Icon size={16} />
                 <span>{item.label}</span>
                 {item.path === '/publish' && (
                   <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-a2r-accent/20 text-a2r-accent">
@@ -105,7 +104,7 @@ export default function Layout({ children }: LayoutProps) {
                 rel="noopener noreferrer"
                 className="p-2 rounded-lg text-a2r-text-muted hover:text-a2r-text hover:bg-a2r-surface-hover transition-all"
               >
-                <Github className="w-4 h-4" />
+                <Github size={16} />
               </a>
               <a 
                 href="https://twitter.com/a2r" 
@@ -113,7 +112,7 @@ export default function Layout({ children }: LayoutProps) {
                 rel="noopener noreferrer"
                 className="p-2 rounded-lg text-a2r-text-muted hover:text-a2r-text hover:bg-a2r-surface-hover transition-all"
               >
-                <Twitter className="w-4 h-4" />
+                <Twitter size={16} />
               </a>
             </div>
           </div>
@@ -130,13 +129,13 @@ export default function Layout({ children }: LayoutProps) {
               onClick={() => setSidebarOpen(true)}
               className="lg:hidden p-2 -ml-2 rounded-lg text-a2r-text-secondary hover:text-a2r-text hover:bg-a2r-surface-hover transition-all"
             >
-              <Menu className="w-5 h-5" />
+              <List size={20} />
             </button>
 
             {/* Center: Breadcrumb (hidden on mobile) */}
             <div className="hidden lg:flex items-center gap-2 text-sm">
               <span className="text-a2r-text-muted">A2R Platform</span>
-              <ChevronRight className="w-4 h-4 text-a2r-text-muted" />
+              <CaretRight className="w-4 h-4 text-a2r-text-muted" />
               <span className="text-a2r-text">Developer Portal</span>
             </div>
 
@@ -149,7 +148,7 @@ export default function Layout({ children }: LayoutProps) {
                 className="hidden sm:flex items-center gap-2 px-4 py-2 text-sm text-a2r-text-secondary hover:text-a2r-text transition-colors"
               >
                 <span>Go to App</span>
-                <ExternalLink className="w-4 h-4" />
+                <ArrowSquareOut size={16} />
               </a>
               <a
                 href="https://a2r.dev"

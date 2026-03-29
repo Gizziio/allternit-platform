@@ -1,6 +1,9 @@
+'use client'
 import React, { useState, useRef, useEffect } from 'react';
+import { usePlatformSignOut } from '@/lib/platform-auth-client';
 import * as Popover from '@radix-ui/react-popover';
 import ReactDOM from 'react-dom';
+import { useResolvedTheme, useThemeStore } from '@/design/ThemeStore';
 import { 
   Gear, 
   SignOut, 
@@ -13,6 +16,7 @@ import {
   Gift,
   Info,
   CaretRight,
+  PuzzlePiece as Puzzle,
 } from '@phosphor-icons/react';
 
 interface MenuItem {
@@ -84,10 +88,10 @@ function SubmenuFlyout({
         left: position.left,
         top: position.top,
         minWidth: '180px',
-        backgroundColor: '#1f1f1f',
+        backgroundColor: 'var(--shell-menu-bg)',
         borderRadius: '10px',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+        border: '1px solid var(--shell-menu-border)',
+        boxShadow: 'var(--shadow-lg)',
         padding: '8px 0',
         zIndex: 100000,
         animation: 'submenuSlideIn 0.1s ease-out',
@@ -96,10 +100,10 @@ function SubmenuFlyout({
       {/* Submenu header */}
       <div style={{ 
         padding: '8px 16px 12px', 
-        borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+        borderBottom: '1px solid var(--shell-divider)',
         marginBottom: '6px'
       }}>
-        <span style={{ fontSize: '13px', fontWeight: 500, color: '#a0a0a0' }}>
+        <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--shell-item-muted)' }}>
           {title}
         </span>
       </div>
@@ -118,7 +122,7 @@ function SubmenuFlyout({
             justifyContent: 'space-between',
             padding: '8px 16px',
             fontSize: '14px',
-            color: '#e5e5e5',
+            color: 'var(--shell-item-fg)',
             background: 'transparent',
             border: 'none',
             cursor: 'pointer',
@@ -126,7 +130,7 @@ function SubmenuFlyout({
             transition: 'background-color 0.15s ease',
           }}
           onMouseEnter={(e) => { 
-            e.currentTarget.style.backgroundColor = '#2a2a2a'; 
+            e.currentTarget.style.backgroundColor = 'var(--shell-item-hover)'; 
           }}
           onMouseLeave={(e) => { 
             e.currentTarget.style.backgroundColor = 'transparent'; 
@@ -134,7 +138,7 @@ function SubmenuFlyout({
         >
           <span>{child.label}</span>
           {child.shortcut && (
-            <span style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace' }}>
+            <span style={{ fontSize: '12px', color: 'var(--shell-item-muted)', fontFamily: 'monospace' }}>
               {child.shortcut}
             </span>
           )}
@@ -146,12 +150,16 @@ function SubmenuFlyout({
 }
 
 export function SettingsDrilldown({ children }: { children?: React.ReactNode }) {
+  const signOut = usePlatformSignOut()
   const [open, setOpen] = useState(false);
-  const [isDark, setIsDark] = useState(true);
   const [activeSubmenuId, setActiveSubmenuId] = useState<string | null>(null);
   const [submenuAnchor, setSubmenuAnchor] = useState<DOMRect | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const submenuTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const themePreference = useThemeStore((state) => state.theme);
+  const setThemePreference = useThemeStore((state) => state.setTheme);
+  const resolvedTheme = useResolvedTheme(themePreference);
+  const isDark = resolvedTheme === 'dark';
 
   const handleOpenSettings = (section?: string) => {
     setOpen(false);
@@ -162,13 +170,13 @@ export function SettingsDrilldown({ children }: { children?: React.ReactNode }) 
   };
 
   const toggleTheme = () => {
-    setIsDark(!isDark);
+    setThemePreference(isDark ? 'light' : 'dark');
   };
 
   const handleLogout = () => {
     setOpen(false);
     setActiveSubmenuId(null);
-    window.dispatchEvent(new CustomEvent('a2r:logout'));
+    signOut({ redirectUrl: '/sign-in' });
   };
 
   // Submenu data
@@ -211,6 +219,22 @@ export function SettingsDrilldown({ children }: { children?: React.ReactNode }) 
       icon: isDark ? <Sun size={18} weight="regular" /> : <Moon size={18} weight="regular" />,
       onClick: toggleTheme 
     },
+    ...(process.env.NODE_ENV === 'development' ? [
+      { 
+        id: 'agentation', 
+        label: 'Agentation', 
+        icon: <Puzzle size={18} weight="regular" />,
+        onClick: () => {
+          const enabled = localStorage.getItem('a2r-agentation-enabled') === 'true';
+          localStorage.setItem('a2r-agentation-enabled', enabled ? 'false' : 'true');
+          window.dispatchEvent(new StorageEvent('storage', {
+            key: 'a2r-agentation-enabled',
+            newValue: enabled ? 'false' : 'true'
+          }));
+          location.reload();
+        }
+      } as MenuItem
+    ] : []),
     { 
       id: 'language', 
       label: 'Language', 
@@ -295,7 +319,7 @@ export function SettingsDrilldown({ children }: { children?: React.ReactNode }) 
   const SectionDivider = () => (
     <div style={{ 
       height: '1px', 
-      backgroundColor: 'rgba(255, 255, 255, 0.06)',
+      backgroundColor: 'var(--shell-divider)',
       margin: '6px 12px'
     }} />
   );
@@ -329,10 +353,10 @@ export function SettingsDrilldown({ children }: { children?: React.ReactNode }) 
             sideOffset={8}
             style={{
               minWidth: '240px',
-              backgroundColor: '#1f1f1f',
+              backgroundColor: 'var(--shell-menu-bg)',
               borderRadius: '10px',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+              border: '1px solid var(--shell-menu-border)',
+              boxShadow: 'var(--shadow-lg)',
               padding: '8px 0',
               zIndex: 9999,
             }}
@@ -400,8 +424,8 @@ function MenuItem({
         borderRadius: '6px',
         fontSize: '14px',
         fontWeight: 400,
-        color: item.id === 'logout' ? '#ef4444' : '#e5e5e5',
-        background: isActive ? '#2a2a2a' : 'transparent',
+        color: item.id === 'logout' ? 'var(--status-error)' : 'var(--shell-item-fg)',
+        background: isActive ? 'var(--shell-item-hover)' : 'transparent',
         border: 'none',
         cursor: 'pointer',
         textAlign: 'left',
@@ -410,7 +434,7 @@ function MenuItem({
       onMouseOver={(e) => {
         if (!isActive) {
           e.currentTarget.style.backgroundColor = 
-            item.id === 'logout' ? 'rgba(239, 68, 68, 0.1)' : '#2a2a2a';
+            item.id === 'logout' ? 'var(--shell-danger-soft-bg)' : 'var(--shell-item-hover)';
         }
       }}
       onMouseOut={(e) => {
@@ -419,18 +443,18 @@ function MenuItem({
         }
       }}
     >
-      <span style={{ color: '#a0a0a0', display: 'flex', alignItems: 'center' }}>
+      <span style={{ color: 'var(--shell-item-muted)', display: 'flex', alignItems: 'center' }}>
         {item.icon}
       </span>
       <span style={{ flex: 1 }}>{item.label}</span>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         {item.shortcut && !hasSubmenu && (
-          <span style={{ fontSize: '12px', color: '#666', fontFamily: 'monospace' }}>
+          <span style={{ fontSize: '12px', color: 'var(--shell-item-muted)', fontFamily: 'monospace' }}>
             {item.shortcut}
           </span>
         )}
         {hasSubmenu && (
-          <CaretRight size={14} color="#666" />
+          <CaretRight size={14} color="var(--shell-item-muted)" />
         )}
       </div>
     </button>

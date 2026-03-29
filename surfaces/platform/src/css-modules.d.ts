@@ -1,3 +1,8 @@
+/// <reference types="react" />
+
+import 'react';
+import type { HTMLAttributes } from 'react';
+
 declare module '*.module.css' {
   const classes: { [key: string]: string };
   export default classes;
@@ -20,4 +25,10 @@ declare module 'react' {
     jsx?: boolean;
     global?: boolean;
   }
+
+  interface CSSProperties {
+    WebkitAppRegion?: 'drag' | 'no-drag';
+  }
 }
+
+export {};

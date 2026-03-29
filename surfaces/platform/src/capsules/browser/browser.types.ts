@@ -41,7 +41,6 @@ export interface A2UITab extends BrowserTabBase {
   contentType: 'a2ui';
   payload: import('../a2ui/a2ui.types').A2UIPayload;
   source?: string; // Optional source identifier (e.g., agent ID)
-  isMockData?: boolean; // True if this UI was generated using mock data (kernel unavailable)
 }
 
 /** Miniapp tab - capsule-based miniapp */

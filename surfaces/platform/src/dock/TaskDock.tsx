@@ -3,16 +3,16 @@ import { useTicketStore } from './ticket.store';
 
 import { GlassSurface } from '../design/GlassSurface';
 import { tokens } from '../design/tokens';
-import { 
-  CheckCircle, 
-  CircleDashed, 
-  Play, 
-  X, 
-  Bug, 
-  Zap, 
+import {
+  CheckCircle,
+  CircleDashed,
+  Play,
+  X,
+  Bug,
+  Lightning,
   ArrowUpRight,
-  MoreVertical
-} from 'lucide-react';
+  DotsThreeVertical,
+} from '@phosphor-icons/react';
 
 type TaskDockVariant = 'floating' | 'panel';
 
@@ -72,7 +72,7 @@ export function TaskDock({
             justifyContent: 'center',
             boxShadow: '0 0 12px ' + tokens.colors.chat.primary + '40'
           }}>
-            <Zap size={18} className="fill-white text-white" />
+            <Lightning size={18} className="fill-white text-white" />
           </div>
           <div style={{ fontWeight: 800, fontSize: 15, letterSpacing: '-0.01em' }}>Task Dock</div>
           <div style={{ flex: 1 }} />
@@ -110,7 +110,7 @@ export function TaskDock({
                 <div style={{ flex: 1, fontWeight: 600, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: textColor }}>
                   {t.title}
                 </div>
-                <MoreVertical size={16} style={{ opacity: 0.4, color: mutedText }} />
+                <DotsThreeVertical size={16} style={{ opacity: 0.4, color: mutedText }} />
               </div>
               
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

@@ -23,7 +23,7 @@ export function FloatingModeSwitcher({ activeMode, onModeChange, onRailToggle, t
           padding: '4px',
           borderRadius: 999,
           border: '1px solid var(--border-subtle)',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
+          boxShadow: 'var(--shadow-lg)',
           background: 'var(--glass-bg-thick)',
           gap: 4
         }}
@@ -35,8 +35,8 @@ export function FloatingModeSwitcher({ activeMode, onModeChange, onRailToggle, t
         <div style={{ width: 1, height: 20, background: 'var(--border-subtle)' }} />
 
         <ModePill active={activeMode === 'chat'} onClick={() => onModeChange('chat')} icon={ChatText} label="Chat" color={tokens.colors.chat.primary} />
-        <ModePill active={activeMode === 'cowork'} onClick={() => onModeChange('cowork')} icon={UsersThree} label="Cowork" color="#af52de" />
-        <ModePill active={activeMode === 'code'} onClick={() => onModeChange('code')} icon={TerminalWindow} label="Code" color="#34c759" />
+        <ModePill active={activeMode === 'cowork'} onClick={() => onModeChange('cowork')} icon={UsersThree} label="Cowork" color="var(--accent-cowork)" />
+        <ModePill active={activeMode === 'code'} onClick={() => onModeChange('code')} icon={TerminalWindow} label="Code" color="var(--accent-code)" />
 
         <div style={{ width: 1, height: 20, background: 'var(--border-subtle)' }} />
 
@@ -60,7 +60,7 @@ function ModePill({ active, onClick, icon: Icon, label, color }: any) {
         borderRadius: 999,
         border: 'none',
         background: active ? color : 'transparent',
-        color: active ? 'white' : 'var(--text-tertiary)',
+        color: active ? 'var(--shell-control-active-fg)' : 'var(--text-tertiary)',
         cursor: 'pointer',
         transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
         fontSize: 13,

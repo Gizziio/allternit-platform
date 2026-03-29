@@ -10,7 +10,14 @@ import { BlockNoteEditor, PartialBlock } from "@blocknote/core";
 import { BlockNoteView } from "@blocknote/mantine";
 import { useCreateBlockNote } from "@blocknote/react";
 import "@blocknote/mantine/style.css";
-import { FileText, Edit3, Eye, Save, Share2, MoreHorizontal } from 'lucide-react';
+import {
+  FileText,
+  PencilSimple,
+  Eye,
+  FloppyDisk,
+  ShareNetwork,
+  DotsThreeOutline,
+} from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -159,7 +166,7 @@ export function A2RDocumentEditor({
                 className="text-sm font-medium text-[#ECECEC] hover:text-[#D4956A] transition-colors flex items-center gap-2"
               >
                 {documentTitle}
-                {!readOnly && <Edit3 className="w-3 h-3 opacity-50" />}
+                {!readOnly && <PencilSimple className="w-3 h-3 opacity-50" />}
               </button>
             )}
 
@@ -172,19 +179,19 @@ export function A2RDocumentEditor({
           <div className="flex items-center gap-2">
             {readOnly && (
               <span className="text-xs text-[#666] flex items-center gap-1">
-                <Eye className="w-3 h-3" />
+                <Eye size={12} />
                 Read-only
               </span>
             )}
             
             <Button variant="ghost" size="sm" className="h-7 text-[#888] hover:text-[#ECECEC]">
-              <Save className="w-4 h-4" />
+              <FloppyDisk size={16} />
             </Button>
             <Button variant="ghost" size="sm" className="h-7 text-[#888] hover:text-[#ECECEC]">
-              <Share2 className="w-4 h-4" />
+              <ShareNetwork size={16} />
             </Button>
             <Button variant="ghost" size="sm" className="h-7 text-[#888] hover:text-[#ECECEC]">
-              <MoreHorizontal className="w-4 h-4" />
+              <DotsThreeOutline size={16} />
             </Button>
           </div>
         </div>

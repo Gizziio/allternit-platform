@@ -18,16 +18,16 @@ import type {
 import {
   Terminal,
   FileText,
-  MousePointerClick,
+  Cursor as MousePointerClick,
   Camera,
   CheckCircle,
   Flag,
-  ChevronDown,
-  ChevronUp,
-  Loader2,
+  CaretDown,
+  CaretUp,
+  CircleNotch,
   Code,
   Eye,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 
 // ============================================================================
 // Work Block Types
@@ -112,9 +112,9 @@ const ActionBlock = memo(function ActionBlock({ event, isExpanded, onToggle }: B
         )}
       </div>
       {isExpanded ? (
-        <ChevronUp className="w-4 h-4 text-white/30" />
+        <CaretUp className="w-4 h-4 text-white/30" />
       ) : (
-        <ChevronDown className="w-4 h-4 text-white/30" />
+        <CaretDown className="w-4 h-4 text-white/30" />
       )}
     </div>
   );
@@ -152,9 +152,9 @@ const CommandBlock = memo(function CommandBlock({ event, isExpanded, onToggle }:
           </span>
         </div>
         {isExpanded ? (
-          <ChevronUp className="w-4 h-4 text-white/30" />
+          <CaretUp className="w-4 h-4 text-white/30" />
         ) : (
-          <ChevronDown className="w-4 h-4 text-white/30" />
+          <CaretDown className="w-4 h-4 text-white/30" />
         )}
       </div>
       
@@ -219,9 +219,9 @@ const FileBlock = memo(function FileBlock({ event, isExpanded, onToggle }: Block
           </span>
         </div>
         {isExpanded ? (
-          <ChevronUp className="w-4 h-4 text-white/30" />
+          <CaretUp className="w-4 h-4 text-white/30" />
         ) : (
-          <ChevronDown className="w-4 h-4 text-white/30" />
+          <CaretDown className="w-4 h-4 text-white/30" />
         )}
       </div>
       
@@ -277,9 +277,9 @@ const ObservationBlock = memo(function ObservationBlock({ event, isExpanded, onT
           )}
         </div>
         {isExpanded ? (
-          <ChevronUp className="w-4 h-4 text-white/30" />
+          <CaretUp className="w-4 h-4 text-white/30" />
         ) : (
-          <ChevronDown className="w-4 h-4 text-white/30" />
+          <CaretDown className="w-4 h-4 text-white/30" />
         )}
       </div>
       
@@ -362,9 +362,9 @@ const ToolBlock = memo(function ToolBlock({ event, isExpanded, onToggle }: Block
           </span>
         </div>
         {isExpanded ? (
-          <ChevronUp className="w-4 h-4 text-white/30" />
+          <CaretUp className="w-4 h-4 text-white/30" />
         ) : (
-          <ChevronDown className="w-4 h-4 text-white/30" />
+          <CaretDown className="w-4 h-4 text-white/30" />
         )}
       </div>
       

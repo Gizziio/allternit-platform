@@ -10,47 +10,47 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { 
-  ClipboardList, 
-  Play, 
-  CheckCircle, 
-  FileText, 
-  Zap, 
-  Globe, 
-  Bot, 
-  RefreshCw,
-  type LucideIcon
-} from 'lucide-react';
+import {
+  ClipboardText,
+  Play,
+  CheckCircle,
+  FileText,
+  Lightning,
+  Globe,
+  Robot,
+  ArrowsClockwise,
+} from '@phosphor-icons/react';
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { useAgentSurfaceModeStore, type AgentModeId } from '@/stores/agent-surface-mode.store';
 
 interface ModeTab {
   id: AgentModeId;
   label: string;
-  icon: LucideIcon;
+  icon: PhosphorIcon;
   description?: string;
 }
 
 // Top pills configuration (6 tabs)
 const TOP_PILLS: ModeTab[] = [
-  { id: 'plan', label: 'Plan', icon: ClipboardList, description: 'Define tasks and milestones' },
+  { id: 'plan', label: 'Plan', icon: ClipboardText, description: 'Define tasks and milestones' },
   { id: 'execute', label: 'Execute', icon: Play, description: 'Run tasks and workflows' },
   { id: 'review', label: 'Review', icon: CheckCircle, description: 'Review and approve work' },
-  { id: 'automate', label: 'Automate', icon: Zap, description: 'Automation and scheduling' },
+  { id: 'automate', label: 'Automate', icon: Lightning, description: 'Automation and scheduling' },
   { id: 'web', label: 'Web', icon: Globe, description: 'Web search and browsing' },
-  { id: 'agents', label: 'Agents', icon: Bot, description: 'Agent selection and config' },
+  { id: 'agents', label: 'Agents', icon: Robot, description: 'Agent selection and config' },
 ];
 
 // Bottom dock configuration (8 tabs)
 const BOTTOM_TABS: ModeTab[] = [
-  { id: 'plan', label: 'Plan', icon: ClipboardList },
+  { id: 'plan', label: 'Plan', icon: ClipboardText },
   { id: 'execute', label: 'Execute', icon: Play },
   { id: 'review', label: 'Review', icon: CheckCircle },
   { id: 'report', label: 'Report', icon: FileText },
-  { id: 'automate', label: 'Automate', icon: Zap },
+  { id: 'automate', label: 'Automate', icon: Lightning },
   { id: 'web', label: 'Web', icon: Globe },
-  { id: 'agents', label: 'Agents', icon: Bot },
-  { id: 'sync', label: 'Sync', icon: RefreshCw },
+  { id: 'agents', label: 'Agents', icon: Robot },
+  { id: 'sync', label: 'Sync', icon: ArrowsClockwise },
 ];
 
 interface CoworkModeTabsProps {
@@ -118,7 +118,7 @@ export function CoworkModeTabs({
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              <Icon className="w-4 h-4" />
+              <Icon size={16} />
               <span>{tab.label}</span>
               {isActive && (
                 <motion.div

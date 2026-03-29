@@ -31,36 +31,6 @@ interface GeneratedArtifact {
   fileType: 'typescript' | 'markdown';
 }
 
-const mockContextFiles: ContextFile[] = [
-  { name: 'src/views/code/CodeCanvas.tsx', language: 'TypeScript', lines: 928, type: 'typescript' },
-  { name: 'package.json', language: 'JSON', lines: 45, type: 'json' },
-  { name: 'src/shell/ShellApp.tsx', language: 'TypeScript', lines: 576, type: 'typescript' },
-  { name: 'README.md', language: 'Markdown', lines: 120, type: 'markdown' },
-];
-
-const mockArtifacts: GeneratedArtifact[] = [
-  {
-    name: 'refactored_CodeCanvas.tsx',
-    type: 'TypeScript',
-    lines: 950,
-    generatedTime: '2m ago',
-    fileType: 'typescript',
-  },
-  {
-    name: 'test_suite.test.ts',
-    type: 'TypeScript',
-    lines: 180,
-    generatedTime: '8m ago',
-    fileType: 'typescript',
-  },
-  {
-    name: 'MIGRATION_NOTES.md',
-    type: 'Markdown',
-    lines: 44,
-    generatedTime: '15m ago',
-    fileType: 'markdown',
-  },
-];
 
 const inspectorBodyStyle: React.CSSProperties = {
   flex: 1,
@@ -177,7 +147,7 @@ const getFileIcon = (type: 'typescript' | 'json' | 'markdown'): React.ReactNode 
 export function InspectorStack() {
   const activeRun = useRunnerStore((state) => state.activeRun);
   const [activeTab, setActiveTab] = useState<InspectorTab>('diff');
-  const [contextFiles, setContextFiles] = useState<ContextFile[]>(mockContextFiles);
+  const [contextFiles, setContextFiles] = useState<ContextFile[]>([]);
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'transparent' }}>
@@ -349,7 +319,7 @@ export function InspectorStack() {
             </div>
 
             <div style={listContainerStyle}>
-              {mockArtifacts.map((artifact, index) => (
+              {([] as GeneratedArtifact[]).map((artifact, index) => (
                 <GlassCard
                   key={index}
                   style={{

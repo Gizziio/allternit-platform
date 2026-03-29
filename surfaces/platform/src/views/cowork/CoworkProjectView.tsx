@@ -5,13 +5,13 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { 
+import {
   CheckSquare,
-  Bot,
-  Pencil,
-  Trash2,
-  MoreHorizontal,
-} from 'lucide-react';
+  Robot,
+  PencilSimple,
+  Trash,
+  DotsThreeOutline,
+} from '@phosphor-icons/react';
 import { useCoworkStore } from './CoworkStore';
 import { useNav } from '@/nav/useNav';
 import { 
@@ -183,7 +183,7 @@ export function CoworkProjectView({ projectId }: CoworkProjectViewProps) {
           textAlign: 'left',
         }}
       >
-        <Pencil size={16} />
+        <PencilSimple size={16} />
         Edit details
       </button>
       <button
@@ -223,7 +223,7 @@ export function CoworkProjectView({ projectId }: CoworkProjectViewProps) {
           textAlign: 'left',
         }}
       >
-        <Trash2 size={16} />
+        <Trash size={16} />
         Delete
       </button>
     </ProjectMenuButton>
@@ -472,7 +472,7 @@ function TaskCard({ task, isActive, onClick, onRename, onDelete, isAgent }: Task
         color: '#9b9b9b',
         flexShrink: 0,
       }}>
-        {isAgent ? <Bot size={18} /> : <CheckSquare size={18} />}
+        {isAgent ? <Robot size={18} /> : <CheckSquare size={18} />}
       </div>
       
       {/* Content */}
@@ -516,7 +516,7 @@ function TaskCard({ task, isActive, onClick, onRename, onDelete, isAgent }: Task
             justifyContent: 'center',
           }}
         >
-          <MoreHorizontal size={16} />
+          <DotsThreeOutline size={16} />
         </button>
         
         {showMenu && (
@@ -566,7 +566,7 @@ function TaskCard({ task, isActive, onClick, onRename, onDelete, isAgent }: Task
                 onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
-                <Pencil size={14} />
+                <PencilSimple size={14} />
                 Rename
               </button>
               <button
@@ -590,7 +590,7 @@ function TaskCard({ task, isActive, onClick, onRename, onDelete, isAgent }: Task
                 onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239,68,68,0.1)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
-                <Trash2 size={14} />
+                <Trash size={14} />
                 Delete
               </button>
             </div>

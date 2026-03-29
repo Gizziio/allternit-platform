@@ -12,19 +12,19 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   GitBranch,
-  ArrowRightLeft,
+  ArrowsLeftRight as ArrowRightLeft,
   Check,
   X,
-  Loader2,
+  CircleNotch,
   Play,
-  RotateCcw,
-  AlertTriangle,
+  ArrowCounterClockwise,
+  Warning,
   ArrowRight,
   Shield,
   Clock,
-  Activity,
-  Server,
-} from 'lucide-react';
+  Pulse as Activity,
+  HardDrives,
+} from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -210,7 +210,7 @@ export function BlueGreenDeploy({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="font-semibold flex items-center gap-2">
-            <GitBranch className="w-4 h-4" />
+            <GitBranch size={16} />
             Blue-Green Deployment
           </h3>
           <p className="text-xs text-muted-foreground">
@@ -239,7 +239,7 @@ export function BlueGreenDeploy({
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="flex items-center gap-2 text-sm">
-              <Server className="w-4 h-4 text-muted-foreground" />
+              <HardDrives className="w-4 h-4 text-muted-foreground" />
               <span>{blueEnv.name}</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
@@ -280,7 +280,7 @@ export function BlueGreenDeploy({
             {greenEnv ? (
               <>
                 <div className="flex items-center gap-2 text-sm">
-                  <Server className="w-4 h-4 text-muted-foreground" />
+                  <HardDrives className="w-4 h-4 text-muted-foreground" />
                   <span>{greenEnv.name}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
@@ -345,7 +345,7 @@ export function BlueGreenDeploy({
       <div className="flex gap-2">
         {phase === 'idle' && (
           <Button onClick={startDeployment} className="flex-1 gap-2">
-            <Play className="w-4 h-4" />
+            <Play size={16} />
             Start Blue-Green Deployment
           </Button>
         )}
@@ -353,11 +353,11 @@ export function BlueGreenDeploy({
         {phase === 'ready-to-switch' && (
           <>
             <Button variant="outline" onClick={rollback} className="gap-2">
-              <RotateCcw className="w-4 h-4" />
+              <ArrowCounterClockwise size={16} />
               Cancel
             </Button>
             <Button onClick={switchTraffic} className="flex-1 gap-2">
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight size={16} />
               Switch Traffic to Green
             </Button>
           </>
@@ -366,11 +366,11 @@ export function BlueGreenDeploy({
         {phase === 'completed' && (
           <>
             <Button variant="outline" onClick={rollback} className="gap-2">
-              <RotateCcw className="w-4 h-4" />
+              <ArrowCounterClockwise size={16} />
               Rollback to Blue
             </Button>
             <Button variant="default" className="flex-1 gap-2" disabled>
-              <Check className="w-4 h-4" />
+              <Check size={16} />
               Deployment Complete
             </Button>
           </>
@@ -432,7 +432,7 @@ export function BlueGreenDeploy({
             {phase === 'ready-to-switch' && (
               <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/30 text-sm">
                 <div className="flex items-center gap-2 text-green-700">
-                  <Check className="w-4 h-4" />
+                  <Check size={16} />
                   <span>Green environment is healthy and ready for traffic</span>
                 </div>
               </div>
@@ -458,7 +458,7 @@ export function BlueGreenDeploy({
               </Button>
             ) : (
               <Button disabled>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <CircleNotch className="w-4 h-4 mr-2 animate-spin" />
                 {getPhaseLabel(phase)}...
               </Button>
             )}

@@ -4,6 +4,7 @@ import {
 } from "@ai-sdk/mcp";
 import type {
   ListPromptsResult,
+  ListResourceTemplatesResult,
   ListResourcesResult,
 } from "@modelcontextprotocol/sdk/types.js";
 import type { Tool } from "ai";
@@ -15,10 +16,18 @@ import {
   McpOAuthClientProvider,
   OAuthAuthorizationRequiredError,
 } from "./mcp-oauth-provider";
+import { MCP_APPS_CLIENT_CAPABILITIES } from "./apps";
 
 const log = createModuleLogger("mcp-client");
 
 type McpClientInstance = Awaited<ReturnType<typeof createMCPClient>>;
+type McpListToolsResult = Awaited<ReturnType<McpClientInstance["listTools"]>>;
+type McpReadResourceResult = Awaited<
+  ReturnType<McpClientInstance["readResource"]>
+>;
+type McpListResourceTemplatesResult = Awaited<
+  ReturnType<McpClientInstance["listResourceTemplates"]>
+>;
 
 type McpClientStatus =
   | "disconnected"
@@ -114,6 +123,7 @@ export class MCPClient {
           headers: this.serverConfig.headers,
           authProvider: this.oauthProvider,
         },
+        capabilities: MCP_APPS_CLIENT_CAPABILITIES,
       });
 
       this._status = "connected";
@@ -227,14 +237,89 @@ export class MCPClient {
   }
 
   /**
-   * List resources from the MCP server.
+   * List raw MCP tool definitions, including server-provided metadata.
    */
-  async listResources(): Promise<ListResourcesResult> {
+  async listTools(params?: { cursor?: string }): Promise<McpListToolsResult> {
     if (!this.client) {
       throw new Error("Client not connected");
     }
     try {
-      return await this.client.listResources();
+      return await this.client.listTools({ params });
+    } catch (error) {
+      this.handlePotentialAuthError(error);
+      throw error;
+    }
+  }
+
+  /**
+   * Call a server-side MCP tool directly.
+   */
+  async callTool(
+    name: string,
+    args: Record<string, unknown> = {},
+    definitions?: McpListToolsResult
+  ): Promise<unknown> {
+    if (!this.client) {
+      throw new Error("Client not connected");
+    }
+
+    try {
+      const resolvedDefinitions = definitions ?? (await this.client.listTools());
+      const tools = this.client.toolsFromDefinitions(resolvedDefinitions);
+      const tool = tools[name];
+
+      if (!tool?.execute) {
+        throw new Error(`MCP tool "${name}" is not available`);
+      }
+
+      type ToolExecutionContext = Parameters<NonNullable<typeof tool.execute>>[1];
+
+      return await tool.execute(args, {} as ToolExecutionContext);
+    } catch (error) {
+      this.handlePotentialAuthError(error);
+      throw error;
+    }
+  }
+
+  /**
+   * List resources from the MCP server.
+   */
+  async listResources(params?: { cursor?: string }): Promise<ListResourcesResult> {
+    if (!this.client) {
+      throw new Error("Client not connected");
+    }
+    try {
+      return await this.client.listResources({ params });
+    } catch (error) {
+      this.handlePotentialAuthError(error);
+      throw error;
+    }
+  }
+
+  /**
+   * List resource templates from the MCP server.
+   */
+  async listResourceTemplates(): Promise<McpListResourceTemplatesResult> {
+    if (!this.client) {
+      throw new Error("Client not connected");
+    }
+    try {
+      return await this.client.listResourceTemplates();
+    } catch (error) {
+      this.handlePotentialAuthError(error);
+      throw error;
+    }
+  }
+
+  /**
+   * Read a resource payload from the MCP server.
+   */
+  async readResource(uri: string): Promise<McpReadResourceResult> {
+    if (!this.client) {
+      throw new Error("Client not connected");
+    }
+    try {
+      return await this.client.readResource({ uri });
     } catch (error) {
       this.handlePotentialAuthError(error);
       throw error;
@@ -244,15 +329,19 @@ export class MCPClient {
   /**
    * List prompts from the MCP server.
    */
-  async listPrompts(): Promise<ListPromptsResult> {
+  async listPrompts(params?: { cursor?: string }): Promise<ListPromptsResult> {
     if (!this.client) {
       throw new Error("Client not connected");
     }
     try {
       // experimental_listPrompts may not be available in all versions
-      const client = this.client as unknown as { experimental_listPrompts?: () => Promise<ListPromptsResult> };
+      const client = this.client as unknown as {
+        experimental_listPrompts?: (options?: {
+          params?: { cursor?: string };
+        }) => Promise<ListPromptsResult>;
+      };
       if (client.experimental_listPrompts) {
-        return await client.experimental_listPrompts();
+        return await client.experimental_listPrompts({ params });
       }
       // Return empty result if not available
       return { prompts: [] };

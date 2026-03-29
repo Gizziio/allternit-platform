@@ -15,28 +15,28 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import {
-  Bold,
-  Italic,
-  Underline,
-  Strikethrough,
-  Heading1,
-  Heading2,
+  TextB,
+  TextItalic,
+  TextUnderline,
+  TextStrikethrough,
+  TextHOne,
+  TextHTwo,
   Code,
-  Quote,
+  Quotes,
   List,
-  ListOrdered,
+  ListNumbers,
   Link,
   Image,
   Table,
-  ChevronRight,
-  ChevronDown,
-  Search,
-  GripVertical,
+  CaretRight,
+  CaretDown,
+  MagnifyingGlass,
+  DotsSixVertical,
   Clock,
-  CheckCircle2,
-  AlertCircle,
-  Loader2,
-} from "lucide-react";
+  CheckCircle,
+  Warning,
+  CircleNotch,
+} from '@phosphor-icons/react';
 
 import type {
   RichTextProps,
@@ -113,62 +113,62 @@ export function RichTextRenderer({
     { icon: React.ReactNode; action: () => void; label: string }
   > = {
     bold: {
-      icon: <Bold className="h-4 w-4" />,
+      icon: <TextB size={16} />,
       action: () => insertMarkdown("**", "**"),
       label: "Bold",
     },
     italic: {
-      icon: <Italic className="h-4 w-4" />,
+      icon: <TextItalic size={16} />,
       action: () => insertMarkdown("*", "*"),
       label: "Italic",
     },
     underline: {
-      icon: <Underline className="h-4 w-4" />,
+      icon: <TextUnderline size={16} />,
       action: () => insertMarkdown("<u>", "</u>"),
       label: "Underline",
     },
     strikethrough: {
-      icon: <Strikethrough className="h-4 w-4" />,
+      icon: <TextStrikethrough size={16} />,
       action: () => insertMarkdown("~~", "~~"),
       label: "Strikethrough",
     },
     heading: {
-      icon: <Heading1 className="h-4 w-4" />,
+      icon: <TextHOne size={16} />,
       action: () => insertMarkdown("# ", ""),
       label: "Heading",
     },
     code: {
-      icon: <Code className="h-4 w-4" />,
+      icon: <Code size={16} />,
       action: () => insertMarkdown("`", "`"),
       label: "Code",
     },
     quote: {
-      icon: <Quote className="h-4 w-4" />,
+      icon: <Quotes size={16} />,
       action: () => insertMarkdown("> ", ""),
       label: "Quote",
     },
     "unordered-list": {
-      icon: <List className="h-4 w-4" />,
+      icon: <List size={16} />,
       action: () => insertMarkdown("- ", ""),
       label: "Unordered List",
     },
     "ordered-list": {
-      icon: <ListOrdered className="h-4 w-4" />,
+      icon: <ListNumbers size={16} />,
       action: () => insertMarkdown("1. ", ""),
       label: "Ordered List",
     },
     link: {
-      icon: <Link className="h-4 w-4" />,
+      icon: <Link size={16} />,
       action: () => insertMarkdown("[", "](url)"),
       label: "Link",
     },
     image: {
-      icon: <Image className="h-4 w-4" />,
+      icon: <Image size={16} />,
       action: () => insertMarkdown("![alt text](", ")"),
       label: "Image",
     },
     table: {
-      icon: <Table className="h-4 w-4" />,
+      icon: <Table size={16} />,
       action: () =>
         insertMarkdown(
           "| Header 1 | Header 2 |\\n|----------|----------|\\n| Cell 1 | Cell 2 |",
@@ -198,7 +198,7 @@ export function RichTextRenderer({
                 key={item}
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8"
+                size={32}
                 onClick={button.action}
                 disabled={isDisabled}
                 title={button.label}
@@ -308,9 +308,9 @@ function TreeNodeItem({
             className="p-0.5 rounded hover:bg-muted"
           >
             {isExpanded ? (
-              <ChevronDown className="h-4 w-4" />
+              <CaretDown size={16} />
             ) : (
-              <ChevronRight className="h-4 w-4" />
+              <CaretRight size={16} />
             )}
           </button>
         ) : (
@@ -438,7 +438,7 @@ export function TreeViewRenderer({
       {props.searchable && (
         <div className="p-2 border-b">
           <div className="relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <MagnifyingGlass className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder={props.searchPlaceholder || "Search..."}
               value={searchQuery}
@@ -569,10 +569,10 @@ export function SplitPaneRenderer({
 
 const statusIcons: Record<string, React.ReactNode> = {
   pending: <div className="w-3 h-3 rounded-full border-2 border-muted-foreground" />,
-  active: <Loader2 className="w-4 h-4 animate-spin text-primary" />,
-  completed: <CheckCircle2 className="w-4 h-4 text-green-500" />,
-  error: <AlertCircle className="w-4 h-4 text-destructive" />,
-  warning: <AlertCircle className="w-4 h-4 text-yellow-500" />,
+  active: <CircleNotch className="w-4 h-4 animate-spin text-primary" />,
+  completed: <CheckCircle className="w-4 h-4 text-green-500" />,
+  error: <Warning className="w-4 h-4 text-destructive" />,
+  warning: <Warning className="w-4 h-4 text-yellow-500" />,
 };
 
 const statusColors: Record<string, string> = {
@@ -679,7 +679,7 @@ export function TimelineRenderer({
             )}
             {item.timestamp && (
               <div className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-                <Clock className="w-3 h-3" />
+                <Clock size={12} />
                 {format(parseISO(item.timestamp), "PPp")}
               </div>
             )}
@@ -706,7 +706,7 @@ export function TimelineRenderer({
 
       {isLoading && (
         <div className="flex items-center gap-2 text-muted-foreground">
-          <Loader2 className="w-4 h-4 animate-spin" />
+          <CircleNotch className="w-4 h-4 animate-spin" />
           <span className="text-sm">Loading more...</span>
         </div>
       )}

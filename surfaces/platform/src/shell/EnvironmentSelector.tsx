@@ -1,67 +1,61 @@
 /**
  * EnvironmentSelector - Runtime target switcher
- * 
- * Small dropdown in header showing active execution target.
- * Switch ONLY (not configuration - that's in Control Center).
- * 
- * Targets:
- * - Cloud (hosted)
- * - BYOC VPS (customer execution plane)
- * - Hybrid (cloud + VPS)
- * 
- * "Manage..." link opens Control Center → Compute & Runtimes
+ *
+ * Small dropdown in header showing the active execution target.
+ * This is now backed by the persisted runtime backend API instead of
+ * the legacy in-memory environment service.
  */
 
 "use client";
 
-import React, { useState, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Desktop,
   Cloud,
-  Server,
+  HardDrives,
   CloudSun,
-  ChevronDown,
-  Settings,
+  CaretDown,
+  GearSix,
   Check,
-  Cpu,
-  Activity,
-  HardDrive,
-} from 'lucide-react';
-import { GlassSurface } from '@/design/GlassSurface';
+  Pulse as Activity,
+} from "@phosphor-icons/react";
+import { GlassSurface } from "@/design/GlassSurface";
 import {
-  getEnvironmentManager,
-  EnvironmentTarget,
-  EnvironmentType,
-} from '@/capsules/browser/environmentService';
-import { getObservabilityService } from '@/capsules/browser/observabilityService';
+  runtimeBackendApi,
+  type RuntimeBackendMode,
+  type RuntimeBackendResponse,
+} from "@/api/infrastructure/runtime-backend";
+import {
+  loadRuntimeBackendSnapshot,
+  subscribeRuntimeBackendSnapshot,
+} from "@/lib/runtime-backend-client";
 
-// Re-export types for consumers of this component
-export type { EnvironmentTarget, EnvironmentType };
+export type EnvironmentType = RuntimeBackendMode;
 
-// ============================================================================
-// Props
-// ============================================================================
+export interface EnvironmentTarget {
+  id: string;
+  type: EnvironmentType;
+  name: string;
+  description: string;
+  status: "active" | "inactive" | "degraded" | "provisioning";
+  region?: string;
+  instances?: number;
+  cpuUsage?: number;
+  memoryUsage?: number;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface EnvironmentSelectorProps {
-  // Current environment
-  currentEnvironment: EnvironmentType;
-  
-  // Available environments
+  currentEnvironment?: EnvironmentType;
   environments?: EnvironmentTarget[];
-  
-  // Callbacks
   onEnvironmentChange?: (env: EnvironmentType) => void;
   onOpenControlCenter?: () => void;
-  
-  // Styling
   className?: string;
 }
 
-// ============================================================================
-// Component
-// ============================================================================
-
 export function EnvironmentSelector({
-  currentEnvironment,
+  currentEnvironment = "local",
   environments = [],
   onEnvironmentChange,
   onOpenControlCenter,
@@ -69,206 +63,194 @@ export function EnvironmentSelector({
 }: EnvironmentSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [internalEnvs, setInternalEnvs] = useState<EnvironmentTarget[]>([]);
+  const [internalEnvs, setInternalEnvs] = useState<EnvironmentTarget[]>([
+    getDefaultEnvironment(currentEnvironment),
+  ]);
+  const [runtimeBackend, setRuntimeBackend] = useState<RuntimeBackendResponse | null>(null);
+  const [selectedEnvironment, setSelectedEnvironment] =
+    useState<EnvironmentType>(currentEnvironment);
 
-  // Load environments from backend on mount
-  React.useEffect(() => {
-    const envManager = getEnvironmentManager();
-    envManager.getEnvironments().then(envs => {
-      setInternalEnvs(envs);
-    });
+  const refreshRuntime = useCallback(async () => {
+    const runtime = await runtimeBackendApi.get();
+    setRuntimeBackend(runtime);
+    setSelectedEnvironment(runtime.mode);
+    setInternalEnvs(mapRuntimeBackendToEnvironments(runtime));
+    return runtime;
   }, []);
 
-  // Use internal environments if none provided
+  useEffect(() => {
+    loadRuntimeBackendSnapshot().catch(() => null);
+    refreshRuntime().catch((error) => {
+      console.error("Failed to load runtime environments:", error);
+    });
+
+    return subscribeRuntimeBackendSnapshot(() => {
+      refreshRuntime().catch(() => null);
+    });
+  }, [refreshRuntime]);
+
+  useEffect(() => {
+    if (!runtimeBackend) {
+      setSelectedEnvironment(currentEnvironment);
+    }
+  }, [currentEnvironment, runtimeBackend]);
+
   const envList = environments.length > 0 ? environments : internalEnvs;
+  const currentEnv = useMemo(
+    () =>
+      envList.find((env) => env.type === selectedEnvironment) ||
+      getDefaultEnvironment(selectedEnvironment),
+    [envList, selectedEnvironment],
+  );
 
-  // Get current environment info
-  const currentEnv = environments.find((e) => e.type === currentEnvironment) || getDefaultEnvironment(currentEnvironment);
-
-  // Handle selection
   const handleSelect = useCallback(
     async (type: EnvironmentType) => {
       setIsLoading(true);
-      
+
       try {
-        // Switch environment via backend
-        const envManager = getEnvironmentManager();
-        await envManager.switchEnvironment(type);
-        
-        // Log to observability
-        const obs = getObservabilityService();
-        await obs.log({
-          event_type: 'environment.switch',
-          severity: 'info',
-          source: 'EnvironmentSelector',
-          message: `Switched environment to: ${type}`,
-          payload: {
-            previousEnvironment: currentEnvironment,
-            newEnvironment: type,
-          },
-        });
-        
-        // Update parent component
-        onEnvironmentChange?.(type);
+        let updatedRuntime: RuntimeBackendResponse;
+
+        if (type === "local") {
+          updatedRuntime = await runtimeBackendApi.activateLocal();
+        } else if (type === "byoc-vps") {
+          const backendTargetId =
+            runtimeBackend?.active_backend?.id ||
+            runtimeBackend?.available_backends?.[0]?.id;
+
+          if (!backendTargetId) {
+            throw new Error("No BYOC backend is available yet");
+          }
+
+          updatedRuntime = await runtimeBackendApi.setBackend({
+            mode: "byoc-vps",
+            fallbackMode: "local",
+            backendTargetId,
+          });
+        } else {
+          updatedRuntime = await runtimeBackendApi.setBackend({
+            mode: type,
+            fallbackMode: "local",
+          });
+        }
+
+        setRuntimeBackend(updatedRuntime);
+        setSelectedEnvironment(updatedRuntime.mode);
+        setInternalEnvs(mapRuntimeBackendToEnvironments(updatedRuntime));
+        onEnvironmentChange?.(updatedRuntime.mode);
         setIsOpen(false);
-        
-        // Refresh environments
-        const updatedEnvs = await envManager.getEnvironments();
-        setInternalEnvs(updatedEnvs);
       } catch (error) {
-        console.error('Failed to switch environment:', error);
-        
-        // Log error
-        const obs = getObservabilityService();
-        await obs.log({
-          event_type: 'environment.switch.error',
-          severity: 'error',
-          source: 'EnvironmentSelector',
-          message: `Failed to switch environment: ${error}`,
-          payload: {
-            targetEnvironment: type,
-          },
-        });
+        console.error("Failed to switch environment:", error);
       } finally {
         setIsLoading(false);
       }
     },
-    [onEnvironmentChange, currentEnvironment]
+    [onEnvironmentChange, runtimeBackend],
   );
 
-  // Get environment icon
   const getEnvironmentIcon = (type: EnvironmentType) => {
     switch (type) {
-      case 'cloud':
+      case "local":
+        return Desktop;
+      case "cloud":
         return Cloud;
-      case 'byoc-vps':
-        return Server;
-      case 'hybrid':
+      case "byoc-vps":
+        return HardDrives;
+      case "hybrid":
         return CloudSun;
       default:
         return Cloud;
     }
   };
 
-  // Get environment color
   const getEnvironmentColor = (type: EnvironmentType) => {
     switch (type) {
-      case 'cloud':
-        return 'text-blue-500';
-      case 'byoc-vps':
-        return 'text-purple-500';
-      case 'hybrid':
-        return 'text-orange-500';
+      case "local":
+        return "text-emerald-500";
+      case "cloud":
+        return "text-blue-500";
+      case "byoc-vps":
+        return "text-purple-500";
+      case "hybrid":
+        return "text-orange-500";
       default:
-        return 'text-muted-foreground';
+        return "text-muted-foreground";
     }
   };
 
-  const CurrentIcon = getEnvironmentIcon(currentEnvironment);
+  const CurrentIcon = getEnvironmentIcon(selectedEnvironment);
 
   return (
-    <div className={`relative ${className || ''}`}>
-      {/* Selector Button */}
+    <div className={`relative ${className || ""}`}>
       <button
         onClick={() => setIsOpen(!isOpen)}
         disabled={isLoading}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg
-          bg-secondary/50 hover:bg-secondary
-          border border-border/50
-          transition-colors
-          text-sm
-          disabled:opacity-50"
+        className="flex items-center gap-2 rounded-lg border border-border/50 bg-secondary/50 px-3 py-1.5 text-sm transition-colors hover:bg-secondary disabled:opacity-50"
       >
         {isLoading ? (
-          <Activity className="w-4 h-4 animate-spin text-blue-500" />
+          <Activity className="h-4 w-4 animate-spin text-blue-500" />
         ) : (
-          <CurrentIcon className={`w-4 h-4 ${getEnvironmentColor(currentEnvironment)}`} />
+          <CurrentIcon
+            className={`h-4 w-4 ${getEnvironmentColor(selectedEnvironment)}`}
+          />
         )}
         <span className="font-medium">{currentEnv.name}</span>
-        <ChevronDown className="w-3 h-3 opacity-50" />
+        <CaretDown className="h-3 w-3 opacity-50" />
       </button>
 
-      {/* Dropdown Menu */}
       {isOpen && (
         <>
-          {/* Backdrop to close */}
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => setIsOpen(false)}
-          />
+          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
 
-          {/* Menu */}
           <GlassSurface
             intensity="thick"
-            className="absolute top-full left-0 mt-2 w-80 z-50
-              rounded-xl border border-border
-              shadow-xl overflow-hidden"
+            className="absolute left-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-xl border border-border shadow-xl"
             style={{
-              background: 'var(--glass-bg-thick)',
+              background: "var(--glass-bg-thick)",
             }}
           >
-            {/* Header */}
-            <div className="px-4 py-3 border-b border-border bg-secondary/30">
+            <div className="border-b border-border bg-secondary/30 px-4 py-3">
               <h4 className="text-sm font-semibold">Runtime Environment</h4>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <p className="mt-0.5 text-xs text-muted-foreground">
                 Select execution target
               </p>
             </div>
 
-            {/* Environment List */}
             <div className="py-2">
               {envList.length > 0 ? (
                 envList.map((env) => {
                   const Icon = getEnvironmentIcon(env.type);
-                  const isSelected = env.type === currentEnvironment;
+                  const isSelected = env.type === selectedEnvironment;
 
                   return (
                     <button
-                      key={env.type}
+                      key={env.id}
                       onClick={() => handleSelect(env.type)}
                       disabled={isLoading}
-                      className={`
-                        w-full px-4 py-3 flex items-start gap-3
-                        hover:bg-accent/10
-                        transition-colors
-                        ${isSelected ? 'bg-accent/5' : ''}
-                        ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}
-                      `}
+                      className={`w-full px-4 py-3 flex items-start gap-3 transition-colors hover:bg-accent/10 ${
+                        isSelected ? "bg-accent/5" : ""
+                      } ${isLoading ? "cursor-not-allowed opacity-50" : ""}`}
                     >
                       <div className="flex-shrink-0">
-                        <Icon className={`w-5 h-5 ${getEnvironmentColor(env.type)}`} />
+                        <Icon className={`h-5 w-5 ${getEnvironmentColor(env.type)}`} />
                       </div>
                       <div className="flex-1 text-left">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium">{env.name}</span>
-                          {isSelected && (
-                            <Check className="w-4 h-4 text-green-500" />
-                          )}
+                          {isSelected && <Check className="h-4 w-4 text-green-500" />}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">
+                        <p className="mt-0.5 text-xs text-muted-foreground">
                           {env.description}
                         </p>
-                        {(env.region || env.instances !== undefined || env.cpuUsage !== undefined) && (
-                          <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                            {env.region && (
-                              <span>{env.region}</span>
-                            )}
-                            {env.instances !== undefined && (
-                              <span>{env.instances} instances</span>
-                            )}
-                            {env.cpuUsage !== undefined && (
-                              <span>CPU {env.cpuUsage}%</span>
-                            )}
-                          </div>
-                        )}
-                        <div className="flex items-center gap-1 mt-1.5">
+                        <div className="mt-1.5 flex items-center gap-1">
                           <div
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              env.status === 'active'
-                                ? 'bg-green-500'
-                                : env.status === 'degraded'
-                                ? 'bg-yellow-500'
-                                : 'bg-gray-500'
+                            className={`h-1.5 w-1.5 rounded-full ${
+                              env.status === "active"
+                                ? "bg-green-500"
+                                : env.status === "degraded"
+                                  ? "bg-yellow-500"
+                                  : env.status === "provisioning"
+                                    ? "bg-blue-500"
+                                    : "bg-gray-500"
                             }`}
                           />
                           <span className="text-xs capitalize">{env.status}</span>
@@ -279,24 +261,18 @@ export function EnvironmentSelector({
                 })
               ) : (
                 <div className="px-4 py-8 text-center text-muted-foreground">
-                  <Cloud className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <Cloud className="mx-auto mb-2 h-8 w-8 opacity-50" />
                   <p className="text-sm">No environments configured</p>
                 </div>
               )}
             </div>
 
-            {/* Footer */}
-            <div className="px-4 py-3 border-t border-border bg-secondary/30">
+            <div className="border-t border-border bg-secondary/30 px-4 py-3">
               <button
                 onClick={onOpenControlCenter}
-                className="w-full flex items-center justify-center gap-2
-                  px-4 py-2 rounded-lg
-                  bg-accent/20 text-accent
-                  hover:bg-accent/30
-                  transition-colors
-                  text-sm font-medium"
+                className="w-full flex items-center justify-center gap-2 rounded-lg bg-accent/20 px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/30"
               >
-                <Settings className="w-4 h-4" />
+                <GearSix size={16} />
                 <span>Manage Environments</span>
               </button>
             </div>
@@ -307,67 +283,124 @@ export function EnvironmentSelector({
   );
 }
 
-// ============================================================================
-// Helper Functions
-// ============================================================================
-
 function getDefaultEnvironment(type: EnvironmentType): EnvironmentTarget {
+  const now = new Date().toISOString();
+
   switch (type) {
-    case 'cloud':
+    case "local":
       return {
-        id: 'cloud-default',
-        type: 'cloud',
-        name: 'A2R Cloud',
-        description: 'Hosted execution plane',
-        status: 'active',
-        region: 'us-east-1',
-        instances: 3,
-        cpuUsage: 45,
-        memoryUsage: 62,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        id: "local-default",
+        type: "local",
+        name: "This Device",
+        description: "Use the desktop-local backend",
+        status: "active",
+        createdAt: now,
+        updatedAt: now,
       };
-    case 'byoc-vps':
+    case "cloud":
       return {
-        id: 'byoc-default',
-        type: 'byoc-vps',
-        name: 'BYOC VPS',
-        description: 'Your infrastructure',
-        status: 'inactive',
-        region: 'Custom',
-        instances: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        id: "cloud-default",
+        type: "cloud",
+        name: "A2R Cloud",
+        description: "Hosted execution plane",
+        status: "inactive",
+        createdAt: now,
+        updatedAt: now,
       };
-    case 'hybrid':
+    case "byoc-vps":
       return {
-        id: 'hybrid-default',
-        type: 'hybrid',
-        name: 'Hybrid',
-        description: 'Cloud + VPS combined',
-        status: 'inactive',
-        region: 'Multi-region',
-        instances: 3,
-        cpuUsage: 52,
-        memoryUsage: 68,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        id: "byoc-default",
+        type: "byoc-vps",
+        name: "BYOC VPS",
+        description: "Connect and install a backend on your VPS",
+        status: "inactive",
+        createdAt: now,
+        updatedAt: now,
+      };
+    case "hybrid":
+      return {
+        id: "hybrid-default",
+        type: "hybrid",
+        name: "Hybrid",
+        description: "Cloud + VPS combined",
+        status: "inactive",
+        createdAt: now,
+        updatedAt: now,
       };
     default:
       return {
-        id: 'unknown',
-        type: 'cloud',
-        name: 'Unknown',
-        description: 'Unknown environment',
-        status: 'inactive',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        id: "unknown",
+        type: "local",
+        name: "Unknown",
+        description: "Unknown environment",
+        status: "inactive",
+        createdAt: now,
+        updatedAt: now,
       };
   }
 }
 
-// ============================================================================
-// Default Export
-// ============================================================================
+function mapRemoteStatus(
+  runtime: RuntimeBackendResponse,
+  target?: RuntimeBackendResponse["active_backend"],
+): EnvironmentTarget["status"] {
+  if (!target) {
+    return "inactive";
+  }
+
+  if (target.status === "degraded") {
+    return "degraded";
+  }
+
+  if (target.install_state === "installing" || target.install_state === "unknown") {
+    return "provisioning";
+  }
+
+  if (
+    runtime.mode === "byoc-vps" ||
+    target.status === "ready" ||
+    target.status === "connected" ||
+    target.status === "installed"
+  ) {
+    return runtime.mode === "byoc-vps" ? "active" : "inactive";
+  }
+
+  return "inactive";
+}
+
+function mapRuntimeBackendToEnvironments(
+  runtime: RuntimeBackendResponse,
+): EnvironmentTarget[] {
+  const now = new Date().toISOString();
+  const remoteTarget = runtime.active_backend ?? runtime.available_backends?.[0] ?? null;
+  const environments: EnvironmentTarget[] = [
+    {
+      id: "local-runtime",
+      type: "local",
+      name: "This Device",
+      description: "Use the desktop-local backend",
+      status: runtime.mode === "local" ? "active" : "inactive",
+      createdAt: now,
+      updatedAt: now,
+    },
+  ];
+
+  if (remoteTarget || (runtime.available_backends?.length ?? 0) > 0) {
+    environments.push({
+      id: remoteTarget?.id || "byoc-runtime",
+      type: "byoc-vps",
+      name: remoteTarget?.name || "BYOC VPS",
+      description:
+        remoteTarget?.gateway_url ||
+        remoteTarget?.backend_url ||
+        "Connected VPS runtime pending install",
+      status: mapRemoteStatus(runtime, remoteTarget || undefined),
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+
+  return environments;
+}
 
 export default EnvironmentSelector;

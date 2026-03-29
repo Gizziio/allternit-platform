@@ -1,5 +1,10 @@
 import { Link } from 'react-router-dom';
-import { Github, Twitter, MessageCircle, Sparkles } from 'lucide-react';
+import {
+  GithubLogo as Github,
+  TwitterLogo as Twitter,
+  ChatCircle,
+  Sparkle,
+} from '@phosphor-icons/react';
 
 const footerLinks = {
   Product: [
@@ -37,7 +42,7 @@ export function Footer() {
           <div className="col-span-2">
             <Link to="/" className="flex items-center gap-2 mb-4">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-a2r-500 to-violet-500 flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-white" />
+                <Sparkle className="w-5 h-5 text-white" />
               </div>
               <span className="font-bold text-xl">
                 A2R <span className="text-a2r-500">Dev</span>
@@ -55,7 +60,7 @@ export function Footer() {
                 className="text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 transition-colors"
                 aria-label="GitHub"
               >
-                <Github className="w-5 h-5" />
+                <Github size={20} />
               </a>
               <a
                 href="https://twitter.com/a2r"
@@ -64,7 +69,7 @@ export function Footer() {
                 className="text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 transition-colors"
                 aria-label="Twitter"
               >
-                <Twitter className="w-5 h-5" />
+                <Twitter size={20} />
               </a>
               <a
                 href="https://discord.gg/a2r"
@@ -73,7 +78,7 @@ export function Footer() {
                 className="text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 transition-colors"
                 aria-label="Discord"
               >
-                <MessageCircle className="w-5 h-5" />
+                <ChatCircle size={20} />
               </a>
             </div>
           </div>

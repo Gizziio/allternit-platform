@@ -11,21 +11,21 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus,
-  Save,
+  FloppyDisk,
   Copy,
-  Trash2,
-  Edit2,
-  Server,
+  Trash,
+  PencilSimple,
+  HardDrives,
   HardDrive,
   Cpu,
   Globe,
   Check,
   X,
-  Search,
+  MagnifyingGlass,
   Folder,
   Tag,
-  MoreVertical,
-} from 'lucide-react';
+  DotsThreeVertical,
+} from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -206,7 +206,7 @@ export function VpsTemplates({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="font-semibold flex items-center gap-2">
-            <Folder className="w-4 h-4" />
+            <Folder size={16} />
             VPS Templates
           </h3>
           <p className="text-xs text-muted-foreground">
@@ -214,7 +214,7 @@ export function VpsTemplates({
           </p>
         </div>
         <Button size="sm" onClick={openNewTemplate} className="gap-2">
-          <Plus className="w-4 h-4" />
+          <Plus size={16} />
           New Template
         </Button>
       </div>
@@ -222,7 +222,7 @@ export function VpsTemplates({
       {/* Search and Filter */}
       <div className="flex gap-2">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Search templates..."
             value={searchQuery}
@@ -281,7 +281,7 @@ export function VpsTemplates({
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <Server className="w-4 h-4 text-muted-foreground" />
+                      <HardDrives className="w-4 h-4 text-muted-foreground" />
                       <span className="font-medium truncate">
                         {template.name}
                       </span>
@@ -321,15 +321,15 @@ export function VpsTemplates({
 
                     <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
-                        <Globe className="w-3 h-3" />
+                        <Globe size={12} />
                         Port {template.config.port}
                       </span>
                       <span className="flex items-center gap-1">
-                        <Cpu className="w-3 h-3" />
+                        <Cpu size={12} />
                         {template.resources?.cpu || '-'} CPUs
                       </span>
                       <span className="flex items-center gap-1">
-                        <HardDrive className="w-3 h-3" />
+                        <HardDrive size={12} />
                         {template.resources?.memory || '-'}GB RAM
                       </span>
                     </div>
@@ -358,14 +358,14 @@ export function VpsTemplates({
                           variant="ghost"
                           className="h-8 w-8 p-0"
                         >
-                          <MoreVertical className="w-4 h-4" />
+                          <DotsThreeVertical size={16} />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
                           onClick={() => openEditTemplate(template)}
                         >
-                          <Edit2 className="w-4 h-4 mr-2" />
+                          <PencilSimple className="w-4 h-4 mr-2" />
                           Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem
@@ -378,7 +378,7 @@ export function VpsTemplates({
                           onClick={() => handleDelete(template.id)}
                           className="text-red-600"
                         >
-                          <Trash2 className="w-4 h-4 mr-2" />
+                          <Trash className="w-4 h-4 mr-2" />
                           Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -468,7 +468,7 @@ export function VpsTemplates({
                     placeholder="Add tag..."
                   />
                   <Button size="sm" variant="outline" onClick={addTag}>
-                    <Tag className="w-4 h-4" />
+                    <Tag size={16} />
                   </Button>
                 </div>
                 <div className="flex flex-wrap gap-1">
@@ -532,7 +532,7 @@ export function VpsTemplates({
               onClick={handleSave}
               disabled={!editingTemplate?.name.trim()}
             >
-              <Save className="w-4 h-4 mr-2" />
+              <FloppyDisk className="w-4 h-4 mr-2" />
               Save Template
             </Button>
           </DialogFooter>

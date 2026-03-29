@@ -8,20 +8,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { 
-  GitCommit, 
-  GitBranch, 
-  Tag, 
-  RotateCcw, 
-  CheckCircle2, 
+import {
+  GitCommit,
+  GitBranch,
+  Tag,
+  ArrowCounterClockwise,
+  CheckCircle,
   Clock,
   Hash,
   User,
-  MessageSquare,
+  Chat,
   Plus,
-  Loader2,
-  AlertCircle
-} from "lucide-react";
+  CircleNotch,
+  Warning,
+} from '@phosphor-icons/react';
 
 interface Checkpoint {
   id: string;
@@ -72,22 +72,10 @@ export function Checkpointing() {
           error: null,
         });
       } else {
-        // Fall back to mock data for development
-        setState({
-          checkpoints: getMockCheckpoints(),
-          currentBranch: "main",
-          isLoading: false,
-          error: null,
-        });
+        setState(prev => ({ ...prev, isLoading: false, error: 'Failed to load checkpoints' }));
       }
     } catch (error) {
-      // Fall back to mock data for development
-      setState({
-        checkpoints: getMockCheckpoints(),
-        currentBranch: "main",
-        isLoading: false,
-        error: null,
-      });
+      setState(prev => ({ ...prev, isLoading: false, error: 'Failed to load checkpoints' }));
     }
   };
 
@@ -120,38 +108,10 @@ export function Checkpointing() {
         }));
         setCommitMessage("");
       } else {
-        // Simulate for development
-        const mockCheckpoint: Checkpoint = {
-          id: `mock-${Date.now()}`,
-          hash: Math.random().toString(36).substring(2, 10),
-          message: commitMessage.trim(),
-          author: "Current User",
-          timestamp: new Date().toISOString(),
-          tags: [],
-          branch: state.currentBranch,
-        };
-        setState(prev => ({
-          ...prev,
-          checkpoints: [mockCheckpoint, ...prev.checkpoints],
-        }));
-        setCommitMessage("");
+        // commit failed — backend returned error, do nothing
       }
     } catch (error) {
-      // Simulate for development
-      const mockCheckpoint: Checkpoint = {
-        id: `mock-${Date.now()}`,
-        hash: Math.random().toString(36).substring(2, 10),
-        message: commitMessage.trim(),
-        author: "Current User",
-        timestamp: new Date().toISOString(),
-        tags: [],
-        branch: state.currentBranch,
-      };
-      setState(prev => ({
-        ...prev,
-        checkpoints: [mockCheckpoint, ...prev.checkpoints],
-      }));
-      setCommitMessage("");
+      // commit failed — do nothing
     } finally {
       setIsCreating(false);
     }
@@ -246,7 +206,7 @@ export function Checkpointing() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <GitCommit className="w-5 h-5" />
+            <GitCommit size={20} />
             Create Checkpoint
           </CardTitle>
         </CardHeader>
@@ -264,7 +224,7 @@ export function Checkpointing() {
               disabled={!commitMessage.trim() || isCreating}
             >
               {isCreating ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <CircleNotch className="w-4 h-4 mr-2 animate-spin" />
               ) : (
                 <Plus className="w-4 h-4 mr-2" />
               )}
@@ -278,14 +238,14 @@ export function Checkpointing() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Clock className="w-5 h-5" />
+            <Clock size={20} />
             Checkpoint History ({state.checkpoints.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
           {state.isLoading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              <CircleNotch className="w-6 h-6 animate-spin text-muted-foreground" />
             </div>
           ) : state.checkpoints.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
@@ -310,7 +270,7 @@ export function Checkpointing() {
                         {formatHash(checkpoint.hash)}
                       </code>
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
+                        <Clock size={12} />
                         {formatTimestamp(checkpoint.timestamp)}
                       </span>
                       {checkpoint.tags.map(tag => (
@@ -324,7 +284,7 @@ export function Checkpointing() {
                     <p className="font-medium truncate">{checkpoint.message}</p>
                     
                     <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                      <User className="w-3 h-3" />
+                      <User size={12} />
                       {checkpoint.author}
                     </div>
                   </div>
@@ -336,7 +296,7 @@ export function Checkpointing() {
                           placeholder="Tag name..."
                           value={tagName}
                           onChange={(e) => setTagName(e.target.value)}
-                          className="w-32 h-8"
+                          size={128}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') createTag(checkpoint.id);
                             if (e.key === 'Escape') setSelectedCheckpoint(null);
@@ -349,7 +309,7 @@ export function Checkpointing() {
                           onClick={() => createTag(checkpoint.id)}
                           disabled={!tagName.trim()}
                         >
-                          <CheckCircle2 className="w-4 h-4" />
+                          <CheckCircle size={16} />
                         </Button>
                       </div>
                     ) : (
@@ -367,7 +327,7 @@ export function Checkpointing() {
                           variant="ghost"
                           onClick={() => restoreCheckpoint(checkpoint.id)}
                         >
-                          <RotateCcw className="w-4 h-4 mr-1" />
+                          <ArrowCounterClockwise className="w-4 h-4 mr-1" />
                           Restore
                         </Button>
                       </>
@@ -398,37 +358,5 @@ export function Checkpointing() {
   );
 }
 
-// Mock data for development
-function getMockCheckpoints(): Checkpoint[] {
-  return [
-    {
-      id: "cp-1",
-      hash: "a1b2c3d4e5f6",
-      message: "Initial DAG structure with 3 nodes",
-      author: "A2R System",
-      timestamp: new Date(Date.now() - 86400000).toISOString(),
-      tags: ["v0.1.0", "baseline"],
-      branch: "main",
-    },
-    {
-      id: "cp-2",
-      hash: "b2c3d4e5f6g7",
-      message: "Add validation checkpoint before processing",
-      author: "A2R System",
-      timestamp: new Date(Date.now() - 43200000).toISOString(),
-      tags: [],
-      branch: "main",
-    },
-    {
-      id: "cp-3",
-      hash: "c3d4e5f6g7h8",
-      message: "Working baseline with error handling",
-      author: "A2R System",
-      timestamp: new Date(Date.now() - 3600000).toISOString(),
-      tags: ["stable"],
-      branch: "main",
-    },
-  ];
-}
 
 export default Checkpointing;

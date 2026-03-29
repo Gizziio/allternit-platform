@@ -24,10 +24,10 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import {
-  Dot,
-  PauseIcon,
-  PlayIcon,
-} from "lucide-react";
+  Circle,
+  Pause as PauseIcon,
+  Play as PlayIcon,
+} from '@phosphor-icons/react';
 
 // Gender icons for voice selector - custom SVG implementations
 const MarsIcon = ({ className }: { className?: string }) => (
@@ -334,7 +334,7 @@ export const VoiceSelectorGender = ({
       break;
     }
     default: {
-      icon = <Dot className="size-4" />;
+      icon = <Circle className="size-4" />;
     }
   }
 

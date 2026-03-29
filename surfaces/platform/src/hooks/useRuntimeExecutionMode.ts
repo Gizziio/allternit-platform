@@ -35,15 +35,14 @@ function normalizeExecutionMode(
 export function useRuntimeExecutionMode(): UseRuntimeExecutionModeResult {
   const [executionMode, setExecutionMode] =
     useState<RuntimeExecutionModeStatus | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const hasAttemptedRef = useRef(false); // Track if we've already attempted to fetch
+  const hasAttemptedRef = useRef(false);
 
   const refetch = useCallback(async () => {
-    // Skip if already loading or previously attempted (to prevent repeated 404s)
-    if (isLoading || hasAttemptedRef.current) return;
-    
+    if (isLoading) return;
+
     hasAttemptedRef.current = true;
     setIsLoading(true);
     setError(null);
@@ -61,8 +60,10 @@ export function useRuntimeExecutionMode(): UseRuntimeExecutionModeResult {
   }, [isLoading]);
 
   useEffect(() => {
-    void refetch();
-  }, []); // Empty deps - only fetch once on mount
+    if (!hasAttemptedRef.current) {
+      void refetch();
+    }
+  }, [refetch]);
 
   const setMode = useCallback(
     async (mode: RuntimeExecutionMode): Promise<RuntimeExecutionModeStatus> => {

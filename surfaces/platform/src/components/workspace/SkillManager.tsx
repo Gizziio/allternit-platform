@@ -5,8 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { WorkspaceAPI } from '../../agent-workspace';
-import { Skill } from './types';
+import { WorkspaceAPI, Skill } from '../../agent-workspace';
 
 interface SkillManagerProps {
   api: WorkspaceAPI;
@@ -20,93 +19,7 @@ export function SkillManager({ api }: SkillManagerProps) {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
 
   useEffect(() => {
-    // Load skills
-    const loadSkills = async () => {
-      // Mock data - replace with actual API call
-      const mockSkills: Skill[] = [
-        {
-          id: 'skill-1',
-          name: 'File System',
-          description: 'Read, write, and manage files in the workspace',
-          version: '1.0.0',
-          author: 'a2r-core',
-          installed: true,
-          category: 'Core',
-          tags: ['filesystem', 'io', 'core'],
-          dependencies: [],
-          entryPoint: 'skills/filesystem/contract.json',
-          documentation: 'skills/filesystem/SKILL.md',
-        },
-        {
-          id: 'skill-2',
-          name: 'Web Search',
-          description: 'Search the web for information',
-          version: '1.2.0',
-          author: 'a2r-community',
-          installed: true,
-          category: 'Integration',
-          tags: ['search', 'web', 'api'],
-          dependencies: ['network-http'],
-          entryPoint: 'skills/web-search/contract.json',
-          documentation: 'skills/web-search/SKILL.md',
-        },
-        {
-          id: 'skill-3',
-          name: 'Code Analysis',
-          description: 'Analyze code structure and dependencies',
-          version: '2.0.0',
-          author: 'a2r-core',
-          installed: false,
-          category: 'Development',
-          tags: ['code', 'analysis', 'ast'],
-          dependencies: ['filesystem'],
-          entryPoint: 'skills/code-analysis/contract.json',
-          documentation: 'skills/code-analysis/SKILL.md',
-        },
-        {
-          id: 'skill-4',
-          name: 'Git Operations',
-          description: 'Execute git commands and manage repositories',
-          version: '1.1.0',
-          author: 'a2r-core',
-          installed: true,
-          category: 'Development',
-          tags: ['git', 'vcs', 'version-control'],
-          dependencies: ['filesystem', 'system-exec'],
-          entryPoint: 'skills/git/contract.json',
-          documentation: 'skills/git/SKILL.md',
-        },
-        {
-          id: 'skill-5',
-          name: 'Database Query',
-          description: 'Connect to and query databases',
-          version: '1.0.0',
-          author: 'a2r-community',
-          installed: false,
-          category: 'Integration',
-          tags: ['database', 'sql', 'data'],
-          dependencies: ['network-tcp'],
-          entryPoint: 'skills/database/contract.json',
-          documentation: 'skills/database/SKILL.md',
-        },
-        {
-          id: 'skill-6',
-          name: 'Image Processing',
-          description: 'Process and analyze images',
-          version: '0.9.0',
-          author: 'a2r-community',
-          installed: false,
-          category: 'Media',
-          tags: ['image', 'processing', 'computer-vision'],
-          dependencies: ['filesystem'],
-          entryPoint: 'skills/image-processing/contract.json',
-          documentation: 'skills/image-processing/SKILL.md',
-        },
-      ];
-      setSkills(mockSkills);
-    };
-
-    loadSkills();
+    api.listSkills().then(setSkills).catch(() => {});
   }, [api]);
 
   const categories = Array.from(new Set(skills.map(s => s.category)));
@@ -124,15 +37,15 @@ export function SkillManager({ api }: SkillManagerProps) {
   });
 
   const handleInstall = (skillId: string) => {
-    setSkills(prev => prev.map(s => 
-      s.id === skillId ? { ...s, installed: true } : s
-    ));
+    api.installSkill(skillId)
+      .then(() => setSkills(prev => prev.map(s => s.id === skillId ? { ...s, installed: true } : s)))
+      .catch(() => {});
   };
 
   const handleUninstall = (skillId: string) => {
-    setSkills(prev => prev.map(s => 
-      s.id === skillId ? { ...s, installed: false } : s
-    ));
+    api.uninstallSkill(skillId)
+      .then(() => setSkills(prev => prev.map(s => s.id === skillId ? { ...s, installed: false } : s)))
+      .catch(() => {});
   };
 
   const stats = {

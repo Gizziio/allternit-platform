@@ -1,5 +1,13 @@
-import React, { useCallback, useState } from 'react';
-import { FolderOpen, ChevronRight, List, Grid3x3, Upload, FileText, Image as ImageIcon } from 'lucide-react';
+import React, { useCallback, useState, useEffect } from 'react';
+import {
+  FolderOpen,
+  CaretRight,
+  List,
+  SquaresFour,
+  UploadSimple,
+  FileText,
+  Image,
+} from '@phosphor-icons/react';
 import GlassSurface from '@/design/GlassSurface';
 import { useDropTarget, type FileWithData } from '@/components/GlobalDropzone';
 import { AttachmentPreview, AttachmentPreviewModal, type AttachmentPreviewItem } from '@/components/chat/AttachmentPreview';
@@ -30,46 +38,12 @@ interface DroppedFile {
   extractedText?: string;
 }
 
-const mockFileTree: Folder[] = [
-  {
-    id: 'root-docs',
-    name: 'Documents',
-    expanded: true,
-    children: [
-      { id: 'doc-1', name: 'Strategy.md', type: 'file', icon: 'MD', size: '245 KB', modified: '2 days ago', color: '#9ca3af' },
-      { id: 'doc-2', name: 'Meeting Notes.md', type: 'file', icon: 'MD', size: '128 KB', modified: '5 hours ago', color: '#9ca3af' },
-      {
-        id: 'folder-1',
-        name: 'Archive',
-        type: 'folder',
-      },
-    ],
-  },
-  {
-    id: 'root-data',
-    name: 'Data',
-    expanded: false,
-    children: [
-      { id: 'csv-1', name: 'users.csv', type: 'file', icon: 'CSV', size: '1.2 MB', modified: '1 day ago', color: '#22c55e' },
-      { id: 'csv-2', name: 'analytics.csv', type: 'file', icon: 'CSV', size: '856 KB', modified: '12 hours ago', color: '#22c55e' },
-    ],
-  },
-  {
-    id: 'root-code',
-    name: 'Code',
-    expanded: false,
-    children: [
-      { id: 'ts-1', name: 'index.tsx', type: 'file', icon: 'TS', size: '4.2 KB', modified: '3 hours ago', color: '#3b82f6' },
-      { id: 'ts-2', name: 'utils.ts', type: 'file', icon: 'TS', size: '2.8 KB', modified: '1 day ago', color: '#3b82f6' },
-      { id: 'pdf-1', name: 'spec.pdf', type: 'file', icon: 'PDF', size: '2.1 MB', modified: '1 week ago', color: '#ef4444' },
-    ],
-  },
-];
 
 type ViewMode = 'grid' | 'list';
 
 export const FilesView: React.FC = () => {
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['root-docs']));
+  const [fileTree, setFileTree] = useState<Folder[]>([]);
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [currentPath, setCurrentPath] = useState<string[]>(['workspace']);
   const [droppedFiles, setDroppedFiles] = useState<AttachmentPreviewItem[]>([]);
@@ -112,6 +86,13 @@ export const FilesView: React.FC = () => {
   const handlePreview = useCallback((item: AttachmentPreviewItem) => {
     setPreviewItem(item);
     setPreviewModalOpen(true);
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/v1/workspace/files')
+      .then(r => r.json())
+      .then((data: Folder[]) => setFileTree(data))
+      .catch(() => {});
   }, []);
 
   // Register as drop target for cowork files
@@ -212,7 +193,7 @@ export const FilesView: React.FC = () => {
         {/* LEFT: Folder Tree */}
         <GlassSurface style={{ padding: 'var(--spacing-md)', overflowY: 'auto' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            {mockFileTree.map((folder) => (
+            {fileTree.map((folder) => (
               <div key={folder.id}>
                 <button
                   onClick={() => toggleFolder(folder.id)}
@@ -240,7 +221,7 @@ export const FilesView: React.FC = () => {
                     e.currentTarget.style.color = 'var(--text-secondary)';
                   }}
                 >
-                  <ChevronRight
+                  <CaretRight
                     size={16}
                     style={{
                       transform: expandedFolders.has(folder.id) ? 'rotate(90deg)' : 'rotate(0deg)',
@@ -323,7 +304,7 @@ export const FilesView: React.FC = () => {
                 fontWeight: 500,
               }}
             >
-              <Grid3x3 size={16} />
+              <SquaresFour size={16} />
               Grid
             </button>
           </div>
@@ -355,7 +336,7 @@ export const FilesView: React.FC = () => {
           {viewMode === 'list' ? (
             // List View
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {mockFileTree.flatMap((folder) =>
+              {fileTree.flatMap((folder) =>
                 folder.children.map((file) => (
                   <GlassSurface
                     key={file.id}
@@ -390,7 +371,7 @@ export const FilesView: React.FC = () => {
                 gap: 'var(--spacing-md)',
               }}
             >
-              {mockFileTree.flatMap((folder) =>
+              {fileTree.flatMap((folder) =>
                 folder.children.map((file) => (
                   <GlassSurface
                     key={file.id}

@@ -1,42 +1,43 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { useChatStore } from '../chat/ChatStore';
 import { GlassCard } from '../../design/GlassCard';
-import { 
-  Plus, 
-  Clock, 
-  MessageSquare, 
+import {
+  Plus,
+  Clock,
+  Chat,
   ArrowRight,
   Globe,
-  Terminal as TerminalIcon,
+  Terminal,
   FileText,
   Folder,
-  LayoutGrid,
-  Sparkles,
-  Image as ImageIcon,
+  SquaresFour,
+  Sparkle,
+  Image,
   X,
   Code,
   Users,
-  Bot,
-  Rocket,
-  Zap,
+  Robot,
+  RocketLaunch,
+  Lightning,
   Target,
   Lightbulb,
   Compass,
   Hammer,
   Wrench,
-  Search,
+  MagnifyingGlass,
   ArrowUpRight,
-  Download,
-  ChevronRight
-} from 'lucide-react';
-import { UsersThree } from '@phosphor-icons/react';
+  DownloadSimple,
+  CaretRight,
+  UsersThree,
+  Image as ImageIcon,
+} from '@phosphor-icons/react';
+
 import { getSession } from '@/lib/auth-browser';
 
 import { ChatComposer } from '../chat/ChatComposer';
 import { useModelSelection } from '@/providers/model-selection-provider';
 import { ModelPicker } from '@/components/model-picker';
 import { useCoworkStore } from './CoworkStore';
-import { useAgentSurfaceModeStore } from '@/stores/agent-surface-mode.store';
+import { useEmbeddedAgentSession } from '@/lib/agents/embedded-agent-session.store';
 import { AgentModeBackdrop } from '../chat/agentModeSurfaceTheme';
 import { AgentCapabilitiesPanel } from './AgentCapabilitiesPanel';
 
@@ -185,16 +186,16 @@ interface AnimatedHeadlineProps {
 
 function AnimatedHeadline({ children, animationIndex, delay = 0, as: Component = 'span', style = {} }: AnimatedHeadlineProps) {
   const animations = [
-    'fadeSlideUp 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards',
-    'fadeSlideDown 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards',
-    'slideFromLeft 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards',
-    'slideFromRight 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards',
-    'scaleIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
-    'blurIn 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards',
-    'clipReveal 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards',
-    'letterSpacingIn 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards',
-    'bounceIn 0.9s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards',
-    'waveIn 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards',
+    { name: 'fadeSlideUp', duration: '0.7s', timingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)' },
+    { name: 'fadeSlideDown', duration: '0.6s', timingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)' },
+    { name: 'slideFromLeft', duration: '0.8s', timingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)' },
+    { name: 'slideFromRight', duration: '0.8s', timingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)' },
+    { name: 'scaleIn', duration: '0.6s', timingFunction: 'cubic-bezier(0.34, 1.56, 0.64, 1)' },
+    { name: 'blurIn', duration: '0.9s', timingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)' },
+    { name: 'clipReveal', duration: '0.7s', timingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)' },
+    { name: 'letterSpacingIn', duration: '0.8s', timingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)' },
+    { name: 'bounceIn', duration: '0.9s', timingFunction: 'cubic-bezier(0.68, -0.55, 0.265, 1.55)' },
+    { name: 'waveIn', duration: '0.8s', timingFunction: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)' },
   ];
   
   const animation = animations[animationIndex % animations.length];
@@ -203,8 +204,11 @@ function AnimatedHeadline({ children, animationIndex, delay = 0, as: Component =
     <Component
       style={{
         opacity: 0,
-        animation,
+        animationName: animation.name,
+        animationDuration: animation.duration,
+        animationTimingFunction: animation.timingFunction,
         animationDelay: `${delay}ms`,
+        animationFillMode: 'forwards',
         display: 'inline-block',
         ...style,
       }}
@@ -252,9 +256,9 @@ const COWORK_TAGLINES = [
 ];
 
 export function CoworkLaunchpad({ onStartChat, onResumeThread }: CoworkLaunchpadProps) {
-  const { threads } = useChatStore();
   const { sessionHistory } = useCoworkStore();
-  const agentModeEnabled = useAgentSurfaceModeStore((state) => state.enabledBySurface.cowork);
+  const coworkSession = useEmbeddedAgentSession('cowork');
+  const agentModeEnabled = coworkSession.isEmbedded && coworkSession.descriptor.sessionMode === 'agent';
   const { selection: modelSelection, selectModel, startSelection, isSelecting, cancelSelection } = useModelSelection();
   const [composerInput, setComposerInput] = useState('');
   const [showPluginsOverlay, setShowPluginsOverlay] = useState(false);
@@ -427,7 +431,7 @@ export function CoworkLaunchpad({ onStartChat, onResumeThread }: CoworkLaunchpad
         {/* Pick a task section - Restored with tailored prompts */}
         <section>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '16px' }}>
-            <LayoutGrid size={14} color="#444" />
+            <SquaresFour size={14} color="#444" />
             <h2 style={{ fontSize: '12px', fontWeight: 700, color: '#444', textTransform: 'uppercase' }}>Pick a task, any task</h2>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -560,7 +564,7 @@ const BUILTIN_PLUGINS = [
     id: 'research-assistant',
     name: 'Research Assistant',
     description: 'Gathers information, summarizes sources, and helps compile research documents.',
-    icon: <Search size={24} />,
+    icon: <MagnifyingGlass size={24} />,
     category: 'Research',
     prompt: 'Help me research the following topic. Please:\n1. Search for relevant sources and documentation\n2. Summarize key findings from multiple perspectives\n3. Identify conflicting information or gaps\n4. Compile a structured report with citations\n\nWhat topic would you like me to research?'
   },
@@ -568,7 +572,7 @@ const BUILTIN_PLUGINS = [
     id: 'email-drafter',
     name: 'Email Drafter',
     description: 'Drafts professional emails, follow-ups, and correspondence based on context.',
-    icon: <MessageSquare size={24} />,
+    icon: <Chat size={24} />,
     category: 'Communication',
     prompt: 'I need help drafting an email. Please provide:\n1. The recipient and their relationship to me\n2. The purpose of the email\n3. Any specific points that must be included\n4. The desired tone (formal, casual, urgent, etc.)\n\nI\'ll draft a version for your review and editing.'
   },
@@ -576,7 +580,7 @@ const BUILTIN_PLUGINS = [
     id: 'data-analyzer',
     name: 'Data Analyzer',
     description: 'Processes data files, generates insights, and creates visualizations.',
-    icon: <LayoutGrid size={24} />,
+    icon: <SquaresFour size={24} />,
     category: 'Analytics',
     prompt: 'I have data I need analyzed. Please:\n1. Examine the data structure and format\n2. Calculate key statistics and metrics\n3. Identify trends, outliers, or patterns\n4. Generate charts or visualizations if helpful\n5. Summarize insights in plain language\n\nWhat data would you like me to analyze?'
   }
@@ -672,7 +676,7 @@ function PluginsOverlay({ onClose, onStartChat }: PluginsOverlayProps) {
             padding: '12px 16px',
             marginBottom: 16
           }}>
-            <Search size={18} color="#666" />
+            <MagnifyingGlass size={18} color="#666" />
             <input
               type="text"
               placeholder="Search plugins..."
@@ -795,7 +799,7 @@ function PluginsOverlay({ onClose, onStartChat }: PluginsOverlayProps) {
                   onMouseLeave={(e) => e.currentTarget.style.background = '#D4B08C'}
                 >
                   Use Plugin
-                  <ChevronRight size={14} />
+                  <CaretRight size={14} />
                 </button>
               </div>
             </div>

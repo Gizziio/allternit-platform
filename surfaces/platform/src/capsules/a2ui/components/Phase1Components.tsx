@@ -78,15 +78,15 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import {
-  Calendar as CalendarIcon,
-  Upload,
+  Calendar,
+  UploadSimple,
   X,
-  FileIcon,
-  Image as ImageIcon,
-  ChevronLeft,
-  ChevronRight,
+  File as FileIcon,
+  Image,
+  CaretLeft,
+  CaretRight,
   Clock,
-} from "lucide-react";
+} from '@phosphor-icons/react';
 
 // Import types
 import type {
@@ -401,7 +401,7 @@ function SimpleCalendar({
           size="icon"
           onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
         >
-          <ChevronLeft className="h-4 w-4" />
+          <CaretLeft size={16} />
         </Button>
         <span className="font-medium">{format(currentMonth, "MMMM yyyy")}</span>
         <Button
@@ -409,7 +409,7 @@ function SimpleCalendar({
           size="icon"
           onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
         >
-          <ChevronRight className="h-4 w-4" />
+          <CaretRight size={16} />
         </Button>
       </div>
 
@@ -495,7 +495,7 @@ export function CalendarRenderer({
           size="icon"
           onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
         >
-          <ChevronLeft className="h-4 w-4" />
+          <CaretLeft size={16} />
         </Button>
         <span className="font-medium text-lg">
           {format(currentMonth, "MMMM yyyy")}
@@ -505,7 +505,7 @@ export function CalendarRenderer({
           size="icon"
           onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
         >
-          <ChevronRight className="h-4 w-4" />
+          <CaretRight size={16} />
         </Button>
       </div>
 
@@ -679,7 +679,7 @@ export function FileUploadRenderer({
             multiple={props.multiple !== false}
             disabled={isDisabled}
           />
-          <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+          <UploadSimple className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
           <p className="text-sm text-muted-foreground">
             {isDragging
               ? "Drop files here..."
@@ -712,7 +712,7 @@ export function FileUploadRenderer({
               <div className="flex items-center gap-3">
                 {props.preview && file.type?.startsWith("image/") ? (
                   <div className="h-10 w-10 rounded bg-muted flex items-center justify-center">
-                    <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                    <Image className="h-5 w-5 text-muted-foreground" />
                   </div>
                 ) : (
                   <div className="h-10 w-10 rounded bg-muted flex items-center justify-center">
@@ -737,11 +737,11 @@ export function FileUploadRenderer({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8"
+                  size={32}
                   onClick={() => removeFile(file.name)}
                   disabled={isDisabled}
                 >
-                  <X className="h-4 w-4" />
+                  <X size={16} />
                 </Button>
               </div>
             </Card>

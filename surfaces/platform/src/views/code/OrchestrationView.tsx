@@ -1,8 +1,12 @@
 import React, { useEffect } from 'react';
 import { useUnifiedStore } from '@/lib/agents/unified.store';
 import { GlassCard } from '../../design/GlassCard';
-import { Circle, Activity, Clock } from 'lucide-react';
-import { Robot } from '@phosphor-icons/react';
+import {
+  Circle,
+  Pulse as Activity,
+  Clock,
+  Robot,
+} from '@phosphor-icons/react';
 
 export function OrchestrationView() {
   const { 

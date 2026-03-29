@@ -11,15 +11,14 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FileCode,
-  FileJson,
-  Container,
+  Cube,
   Copy,
   Check,
-  Download,
+  DownloadSimple,
   Eye,
-  EyeOff,
+  EyeSlash,
   Code,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -255,12 +254,12 @@ ${volumes ? `\nvolumes:\n${volumes}` : ''}
           >
             {showPreview ? (
               <>
-                <EyeOff className="w-3 h-3" />
+                <EyeSlash size={12} />
                 <span className="text-xs">Hide</span>
               </>
             ) : (
               <>
-                <Eye className="w-3 h-3" />
+                <Eye size={12} />
                 <span className="text-xs">Show</span>
               </>
             )}
@@ -279,15 +278,15 @@ ${volumes ? `\nvolumes:\n${volumes}` : ''}
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as PreviewTab)}>
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="devcontainer" className="gap-1 text-xs">
-                  <FileJson className="w-3 h-3" />
+                  <FileCode size={12} />
                   devcontainer.json
                 </TabsTrigger>
                 <TabsTrigger value="dockerfile" className="gap-1 text-xs">
-                  <Container className="w-3 h-3" />
+                  <Cube size={12} />
                   Dockerfile
                 </TabsTrigger>
                 <TabsTrigger value="docker-compose" className="gap-1 text-xs">
-                  <FileCode className="w-3 h-3" />
+                  <FileCode size={12} />
                   docker-compose.yml
                 </TabsTrigger>
               </TabsList>
@@ -306,7 +305,7 @@ ${volumes ? `\nvolumes:\n${volumes}` : ''}
                         {copied ? (
                           <Check className="w-3 h-3 text-green-500" />
                         ) : (
-                          <Copy className="w-3 h-3" />
+                          <Copy size={12} />
                         )}
                       </Button>
                       <Button
@@ -315,7 +314,7 @@ ${volumes ? `\nvolumes:\n${volumes}` : ''}
                         onClick={downloadFile}
                         className="h-7 w-7 p-0"
                       >
-                        <Download className="w-3 h-3" />
+                        <DownloadSimple size={12} />
                       </Button>
                     </div>
                   </div>

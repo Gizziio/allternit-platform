@@ -13,26 +13,25 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Shield,
   Plus,
-  Search,
-  Filter,
-  MoreVertical,
-  Edit3,
-  Trash2,
+  MagnifyingGlass,
+  Funnel,
+  DotsThreeVertical,
+  PencilSimple,
+  Trash,
   Copy,
   Power,
-  AlertTriangle,
+  Warning,
   CheckCircle,
   XCircle,
-  ChevronDown,
-  ChevronRight,
+  CaretDown,
+  CaretRight,
   Clock,
   FileText,
   Lock,
   Eye,
   X,
-  RefreshCw,
-  AlertCircle,
-} from 'lucide-react';
+  ArrowsClockwise,
+} from '@phosphor-icons/react';
 import {
   listPolicies,
   getPolicy,
@@ -238,7 +237,7 @@ export function PolicyManager() {
               gap: 8,
             }}
           >
-            <AlertTriangle size={16} />
+            <Warning size={16} />
             Violations
             {violations.filter(v => v.status === 'open').length > 0 && (
               <span style={{
@@ -285,7 +284,7 @@ export function PolicyManager() {
         background: '#1a1a1a',
       }}>
         <div style={{ position: 'relative', flex: 1, maxWidth: 300 }}>
-          <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#666' }} />
+          <MagnifyingGlass size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#666' }} />
           <input
             type="text"
             placeholder="Search policies..."
@@ -349,7 +348,7 @@ export function PolicyManager() {
             cursor: 'pointer',
           }}
         >
-          <RefreshCw size={16} />
+          <ArrowsClockwise size={16} />
         </button>
       </div>
 
@@ -507,7 +506,7 @@ function PolicyCard({
           display: 'flex',
           alignItems: 'center',
         }}>
-          {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+          {isExpanded ? <CaretDown size={18} /> : <CaretRight size={18} />}
         </button>
 
         <div style={{
@@ -618,7 +617,7 @@ function PolicyCard({
             }}
             title="Edit"
           >
-            <Edit3 size={16} />
+            <PencilSimple size={16} />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onClone(); }}
@@ -646,7 +645,7 @@ function PolicyCard({
             }}
             title="Delete"
           >
-            <Trash2 size={16} />
+            <Trash size={16} />
           </button>
         </div>
       </div>
@@ -1010,7 +1009,7 @@ function PolicyModal({
 function LoadingState() {
   return (
     <div style={{ textAlign: 'center', padding: 60, color: '#666' }}>
-      <RefreshCw size={32} style={{ animation: 'spin 1s linear infinite' }} />
+      <ArrowsClockwise size={32} style={{ animation: 'spin 1s linear infinite' }} />
       <p>Loading policies...</p>
     </div>
   );
@@ -1019,7 +1018,7 @@ function LoadingState() {
 function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
     <div style={{ textAlign: 'center', padding: 60 }}>
-      <AlertCircle size={32} color="#ef4444" />
+      <Warning size={32} color="#ef4444" />
       <p style={{ color: '#ef4444', marginBottom: 16 }}>{message}</p>
       <button
         onClick={onRetry}

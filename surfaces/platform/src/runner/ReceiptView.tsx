@@ -13,20 +13,20 @@
 "use client";
 
 import React, { useState } from "react";
-import { 
-  CheckCircle, 
-  AlertCircle, 
-  XCircle, 
-  Clock, 
-  FileText, 
-  Download,
-  ChevronRight,
-  ChevronDown,
+import {
+  CheckCircle,
+  Warning,
+  XCircle,
+  Clock,
+  FileText,
+  DownloadSimple,
+  CaretRight,
+  CaretDown,
   Shield,
   Target,
-  Layers,
-  Activity
-} from "lucide-react";
+  Stack,
+  Pulse as Activity,
+} from '@phosphor-icons/react';
 
 const THEME = {
   bg: '#2B2520',
@@ -136,7 +136,7 @@ export function ReceiptView({ receipt, onClose }: ReceiptViewProps) {
       case 'success':
         return <CheckCircle size={20} style={{ color: THEME.success }} />;
       case 'partial_success':
-        return <AlertCircle size={20} style={{ color: THEME.warning }} />;
+        return <Warning size={20} style={{ color: THEME.warning }} />;
       case 'failed':
       case 'blocked':
         return <XCircle size={20} style={{ color: THEME.error }} />;
@@ -236,7 +236,7 @@ export function ReceiptView({ receipt, onClose }: ReceiptViewProps) {
               fontSize: '12px',
             }}
           >
-            <Download size={14} />
+            <DownloadSimple size={14} />
             Export
           </button>
           {onClose && (
@@ -373,7 +373,7 @@ export function ReceiptView({ receipt, onClose }: ReceiptViewProps) {
                     gap: '4px',
                   }}
                 >
-                  {action.verification.passed ? <CheckCircle size={10} /> : <AlertCircle size={10} />}
+                  {action.verification.passed ? <CheckCircle size={10} /> : <Warning size={10} />}
                   Verified: {action.verification.method}
                 </div>
               )}
@@ -386,7 +386,7 @@ export function ReceiptView({ receipt, onClose }: ReceiptViewProps) {
       {receipt.createdObjects.length > 0 && (
         <Section
           title="Created Objects"
-          icon={<Layers size={16} />}
+          icon={<Stack size={16} />}
           expanded={expandedSections.createdObjects}
           onToggle={() => toggleSection('createdObjects')}
         >
@@ -449,7 +449,7 @@ export function ReceiptView({ receipt, onClose }: ReceiptViewProps) {
         >
           {receipt.verification.overallPassed 
             ? <CheckCircle size={16} style={{ color: THEME.success }} />
-            : <AlertCircle size={16} style={{ color: THEME.warning }} />
+            : <Warning size={16} style={{ color: THEME.warning }} />
           }
           <span style={{ fontSize: '13px', fontWeight: 500 }}>
             {receipt.verification.overallPassed 
@@ -561,7 +561,7 @@ function Section({ title, icon, expanded, onToggle, children }: SectionProps) {
           {icon}
           <span style={{ fontSize: '13px', fontWeight: 600 }}>{title}</span>
         </div>
-        {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+        {expanded ? <CaretDown size={16} /> : <CaretRight size={16} />}
       </button>
       {expanded && (
         <div style={{ marginTop: '8px', paddingLeft: '8px' }}>

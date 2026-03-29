@@ -10,7 +10,16 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Eye, Copy, Check, AlertCircle, Sparkles, HelpCircle, Code } from 'lucide-react';
+import {
+  Play,
+  Eye,
+  Copy,
+  Check,
+  Warning,
+  Sparkle,
+  Question as HelpCircle,
+  Code,
+} from '@phosphor-icons/react';
 import { TEXT, GLASS, SAND } from '@/design/a2r.tokens';
 import { api } from '@/integration/api-client';
 
@@ -145,14 +154,14 @@ export function A2RSystemPromptEditor({
         <div className="p-4 bg-blue-500/5 border-t border-blue-500/20 animate-in slide-in-from-bottom-2">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2 text-xs font-semibold text-blue-400">
-              <Sparkles size={12} />
+              <Sparkle size={12} />
               Simulated Agent Response
             </div>
             <button 
               onClick={() => setTestTestOutput(null)}
               className="text-white/40 hover:text-white"
             >
-              <AlertCircle size={14} rotate={45} />
+              <Warning size={14} rotate={45} />
             </button>
           </div>
           <div className="text-xs text-white/70 italic leading-relaxed font-serif p-3 bg-black/40 rounded-lg border border-white/5">

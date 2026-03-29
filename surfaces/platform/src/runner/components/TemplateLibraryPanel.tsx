@@ -9,11 +9,24 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  FileCode, Search, Tag, Play, Copy, Check, RefreshCw,
-  Code, User, GitBranch, FileText, Repeat, Trash2, Shield,
-  ChevronRight, Variable
-} from "lucide-react";
+import {
+  FileCode,
+  MagnifyingGlass,
+  Tag,
+  Play,
+  Copy,
+  Check,
+  ArrowsClockwise,
+  Code,
+  User,
+  GitBranch,
+  FileText,
+  Repeat,
+  Trash,
+  Shield,
+  CaretRight,
+  Function,
+} from '@phosphor-icons/react';
 import type { PromptTemplate, TemplateCategory } from "../dak.types";
 
 const CATEGORY_ICONS: Record<TemplateCategory, any> = {
@@ -21,7 +34,7 @@ const CATEGORY_ICONS: Record<TemplateCategory, any> = {
   roles: User,
   orchestration: GitBranch,
   planning: FileText,
-  cleanup: Trash2,
+  cleanup: Trash,
   control_flow: Repeat,
   evidence: Shield,
 };
@@ -97,7 +110,7 @@ export function TemplateLibraryPanel() {
       <div className="p-4 border-b space-y-4">
         {/* Search */}
         <div className="relative">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <MagnifyingGlass className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search templates by name, description, or tags..."
             value={searchQuery}
@@ -131,7 +144,7 @@ export function TemplateLibraryPanel() {
           <CardHeader>
             <CardTitle className="text-base flex items-center justify-between">
               <span className="flex items-center gap-2">
-                <FileCode className="w-4 h-4" /> Templates
+                <FileCode size={16} /> Templates
               </span>
               <Badge variant="secondary">{filteredTemplates.length}</Badge>
             </CardTitle>
@@ -196,7 +209,7 @@ export function TemplateLibraryPanel() {
                   {/* Variables */}
                   <div>
                     <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
-                      <Variable className="w-4 h-4" /> Variables
+                      <Function size={16} /> Variables
                     </h4>
                     <div className="space-y-3">
                       {selectedTemplate.variables.map((variable) => (

@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
-import { GitBranch, ChevronDown, MessageSquare } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { GitBranch, ChevronDown, MessageCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface BranchOption {
@@ -44,17 +44,26 @@ export function BranchSelector({
 
   const currentBranch = branches.find((b) => b.id === currentBranchId);
 
-  // Close on click outside
+  const close = useCallback(() => setIsOpen(false), []);
+
+  // Close on click outside or Escape
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
+        close();
       }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') close();
     };
 
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [close]);
 
   if (branches.length <= 1) return null;
 
@@ -63,6 +72,8 @@ export function BranchSelector({
       {/* Trigger button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -74,6 +85,7 @@ export function BranchSelector({
           color: THEME.textSecondary,
           fontSize: 13,
           cursor: 'pointer',
+          transition: 'border-color 0.15s',
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)';
@@ -82,7 +94,7 @@ export function BranchSelector({
           e.currentTarget.style.borderColor = THEME.border;
         }}
       >
-        <GitBranch size={14} style={{ color: THEME.accent }} />
+        <GitBranch size={14} style={{ color: THEME.accent }} aria-hidden="true" />
         <span>
           {branches.length} {branches.length === 1 ? 'branch' : 'branches'}
         </span>
@@ -92,6 +104,7 @@ export function BranchSelector({
             transform: isOpen ? 'rotate(180deg)' : 'none',
             transition: 'transform 0.2s',
           }}
+          aria-hidden="true"
         />
       </button>
 
@@ -125,7 +138,6 @@ export function BranchSelector({
                 fontWeight: 600,
                 color: THEME.textSecondary,
                 textTransform: 'uppercase',
-                letterSpacing: '0.5px',
                 margin: 0,
               }}
             >
@@ -182,11 +194,12 @@ export function BranchSelector({
                     marginTop: 2,
                   }}
                 >
-                  <MessageSquare
+                  <MessageCircle
                     size={12}
+                    aria-hidden="true"
                     style={{
-                      color: branch.id === currentBranchId 
-                        ? THEME.accent 
+                      color: branch.id === currentBranchId
+                        ? THEME.accent
                         : THEME.textMuted,
                     }}
                   />

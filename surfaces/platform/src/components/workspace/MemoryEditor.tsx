@@ -5,8 +5,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { WorkspaceAPI } from '../../agent-workspace';
-import { MemoryEntry } from './types';
+import { WorkspaceAPI, MemoryEntry } from '../../agent-workspace';
 
 interface MemoryEditorProps {
   api: WorkspaceAPI;
@@ -21,100 +20,20 @@ export function MemoryEditor({ api }: MemoryEditorProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    // Load memory entries
-    const loadEntries = async () => {
-      // Mock data - replace with actual API call
-      const mockEntries: MemoryEntry[] = [
-        {
-          id: 'mem-1',
-          timestamp: new Date().toISOString(),
-          type: 'session',
-          title: 'Initial Workspace Setup',
-          content: `# Session: Initial Workspace Setup
-
-## Summary
-Successfully initialized the agent workspace with all 5 layers.
-
-## Actions Taken
-1. Created workspace directory structure
-2. Initialized BRAIN.md with initial task graph
-3. Set up MEMORY.md index
-4. Configured IDENTITY.md and SOUL.md
-
-## Outcomes
-- Workspace is ready for agent operations
-- All core files are in place
-- Policy engine is configured with default rules
-
-## Next Steps
-- Install required skills
-- Configure business topology (if needed)
-- Run first task`,
-          tags: ['setup', 'initialization'],
-          relatedTasks: ['task-1'],
-        },
-        {
-          id: 'mem-2',
-          timestamp: new Date(Date.now() - 86400000).toISOString(),
-          type: 'lesson',
-          title: 'Workspace Organization Best Practices',
-          content: `# Lesson: Workspace Organization
-
-## What Worked
-- Keeping MEMORY.md as an index rather than storing everything
-- Using dated session files in memory/ directory
-- Tagging entries for easy retrieval
-
-## What to Improve
-- Need better linking between related entries
-- Should automate timestamp generation
-- Consider adding search index
-
-## Recommendations
-1. Use consistent naming conventions
-2. Link related entries explicitly
-3. Summarize long sessions`,
-          tags: ['best-practices', 'organization'],
-          relatedTasks: [],
-        },
-        {
-          id: 'mem-3',
-          timestamp: new Date(Date.now() - 172800000).toISOString(),
-          type: 'decision',
-          title: 'Policy: Tool Approval Requirements',
-          content: `# Decision: Tool Approval Policy
-
-## Context
-Need to balance agent autonomy with safety.
-
-## Decision
-- filesystem.write: Requires approval if outside workspace
-- network.http: Always requires approval
-- system.exec: Denied by default
-
-## Rationale
-File system operations outside the workspace could be dangerous. Network access could leak data. System execution is too risky.
-
-## Implementation
-Updated POLICY.md with these rules. Policy engine enforces them automatically.`,
-          tags: ['policy', 'safety', 'decision'],
-          relatedTasks: ['task-4'],
-        },
-      ];
-      setEntries(mockEntries);
-    };
-
-    loadEntries();
+    api.listMemoryEntries().then(setEntries).catch(() => {});
   }, [api]);
 
-  const filteredEntries = entries.filter(entry => {
-    const matchesFilter = filter === 'all' || entry.type === filter;
-    const matchesSearch = !searchQuery || 
-      entry.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      entry.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      entry.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchesFilter && matchesSearch;
-  });
+  useEffect(() => {
+    if (searchQuery.length >= 2) {
+      api.searchMemory(searchQuery).then(setEntries).catch(() => {});
+    } else if (searchQuery === '') {
+      api.listMemoryEntries().then(setEntries).catch(() => {});
+    }
+  }, [api, searchQuery]);
+
+  const filteredEntries = entries.filter(entry =>
+    filter === 'all' || entry.type === filter
+  );
 
   const handleSave = useCallback(() => {
     if (selectedEntry) {

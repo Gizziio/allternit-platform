@@ -5,24 +5,24 @@
 import React, { useState } from 'react';
 import {
   Users,
-  Zap,
-  Activity,
+  Lightning,
+  Pulse as Activity,
   Shield,
-  Box,
+  Cube,
   Target,
-  ListTodo,
+  ListChecks,
   Brain,
-  MessageSquare,
-  BarChart3,
-  ShieldAlert,
+  Chat,
+  ChartBar,
+  ShieldWarning,
   Network,
   Play,
   Pause,
   Plus,
-  CheckCircle2,
+  CheckCircle,
   Clock,
   X,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 
 import {
   MODE_COLORS,
@@ -35,12 +35,12 @@ import type { CodeModeADEProps } from './types';
 const TABS = [
   { id: 'orchestrator', label: 'Orchestrator', icon: Network },
   { id: 'goal', label: 'Goal', icon: Target },
-  { id: 'tasks', label: 'Tasks', icon: ListTodo },
+  { id: 'tasks', label: 'Tasks', icon: ListChecks },
   { id: 'thinking', label: 'Thinking', icon: Brain },
   { id: 'teams', label: 'Teams', icon: Users },
-  { id: 'chat', label: 'Chat', icon: MessageSquare },
-  { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-  { id: 'monitor', label: 'Monitor', icon: ShieldAlert },
+  { id: 'chat', label: 'Chat', icon: Chat },
+  { id: 'analytics', label: 'Analytics', icon: ChartBar },
+  { id: 'monitor', label: 'Monitor', icon: ShieldWarning },
 ] as const;
 
 type TabId = typeof TABS[number]['id'];
@@ -146,7 +146,7 @@ export function CodeModeADE({
           }}
           onClick={() => setIsRunning(!isRunning)}
         >
-          {isRunning ? <Activity size={14} className="animate-pulse" /> : <Zap size={14} />}
+          {isRunning ? <Activity size={14} className="animate-pulse" /> : <Lightning size={14} />}
           {isRunning ? 'Active' : 'Ignite'}
         </button>
       }
@@ -163,8 +163,8 @@ export function CodeModeADE({
           {/* Stats */}
           <div className="grid grid-cols-2 gap-3 mb-6">
             <StatCard label="Agents" value="4" icon={Users} />
-            <StatCard label="Latency" value="24ms" icon={Zap} />
-            <StatCard label="Memory" value="1.4GB" icon={Box} />
+            <StatCard label="Latency" value="24ms" icon={Lightning} />
+            <StatCard label="Memory" value="1.4GB" icon={Cube} />
             <StatCard label="Success" value="99.8%" icon={Shield} />
           </div>
 
@@ -288,7 +288,7 @@ function TasksView({ modeColors }: { modeColors: any }) {
           <div key={i} className="p-4 rounded-xl" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ background: task.done ? 'rgba(34,197,94,0.15)' : 'rgba(107,114,128,0.15)' }}>
-                {task.done ? <CheckCircle2 size={20} style={{ color: '#22c55e' }} /> : <Clock size={20} style={{ color: '#6b7280' }} />}
+                {task.done ? <CheckCircle size={20} style={{ color: '#22c55e' }} /> : <Clock size={20} style={{ color: '#6b7280' }} />}
               </div>
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-2">
@@ -418,7 +418,7 @@ function AnalyticsView({ modeColors, isRunning }: { modeColors: any; isRunning: 
     return (
       <div className="h-full flex flex-col items-center justify-center text-center p-8">
         <div className="w-16 h-16 rounded-xl mb-4 flex items-center justify-center" style={{ background: `${modeColors.accent}20`, border: `1px solid ${modeColors.accent}40` }}>
-          <BarChart3 size={32} style={{ color: modeColors.accent, opacity: 0.5 }} />
+          <ChartBar size={32} style={{ color: modeColors.accent, opacity: 0.5 }} />
         </div>
         <p className="text-sm font-semibold mb-2" style={{ color: TEXT.primary }}>Start swarm to see analytics</p>
         <p className="text-sm" style={{ color: TEXT.secondary }}>Metrics appear during execution</p>

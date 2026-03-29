@@ -91,6 +91,7 @@ export type ViewType =
   | "new-document"
   // Code views
   | "new-file"
+  | "code-project"
   | "search"
   | "debug"
   | "code-explorer"

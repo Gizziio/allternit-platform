@@ -16,7 +16,11 @@ import { ModelPicker, type ModelSelection } from "@/components/model-picker";
 import { api } from "@/integration/api-client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Sparkles, X } from "lucide-react";
+import {
+  CircleNotch,
+  Sparkle,
+  X,
+} from '@phosphor-icons/react';
 import { useState, useCallback } from "react";
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -30,11 +34,11 @@ export function ModelSelectorButton() {
     return (
       <div className="flex items-center gap-2">
         <Badge variant="secondary" className="gap-1">
-          <Sparkles className="h-3 w-3" />
+          <Sparkle size={12} />
           {selection.modelName || selection.modelId}
         </Badge>
         <Button variant="ghost" size="sm" onClick={clearSelection}>
-          <X className="h-3 w-3" />
+          <X size={12} />
         </Button>
       </div>
     );
@@ -45,7 +49,7 @@ export function ModelSelectorButton() {
       onSelect={(sel) => console.log("Selected:", sel)}
       trigger={
         <Button variant="outline" size="sm" className="gap-1">
-          <Sparkles className="h-3 w-3" />
+          <Sparkle size={12} />
           Select Model
         </Button>
       }
@@ -110,7 +114,7 @@ export function ChatInputWithModel({ onSend, disabled }: ChatInputWithModelProps
       {/* Selected Model Display */}
       {selection && (
         <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg">
-          <Sparkles className="h-4 w-4 text-primary" />
+          <Sparkle className="h-4 w-4 text-primary" />
           <span className="text-sm">
             Using <strong>{selection.modelName || selection.modelId}</strong>
             {" "}via {selection.profileId}
@@ -121,7 +125,7 @@ export function ChatInputWithModel({ onSend, disabled }: ChatInputWithModelProps
             className="h-auto py-1 px-2 ml-auto"
             onClick={clearSelection}
           >
-            <X className="h-3 w-3" />
+            <X size={12} />
           </Button>
         </div>
       )}
@@ -147,8 +151,8 @@ export function ChatInputWithModel({ onSend, disabled }: ChatInputWithModelProps
             <ModelPicker
               onSelect={(sel) => console.log("Selected:", sel)}
               trigger={
-                <Button variant="outline" size="icon" className="h-10 w-10">
-                  <Sparkles className="h-4 w-4" />
+                <Button variant="outline" size="icon" size={40}>
+                  <Sparkle size={16} />
                 </Button>
               }
             />
@@ -160,7 +164,7 @@ export function ChatInputWithModel({ onSend, disabled }: ChatInputWithModelProps
             className="h-10"
           >
             {isCreatingSession ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <CircleNotch className="h-4 w-4 animate-spin" />
             ) : (
               "Send"
             )}

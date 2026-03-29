@@ -10,20 +10,20 @@
  */
 
 import React, { useEffect } from "react";
-import { 
-  Activity, 
-  CheckCircle, 
-  XCircle, 
-  Clock, 
-  AlertCircle,
+import {
+  Pulse as Activity,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Warning,
   Cpu,
   HardDrive,
-  Wifi,
+  WifiHigh,
   Users,
-  Loader2,
+  CircleNotch,
   Pause,
-  Play
-} from "lucide-react";
+  Play,
+} from '@phosphor-icons/react';
 import { useUnifiedStore } from "@/lib/agents/unified.store";
 
 export function StatusTab() {
@@ -84,7 +84,7 @@ export function StatusTab() {
             }}
           >
             <HealthItem
-              icon={Wifi}
+              icon={WifiHigh}
               label="Rails Service"
               status={health.rails}
             />

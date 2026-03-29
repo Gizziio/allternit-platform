@@ -1,7 +1,13 @@
 "use client";
 
 import React, { useEffect, useCallback } from "react";
-import { X, Check, ExternalLink, Star, Server } from "lucide-react";
+import {
+  X,
+  Check,
+  ArrowSquareOut,
+  Star,
+  HardDrives,
+} from '@phosphor-icons/react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -216,7 +222,7 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
         >
           <span className="relative z-10 flex items-center justify-center gap-2">
             Get Started
-            <ExternalLink className="w-4 h-4 transition-transform duration-300 group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5" />
+            <ArrowSquareOut className="w-4 h-4 transition-transform duration-300 group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5" />
           </span>
         </Button>
       </div>
@@ -303,14 +309,14 @@ export const VPSMarketplace: React.FC<VPSMarketplaceProps> = ({
           )}
           aria-label="Close"
         >
-          <X className="w-5 h-5" />
+          <X size={20} />
         </button>
 
         {/* Header */}
         <div className="px-8 pt-8 pb-6 border-b border-[#2a2a2a]">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/30 flex items-center justify-center">
-              <Server className="w-5 h-5 text-blue-400" />
+              <HardDrives className="w-5 h-5 text-blue-400" />
             </div>
             <div>
               <h2 className="text-2xl font-bold text-white">

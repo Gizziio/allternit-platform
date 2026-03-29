@@ -3,19 +3,73 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  LayoutDashboard, Play, CheckSquare, GitCommit, Wrench, Mail,
-  BarChart3, Container, Users, UserCircle, Settings, X, ChevronLeft,
-  Plus, Pause, RotateCw, Terminal, Trash2, Edit3, Clock, AlertCircle,
-  CheckCircle2, Filter, Search, RefreshCw, Send, Inbox,
-  MessageSquare, Activity, Cpu, Globe, FileCode, FolderOpen,
-  Zap, Shield, Lock, Unlock, Eye, ChevronDown, ChevronRight,
-  Copy, Check, TrendingUp, DollarSign, Server, HardDrive, Box,
-  GitBranch, MessageCircle, ThumbsUp, ThumbsDown, Archive,
-  XCircle, Loader2, Download, Upload, Plug, Layers, Sparkles,
-  Code, Database, Globe2, FileText, ArchiveRestore, Share2, Bookmark, MoreVertical,
-  Save,
+  SquaresFour,
+  Play,
+  CheckSquare,
+  GitCommit,
+  Wrench,
+  EnvelopeSimple,
+  ChartBar,
+  Cube,
+  Users,
+  UserCircle,
+  GearSix,
+  X,
+  CaretLeft,
+  Plus,
+  Pause,
+  ArrowClockwise,
+  Terminal,
+  Trash,
+  PencilSimple,
+  Clock,
+  Warning,
+  CheckCircle,
+  Funnel,
+  MagnifyingGlass,
+  ArrowsClockwise,
+  PaperPlaneTilt,
+  Tray,
+  Chat,
+  Pulse as Activity,
+  Cpu,
+  Globe,
+  FileCode,
+  FolderOpen,
+  Lightning,
+  Shield,
+  Lock,
+  LockOpen,
+  Eye,
+  CaretDown,
+  CaretRight,
+  Copy,
+  Check,
+  TrendUp,
+  CurrencyDollar,
+  HardDrives,
+  HardDrive,
+  GitBranch,
+  ChatCircle,
+  ThumbsUp,
+  ThumbsDown,
+  Archive,
+  XCircle,
+  CircleNotch,
+  DownloadSimple,
+  UploadSimple,
+  PlugsConnected,
+  Stack,
+  Sparkle,
+  Code,
+  Database,
+  FileText,
+  ShareNetwork,
+  Bookmark,
+  DotsThreeVertical,
+  FloppyDisk,
   Package,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 
 // Stores
 import { useAgentStore } from '@/lib/agents/agent.store';
@@ -165,7 +219,7 @@ function DashboardHeader({ agent, stats, onClose, activeTab }: {
           padding: '8px', borderRadius: '8px', background: 'transparent', border: 'none',
           color: STUDIO_THEME.textSecondary, cursor: 'pointer',
         }}>
-          <ChevronLeft style={{ width: 20, height: 20 }} />
+          <CaretLeft style={{ width: 20, height: 20 }} />
         </button>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -205,18 +259,18 @@ function DashboardHeader({ agent, stats, onClose, activeTab }: {
 
 function SidebarNavigation({ activeTab, onTabChange }: { activeTab: TabId; onTabChange: (tab: TabId) => void }) {
   const tabs: { id: TabId; icon: React.ElementType; label: string }[] = [
-    { id: 'overview', icon: LayoutDashboard, label: 'Overview' },
+    { id: 'overview', icon: SquaresFour, label: 'Overview' },
     { id: 'runs', icon: Play, label: 'Runs' },
     { id: 'tasks', icon: CheckSquare, label: 'Tasks' },
     { id: 'checkpoints', icon: GitCommit, label: 'Checkpoints' },
     { id: 'tools', icon: Wrench, label: 'Tools' },
-    { id: 'comms', icon: Mail, label: 'Comms' },
-    { id: 'monitoring', icon: BarChart3, label: 'Monitor' },
-    { id: 'environment', icon: Container, label: 'Env' },
+    { id: 'comms', icon: EnvelopeSimple, label: 'Comms' },
+    { id: 'monitoring', icon: ChartBar, label: 'Monitor' },
+    { id: 'environment', icon: Cube, label: 'Env' },
     { id: 'swarm', icon: Users, label: 'Swarm' },
     { id: 'character', icon: UserCircle, label: 'Character' },
     { id: 'workspace', icon: FolderOpen, label: 'Workspace' },
-    { id: 'settings', icon: Settings, label: 'Settings' },
+    { id: 'settings', icon: GearSix, label: 'Settings' },
   ];
 
   return (
@@ -443,9 +497,9 @@ function ToolsTab({ agent }: { agent: Agent }) {
         <div style={{ display: 'flex', gap: '8px', padding: '4px', borderRadius: '8px', background: STUDIO_THEME.bgCard, border: `1px solid ${STUDIO_THEME.borderSubtle}` }}>
           {[
             { id: 'tools', label: 'Tools', icon: Wrench },
-            { id: 'skills', label: 'Skills', icon: Zap },
-            { id: 'mcp', label: 'MCP', icon: Plug },
-            { id: 'plugins', label: 'Plugins', icon: Layers },
+            { id: 'skills', label: 'Skills', icon: Lightning },
+            { id: 'mcp', label: 'MCP', icon: PlugsConnected },
+            { id: 'plugins', label: 'Plugins', icon: Stack },
           ].map((s: any) => (
             <button key={s.id} onClick={() => setActiveSection(s.id)} style={{
               flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
@@ -481,7 +535,7 @@ function ToolsTab({ agent }: { agent: Agent }) {
               }} 
               style={{ background: STUDIO_THEME.accent, color: STUDIO_THEME.bg }}
             >
-              <Download style={{ width: 16, height: 16, marginRight: 8 }} />Browse Skill Registry
+              <DownloadSimple style={{ width: 16, height: 16, marginRight: 8 }} />Browse Skill Registry
             </Button>
           )}
         </div>
@@ -510,7 +564,7 @@ function ToolsTab({ agent }: { agent: Agent }) {
 
         {/* Skills Section */}
         {activeSection === 'skills' && (
-          <Section title={`Available Skills (${skills.length})`} icon={Zap}>
+          <Section title={`Available Skills (${skills.length})`} icon={Lightning}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {skills.map(skill => (
                 <div key={skill.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderRadius: '10px', border: `1px solid ${STUDIO_THEME.borderSubtle}`, background: STUDIO_THEME.bgCard }}>
@@ -551,7 +605,7 @@ function ToolsTab({ agent }: { agent: Agent }) {
                         disabled={installingSkillId === skill.id}
                       >
                         {installingSkillId === skill.id ? (
-                          <Loader2 style={{ width: 14, height: 14, animation: 'spin 1s linear infinite' }} />
+                          <CircleNotch style={{ width: 14, height: 14, animation: 'spin 1s linear infinite' }} />
                         ) : (
                           'Install'
                         )}
@@ -566,7 +620,7 @@ function ToolsTab({ agent }: { agent: Agent }) {
 
         {/* MCP Section */}
         {activeSection === 'mcp' && (
-          <Section title={`MCP Connectors (${mcpConnectors.length})`} icon={Plug}>
+          <Section title={`MCP Connectors (${mcpConnectors.length})`} icon={PlugsConnected}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {mcpConnectors.map(connector => {
                 const testStatus = mcpTestStatus[connector.id];
@@ -574,7 +628,7 @@ function ToolsTab({ agent }: { agent: Agent }) {
                   <div key={connector.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderRadius: '10px', border: `1px solid ${STUDIO_THEME.borderSubtle}`, background: STUDIO_THEME.bgCard }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       <div style={{ width: 36, height: 36, borderRadius: 8, background: STUDIO_THEME.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Plug style={{ width: 18, height: 18, color: STUDIO_THEME.accent }} />
+                        <PlugsConnected style={{ width: 18, height: 18, color: STUDIO_THEME.accent }} />
                       </div>
                       <div>
                         <div style={{ color: STUDIO_THEME.textPrimary, fontSize: '14px', fontWeight: 500 }}>{connector.name}</div>
@@ -602,7 +656,7 @@ function ToolsTab({ agent }: { agent: Agent }) {
                         disabled={testStatus?.status === 'testing'}
                       >
                         {testStatus?.status === 'testing' ? (
-                          <RefreshCw style={{ width: 14, height: 14, animation: 'spin 1s linear infinite' }} />
+                          <ArrowsClockwise style={{ width: 14, height: 14, animation: 'spin 1s linear infinite' }} />
                         ) : (
                           <Activity style={{ width: 14, height: 14 }} />
                         )}
@@ -613,7 +667,7 @@ function ToolsTab({ agent }: { agent: Agent }) {
                         onClick={() => setDeleteConfirmConnector(connector)}
                         disabled={isDeletingMcp}
                       >
-                        <Trash2 style={{ width: 14, height: 14 }} />
+                        <Trash style={{ width: 14, height: 14 }} />
                       </Button>
                     </div>
                   </div>
@@ -626,13 +680,13 @@ function ToolsTab({ agent }: { agent: Agent }) {
 
         {/* Plugins Section */}
         {activeSection === 'plugins' && (
-          <Section title="Feature Plugins" icon={Layers}>
+          <Section title="Feature Plugins" icon={Stack}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {FEATURE_PLUGIN_REGISTRY.map(plugin => (
                 <div key={plugin.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderRadius: '10px', border: `1px solid ${STUDIO_THEME.borderSubtle}`, background: STUDIO_THEME.bgCard }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <div style={{ width: 36, height: 36, borderRadius: 8, background: enabledIds.has(plugin.id) ? `${STUDIO_THEME.accent}20` : STUDIO_THEME.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Layers style={{ width: 18, height: 18, color: enabledIds.has(plugin.id) ? STUDIO_THEME.accent : STUDIO_THEME.textMuted }} />
+                      <Stack style={{ width: 18, height: 18, color: enabledIds.has(plugin.id) ? STUDIO_THEME.accent : STUDIO_THEME.textMuted }} />
                     </div>
                     <div>
                       <div style={{ color: STUDIO_THEME.textPrimary, fontSize: '14px', fontWeight: 500 }}>{plugin.name}</div>
@@ -781,7 +835,7 @@ function CommsTab({ agent }: { agent: Agent }) {
           </h3>
           <div style={{ display: 'flex', gap: '8px' }}>
             <Button size="sm" variant="ghost" onClick={() => { fetchMail(agent.id); fetchMailThreads(agent.id); }}>
-              <RefreshCw style={{ width: 14, height: 14 }} />
+              <ArrowsClockwise style={{ width: 14, height: 14 }} />
             </Button>
             <Button size="sm" onClick={() => setComposeOpen(true)}><Plus style={{ width: 14, height: 14 }} /></Button>
           </div>
@@ -820,7 +874,7 @@ function CommsTab({ agent }: { agent: Agent }) {
                   setShareLink(link);
                   setShareOpen(true);
                 }}>
-                  <Share2 style={{ width: 14, height: 14, marginRight: 6 }} />Share
+                  <ShareNetwork style={{ width: 14, height: 14, marginRight: 6 }} />Share
                 </Button>
               </div>
             </div>
@@ -852,7 +906,7 @@ function CommsTab({ agent }: { agent: Agent }) {
             <div style={{ padding: '16px', borderTop: `1px solid ${STUDIO_THEME.borderSubtle}`, background: STUDIO_THEME.bgCard }}>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <Input placeholder="Type a message..." style={{ flex: 1 }} onKeyDown={e => { if (e.key === 'Enter') { unified.sendMail(selectedThread, (e.target as HTMLInputElement).value); (e.target as HTMLInputElement).value = ''; } }} />
-                <Button size="sm"><Send style={{ width: 16, height: 16 }} /></Button>
+                <Button size="sm"><PaperPlaneTilt style={{ width: 16, height: 16 }} /></Button>
               </div>
             </div>
           </>
@@ -981,13 +1035,13 @@ function MonitoringTab({ agent }: { agent: Agent }) {
         {/* Metric Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
           <MetricCard label="Total Runs" value={totalRuns} icon={Activity} onClick={() => setSelectedMetric('runs')} />
-          <MetricCard label="Success Rate" value={`${successRate}%`} icon={CheckCircle2} color="#22c55e" onClick={() => setSelectedMetric('runs')} />
+          <MetricCard label="Success Rate" value={`${successRate}%`} icon={CheckCircle} color="#22c55e" onClick={() => setSelectedMetric('runs')} />
           <MetricCard label="Failed" value={failedRuns} icon={XCircle} color="#ef4444" onClick={() => setSelectedMetric('failed')} />
           <MetricCard label="Pending Reviews" value={pendingReviews} icon={Shield} color="#f59e0b" onClick={() => setSelectedMetric('reviews')} />
         </div>
 
         {/* Token Usage - REAL DATA */}
-        <Section title="Token Usage" icon={TrendingUp}>
+        <Section title="Token Usage" icon={TrendUp}>
           <div style={{ padding: '20px', borderRadius: '10px', border: `1px solid ${STUDIO_THEME.borderSubtle}`, background: STUDIO_THEME.bgCard }}>
             {loading ? (
               <div style={{ textAlign: 'center', padding: '20px', color: STUDIO_THEME.textMuted }}>Loading telemetry...</div>
@@ -1120,7 +1174,7 @@ function MonitoringTab({ agent }: { agent: Agent }) {
                     disabled={processingReviewId === review.id}
                   >
                     {processingReviewId === review.id ? (
-                      <Loader2 style={{ width: 14, height: 14, animation: 'spin 1s linear infinite' }} />
+                      <CircleNotch style={{ width: 14, height: 14, animation: 'spin 1s linear infinite' }} />
                     ) : (
                       <ThumbsUp style={{ width: 14, height: 14 }} />
                     )}
@@ -1150,7 +1204,7 @@ function MonitoringTab({ agent }: { agent: Agent }) {
                     disabled={processingReviewId === review.id}
                   >
                     {processingReviewId === review.id ? (
-                      <Loader2 style={{ width: 14, height: 14, animation: 'spin 1s linear infinite' }} />
+                      <CircleNotch style={{ width: 14, height: 14, animation: 'spin 1s linear infinite' }} />
                     ) : (
                       <ThumbsDown style={{ width: 14, height: 14 }} />
                     )}
@@ -1235,7 +1289,7 @@ function EnvironmentTab({ agent }: { agent: Agent }) {
     <ScrollArea style={{ height: '100%', padding: '20px' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         {/* Environment Templates */}
-        <Section title="Environment Templates" icon={Box}>
+        <Section title="Environment Templates" icon={Cube}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
             {Object.entries(templates).map(([key, template]) => (
               <button
@@ -1486,7 +1540,7 @@ function SwarmTab({ agent }: { agent: Agent }) {
                     <div style={{ color: STUDIO_THEME.textMuted, fontSize: '12px' }}>{subAgent.type} • {subAgent.model}</div>
                   </div>
                   <StatusBadge status={subAgent.status} />
-                  <Button variant="ghost" size="sm"><MoreVertical style={{ width: 16, height: 16 }} /></Button>
+                  <Button variant="ghost" size="sm"><DotsThreeVertical style={{ width: 16, height: 16 }} /></Button>
                 </div>
               ))}
             </div>
@@ -1659,13 +1713,13 @@ function CharacterTab({ agent, stats }: { agent: Agent; stats?: CharacterStats }
             )}
           </div>
           <Button onClick={() => isEditing ? handleSave() : setIsEditing(true)} disabled={isSaving}>
-            {isSaving ? <Loader2 style={{ width: 16, height: 16, marginRight: 8, animation: 'spin 1s linear infinite' }} /> : isEditing ? <><Check style={{ width: 16, height: 16, marginRight: 8 }} />Save</> : <><Edit3 style={{ width: 16, height: 16, marginRight: 8 }} />Edit</>}
+            {isSaving ? <CircleNotch style={{ width: 16, height: 16, marginRight: 8, animation: 'spin 1s linear infinite' }} /> : isEditing ? <><Check style={{ width: 16, height: 16, marginRight: 8 }} />Save</> : <><PencilSimple style={{ width: 16, height: 16, marginRight: 8 }} />Edit</>}
           </Button>
         </div>
 
         {/* Specialties */}
         {isEditing && (
-          <Section title="Specialties" icon={Sparkles}>
+          <Section title="Specialties" icon={Sparkle}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {specialtyOptions.map((specialty: string) => (
                 <button
@@ -1850,7 +1904,7 @@ function SettingsTab({ agent }: { agent: Agent }) {
         </Section>
 
         {/* System Prompt */}
-        <Section title="System Prompt" icon={MessageSquare}>
+        <Section title="System Prompt" icon={Chat}>
           <div style={{ padding: '20px', borderRadius: '10px', border: `1px solid ${STUDIO_THEME.borderSubtle}`, background: STUDIO_THEME.bgCard }}>
             <Textarea 
               value={editConfig.systemPrompt}
@@ -1862,7 +1916,7 @@ function SettingsTab({ agent }: { agent: Agent }) {
         </Section>
 
         {/* Capabilities */}
-        <Section title="Capabilities" icon={Zap}>
+        <Section title="Capabilities" icon={Lightning}>
           <div style={{ padding: '20px', borderRadius: '10px', border: `1px solid ${STUDIO_THEME.borderSubtle}`, background: STUDIO_THEME.bgCard }}>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
               <Input 
@@ -1911,7 +1965,7 @@ function SettingsTab({ agent }: { agent: Agent }) {
         <div style={{ padding: '20px', borderRadius: '10px', border: '1px solid rgba(239,68,68,0.3)', backgroundColor: 'rgba(239,68,68,0.05)' }}>
           <h4 style={{ color: '#ef4444', margin: '0 0 16px 0', fontSize: '14px', fontWeight: 600 }}>Danger Zone</h4>
           <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)} disabled={isDeleting}>
-            <Trash2 style={{ width: 16, height: 16, marginRight: 8 }} />
+            <Trash style={{ width: 16, height: 16, marginRight: 8 }} />
             {isDeleting ? 'Deleting...' : 'Delete Agent'}
           </Button>
         </div>
@@ -1961,7 +2015,7 @@ function OverviewTab({ agent, stats }: { agent: Agent; stats?: CharacterStats })
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
           <StatBox label="Total Runs" value={agentRuns.length} icon={Play} />
           <StatBox label="Pending Tasks" value={pendingTasks.length} icon={CheckSquare} />
-          <StatBox label="Unread Messages" value={unreadMessages} icon={Mail} />
+          <StatBox label="Unread Messages" value={unreadMessages} icon={EnvelopeSimple} />
           <StatBox label="Level" value={stats?.level || 1} icon={UserCircle} />
         </div>
 
@@ -1989,7 +2043,7 @@ function OverviewTab({ agent, stats }: { agent: Agent; stats?: CharacterStats })
 
         {/* Capabilities */}
         {agent.capabilities && agent.capabilities.length > 0 && (
-          <Section title="Capabilities" icon={Zap}>
+          <Section title="Capabilities" icon={Lightning}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
               {agent.capabilities.map(cap => (
                 <Badge key={cap} variant="outline">{cap}</Badge>
@@ -2095,7 +2149,7 @@ function CheckpointsTab({ agent }: { agent: Agent }) {
                       <div style={{ color: STUDIO_THEME.textMuted, fontSize: '12px' }}>{new Date(cp.timestamp).toLocaleString()}</div>
                     </div>
                     <Button size="sm" variant="outline" onClick={() => handleRestore(cp.id)}>
-                      <ArchiveRestore style={{ width: 14, height: 14, marginRight: 6 }} />Restore
+                      <Archive style={{ width: 14, height: 14, marginRight: 6 }} />Restore
                     </Button>
                   </div>
                 </div>
@@ -2207,7 +2261,7 @@ function RunListItem({ run, onCancel, compact }: { run: AgentRun; onCancel?: () 
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <StatusBadge status={run.status} />
-          {onCancel && <Button variant="ghost" size="sm" onClick={onCancel}><Trash2 style={{ width: 14, height: 14 }} /></Button>}
+          {onCancel && <Button variant="ghost" size="sm" onClick={onCancel}><Trash style={{ width: 14, height: 14 }} /></Button>}
         </div>
       </div>
     </div>
@@ -2225,7 +2279,7 @@ function TaskListItem({ task, onStatusChange, compact }: { task: AgentTask; onSt
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <StatusBadge status={task.status} />
           {onStatusChange && task.status === 'in-progress' && (
-            <Button variant="ghost" size="sm" onClick={() => onStatusChange('completed')}><CheckCircle2 style={{ width: 14, height: 14 }} /></Button>
+            <Button variant="ghost" size="sm" onClick={() => onStatusChange('completed')}><CheckCircle style={{ width: 14, height: 14 }} /></Button>
           )}
         </div>
       </div>

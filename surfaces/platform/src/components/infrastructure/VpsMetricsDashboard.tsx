@@ -12,18 +12,17 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Activity,
+  Pulse as Activity,
   Cpu,
-  MemoryStick,
   HardDrive,
   Network,
   Clock,
-  TrendingUp,
-  TrendingDown,
-  AlertTriangle,
-  Server,
-  RefreshCw,
-} from 'lucide-react';
+  TrendUp,
+  TrendDown,
+  Warning,
+  HardDrives,
+  ArrowsClockwise,
+} from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -167,7 +166,7 @@ export function VpsMetricsDashboard({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Server className="w-5 h-5 text-primary" />
+          <HardDrives className="w-5 h-5 text-primary" />
           <div>
             <h3 className="font-semibold">{vpsConnection.name}</h3>
             <p className="text-xs text-muted-foreground">
@@ -189,9 +188,9 @@ export function VpsMetricsDashboard({
             className="gap-1"
           >
             {health.status === 'healthy' ? (
-              <Activity className="w-3 h-3" />
+              <Activity size={12} />
             ) : (
-              <AlertTriangle className="w-3 h-3" />
+              <Warning size={12} />
             )}
             {health.message}
           </Badge>
@@ -202,7 +201,7 @@ export function VpsMetricsDashboard({
             disabled={isLoading}
             className="gap-1"
           >
-            <RefreshCw className={cn("w-3 h-3", isLoading && "animate-spin")} />
+            <ArrowsClockwise className={cn("w-3 h-3", isLoading && "animate-spin")} />
             Refresh
           </Button>
         </div>
@@ -229,7 +228,7 @@ export function VpsMetricsDashboard({
       {/* Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
-          icon={<Cpu className="w-4 h-4" />}
+          icon={<Cpu size={16} />}
           title="CPU Usage"
           value={currentMetrics ? `${currentMetrics.cpu.toFixed(1)}%` : 'N/A'}
           subtitle={stats ? `Avg: ${stats.avgCpu.toFixed(1)}% | Peak: ${stats.peakCpu.toFixed(1)}%` : ''}
@@ -238,7 +237,7 @@ export function VpsMetricsDashboard({
         />
 
         <MetricCard
-          icon={<MemoryStick className="w-4 h-4" />}
+          icon={<HardDrive size={16} />}
           title="Memory Usage"
           value={currentMetrics ? `${currentMetrics.memory.toFixed(1)}%` : 'N/A'}
           subtitle={stats ? `Avg: ${stats.avgMemory.toFixed(1)}% | Peak: ${stats.peakMemory.toFixed(1)}%` : ''}
@@ -247,7 +246,7 @@ export function VpsMetricsDashboard({
         />
 
         <MetricCard
-          icon={<HardDrive className="w-4 h-4" />}
+          icon={<HardDrive size={16} />}
           title="Disk Usage"
           value={currentMetrics ? `${currentMetrics.disk.toFixed(1)}%` : 'N/A'}
           subtitle={vpsConnection.resources?.disk ? `Total: ${vpsConnection.resources.disk}GB` : ''}
@@ -256,7 +255,7 @@ export function VpsMetricsDashboard({
         />
 
         <MetricCard
-          icon={<Clock className="w-4 h-4" />}
+          icon={<Clock size={16} />}
           title="Uptime"
           value={stats ? formatDuration(stats.uptime) : 'N/A'}
           subtitle="Since last connection"
@@ -269,19 +268,19 @@ export function VpsMetricsDashboard({
       <Tabs defaultValue="cpu" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="cpu" className="gap-1 text-xs">
-            <Cpu className="w-3 h-3" />
+            <Cpu size={12} />
             CPU
           </TabsTrigger>
           <TabsTrigger value="memory" className="gap-1 text-xs">
-            <MemoryStick className="w-3 h-3" />
+            <HardDrive size={12} />
             Memory
           </TabsTrigger>
           <TabsTrigger value="disk" className="gap-1 text-xs">
-            <HardDrive className="w-3 h-3" />
+            <HardDrive size={12} />
             Disk
           </TabsTrigger>
           <TabsTrigger value="network" className="gap-1 text-xs">
-            <Network className="w-3 h-3" />
+            <Network size={12} />
             Network
           </TabsTrigger>
         </TabsList>
@@ -339,7 +338,7 @@ export function VpsMetricsDashboard({
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Activity className="w-4 h-4" />
+              <Activity size={16} />
               Load Average
             </CardTitle>
           </CardHeader>
@@ -365,7 +364,7 @@ export function VpsMetricsDashboard({
       {error && (
         <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-red-600 text-sm">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4" />
+            <Warning size={16} />
             <span>Failed to fetch metrics: {error}</span>
           </div>
         </div>
@@ -406,9 +405,9 @@ function MetricCard({ icon, title, value, subtitle, trend, color }: MetricCardPr
           <span className="text-xs font-medium opacity-80">{title}</span>
         </div>
         {trend === 'up' ? (
-          <TrendingUp className="w-3 h-3" />
+          <TrendUp size={12} />
         ) : trend === 'down' ? (
-          <TrendingDown className="w-3 h-3" />
+          <TrendDown size={12} />
         ) : null}
       </div>
       <p className="text-2xl font-bold">{value}</p>

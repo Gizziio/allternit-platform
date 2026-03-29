@@ -25,6 +25,13 @@ export interface BrowserChatPaneState {
   slashMenuOpen: boolean;
   slashQuery: string;
   language: string;
+  extensionApiKey: string;
+  extensionBaseUrl: string;
+  extensionModel: string;
+  extensionMaxSteps: number | null;
+  extensionSystemInstruction: string;
+  extensionExperimentalLlmsTxt: boolean;
+  browserBridgeToken: string;
 
   setPermissionMode: (mode: "ask" | "act") => void;
   setWorkflowTeachingActive: (active: boolean) => void;
@@ -35,6 +42,31 @@ export interface BrowserChatPaneState {
   setSlashMenuOpen: (open: boolean) => void;
   setSlashQuery: (query: string) => void;
   setLanguage: (language: string) => void;
+  setExtensionSettings: (
+    settings: Partial<Pick<
+      BrowserChatPaneState,
+      | "extensionApiKey"
+      | "extensionBaseUrl"
+      | "extensionModel"
+      | "extensionMaxSteps"
+      | "extensionSystemInstruction"
+      | "extensionExperimentalLlmsTxt"
+      | "browserBridgeToken"
+    >>,
+  ) => void;
+}
+
+const DEMO_API_KEY = "NA";
+const DEMO_BASE_URL = "https://page-ag-testing-ohftxirgbn.cn-shanghai.fcapp.run";
+const DEMO_MODEL = "qwen3.5-plus";
+
+function createBrowserBridgeToken() {
+  const random =
+    typeof globalThis !== "undefined" && globalThis.crypto?.randomUUID
+      ? globalThis.crypto.randomUUID().replace(/-/g, "")
+      : `${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`;
+
+  return `a2r_${random.slice(0, 24)}`;
 }
 
 export const useBrowserChatPaneStore = create<BrowserChatPaneState>()(
@@ -48,6 +80,13 @@ export const useBrowserChatPaneStore = create<BrowserChatPaneState>()(
       slashMenuOpen: false,
       slashQuery: "",
       language: "en",
+      extensionApiKey: DEMO_API_KEY,
+      extensionBaseUrl: DEMO_BASE_URL,
+      extensionModel: DEMO_MODEL,
+      extensionMaxSteps: 40,
+      extensionSystemInstruction: "",
+      extensionExperimentalLlmsTxt: false,
+      browserBridgeToken: createBrowserBridgeToken(),
 
       setPermissionMode: (mode) => {
         set({ permissionMode: mode });
@@ -73,12 +112,21 @@ export const useBrowserChatPaneStore = create<BrowserChatPaneState>()(
       setSlashQuery: (query) => set({ slashQuery: query }),
 
       setLanguage: (language) => set({ language }),
+
+      setExtensionSettings: (settings) => set(settings),
     }),
     {
       name: "a2r.browser.chatPane",
       partialize: (state) => ({
         permissionMode: state.permissionMode,
         language: state.language,
+        extensionApiKey: state.extensionApiKey,
+        extensionBaseUrl: state.extensionBaseUrl,
+        extensionModel: state.extensionModel,
+        extensionMaxSteps: state.extensionMaxSteps,
+        extensionSystemInstruction: state.extensionSystemInstruction,
+        extensionExperimentalLlmsTxt: state.extensionExperimentalLlmsTxt,
+        browserBridgeToken: state.browserBridgeToken,
       }),
     },
   ),

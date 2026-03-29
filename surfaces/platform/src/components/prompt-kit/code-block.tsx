@@ -2,8 +2,8 @@
 "use client"
 
 import { cn } from "../../lib/utils"
-import React, { useEffect, useState } from "react"
-import { codeToHtml } from "shiki"
+import React from "react"
+import { SyntaxHighlighter } from "@/views/plugins/SyntaxHighlighter"
 
 export type CodeBlockProps = {
   children?: React.ReactNode
@@ -39,42 +39,16 @@ function CodeBlockCode({
   className,
   ...props
 }: CodeBlockCodeProps) {
-  const [highlightedHtml, setHighlightedHtml] = useState<string | null>(null)
-
-  useEffect(() => {
-    async function highlight() {
-      if (!code) {
-        setHighlightedHtml("<pre><code></code></pre>")
-        return
-      }
-
-      try {
-        const html = await codeToHtml(code, { lang: language, theme })
-        setHighlightedHtml(html)
-      } catch (e) {
-        console.error("Highlighting failed", e);
-        setHighlightedHtml(`<pre><code>${code}</code></pre>`);
-      }
-    }
-    highlight()
-  }, [code, language, theme])
+  void theme
 
   const classNames = cn(
     "w-full overflow-x-auto text-[13px] [&>pre]:px-4 [&>pre]:py-4 font-mono",
     className
   )
 
-  return highlightedHtml ? (
-    <div
-      className={classNames}
-      dangerouslySetInnerHTML={{ __html: highlightedHtml }}
-      {...props}
-    />
-  ) : (
+  return (
     <div className={classNames} {...props}>
-      <pre>
-        <code>{code}</code>
-      </pre>
+      <SyntaxHighlighter code={code} language={language} showLineNumbers={false} />
     </div>
   )
 }

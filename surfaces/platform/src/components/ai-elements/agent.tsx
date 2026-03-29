@@ -11,7 +11,9 @@ import {
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { BotIcon } from "lucide-react";
+import {
+  Robot as BotIcon,
+} from '@phosphor-icons/react';
 import { memo } from "react";
 
 import { CodeBlock } from "./code-block";

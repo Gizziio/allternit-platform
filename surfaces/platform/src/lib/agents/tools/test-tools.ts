@@ -7,6 +7,7 @@
  */
 
 import type { ToolDefinition, ToolExecutionHandler } from "./index";
+import { API_BASE_URL, apiRequest } from "../api-config";
 
 // ============================================================================
 // Run Tests Tool
@@ -93,25 +94,12 @@ export const executeRunTests: ToolExecutionHandler = async (context, parameters)
   } = parameters;
 
   try {
-    // Detect test runner from project files
-    const testRunner = await detectTestRunner(String(path));
-
-    // Mock implementation - would call backend API to run actual tests
-    const mockResult: TestResult = {
-      success: true,
-      testRunner,
-      totalTests: 42,
-      passed: 42,
-      failed: 0,
-      skipped: 0,
-      duration: 2540,
-      failures: [],
-      output: verbose
-        ? "PASS src/components/Button.test.tsx\nPASS src/utils/helpers.test.ts\n\nTest Suites: 5 passed, 5 total\nTests: 42 passed, 42 total"
-        : "All tests passed",
-    };
-
-    return { result: mockResult };
+    const result = await apiRequest<TestResult>(`${API_BASE_URL}/tools/run-tests`, {
+      method: "POST",
+      body: JSON.stringify({ path, testPathPattern, testNamePattern, coverage, verbose, timeout }),
+      signal: context.abortSignal,
+    });
+    return { result };
   } catch (error) {
     return {
       result: null,
@@ -119,22 +107,6 @@ export const executeRunTests: ToolExecutionHandler = async (context, parameters)
     };
   }
 };
-
-async function detectTestRunner(projectPath: string): Promise<string> {
-  // Check for common test runner config files
-  const runners = [
-    { name: "vitest", files: ["vitest.config.ts", "vitest.config.js"] },
-    { name: "jest", files: ["jest.config.js", "jest.config.ts", "jest.json"] },
-    { name: "mocha", files: [".mocharc.js", ".mocharc.json"] },
-    { name: "pytest", files: ["pytest.ini", "setup.cfg", "pyproject.toml"] },
-    { name: "cargo", files: ["Cargo.toml"] },
-    { name: "go", files: ["go.mod"] },
-  ];
-
-  // In production, check actual file system
-  // For now, return a default
-  return "vitest";
-}
 
 // ============================================================================
 // Check Coverage Tool
@@ -200,39 +172,12 @@ export const executeCheckCoverage: ToolExecutionHandler = async (context, parame
   const { path = ".", showUncovered = false, threshold = 80 } = parameters as { path?: string; showUncovered?: boolean; threshold?: number };
 
   try {
-    const mockReport: CoverageReport = {
-      overall: {
-        lines: 87.5,
-        statements: 89.2,
-        functions: 85.0,
-        branches: 82.3,
-      },
-      files: [
-        {
-          path: "src/components/Button.tsx",
-          lines: 95,
-          statements: 96,
-        },
-        {
-          path: "src/utils/helpers.ts",
-          lines: 78,
-          statements: 80,
-          uncoveredLines: [15, 16, 42],
-        },
-      ],
-      summary: {
-        totalFiles: 25,
-        filesAboveThreshold: 20,
-        filesBelowThreshold: 5,
-      },
-    };
-
-    // Filter to show only uncovered files if requested
-    if (showUncovered) {
-      mockReport.files = mockReport.files.filter((f) => f.lines < threshold);
-    }
-
-    return { result: mockReport };
+    const result = await apiRequest<CoverageReport>(`${API_BASE_URL}/tools/coverage`, {
+      method: "POST",
+      body: JSON.stringify({ path, showUncovered, threshold }),
+      signal: context.abortSignal,
+    });
+    return { result };
   } catch (error) {
     return {
       result: null,
@@ -304,27 +249,12 @@ export const executeLintCheck: ToolExecutionHandler = async (context, parameters
   const { path = ".", files, fix = false } = parameters as { path?: string; files?: string[]; fix?: boolean };
 
   try {
-    const mockResult: LintResult = {
-      linter: "ESLint",
-      success: true,
-      errorCount: 0,
-      warningCount: 2,
-      fixableErrorCount: 0,
-      fixableWarningCount: 2,
-      issues: [
-        {
-          file: "src/utils/helpers.ts",
-          line: 42,
-          column: 5,
-          severity: "warning",
-          message: "'unusedVar' is assigned a value but never used",
-          rule: "@typescript-eslint/no-unused-vars",
-        },
-      ],
-      fixed: fix,
-    };
-
-    return { result: mockResult };
+    const result = await apiRequest<LintResult>(`${API_BASE_URL}/tools/lint`, {
+      method: "POST",
+      body: JSON.stringify({ path, files, fix }),
+      signal: context.abortSignal,
+    });
+    return { result };
   } catch (error) {
     return {
       result: null,
@@ -384,14 +314,12 @@ export const executeTypeCheck: ToolExecutionHandler = async (context, parameters
   const { path = ".", strict = false } = parameters;
 
   try {
-    const mockResult: TypeCheckResult = {
-      success: true,
-      errorCount: 0,
-      errors: [],
-      duration: 3240,
-    };
-
-    return { result: mockResult };
+    const result = await apiRequest<TypeCheckResult>(`${API_BASE_URL}/tools/typecheck`, {
+      method: "POST",
+      body: JSON.stringify({ path, strict }),
+      signal: context.abortSignal,
+    });
+    return { result };
   } catch (error) {
     return {
       result: null,

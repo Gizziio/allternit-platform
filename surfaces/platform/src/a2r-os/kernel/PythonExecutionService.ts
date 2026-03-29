@@ -363,9 +363,10 @@ export class PythonExecutionService {
           result = await this.executeViaHttp(request);
           break;
         case 'mock':
-        default:
           result = await this.executeViaMock(request);
           break;
+        default:
+          throw new Error(`Unknown Python execution backend: ${this.config.backend}`);
       }
 
       session.status = result.success ? 'completed' : 'error';
@@ -532,76 +533,15 @@ export class PythonExecutionService {
     }
   }
 
-  private async executeViaMock(request: PythonExecutionRequest): Promise<PythonExecutionResult> {
-    // Mock execution for development - simulates Python execution
-    this.log('Mock execution:', request.executionId);
-
-    const startTime = Date.now();
-    
-    // Simulate execution delay
-    await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1000));
-
-    // Check for matplotlib/plotly code to generate mock output
-    const hasVisualization = request.code.includes('plt.savefig') || 
-                             request.code.includes('fig.write_html');
-
-    if (hasVisualization) {
-      // Generate a mock visualization result
-      const mockOutputUrl = this.generateMockVisualization(request);
-      
-      return {
-        success: true,
-        stdout: `DataFrame: 100 rows × 5 columns\nA2R_OUTPUT:${mockOutputUrl}`,
-        stderr: '',
-        outputUrl: mockOutputUrl,
-        executionTime: Date.now() - startTime,
-        exitCode: 0,
-      };
-    }
-
-    // Return mock computation result
+  private async executeViaMock(_request: PythonExecutionRequest): Promise<PythonExecutionResult> {
     return {
-      success: true,
-      stdout: 'Mock execution completed\nResult: 42',
-      stderr: '',
-      executionTime: Date.now() - startTime,
-      exitCode: 0,
+      success: false,
+      stdout: '',
+      stderr: 'Python runtime unavailable',
+      executionTime: 0,
+      exitCode: 1,
+      error: 'No Python execution backend is connected',
     };
-  }
-
-  private generateMockVisualization(request: PythonExecutionRequest): string {
-    // Generate a mock chart using canvas/data URI
-    const isPlotly = request.code.includes('plotly');
-    
-    if (isPlotly) {
-      // Return a simple HTML page that looks like a Plotly chart
-      const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
-  <style>body{margin:0;display:flex;justify-content:center;align-items:center;height:100vh;}</style>
-</head>
-<body>
-  <div id="chart" style="width:100%;height:100%;"></div>
-  <script>
-    Plotly.newPlot('chart', [{
-      x: ['A','B','C','D','E'],
-      y: [20,35,40,25,30],
-      type: 'bar'
-    }], {
-      title: 'Mock Visualization (Development Mode)',
-      paper_bgcolor: 'white',
-      plot_bgcolor: 'white'
-    }, {responsive: true});
-  </script>
-</body>
-</html>`;
-      return `data:text/html;base64,${btoa(html)}`;
-    } else {
-      // Return a placeholder image
-      return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iI2Y4ZjlmYSIvPjx0ZXh0IHg9IjIwMCIgeT0iMTUwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LXNpemU9IjE0IiBmaWxsPSIjNmI3MjgwIj5Nb2NrIFZpc3VhbGl6YXRpb248YnIvPihEZXZlbG9wbWVudCBNb2RlKTwvdGV4dD48L3N2Zz4=';
-    }
   }
 
   // -------------------------------------------------------------------------

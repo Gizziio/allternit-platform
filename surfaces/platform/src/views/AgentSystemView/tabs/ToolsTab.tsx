@@ -9,20 +9,20 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { 
-  FileText, 
-  Save, 
-  Trash2, 
-  Search,
-  Filter,
-  Download,
-  Upload,
-  Settings,
+import {
+  FileText,
+  FloppyDisk,
+  Trash,
+  MagnifyingGlass,
+  Funnel,
+  DownloadSimple,
+  UploadSimple,
+  GearSix,
   Database,
-  RefreshCw,
+  ArrowsClockwise,
   HardDrive,
-  X
-} from "lucide-react";
+  X,
+} from '@phosphor-icons/react';
 import { useUnifiedStore } from "@/lib/agents/unified.store";
 import type { PromptTemplate, ToolSnapshot } from "@/lib/agents/unified.store";
 import type { Receipt } from "@/lib/agents";
@@ -122,7 +122,7 @@ export function ToolsTab() {
           onClick={() => setActiveSection("receipts")}
         />
         <SidebarItem
-          icon={Settings}
+          icon={GearSix}
           label="Settings"
           isActive={activeSection === "settings"}
           onClick={() => setActiveSection("settings")}
@@ -552,7 +552,7 @@ function SnapshotsSection({
               gap: 6,
             }}
           >
-            <Trash2 size={14} />
+            <Trash size={14} />
             Clear All
           </button>
         )}
@@ -641,7 +641,7 @@ function SnapshotsSection({
                   cursor: "pointer",
                 }}
               >
-                <Trash2 size={16} color="#ff3b30" />
+                <Trash size={16} color="#ff3b30" />
               </button>
             </div>
           ))}
@@ -698,7 +698,7 @@ function ReceiptsSection({
             cursor: "pointer",
           }}
         >
-          <RefreshCw size={16} color="#888" />
+          <ArrowsClockwise size={16} color="#888" />
         </button>
       </div>
 
@@ -722,7 +722,7 @@ function ReceiptsSection({
             borderRadius: 8,
           }}
         >
-          <Search size={16} color="#888" />
+          <MagnifyingGlass size={16} color="#888" />
           <input
             type="text"
             value={filter}

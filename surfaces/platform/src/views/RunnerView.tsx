@@ -12,11 +12,23 @@ import { SnapshotManagerPanel } from "../runner/components/SnapshotManagerPanel"
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Play, GitBranch, ClipboardList, Key, Package, Receipt,
-  FileCode, Database, Activity, RefreshCw, Settings, 
-  Terminal, Bot, CheckCircle, AlertTriangle
-} from "lucide-react";
+import {
+  Play,
+  GitBranch,
+  ClipboardText,
+  Key,
+  Package,
+  Receipt,
+  FileCode,
+  Database,
+  Pulse as Activity,
+  ArrowsClockwise,
+  GearSix,
+  Terminal,
+  Robot,
+  CheckCircle,
+  Warning,
+} from '@phosphor-icons/react';
 
 // Simple Execute Panel for basic tool execution
 function ExecutePanel() {
@@ -56,7 +68,7 @@ function ExecutePanel() {
           disabled={isRunning}
         />
         <Button onClick={handleExecute} disabled={isRunning || !command.trim()}>
-          {isRunning ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+          {isRunning ? <ArrowsClockwise className="w-4 h-4 animate-spin" /> : <Play size={16} />}
         </Button>
       </div>
     </div>
@@ -99,7 +111,7 @@ function StatusBar() {
       
       {pendingGates > 0 && (
         <div className="flex items-center gap-2">
-          <AlertTriangle className="w-3 h-3 text-orange-500" />
+          <Warning className="w-3 h-3 text-orange-500" />
           <span className="text-muted-foreground">Pending Gates</span>
           <Badge variant="destructive" className="text-xs">{pendingGates}</Badge>
         </div>
@@ -141,7 +153,7 @@ export function RunnerView() {
       <div className="h-14 border-b flex items-center px-4 gap-4">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Bot className="w-5 h-5 text-primary" />
+            <Robot className="w-5 h-5 text-primary" />
           </div>
           <div>
             <h1 className="font-semibold">DAK Runner</h1>
@@ -174,7 +186,7 @@ export function RunnerView() {
           
           {pendingGates > 0 && (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/10">
-              <AlertTriangle className="w-3 h-3 text-red-500" />
+              <Warning className="w-3 h-3 text-red-500" />
               <span className="text-xs text-red-500">{pendingGates} Gates</span>
             </div>
           )}
@@ -185,43 +197,43 @@ export function RunnerView() {
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 flex flex-col overflow-hidden">
         <TabsList className="mx-4 mt-4 flex-wrap h-auto gap-1 justify-start">
           <TabsTrigger value="execute" className="gap-2">
-            <Play className="w-4 h-4" /> Execute
+            <Play size={16} /> Execute
           </TabsTrigger>
           
           <TabsTrigger value="dags" className="gap-2">
-            <GitBranch className="w-4 h-4" /> 
+            <GitBranch size={16} /> 
             DAG Plans
             {activeRuns > 0 && <Badge variant="default" className="ml-1 text-[10px]">{activeRuns}</Badge>}
           </TabsTrigger>
           
           <TabsTrigger value="wihs" className="gap-2">
-            <ClipboardList className="w-4 h-4" /> 
+            <ClipboardText size={16} /> 
             Work Items
           </TabsTrigger>
           
           <TabsTrigger value="leases" className="gap-2">
-            <Key className="w-4 h-4" /> 
+            <Key size={16} /> 
             Leases
             {activeLeases > 0 && <Badge variant="secondary" className="ml-1 text-[10px]">{activeLeases}</Badge>}
           </TabsTrigger>
           
           <TabsTrigger value="context" className="gap-2">
-            <Package className="w-4 h-4" /> 
+            <Package size={16} /> 
             Context Packs
           </TabsTrigger>
           
           <TabsTrigger value="receipts" className="gap-2">
-            <Receipt className="w-4 h-4" /> 
+            <Receipt size={16} /> 
             Receipts
           </TabsTrigger>
           
           <TabsTrigger value="templates" className="gap-2">
-            <FileCode className="w-4 h-4" /> 
+            <FileCode size={16} /> 
             Templates
           </TabsTrigger>
           
           <TabsTrigger value="snapshots" className="gap-2">
-            <Database className="w-4 h-4" /> 
+            <Database size={16} /> 
             Snapshots
           </TabsTrigger>
         </TabsList>

@@ -12,16 +12,16 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  Mic,
-  Volume2,
-  VolumeX,
+  Microphone,
+  SpeakerHigh,
+  SpeakerSlash,
   Radio,
-  Settings2,
+  GearSix,
   Play,
   Square,
-  AlertCircle,
+  Warning,
   Check,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import { useVoice } from '@/providers/voice-provider';
 import { SpeechInput } from './speech-input';
 
@@ -88,9 +88,9 @@ export function VoiceToolbar({ className, variant = 'compact' }: VoiceToolbarPro
             {isPlaying ? (
               <Square className="h-3 w-3 fill-current" />
             ) : autoPlay ? (
-              <Volume2 className="h-3 w-3" />
+              <SpeakerHigh size={12} />
             ) : (
-              <VolumeX className="h-3 w-3" />
+              <SpeakerSlash size={12} />
             )}
             {!isCompact && (
               <>
@@ -100,7 +100,7 @@ export function VoiceToolbar({ className, variant = 'compact' }: VoiceToolbarPro
                     : 'Offline'
                   }
                 </span>
-                <Settings2 className="h-3 w-3 opacity-50" />
+                <GearSix className="h-3 w-3 opacity-50" />
               </>
             )}
           </Button>
@@ -116,7 +116,7 @@ export function VoiceToolbar({ className, variant = 'compact' }: VoiceToolbarPro
               </>
             ) : (
               <>
-                <AlertCircle className="h-3 w-3 text-amber-500" />
+                <Warning className="h-3 w-3 text-amber-500" />
                 <span className="text-amber-600">Service Offline</span>
               </>
             )}
@@ -132,7 +132,7 @@ export function VoiceToolbar({ className, variant = 'compact' }: VoiceToolbarPro
           >
             <div className="flex items-center justify-between w-full">
               <span>Auto-play TTS</span>
-              {autoPlay && <Check className="h-3 w-3" />}
+              {autoPlay && <Check size={12} />}
             </div>
           </DropdownMenuItem>
           

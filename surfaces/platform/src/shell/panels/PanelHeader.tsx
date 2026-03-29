@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 import { tokens } from '@/design/tokens';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import * as LucideIcons from 'lucide-react';
+import * as PhosphorIcons from '@phosphor-icons/react';
 import type { IconName, PanelTab, PanelAction } from './Panel';
 
 export interface PanelHeaderProps {
@@ -187,7 +187,7 @@ function TabButton({ tab, isActive, onClick }: TabButtonProps) {
   );
 }
 
-// Icon component using lucide-react
+// Icon component using phosphor-icons
 interface IconProps {
   name: string;
   size?: 'xs' | 'sm' | 'md' | 'lg';
@@ -208,12 +208,12 @@ function Icon({ name, size = 'md', className }: IconProps) {
     .map(part => part.charAt(0).toUpperCase() + part.slice(1))
     .join('');
 
-  const IconComponent = ((LucideIcons as unknown) as Record<string, React.ComponentType<{ size?: number; className?: string }>>)[
+  const IconComponent = ((PhosphorIcons as unknown) as Record<string, React.ComponentType<{ size?: number; className?: string }>>)[
     pascalName
   ];
 
   if (!IconComponent) {
-    return <LucideIcons.FileIcon size={sizeMap[size]} className={className} />;
+    return <PhosphorIcons.File size={sizeMap[size]} className={className} />;
   }
 
   return <IconComponent size={sizeMap[size]} className={className} />;

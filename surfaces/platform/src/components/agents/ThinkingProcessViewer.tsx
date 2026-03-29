@@ -11,19 +11,19 @@ import {
   Brain,
   Lightbulb,
   Target,
-  AlertCircle,
-  CheckCircle2,
+  Warning,
+  CheckCircle,
   Clock,
-  Zap,
-  Search,
-  Code2,
+  Lightning,
+  MagnifyingGlass,
+  Code,
   FileText,
-  MessageSquare,
-  ChevronDown,
-  ChevronUp,
-  Download,
+  Chat,
+  CaretDown,
+  CaretUp,
+  DownloadSimple,
   Copy,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 
 // ============================================================================
 // Types
@@ -80,12 +80,12 @@ function ThoughtItem({
   const typeConfig: Record<ThoughtType, { icon: any; color: string; label: string; bg: string }> = {
     analysis: { icon: Brain, color: '#60a5fa', label: 'Analysis', bg: 'rgba(96, 165, 250, 0.15)' },
     planning: { icon: Target, color: '#a78bfa', label: 'Planning', bg: 'rgba(167, 139, 250, 0.15)' },
-    decision: { icon: Zap, color: '#fb923c', label: 'Decision', bg: 'rgba(251, 146, 60, 0.15)' },
+    decision: { icon: Lightning, color: '#fb923c', label: 'Decision', bg: 'rgba(251, 146, 60, 0.15)' },
     reflection: { icon: Lightbulb, color: '#22c55e', label: 'Insight', bg: 'rgba(34, 197, 94, 0.15)' },
-    research: { icon: Search, color: '#3b82f6', label: 'Research', bg: 'rgba(59, 130, 246, 0.15)' },
-    coding: { icon: Code2, color: '#4ade80', label: 'Coding', bg: 'rgba(74, 222, 128, 0.15)' },
+    research: { icon: MagnifyingGlass, color: '#3b82f6', label: 'Research', bg: 'rgba(59, 130, 246, 0.15)' },
+    coding: { icon: Code, color: '#4ade80', label: 'Coding', bg: 'rgba(74, 222, 128, 0.15)' },
     writing: { icon: FileText, color: '#f472b6', label: 'Writing', bg: 'rgba(244, 114, 182, 0.15)' },
-    communication: { icon: MessageSquare, color: '#2dd4bf', label: 'Communication', bg: 'rgba(45, 212, 191, 0.15)' },
+    communication: { icon: Chat, color: '#2dd4bf', label: 'Communication', bg: 'rgba(45, 212, 191, 0.15)' },
   };
 
   const config = typeConfig[thought.type];
@@ -159,9 +159,9 @@ function ThoughtItem({
 
           <button className="p-1 hover:bg-white/5 rounded transition-colors">
             {isExpanded ? (
-              <ChevronUp size={14} className="text-white/40" />
+              <CaretUp size={14} className="text-white/40" />
             ) : (
-              <ChevronDown size={14} className="text-white/40" />
+              <CaretDown size={14} className="text-white/40" />
             )}
           </button>
         </div>
@@ -314,7 +314,7 @@ export function ThinkingProcessViewer({
               className="p-2 hover:bg-white/5 rounded transition-colors text-white/40 hover:text-white/70"
               title="Export thoughts"
             >
-              <Download size={14} />
+              <DownloadSimple size={14} />
             </button>
           </div>
         </div>

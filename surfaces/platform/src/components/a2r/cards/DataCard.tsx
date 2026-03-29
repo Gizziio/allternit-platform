@@ -7,15 +7,15 @@
 
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Table2, 
-  Maximize2, 
-  Download, 
-  BarChart3,
-  Rows3,
-  Columns3,
-  TrendingUp
-} from 'lucide-react';
+import {
+  Table as Table2,
+  ArrowsOut,
+  DownloadSimple,
+  ChartBar,
+  Rows as Rows3,
+  Columns as Columns3,
+  TrendUp,
+} from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -114,11 +114,11 @@ export function DataCard({
             </h3>
             <div className="flex items-center gap-2 text-xs text-[#666]">
               <span className="flex items-center gap-1">
-                <Rows3 className="w-3 h-3" />
+                <Rows3 size={12} />
                 {metadata?.rowCount || data.length} rows
               </span>
               <span className="flex items-center gap-1">
-                <Columns3 className="w-3 h-3" />
+                <Columns3 size={12} />
                 {metadata?.columnCount || columns.length} cols
               </span>
             </div>
@@ -146,7 +146,7 @@ export function DataCard({
                 onClick={onExport}
                 className="h-7 text-[#888] hover:text-[#ECECEC] hover:bg-[#333]"
               >
-                <Download className="w-3.5 h-3.5 mr-1" />
+                <DownloadSimple className="w-3.5 h-3.5 mr-1" />
                 <span className="text-xs">Export</span>
               </Button>
             )}
@@ -156,7 +156,7 @@ export function DataCard({
               onClick={onOpenFull}
               className="h-7 text-[#888] hover:text-[#ECECEC] hover:bg-[#333]"
             >
-              <Maximize2 className="w-3.5 h-3.5 mr-1" />
+              <ArrowsOut className="w-3.5 h-3.5 mr-1" />
               <span className="text-xs">Open Full</span>
             </Button>
           </div>
@@ -225,7 +225,7 @@ export function DataCard({
         {summaryStat && (
           <div className="flex items-center gap-4 p-3 rounded-lg bg-[#1e1e1e] border border-[#333] mb-4">
             <div className="w-10 h-10 rounded-lg bg-[#D4956A]/10 flex items-center justify-center">
-              <TrendingUp className="w-5 h-5 text-[#D4956A]" />
+              <TrendUp className="w-5 h-5 text-[#D4956A]" />
             </div>
             <div>
               <p className="text-xs text-[#666] uppercase tracking-wide">
@@ -242,7 +242,7 @@ export function DataCard({
         {visualization && (
           <div className="p-3 rounded-lg bg-[#1e1e1e] border border-[#333] mb-4">
             <div className="flex items-center gap-2 mb-2">
-              <BarChart3 className="w-4 h-4 text-[#D4956A]" />
+              <ChartBar className="w-4 h-4 text-[#D4956A]" />
               <span className="text-xs font-medium text-[#888]">
                 {visualization.title || 'Visualization Preview'}
               </span>

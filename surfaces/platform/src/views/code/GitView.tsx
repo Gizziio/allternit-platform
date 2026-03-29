@@ -1,19 +1,20 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { apiRequest, API_BASE_URL } from '@/lib/agents/api-config';
 import {
   GitBranch,
-  ChevronDown,
+  CaretDown,
   Circle,
   FileText,
-  MessageSquare,
-  Send,
-  GitCompare,
-  Trash2,
-} from 'lucide-react';
+  Chat,
+  PaperPlaneTilt,
+  GitDiff,
+  Trash,
+} from '@phosphor-icons/react';
 import GlassSurface from '@/design/GlassSurface';
 
-interface MockCommit {
+interface Commit {
   hash: string;
   message: string;
   author: string;
@@ -23,97 +24,40 @@ interface MockCommit {
   branch?: string;
   isMerge: boolean;
 }
+type MockCommit = Commit;
 
 interface StagedFile {
   filename: string;
   status: 'M' | 'A' | 'D';
 }
 
-const mockCommits: MockCommit[] = [
-  {
-    hash: 'a3f2b91',
-    message: 'Add TypeScript strict mode configuration',
-    author: 'Sarah Chen',
-    avatar: 'SC',
-    avatarColor: '#ec4899',
-    timestamp: '2 hours ago',
-    branch: 'main',
-    isMerge: false,
-  },
-  {
-    hash: 'f8c1e45',
-    message: 'Merge feature/dashboard-redesign into main',
-    author: 'Marcus Dev',
-    avatar: 'MD',
-    avatarColor: '#3b82f6',
-    timestamp: '4 hours ago',
-    branch: 'origin/main',
-    isMerge: true,
-  },
-  {
-    hash: '2d9b3c7',
-    message: 'Refactor authentication middleware',
-    author: 'Alex Quinn',
-    avatar: 'AQ',
-    avatarColor: '#f59e0b',
-    timestamp: '6 hours ago',
-    isMerge: false,
-  },
-  {
-    hash: '7e5a1f2',
-    message: 'Update dependencies and fix vulnerabilities',
-    author: 'Jordan Park',
-    avatar: 'JP',
-    avatarColor: '#8b5cf6',
-    timestamp: '1 day ago',
-    isMerge: false,
-  },
-  {
-    hash: '4b2c9d1',
-    message: 'Implement dark mode toggle component',
-    author: 'Casey Moore',
-    avatar: 'CM',
-    avatarColor: '#06b6d4',
-    timestamp: '2 days ago',
-    isMerge: false,
-  },
-  {
-    hash: 'c3f7a89',
-    message: 'Add comprehensive error handling',
-    author: 'Sarah Chen',
-    avatar: 'SC',
-    avatarColor: '#ec4899',
-    timestamp: '3 days ago',
-    isMerge: false,
-  },
-  {
-    hash: '9a2f1e5',
-    message: 'Performance optimization: lazy load components',
-    author: 'Marcus Dev',
-    avatar: 'MD',
-    avatarColor: '#3b82f6',
-    timestamp: '4 days ago',
-    isMerge: false,
-  },
-  {
-    hash: '5d8c3b2',
-    message: 'Initial project setup and configuration',
-    author: 'Alex Quinn',
-    avatar: 'AQ',
-    avatarColor: '#f59e0b',
-    timestamp: '1 week ago',
-    isMerge: false,
-  },
-];
-
-const stagedFiles: StagedFile[] = [
-  { filename: 'src/views/ChatView.tsx', status: 'M' },
-  { filename: 'src/shell/ShellApp.tsx', status: 'M' },
-  { filename: '.env.local', status: 'A' },
-];
 
 export const GitView: React.FC = () => {
   const [commitMessage, setCommitMessage] = useState('');
+  const [commits, setCommits] = useState<Commit[]>([]);
+  const [stagedFiles, setStagedFiles] = useState<StagedFile[]>([]);
+
+  useEffect(() => {
+    apiRequest<{ commits: Array<{ hash: string; shortHash?: string; message: string; author: string; date: string }> }>(
+      `${API_BASE_URL}/git/log`,
+      { method: 'POST', body: JSON.stringify({ path: '.', limit: 20 }) }
+    )
+      .then(({ commits: raw }) =>
+        setCommits(raw.map((c) => ({
+          hash: c.shortHash ?? c.hash.slice(0, 7),
+          message: c.message,
+          author: c.author,
+          avatar: c.author.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase(),
+          avatarColor: '#3b82f6',
+          timestamp: new Date(c.date).toLocaleDateString(),
+          isMerge: c.message.toLowerCase().startsWith('merge'),
+        })))
+      )
+      .catch(() => {});
+    apiRequest<{ staged: StagedFile[] }>(`${API_BASE_URL}/git/status`, { method: 'POST', body: JSON.stringify({ path: '.' }) })
+      .then((status) => setStagedFiles((status as any).staged ?? []))
+      .catch(() => {});
+  }, []);
 
   const handleCommit = () => {
     if (commitMessage.trim()) {
@@ -163,7 +107,7 @@ export const GitView: React.FC = () => {
           >
             <GitBranch size={14} />
             <span>main</span>
-            <ChevronDown size={14} />
+            <CaretDown size={14} />
           </div>
         </div>
 
@@ -210,7 +154,7 @@ export const GitView: React.FC = () => {
           }}
         >
           <div style={{ position: 'relative', paddingLeft: '32px' }}>
-            {mockCommits.map((commit, idx) => (
+            {commits.map((commit, idx) => (
               <div
                 key={commit.hash}
                 style={{
@@ -218,7 +162,7 @@ export const GitView: React.FC = () => {
                   gap: '12px',
                   padding: '12px 16px',
                   borderLeft:
-                    idx < mockCommits.length - 1
+                    idx < commits.length - 1
                       ? '1px solid var(--border-subtle)'
                       : 'none',
                   position: 'relative',
@@ -421,7 +365,7 @@ export const GitView: React.FC = () => {
                 (e.target as HTMLElement).style.opacity = '1';
               }}
             >
-              <Send size={14} />
+              <PaperPlaneTilt size={14} />
               Commit
             </button>
           </div>

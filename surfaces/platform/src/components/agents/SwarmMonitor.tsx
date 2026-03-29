@@ -8,22 +8,22 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Zap,
+  Lightning,
   Shield,
-  AlertTriangle,
-  CheckCircle2,
+  Warning,
+  CheckCircle,
   XCircle,
   Clock,
-  RefreshCw,
+  ArrowsClockwise,
   Lock,
-  Unlock,
-  Activity,
-  MessageSquare,
+  LockOpen,
+  Pulse as Activity,
+  Chat,
   Users,
-  TrendingUp,
-  Filter,
-  Download,
-} from 'lucide-react';
+  TrendUp,
+  Funnel,
+  DownloadSimple,
+} from '@phosphor-icons/react';
 
 // ============================================================================
 // Types
@@ -93,9 +93,9 @@ function CircuitBreakerCard({
   onReset?: (agentId: string) => void;
 }) {
   const stateConfig: Record<CircuitBreakerState, { color: string; label: string; icon: any }> = {
-    closed: { color: '#22c55e', label: 'Closed', icon: CheckCircle2 },
+    closed: { color: '#22c55e', label: 'Closed', icon: CheckCircle },
     open: { color: '#ef4444', label: 'Open', icon: XCircle },
-    'half-open': { color: '#f59e0b', label: 'Half-Open', icon: AlertTriangle },
+    'half-open': { color: '#f59e0b', label: 'Half-Open', icon: Warning },
   };
 
   const config = stateConfig[breaker.state];
@@ -120,7 +120,7 @@ function CircuitBreakerCard({
             className="w-10 h-10 rounded-lg flex items-center justify-center"
             style={{ background: `${config.color}22`, border: `1px solid ${config.color}44` }}
           >
-            <Zap size={20} style={{ color: config.color }} />
+            <Lightning size={20} style={{ color: config.color }} />
           </div>
           <div>
             <div className="text-sm font-bold text-white/90">
@@ -177,7 +177,7 @@ function CircuitBreakerCard({
           onClick={() => onReset(breaker.agent_id)}
           className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-green-500/20 hover:bg-green-500/30 transition-colors text-green-400 text-sm font-medium"
         >
-          <RefreshCw size={14} />
+          <ArrowsClockwise size={14} />
           Reset Circuit Breaker
         </button>
       )}
@@ -278,7 +278,7 @@ function QuarantineCard({
           onClick={() => onRelease(agent.agent_id)}
           className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 transition-colors text-blue-400 text-sm font-medium"
         >
-          <Unlock size={14} />
+          <LockOpen size={14} />
           Release from Quarantine
         </button>
       )}
@@ -292,10 +292,10 @@ function QuarantineCard({
 
 function ActivityFeedItem({ entry }: { entry: ActivityFeedEntry }) {
   const typeConfig: Record<string, { color: string; icon: any; label: string }> = {
-    message: { color: '#3b82f6', icon: MessageSquare, label: 'Message' },
-    tool_use: { color: '#f59e0b', icon: Zap, label: 'Tool Use' },
-    checkpoint: { color: '#22c55e', icon: CheckCircle2, label: 'Checkpoint' },
-    error: { color: '#ef4444', icon: AlertTriangle, label: 'Error' },
+    message: { color: '#3b82f6', icon: Chat, label: 'Message' },
+    tool_use: { color: '#f59e0b', icon: Lightning, label: 'Tool Use' },
+    checkpoint: { color: '#22c55e', icon: CheckCircle, label: 'Checkpoint' },
+    error: { color: '#ef4444', icon: Warning, label: 'Error' },
     state_change: { color: '#a78bfa', icon: Activity, label: 'State Change' },
     human_review: { color: '#ec4899', icon: Users, label: 'Human Review' },
   };
@@ -357,7 +357,7 @@ function ActivityFeedItem({ entry }: { entry: ActivityFeedEntry }) {
             )}
             {entry.metadata.cost && (
               <span className="flex items-center gap-1">
-                <TrendingUp size={10} />
+                <TrendUp size={10} />
                 ${entry.metadata.cost.toFixed(2)}
               </span>
             )}
@@ -416,7 +416,7 @@ export function SwarmMonitor({
             disabled={isLoading}
             className="p-2 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-white/70"
           >
-            <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
+            <ArrowsClockwise size={16} className={isLoading ? 'animate-spin' : ''} />
           </button>
         </div>
 
@@ -456,7 +456,7 @@ export function SwarmMonitor({
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="p-4 rounded-xl border border-green-500/30 bg-green-500/10">
                 <div className="flex items-center gap-2 mb-2">
-                  <CheckCircle2 size={16} className="text-green-400" />
+                  <CheckCircle size={16} className="text-green-400" />
                   <span className="text-xs text-green-300">Healthy</span>
                 </div>
                 <div className="text-2xl font-bold text-white/90">
@@ -545,7 +545,7 @@ export function SwarmMonitor({
           <div className="space-y-4">
             {/* Filter */}
             <div className="flex items-center gap-2">
-              <Filter size={14} className="text-white/40" />
+              <Funnel size={14} className="text-white/40" />
               <select
                 value={feedFilter}
                 onChange={(e) => setFeedFilter(e.target.value)}
@@ -560,7 +560,7 @@ export function SwarmMonitor({
                 <option value="human_review">Human Review</option>
               </select>
               <button className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-white/70">
-                <Download size={14} />
+                <DownloadSimple size={14} />
               </button>
             </div>
 

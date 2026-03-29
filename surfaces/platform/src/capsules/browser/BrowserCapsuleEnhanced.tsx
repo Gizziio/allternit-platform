@@ -11,30 +11,30 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   Globe,
-  RefreshCw,
-  AlertTriangle,
+  ArrowsClockwise,
+  Warning,
   Plus,
   X,
   Lock,
-  Search,
-  ChevronLeft,
-  ChevronRight,
-  ChevronDown,
-  MoreVertical,
+  MagnifyingGlass,
+  CaretLeft,
+  CaretRight,
+  CaretDown,
+  DotsThreeVertical,
   Camera,
-  LayoutGrid,
-  Sparkles,
+  SquaresFour,
+  Sparkle,
   Star,
-  Puzzle,
-  Download,
-  Trash2,
+  PuzzlePiece as Puzzle,
+  DownloadSimple,
+  Trash,
   Copy,
-  Pin,
-  Loader2,
-  Settings,
+  PushPin as Pin,
+  CircleNotch,
+  GearSix,
   Shield,
   ArrowLeft,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 
 import { A2RLogo } from '@/components/A2RLogo';
 import { ArchitectLogo } from '@/components/ai-elements/ArchitectLogo';
@@ -42,7 +42,10 @@ import { MatrixLogo } from '@/components/ai-elements/MatrixLogo';
 import { cn } from '@/lib/utils';
 import { isElectronShell, getWebProxyUrl } from '@/lib/platform';
 
-import { useBrowserStore } from './browser.store';
+import {
+  BROWSER_CHAT_PANE_MIN_WIDTH,
+  useBrowserStore,
+} from './browser.store';
 import { BrowserTab, WebTab, A2UITab, A2UIPayload, ChromeStreamTab } from './browser.types';
 import { useBrowserAgentStore } from './browserAgent.store';
 import { BrowserAgentMode } from './browserAgent.types';
@@ -52,6 +55,12 @@ import { useSidecarStore } from '../../stores/sidecar-store';
 import { useBrowserShortcutsStore, getFaviconUrl } from './browserShortcuts.store';
 import { ChromeStreamView } from './ChromeStreamView';
 import { useChromeSession } from './useChromeSession';
+import { ACIGlassPill } from './ACIGlassPill';
+import { BrowserAgentOverlay } from './BrowserAgentOverlay';
+import { BrowserChatPane } from './BrowserChatPane';
+import { ACIComputerUseView } from './ACIComputerUseView';
+import { PageAgentTakeoverOverlay } from './PageAgentTakeoverOverlay';
+import { useExtensionBridge } from './useExtensionBridge';
 
 // ============================================================================
 // Types & Constants
@@ -250,7 +259,7 @@ function CanvasMode({ tab }: { tab?: A2UITab }) {
     <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', padding: 32 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 32 }}>
         <div style={{ width: 40, height: 40, borderRadius: 4, background: 'rgba(168,85,247,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(168,85,247,0.2)' }}>
-          <LayoutGrid style={{ width: 20, height: 20, color: 'rgba(168,85,247,0.6)' }} />
+          <SquaresFour style={{ width: 20, height: 20, color: 'rgba(168,85,247,0.6)' }} />
         </div>
         <div>
           <div style={{ fontSize: 12, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.3em', color: 'rgba(168,85,247,0.8)' }}>Canvas_Surface</div>
@@ -258,7 +267,7 @@ function CanvasMode({ tab }: { tab?: A2UITab }) {
       </div>
       <div style={{ flex: 1, background: 'rgba(0,0,0,0.2)', borderRadius: 4, border: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center', opacity: 0.1 }}>
-          <LayoutGrid style={{ width: 64, height: 64, margin: '0 auto 16px' }} />
+          <SquaresFour style={{ width: 64, height: 64, margin: '0 auto 16px' }} />
           <p style={{ fontSize: 10, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.5em' }}>Waiting_for_signal...</p>
         </div>
       </div>
@@ -271,7 +280,7 @@ function StudioMode() {
     <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', padding: 32 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 32 }}>
         <div style={{ width: 40, height: 40, borderRadius: 4, background: 'rgba(245,158,11,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(245,158,11,0.2)' }}>
-          <Sparkles style={{ width: 20, height: 20, color: 'rgba(245,158,11,0.6)' }} />
+          <Sparkle style={{ width: 20, height: 20, color: 'rgba(245,158,11,0.6)' }} />
         </div>
         <div>
           <div style={{ fontSize: 12, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.3em', color: 'rgba(245,158,11,0.8)' }}>A2UI_Studio</div>
@@ -279,7 +288,7 @@ function StudioMode() {
       </div>
       <div style={{ flex: 1, background: 'rgba(0,0,0,0.2)', borderRadius: 4, border: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center', opacity: 0.1 }}>
-          <Sparkles style={{ width: 64, height: 64, margin: '0 auto 16px' }} />
+          <Sparkle style={{ width: 64, height: 64, margin: '0 auto 16px' }} />
           <p style={{ fontSize: 10, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.5em' }}>Initialize_Workspace...</p>
         </div>
       </div>
@@ -369,7 +378,7 @@ function TabContextMenu({ x, y, tabId, onClose }: {
     { label: 'Duplicate Tab', icon: <Copy style={{ width: 12, height: 12 }} />, action: () => duplicateTab(tabId) },
     { label: 'Close Tab', icon: <X style={{ width: 12, height: 12 }} />, action: () => closeTab(tabId) },
     { label: 'Close Other Tabs', icon: <X style={{ width: 12, height: 12 }} />, action: () => closeOtherTabs(tabId) },
-    { label: 'Close Tabs to Right', icon: <ChevronRight style={{ width: 12, height: 12 }} />, action: () => closeTabsToRight(tabId) },
+    { label: 'Close Tabs to Right', icon: <CaretRight style={{ width: 12, height: 12 }} />, action: () => closeTabsToRight(tabId) },
   ];
 
   return (
@@ -480,7 +489,7 @@ function ThreeDotMenu({ open, onClose, contentMode, setContentMode, agentModeCon
       <div style={{ padding: '6px 12px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#888', fontWeight: 600 }}>Agent Mode</div>
       {(['Human', 'Assist', 'Agent'] as BrowserAgentMode[]).map((m) => <Item key={m} label={m} active={agentModeControl === m} disabled={agentStatus === 'Running'} onClick={() => setAgentMode(m)} />)}
       <div style={{ height: 1, background: '#444', margin: '4px 0' }} />
-      <Item label={chatPaneOpen ? 'Hide Chat Pane' : 'Open Chat Pane'} icon={<Sparkles style={{ width: 14, height: 14 }} />} onClick={onToggleChatPane} />
+      <Item label={chatPaneOpen ? 'Hide Chat Pane' : 'Open Chat Pane'} icon={<Sparkle style={{ width: 14, height: 14 }} />} onClick={onToggleChatPane} />
       <Item label="Screenshot" icon={<Camera style={{ width: 14, height: 14 }} />} onClick={onScreenshot} />
       <Item label="New Tab" icon={<Plus style={{ width: 14, height: 14 }} />} onClick={onNewTab} />
       <div style={{ height: 1, background: '#444', margin: '4px 0' }} />
@@ -922,7 +931,7 @@ function ExtensionManagerPopup({ open, onClose, onNavigate }: { open: boolean; o
                     onMouseEnter={(e) => { e.currentTarget.style.color = '#D4B08C'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.color = '#555'; }}
                   >
-                    <Settings style={{ width: 12, height: 12 }} />
+                    <GearSix style={{ width: 12, height: 12 }} />
                   </button>
                 )}
                 {/* Remove */}
@@ -936,7 +945,7 @@ function ExtensionManagerPopup({ open, onClose, onNavigate }: { open: boolean; o
                     onMouseEnter={(e) => { e.currentTarget.style.color = '#f87171'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.color = '#666'; }}
                   >
-                    <Trash2 style={{ width: 12, height: 12 }} />
+                    <Trash style={{ width: 12, height: 12 }} />
                   </button>
                 )}
               </div>
@@ -1057,7 +1066,7 @@ function ExtensionManagerPopup({ open, onClose, onNavigate }: { open: boolean; o
                             if (!item.featured) { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#aaa'; }
                           }}
                         >
-                          <Download style={{ width: 9, height: 9 }} /> Add to Chrome
+                          <DownloadSimple style={{ width: 9, height: 9 }} /> Add to Chrome
                         </button>
                       )}
                     </div>
@@ -1111,7 +1120,7 @@ function ExtensionManagerPopup({ open, onClose, onNavigate }: { open: boolean; o
               <span style={{ fontSize: 12, color: '#ccc', fontWeight: 600, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {settingsExt.name}
               </span>
-              <Settings style={{ width: 12, height: 12, color: '#555' }} />
+              <GearSix style={{ width: 12, height: 12, color: '#555' }} />
             </div>
 
             {/* Permissions section */}
@@ -1210,7 +1219,7 @@ export function BrowserCapsuleEnhanced({
     tabs, activeTabId, addTab, closeTab, closeAllTabs, setActiveTab, updateTab,
     goBack, goForward, canGoBack, canGoForward, pushHistory,
     tabLoading, setTabLoading, duplicateTab, closeOtherTabs, closeTabsToRight,
-    addChromeStreamTab,
+    addChromeStreamTab, chatPaneOpen, chatPaneWidth, toggleChatPane, setChatPaneWidth,
   } = useBrowserStore();
   
   // Override closeAllTabs to show home page
@@ -1219,8 +1228,27 @@ export function BrowserCapsuleEnhanced({
     setShowHomePage(true);
   }, [closeAllTabs]);
   
-  const { isOpen: sidecarOpen, toggle: toggleSidecar, setActivePanel } = useSidecarStore();
-  const { status: agentStatus, mode: agentModeControl, setMode: setAgentMode, endpoint } = useBrowserAgentStore();
+  const {
+    status: agentStatus,
+    mode: agentModeControl,
+    setMode: setAgentMode,
+    endpoint,
+    currentAction: agentCurrentAction,
+    setIsBrowserCapsuleMounted,
+    goal: pageAgentGoal,
+    pageAgentStatus,
+  } = useBrowserAgentStore();
+  const showAciViewport =
+    agentStatus === 'Running' ||
+    agentStatus === 'WaitingApproval' ||
+    agentStatus === 'Blocked';
+  const showPageAgentTakeover = pageAgentStatus === 'running';
+
+  // Tell the global ACIComputerUseSidecar to suppress itself while this capsule is mounted
+  useEffect(() => {
+    setIsBrowserCapsuleMounted(true);
+    return () => { setIsBrowserCapsuleMounted(false); };
+  }, [setIsBrowserCapsuleMounted]);
   const { addShortcut } = useBrowserShortcutsStore();
   const allExtensions = useExtensionsStore((s) => s.extensions);
   const extSetEnabled = useExtensionsStore((s) => s.setEnabled);
@@ -1229,18 +1257,10 @@ export function BrowserCapsuleEnhanced({
     () => allExtensions.filter((e) => e.enabled && e.installStatus !== 'pending'),
     [allExtensions],
   );
-
-
-  const toggleChatPane = () => {
-    if (!sidecarOpen) {
-      setActivePanel('agent');
-      toggleSidecar();
-    } else {
-      toggleSidecar();
-    }
-  };
-  const chatPaneOpen = sidecarOpen;
   const automation = useBrowserAutomation();
+  
+  // Initialize extension bridge for direct Chrome extension communication
+  const { isConnected: isExtensionConnected } = useExtensionBridge();
 
   const activeTab = tabs.find(t => t.id === activeTabId);
   const [contentMode, setContentMode] = useState<ContentMode>('web');
@@ -1266,9 +1286,11 @@ export function BrowserCapsuleEnhanced({
   
   // Show home page state (when no tabs)
   const [showHomePage, setShowHomePage] = useState(false);
+  const [isResizingChatPane, setIsResizingChatPane] = useState(false);
 
   // Tab context menu state
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; tabId: string } | null>(null);
+  const chatPaneResizeRef = useRef<{ startX: number; startWidth: number } | null>(null);
 
   // Bookmarked state for current tab
   const shortcuts = useBrowserShortcutsStore((s) => s.shortcuts);
@@ -1536,6 +1558,64 @@ export function BrowserCapsuleEnhanced({
   const canBack = activeTabId ? canGoBack(activeTabId) : false;
   const canForward = activeTabId ? canGoForward(activeTabId) : false;
 
+  const startChatPaneResize = useCallback((clientX: number) => {
+    chatPaneResizeRef.current = {
+      startX: clientX,
+      startWidth: chatPaneWidth,
+    };
+    setIsResizingChatPane(true);
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }, [chatPaneWidth]);
+
+  const updateChatPaneResize = useCallback((clientX: number) => {
+    const resizeState = chatPaneResizeRef.current;
+    if (!resizeState) return;
+
+    const delta = resizeState.startX - clientX;
+    setChatPaneWidth(resizeState.startWidth + delta);
+  }, [setChatPaneWidth]);
+
+  const stopChatPaneResize = useCallback(() => {
+    chatPaneResizeRef.current = null;
+    setIsResizingChatPane(false);
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  }, []);
+
+  const handleChatPaneResizePointerStart = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    startChatPaneResize(event.clientX);
+  }, [startChatPaneResize]);
+
+  const handleChatPaneResizeMouseStart = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    startChatPaneResize(event.clientX);
+  }, [startChatPaneResize]);
+
+  useEffect(() => {
+    if (!isResizingChatPane) return;
+
+    const handlePointerMove = (event: PointerEvent) => {
+      updateChatPaneResize(event.clientX);
+    };
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', stopChatPaneResize);
+    window.addEventListener('pointercancel', stopChatPaneResize);
+    window.addEventListener('blur', stopChatPaneResize);
+
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', stopChatPaneResize);
+      window.removeEventListener('pointercancel', stopChatPaneResize);
+      window.removeEventListener('blur', stopChatPaneResize);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isResizingChatPane, stopChatPaneResize, updateChatPaneResize]);
+
   return (
     // ROOT: explicit inline flex-column, absolute dimensions
     <div
@@ -1548,6 +1628,7 @@ export function BrowserCapsuleEnhanced({
         flex: '1 1 0%',
         minHeight: 0,
         minWidth: 0,
+        position: 'relative',
         overflow: 'hidden',
         background: '#202020',
         color: '#ECECEC',
@@ -1631,7 +1712,7 @@ export function BrowserCapsuleEnhanced({
                 )}
                 {/* Favicon or loading spinner */}
                 {isLoading ? (
-                  <Loader2 style={{ width: 12, height: 12, marginRight: 6, flexShrink: 0, opacity: 0.6, animation: 'spin 1s linear infinite' }} />
+                  <CircleNotch style={{ width: 12, height: 12, marginRight: 6, flexShrink: 0, opacity: 0.6, animation: 'spin 1s linear infinite' }} />
                 ) : (
                   <TabFavicon url={tab.contentType === 'web' ? (tab as WebTab).url : undefined} size={12} />
                 )}
@@ -1659,7 +1740,7 @@ export function BrowserCapsuleEnhanced({
         </div>
         {/* Dropdown chevron + close all */}
         <div style={{ position: 'relative', display: 'flex', alignItems: 'center', height: '100%', paddingRight: 4, gap: 2 }}>
-          <NavBtn title="Show all tabs" onClick={() => setTabDropdownOpen(!tabDropdownOpen)}><ChevronDown style={{ width: 16, height: 16 }} /></NavBtn>
+          <NavBtn title="Show all tabs" onClick={() => setTabDropdownOpen(!tabDropdownOpen)}><CaretDown style={{ width: 16, height: 16 }} /></NavBtn>
           <TabOverflowDropdown open={tabDropdownOpen} onClose={() => setTabDropdownOpen(false)} tabs={tabs} activeTabId={activeTabId} onSelect={setActiveTab} onCloseTab={closeTab} />
           {tabs.length > 0 && (
             <NavBtn title="Close all tabs" onClick={handleCloseAllTabs}><X style={{ width: 16, height: 16 }} /></NavBtn>
@@ -1704,10 +1785,10 @@ export function BrowserCapsuleEnhanced({
         {/* Nav buttons */}
         <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 2 }}>
           <NavBtn title="Back" onClick={() => activeTabId && goBack(activeTabId)} disabled={!canBack}>
-            <ChevronLeft style={{ width: 16, height: 16 }} />
+            <CaretLeft style={{ width: 16, height: 16 }} />
           </NavBtn>
           <NavBtn title="Forward" onClick={() => activeTabId && goForward(activeTabId)} disabled={!canForward}>
-            <ChevronRight style={{ width: 16, height: 16 }} />
+            <CaretRight style={{ width: 16, height: 16 }} />
           </NavBtn>
           <NavBtn title="Refresh" onClick={() => {
             if (activeTabId) {
@@ -1722,7 +1803,7 @@ export function BrowserCapsuleEnhanced({
               }
             }
           }}>
-            <RefreshCw style={{ width: 16, height: 16 }} />
+            <ArrowsClockwise style={{ width: 16, height: 16 }} />
           </NavBtn>
           {/* Chrome Web Store button - opens embedded Chrome */}
           <NavBtn title="Open Chrome Web Store (for extensions)" onClick={async () => {
@@ -1857,7 +1938,7 @@ export function BrowserCapsuleEnhanced({
         </div>
 
         <div style={{ position: 'relative' }}>
-          <NavBtn title="More" onClick={() => setMenuOpen(!menuOpen)}><MoreVertical style={{ width: 16, height: 16 }} /></NavBtn>
+          <NavBtn title="More" onClick={() => setMenuOpen(!menuOpen)}><DotsThreeVertical style={{ width: 16, height: 16 }} /></NavBtn>
           <ThreeDotMenu open={menuOpen} onClose={() => setMenuOpen(false)} contentMode={contentMode} setContentMode={setContentMode}
             agentModeControl={agentModeControl} setAgentMode={setAgentMode} agentStatus={agentStatus}
             onNewTab={() => addTab(DEFAULT_URL)} onToggleChatPane={toggleChatPane} chatPaneOpen={chatPaneOpen} onCloseAllTabs={closeAllTabs}
@@ -1865,15 +1946,27 @@ export function BrowserCapsuleEnhanced({
         </div>
       </div>
 
-      {/* ━━━ VIEWPORT ━━━ */}
-      <div ref={viewportRef} style={{
-        flex: '1 1 0%',
-        position: 'relative',
-        overflow: 'hidden',
-        minHeight: 0,
-        minWidth: 0,
-      }}>
-        {contentMode === 'web' ? (
+      {/* ━━━ VIEWPORT + CHAT PANE ━━━ */}
+      <div style={{ flex: '1 1 0%', display: 'flex', flexDirection: 'row', minHeight: 0, overflow: 'hidden' }}>
+        <div ref={viewportRef} style={{
+          flex: '1 1 0%',
+          position: 'relative',
+          overflow: 'hidden',
+          minHeight: 0,
+          minWidth: 0,
+        }}>
+          {/* ACI computer-use viewport — full overlay when agent is active */}
+          {showAciViewport && (
+            <ACIComputerUseView agentBarHeight={0} />
+          )}
+
+          {/* ACI overlays — float above web content */}
+          <BrowserAgentOverlay status={agentStatus} currentAction={agentCurrentAction} />
+
+          {/* Glass pill — bottom-center execution status */}
+          <ACIGlassPill placement="bottom-center" />
+
+          {contentMode === 'web' ? (
           activeTab && activeTab.contentType === 'web' ? (
             /* WEB CONTENT */
             <div style={{ width: '100%', height: '100%', position: 'relative' }}>
@@ -1883,7 +1976,7 @@ export function BrowserCapsuleEnhanced({
                   data-testid="a2r-webview-content"
                   src={(activeTab as WebTab).url}
                   style={{ width: '100%', height: '100%', border: 'none', background: 'white' }}
-                  allowpopups
+                  allowpopups="true"
                 />
               ) : (
                 <iframe
@@ -1900,7 +1993,7 @@ export function BrowserCapsuleEnhanced({
               )}
               {iframeError && (
                 <div style={{ position: 'absolute', inset: 0, background: '#0A0908', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
-                  <AlertTriangle style={{ width: 48, height: 48, color: 'rgba(239,68,68,0.6)', marginBottom: 16 }} />
+                  <Warning style={{ width: 48, height: 48, color: 'rgba(239,68,68,0.6)', marginBottom: 16 }} />
                   <div style={{ fontSize: 11, fontWeight: 900, color: 'rgba(248,113,113,0.8)', textTransform: 'uppercase', letterSpacing: '0.3em', marginBottom: 8 }}>CONNECTION_FAILED</div>
                   <div style={{ fontSize: 10, fontFamily: 'monospace', color: 'rgba(155,155,155,0.4)', maxWidth: 320, textAlign: 'center' }}>Could not load {(activeTab as WebTab).url}</div>
                 </div>
@@ -2000,7 +2093,69 @@ export function BrowserCapsuleEnhanced({
         ) : (
           <StudioMode />
         )}
+          <PageAgentTakeoverOverlay active={showPageAgentTakeover} task={pageAgentGoal} />
+        </div>
+
+        {/* ━━━ CHAT PANE (Kimi-style right sidecar) ━━━ */}
+        {chatPaneOpen && (
+          <>
+            <div
+              role="separator"
+              aria-label="Resize browser chat pane"
+              onPointerDown={handleChatPaneResizePointerStart}
+              onMouseDown={handleChatPaneResizeMouseStart}
+              style={{
+                width: 8,
+                flexShrink: 0,
+                cursor: 'col-resize',
+                position: 'relative',
+                background: isResizingChatPane ? 'rgba(255,255,255,0.04)' : 'transparent',
+              }}
+            >
+              <div
+                style={{
+                  position: 'absolute',
+                  left: 3,
+                  top: 0,
+                  bottom: 0,
+                  width: 1,
+                  background: isResizingChatPane ? '#5f5f5f' : '#1a1a1a',
+                }}
+              />
+            </div>
+            <div style={{
+              width: chatPaneWidth,
+              minWidth: BROWSER_CHAT_PANE_MIN_WIDTH,
+              flexShrink: 0,
+              borderLeft: '1px solid #1a1a1a',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              background: '#12100f',
+            }}>
+              <BrowserChatPane />
+            </div>
+          </>
+        )}
       </div>
+      {isResizingChatPane && (
+        <div
+          aria-hidden="true"
+          onPointerMove={(event) => updateChatPaneResize(event.clientX)}
+          onPointerUp={stopChatPaneResize}
+          onPointerCancel={stopChatPaneResize}
+          onMouseMove={(event) => updateChatPaneResize(event.clientX)}
+          onMouseUp={stopChatPaneResize}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 50,
+            cursor: 'col-resize',
+            background: 'transparent',
+            pointerEvents: 'auto',
+          }}
+        />
+      )}
     </div>
   );
 }

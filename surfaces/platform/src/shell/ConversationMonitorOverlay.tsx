@@ -2,7 +2,9 @@
 
 import { useEffect } from "react";
 
-import { X } from "lucide-react";
+import {
+  X,
+} from '@phosphor-icons/react';
 import { ConversationMonitorPanel } from "@/views/mail-monitor/ConversationMonitorPanel";
 import { useMonitorData } from "@/views/mail-monitor/monitor.helpers";
 import { useUnifiedStore } from "@/lib/agents/unified.store";
@@ -32,11 +34,15 @@ export function ConversationMonitorOverlay({
   return (
     <div className="fixed inset-0 z-[1200] flex items-center justify-center">
       <div
-        className="absolute inset-0 bg-black/40"
+        className="absolute inset-0"
+        style={{ background: 'var(--shell-overlay-backdrop)' }}
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="relative z-10 w-[420px] max-w-[90vw] rounded-3xl border border-border bg-background/90 p-4 shadow-[0_40px_120px_rgba(0,0,0,0.45)] backdrop-blur-2xl">
+      <div
+        className="relative z-10 w-[420px] max-w-[90vw] rounded-3xl border border-border bg-background/90 p-4 backdrop-blur-2xl"
+        style={{ boxShadow: 'var(--shadow-xl)' }}
+      >
         <div className="flex items-center justify-between border-b pb-2">
           <div>
             <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Conversation Monitor</p>

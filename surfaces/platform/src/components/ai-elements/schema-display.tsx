@@ -9,7 +9,9 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
-import { ChevronRightIcon } from "lucide-react";
+import {
+  CaretRight as ChevronRightIcon,
+} from '@phosphor-icons/react';
 import { createContext, useContext, useMemo } from "react";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -165,21 +167,21 @@ export const SchemaDisplayPath = ({
   ...props
 }: SchemaDisplayPathProps) => {
   const { path } = useContext(SchemaDisplayContext);
-
-  // Highlight path parameters
-  const highlightedPath = path.replaceAll(
-    /\{([^}]+)\}/g,
-    '<span class="text-blue-600 dark:text-blue-400">{$1}</span>'
-  );
+  const displayPath = typeof children === "string" ? children : path;
+  const pathSegments = displayPath.split(/(\{[^}]+\})/g).filter(Boolean);
 
   return (
-    <span
-      className={cn("font-mono text-sm", className)}
-      // biome-ignore lint/security/noDangerouslySetInnerHtml: "needed for parameter highlighting"
-      // oxlint-disable-next-line eslint-plugin-react(no-danger)
-      dangerouslySetInnerHTML={{ __html: typeof children === 'string' ? children : highlightedPath }}
-      {...props}
-    />
+    <span className={cn("font-mono text-sm", className)} {...props}>
+      {pathSegments.map((segment, index) =>
+        segment.startsWith("{") && segment.endsWith("}") ? (
+          <span key={index} className="text-blue-600 dark:text-blue-400">
+            {segment}
+          </span>
+        ) : (
+          <span key={index}>{segment}</span>
+        )
+      )}
+    </span>
   );
 };
 

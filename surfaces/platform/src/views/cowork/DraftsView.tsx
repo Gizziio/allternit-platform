@@ -1,5 +1,9 @@
-import React, { useState } from 'react';
-import { FileText, Table2, Code2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  FileText,
+  Table as Table2,
+  Code,
+} from '@phosphor-icons/react';
 import GlassSurface from '@/design/GlassSurface';
 
 interface Draft {
@@ -11,49 +15,6 @@ interface Draft {
   wordCount: number;
 }
 
-const mockDrafts: Draft[] = [
-  {
-    id: '1',
-    title: 'Q4 Product Strategy',
-    type: 'document',
-    preview: 'This document outlines our product roadmap for the fourth quarter, including key features, performance targets, and stakeholder alignment...',
-    lastEdited: '2 hours ago',
-    wordCount: 2847,
-  },
-  {
-    id: '2',
-    title: 'User Analytics Dashboard',
-    type: 'table',
-    preview: 'Comprehensive user metrics including monthly active users, retention rates, conversion funnels, and demographic breakdowns across all regions...',
-    lastEdited: '5 hours ago',
-    wordCount: 1203,
-  },
-  {
-    id: '3',
-    title: 'API Integration Module',
-    type: 'code',
-    preview: 'TypeScript/React integration layer for REST API communication. Includes request interceptors, error handling, and automatic retry logic with exponential backoff...',
-    lastEdited: '1 day ago',
-    wordCount: 542,
-  },
-  {
-    id: '4',
-    title: 'Market Research Notes',
-    type: 'document',
-    preview: 'Competitive analysis and market trends gathered from industry reports, customer interviews, and analyst publications. Identifies key opportunities and threats...',
-    lastEdited: '3 days ago',
-    wordCount: 3156,
-  },
-  {
-    id: '5',
-    title: 'Performance Metrics',
-    type: 'table',
-    preview: 'Real-time performance data including response times, error rates, CPU usage, memory allocation, and database query performance across all environments...',
-    lastEdited: '12 hours ago',
-    wordCount: 876,
-  },
-];
-
 const getIcon = (type: Draft['type']) => {
   switch (type) {
     case 'document':
@@ -61,7 +22,7 @@ const getIcon = (type: Draft['type']) => {
     case 'table':
       return <Table2 size={20} color="#8b5cf6" />;
     case 'code':
-      return <Code2 size={20} color="#06b6d4" />;
+      return <Code size={20} color="#06b6d4" />;
     default:
       return <FileText size={20} />;
   }
@@ -89,7 +50,7 @@ export const DraftsView: React.FC = () => {
           gap: 'var(--spacing-lg)',
         }}
       >
-        {mockDrafts.map((draft) => (
+        {drafts.map((draft) => (
           <GlassSurface
             key={draft.id}
             style={{

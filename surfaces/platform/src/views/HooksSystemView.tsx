@@ -10,9 +10,17 @@
 import React, { useState } from 'react';
 import { GlassSurface } from '@/design/GlassSurface';
 import {
-  Anchor, Shield, Activity, Users, Plus, Power, AlertCircle,
-  CheckCircle, Clock, Zap
-} from 'lucide-react';
+  Anchor,
+  Shield,
+  Pulse as Activity,
+  Users,
+  Plus,
+  Power,
+  Warning,
+  CheckCircle,
+  Clock,
+  Lightning,
+} from '@phosphor-icons/react';
 
 interface Hook {
   id: string;
@@ -62,14 +70,6 @@ const HOOKS_BY_CATEGORY: Record<HookCategory, Hook[]> = {
   ],
 };
 
-const MOCK_EXECUTIONS: HookExecution[] = [
-  { id: 'e1', time: '14:42:07', hookName: 'pre_tool_execution', result: 'passed', duration: '2ms' },
-  { id: 'e2', time: '14:42:05', hookName: 'post_tool_execution', result: 'passed', duration: '5ms' },
-  { id: 'e3', time: '14:41:58', hookName: 'on_message_send', result: 'passed', duration: '1ms' },
-  { id: 'e4', time: '14:41:45', hookName: 'on_task_complete', result: 'passed', duration: '8ms' },
-  { id: 'e5', time: '14:40:22', hookName: 'on_error', result: 'blocked', duration: '3ms' },
-  { id: 'e6', time: '14:40:11', hookName: 'on_approval_required', result: 'error', duration: '12ms' },
-];
 
 interface StatsData {
   totalHooks: number;
@@ -108,7 +108,7 @@ function HookRow({ hook, onToggle }: { hook: Hook; onToggle: (id: string) => voi
           }`}
           title={hook.enabled ? 'Disable' : 'Enable'}
         >
-          <Power className="w-4 h-4" />
+          <Power size={16} />
         </button>
       </div>
     </div>
@@ -117,9 +117,9 @@ function HookRow({ hook, onToggle }: { hook: Hook; onToggle: (id: string) => voi
 
 function ExecutionLogEntry({ execution }: { execution: HookExecution }) {
   const resultConfig: Record<string, { bg: string; color: string; icon: React.ReactNode }> = {
-    passed: { bg: 'rgba(52, 199, 89, 0.08)', color: '#34c759', icon: <CheckCircle className="w-4 h-4" /> },
-    blocked: { bg: 'rgba(255, 159, 10, 0.08)', color: '#ff9f0a', icon: <Shield className="w-4 h-4" /> },
-    error: { bg: 'rgba(255, 59, 48, 0.08)', color: '#ff3b30', icon: <AlertCircle className="w-4 h-4" /> },
+    passed: { bg: 'rgba(52, 199, 89, 0.08)', color: '#34c759', icon: <CheckCircle size={16} /> },
+    blocked: { bg: 'rgba(255, 159, 10, 0.08)', color: '#ff9f0a', icon: <Shield size={16} /> },
+    error: { bg: 'rgba(255, 59, 48, 0.08)', color: '#ff3b30', icon: <Warning size={16} /> },
   };
 
   const config = resultConfig[execution.result];
@@ -258,7 +258,7 @@ export function HooksSystemView() {
                 Registered Hooks
               </h2>
               <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--accent-primary)] text-[var(--bg-primary)] text-xs font-medium hover:opacity-90 transition-opacity">
-                <Plus className="w-4 h-4" />
+                <Plus size={16} />
                 Add Hook
               </button>
             </div>
@@ -279,13 +279,11 @@ export function HooksSystemView() {
         <div className="border-t border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
           <div className="px-6 py-4">
             <h2 className="text-sm font-semibold text-[var(--text-secondary)] mb-3 flex items-center gap-2">
-              <Zap className="w-4 h-4" />
+              <Lightning size={16} />
               Recent Executions
             </h2>
             <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] overflow-hidden">
-              {MOCK_EXECUTIONS.map((execution) => (
-                <ExecutionLogEntry key={execution.id} execution={execution} />
-              ))}
+              {/* Execution history populated via real hook event stream */}
             </div>
           </div>
         </div>

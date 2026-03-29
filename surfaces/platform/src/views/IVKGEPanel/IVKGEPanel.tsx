@@ -17,15 +17,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
-  Upload,
+  UploadSimple,
   Image,
-  Search,
+  MagnifyingGlass,
   CheckCircle,
-  AlertTriangle,
-  Edit,
-  Save,
-  X
-} from 'lucide-react';
+  Warning,
+  PencilSimple,
+  FloppyDisk,
+  X,
+} from '@phosphor-icons/react';
 
 // Types
 interface Entity {
@@ -231,7 +231,7 @@ export function IVKGEPanel() {
         <Card className="border-red-500">
           <CardContent className="pt-6">
             <div className="flex items-center gap-2 text-red-500">
-              <AlertTriangle className="h-5 w-5" />
+              <Warning size={20} />
               <span>{error}</span>
             </div>
           </CardContent>
@@ -266,7 +266,7 @@ export function IVKGEPanel() {
                   htmlFor="image-upload"
                   className="cursor-pointer flex flex-col items-center gap-2"
                 >
-                  <Upload className="h-12 w-12 text-muted-foreground" />
+                  <UploadSimple className="h-12 w-12 text-muted-foreground" />
                   <span className="text-sm text-muted-foreground">
                     {selectedFile ? selectedFile.name : 'Click to upload or drag and drop'}
                   </span>
@@ -303,7 +303,7 @@ export function IVKGEPanel() {
                     'Extracting...'
                   ) : (
                     <>
-                      <Search className="h-4 w-4 mr-2" />
+                      <MagnifyingGlass className="h-4 w-4 mr-2" />
                       Extract Entities
                     </>
                   )}
@@ -316,7 +316,7 @@ export function IVKGEPanel() {
                       setPreviewUrl(null);
                     }}
                   >
-                    <X className="h-4 w-4" />
+                    <X size={16} />
                   </Button>
                 )}
               </div>
@@ -365,7 +365,7 @@ export function IVKGEPanel() {
                                 variant="outline"
                                 onClick={() => setEditingEntity(entity)}
                               >
-                                <Edit className="h-3 w-3 mr-1" />
+                                <PencilSimple className="h-3 w-3 mr-1" />
                                 Edit
                               </Button>
                             </div>
@@ -445,7 +445,7 @@ export function IVKGEPanel() {
                   <Card key={ambiguity.ambiguity_id}>
                     <CardHeader>
                       <div className="flex items-center gap-2">
-                        <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                        <Warning className="h-5 w-5 text-yellow-500" />
                         <CardTitle className="text-base">
                           {ambiguity.ambiguity_type}
                         </CardTitle>
@@ -504,7 +504,7 @@ export function IVKGEPanel() {
                     handleCorrection(editingEntity.entity_id, { name, entity_type: type });
                   }}
                 >
-                  <Save className="h-4 w-4 mr-2" />
+                  <FloppyDisk className="h-4 w-4 mr-2" />
                   Save
                 </Button>
                 <Button

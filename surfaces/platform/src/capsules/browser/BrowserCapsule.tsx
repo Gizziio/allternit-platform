@@ -17,17 +17,16 @@ import {
   Globe,
   Lock,
   Terminal,
-  LayoutGrid,
-  Puzzle,
-  MoreHorizontal,
-  RefreshCw,
-  ChevronLeft,
-  ChevronRight,
-  Home,
+  SquaresFour,
+  PuzzlePiece as Puzzle,
+  DotsThreeOutline,
+  ArrowsClockwise,
+  CaretLeft,
+  CaretRight,
+  House,
   Star,
-  AlertTriangle,
-  Beaker,
-} from 'lucide-react';
+  Warning,
+} from '@phosphor-icons/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { isElectronShell, getWebProxyUrl } from '@/lib/platform';
@@ -35,6 +34,9 @@ import { isElectronShell, getWebProxyUrl } from '@/lib/platform';
 // Store and Types
 import { useBrowserStore, useActiveTab, parseBrowserInput } from './browser.store';
 import type { BrowserTab, WebTab, A2UITab, MiniappTab, ComponentTab, A2UIPayload } from './browser.types';
+
+// Extension Bridge
+import { useExtensionBridge } from './useExtensionBridge';
 
 // A2UI Renderer
 import { A2UIRenderer } from '../a2ui/A2UIRenderer';
@@ -56,7 +58,7 @@ function TabIcon({ tab, className }: { tab: BrowserTab; className?: string }) {
     case 'web':
       return <Globe className={cn('w-4 h-4', className)} />;
     case 'a2ui':
-      return <LayoutGrid className={cn('w-4 h-4', className)} />;
+      return <SquaresFour className={cn('w-4 h-4', className)} />;
     case 'miniapp':
       return <Puzzle className={cn('w-4 h-4', className)} />;
     case 'component':
@@ -140,7 +142,7 @@ function TabBar() {
                    hover:bg-[var(--glass-bg-hover)] hover:border-[var(--border-hover)]
                    transition-colors shrink-0"
       >
-        <Plus className="w-4 h-4" />
+        <Plus size={16} />
       </button>
     </div>
   );
@@ -204,7 +206,7 @@ function NavigationBar() {
               }}
               className="p-1.5 rounded-md hover:bg-[var(--glass-bg-hover)] text-[var(--text-tertiary)]"
             >
-              <ChevronLeft className="w-4 h-4" />
+              <CaretLeft size={16} />
             </button>
             <button
               onClick={() => {
@@ -215,7 +217,7 @@ function NavigationBar() {
               }}
               className="p-1.5 rounded-md hover:bg-[var(--glass-bg-hover)] text-[var(--text-tertiary)]"
             >
-              <ChevronRight className="w-4 h-4" />
+              <CaretRight size={16} />
             </button>
           </div>
         )}
@@ -242,14 +244,14 @@ function NavigationBar() {
               onClick={handleRefresh}
               className="p-1.5 rounded-md hover:bg-[var(--glass-bg-hover)] text-[var(--text-tertiary)]"
             >
-              <RefreshCw className="w-4 h-4" />
+              <ArrowsClockwise size={16} />
             </button>
           )}
           <button
             onClick={() => addTab('https://www.google.com', 'New Tab')}
             className="p-1.5 rounded-md hover:bg-[var(--glass-bg-hover)] text-[var(--text-tertiary)]"
           >
-            <Home className="w-4 h-4" />
+            <House size={16} />
           </button>
         </div>
       </div>
@@ -323,20 +325,6 @@ function A2UIContent({ tab }: { tab: A2UITab }) {
 
   return (
     <div className="w-full h-full overflow-auto p-4">
-      {/* Mock Data Warning Banner */}
-      {tab.isMockData && (
-        <div className="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center gap-3">
-          <Beaker className="w-5 h-5 text-amber-500 shrink-0" />
-          <div className="flex-1">
-            <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
-              Demo Mode
-            </p>
-            <p className="text-xs text-amber-600/80 dark:text-amber-400/70">
-              This UI was generated with mock data. The kernel is unavailable.
-            </p>
-          </div>
-        </div>
-      )}
       <A2UIRenderer
         payload={tab.payload}
         onAction={handleAction}
@@ -400,7 +388,7 @@ function MiniappContent({ tab }: { tab: MiniappTab }) {
   return (
     <div className="w-full h-full flex items-center justify-center">
       <div className="text-center">
-        <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-yellow-500 opacity-50" />
+        <Warning className="w-12 h-12 mx-auto mb-4 text-yellow-500 opacity-50" />
         <p className="text-[var(--text-secondary)]">Unknown miniapp entry type</p>
         <p className="text-sm text-[var(--text-tertiary)] mt-1">{manifest.entry.type}</p>
       </div>
@@ -487,6 +475,9 @@ function EmptyState() {
 export function BrowserCapsule() {
   const { tabs, activeTabId, consoleOpen, toggleConsole } = useBrowserStore();
   const activeTab = tabs.find((t) => t.id === activeTabId);
+  
+  // Initialize extension bridge for direct Chrome extension communication
+  const { isConnected: isExtensionConnected } = useExtensionBridge();
 
   return (
     <div className="h-full flex flex-col p-3">
@@ -517,7 +508,7 @@ export function BrowserCapsule() {
                 : 'bg-[var(--glass-bg-elevated)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             )}
           >
-            <Terminal className="w-4 h-4" />
+            <Terminal size={16} />
           </button>
         </div>
       </GlassCard>

@@ -16,16 +16,16 @@ import {
 } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import {
-  Volume2,
-  VolumeX,
-  Settings,
+  SpeakerHigh,
+  SpeakerSlash,
+  GearSix,
   Play,
-  AlertCircle,
+  Warning,
   Headphones,
-  Mic,
+  Microphone,
   X,
   UserCircle,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import { useVoice } from '@/providers/voice-provider';
 import { Persona } from './persona';
 import {
@@ -212,7 +212,7 @@ export function VoicePresence({ className, compact = true }: VoicePresenceProps)
                 exit={{ opacity: 0, scale: 0.5 }}
                 className="absolute inset-0 flex items-center justify-center bg-background/40 rounded-full backdrop-blur-sm"
               >
-                <Mic className="w-4 h-4 text-white drop-shadow-md" />
+                <Microphone className="w-4 h-4 text-white drop-shadow-md" />
               </motion.div>
             )}
           </AnimatePresence>
@@ -241,7 +241,7 @@ export function VoicePresence({ className, compact = true }: VoicePresenceProps)
                 !serviceAvailable && "text-muted-foreground"
               )}
             >
-              <Settings className="h-3.5 w-3.5" />
+              <GearSix className="h-3.5 w-3.5" />
               {!serviceAvailable && (
                 <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-amber-500 rounded-full" />
               )}
@@ -311,7 +311,7 @@ export function VoicePresence({ className, compact = true }: VoicePresenceProps)
               className="absolute -top-16 right-0 rounded-full bg-background/50 hover:bg-background/80"
               onClick={handleDismiss}
             >
-              <X className="w-5 h-5" />
+              <X size={20} />
             </Button>
 
             {/* Large Animated Persona */}
@@ -463,7 +463,7 @@ function VoiceSettingsContent({
       {!serviceAvailable && (
         <div className="bg-amber-500/10 border border-amber-500/20 rounded-md p-2 mb-3">
           <div className="flex items-start gap-2">
-            <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
+            <Warning className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
             <div className="space-y-1">
               <p className="text-[10px] text-muted-foreground">Start voice service:</p>
               <code className="block bg-background px-1.5 py-0.5 rounded text-[9px]">
@@ -522,7 +522,7 @@ function VoiceSettingsContent({
       {/* Mic Selector */}
       <div className="space-y-1.5 mb-3">
         <label className="text-[10px] font-medium text-muted-foreground flex items-center gap-1">
-          <UserCircle className="h-3 w-3" />
+          <UserCircle size={12} />
           Microphone
         </label>
         <MicSelector>
@@ -549,7 +549,7 @@ function VoiceSettingsContent({
       <div className="space-y-1.5 mb-3">
         <div className="flex items-center justify-between">
           <label className="text-[10px] font-medium text-muted-foreground flex items-center gap-1">
-            <Settings className="h-3 w-3" />
+            <GearSix size={12} />
             Voice ({availableVoices.length} available)
           </label>
           {availableVoices.length === 0 && serviceAvailable && (
@@ -595,9 +595,9 @@ function VoiceSettingsContent({
           disabled={!serviceAvailable}
         >
           {autoPlay ? (
-            <><Volume2 className="h-3 w-3 mr-1" /> On</>
+            <><SpeakerHigh className="h-3 w-3 mr-1" /> On</>
           ) : (
-            <><VolumeX className="h-3 w-3 mr-1" /> Off</>
+            <><SpeakerSlash className="h-3 w-3 mr-1" /> Off</>
           )}
         </Button>
       </div>

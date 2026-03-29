@@ -6,14 +6,14 @@ import { usePanels, useResponsiveLayout } from './useLayout';
 import { PanelConfig } from './layout-context';
 import {
   X,
-  PanelLeft,
-  PanelRight,
-  PanelBottom,
-  Maximize2,
-  Minimize2,
-  GripVertical,
-  GripHorizontal,
-} from 'lucide-react';
+  Sidebar,
+  SidebarSimple,
+  Rows,
+  ArrowsOut,
+  ArrowsIn,
+  DotsSixVertical,
+  DotsNine,
+} from '@phosphor-icons/react';
 
 // =============================================================================
 // Types
@@ -200,9 +200,9 @@ function ResizeHandle({ position, onResize, onDoubleClick }: ResizeHandleProps) 
       onDoubleClick={onDoubleClick}
     >
       {isHorizontal ? (
-        <GripVertical className="w-3 h-3 text-muted-foreground/50" />
+        <DotsSixVertical className="w-3 h-3 text-muted-foreground/50" />
       ) : (
-        <GripHorizontal className="w-3 h-3 text-muted-foreground/50" />
+        <DotsNine className="w-3 h-3 text-muted-foreground/50" />
       )}
     </div>
   );
@@ -247,9 +247,9 @@ function Panel({ config, isFirst, isLast, onClose }: PanelProps) {
             title={isMaximized ? 'Restore' : 'Maximize'}
           >
             {isMaximized ? (
-              <Minimize2 className="w-3.5 h-3.5 text-muted-foreground" />
+              <ArrowsIn className="w-3.5 h-3.5 text-muted-foreground" />
             ) : (
-              <Maximize2 className="w-3.5 h-3.5 text-muted-foreground" />
+              <ArrowsOut className="w-3.5 h-3.5 text-muted-foreground" />
             )}
           </button>
           <button
@@ -277,17 +277,17 @@ function Panel({ config, isFirst, isLast, onClose }: PanelProps) {
 function DefaultPanelContent({ position }: { position: 'left' | 'right' | 'bottom' }) {
   const content = {
     left: {
-      icon: PanelLeft,
+      icon: Sidebar,
       title: 'Explorer Panel',
       description: 'This is the left panel. Use it for file explorers, project navigation, or other primary sidebar content.',
     },
     right: {
-      icon: PanelRight,
+      icon: SidebarSimple,
       title: 'Inspector Panel',
       description: 'This is the right panel. Use it for property inspectors, details views, or secondary information.',
     },
     bottom: {
-      icon: PanelBottom,
+      icon: Rows,
       title: 'Bottom Panel',
       description: 'This is the bottom panel. Use it for terminals, logs, output consoles, or debug information.',
     },
@@ -318,9 +318,9 @@ export function PanelToggleButton({ position, className }: PanelToggleButtonProp
   const panel = position === 'left' ? left : position === 'right' ? right : bottom;
   
   const icons = {
-    left: PanelLeft,
-    right: PanelRight,
-    bottom: PanelBottom,
+    left: Sidebar,
+    right: SidebarSimple,
+    bottom: Rows,
   };
   
   const Icon = icons[position];
@@ -339,7 +339,7 @@ export function PanelToggleButton({ position, className }: PanelToggleButtonProp
       aria-label={`Toggle ${label} Panel`}
       aria-pressed={panel.isOpen}
     >
-      <Icon className="w-5 h-5" />
+      <Icon size={20} />
     </button>
   );
 }

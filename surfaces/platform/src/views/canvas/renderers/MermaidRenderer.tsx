@@ -6,15 +6,15 @@
  */
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { 
-  Maximize2, 
-  Download, 
-  Share2, 
-  ZoomIn, 
-  ZoomOut,
-  RefreshCw,
-  Code
-} from 'lucide-react';
+import {
+  ArrowsOut,
+  DownloadSimple,
+  ShareNetwork,
+  MagnifyingGlassPlus,
+  MagnifyingGlassMinus,
+  ArrowsClockwise,
+  Code,
+} from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import type { ArtifactUIPart } from '@/lib/ai/rust-stream-adapter';
 import { cn } from '@/lib/utils';
@@ -78,6 +78,14 @@ export function MermaidRenderer({
 
     renderDiagram();
   }, [mermaidCode]);
+
+  const renderedSvgSrc = useMemo(
+    () =>
+      svgRef.current
+        ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgRef.current)}`
+        : null,
+    [isRendering, mermaidCode, renderError]
+  );
 
   // Generate simple fallback SVG for basic graphs
   const generateFallbackSVG = (code: string): string => {
@@ -192,7 +200,7 @@ export function MermaidRenderer({
               showSource && "text-[var(--accent-primary)]"
             )}
           >
-            <Code className="w-4 h-4" />
+            <Code size={16} />
           </Button>
           <Button
             variant="ghost"
@@ -200,7 +208,7 @@ export function MermaidRenderer({
             onClick={() => setZoom(z => Math.max(0.5, z - 0.25))}
             className="text-[var(--text-tertiary)]"
           >
-            <ZoomOut className="w-4 h-4" />
+            <MagnifyingGlassMinus size={16} />
           </Button>
           <span className="text-xs text-[var(--text-tertiary)] min-w-[40px] text-center">
             {Math.round(zoom * 100)}%
@@ -211,7 +219,7 @@ export function MermaidRenderer({
             onClick={() => setZoom(z => Math.min(3, z + 0.25))}
             className="text-[var(--text-tertiary)]"
           >
-            <ZoomIn className="w-4 h-4" />
+            <MagnifyingGlassPlus size={16} />
           </Button>
           <Button
             variant="ghost"
@@ -219,10 +227,10 @@ export function MermaidRenderer({
             onClick={handleDownloadSVG}
             className="text-[var(--text-tertiary)]"
           >
-            <Download className="w-4 h-4" />
+            <DownloadSimple size={16} />
           </Button>
           <Button variant="ghost" size="sm" className="text-[var(--text-tertiary)]">
-            <Share2 className="w-4 h-4" />
+            <ShareNetwork size={16} />
           </Button>
         </div>
       </div>
@@ -240,7 +248,7 @@ export function MermaidRenderer({
           /* Loading state */
           <div className="h-full flex items-center justify-center">
             <div className="text-center text-[var(--text-tertiary)]">
-              <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2" />
+              <ArrowsClockwise className="w-8 h-8 animate-spin mx-auto mb-2" />
               <p className="text-sm">Rendering diagram...</p>
             </div>
           </div>
@@ -269,8 +277,15 @@ export function MermaidRenderer({
               transform: `scale(${zoom})`,
               transformOrigin: 'center center',
             }}
-            dangerouslySetInnerHTML={{ __html: svgRef.current }}
-          />
+          >
+            {renderedSvgSrc && (
+              <img
+                alt="Rendered Mermaid diagram"
+                className="max-w-full max-h-full"
+                src={renderedSvgSrc}
+              />
+            )}
+          </div>
         )}
       </div>
 

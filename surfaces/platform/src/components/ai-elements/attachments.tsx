@@ -11,14 +11,14 @@ import {
 } from "@/components/ui/hover-card";
 import { cn } from "@/lib/utils";
 import {
-  FileTextIcon,
-  GlobeIcon,
-  ImageIcon,
-  Music2Icon,
-  PaperclipIcon,
-  VideoIcon,
-  XIcon,
-} from "lucide-react";
+  FileText as FileTextIcon,
+  Globe as GlobeIcon,
+  Image as ImageIcon,
+  MusicNotes as Music2Icon,
+  Paperclip as PaperclipIcon,
+  Video,
+  X as XIcon,
+} from '@phosphor-icons/react';
 import { createContext, useCallback, useContext, useMemo } from "react";
 
 // ============================================================================
@@ -45,7 +45,7 @@ const mediaCategoryIcons: Record<AttachmentMediaCategory, typeof ImageIcon> = {
   image: ImageIcon,
   source: GlobeIcon,
   unknown: PaperclipIcon,
-  video: VideoIcon,
+  video: Video,
 };
 
 // ============================================================================

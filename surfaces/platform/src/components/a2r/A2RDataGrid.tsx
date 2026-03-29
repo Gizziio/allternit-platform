@@ -19,16 +19,16 @@ import {
   DateFilterModule,
 } from 'ag-grid-community';
 import 'ag-grid-community/styles/ag-grid.css';
-import { 
-  Table2, 
-  Download, 
-  Share2, 
-  Plus, 
-  Filter,
-  BarChart3,
-  MoreHorizontal,
-  FileSpreadsheet
-} from 'lucide-react';
+import {
+  Table as Table2,
+  DownloadSimple,
+  ShareNetwork,
+  Plus,
+  Funnel,
+  ChartBar,
+  DotsThreeOutline,
+  FileXls as FileSpreadsheet,
+} from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -215,7 +215,7 @@ export function A2RDataGrid({
                 filterEnabled && "text-[#D4956A] bg-[#D4956A]/10"
               )}
             >
-              <Filter className="w-4 h-4" />
+              <Funnel size={16} />
             </Button>
 
             {/* Charts button */}
@@ -225,7 +225,7 @@ export function A2RDataGrid({
                 size="sm"
                 className="h-7 text-[#888] hover:text-[#ECECEC]"
               >
-                <BarChart3 className="w-4 h-4" />
+                <ChartBar size={16} />
               </Button>
             )}
 
@@ -237,7 +237,7 @@ export function A2RDataGrid({
                 onClick={addRow}
                 className="h-7 text-[#888] hover:text-[#ECECEC]"
               >
-                <Plus className="w-4 h-4" />
+                <Plus size={16} />
               </Button>
             )}
 
@@ -248,7 +248,7 @@ export function A2RDataGrid({
               onClick={exportCSV}
               className="h-7 text-[#888] hover:text-[#ECECEC]"
             >
-              <Download className="w-4 h-4" />
+              <DownloadSimple size={16} />
             </Button>
 
             {/* Share */}
@@ -257,7 +257,7 @@ export function A2RDataGrid({
               size="sm"
               className="h-7 text-[#888] hover:text-[#ECECEC]"
             >
-              <Share2 className="w-4 h-4" />
+              <ShareNetwork size={16} />
             </Button>
 
             {/* More */}
@@ -266,7 +266,7 @@ export function A2RDataGrid({
               size="sm"
               className="h-7 text-[#888] hover:text-[#ECECEC]"
             >
-              <MoreHorizontal className="w-4 h-4" />
+              <DotsThreeOutline size={16} />
             </Button>
           </div>
         </div>

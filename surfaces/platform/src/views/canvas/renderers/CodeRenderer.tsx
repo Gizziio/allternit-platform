@@ -6,22 +6,23 @@
  */
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { 
-  Code, 
-  Play, 
-  Download, 
-  Share2, 
-  Copy, 
+import {
+  Code,
+  Play,
+  DownloadSimple,
+  ShareNetwork,
+  Copy,
   Check,
   Monitor,
   FileCode,
-  Maximize2,
-  RefreshCw,
-  Terminal
-} from 'lucide-react';
+  ArrowsOut,
+  ArrowsClockwise,
+  Terminal,
+} from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import type { ArtifactUIPart } from '@/lib/ai/rust-stream-adapter';
 import { cn } from '@/lib/utils';
+import { SyntaxHighlighter } from '@/views/plugins/SyntaxHighlighter';
 
 interface CodeRendererProps {
   artifact: ArtifactUIPart;
@@ -180,88 +181,14 @@ export function CodeRenderer({
 
   // Render code with syntax highlighting
   const renderCode = () => {
-    const lines = code.split('\n');
-    
     return (
-      <div className="font-mono text-sm">
-        {lines.map((line, index) => (
-          <div key={index} className="flex">
-            <div className="w-10 flex-shrink-0 text-right pr-3 text-[var(--text-tertiary)] select-none border-r border-[var(--border-subtle)]">
-              {index + 1}
-            </div>
-            <div className="flex-1 pl-3 text-[var(--text-secondary)]">
-              {highlightSyntax(line, language)}
-            </div>
-          </div>
-        ))}
-      </div>
+      <SyntaxHighlighter
+        code={code}
+        language={language}
+        showLineNumbers
+        wrapLines={false}
+      />
     );
-  };
-
-  // Improved syntax highlighting
-  const highlightSyntax = (line: string, lang: string) => {
-    const keywords = ['import', 'export', 'from', 'const', 'let', 'var', 'function', 'return', 'if', 'else', 'for', 'while', 'class', 'extends', 'default', 'async', 'await', 'try', 'catch', 'throw', 'new', 'this', 'typeof', 'instanceof', 'switch', 'case', 'break', 'continue'];
-    const builtins = ['console', 'document', 'window', 'Promise', 'Array', 'Object', 'String', 'Number', 'Boolean', 'Map', 'Set', 'JSON', 'Math', 'Date', 'RegExp', 'Error'];
-    
-    let highlighted = line;
-    
-    // Escape HTML
-    highlighted = highlighted
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
-    
-    // Keywords
-    keywords.forEach(keyword => {
-      const regex = new RegExp(`\\b${keyword}\\b`, 'g');
-      highlighted = highlighted.replace(
-        regex,
-        `<span class="text-[var(--accent-primary)]">${keyword}</span>`
-      );
-    });
-
-    // Builtins
-    builtins.forEach(builtin => {
-      const regex = new RegExp(`\\b${builtin}\\b`, 'g');
-      highlighted = highlighted.replace(
-        regex,
-        `<span class="text-blue-400">${builtin}</span>`
-      );
-    });
-    
-    // Strings (single, double, template)
-    highlighted = highlighted.replace(
-      /(["'`])(?:(?!\1)[^\\]|\\.)*?\1/g,
-      '<span class="text-green-400">$&</span>'
-    );
-
-    // Comments
-    highlighted = highlighted.replace(
-      /(\/\/.*$)/g,
-      '<span class="text-[var(--text-tertiary)] italic">$1</span>'
-    );
-    
-    // Multi-line comments (simple version)
-    highlighted = highlighted.replace(
-      /(\/\*[\s\S]*?\*\/)/g,
-      '<span class="text-[var(--text-tertiary)] italic">$1</span>'
-    );
-
-    // Numbers
-    highlighted = highlighted.replace(
-      /\b\d+(\.\d+)?\b/g,
-      '<span class="text-orange-400">$&</span>'
-    );
-    
-    // JSX tags
-    if (lang === 'jsx' || lang === 'html') {
-      highlighted = highlighted.replace(
-        /(&lt;\/?[a-zA-Z][a-zA-Z0-9]*)/g,
-        '<span class="text-purple-400">$1</span>'
-      );
-    }
-
-    return <span dangerouslySetInnerHTML={{ __html: highlighted }} />;
   };
 
   return (
@@ -288,7 +215,7 @@ export function CodeRenderer({
                 previewMode === 'code' && "text-[var(--accent-primary)]"
               )}
             >
-              <Code className="w-4 h-4" />
+              <Code size={16} />
             </Button>
             <Button
               variant="ghost"
@@ -299,7 +226,7 @@ export function CodeRenderer({
                 previewMode === 'split' && "text-[var(--accent-primary)]"
               )}
             >
-              <Monitor className="w-4 h-4" />
+              <Monitor size={16} />
             </Button>
             <Button
               variant="ghost"
@@ -310,7 +237,7 @@ export function CodeRenderer({
                 previewMode === 'preview' && "text-[var(--accent-primary)]"
               )}
             >
-              <Play className="w-4 h-4" />
+              <Play size={16} />
             </Button>
           </div>
           {(language === 'javascript' || language === 'html') && (
@@ -321,7 +248,7 @@ export function CodeRenderer({
               disabled={isRunning}
               className="text-[var(--text-tertiary)] hover:text-green-500"
             >
-              {isRunning ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+              {isRunning ? <ArrowsClockwise className="w-4 h-4 animate-spin" /> : <Play size={16} />}
             </Button>
           )}
           <Button
@@ -330,7 +257,7 @@ export function CodeRenderer({
             onClick={handleRefresh}
             className="text-[var(--text-tertiary)]"
           >
-            <RefreshCw className="w-4 h-4" />
+            <ArrowsClockwise size={16} />
           </Button>
           <Button
             variant="ghost"
@@ -338,13 +265,13 @@ export function CodeRenderer({
             onClick={handleCopy}
             className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
           >
-            {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+            {copied ? <Check size={16} /> : <Copy size={16} />}
           </Button>
           <Button variant="ghost" size="sm" className="text-[var(--text-tertiary)]">
-            <Download className="w-4 h-4" />
+            <DownloadSimple size={16} />
           </Button>
           <Button variant="ghost" size="sm" className="text-[var(--text-tertiary)]">
-            <Share2 className="w-4 h-4" />
+            <ShareNetwork size={16} />
           </Button>
         </div>
       </div>
@@ -377,7 +304,7 @@ export function CodeRenderer({
             {consoleOutput.length > 0 && (
               <div className="h-32 border-t border-[var(--border-subtle)] bg-[var(--bg-secondary)] overflow-auto p-2">
                 <div className="flex items-center gap-2 text-xs text-[var(--text-tertiary)] mb-1">
-                  <Terminal className="w-3 h-3" />
+                  <Terminal size={12} />
                   Console
                 </div>
                 {consoleOutput.map((log, i) => (

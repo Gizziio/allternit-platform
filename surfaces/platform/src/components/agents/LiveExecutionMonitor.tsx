@@ -16,28 +16,28 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Terminal,
-  Activity,
+  Pulse as Activity,
   Clock,
-  AlertCircle,
+  Warning,
   CheckCircle,
   XCircle,
   Play,
   Pause,
   Square,
-  Filter,
-  Download,
-  Search,
-  ChevronRight,
-  ChevronDown,
-  Zap,
+  Funnel,
+  DownloadSimple,
+  MagnifyingGlass,
+  CaretRight,
+  CaretDown,
+  Lightning,
   GitBranch,
-  Layers,
-  Box,
-  MoreHorizontal,
-  RotateCcw,
-  Maximize2,
-  Minimize2,
-} from 'lucide-react';
+  Stack,
+  Cube,
+  DotsThreeOutline,
+  ArrowCounterClockwise,
+  ArrowsOut,
+  ArrowsIn,
+} from '@phosphor-icons/react';
 
 import {
   SAND,
@@ -102,69 +102,6 @@ export interface WihInfo {
 }
 
 // ============================================================================
-// Mock Data Generators
-// ============================================================================
-
-function generateMockLogs(): LogEntry[] {
-  const levels: LogEntry['level'][] = ['debug', 'info', 'warn', 'error'];
-  const sources = ['kernel', 'agent', 'tool', 'dag', 'wih', 'runtime'];
-  const messages = [
-    'Initializing agent session',
-    'Tool execution started: read_file',
-    'Received message from user',
-    'Processing with model gpt-4',
-    'DAG node completed successfully',
-    'WIH claimed by agent-worker-1',
-    'Memory operation: storing context',
-    'Policy check passed',
-    'Checkpoint created',
-    'Streaming response chunks',
-  ];
-
-  return Array.from({ length: 50 }, (_, i) => ({
-    id: `log-${Date.now() - i * 1000}`,
-    timestamp: new Date(Date.now() - i * 1000),
-    level: levels[Math.floor(Math.random() * levels.length)],
-    source: sources[Math.floor(Math.random() * sources.length)],
-    message: messages[Math.floor(Math.random() * messages.length)],
-    metadata: Math.random() > 0.7 ? { tool: 'read_file', duration: 120 } : undefined,
-  })).reverse();
-}
-
-function generateMockDag(): DagExecution {
-  const nodes: DagNode[] = [
-    { id: 'node-1', name: 'Parse Request', status: 'completed', dependencies: [], duration: 150 },
-    { id: 'node-2', name: 'Retrieve Context', status: 'completed', dependencies: ['node-1'], duration: 320 },
-    { id: 'node-3', name: 'Analyze Code', status: 'running', dependencies: ['node-2'], duration: 0 },
-    { id: 'node-4', name: 'Generate Response', status: 'pending', dependencies: ['node-3'], duration: 0 },
-    { id: 'node-5', name: 'Validate Output', status: 'pending', dependencies: ['node-4'], duration: 0 },
-  ];
-
-  return {
-    id: 'dag-1',
-    nodes,
-    edges: [
-      { from: 'node-1', to: 'node-2' },
-      { from: 'node-2', to: 'node-3' },
-      { from: 'node-3', to: 'node-4' },
-      { from: 'node-4', to: 'node-5' },
-    ],
-    status: 'running',
-    progress: 40,
-  };
-}
-
-function generateMockWihs(): WihInfo[] {
-  return [
-    { id: 'wih-1', title: 'Review code changes', status: 'completed', priority: 1, createdAt: new Date() },
-    { id: 'wih-2', title: 'Run test suite', status: 'in_progress', assignee: 'agent-1', priority: 2, createdAt: new Date() },
-    { id: 'wih-3', title: 'Generate documentation', status: 'ready', priority: 3, createdAt: new Date() },
-    { id: 'wih-4', title: 'Security scan', status: 'ready', priority: 1, createdAt: new Date() },
-    { id: 'wih-5', title: 'Deploy to staging', status: 'ready', priority: 4, createdAt: new Date() },
-  ];
-}
-
-// ============================================================================
 // Main Component
 // ============================================================================
 
@@ -187,32 +124,8 @@ export function LiveExecutionMonitor({
   const logsEndRef = useRef<HTMLDivElement>(null);
   const logsContainerRef = useRef<HTMLDivElement>(null);
 
-  // Initialize data
-  useEffect(() => {
-    setLogs(generateMockLogs());
-    setDag(generateMockDag());
-    setWihs(generateMockWihs());
-  }, []);
-
-  // Simulate live log streaming
-  useEffect(() => {
-    if (!isLive) return;
-
-    const interval = setInterval(() => {
-      setLogs((prev) => {
-        const newLog: LogEntry = {
-          id: `log-${Date.now()}`,
-          timestamp: new Date(),
-          level: Math.random() > 0.9 ? 'warn' : 'info',
-          source: ['kernel', 'agent', 'tool'][Math.floor(Math.random() * 3)],
-          message: `Streaming update at ${new Date().toLocaleTimeString()}`,
-        };
-        return [...prev.slice(-499), newLog];
-      });
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, [isLive]);
+  // Logs, DAG, and WIHs are populated via real streaming once the execution backend
+  // pushes events (handled by parent via executionId/dagId props).
 
   // Auto-scroll
   useEffect(() => {
@@ -315,7 +228,7 @@ function MonitorHeader({
   const tabs = [
     { id: 'logs', label: 'Logs', icon: Terminal },
     { id: 'dag', label: 'DAG', icon: GitBranch },
-    { id: 'wihs', label: 'WIHs', icon: Layers },
+    { id: 'wihs', label: 'WIHs', icon: Stack },
   ];
 
   return (
@@ -399,7 +312,7 @@ function MonitorHeader({
               color: TEXT.secondary,
             }}
           >
-            <RotateCcw size={16} />
+            <ArrowCounterClockwise size={16} />
           </button>
         )}
         {onStop && (
@@ -480,7 +393,7 @@ function LogsPanel({
 
         {/* Search */}
         <div className="relative">
-          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: TEXT.tertiary }} />
+          <MagnifyingGlass size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: TEXT.tertiary }} />
           <input
             type="text"
             value={searchQuery}
@@ -515,7 +428,7 @@ function LogsPanel({
             color: TEXT.secondary,
           }}
         >
-          <Download size={14} />
+          <DownloadSimple size={14} />
         </button>
       </div>
 
@@ -572,7 +485,7 @@ function DagPanel({
     running: { bg: modeColors.soft, border: modeColors.accent, icon: Activity },
     completed: { bg: 'rgba(74,222,128,0.1)', border: '#4ade80', icon: CheckCircle },
     failed: { bg: 'rgba(248,113,113,0.1)', border: '#f87171', icon: XCircle },
-    skipped: { bg: 'rgba(255,255,255,0.02)', border: 'rgba(255,255,255,0.05)', icon: Box },
+    skipped: { bg: 'rgba(255,255,255,0.02)', border: 'rgba(255,255,255,0.05)', icon: Cube },
   };
 
   return (

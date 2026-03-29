@@ -5,17 +5,17 @@ import {
   FolderOpen,
   FileText,
   FileCode,
-  RefreshCw,
-  Save,
+  ArrowsClockwise,
+  FloppyDisk,
   Wrench,
   Clock,
   Package,
-  Loader2,
+  CircleNotch,
   Check,
   X,
   Eye,
-  EyeOff,
-} from 'lucide-react';
+  EyeSlash,
+} from '@phosphor-icons/react';
 import { agentWorkspaceService } from '@/lib/agents/agent-workspace.service';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -189,7 +189,7 @@ export function WorkspaceTab({ agent }: WorkspaceTabProps) {
                 cursor: 'pointer',
               }}
             >
-              <RefreshCw style={{ width: 16, height: 16, animation: isLoading ? 'spin 1s linear infinite' : undefined }} />
+              <ArrowsClockwise style={{ width: 16, height: 16, animation: isLoading ? 'spin 1s linear infinite' : undefined }} />
             </button>
           </div>
           
@@ -433,10 +433,10 @@ export function WorkspaceTab({ agent }: WorkspaceTabProps) {
                 style={{ background: STUDIO_THEME.accent, flexShrink: 0 }}
               >
                 {isSaving ? (
-                  <RefreshCw style={{ width: 14, height: 14, animation: 'spin 1s linear infinite' }} />
+                  <ArrowsClockwise style={{ width: 14, height: 14, animation: 'spin 1s linear infinite' }} />
                 ) : (
                   <>
-                    <Save style={{ width: 14, height: 14, marginRight: '6px' }} />
+                    <FloppyDisk style={{ width: 14, height: 14, marginRight: '6px' }} />
                     Save
                   </>
                 )}

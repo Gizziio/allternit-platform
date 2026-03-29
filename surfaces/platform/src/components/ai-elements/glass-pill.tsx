@@ -13,14 +13,14 @@
 
 import { cn } from "@/lib/utils";
 import {
-  CheckCircle2,
+  CheckCircle,
   CircleDashed,
-  AlertCircle,
+  Warning,
   Terminal,
   FileText,
   Globe,
-  ChevronRight,
-} from "lucide-react";
+  CaretRight,
+} from '@phosphor-icons/react';
 import { memo, useState } from "react";
 import { MatrixLogo } from "@/components/ai-elements/MatrixLogo";
 
@@ -73,18 +73,31 @@ const typeIcon: Record<PillType, React.ReactNode> = {
 // ─── State indicator ──────────────────────────────────────────────────────────
 function StateIndicator({ state }: { state: PillState }) {
   if (state === "running") {
-    return <MatrixLogo state="thinking" size={10} />;
+    // Amber ring spinner — MatrixLogo blocks are too large for this size
+    return (
+      <div
+        className="animate-spin"
+        style={{
+          width: 12,
+          height: 12,
+          borderRadius: "50%",
+          border: "1.5px solid rgba(212,176,140,0.18)",
+          borderTopColor: "rgba(212,176,140,0.85)",
+          flexShrink: 0,
+        }}
+      />
+    );
   }
   if (state === "completed") {
     return (
-      <CheckCircle2
+      <CheckCircle
         style={{ width: 13, height: 13, color: "rgba(74,222,128,0.7)", flexShrink: 0 }}
       />
     );
   }
   if (state === "error") {
     return (
-      <AlertCircle
+      <Warning
         style={{ width: 13, height: 13, color: "rgba(248,113,113,0.7)", flexShrink: 0 }}
       />
     );
@@ -192,7 +205,7 @@ export const GlassPill = memo(
 
           {/* Expand chevron */}
           {collapsible && children && (
-            <ChevronRight
+            <CaretRight
               style={{
                 width: 12,
                 height: 12,

@@ -7,17 +7,17 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Presentation, 
-  Maximize2, 
-  ChevronLeft, 
-  ChevronRight,
+import {
+  Presentation,
+  ArrowsOut,
+  CaretLeft,
+  CaretRight,
   Play,
-  Layers,
+  Stack,
   Clock,
   Users,
-  Eye
-} from 'lucide-react';
+  Eye,
+} from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -103,12 +103,12 @@ export function DeckCard({
             </h3>
             <div className="flex items-center gap-2 text-xs text-[#666]">
               <span className="flex items-center gap-1">
-                <Layers className="w-3 h-3" />
+                <Stack size={12} />
                 {slides.length} slides
               </span>
               {metadata?.estimatedDuration && (
                 <span className="flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
+                  <Clock size={12} />
                   {metadata.estimatedDuration} min
                 </span>
               )}
@@ -147,7 +147,7 @@ export function DeckCard({
               onClick={onOpenFull}
               className="h-7 text-[#888] hover:text-[#ECECEC] hover:bg-[#333]"
             >
-              <Maximize2 className="w-3.5 h-3.5 mr-1" />
+              <ArrowsOut className="w-3.5 h-3.5 mr-1" />
               <span className="text-xs">Open Full</span>
             </Button>
           </div>
@@ -238,7 +238,7 @@ export function DeckCard({
                   : "text-[#666] opacity-50 cursor-not-allowed"
               )}
             >
-              <ChevronLeft className="w-4 h-4" />
+              <CaretLeft size={16} />
             </button>
             <button
               onClick={handleNext}
@@ -250,7 +250,7 @@ export function DeckCard({
                   : "text-[#666] opacity-50 cursor-not-allowed"
               )}
             >
-              <ChevronRight className="w-4 h-4" />
+              <CaretRight size={16} />
             </button>
           </div>
         </div>
@@ -290,7 +290,7 @@ export function DeckCard({
           <div className="flex items-center gap-3 text-xs text-[#666]">
             {metadata?.author && (
               <span className="flex items-center gap-1">
-                <Users className="w-3 h-3" />
+                <Users size={12} />
                 {metadata.author}
               </span>
             )}
@@ -302,7 +302,7 @@ export function DeckCard({
           <span className="text-xs text-[#666]">
             {metadata?.totalViews !== undefined && (
               <span className="flex items-center gap-1">
-                <Eye className="w-3 h-3" />
+                <Eye size={12} />
                 {formatViews(metadata.totalViews)} views
               </span>
             )}

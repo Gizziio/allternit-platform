@@ -9,21 +9,21 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Target,
-  Sparkles,
-  Zap,
-  AlertCircle,
-  CheckCircle2,
+  Sparkle,
+  Lightning,
+  Warning,
+  CheckCircle,
   X,
   Plus,
-  Trash2,
-  Settings,
-  ChevronDown,
-  ChevronUp,
+  Trash,
+  GearSix,
+  CaretDown,
+  CaretUp,
   Lightbulb,
   Shield,
   Clock,
-  DollarSign,
-} from 'lucide-react';
+  CurrencyDollar,
+} from '@phosphor-icons/react';
 
 // ============================================================================
 // Types
@@ -72,9 +72,9 @@ function ConstraintBuilder({
   });
 
   const constraintTypes: Array<{ value: GoalConstraint['type']; label: string; icon: any; color: string }> = [
-    { value: 'budget', label: 'Budget', icon: DollarSign, color: '#22c55e' },
+    { value: 'budget', label: 'Budget', icon: CurrencyDollar, color: '#22c55e' },
     { value: 'time', label: 'Time Limit', icon: Clock, color: '#3b82f6' },
-    { value: 'tools', label: 'Tools', icon: Settings, color: '#f97316' },
+    { value: 'tools', label: 'Tools', icon: GearSix, color: '#f97316' },
     { value: 'scope', label: 'Scope', icon: Shield, color: '#a855f7' },
   ];
 
@@ -169,9 +169,9 @@ function ConstraintBuilder({
                     title={constraint.enabled ? 'Disable' : 'Enable'}
                   >
                     {constraint.enabled ? (
-                      <CheckCircle2 size={14} />
+                      <CheckCircle size={14} />
                     ) : (
-                      <AlertCircle size={14} />
+                      <Warning size={14} />
                     )}
                   </button>
                   <button
@@ -179,7 +179,7 @@ function ConstraintBuilder({
                     className="p-1.5 hover:bg-white/5 rounded transition-colors text-white/40 hover:text-red-400"
                     title="Remove"
                   >
-                    <Trash2 size={14} />
+                    <Trash size={14} />
                   </button>
                 </div>
               </motion.div>
@@ -318,7 +318,7 @@ function SuccessCriteriaBuilder({
               className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/5"
             >
               <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
-                <CheckCircle2 size={12} className="text-green-400" />
+                <CheckCircle size={12} className="text-green-400" />
               </div>
               <span className="text-sm text-white/80 flex-1">{criterion}</span>
               <button
@@ -469,9 +469,9 @@ export function GoalDefinitionInput({
           className="absolute right-2 bottom-2 p-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-blue-400"
         >
           {isLoading ? (
-            <Zap size={16} className="animate-pulse" />
+            <Lightning size={16} className="animate-pulse" />
           ) : (
-            <Sparkles size={16} />
+            <Sparkle size={16} />
           )}
         </button>
       </div>
@@ -500,9 +500,9 @@ export function GoalDefinitionInput({
         className="flex items-center gap-2 text-xs text-white/40 hover:text-white/60 transition-colors"
       >
         {isExpanded ? (
-          <ChevronUp size={14} />
+          <CaretUp size={14} />
         ) : (
-          <ChevronDown size={14} />
+          <CaretDown size={14} />
         )}
         {isExpanded ? 'Hide' : 'Show'} advanced options
       </button>

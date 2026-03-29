@@ -15,10 +15,10 @@ export function DrawerHandle({ isOpen, onToggle, onMouseDown }: DrawerHandleProp
         width: '100%',
         display: 'flex',
         justifyContent: 'flex-end',
-        paddingRight: 16,
+        paddingRight: 'max(16px, calc(env(safe-area-inset-right, 0px) + 16px))',
         pointerEvents: 'auto',
         cursor: isOpen ? 'row-resize' : 'pointer',
-        paddingBottom: isOpen ? 0 : 8,
+        paddingBottom: isOpen ? 0 : 'calc(env(safe-area-inset-bottom, 0px) + 12px)',
       }}
       onMouseDown={isOpen ? onMouseDown : undefined}
       onClick={!isOpen ? onToggle : undefined}
@@ -30,13 +30,15 @@ export function DrawerHandle({ isOpen, onToggle, onMouseDown }: DrawerHandleProp
           width: 60,
           borderTopLeftRadius: 12,
           borderTopRightRadius: 12,
+          borderBottomLeftRadius: isOpen ? 0 : 999,
+          borderBottomRightRadius: isOpen ? 0 : 999,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           border: '1px solid var(--border-subtle)',
-          borderBottom: 'none',
+          borderBottom: isOpen ? 'none' : '1px solid var(--border-subtle)',
           background: 'var(--glass-bg-thick)',
-          boxShadow: '0 -4px 20px rgba(0,0,0,0.1)',
+          boxShadow: isOpen ? '0 -4px 20px rgba(0,0,0,0.1)' : '0 10px 24px rgba(0,0,0,0.22)',
           transition: 'transform 0.2s',
           transform: isOpen ? 'translateY(1px)' : 'translateY(0)',
         }}

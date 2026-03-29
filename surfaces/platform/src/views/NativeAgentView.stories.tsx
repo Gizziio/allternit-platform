@@ -199,13 +199,7 @@ function seedStoryStore(streaming = false) {
     sendMessage: async () => {},
     sendMessageStream: async () => {},
     abortGeneration: async () => {
-      useNativeAgentStore.setState((currentState) => ({
-        streaming: {
-          ...currentState.streaming,
-          isStreaming: false,
-          currentMessageId: null,
-        },
-      }));
+      useNativeAgentStore.setState({ streamingBySession: {} });
     },
     fetchTools: async () => {},
     executeTool: async () => ({
@@ -304,7 +298,6 @@ function SeededNativeAgentView({ streaming = false }: { streaming?: boolean }) {
   return (
     <NativeAgentView
       bootstrapStrategy="manual"
-      syncSessions={false}
       onOpenRuntimeOps={() => {}}
     />
   );

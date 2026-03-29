@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
-import { Activity, FileText, Zap, Clock, CheckSquare } from 'lucide-react';
+import {
+  Pulse as Activity,
+  FileText,
+  Lightning,
+  Clock,
+  CheckSquare,
+} from '@phosphor-icons/react';
 import GlassSurface from '@/design/GlassSurface';
 
 type FilterType = 'all' | 'documents' | 'runs' | 'sessions';
@@ -31,7 +37,7 @@ const ActivityView: React.FC = () => {
       type: 'run',
       action: 'Executed analysis workflow',
       timestamp: '4 hours ago',
-      icon: <Zap size={16} />,
+      icon: <Lightning size={16} />,
       iconBg: '#34c759',
     },
     {
@@ -63,7 +69,7 @@ const ActivityView: React.FC = () => {
       type: 'run',
       action: 'Generated report for stakeholders',
       timestamp: '1 day ago',
-      icon: <Zap size={16} />,
+      icon: <Lightning size={16} />,
       iconBg: '#34c759',
     },
     {
@@ -95,7 +101,7 @@ const ActivityView: React.FC = () => {
       type: 'run',
       action: 'Scheduled recurring analysis',
       timestamp: '3 days ago',
-      icon: <Zap size={16} />,
+      icon: <Lightning size={16} />,
       iconBg: '#34c759',
     },
   ];

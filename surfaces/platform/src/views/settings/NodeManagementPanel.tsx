@@ -14,39 +14,37 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  Server,
+  HardDrives,
   Plus,
-  RefreshCw,
-  Loader2,
-  AlertCircle,
-  Activity,
-  CheckCircle2,
+  ArrowsClockwise,
+  CircleNotch,
+  Warning,
+  Pulse as Activity,
+  CheckCircle,
   XCircle,
   Cloud,
   Cpu,
   HardDrive,
-  MemoryStick,
   Terminal,
-  MoreVertical,
-  Trash2,
+  DotsThreeVertical,
+  Trash,
   Power,
-  RotateCw,
+  ArrowClockwise,
   Play,
   Square,
   Copy,
   Check,
-  ChevronDown,
-  ChevronUp,
+  CaretDown,
+  CaretUp,
   Clock,
   Gauge,
-  Container,
-  Sparkles,
-  AlertTriangle,
+  Cube,
+  Sparkle,
   FileText,
-  Search,
-  Filter,
-  Download,
-} from 'lucide-react';
+  MagnifyingGlass,
+  Funnel,
+  DownloadSimple,
+} from '@phosphor-icons/react';
 import { GATEWAY_BASE_URL } from '@/integration/api-client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -130,31 +128,31 @@ const statusConfig: Record<NodeStatus, { color: string; bg: string; icon: React.
   online: {
     color: '#22c55e',
     bg: 'rgba(34, 197, 94, 0.1)',
-    icon: <CheckCircle2 className="h-4 w-4" />,
+    icon: <CheckCircle size={16} />,
     label: 'Online',
   },
   offline: {
     color: '#6b7280',
     bg: 'rgba(107, 114, 128, 0.1)',
-    icon: <XCircle className="h-4 w-4" />,
+    icon: <XCircle size={16} />,
     label: 'Offline',
   },
   busy: {
     color: '#f59e0b',
     bg: 'rgba(245, 158, 11, 0.1)',
-    icon: <Activity className="h-4 w-4" />,
+    icon: <Activity size={16} />,
     label: 'Busy',
   },
   maintenance: {
     color: '#3b82f6',
     bg: 'rgba(59, 130, 246, 0.1)',
-    icon: <Clock className="h-4 w-4" />,
+    icon: <Clock size={16} />,
     label: 'Maintenance',
   },
   error: {
     color: '#ef4444',
     bg: 'rgba(239, 68, 68, 0.1)',
-    icon: <AlertCircle className="h-4 w-4" />,
+    icon: <Warning size={16} />,
     label: 'Error',
   },
 };
@@ -498,7 +496,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
                 color: status.color,
               }}
             >
-              <Server size={24} />
+              <HardDrives size={24} />
             </div>
             <div>
               <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#fff', margin: 0 }}>{node.hostname}</h2>
@@ -612,7 +610,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                        <MemoryStick size={16} color="#888" />
+                        <HardDrive size={16} color="#888" />
                         <span style={{ fontSize: '13px', color: '#888' }}>Memory</span>
                       </div>
                       <div style={{ fontSize: '24px', fontWeight: '600', color: '#fff', marginBottom: '8px' }}>
@@ -725,7 +723,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
                           gap: '8px',
                         }}
                       >
-                        <RotateCw size={16} />
+                        <ArrowClockwise size={16} />
                         Restart
                       </button>
                       {node.status === 'online' ? (
@@ -787,7 +785,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
                       gap: '8px',
                     }}
                   >
-                    <Trash2 size={16} />
+                    <Trash size={16} />
                     Remove Node
                   </button>
                 </div>
@@ -841,7 +839,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
                             color: '#d4b08c',
                           }}
                         >
-                          <Sparkles size={18} />
+                          <Sparkle size={18} />
                         </div>
                         <div>
                           <div style={{ fontSize: '14px', fontWeight: '500', color: '#fff' }}>{agent.name}</div>
@@ -1040,7 +1038,7 @@ const AddNodeModal: React.FC<AddNodeModalProps> = ({ onClose, onDeployCloud }) =
               gap: '8px',
             }}
           >
-            <Server size={16} />
+            <HardDrives size={16} />
             Bring Your Own
           </button>
           <button
@@ -1085,15 +1083,15 @@ const AddNodeModal: React.FC<AddNodeModalProps> = ({ onClose, onDeployCloud }) =
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#888' }}>
-                        <CheckCircle2 size={14} color="#22c55e" />
+                        <CheckCircle size={14} color="#22c55e" />
                         Linux, macOS, or Windows machine
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#888' }}>
-                        <CheckCircle2 size={14} color="#22c55e" />
+                        <CheckCircle size={14} color="#22c55e" />
                         Docker installed (recommended)
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#888' }}>
-                        <CheckCircle2 size={14} color="#22c55e" />
+                        <CheckCircle size={14} color="#22c55e" />
                         Outbound internet access (port 443)
                       </div>
                     </div>
@@ -1120,7 +1118,7 @@ const AddNodeModal: React.FC<AddNodeModalProps> = ({ onClose, onDeployCloud }) =
                   >
                     {loading ? (
                       <>
-                        <Loader2 size={18} className="animate-spin" />
+                        <CircleNotch size={18} className="animate-spin" />
                         Generating...
                       </>
                     ) : (
@@ -1399,7 +1397,7 @@ export const NodeManagementPanel: React.FC = () => {
               gap: '6px',
             }}
           >
-            <RefreshCw size={14} style={{ animation: loading ? 'spin 1s linear infinite' : undefined }} />
+            <ArrowsClockwise size={14} style={{ animation: loading ? 'spin 1s linear infinite' : undefined }} />
             Refresh
           </button>
           <button
@@ -1426,16 +1424,16 @@ export const NodeManagementPanel: React.FC = () => {
 
       {/* Stats Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px' }}>
-        <MetricCard icon={<Server size={20} />} label="Total Nodes" value={stats.total.toString()} />
+        <MetricCard icon={<HardDrives size={20} />} label="Total Nodes" value={stats.total.toString()} />
         <MetricCard
-          icon={<CheckCircle2 size={20} />}
+          icon={<CheckCircle size={20} />}
           label="Online"
           value={stats.online.toString()}
           subtext={`${stats.connected} connected`}
         />
         <MetricCard icon={<XCircle size={20} />} label="Offline" value={stats.offline.toString()} />
         <MetricCard icon={<Activity size={20} />} label="Busy" value={stats.busy.toString()} />
-        <MetricCard icon={<AlertCircle size={20} />} label="Error" value={stats.error.toString()} />
+        <MetricCard icon={<Warning size={20} />} label="Error" value={stats.error.toString()} />
       </div>
 
       {/* Filters */}
@@ -1499,7 +1497,7 @@ export const NodeManagementPanel: React.FC = () => {
             color: '#ef4444',
           }}
         >
-          <AlertCircle size={18} />
+          <Warning size={18} />
           <span style={{ fontSize: '13px' }}>{error}</span>
           <button
             onClick={refresh}
@@ -1523,7 +1521,7 @@ export const NodeManagementPanel: React.FC = () => {
       <div style={{ flex: 1, overflow: 'auto' }}>
         {loading && nodes.length === 0 ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '300px' }}>
-            <Loader2 size={32} color="#666" style={{ animation: 'spin 1s linear infinite' }} />
+            <CircleNotch size={32} color="#666" style={{ animation: 'spin 1s linear infinite' }} />
           </div>
         ) : filteredNodes.length === 0 ? (
           <div
@@ -1538,7 +1536,7 @@ export const NodeManagementPanel: React.FC = () => {
               border: '1px dashed rgba(255,255,255,0.1)',
             }}
           >
-            <Server size={48} color="#444" style={{ marginBottom: '16px' }} />
+            <HardDrives size={48} color="#444" style={{ marginBottom: '16px' }} />
             <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#fff', marginBottom: '8px' }}>
               {nodes.length === 0 ? 'No nodes configured' : 'No matching nodes'}
             </h3>
@@ -1609,7 +1607,7 @@ export const NodeManagementPanel: React.FC = () => {
                         color: status.color,
                       }}
                     >
-                      <Server size={20} />
+                      <HardDrives size={20} />
                     </div>
 
                     <div style={{ flex: 1 }}>
@@ -1658,7 +1656,7 @@ export const NodeManagementPanel: React.FC = () => {
                         {node.cpu_cores} cores
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#888' }}>
-                        <MemoryStick size={14} />
+                        <HardDrive size={14} />
                         {node.memory_gb} GB
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#888' }}>
@@ -1686,7 +1684,7 @@ export const NodeManagementPanel: React.FC = () => {
                       >
                         <Gauge size={18} />
                       </button>
-                      {isExpanded ? <ChevronUp size={18} color="#666" /> : <ChevronDown size={18} color="#666" />}
+                      {isExpanded ? <CaretUp size={18} color="#666" /> : <CaretDown size={18} color="#666" />}
                     </div>
                   </div>
 
@@ -1769,7 +1767,7 @@ export const NodeManagementPanel: React.FC = () => {
                                 gap: '6px',
                               }}
                             >
-                              <RotateCw size={14} />
+                              <ArrowClockwise size={14} />
                               Restart
                             </button>
                             {node.status === 'online' ? (
@@ -1839,7 +1837,7 @@ export const NodeManagementPanel: React.FC = () => {
                             gap: '6px',
                           }}
                         >
-                          <Trash2 size={14} />
+                          <Trash size={14} />
                           Remove
                         </button>
                       </div>
@@ -1921,7 +1919,7 @@ export const NodeManagementPanel: React.FC = () => {
                   color: '#ef4444',
                 }}
               >
-                <AlertTriangle size={20} />
+                <Warning size={20} />
               </div>
               <div>
                 <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#fff', margin: 0 }}>Remove Node</h3>

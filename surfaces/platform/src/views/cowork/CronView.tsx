@@ -7,23 +7,23 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
   CalendarCheck,
   Clock,
-  Plus, 
+  Plus,
   X,
   Play,
-  Trash2,
-  Pencil,
-  ChevronDown,
+  Trash,
+  PencilSimple,
+  CaretDown,
   FolderOpen,
-  Bot,
+  Robot,
   CheckSquare,
-  MoreVertical,
+  DotsThreeVertical,
   Calendar,
-  Sparkles,
+  Sparkle,
   Cpu,
-  RefreshCw,
-  AlertCircle,
-  Loader2
-} from 'lucide-react';
+  ArrowsClockwise,
+  Warning,
+  CircleNotch,
+} from '@phosphor-icons/react';
 import { useModelSelection } from '@/providers/model-selection-provider';
 import { ModelPicker, type ModelSelection } from '@/components/model-picker';
 import { useAgentStore } from '@/lib/agents';
@@ -349,7 +349,7 @@ export function CronView() {
           <TabButton
             active={activeTab === 'agent-heartbeats'}
             onClick={() => setActiveTab('agent-heartbeats')}
-            icon={Bot}
+            icon={Robot}
             count={0}
           >
             Agent Heartbeats
@@ -376,7 +376,7 @@ export function CronView() {
               opacity: isLoading ? 0.5 : 1,
             }}
           >
-            <RefreshCw size={14} style={{ animation: isLoading ? 'spin 1s linear infinite' : undefined }} />
+            <ArrowsClockwise size={14} style={{ animation: isLoading ? 'spin 1s linear infinite' : undefined }} />
             Refresh
           </button>
           <button
@@ -425,7 +425,7 @@ export function CronView() {
           color: '#ef4444',
           fontSize: '13px',
         }}>
-          <AlertCircle size={16} />
+          <Warning size={16} />
           {error}
           <button 
             onClick={() => setError(null)}
@@ -633,7 +633,7 @@ function AutomationCard({
           alignItems: 'center',
           justifyContent: 'center',
         }}>
-          {automation.mode === 'agent' ? <Bot size={20} color="#d4c5f9" /> : <CheckSquare size={20} color="#d4b08c" />}
+          {automation.mode === 'agent' ? <Robot size={20} color="#d4c5f9" /> : <CheckSquare size={20} color="#d4b08c" />}
         </div>
 
         <div style={{
@@ -672,7 +672,7 @@ function AutomationCard({
             }}
           >
             {isRunning ? (
-              <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+              <CircleNotch size={16} style={{ animation: 'spin 1s linear infinite' }} />
             ) : (
               <Play size={16} />
             )}
@@ -719,7 +719,7 @@ function AutomationCard({
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          {automation.mode === 'agent' ? <Bot size={14} color="#6b6b6b" /> : <Cpu size={14} color="#6b6b6b" />}
+          {automation.mode === 'agent' ? <Robot size={14} color="#6b6b6b" /> : <Cpu size={14} color="#6b6b6b" />}
           <span style={{ fontSize: 12, color: '#6b6b6b' }}>
             {getModelOrAgentDisplay()}
           </span>
@@ -903,7 +903,7 @@ function AutomationForm({
               <ModeButton
                 active={formData.mode === 'agent'}
                 onClick={() => setFormData({ ...formData, mode: 'agent', agentId: '', modelSelection: null })}
-                icon={Bot}
+                icon={Robot}
               >
                 Agent Task
               </ModeButton>
@@ -995,7 +995,7 @@ function AutomationForm({
                 <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   {formData.modelSelection ? (
                     <>
-                      <Sparkles size={16} color="#d4b08c" />
+                      <Sparkle size={16} color="#d4b08c" />
                       {formData.modelSelection.modelName || formData.modelSelection.modelId}
                       <span style={{ color: '#6b6b6b', fontSize: 12 }}>
                         via {formData.modelSelection.providerId}
@@ -1005,7 +1005,7 @@ function AutomationForm({
                     'Select model...'
                   )}
                 </span>
-                <ChevronDown size={16} />
+                <CaretDown size={16} />
               </button>
             </FormField>
           )}
@@ -1033,14 +1033,14 @@ function AutomationForm({
                 <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   {formData.agentId ? (
                     <>
-                      <Bot size={16} color="#d4c5f9" />
+                      <Robot size={16} color="#d4c5f9" />
                       {agents.find(a => a.id === formData.agentId)?.name || 'Unknown Agent'}
                     </>
                   ) : (
                     'Select agent...'
                   )}
                 </span>
-                <ChevronDown size={16} />
+                <CaretDown size={16} />
               </button>
               
               {/* Agent Picker Dropdown */}
@@ -1108,7 +1108,7 @@ function AutomationForm({
                             }
                           }}
                         >
-                          <Bot size={18} color="#d4c5f9" />
+                          <Robot size={18} color="#d4c5f9" />
                           <div>
                             <div style={{ fontWeight: 500 }}>{agent.name}</div>
                             {agent.description && (
@@ -1190,7 +1190,7 @@ function AutomationForm({
                 }}
               >
                 {FREQUENCY_OPTIONS.find(o => o.value === formData.frequency)?.label}
-                <ChevronDown size={16} />
+                <CaretDown size={16} />
               </button>
               
               {showFrequencyDropdown && (
@@ -1362,12 +1362,12 @@ function AutomationDetailOverlay({
   const getExecutorInfo = () => {
     if (automation.mode === 'agent' && automation.agentId) {
       const agent = agents.find(a => a.id === automation.agentId);
-      return { type: 'Agent', name: agent?.name || 'Unknown Agent', icon: Bot };
+      return { type: 'Agent', name: agent?.name || 'Unknown Agent', icon: Robot };
     }
     return {
       type: 'Model',
       name: automation.modelSelection?.modelName || automation.modelOrAgent || 'Default Model',
-      icon: Sparkles
+      icon: Sparkle
     };
   };
 
@@ -1455,13 +1455,13 @@ function AutomationDetailOverlay({
             display: 'flex',
             gap: 8,
           }}>
-            <ActionButton onClick={onEdit} icon={Pencil}>
+            <ActionButton onClick={onEdit} icon={PencilSimple}>
               Edit
             </ActionButton>
-            <ActionButton onClick={() => setShowDeleteConfirm(true)} icon={Trash2} variant="danger">
+            <ActionButton onClick={() => setShowDeleteConfirm(true)} icon={Trash} variant="danger">
               Delete
             </ActionButton>
-            <ActionButton onClick={onRunNow} icon={isRunning ? Loader2 : Play} variant="primary" isLoading={isRunning}>
+            <ActionButton onClick={onRunNow} icon={isRunning ? CircleNotch : Play} variant="primary" isLoading={isRunning}>
               {isRunning ? 'Running...' : 'Run Now'}
             </ActionButton>
           </div>
@@ -1666,7 +1666,7 @@ function ActionButton({
       }}
     >
       {isLoading ? (
-        <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+        <CircleNotch size={16} style={{ animation: 'spin 1s linear infinite' }} />
       ) : (
         <Icon size={16} />
       )}
@@ -1875,7 +1875,7 @@ function AgentHeartbeatsTab({ selectedAgent, onSelectAgent }: AgentHeartbeatsTab
         height: '100%',
         color: '#6b6b6b',
       }}>
-        <RefreshCw size={24} style={{ animation: 'spin 1s linear infinite', marginRight: 12 }} />
+        <ArrowsClockwise size={24} style={{ animation: 'spin 1s linear infinite', marginRight: 12 }} />
         Loading agents...
       </div>
     );
@@ -1907,7 +1907,7 @@ function AgentHeartbeatsTab({ selectedAgent, onSelectAgent }: AgentHeartbeatsTab
               alignItems: 'center',
               justifyContent: 'center',
             }}>
-              <Bot size={18} color="#d4c5f9" />
+              <Robot size={18} color="#d4c5f9" />
             </div>
             <div>
               <div style={{ fontSize: 14, fontWeight: 600, color: '#f0c8aa' }}>
@@ -1963,7 +1963,7 @@ function AgentHeartbeatsTab({ selectedAgent, onSelectAgent }: AgentHeartbeatsTab
   if (agents.length === 0) {
     return (
       <EmptyState 
-        icon={Bot}
+        icon={Robot}
         title="No agents available"
         description="Create an agent first to configure heartbeat tasks."
       />
@@ -2044,7 +2044,7 @@ function AgentHeartbeatsTab({ selectedAgent, onSelectAgent }: AgentHeartbeatsTab
                 justifyContent: 'center',
                 flexShrink: 0,
               }}>
-                <Bot size={22} color={agent.status === 'running' ? '#22c55e' : '#d4c5f9'} />
+                <Robot size={22} color={agent.status === 'running' ? '#22c55e' : '#d4c5f9'} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{

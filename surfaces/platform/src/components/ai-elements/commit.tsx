@@ -11,13 +11,13 @@ import {
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import {
-  CheckIcon,
-  CopyIcon,
-  FileIcon,
-  GitCommitIcon,
-  MinusIcon,
-  PlusIcon,
-} from "lucide-react";
+  Check as CheckIcon,
+  Copy as CopyIcon,
+  File as FileIcon,
+  GitCommit as GitCommitIcon,
+  Minus as MinusIcon,
+  Plus as PlusIcon,
+} from '@phosphor-icons/react';
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export type CommitProps = ComponentProps<typeof Collapsible>;

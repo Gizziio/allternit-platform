@@ -10,7 +10,12 @@
  */
 
 import React, { useState, useCallback, useEffect, useRef, ReactNode, useMemo } from 'react';
-import { X, AlertTriangle, RefreshCw, AlertOctagon, FileCode } from 'lucide-react';
+import {
+  X,
+  Warning,
+  ArrowsClockwise,
+  FileCode,
+} from '@phosphor-icons/react';
 import { createModuleLogger } from '@/lib/logger';
 import { TEXT } from '@/design/a2r.tokens';
 
@@ -295,7 +300,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
           role="alert"
           aria-live="assertive"
         >
-          <AlertOctagon size={48} className="mb-4" style={{ color: '#ef4444' }} />
+          <Warning size={48} className="mb-4" style={{ color: '#ef4444' }} />
           <h3 className="text-lg font-semibold mb-2" style={{ color: TEXT.primary }}>
             Something went wrong
           </h3>
@@ -321,7 +326,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
               color: 'white',
             }}
           >
-            <RefreshCw size={16} />
+            <ArrowsClockwise size={16} />
             Try Again
           </button>
         </div>
@@ -420,7 +425,7 @@ export const BrowserCompatibilityWarning: React.FC<BrowserCompatibilityWarningPr
       }}
       role="alert"
     >
-      <AlertTriangle size={20} className="flex-shrink-0 mt-0.5" style={{ color: '#fbbf24' }} />
+      <Warning size={20} className="flex-shrink-0 mt-0.5" style={{ color: '#fbbf24' }} />
       <div className="flex-1">
         <h4 className="text-sm font-semibold mb-1" style={{ color: TEXT.primary }}>
           Limited Browser Support
@@ -516,7 +521,7 @@ export const FileSizeWarning: React.FC<FileSizeWarningProps> = ({ fileSize, onDi
       }}
       role="alert"
     >
-      <AlertTriangle
+      <Warning
         size={20}
         className="flex-shrink-0 mt-0.5"
         style={{ color: isOverLimit ? '#ef4444' : '#fbbf24' }}

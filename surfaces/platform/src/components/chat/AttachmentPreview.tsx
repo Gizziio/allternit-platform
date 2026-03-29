@@ -1,19 +1,18 @@
 'use client';
 
-import React, { useState } from 'react';
-import { 
-  X, 
-  FileText, 
-  Image as ImageIcon, 
-  FileCode, 
-  FileSpreadsheet, 
-  FileJson,
-  File as FileGeneric,
+import React, { useState, useEffect } from 'react';
+import type { LucideIcon } from 'lucide-react';
+import {
+  X,
+  FileText,
+  ImageIcon,
+  FileCode,
+  Table,
+  File,
   Film,
   Music,
   Download,
   Maximize2,
-  FileType
 } from 'lucide-react';
 
 // ============================================================================
@@ -57,7 +56,7 @@ function getFileCategory(filename: string, type: string): AttachmentPreviewItem[
   return 'other';
 }
 
-function getFileIcon(type: AttachmentPreviewItem['type']) {
+function getFileIcon(type: AttachmentPreviewItem['type']): LucideIcon {
   switch (type) {
     case 'image':
     case 'gif':
@@ -68,15 +67,15 @@ function getFileIcon(type: AttachmentPreviewItem['type']) {
     case 'code':
       return FileCode;
     case 'spreadsheet':
-      return FileSpreadsheet;
+      return Table;
     case 'json':
-      return FileJson;
+      return FileText;
     case 'video':
       return Film;
     case 'audio':
       return Music;
     default:
-      return FileGeneric;
+      return File;
   }
 }
 
@@ -200,8 +199,7 @@ function AttachmentCard({ item, onRemove, onPreview, variant }: AttachmentCardPr
         border: `1px solid ${isHovered ? color : 'rgba(255,255,255,0.08)'}`,
         borderRadius: 12,
         overflow: 'hidden',
-        transition: 'all 0.2s ease',
-        boxShadow: isHovered ? `0 4px 20px ${color}20` : 'none',
+        transition: 'border-color 0.2s',
       }}
     >
       {/* Preview Area */}
@@ -261,11 +259,11 @@ function AttachmentCard({ item, onRemove, onPreview, variant }: AttachmentCardPr
         {/* Hover Overlay with actions */}
         {isHovered && (
           <div
+            className="a2r-hover-overlay"
             style={{
               position: 'absolute',
               inset: 0,
-              background: 'rgba(0,0,0,0.6)',
-              backdropFilter: 'blur(2px)',
+              background: 'rgba(0,0,0,0.65)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -273,11 +271,12 @@ function AttachmentCard({ item, onRemove, onPreview, variant }: AttachmentCardPr
               animation: 'fadeIn 0.15s ease',
             }}
           >
-            <style>{`@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }`}</style>
+            <style>{`@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } } @media (prefers-reduced-motion: reduce) { .a2r-hover-overlay { animation: none !important; } }`}</style>
             
             {canPreview && onPreview && (
               <button
                 onClick={() => onPreview(item)}
+                aria-label={`Preview ${item.name}`}
                 style={{
                   width: 32,
                   height: 32,
@@ -291,13 +290,14 @@ function AttachmentCard({ item, onRemove, onPreview, variant }: AttachmentCardPr
                   justifyContent: 'center',
                 }}
               >
-                <Maximize2 size={16} />
+                <Maximize2 size={16} aria-hidden="true" />
               </button>
             )}
-            
+
             <a
               href={item.dataUrl}
               download={item.name}
+              aria-label={`Download ${item.name}`}
               style={{
                 width: 32,
                 height: 32,
@@ -312,7 +312,7 @@ function AttachmentCard({ item, onRemove, onPreview, variant }: AttachmentCardPr
                 textDecoration: 'none',
               }}
             >
-              <Download size={16} />
+              <Download size={16} aria-hidden="true" />
             </a>
           </div>
         )}
@@ -336,7 +336,7 @@ function AttachmentCard({ item, onRemove, onPreview, variant }: AttachmentCardPr
               alignItems: 'center',
               justifyContent: 'center',
               opacity: isHovered ? 1 : 0,
-              transition: 'all 0.15s',
+              transition: 'opacity 0.15s, background-color 0.15s',
               zIndex: 2,
             }}
           >
@@ -395,7 +395,7 @@ interface CompactCardProps {
   item: AttachmentPreviewItem;
   isImage: boolean;
   color: string;
-  Icon: typeof FileGeneric;
+  Icon: LucideIcon;
   size: string;
   onRemove?: (id: string) => void;
   imageError: boolean;
@@ -468,6 +468,7 @@ function CompactCard({ item, isImage, color, Icon, size, onRemove, imageError, s
       {onRemove && (
         <button
           onClick={() => onRemove(item.id)}
+          aria-label={`Remove ${item.name}`}
           style={{
             padding: 2,
             border: 'none',
@@ -479,7 +480,7 @@ function CompactCard({ item, isImage, color, Icon, size, onRemove, imageError, s
             borderRadius: 4,
           }}
         >
-          <X size={14} />
+          <X size={14} aria-hidden="true" />
         </button>
       )}
     </div>
@@ -497,6 +498,15 @@ interface AttachmentPreviewModalProps {
 }
 
 export function AttachmentPreviewModal({ item, isOpen, onClose }: AttachmentPreviewModalProps) {
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen || !item) return null;
 
   const isImage = item.type === 'image' || item.type === 'gif' || item.type === 'screenshot';
@@ -506,12 +516,12 @@ export function AttachmentPreviewModal({ item, isOpen, onClose }: AttachmentPrev
 
   return (
     <div
+      role="presentation"
       onClick={onClose}
       style={{
         position: 'fixed',
         inset: 0,
         background: 'rgba(0,0,0,0.9)',
-        backdropFilter: 'blur(10px)',
         zIndex: 10000,
         display: 'flex',
         alignItems: 'center',
@@ -520,6 +530,9 @@ export function AttachmentPreviewModal({ item, isOpen, onClose }: AttachmentPrev
       }}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="attachment-preview-title"
         onClick={(e) => e.stopPropagation()}
         style={{
           maxWidth: '90vw',
@@ -552,10 +565,10 @@ export function AttachmentPreviewModal({ item, isOpen, onClose }: AttachmentPrev
                 justifyContent: 'center',
               }}
             >
-              <Icon size={18} color={color} />
+              <Icon size={18} color={color} aria-hidden="true" />
             </div>
             <div>
-              <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#fff' }}>
+              <p id="attachment-preview-title" style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#fff' }}>
                 {item.name}
               </p>
               {item.size && (
@@ -583,11 +596,12 @@ export function AttachmentPreviewModal({ item, isOpen, onClose }: AttachmentPrev
                 gap: 6,
               }}
             >
-              <Download size={16} />
+              <Download size={16} aria-hidden="true" />
               Download
             </a>
             <button
               onClick={onClose}
+              aria-label="Close preview"
               style={{
                 padding: 8,
                 borderRadius: 8,
@@ -597,7 +611,7 @@ export function AttachmentPreviewModal({ item, isOpen, onClose }: AttachmentPrev
                 cursor: 'pointer',
               }}
             >
-              <X size={20} />
+              <X size={20} aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -666,7 +680,7 @@ export function AttachmentPreviewModal({ item, isOpen, onClose }: AttachmentPrev
                   margin: '0 auto 20px',
                 }}
               >
-                <Icon size={40} color={color} />
+                <Icon size={40} color={color} aria-hidden="true" />
               </div>
               <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>
                 Preview not available for this file type

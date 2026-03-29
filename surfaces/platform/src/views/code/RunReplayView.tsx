@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { apiRequest, API_BASE_URL } from '@/lib/agents/api-config';
 import { Wrench, Brain, User, Terminal, Play, Pause, SkipBack, SkipForward, CaretLeft, CaretRight, Clock } from '@phosphor-icons/react';
 import { GlassCard } from '../../design/GlassCard';
 
@@ -15,153 +16,7 @@ interface ReplayStep {
   expanded?: boolean;
 }
 
-const mockSteps: ReplayStep[] = [
-  {
-    id: 1,
-    type: 'tool_call',
-    timestamp: '10:05:22.120',
-    duration: 245,
-    title: 'read_file',
-    preview: 'Reading src/views/code/CodeCanvas.tsx',
-    content: {
-      tool: 'read_file',
-      arguments: { path: 'src/views/code/CodeCanvas.tsx' },
-      result: '/* React component file - 928 lines */'
-    }
-  },
-  {
-    id: 2,
-    type: 'llm_response',
-    timestamp: '10:05:22.510',
-    duration: 1020,
-    title: 'Claude Analysis',
-    preview: 'Analyzing file structure and identifying optimization opportunities...',
-    content: {
-      model: 'claude-opus-4.6',
-      tokens: { input: 2840, output: 1240 },
-      message: 'I\'ve analyzed the CodeCanvas component. It has good separation of concerns but could benefit from memoization in a few rendering paths.'
-    }
-  },
-  {
-    id: 3,
-    type: 'tool_call',
-    timestamp: '10:05:23.620',
-    duration: 150,
-    title: 'web_search',
-    preview: 'Searching for React performance optimization patterns',
-    content: {
-      tool: 'web_search',
-      arguments: { query: 'React performance optimization memoization patterns' },
-      result: '5 relevant articles found about React.memo and useMemo'
-    }
-  },
-  {
-    id: 4,
-    type: 'system_log',
-    timestamp: '10:05:23.850',
-    duration: 0,
-    title: 'Benchmark Complete',
-    preview: 'Performance analysis finished - 3 optimization candidates identified',
-    content: {
-      level: 'info',
-      message: 'Performance analysis finished - 3 optimization candidates identified',
-      details: { candidates: 3, estimatedImprovement: '12-18%' }
-    }
-  },
-  {
-    id: 5,
-    type: 'tool_call',
-    timestamp: '10:05:24.120',
-    duration: 380,
-    title: 'write_file',
-    preview: 'Creating refactored version with memo optimization',
-    content: {
-      tool: 'write_file',
-      arguments: { path: 'src/views/code/CodeCanvas.refactored.tsx', content: '/* Optimized version with React.memo */' },
-      result: 'File written successfully - 956 lines'
-    }
-  },
-  {
-    id: 6,
-    type: 'human_message',
-    timestamp: '10:05:24.620',
-    duration: 0,
-    title: 'User Confirmation',
-    preview: 'Please review the refactored version and apply if it looks good',
-    content: {
-      role: 'user',
-      message: 'Please review the refactored version and apply if it looks good'
-    }
-  },
-  {
-    id: 7,
-    type: 'llm_response',
-    timestamp: '10:05:25.100',
-    duration: 1850,
-    title: 'Code Review Response',
-    preview: 'I\'ve completed the refactoring with three key improvements...',
-    content: {
-      model: 'claude-opus-4.6',
-      tokens: { input: 3200, output: 2100 },
-      message: 'I\'ve completed the refactoring with three key improvements: 1) Wrapped StepDetail in React.memo to prevent unnecessary re-renders 2) Added useMemo for the step list filtering 3) Optimized icon selection with a callback. Estimated performance improvement: 15%'
-    }
-  },
-  {
-    id: 8,
-    type: 'tool_call',
-    timestamp: '10:05:26.920',
-    duration: 420,
-    title: 'execute_test',
-    preview: 'Running unit tests on refactored component',
-    content: {
-      tool: 'execute_test',
-      arguments: { testFile: 'CodeCanvas.test.ts', pattern: '*' },
-      result: '24 tests passed, 0 failed, duration: 420ms'
-    }
-  },
-  {
-    id: 9,
-    type: 'system_log',
-    timestamp: '10:05:27.380',
-    duration: 0,
-    title: 'Tests Passed',
-    preview: 'All unit tests passed successfully',
-    content: {
-      level: 'success',
-      message: 'All unit tests passed successfully',
-      details: { total: 24, passed: 24, failed: 0 }
-    }
-  },
-  {
-    id: 10,
-    type: 'tool_call',
-    timestamp: '10:05:27.850',
-    duration: 580,
-    title: 'git_commit',
-    preview: 'Committing optimization changes to repository',
-    content: {
-      tool: 'git_commit',
-      arguments: { 
-        message: 'perf: optimize CodeCanvas rendering with React.memo and useMemo',
-        files: ['src/views/code/CodeCanvas.tsx']
-      },
-      result: 'Commit created: abc123def456'
-    }
-  },
-  {
-    id: 11,
-    type: 'llm_response',
-    timestamp: '10:05:28.550',
-    duration: 620,
-    title: 'Final Summary',
-    preview: 'Optimization complete and committed to the repository',
-    content: {
-      model: 'claude-opus-4.6',
-      tokens: { input: 1240, output: 890 },
-      message: 'Optimization complete! I\'ve successfully refactored CodeCanvas with React.memo and useMemo hooks. All tests pass and the changes have been committed. Expected performance improvement is 15% on re-render operations.'
-    }
-  }
-];
+// Session replay steps are loaded from the backend — no static data
 
 const getStepIcon = (type: StepType) => {
   switch (type) {
@@ -191,14 +46,22 @@ const getStepLabel = (type: StepType): string => {
 };
 
 export function RunReplayView() {
+  const [steps, setSteps] = useState<ReplayStep[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [activeStepId, setActiveStepId] = useState(1);
   const [expandedSteps, setExpandedSteps] = useState<number[]>([]);
-  const [progress, setProgress] = useState(9);
+  const [progress, setProgress] = useState(0);
 
-  const activeStep = mockSteps.find(s => s.id === activeStepId);
-  const totalDuration = mockSteps.reduce((sum, s) => sum + s.duration, 0);
-  const totalTokens = mockSteps
+  useEffect(() => {
+    // TODO: wire sessionId from router/store when replay backend is available
+    apiRequest<{ steps: ReplayStep[] }>(`${API_BASE_URL}/sessions/replay`, { method: 'POST', body: JSON.stringify({}) })
+      .then(({ steps: loaded }) => { setSteps(loaded); if (loaded.length > 0) setActiveStepId(loaded[0].id); })
+      .catch(() => {});
+  }, []);
+
+  const activeStep = steps.find(s => s.id === activeStepId);
+  const totalDuration = steps.reduce((sum, s) => sum + s.duration, 0);
+  const totalTokens = steps
     .filter(s => s.type === 'llm_response' && s.content.tokens)
     .reduce((sum, s) => sum + s.content.tokens.input + s.content.tokens.output, 0);
 
@@ -251,13 +114,13 @@ export function RunReplayView() {
             {isPlaying ? <Pause size={16} weight="fill" /> : <Play size={16} weight="fill" />}
           </button>
           <button
-            onClick={() => setActiveStepId(Math.min(mockSteps.length, activeStepId + 1))}
+            onClick={() => setActiveStepId(Math.min(steps.length, activeStepId + 1))}
             style={{ padding: 6, border: 'none', background: 'var(--bg-secondary)', borderRadius: 6, cursor: 'pointer', color: 'var(--text-secondary)' }}
           >
             <SkipForward size={16} weight="fill" />
           </button>
           <button
-            onClick={() => setActiveStepId(Math.min(mockSteps.length, activeStepId + 5))}
+            onClick={() => setActiveStepId(Math.min(steps.length, activeStepId + 5))}
             style={{ padding: 6, border: 'none', background: 'var(--bg-secondary)', borderRadius: 6, cursor: 'pointer', color: 'var(--text-secondary)' }}
           >
             <CaretRight size={16} weight="fill" />
@@ -267,13 +130,13 @@ export function RunReplayView() {
           <input
             type="range"
             min="1"
-            max={mockSteps.length}
+            max={steps.length}
             value={activeStepId}
             onChange={(e) => setActiveStepId(parseInt(e.target.value))}
             style={{ flex: 1, cursor: 'pointer' }}
           />
           <div style={{ fontSize: 11, color: 'var(--text-tertiary)', fontVariantNumeric: 'tabular-nums', minWidth: 40 }}>
-            {activeStepId}/{mockSteps.length}
+            {activeStepId}/{steps.length}
           </div>
         </div>
 
@@ -283,7 +146,7 @@ export function RunReplayView() {
             style={{
               height: '100%',
               background: 'var(--accent-primary)',
-              width: `${(activeStepId / mockSteps.length) * 100}%`,
+              width: `${(activeStepId / steps.length) * 100}%`,
               transition: 'width 0.3s ease'
             }}
           />
@@ -298,7 +161,7 @@ export function RunReplayView() {
             Execution Timeline
           </h3>
           <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {mockSteps.map(step => {
+            {steps.map(step => {
               const Icon = getStepIcon(step.type);
               const isActive = step.id === activeStepId;
               const isExpanded = expandedSteps.includes(step.id);
@@ -468,10 +331,10 @@ export function RunReplayView() {
 
       {/* Stats Footer */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
-        <StatItem label="Total Steps" value={mockSteps.length.toString()} />
+        <StatItem label="Total Steps" value={steps.length.toString()} />
         <StatItem label="Total Tokens" value={totalTokens.toString()} />
         <StatItem label="Elapsed Time" value={`${(totalDuration / 1000).toFixed(2)}s`} />
-        <StatItem label="Tool Calls" value={mockSteps.filter(s => s.type === 'tool_call').length.toString()} />
+        <StatItem label="Tool Calls" value={steps.filter(s => s.type === 'tool_call').length.toString()} />
       </div>
     </div>
   );

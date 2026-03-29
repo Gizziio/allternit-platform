@@ -1,4 +1,6 @@
-import { Loader2Icon } from "lucide-react"
+import {
+  CircleNotch as Loader2Icon,
+} from '@phosphor-icons/react';
 
 import { cn } from "@/lib/utils"
 

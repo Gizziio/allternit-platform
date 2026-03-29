@@ -1,8 +1,14 @@
 import React from 'react';
 import { useSidecarStore } from '../stores/sidecar-store';
 import { ChangeSetReview } from '../components/changeset-review/ChangeSetReview';
-import { FileCode, Eye, GitDiff, Cpu, ChatCenteredText } from '@phosphor-icons/react';
-import { X } from 'lucide-react';
+import {
+  FileCode,
+  Eye,
+  GitDiff,
+  Cpu,
+  ChatCenteredText,
+  X,
+} from '@phosphor-icons/react';
 
 export function ArtifactSidecar() {
   const { isOpen, activePanel, width, setOpen, setActivePanel } = useSidecarStore();

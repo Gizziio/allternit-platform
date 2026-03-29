@@ -8,20 +8,19 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ListTodo,
-  CheckCircle2,
+  ListChecks,
+  CheckCircle,
   Circle,
   Clock,
-  AlertCircle,
-  ChevronRight,
-  ChevronDown,
+  Warning,
+  CaretRight,
+  CaretDown,
   GitBranch,
-  Link2,
   Link,
   Play,
   Pause,
   SkipForward,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 
 // ============================================================================
 // Types
@@ -78,8 +77,8 @@ function TaskItem({
   const statusConfig: Record<TaskStatus, { icon: any; color: string; label: string }> = {
     pending: { icon: Circle, color: '#6b7280', label: 'Pending' },
     in_progress: { icon: Clock, color: '#3b82f6', label: 'In Progress' },
-    completed: { icon: CheckCircle2, color: '#22c55e', label: 'Completed' },
-    failed: { icon: AlertCircle, color: '#ef4444', label: 'Failed' },
+    completed: { icon: CheckCircle, color: '#22c55e', label: 'Completed' },
+    failed: { icon: Warning, color: '#ef4444', label: 'Failed' },
     skipped: { icon: Circle, color: '#4b5563', label: 'Skipped' },
   };
 
@@ -109,9 +108,9 @@ function TaskItem({
         <button className="p-1 hover:bg-white/5 rounded transition-colors">
           {hasSubtasks ? (
             isExpanded ? (
-              <ChevronDown size={14} className="text-white/40" />
+              <CaretDown size={14} className="text-white/40" />
             ) : (
-              <ChevronRight size={14} className="text-white/40" />
+              <CaretRight size={14} className="text-white/40" />
             )
           ) : (
             <div className="w-3.5" />
@@ -271,7 +270,7 @@ export function TaskDecompositionViewer({
       <div className="p-4 border-b border-white/5">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center border border-purple-500/30">
-            <ListTodo size={20} className="text-purple-400" />
+            <ListChecks size={20} className="text-purple-400" />
           </div>
           <div className="flex-1">
             <h3 className="text-sm font-bold text-white/90">Task Breakdown</h3>
@@ -326,7 +325,7 @@ export function TaskDecompositionViewer({
                 border: '1px solid rgba(255,255,255,0.1)',
               }}
             >
-              <ListTodo size={32} className="text-white/20" />
+              <ListChecks size={32} className="text-white/20" />
             </div>
             <p className="text-sm font-medium text-white/50 mb-1">
               No tasks yet

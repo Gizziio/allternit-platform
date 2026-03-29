@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { CheckSquare } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  CheckSquare,
+} from '@phosphor-icons/react';
 import GlassSurface from '@/design/GlassSurface';
 
 interface Task {
@@ -10,65 +12,6 @@ interface Task {
   assignee: string;
   column: 'todo' | 'in-progress' | 'done';
 }
-
-const mockTasks: Task[] = [
-  {
-    id: '1',
-    title: 'Implement document parser',
-    priority: 'high',
-    tag: 'Agent',
-    assignee: 'AJ',
-    column: 'in-progress',
-  },
-  {
-    id: '2',
-    title: 'Design API endpoints',
-    priority: 'high',
-    tag: 'Code',
-    assignee: 'SK',
-    column: 'todo',
-  },
-  {
-    id: '3',
-    title: 'Write onboarding guide',
-    priority: 'medium',
-    tag: 'Docs',
-    assignee: 'MB',
-    column: 'todo',
-  },
-  {
-    id: '4',
-    title: 'Test export pipeline',
-    priority: 'medium',
-    tag: 'Agent',
-    assignee: 'AJ',
-    column: 'in-progress',
-  },
-  {
-    id: '5',
-    title: 'Review code quality metrics',
-    priority: 'medium',
-    tag: 'Code',
-    assignee: 'SK',
-    column: 'in-progress',
-  },
-  {
-    id: '6',
-    title: 'Optimize database queries',
-    priority: 'high',
-    tag: 'Code',
-    assignee: 'DV',
-    column: 'todo',
-  },
-  {
-    id: '7',
-    title: 'Complete product documentation',
-    priority: 'low',
-    tag: 'Docs',
-    assignee: 'MB',
-    column: 'done',
-  },
-];
 
 const getPriorityColor = (priority: Task['priority']) => {
   switch (priority) {
@@ -111,12 +54,17 @@ const getTagColor = (tag: string) => {
 
 export const TasksView: React.FC = () => {
   const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null);
+  const [taskItems, setTaskItems] = useState<Task[]>([]);
+
+  useEffect(() => {
+    fetch('/api/v1/workspace/tasks').then(r => r.json()).then(setTaskItems).catch(() => {});
+  }, []);
 
   const columns = ['todo', 'in-progress', 'done'] as const;
   const columnLabels = { todo: 'TODO', 'in-progress': 'IN PROGRESS', done: 'DONE' };
 
   const getTasksForColumn = (columnId: string) => {
-    return mockTasks.filter((task) => task.column === columnId);
+    return taskItems.filter((task) => task.column === columnId);
   };
 
   return (

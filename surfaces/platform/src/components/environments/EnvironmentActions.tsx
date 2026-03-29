@@ -12,20 +12,19 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Copy,
-  Download,
-  Upload,
+  DownloadSimple,
+  UploadSimple,
   Archive,
-  RotateCcw,
+  ArrowCounterClockwise,
   GitBranch,
-  FileJson,
   FileCode,
-  Container,
+  Cube,
   Check,
   X,
-  Loader2,
-  ChevronDown,
-  ExternalLink,
-} from 'lucide-react';
+  CircleNotch,
+  CaretDown,
+  ArrowSquareOut,
+} from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -270,7 +269,7 @@ volumes:
       <Dialog open={cloneDialogOpen} onOpenChange={setCloneDialogOpen}>
         <DialogTrigger asChild>
           <Button variant="outline" size="sm" className="gap-2">
-            <GitBranch className="w-4 h-4" />
+            <GitBranch size={16} />
             Clone
           </Button>
         </DialogTrigger>
@@ -307,7 +306,7 @@ volumes:
             <Button onClick={handleClone} disabled={isCloning || !cloneName.trim()}>
               {isCloning ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <CircleNotch className="w-4 h-4 mr-2 animate-spin" />
                   Cloning...
                 </>
               ) : (
@@ -325,7 +324,7 @@ volumes:
       <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
         <DialogTrigger asChild>
           <Button variant="outline" size="sm" className="gap-2">
-            <Download className="w-4 h-4" />
+            <DownloadSimple size={16} />
             Export
           </Button>
         </DialogTrigger>
@@ -346,10 +345,10 @@ volumes:
                   onClick={() => setExportFormat(format)}
                   className="flex-1 text-xs capitalize"
                 >
-                  {format === 'json' && <FileJson className="w-3 h-3 mr-1" />}
+                  {format === 'json' && <FileCode className="w-3 h-3 mr-1" />}
                   {format === 'yaml' && <FileCode className="w-3 h-3 mr-1" />}
-                  {format === 'docker-compose' && <Container className="w-3 h-3 mr-1" />}
-                  {format === 'devcontainer' && <FileJson className="w-3 h-3 mr-1" />}
+                  {format === 'docker-compose' && <Cube className="w-3 h-3 mr-1" />}
+                  {format === 'devcontainer' && <FileCode className="w-3 h-3 mr-1" />}
                   {format.replace('-', ' ')}
                 </Button>
               ))}
@@ -368,7 +367,7 @@ volumes:
                     {copied ? (
                       <Check className="w-3 h-3 text-green-500" />
                     ) : (
-                      <Copy className="w-3 h-3" />
+                      <Copy size={12} />
                     )}
                   </Button>
                 </div>
@@ -390,7 +389,7 @@ volumes:
               Close
             </Button>
             <Button onClick={handleExport}>
-              <Download className="w-4 h-4 mr-2" />
+              <DownloadSimple className="w-4 h-4 mr-2" />
               Download
             </Button>
           </div>
@@ -401,7 +400,7 @@ volumes:
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm">
-            <ChevronDown className="w-4 h-4" />
+            <CaretDown size={16} />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
@@ -409,7 +408,7 @@ volumes:
             onClick={() => environment.url && window.open(environment.url, '_blank')}
             disabled={!environment.url}
           >
-            <ExternalLink className="w-4 h-4 mr-2" />
+            <ArrowSquareOut className="w-4 h-4 mr-2" />
             Open in Browser
           </DropdownMenuItem>
           <DropdownMenuSeparator />
@@ -418,7 +417,7 @@ volumes:
               // Trigger sync dialog
             }}
           >
-            <Upload className="w-4 h-4 mr-2" />
+            <UploadSimple className="w-4 h-4 mr-2" />
             Sync Files...
           </DropdownMenuItem>
           <DropdownMenuItem

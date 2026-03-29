@@ -7,12 +7,20 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GlassSurface } from '@/design/GlassSurface';
 import {
-  Database, Network, Layers, ChevronDown, Search, Filter, Eye,
-  Clock, Tag, BarChart3
-} from 'lucide-react';
+  Database,
+  Network,
+  Stack,
+  CaretDown,
+  MagnifyingGlass,
+  Funnel,
+  Eye,
+  Clock,
+  Tag,
+  ChartBar,
+} from '@phosphor-icons/react';
 
 interface MemoryEvent {
   id: string;
@@ -42,82 +50,6 @@ interface Edge {
 
 type MemoryTab = 'Events' | 'Entities' | 'Edges';
 
-const MOCK_EVENTS: MemoryEvent[] = [
-  {
-    id: 'e1',
-    timestamp: '2026-02-26T14:42:07Z',
-    type: 'message_sent',
-    payload: 'Message "Analyze Q3 results" sent to claude-opus-4-5',
-    expanded: false,
-  },
-  {
-    id: 'e2',
-    timestamp: '2026-02-26T14:41:55Z',
-    type: 'tool_called',
-    payload: 'Tool executed: bash_exec {cmd: "npm run build"}',
-    expanded: false,
-  },
-  {
-    id: 'e3',
-    timestamp: '2026-02-26T14:41:40Z',
-    type: 'file_read',
-    payload: 'File read: /home/user/project/src/index.ts (2,847 bytes)',
-    expanded: false,
-  },
-  {
-    id: 'e4',
-    timestamp: '2026-02-26T14:40:22Z',
-    type: 'session_start',
-    payload: 'New session created: sid_0x4a92b (workspace: /home/user/project)',
-    expanded: false,
-  },
-  {
-    id: 'e5',
-    timestamp: '2026-02-26T14:39:44Z',
-    type: 'message_sent',
-    payload: 'Message "Refactor auth module" sent to claude-sonnet-4-5',
-    expanded: false,
-  },
-  {
-    id: 'e6',
-    timestamp: '2026-02-26T14:38:30Z',
-    type: 'tool_called',
-    payload: 'Tool executed: file_write {path: /src/auth.ts, size: 1,204 bytes}',
-    expanded: false,
-  },
-  {
-    id: 'e7',
-    timestamp: '2026-02-26T14:37:15Z',
-    type: 'file_read',
-    payload: 'File read: /home/user/project/package.json (1,542 bytes)',
-    expanded: false,
-  },
-  {
-    id: 'e8',
-    timestamp: '2026-02-26T14:36:00Z',
-    type: 'session_start',
-    payload: 'New session created: sid_0x3f81a (workspace: /home/user/shared)',
-    expanded: false,
-  },
-];
-
-const MOCK_ENTITIES: Entity[] = [
-  { id: 'ent1', entityId: 'user:alice', name: 'Alice', type: 'Person', lastUpdated: '2m ago', propertyCount: 12 },
-  { id: 'ent2', entityId: 'company:acme', name: 'Acme Corp', type: 'Company', lastUpdated: '14s ago', propertyCount: 8 },
-  { id: 'ent3', entityId: 'project:canvas', name: 'Canvas Protocol', type: 'Project', lastUpdated: '32m ago', propertyCount: 15 },
-  { id: 'ent4', entityId: 'file:index.ts', name: 'index.ts', type: 'File', lastUpdated: '5s ago', propertyCount: 6 },
-  { id: 'ent5', entityId: 'session:ws01', name: 'Workspace Session', type: 'Session', lastUpdated: '1h ago', propertyCount: 9 },
-  { id: 'ent6', entityId: 'tool:bash_exec', name: 'bash_exec', type: 'Tool', lastUpdated: '52m ago', propertyCount: 4 },
-];
-
-const MOCK_EDGES: Edge[] = [
-  { id: 'edge1', source: 'user:alice', relationship: 'AUTHORED', target: 'file:index.ts', confidence: 0.98, createdAt: '3h ago' },
-  { id: 'edge2', source: 'user:alice', relationship: 'WORKS_AT', target: 'company:acme', confidence: 0.95, createdAt: '2d ago' },
-  { id: 'edge3', source: 'file:index.ts', relationship: 'PART_OF', target: 'project:canvas', confidence: 0.99, createdAt: '5d ago' },
-  { id: 'edge4', source: 'session:ws01', relationship: 'EDITED', target: 'file:index.ts', confidence: 0.87, createdAt: '28m ago' },
-  { id: 'edge5', source: 'tool:bash_exec', relationship: 'CALLED_BY', target: 'session:ws01', confidence: 0.92, createdAt: '1h ago' },
-  { id: 'edge6', source: 'user:alice', relationship: 'LEADS', target: 'project:canvas', confidence: 0.88, createdAt: '1d ago' },
-];
 
 function EventTypeIcon({ type }: { type: string }) {
   const icons: Record<string, string> = {
@@ -147,7 +79,7 @@ function EventRow({ event, onToggle }: { event: MemoryEvent; onToggle: (id: stri
             </div>
           </div>
         </div>
-        <ChevronDown className={`w-4 h-4 text-[var(--text-tertiary)] transition-transform flex-shrink-0 ${event.expanded ? 'rotate-180' : ''}`} />
+        <CaretDown className={`w-4 h-4 text-[var(--text-tertiary)] transition-transform flex-shrink-0 ${event.expanded ? 'rotate-180' : ''}`} />
       </div>
       {event.expanded && (
         <div className="px-4 py-3 bg-[var(--bg-secondary)] border-t border-[var(--border-subtle)]">
@@ -237,9 +169,17 @@ function EdgeRow({ edge }: { edge: Edge }) {
 
 export function MemoryKernelView() {
   const [activeTab, setActiveTab] = useState<MemoryTab>('Events');
-  const [events, setEvents] = useState<MemoryEvent[]>(MOCK_EVENTS);
+  const [events, setEvents] = useState<MemoryEvent[]>([]);
+  const [entities, setEntities] = useState<Entity[]>([]);
+  const [edges, setEdges] = useState<Edge[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
+
+  useEffect(() => {
+    fetch('/api/v1/memory/events').then(r => r.json()).then(setEvents).catch(() => {});
+    fetch('/api/v1/memory/entities').then(r => r.json()).then(setEntities).catch(() => {});
+    fetch('/api/v1/memory/edges').then(r => r.json()).then(setEdges).catch(() => {});
+  }, []);
 
   const toggleEventExpand = (id: string) => {
     setEvents((prev) =>
@@ -277,29 +217,29 @@ export function MemoryKernelView() {
         <div className="grid grid-cols-3 gap-6">
           <div>
             <div className="text-xs text-[var(--text-tertiary)] uppercase font-semibold mb-2 flex items-center gap-2">
-              <Layers className="w-4 h-4" />
+              <Stack size={16} />
               Total Events
             </div>
             <div className="text-2xl font-bold text-[var(--accent-primary)]">
-              {MOCK_EVENTS.length}
+              {events.length}
             </div>
           </div>
           <div>
             <div className="text-xs text-[var(--text-tertiary)] uppercase font-semibold mb-2 flex items-center gap-2">
-              <Tag className="w-4 h-4" />
+              <Tag size={16} />
               Total Entities
             </div>
             <div className="text-2xl font-bold text-[var(--accent-primary)]">
-              {MOCK_ENTITIES.length}
+              {entities.length}
             </div>
           </div>
           <div>
             <div className="text-xs text-[var(--text-tertiary)] uppercase font-semibold mb-2 flex items-center gap-2">
-              <Network className="w-4 h-4" />
+              <Network size={16} />
               Total Edges
             </div>
             <div className="text-2xl font-bold text-[var(--accent-primary)]">
-              {MOCK_EDGES.length}
+              {edges.length}
             </div>
           </div>
         </div>
@@ -328,7 +268,7 @@ export function MemoryKernelView() {
           <div className="p-6">
             <div className="mb-4 flex gap-3">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
+                <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
                 <input
                   type="text"
                   placeholder="Search events..."
@@ -361,7 +301,7 @@ export function MemoryKernelView() {
         {activeTab === 'Entities' && (
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {MOCK_ENTITIES.map((entity) => (
+              {entities.map((entity) => (
                 <EntityCard key={entity.id} entity={entity} />
               ))}
             </div>
@@ -371,7 +311,7 @@ export function MemoryKernelView() {
         {activeTab === 'Edges' && (
           <div className="p-6">
             <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] overflow-hidden">
-              {MOCK_EDGES.map((edge) => (
+              {edges.map((edge) => (
                 <EdgeRow key={edge.id} edge={edge} />
               ))}
             </div>

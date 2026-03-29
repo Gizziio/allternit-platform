@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { GlassCard } from '../../design/GlassCard';
-import { Clock, Play, Pause, CheckCircle, Calendar, RefreshCw, Plus } from 'lucide-react';
+import {
+  Clock,
+  Play,
+  Pause,
+  CheckCircle,
+  Calendar,
+  ArrowsClockwise,
+  Plus,
+} from '@phosphor-icons/react';
 import { useUnifiedStore } from '@/lib/agents/unified.store';
 
 export function SchedulerView() {
@@ -159,7 +167,7 @@ export function SchedulerView() {
               justifyContent: 'center'
             }}
           >
-            <RefreshCw size={16} color="#888" className={isLoading ? 'animate-spin' : ''} />
+            <ArrowsClockwise size={16} color="#888" className={isLoading ? 'animate-spin' : ''} />
           </button>
           <button
             onClick={() => setIsCreating(true)}

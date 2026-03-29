@@ -9,15 +9,15 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Cpu, 
-  CheckCircle2, 
-  Circle, 
-  Loader2, 
-  AlertCircle,
-  Zap,
-  X
-} from 'lucide-react';
+import {
+  Cpu,
+  CheckCircle,
+  Circle,
+  CircleNotch,
+  Warning,
+  Lightning,
+  X,
+} from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { MoAClient, type MoAProgressEvent } from '@/lib/api/moa-client';
@@ -103,11 +103,11 @@ export function CreativeCockpit({
   const getStatusIcon = (taskStatus: MoATask['status']) => {
     switch (taskStatus) {
       case 'complete':
-        return <CheckCircle2 className="w-4 h-4 text-green-500" />;
+        return <CheckCircle className="w-4 h-4 text-green-500" />;
       case 'running':
-        return <Loader2 className="w-4 h-4 text-orange-500 animate-spin" />;
+        return <CircleNotch className="w-4 h-4 text-orange-500 animate-spin" />;
       case 'error':
-        return <AlertCircle className="w-4 h-4 text-red-500" />;
+        return <Warning className="w-4 h-4 text-red-500" />;
       case 'pending':
       default:
         return <Circle className="w-4 h-4 text-[var(--text-tertiary)]" />;
@@ -125,7 +125,7 @@ export function CreativeCockpit({
         </div>
         {runningTasks > 0 && (
           <div className="flex items-center gap-1">
-            <Loader2 className="w-3 h-3 text-orange-500 animate-spin" />
+            <CircleNotch className="w-3 h-3 text-orange-500 animate-spin" />
             <span className="text-[var(--text-tertiary)]">{runningTasks} running</span>
           </div>
         )}
@@ -138,7 +138,7 @@ export function CreativeCockpit({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Zap className="w-4 h-4 text-[var(--accent-primary)]" />
+          <Lightning className="w-4 h-4 text-[var(--accent-primary)]" />
           <span className="text-sm font-medium text-[var(--text-primary)]">
             Creative Cockpit
           </span>
@@ -160,7 +160,7 @@ export function CreativeCockpit({
             onClick={onClose}
             className="h-6 w-6 p-0 text-[var(--text-tertiary)]"
           >
-            <X className="w-3 h-3" />
+            <X size={12} />
           </Button>
         )}
       </div>

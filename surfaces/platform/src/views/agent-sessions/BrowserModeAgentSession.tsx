@@ -15,17 +15,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Globe,
   Lock,
-  RotateCw,
-  Search,
+  ArrowClockwise,
+  MagnifyingGlass,
   Shield,
-  Activity,
-  Bot,
+  Pulse as Activity,
+  Robot,
   Monitor,
   Layout,
-  MousePointer,
+  Cursor,
   Eye,
   Plus,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 
 import {
   MODE_COLORS,
@@ -75,7 +75,7 @@ export function BrowserModeAgentSession({
             style={{ color: TEXT.tertiary }}
             onClick={() => setIsNavigating(true)}
           >
-            <RotateCw size={14} className={isNavigating ? 'animate-spin' : ''} />
+            <ArrowClockwise size={14} className={isNavigating ? 'animate-spin' : ''} />
           </button>
         </div>
       }
@@ -173,7 +173,7 @@ function BrowserComputer({
             <p className="text-sm max-w-xs mx-auto">Rendering secure browser view for {url}</p>
             {isNavigating && (
                <div className="mt-6 flex items-center gap-2 text-xs font-mono">
-                  <RotateCw size={14} className="animate-spin" />
+                  <ArrowClockwise size={14} className="animate-spin" />
                   <span>Loading remote context...</span>
                </div>
             )}

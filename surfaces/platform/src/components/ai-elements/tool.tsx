@@ -11,13 +11,13 @@ import {
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import {
-  CheckCircleIcon,
-  ChevronDownIcon,
-  CircleIcon,
-  ClockIcon,
-  WrenchIcon,
-  XCircleIcon,
-} from "lucide-react";
+  CheckCircle as CheckCircleIcon,
+  CaretDown as ChevronDownIcon,
+  Circle as CircleIcon,
+  Clock as ClockIcon,
+  Wrench as WrenchIcon,
+  XCircle as XCircleIcon,
+} from '@phosphor-icons/react';
 import { isValidElement } from "react";
 
 import { CodeBlock } from "./code-block";

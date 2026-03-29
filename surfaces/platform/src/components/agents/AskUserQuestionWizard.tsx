@@ -12,21 +12,22 @@
 
 import React, { useState, useCallback } from "react";
 import {
-  HelpCircle,
-  ChevronRight,
-  ChevronLeft,
+  Question as HelpCircle,
+  CaretRight,
+  CaretLeft,
   Check,
   Info,
-  AlertCircle,
-  Image as ImageIcon,
+  Warning,
+  Image,
   Code,
   FileText,
-  Sparkles,
-  Edit3,
+  Sparkle,
+  PencilSimple,
   X,
-  CheckCircle2,
-  RotateCcw,
-} from "lucide-react";
+  CheckCircle,
+  ArrowCounterClockwise,
+  Image as ImageIcon,
+} from '@phosphor-icons/react';
 
 // ============================================================================
 // Types
@@ -800,8 +801,8 @@ function Annotation({ annotation }: { annotation: QuestionAnnotation }) {
     >
       <div style={{ color: color.icon, flexShrink: 0, marginTop: 2 }}>
         {annotation.type === "info" && <Info size={16} />}
-        {annotation.type === "warning" && <AlertCircle size={16} />}
-        {annotation.type === "tip" && <Sparkles size={16} />}
+        {annotation.type === "warning" && <Warning size={16} />}
+        {annotation.type === "tip" && <Sparkle size={16} />}
         {annotation.type === "example" && <Code size={16} />}
       </div>
       <div>
@@ -827,8 +828,8 @@ function MiniAnnotation({ annotation }: { annotation: QuestionAnnotation }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: colors[annotation.type] }}>
       {annotation.type === "info" && <Info size={12} />}
-      {annotation.type === "warning" && <AlertCircle size={12} />}
-      {annotation.type === "tip" && <Sparkles size={12} />}
+      {annotation.type === "warning" && <Warning size={12} />}
+      {annotation.type === "tip" && <Sparkle size={12} />}
       {annotation.type === "example" && <Code size={12} />}
       <span>{annotation.content}</span>
     </div>
@@ -881,7 +882,7 @@ function WizardFooter({
           cursor: isFirstStep ? "not-allowed" : "pointer",
         }}
       >
-        <ChevronLeft size={16} />
+        <CaretLeft size={16} />
         Back
       </button>
 
@@ -923,7 +924,7 @@ function WizardFooter({
           }}
         >
           {isLastStep ? "Review" : "Next"}
-          {!isLastStep && <ChevronRight size={16} />}
+          {!isLastStep && <CaretRight size={16} />}
         </button>
       </div>
     </div>
@@ -1024,7 +1025,7 @@ function ReviewView({
                   gap: 4,
                 }}
               >
-                <Edit3 size={12} />
+                <PencilSimple size={12} />
                 Edit
               </button>
             </div>
@@ -1056,7 +1057,7 @@ function ReviewView({
             cursor: "pointer",
           }}
         >
-          <ChevronLeft size={16} />
+          <CaretLeft size={16} />
           Back
         </button>
 
@@ -1117,7 +1118,7 @@ function CompletionView({
           margin: "0 auto 20px",
         }}
       >
-        <CheckCircle2 size={32} style={{ color: accentColor }} />
+        <CheckCircle size={32} style={{ color: accentColor }} />
       </div>
 
       <h2 style={{ margin: "0 0 8px", fontSize: 20, fontWeight: 700, color: "#f6eee7" }}>All Set!</h2>

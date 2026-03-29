@@ -13,6 +13,11 @@ import type {
   FileUIPart,
   SourceDocumentUIPart,
 } from "ai";
+import type {
+  McpAppResourceCsp,
+  McpAppResourcePermissions,
+  McpAppToolDefinition,
+} from "./mcp/apps";
 
 // ============================================================================
 // Rust API Event Types (existing contract)
@@ -24,6 +29,9 @@ export type RustEventType =
   | "content_block_delta"
   | "tool_result"
   | "tool_error"
+  | "mcp_app"
+  | "mcp_app_message"
+  | "mcp_app_update_context"
   | "source"
   | "plan"
   | "plan_update"
@@ -52,11 +60,24 @@ export interface RustStreamEvent {
     thinking?: string;
   };
   toolCallId?: string;
+  toolName?: string;
   result?: unknown;
   error?: string;
   sourceId?: string;
   url?: string;
   title?: string;
+  connectorId?: string;
+  connectorName?: string;
+  resourceUri?: string;
+  html?: string;
+  allow?: string;
+  prefersBorder?: boolean;
+  tool?: McpAppToolDefinition;
+  toolInput?: Record<string, unknown>;
+  toolResult?: unknown;
+  csp?: McpAppResourceCsp;
+  permissions?: McpAppResourcePermissions;
+  domain?: string;
   artifactId?: string;
   kind?: string;
   content?: string;
@@ -75,6 +96,10 @@ export interface RustStreamEvent {
   modelId?: string;
   runtimeModelId?: string;
   finishedAt?: number;
+  // MCP App message fields
+  role?: "user" | "assistant";
+  parts?: unknown[];
+  context?: Record<string, unknown>;
 }
 
 // ============================================================================
@@ -127,6 +152,26 @@ export interface ErrorUIPart {
   message: string;
   stackTrace?: string;
   kind: "compilation" | "runtime" | "validation" | "unknown";
+}
+
+export interface McpAppUIPart {
+  type: "mcp-app";
+  toolCallId: string;
+  toolName: string;
+  connectorId: string;
+  connectorName: string;
+  resourceUri: string;
+  title: string;
+  description?: string;
+  html: string;
+  allow?: string;
+  prefersBorder?: boolean;
+  tool?: McpAppToolDefinition;
+  toolInput?: Record<string, unknown>;
+  toolResult?: unknown;
+  csp?: McpAppResourceCsp;
+  permissions?: McpAppResourcePermissions;
+  domain?: string;
 }
 
 export interface ChatMessageMetadata {
@@ -220,6 +265,7 @@ export type UIPart =
   | DynamicToolUIPart
   | FileUIPart
   | LinkedSourceDocumentUIPart
+  | McpAppUIPart
   | PlanUIPart
   | CheckpointUIPart
   | TaskUIPart
@@ -457,32 +503,107 @@ interface AdapterContext {
   assistantParts: UIPart[];
   assistantMessageId: string | null;
   hasStreamedDeltasByMessageId: Map<string, boolean>;
+  pendingMcpAppPartsByToolCallId: Map<string, McpAppUIPart>;
   initialAssistantMetadata?: ChatMessageMetadata;
   setMessages: (updater: (prev: ChatMessage[]) => ChatMessage[], immediate?: boolean) => void;
+}
+
+function buildMcpAppPart(event: RustStreamEvent): McpAppUIPart | null {
+  if (
+    !event.toolCallId ||
+    !event.toolName ||
+    !event.connectorId ||
+    !event.connectorName ||
+    !event.resourceUri ||
+    !event.html ||
+    !event.title
+  ) {
+    return null;
+  }
+
+  return {
+    type: "mcp-app",
+    toolCallId: event.toolCallId,
+    toolName: event.toolName,
+    connectorId: event.connectorId,
+    connectorName: event.connectorName,
+    resourceUri: event.resourceUri,
+    title: event.title,
+    description: event.description,
+    html: event.html,
+    allow: event.allow,
+    prefersBorder: event.prefersBorder,
+    tool: event.tool,
+    toolInput: event.toolInput,
+    toolResult: event.toolResult,
+    csp: event.csp,
+    permissions: event.permissions,
+    domain: event.domain,
+  };
+}
+
+function upsertMcpAppPartAfterTool(
+  ctx: AdapterContext,
+  toolCallId: string,
+  nextPart: McpAppUIPart,
+): void {
+  const existingIndex = ctx.assistantParts.findIndex(
+    (part): part is McpAppUIPart =>
+      part.type === "mcp-app" && part.toolCallId === toolCallId,
+  );
+
+  if (existingIndex >= 0) {
+    ctx.assistantParts[existingIndex] = nextPart;
+    return;
+  }
+
+  const toolIndex = ctx.assistantParts.findIndex(
+    (part): part is DynamicToolUIPart =>
+      part.type === "dynamic-tool" && part.toolCallId === toolCallId,
+  );
+
+  if (toolIndex >= 0) {
+    ctx.assistantParts.splice(toolIndex + 1, 0, nextPart);
+    return;
+  }
+
+  ctx.assistantParts.push(nextPart);
 }
 
 const RUST_EVENT_MAP: Record<RustEventType, RustEventHandler> = {
   message_start: (event, ctx) => {
     if (!event.messageId) return;
-    
+    const messageId = event.messageId;
+
     // If we've already received deltas for this message, do NOT reset/overwrite
-    if (ctx.hasStreamedDeltasByMessageId.get(event.messageId)) {
+    if (ctx.hasStreamedDeltasByMessageId.get(messageId)) {
       console.log("[rust-stream-adapter] Preserving live stream state, ignoring redundant message_start");
       return;
     }
 
-    ctx.assistantMessageId = event.messageId;
     ctx.assistantParts.length = 0;
-    
-    const newMessage: ChatMessage = {
-      id: event.messageId,
-      role: "assistant",
-      content: [],
-      createdAt: new Date(),
-      metadata: ctx.initialAssistantMetadata,
-    };
-    
-    ctx.setMessages(prev => [...prev, newMessage], true); // Immediate for start
+
+    if (ctx.assistantMessageId && ctx.assistantMessageId !== messageId) {
+      // A placeholder was pre-created on submit. Rename it to the server-assigned ID
+      // so we don't end up with two assistant bubbles.
+      const oldId = ctx.assistantMessageId;
+      ctx.assistantMessageId = messageId;
+      ctx.setMessages(prev => prev.map(m =>
+        m.id === oldId
+          ? { ...m, id: messageId, content: [], metadata: ctx.initialAssistantMetadata }
+          : m
+      ), true);
+    } else {
+      ctx.assistantMessageId = messageId;
+      const newMessage: ChatMessage = {
+        id: messageId,
+        role: "assistant",
+        content: [],
+        createdAt: new Date(),
+        metadata: ctx.initialAssistantMetadata,
+      };
+      ctx.setMessages(prev => [...prev, newMessage], true);
+    }
   },
 
   content_block_delta: (event, ctx) => {
@@ -656,17 +777,58 @@ const RUST_EVENT_MAP: Record<RustEventType, RustEventHandler> = {
 
   tool_result: (event, ctx) => {
     if (!ctx.assistantMessageId || !event.toolCallId) return;
-    
+
     const toolPart = ctx.assistantParts.find(
-      (p): p is DynamicToolUIPart => 
+      (p): p is DynamicToolUIPart =>
         p.type === "dynamic-tool" && p.toolCallId === event.toolCallId
     );
-    
+
     if (toolPart) {
       toolPart.state = "output-available";
       // result is typed as unknown from Rust, but we need to store it
       // The Tool component will handle rendering
       (toolPart as DynamicToolUIPart & { result: unknown }).result = event.result;
+
+      // If this is a generateA2UI tool result, emit an A2UIPart into the message
+      // so the chat renderer shows the interactive UI inline.
+      // Cast via unknown to avoid a circular import with ChatMessageTypes.ts.
+      if (toolPart.toolName === "generateA2UI" && event.result && typeof event.result === "object") {
+        const r = event.result as { payload?: unknown; title?: string; sessionId?: string };
+        if (r.payload) {
+          const a2uiPart = {
+            type: "a2ui" as const,
+            payload: r.payload,
+            title: r.title ?? "Interactive UI",
+            source: "agent",
+          };
+          ctx.assistantParts.push(a2uiPart as unknown as UIPart);
+        }
+      }
+
+      // If this is a generateWebArtifact tool result, emit an ArtifactUIPart
+      // so the UnifiedMessageRenderer renders an ArtifactCard → live preview panel.
+      if (toolPart.toolName === "generateWebArtifact" && event.result && typeof event.result === "object") {
+        const r = event.result as { content?: string; kind?: string; title?: string };
+        if (r.content) {
+          const artifactPart: ArtifactUIPart = {
+            type: "artifact",
+            artifactId: `artifact-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            kind: (r.kind ?? "html") as ArtifactUIPart["kind"],
+            content: r.content,
+            title: r.title ?? "Generated Artifact",
+          };
+          ctx.assistantParts.push(artifactPart);
+        }
+      }
+
+      const pendingMcpAppPart = ctx.pendingMcpAppPartsByToolCallId.get(
+        event.toolCallId,
+      );
+      if (pendingMcpAppPart) {
+        upsertMcpAppPartAfterTool(ctx, event.toolCallId, pendingMcpAppPart);
+        ctx.pendingMcpAppPartsByToolCallId.delete(event.toolCallId);
+      }
+
       updateMessageParts(ctx, true);
     }
   },
@@ -683,8 +845,71 @@ const RUST_EVENT_MAP: Record<RustEventType, RustEventHandler> = {
       toolPart.state = "output-error";
       (toolPart as DynamicToolUIPart & { error: string }).error = 
         event.error ?? "Unknown error";
+      ctx.pendingMcpAppPartsByToolCallId.delete(event.toolCallId);
       updateMessageParts(ctx, true);
     }
+  },
+
+  mcp_app: (event, ctx) => {
+    const appPart = buildMcpAppPart(event);
+    if (!appPart) {
+      return;
+    }
+
+    const toolPart = ctx.assistantParts.find(
+      (part): part is DynamicToolUIPart =>
+        part.type === "dynamic-tool" && part.toolCallId === appPart.toolCallId,
+    );
+
+    if (toolPart?.state === "output-available") {
+      upsertMcpAppPartAfterTool(ctx, appPart.toolCallId, appPart);
+      updateMessageParts(ctx, true);
+      return;
+    }
+
+    ctx.pendingMcpAppPartsByToolCallId.set(appPart.toolCallId, appPart);
+  },
+
+  mcp_app_message: (event, ctx) => {
+    // Handle app-originated messages (ui/message from MCP App)
+    const role = event.role ?? "assistant";
+    const parts = event.parts ?? [];
+    
+    // Convert parts to UI parts
+    const uiParts: UIPart[] = parts.map((part: unknown): UIPart => {
+      if (typeof part === "string") {
+        return { type: "text", text: part };
+      }
+      if (isRecord(part) && typeof part.type === "string") {
+        if (part.type === "text" && typeof part.text === "string") {
+          return { type: "text", text: part.text };
+        }
+      }
+      return { type: "text", text: String(part) };
+    });
+
+    // Create a new message from the app
+    const messageId = `mcp-app-msg-${Date.now()}`;
+    const newMessage: ChatMessage = {
+      id: messageId,
+      role,
+      content: uiParts.length > 0 ? uiParts : [{ type: "text", text: "" }],
+      createdAt: new Date(),
+      metadata: {
+        status: "complete",
+        source: "mcp-app",
+      },
+    };
+
+    ctx.setMessages(prev => [...prev, newMessage], true);
+  },
+
+  mcp_app_update_context: (_event, _ctx) => {
+    // Context updates are stored per-session, not as visible messages
+    // This is handled by the MCP App context manager (MCP-002)
+    // The context is made available for the next model turn
+    // Implementation note: The context is stored in a ref/persistence layer
+    // outside the visible message stream
   },
 
   source: (event, ctx) => {
@@ -927,6 +1152,11 @@ export interface UseRustStreamAdapterReturn {
   regenerate: (messageText: string, params: Omit<SubmitMessageParams, 'message'>) => Promise<void>;
   stop: () => void;
   clearMessages: () => void;
+  /**
+   * Directly inject a synthetic assistant message containing an artifact.
+   * Used for instant template launch — no LLM call required.
+   */
+  injectArtifact: (artifact: ArtifactUIPart, intro?: string) => void;
 }
 
 export interface UseRustStreamAdapterOptions {
@@ -1071,6 +1301,48 @@ function normalizeStreamEvent(raw: unknown): RustStreamEvent | null {
         toolCallId: typeof record.toolCallId === "string" ? record.toolCallId : undefined,
         result: record.result,
       };
+    case "mcp_app":
+      return {
+        type: "mcp_app",
+        toolCallId:
+          typeof record.toolCallId === "string" ? record.toolCallId : undefined,
+        toolName: typeof record.toolName === "string" ? record.toolName : undefined,
+        connectorId:
+          typeof record.connectorId === "string" ? record.connectorId : undefined,
+        connectorName:
+          typeof record.connectorName === "string"
+            ? record.connectorName
+            : undefined,
+        resourceUri:
+          typeof record.resourceUri === "string" ? record.resourceUri : undefined,
+        title: typeof record.title === "string" ? record.title : undefined,
+        description:
+          typeof record.description === "string" ? record.description : undefined,
+        html: typeof record.html === "string" ? record.html : undefined,
+        allow: typeof record.allow === "string" ? record.allow : undefined,
+        prefersBorder:
+          typeof record.prefersBorder === "boolean"
+            ? record.prefersBorder
+            : undefined,
+        tool:
+          record.tool && typeof record.tool === "object"
+            ? (record.tool as McpAppToolDefinition)
+            : undefined,
+        toolInput:
+          record.toolInput && typeof record.toolInput === "object"
+            ? (record.toolInput as Record<string, unknown>)
+            : undefined,
+        toolResult: record.toolResult,
+        csp:
+          record.csp && typeof record.csp === "object"
+            ? (record.csp as McpAppResourceCsp)
+            : undefined,
+        permissions:
+          record.permissions && typeof record.permissions === "object"
+            ? (record.permissions as McpAppResourcePermissions)
+            : undefined,
+        domain: typeof record.domain === "string" ? record.domain : undefined,
+      };
     case "plan":
       return {
         type: "plan",
@@ -1166,11 +1438,10 @@ function buildChatEndpointAttempts(chatId: string, conversationMode: "llm" | "ag
     attempts.push({ url: '/api/agent-chat', label: 'origin:/api/agent-chat' });
     attempts.push({ url: 'http://127.0.0.1:3000/api/agent-chat', label: 'direct-127:/api/agent-chat' });
   } else {
-    // LLM mode - use Terminal Server session API directly
-    // The terminal server uses POST /session/:sessionID/message for chat
-    // Pass chatId as query param so Vite proxy can rewrite to correct path
-    attempts.push({ url: `/api/chat?chatId=${encodeURIComponent(chatId)}`, label: 'proxy:/api/chat' });
-    attempts.push({ url: `${TERMINAL_SERVER_URL}/session/${chatId}/message`, label: 'terminal:message' });
+    // LLM mode - use Agent Chat proxy route
+    // This proxies to Gizzi terminal server at port 4096
+    attempts.push({ url: `/api/agent-chat?chatId=${encodeURIComponent(chatId)}`, label: 'proxy:/api/agent-chat' });
+    attempts.push({ url: `${TERMINAL_SERVER_URL}/v1/session/${chatId}/message`, label: 'terminal:message' });
   }
 
   // Dedupe while preserving order.
@@ -1316,6 +1587,31 @@ export function useRustStreamAdapter(
     
     setMessages((prev: ChatMessage[]) => [...prev, userMessage]);
 
+    // Reset parts from any previous turn before creating the new placeholder.
+    assistantPartsRef.current = [];
+
+    // Create placeholder assistant message IMMEDIATELY so the UI shows a
+    // thinking state rather than a blank gap during inference.
+    // All subsequent handlers (message_start, sync object) update this message
+    // in-place instead of appending a new one.
+    const placeholderAssistantId = `assistant-pending-${Date.now()}`;
+    assistantMessageIdRef.current = placeholderAssistantId;
+    setCurrentAssistantId(placeholderAssistantId);
+    // Pre-populate with an empty reasoning part so the Reasoning component
+    // renders in "Thinking…" state immediately — the full inference wait
+    // is visible instead of a blank shimmer.
+    const initialReasoningPart = { type: 'reasoning', reasoningId: `r-${placeholderAssistantId}`, text: '' };
+    setMessages((prev: ChatMessage[]) => [
+      ...prev,
+      {
+        id: placeholderAssistantId,
+        role: 'assistant',
+        content: [initialReasoningPart],
+        createdAt: new Date(),
+        metadata: pendingAssistantMetadataRef.current ?? undefined,
+      } as ChatMessage,
+    ]);
+
     try {
       abortControllerRef.current = new AbortController();
       const signal = externalSignal ?? abortControllerRef.current.signal;
@@ -1327,12 +1623,28 @@ export function useRustStreamAdapter(
       // Terminal Server expects: { sessionID, parts: [...], model: { providerID, modelID } }
       // Legacy expects: { chatId, message, modelId, ... }
       const buildTerminalRequestBody = (sessionID: string) => {
-        // Parse modelId to extract provider and model
-        // Format: "provider/model" or "providerId/modelId"
-        // Default to Big Pickle (opencode provider) for Terminal Server
+        // Explicit model overrides — maps UI model IDs to terminal server providerID/modelID
+        const TERMINAL_MODEL_MAP: Record<string, { providerID: string; modelID: string }> = {
+          "kimi/kimi-for-coding":        { providerID: "kimi-for-coding", modelID: "k2p5" },
+          "kimi/kimi-k2.5":              { providerID: "kimi-for-coding", modelID: "k2p5" },
+          "kimi/kimi-k2-thinking":       { providerID: "kimi-for-coding", modelID: "kimi-k2-thinking" },
+          "kimi-for-coding/kimi-k2.5":   { providerID: "kimi-for-coding", modelID: "k2p5" },
+          "kimi-for-coding/k2p5":        { providerID: "kimi-for-coding", modelID: "k2p5" },
+        };
+
+        const rawId = runtimeModelId || modelId || "";
+        if (TERMINAL_MODEL_MAP[rawId]) {
+          const mapped = TERMINAL_MODEL_MAP[rawId];
+          return JSON.stringify({
+            sessionID,
+            parts: [{ type: "text", text: message }],
+            model: mapped,
+          });
+        }
+
         let providerID = "opencode";
         let modelID = "big-pickle";
-        
+
         if (runtimeModelId && runtimeModelId.includes("/")) {
           const parts = runtimeModelId.split("/");
           providerID = parts[0];
@@ -1444,8 +1756,12 @@ export function useRustStreamAdapter(
           if (isTerminalEndpoint && terminalSessionId) {
             if (attempt.url.includes('/api/chat')) {
               fetchUrl = `/api/chat?chatId=${terminalSessionId}`;
+            } else if (attempt.url.startsWith('http')) {
+              // Absolute URL (direct terminal server) — preserve origin, replace path
+              const origin = new URL(attempt.url).origin;
+              fetchUrl = `${origin}/v1/session/${terminalSessionId}/message`;
             } else {
-              fetchUrl = `/session/${terminalSessionId}/message`;
+              fetchUrl = `/v1/session/${terminalSessionId}/message`;
             }
             requestBody = buildTerminalRequestBody(terminalSessionId);
           } else {
@@ -1539,13 +1855,17 @@ export function useRustStreamAdapter(
       }
 
       const decoder = new TextDecoder();
-      assistantMessageIdRef.current = null;
+      // Do NOT reset assistantMessageIdRef here — it holds the placeholder ID created
+      // before the request so message_start can rename it in-place instead of creating
+      // a second assistant bubble.
       assistantPartsRef.current = [];
 
       const context: AdapterContext = {
         assistantParts: assistantPartsRef.current,
-        assistantMessageId: null,
+        // Seed with the placeholder ID so handlers rename/update it rather than appending
+        assistantMessageId: assistantMessageIdRef.current,
         hasStreamedDeltasByMessageId: new Map(),
+        pendingMcpAppPartsByToolCallId: new Map(),
         initialAssistantMetadata: pendingAssistantMetadataRef.current ?? undefined,
         setMessages: throttledSetMessages,
       };
@@ -1587,21 +1907,28 @@ export function useRustStreamAdapter(
 
         // Handle Terminal Server "info/parts" sync objects (can be incremental or final)
         if (parsed.info && parsed.parts && Array.isArray(parsed.parts)) {
-          if (context.hasStreamedDeltasByMessageId.get(parsed.info.id || assistantMessageIdRef.current)) {
-             console.log("[rust-stream-adapter] Ignoring DB full-sync object to preserve live streamed deltas");
-             return;
+          const syncId = parsed.info.id || assistantMessageIdRef.current || '';
+          if (context.hasStreamedDeltasByMessageId.get(syncId)) {
+            console.log("[rust-stream-adapter] Ignoring DB full-sync object to preserve live streamed deltas");
+            return;
           }
-          
-          const messageId = parsed.info.id || assistantMessageIdRef.current;
+
+          // Prefer our pre-created placeholder ID so we update it in-place.
+          // Server-assigned ID is only used if no placeholder exists yet.
+          const messageId = assistantMessageIdRef.current || parsed.info.id;
           if (messageId) {
             assistantMessageIdRef.current = messageId;
-            assistantPartsRef.current = parsed.parts.map(normalizePart);
-            context.assistantParts = assistantPartsRef.current;
-            
-            throttledSetMessages((prev: ChatMessage[]) => 
-              prev.map(m => m.id === messageId ? { ...m, content: [...assistantPartsRef.current] } : m),
-              true // Sync objects are important state updates
+            context.assistantMessageId = messageId;
+            const normalizedParts = parsed.parts.map(normalizePart);
+            assistantPartsRef.current = normalizedParts;
+            context.assistantParts = normalizedParts;
+            // Set content immediately — data already arrived, no simulation needed.
+            // isLoading stays true until the finally block so isStreaming renders correctly.
+            throttledSetMessages((prev: ChatMessage[]) =>
+              prev.map(m => m.id === messageId ? { ...m, content: normalizedParts } : m),
+              true
             );
+            context.hasStreamedDeltasByMessageId.set(messageId, true);
           }
           return;
         }
@@ -1755,6 +2082,24 @@ export function useRustStreamAdapter(
     await submitMessage({ ...params, message: messageText });
   }, [submitMessage]);
 
+  const injectArtifact = useCallback((artifact: ArtifactUIPart, intro?: string) => {
+    const id = `template-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const parts: UIPart[] = [];
+    if (intro) {
+      parts.push({ type: "text", text: intro } as TextUIPart);
+    }
+    parts.push(artifact);
+    const message: ChatMessage = {
+      id,
+      role: "assistant",
+      content: parts,
+      createdAt: new Date(),
+      metadata: { status: "complete" },
+    };
+    setMessages(prev => [...prev, message]);
+    setCurrentAssistantId(id);
+  }, []);
+
   return {
     messages,
     isLoading,
@@ -1763,6 +2108,7 @@ export function useRustStreamAdapter(
     regenerate,
     stop,
     clearMessages,
+    injectArtifact,
   };
 }
 

@@ -8,7 +8,12 @@
 
 import React from 'react';
 import { GlassSurface } from '@/design/GlassSurface';
-import { Factory, Shield, FileCheck, GitMerge } from 'lucide-react';
+import {
+  Factory,
+  Shield,
+  FileText as FileCheck,
+  GitMerge,
+} from '@phosphor-icons/react';
 
 export function AutonomousCodeFactoryView() {
   return (

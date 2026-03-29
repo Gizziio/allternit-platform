@@ -136,7 +136,7 @@ function CommandPalettePortal() {
     <KBarPortal>
       <KBarPositioner 
         className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh]"
-        style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+        style={{ backgroundColor: 'var(--shell-overlay-backdrop)' }}
       >
         <KBarAnimator 
           className="w-full max-w-2xl overflow-hidden rounded-lg shadow-2xl"

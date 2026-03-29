@@ -6,7 +6,14 @@
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
-import { ThumbsUp, MessageSquare, X, ChevronDown, Star, Loader2 } from 'lucide-react';
+import {
+  ThumbsUp,
+  Chat,
+  X,
+  CaretDown,
+  Star,
+  CircleNotch,
+} from '@phosphor-icons/react';
 import {
   getReviews,
   getRatingSummary,
@@ -113,7 +120,7 @@ function Button({
       disabled={disabled || loading}
       style={{ ...baseStyles, ...variantStyles[variant] }}
     >
-      {loading && <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />}
+      {loading && <CircleNotch size={14} style={{ animation: 'spin 1s linear infinite' }} />}
       {!loading && Icon && <Icon size={14} />}
       {children}
     </button>
@@ -548,7 +555,7 @@ export function PluginReviews({ pluginId, pluginName }: PluginReviewsProps) {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <MessageSquare size={18} color={THEME.accent} />
+          <Chat size={18} color={THEME.accent} />
           <h3 style={{ margin: 0, fontSize: 16, color: THEME.textPrimary, fontWeight: 600 }}>
             Reviews
           </h3>
@@ -663,7 +670,7 @@ export function PluginReviews({ pluginId, pluginName }: PluginReviewsProps) {
                     </option>
                   ))}
                 </select>
-                <ChevronDown
+                <CaretDown
                   size={14}
                   style={{
                     position: 'absolute',

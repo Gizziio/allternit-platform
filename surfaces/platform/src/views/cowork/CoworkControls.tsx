@@ -10,16 +10,16 @@ import type { CoworkSessionStatus } from './cowork.types';
 import {
   Pause,
   Play,
-  StepForward,
+  SkipForward as StepForward,
   Square,
   Hand,
   CheckCircle,
   XCircle,
-  RotateCcw,
+  ArrowCounterClockwise,
   Flag,
   Clock,
-  Activity,
-} from 'lucide-react';
+  Pulse as Activity,
+} from '@phosphor-icons/react';
 
 // ============================================================================
 // Status Badge
@@ -27,13 +27,13 @@ import {
 
 const StatusBadge = memo(function StatusBadge({ status }: { status: CoworkSessionStatus }) {
   const configs: Record<CoworkSessionStatus, { color: string; icon: React.ReactNode; label: string }> = {
-    idle: { color: 'bg-gray-500/20 text-gray-400', icon: <Clock className="w-3 h-3" />, label: 'Idle' },
-    running: { color: 'bg-green-500/20 text-green-400', icon: <Activity className="w-3 h-3" />, label: 'Running' },
-    paused: { color: 'bg-yellow-500/20 text-yellow-400', icon: <Pause className="w-3 h-3" />, label: 'Paused' },
-    waiting_approval: { color: 'bg-orange-500/20 text-orange-400', icon: <CheckCircle className="w-3 h-3" />, label: 'Approval Needed' },
-    takeover: { color: 'bg-purple-500/20 text-purple-400', icon: <Hand className="w-3 h-3" />, label: 'Takeover' },
-    completed: { color: 'bg-blue-500/20 text-blue-400', icon: <Flag className="w-3 h-3" />, label: 'Completed' },
-    error: { color: 'bg-red-500/20 text-red-400', icon: <XCircle className="w-3 h-3" />, label: 'Error' },
+    idle: { color: 'bg-gray-500/20 text-gray-400', icon: <Clock size={12} />, label: 'Idle' },
+    running: { color: 'bg-green-500/20 text-green-400', icon: <Activity size={12} />, label: 'Running' },
+    paused: { color: 'bg-yellow-500/20 text-yellow-400', icon: <Pause size={12} />, label: 'Paused' },
+    waiting_approval: { color: 'bg-orange-500/20 text-orange-400', icon: <CheckCircle size={12} />, label: 'Approval Needed' },
+    takeover: { color: 'bg-purple-500/20 text-purple-400', icon: <Hand size={12} />, label: 'Takeover' },
+    completed: { color: 'bg-blue-500/20 text-blue-400', icon: <Flag size={12} />, label: 'Completed' },
+    error: { color: 'bg-red-500/20 text-red-400', icon: <XCircle size={12} />, label: 'Error' },
   };
   
   const config = configs[status];
@@ -178,7 +178,7 @@ export const CoworkControls = memo(function CoworkControls() {
                 size="sm"
                 title="Pause execution"
               >
-                <Pause className="w-4 h-4" />
+                <Pause size={16} />
                 Pause
               </ControlButton>
             ) : (
@@ -189,7 +189,7 @@ export const CoworkControls = memo(function CoworkControls() {
                 disabled={isWaitingApproval || isTakeover}
                 title="Resume execution"
               >
-                <Play className="w-4 h-4" />
+                <Play size={16} />
                 Resume
               </ControlButton>
             )}
@@ -201,7 +201,7 @@ export const CoworkControls = memo(function CoworkControls() {
               disabled={isRunning || isWaitingApproval || isTakeover}
               title="Execute one action then pause"
             >
-              <StepForward className="w-4 h-4" />
+              <StepForward size={16} />
               Step
             </ControlButton>
             
@@ -211,7 +211,7 @@ export const CoworkControls = memo(function CoworkControls() {
               size="sm"
               title="Stop and end session"
             >
-              <Square className="w-4 h-4" />
+              <Square size={16} />
               Stop
             </ControlButton>
           </div>
@@ -232,7 +232,7 @@ export const CoworkControls = memo(function CoworkControls() {
               size="sm"
               title="Release control back to agent"
             >
-              <Hand className="w-4 h-4" />
+              <Hand size={16} />
               Release
             </ControlButton>
           ) : (
@@ -243,7 +243,7 @@ export const CoworkControls = memo(function CoworkControls() {
               disabled={isRunning}
               title="Take manual control"
             >
-              <Hand className="w-4 h-4" />
+              <Hand size={16} />
               Takeover
             </ControlButton>
           )}

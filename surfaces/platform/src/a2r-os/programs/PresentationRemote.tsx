@@ -301,11 +301,12 @@ export const PresentationRemote: React.FC<PresentationRemoteProps> = ({
               {/* QR Code */}
               {showQR && (
                 <div className="mt-8 p-4 bg-white rounded-lg text-center">
-                  <div 
+                  <img
+                    alt="Presentation remote QR code"
                     className="w-32 h-32 mx-auto"
-                    dangerouslySetInnerHTML={{ 
-                      __html: generateQRCodeSVG(remoteUrl) 
-                    }}
+                    src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(
+                      generateQRCodeSVG(remoteUrl)
+                    )}`}
                   />
                   <p className="text-xs text-gray-600 mt-2">
                     Scan to use phone as remote

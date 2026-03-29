@@ -1,5 +1,8 @@
 import React from 'react';
-import { Target, Plus } from 'lucide-react';
+import {
+  Target,
+  Plus,
+} from '@phosphor-icons/react';
 import GlassSurface from '@/design/GlassSurface';
 
 interface Goal {

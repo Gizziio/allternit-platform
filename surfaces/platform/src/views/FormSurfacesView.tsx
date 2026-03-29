@@ -10,9 +10,16 @@
 import React, { useState } from 'react';
 import { GlassSurface } from '@/design/GlassSurface';
 import {
-  FileText, Eye, Clock, Plus, ChevronRight, Save, RotateCcw,
-  Zap, Settings
-} from 'lucide-react';
+  FileText,
+  Eye,
+  Clock,
+  Plus,
+  CaretRight,
+  FloppyDisk,
+  ArrowCounterClockwise,
+  Lightning,
+  GearSix,
+} from '@phosphor-icons/react';
 
 interface FormSchema {
   id: string;
@@ -150,7 +157,7 @@ function FormSchemaCard({ schema, isActive, onClick }: { schema: FormSchema; isA
         <h3 className="font-semibold text-sm text-[var(--text-primary)]">
           {schema.name}
         </h3>
-        <ChevronRight className={`w-4 h-4 transition-colors ${
+        <CaretRight className={`w-4 h-4 transition-colors ${
           isActive ? 'text-[var(--accent-primary)]' : 'text-[var(--text-tertiary)]'
         }`} />
       </div>
@@ -164,7 +171,7 @@ function FormSchemaCard({ schema, isActive, onClick }: { schema: FormSchema; isA
           {schema.fieldCount} fields
         </span>
         <span className="text-[var(--text-tertiary)] flex items-center gap-1">
-          <Clock className="w-3 h-3" />
+          <Clock size={12} />
           {schema.lastUsed}
         </span>
       </div>
@@ -335,7 +342,7 @@ export function FormSurfacesView() {
           </div>
 
           <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--accent-primary)] text-[var(--bg-primary)] text-sm font-medium hover:opacity-90 transition-opacity">
-            <Plus className="w-4 h-4" />
+            <Plus size={16} />
             Create Form
           </button>
         </div>
@@ -360,7 +367,7 @@ export function FormSurfacesView() {
         <div className="w-80 border-r border-[var(--border-subtle)] overflow-auto flex flex-col">
           <div className="px-6 py-4 border-b border-[var(--border-subtle)]">
             <h2 className="text-sm font-semibold text-[var(--text-secondary)] flex items-center gap-2">
-              <Eye className="w-4 h-4" />
+              <Eye size={16} />
               Form Registry
             </h2>
           </div>
@@ -404,11 +411,11 @@ export function FormSurfacesView() {
               {/* Form actions */}
               <div className="flex gap-3 mt-8 pt-6 border-t border-[var(--border-subtle)]">
                 <button className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-[var(--accent-primary)] text-[var(--bg-primary)] font-medium hover:opacity-90 transition-opacity">
-                  <Save className="w-4 h-4" />
+                  <FloppyDisk size={16} />
                   Submit
                 </button>
                 <button className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-[var(--bg-primary)] border border-[var(--border-subtle)] text-[var(--text-primary)] font-medium hover:bg-[var(--bg-secondary)] transition-colors">
-                  <RotateCcw className="w-4 h-4" />
+                  <ArrowCounterClockwise size={16} />
                   Reset
                 </button>
               </div>
@@ -417,7 +424,7 @@ export function FormSurfacesView() {
             {/* Form info */}
             <div className="mt-6 p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-tertiary)]">
               <div className="flex items-start gap-2">
-                <Zap className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <Lightning className="w-4 h-4 flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="font-medium mb-1">Real form rendering</p>
                   <p>

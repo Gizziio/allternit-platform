@@ -25,8 +25,8 @@ const MODES: ModeConfig[] = [
     label: 'Chat',
     icon: ChatText,
     accentColor: 'var(--accent-chat)',
-    accentLight: 'rgba(176, 141, 110, 0.15)',
-    accentDark: '#7D5F46',
+    accentLight: 'var(--shell-mode-chat-soft)',
+    accentDark: 'var(--shell-mode-chat-strong)',
     description: 'Conversational AI interface'
   },
   {
@@ -34,8 +34,8 @@ const MODES: ModeConfig[] = [
     label: 'Cowork',
     icon: UsersThree,
     accentColor: 'var(--accent-cowork)',
-    accentLight: 'rgba(154, 123, 170, 0.15)',
-    accentDark: '#6B5577',
+    accentLight: 'var(--shell-mode-cowork-soft)',
+    accentDark: 'var(--shell-mode-cowork-strong)',
     description: 'Collaborative workspace with artifacts'
   },
   {
@@ -43,8 +43,8 @@ const MODES: ModeConfig[] = [
     label: 'Code',
     icon: TerminalWindow,
     accentColor: 'var(--accent-code)',
-    accentLight: 'rgba(107, 154, 123, 0.15)',
-    accentDark: '#4A6B55',
+    accentLight: 'var(--shell-mode-code-soft)',
+    accentDark: 'var(--shell-mode-code-strong)',
     description: 'Development environment with code tools'
   }
 ];
@@ -118,7 +118,7 @@ export function ModeSwitcher({
   // Size configurations
   const sizeConfig = {
     small: {
-      height: 28,
+      height: 26,
       padding: '3px 6px',
       iconSize: 14,
       fontSize: 11,
@@ -223,7 +223,7 @@ export function ModeSwitcher({
         className={`mode-switcher-segmented ${className}`}
         style={{
           display: 'flex',
-          background: 'rgba(128, 128, 128, 0.05)',
+          background: 'var(--shell-control-bg)',
           padding: 3,
           borderRadius: 10,
           gap: 2,
@@ -287,7 +287,7 @@ export function ModeSwitcher({
         WebkitBackdropFilter: 'blur(10px)',
         gap: 2,
         height: sizes.height,
-        boxShadow: '0 2px 12px rgba(0, 0, 0, 0.08)'
+        boxShadow: 'var(--shadow-sm)'
       }}
     >
       {MODES.map((mode) => {
@@ -310,7 +310,7 @@ export function ModeSwitcher({
               borderRadius: 999,
               border: 'none',
               background: isActive ? mode.accentColor : 'transparent',
-              color: isActive ? 'white' : (isHovered ? mode.accentColor : 'var(--text-tertiary)'),
+              color: isActive ? 'var(--shell-control-active-fg)' : (isHovered ? mode.accentColor : 'var(--text-tertiary)'),
               cursor: 'pointer',
               transition: 'all 0.2s ease',
               fontSize: sizes.fontSize,

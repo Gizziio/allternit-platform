@@ -9,11 +9,11 @@ import {
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import {
-  ChevronRightIcon,
-  FileIcon,
-  FolderIcon,
-  FolderOpenIcon,
-} from "lucide-react";
+  CaretRight as ChevronRightIcon,
+  File as FileIcon,
+  Folder as FolderIcon,
+  FolderOpen as FolderOpenIcon,
+} from '@phosphor-icons/react';
 import {
   createContext,
   useCallback,

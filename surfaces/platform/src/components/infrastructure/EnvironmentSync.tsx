@@ -11,24 +11,24 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Upload,
-  Download,
-  ArrowLeftRight,
+  UploadSimple,
+  DownloadSimple,
+  ArrowsLeftRight,
   Folder,
   File,
   Check,
   X,
-  Loader2,
+  CircleNotch,
   Play,
-  RotateCcw,
-  Settings,
+  ArrowCounterClockwise,
+  GearSix,
   Plus,
-  Trash2,
+  Trash,
   Clock,
-  AlertCircle,
-  RefreshCw,
-  ChevronRight,
-} from 'lucide-react';
+  Warning,
+  ArrowsClockwise,
+  CaretRight,
+} from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -171,9 +171,9 @@ export function EnvironmentSync({
   };
 
   const getDirectionIcon = (direction?: 'up' | 'down') => {
-    if (direction === 'up') return <Upload className="w-4 h-4 text-blue-500" />;
-    if (direction === 'down') return <Download className="w-4 h-4 text-green-500" />;
-    return <ArrowLeftRight className="w-4 h-4 text-muted-foreground" />;
+    if (direction === 'up') return <UploadSimple className="w-4 h-4 text-blue-500" />;
+    if (direction === 'down') return <DownloadSimple className="w-4 h-4 text-green-500" />;
+    return <ArrowsLeftRight className="w-4 h-4 text-muted-foreground" />;
   };
 
   const getStatusIcon = (status: SyncFile['status']) => {
@@ -181,7 +181,7 @@ export function EnvironmentSync({
       case 'synced':
         return <Check className="w-4 h-4 text-green-500" />;
       case 'conflict':
-        return <AlertCircle className="w-4 h-4 text-yellow-500" />;
+        return <Warning className="w-4 h-4 text-yellow-500" />;
       case 'error':
         return <X className="w-4 h-4 text-red-500" />;
       default:
@@ -194,7 +194,7 @@ export function EnvironmentSync({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="font-semibold flex items-center gap-2">
-            <ArrowLeftRight className="w-4 h-4" />
+            <ArrowsLeftRight size={16} />
             File Sync
           </h3>
           <p className="text-xs text-muted-foreground">
@@ -203,7 +203,7 @@ export function EnvironmentSync({
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" onClick={() => setShowConfig(true)}>
-            <Settings className="w-4 h-4 mr-2" />
+            <GearSix className="w-4 h-4 mr-2" />
             Config
           </Button>
         </div>
@@ -222,9 +222,9 @@ export function EnvironmentSync({
                 : "border-border hover:border-primary/50"
             )}
           >
-            {dir === 'up' && <Upload className="w-5 h-5" />}
-            {dir === 'down' && <Download className="w-5 h-5" />}
-            {dir === 'bidirectional' && <ArrowLeftRight className="w-5 h-5" />}
+            {dir === 'up' && <UploadSimple size={20} />}
+            {dir === 'down' && <DownloadSimple size={20} />}
+            {dir === 'bidirectional' && <ArrowsLeftRight size={20} />}
             <span className="text-xs font-medium capitalize">
               {dir === 'up' && 'Upload →'}
               {dir === 'down' && '← Download'}
@@ -305,14 +305,14 @@ export function EnvironmentSync({
       >
         {isSyncing ? (
           <>
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <CircleNotch className="w-4 h-4 animate-spin" />
             Syncing... {progress}%
           </>
         ) : (
           <>
-            {config.direction === 'up' && <Upload className="w-4 h-4" />}
-            {config.direction === 'down' && <Download className="w-4 h-4" />}
-            {config.direction === 'bidirectional' && <ArrowLeftRight className="w-4 h-4" />}
+            {config.direction === 'up' && <UploadSimple size={16} />}
+            {config.direction === 'down' && <DownloadSimple size={16} />}
+            {config.direction === 'bidirectional' && <ArrowsLeftRight size={16} />}
             Sync {pendingFiles.length} Files
           </>
         )}
@@ -402,7 +402,7 @@ export function EnvironmentSync({
                     onClick={() => removePattern(pattern, 'exclude')}
                   >
                     {pattern}
-                    <X className="w-3 h-3" />
+                    <X size={12} />
                   </Badge>
                 ))}
               </div>

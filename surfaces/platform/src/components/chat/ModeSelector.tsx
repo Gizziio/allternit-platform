@@ -10,7 +10,7 @@
  * 3. Click X on pill to remove
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -19,11 +19,11 @@ import {
   Sparkles,
   FileText,
   Table,
-  Presentation,
+  MonitorPlay,
   Code,
   FolderOpen,
   Cpu,
-  Workflow,
+  Network,
   Globe,
   Zap,
 } from 'lucide-react';
@@ -41,81 +41,81 @@ interface ModeDef {
 
 // Mode definitions with icons and colors
 const MODES: ModeDef[] = [
-  { 
-    id: 'research', 
-    name: 'Research', 
+  {
+    id: 'research',
+    name: 'Research',
     description: 'Create research document with citations',
-    icon: FileText, 
+    icon: FileText,
     color: '#3b82f6',
     bgColor: 'bg-blue-500/20',
     borderColor: 'border-blue-500/30',
     textColor: 'text-blue-400',
   },
-  { 
-    id: 'data', 
-    name: 'Data Grid', 
+  {
+    id: 'data',
+    name: 'Data Grid',
     description: 'Analyze data with spreadsheets',
-    icon: Table, 
+    icon: Table,
     color: '#10b981',
     bgColor: 'bg-green-500/20',
     borderColor: 'border-green-500/30',
     textColor: 'text-green-400',
   },
-  { 
-    id: 'slides', 
-    name: 'Presentation', 
+  {
+    id: 'slides',
+    name: 'Presentation',
     description: 'Create slides with presenter notes',
-    icon: Presentation, 
+    icon: MonitorPlay,
     color: '#f59e0b',
     bgColor: 'bg-amber-500/20',
     borderColor: 'border-amber-500/30',
     textColor: 'text-amber-400',
   },
-  { 
-    id: 'code', 
-    name: 'Code Preview', 
+  {
+    id: 'code',
+    name: 'Code Preview',
     description: 'Preview and run code',
-    icon: Code, 
+    icon: Code,
     color: '#8b5cf6',
     bgColor: 'bg-purple-500/20',
     borderColor: 'border-purple-500/30',
     textColor: 'text-purple-400',
   },
-  { 
-    id: 'assets', 
-    name: 'Assets', 
+  {
+    id: 'assets',
+    name: 'Assets',
     description: 'Browse and manage files',
-    icon: FolderOpen, 
+    icon: FolderOpen,
     color: '#ec4899',
     bgColor: 'bg-pink-500/20',
     borderColor: 'border-pink-500/30',
     textColor: 'text-pink-400',
   },
-  { 
-    id: 'agents', 
-    name: 'Agents', 
+  {
+    id: 'agents',
+    name: 'Agents',
     description: 'Multi-agent orchestration',
-    icon: Cpu, 
+    icon: Cpu,
     color: '#ef4444',
     bgColor: 'bg-red-500/20',
     borderColor: 'border-red-500/30',
     textColor: 'text-red-400',
   },
-  { 
-    id: 'flow', 
-    name: 'Workflow', 
+  {
+    id: 'flow',
+    name: 'Workflow',
     description: 'Build automation workflows',
-    icon: Workflow, 
+    icon: Network,
     color: '#06b6d4',
     bgColor: 'bg-cyan-500/20',
     borderColor: 'border-cyan-500/30',
     textColor: 'text-cyan-400',
   },
-  { 
-    id: 'web', 
-    name: 'Browser', 
+  {
+    id: 'web',
+    name: 'Browser',
     description: 'Browse web with screenshots',
-    icon: Globe, 
+    icon: Globe,
     color: '#6366f1',
     bgColor: 'bg-indigo-500/20',
     borderColor: 'border-indigo-500/30',
@@ -152,16 +152,17 @@ const ModePill: React.FC<{
       className={`
         flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium
         border ${mode.borderColor} ${mode.bgColor} ${mode.textColor}
-        hover:brightness-110 transition-all cursor-default
+        hover:brightness-110 transition-colors cursor-default
       `}
     >
-      <Icon className="w-3.5 h-3.5" />
+      <Icon className="w-3.5 h-3.5" aria-hidden="true" />
       <span>{mode.name}</span>
       <button
         onClick={onRemove}
-        className="ml-1 p-0.5 hover:bg-white/20 rounded-full transition-colors"
+        aria-label={`Remove ${mode.name} mode`}
+        className="ml-1 p-0.5 hover:bg-white/20 rounded-full transition-colors cursor-pointer"
       >
-        <X className="w-3 h-3" />
+        <X size={12} aria-hidden="true" />
       </button>
     </motion.div>
   );
@@ -176,17 +177,26 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown when clicking outside
+  const close = useCallback(() => setIsOpen(false), []);
+
+  // Close on click outside or Escape
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
+        close();
       }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') close();
     };
 
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [close]);
 
   // Get selected mode objects
   const selectedModeObjects = selectedModes
@@ -204,9 +214,10 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
       <AnimatePresence>
         {selectedModeObjects.length > 0 && (
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
             className="flex flex-wrap gap-2 px-4 pt-2 pb-1"
           >
             {selectedModeObjects.map((mode) => (
@@ -224,21 +235,23 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
       <button
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
         className={`
           flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm
-          transition-all duration-200
-          ${disabled 
-            ? 'opacity-50 cursor-not-allowed' 
+          transition-colors duration-200
+          ${disabled
+            ? 'opacity-50 cursor-not-allowed'
             : 'hover:bg-white/10 cursor-pointer'
           }
           ${isOpen ? 'bg-white/10' : ''}
         `}
       >
-        <Sparkles className="w-4 h-4 text-amber-400" />
+        <Sparkles className="w-4 h-4 text-amber-400" aria-hidden="true" />
         <span className="text-white/70">
           {selectedModes.length > 0 ? 'Add mode' : 'Select mode'}
         </span>
-        <ChevronDown className={`w-4 h-4 text-white/40 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-4 h-4 text-white/40 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
       </button>
 
       {/* Dropdown Menu */}
@@ -249,6 +262,8 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ duration: 0.15 }}
+            role="listbox"
+            aria-label="Available modes"
             className="
               absolute left-0 bottom-full mb-2 z-50
               w-64 py-2 rounded-xl
@@ -256,15 +271,17 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
               shadow-xl shadow-black/40
             "
           >
-            <div className="px-3 py-1.5 text-xs font-medium text-white/40 uppercase tracking-wider">
+            <div className="px-3 py-1.5 text-xs font-medium text-white/40 uppercase">
               Available Modes
             </div>
-            
+
             {availableModes.map((mode) => {
               const Icon = mode.icon;
               return (
                 <button
                   key={mode.id}
+                  role="option"
+                  aria-selected={false}
                   onClick={() => {
                     onSelectMode(mode.id);
                     setIsOpen(false);
@@ -272,16 +289,17 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
                   className="
                     w-full flex items-center gap-3 px-3 py-2.5
                     hover:bg-white/5 transition-colors
-                    text-left group
+                    text-left group cursor-pointer
                   "
                 >
-                  <div 
+                  <div
                     className="w-8 h-8 rounded-lg flex items-center justify-center"
                     style={{ backgroundColor: `${mode.color}20` }}
+                    aria-hidden="true"
                   >
-                    <Icon className="w-4 h-4" style={{ color: mode.color }} />
+                    <Icon size={16} style={{ color: mode.color }} />
                   </div>
-                  
+
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-white/90 group-hover:text-white">
                       {mode.name}
@@ -290,8 +308,8 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
                       {mode.description}
                     </div>
                   </div>
-                  
-                  <Zap className="w-4 h-4 text-white/20 group-hover:text-white/40" />
+
+                  <Zap className="w-4 h-4 text-white/20 group-hover:text-white/40" aria-hidden="true" />
                 </button>
               );
             })}

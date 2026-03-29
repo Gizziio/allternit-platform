@@ -17,13 +17,14 @@ import {
   Copy,
   Check,
   FileText,
-  Code2,
-  Image as ImageIcon,
+  Code,
+  Image,
   Globe,
-  ChevronRight,
+  CaretRight,
   GitBranch,
-  AlertTriangle,
-} from "lucide-react";
+  Warning,
+  Image as ImageIcon,
+} from '@phosphor-icons/react';
 import { Markdown } from "./markdown";
 import { CodeBlock } from "./code-block";
 import type { BundledLanguage } from "shiki";
@@ -90,7 +91,7 @@ const KIND_META: Record<
   },
   code: {
     label: "Code",
-    icon: <Code2 size={15} />,
+    icon: <Code size={15} />,
     accent: "rgba(97,175,239,0.7)",
   },
   image: {
@@ -110,7 +111,7 @@ const KIND_META: Record<
   },
   jsx: {
     label: "React",
-    icon: <Code2 size={15} />,
+    icon: <Code size={15} />,
     accent: "rgba(97,218,251,0.7)",
   },
   mermaid: {
@@ -232,7 +233,7 @@ export function ArtifactCard({ artifact, isSelected, onClick }: ArtifactCardProp
       </div>
 
       {/* Chevron */}
-      <ChevronRight
+      <CaretRight
         size={14}
         style={{
           color: "rgba(255,255,255,0.25)",
@@ -366,7 +367,7 @@ export function ArtifactSidePanel({ artifact, onClose }: ArtifactSidePanelProps)
             >
               {copyError ? (
                 <>
-                  <AlertTriangle size={13} /> Failed
+                  <Warning size={13} /> Failed
                 </>
               ) : isCopied ? (
                 <>
@@ -459,10 +460,13 @@ function ArtifactContent({ artifact }: { artifact: SelectedArtifact }) {
   if (kind === "svg" && content) {
     const sanitizedSvg = sanitizeContent(content);
     return (
-      <div
-        style={{ padding: "24px", display: "flex", justifyContent: "center" }}
-        dangerouslySetInnerHTML={{ __html: sanitizedSvg }}
-      />
+      <div style={{ padding: "24px", display: "flex", justifyContent: "center" }}>
+        <img
+          src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(sanitizedSvg)}`}
+          alt="SVG artifact"
+          style={{ maxWidth: "100%", maxHeight: "100%" }}
+        />
+      </div>
     );
   }
 
@@ -580,10 +584,13 @@ function MermaidRenderer({ content }: { content: string }) {
   }
 
   return (
-    <div
-      style={{ padding: "24px", display: "flex", justifyContent: "center", overflowX: "auto" }}
-      dangerouslySetInnerHTML={{ __html: sanitizeContent(svg) }}
-    />
+    <div style={{ padding: "24px", display: "flex", justifyContent: "center", overflowX: "auto" }}>
+      <img
+        src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(sanitizeContent(svg))}`}
+        alt="SVG artifact"
+        style={{ maxWidth: "100%", maxHeight: "100%" }}
+      />
+    </div>
   );
 }
 

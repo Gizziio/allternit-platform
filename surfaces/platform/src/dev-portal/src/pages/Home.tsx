@@ -1,15 +1,15 @@
 import { Link } from 'react-router-dom';
-import { 
-  ArrowRight, 
-  BookOpen, 
-  Code2, 
-  LayoutTemplate, 
-  Upload,
-  Zap,
+import {
+  ArrowRight,
+  BookOpen,
+  Code,
+  Browsers,
+  UploadSimple,
+  Lightning,
   Shield,
   Globe,
-  Sparkles
-} from 'lucide-react';
+  Sparkle,
+} from '@phosphor-icons/react';
 
 const quickStartCards = [
   {
@@ -20,21 +20,21 @@ const quickStartCards = [
     color: 'from-blue-500/20 to-blue-600/10',
   },
   {
-    icon: Code2,
+    icon: Code,
     title: 'API Explorer',
     description: 'Explore our REST and WebSocket APIs with interactive examples.',
     link: '/api',
     color: 'from-purple-500/20 to-purple-600/10',
   },
   {
-    icon: LayoutTemplate,
+    icon: Browsers,
     title: 'Templates',
     description: 'Start quickly with pre-built skill templates and boilerplates.',
     link: '/templates',
     color: 'from-emerald-500/20 to-emerald-600/10',
   },
   {
-    icon: Upload,
+    icon: UploadSimple,
     title: 'Publish Guide',
     description: 'Learn how to package and publish your skills to the marketplace.',
     link: '/publish',
@@ -44,7 +44,7 @@ const quickStartCards = [
 
 const features = [
   {
-    icon: Zap,
+    icon: Lightning,
     title: 'Lightning Fast',
     description: 'Optimized runtime with sub-100ms cold start times.',
   },
@@ -59,7 +59,7 @@ const features = [
     description: 'Deploy to 35+ regions worldwide.',
   },
   {
-    icon: Sparkles,
+    icon: Sparkle,
     title: 'AI-Native',
     description: 'Built for AI agents with native LLM integrations.',
   },
@@ -71,7 +71,7 @@ export default function Home() {
       {/* Hero Section */}
       <section className="text-center py-12 lg:py-20">
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-a2r-accent/10 border border-a2r-accent/20 mb-8">
-          <Sparkles className="w-4 h-4 text-a2r-accent" />
+          <Sparkle className="w-4 h-4 text-a2r-accent" />
           <span className="text-sm text-a2r-accent">A2R Platform v1.0 is now available</span>
         </div>
         
@@ -91,14 +91,14 @@ export default function Home() {
             to="/docs"
             className="flex items-center gap-2 px-6 py-3 bg-a2r-accent text-a2r-bg rounded-lg font-medium hover:bg-a2r-accent-hover transition-colors"
           >
-            <BookOpen className="w-4 h-4" />
+            <BookOpen size={16} />
             Get Started
           </Link>
           <Link
             to="/templates"
             className="flex items-center gap-2 px-6 py-3 border border-a2r-border rounded-lg text-a2r-text hover:bg-a2r-surface-hover transition-colors"
           >
-            <LayoutTemplate className="w-4 h-4" />
+            <Browsers size={16} />
             Browse Templates
           </Link>
         </div>
@@ -127,7 +127,7 @@ export default function Home() {
                 </p>
                 <div className="flex items-center gap-1 text-sm text-a2r-accent group-hover:gap-2 transition-all">
                   <span>Learn more</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight size={16} />
                 </div>
               </Link>
             );
@@ -173,7 +173,7 @@ export default function Home() {
               className="flex items-center gap-2 text-a2r-accent hover:text-a2r-accent-hover transition-colors"
             >
               <span>View installation guide</span>
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight size={16} />
             </Link>
           </div>
         </div>

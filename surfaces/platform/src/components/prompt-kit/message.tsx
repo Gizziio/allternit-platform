@@ -10,19 +10,17 @@ import * as Popover from "@radix-ui/react-popover";
 import { cn } from "../../lib/utils"
 import { Markdown } from "./markdown"
 import React from "react"
-import { 
-    Copy, 
-    Volume2, 
-    ThumbsUp, 
-    ThumbsDown, 
-    MoreHorizontal, 
-    RefreshCw, 
-    GitBranch, 
-    Zap,
-    ChevronRight,
-    Volume2 as SpeakerHigh,
-    RefreshCw as ArrowsClockwise
-} from "lucide-react"
+import {
+  Copy,
+  SpeakerHigh,
+  ThumbsUp,
+  ThumbsDown,
+  DotsThreeOutline,
+  ArrowsClockwise,
+  GitBranch,
+  Lightning,
+  CaretRight,
+} from '@phosphor-icons/react';
 
 export type MessageProps = {
   children: React.ReactNode
@@ -56,7 +54,7 @@ const Message = ({ children, role, modelName, className, onAction, ...props }: M
                 )}
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     <ActionButton icon={Copy} tooltip="Copy" onClick={() => onAction?.("copy")} />
-                    <ActionButton icon={Volume2} tooltip="Speak" onClick={() => onAction?.("speak")} />
+                    <ActionButton icon={SpeakerHigh} tooltip="Speak" onClick={() => onAction?.("speak")} />
                     <div className="w-px h-3 bg-[var(--border-subtle)] mx-1" />
                     <ActionButton icon={ThumbsUp} tooltip="Helpful" onClick={() => onAction?.("rate-up")} />
                     <ActionButton icon={ThumbsDown} tooltip="Not helpful" onClick={() => onAction?.("rate-down")} />
@@ -90,7 +88,7 @@ function MessageEllipsisMenu({ onAction }: any) {
         <Popover.Root>
             <Popover.Trigger asChild>
                 <button className="p-1 rounded hover:bg-[var(--rail-hover)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]">
-                    <MoreHorizontal size={16} strokeWidth={2.5} />
+                    <DotsThreeOutline size={16} strokeWidth={2.5} />
                 </button>
             </Popover.Trigger>
             <Popover.Portal>
@@ -102,7 +100,7 @@ function MessageEllipsisMenu({ onAction }: any) {
                     <MenuEntry label="Think Harder" onClick={() => onAction?.("retry-harder")} />
                     <MenuEntry label="Ultra Think" onClick={() => onAction?.("retry-ultra")} />
                     <div className="h-px bg-[var(--border-subtle)] my-1" />
-                    <MenuEntry icon={RefreshCw} label="Switch Model & Retry" onClick={() => onAction?.("retry-switch")} />
+                    <MenuEntry icon={ArrowsClockwise} label="Switch Model & Retry" onClick={() => onAction?.("retry-switch")} />
                 </Popover.Content>
             </Popover.Portal>
         </Popover.Root>

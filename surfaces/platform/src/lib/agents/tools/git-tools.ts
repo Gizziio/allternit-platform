@@ -9,6 +9,7 @@
  */
 
 import type { ToolDefinition, ToolExecutionHandler } from "./index";
+import { API_BASE_URL, apiRequest } from "../api-config";
 
 // ============================================================================
 // Git Status Tool
@@ -60,28 +61,19 @@ export const executeGitStatus: ToolExecutionHandler = async (context, parameters
   const { path = ".", short = false } = parameters;
 
   try {
-    // In production, this would call a backend API that runs git commands
-    // For now, return a mock response
-    const mockStatus: GitStatus = {
-      branch: "main",
-      ahead: 0,
-      behind: 0,
-      staged: [],
-      modified: [],
-      untracked: [],
-      conflicted: [],
-      clean: true,
-    };
-
-    // Simulate checking a real repo (would be backend API call)
+    const status = await apiRequest<GitStatus>(`${API_BASE_URL}/git/status`, {
+      method: "POST",
+      body: JSON.stringify({ path, short }),
+      signal: context.abortSignal,
+    });
     return {
       result: short
         ? {
-            branch: mockStatus.branch,
-            clean: mockStatus.clean,
-            changes: mockStatus.staged.length + mockStatus.modified.length + mockStatus.untracked.length,
+            branch: status.branch,
+            clean: status.clean,
+            changes: status.staged.length + status.modified.length + status.untracked.length,
           }
-        : mockStatus,
+        : status,
     };
   } catch (error) {
     return {
@@ -155,25 +147,15 @@ export const executeGitLog: ToolExecutionHandler = async (context, parameters) =
   const { path = ".", limit = 20, branch, since, author } = parameters;
 
   try {
-    // Mock implementation - would call backend API
-    const mockCommits: GitCommit[] = [
+    const result = await apiRequest<{ commits: GitCommit[]; branch: string; total: number }>(
+      `${API_BASE_URL}/git/log`,
       {
-        hash: "abc123def456",
-        shortHash: "abc123d",
-        message: "Initial commit",
-        author: "Developer",
-        email: "dev@example.com",
-        date: new Date().toISOString(),
-      },
-    ];
-
-    return {
-      result: {
-        commits: mockCommits.slice(0, limit as number),
-        branch: branch || "main",
-        total: mockCommits.length,
-      },
-    };
+        method: "POST",
+        body: JSON.stringify({ path, limit, branch, since, author }),
+        signal: context.abortSignal,
+      }
+    );
+    return { result };
   } catch (error) {
     return {
       result: null,
@@ -247,14 +229,12 @@ export const executeGitDiff: ToolExecutionHandler = async (context, parameters) 
   const { path = ".", staged = false, from, to, file } = parameters;
 
   try {
-    // Mock implementation
-    const mockDiff: GitDiff = {
-      files: [],
-      totalAdditions: 0,
-      totalDeletions: 0,
-    };
-
-    return { result: mockDiff };
+    const result = await apiRequest<GitDiff>(`${API_BASE_URL}/git/diff`, {
+      method: "POST",
+      body: JSON.stringify({ path, staged, from, to, file }),
+      signal: context.abortSignal,
+    });
+    return { result };
   } catch (error) {
     return {
       result: null,
@@ -311,40 +291,15 @@ export const executeGitBranch: ToolExecutionHandler = async (context, parameters
   const { path = ".", remote = false } = parameters;
 
   try {
-    // Mock implementation
-    const mockBranches: GitBranch[] = [
+    const result = await apiRequest<{ branches: GitBranch[]; current: string }>(
+      `${API_BASE_URL}/git/branches`,
       {
-        name: "main",
-        current: true,
-        ahead: 0,
-        behind: 0,
-      },
-      {
-        name: "feature/new-ui",
-        current: false,
-        ahead: 5,
-        behind: 0,
-      },
-    ];
-
-    if (remote) {
-      mockBranches.push(
-        {
-          name: "origin/main",
-          current: false,
-          remote: "origin",
-          ahead: 0,
-          behind: 0,
-        }
-      );
-    }
-
-    return {
-      result: {
-        branches: mockBranches,
-        current: mockBranches.find((b) => b.current)?.name || "main",
-      },
-    };
+        method: "POST",
+        body: JSON.stringify({ path, remote }),
+        signal: context.abortSignal,
+      }
+    );
+    return { result };
   } catch (error) {
     return {
       result: null,
@@ -396,16 +351,12 @@ export const executeGitShow: ToolExecutionHandler = async (context, parameters) 
   const { path = ".", commit = "HEAD", stat = false } = parameters;
 
   try {
-    const commitInfo = {
-      hash: commit,
-      message: "Commit message",
-      author: "Developer",
-      date: new Date().toISOString(),
-      files: [] as string[],
-      stats: stat ? { insertions: 0, deletions: 0 } : undefined,
-    };
-
-    return { result: commitInfo };
+    const result = await apiRequest<unknown>(`${API_BASE_URL}/git/show`, {
+      method: "POST",
+      body: JSON.stringify({ path, commit, stat }),
+      signal: context.abortSignal,
+    });
+    return { result };
   } catch (error) {
     return {
       result: null,

@@ -10,17 +10,17 @@
 
 import React, { useEffect, useState } from 'react';
 import { useUnifiedStore } from '@/lib/agents/unified.store';
-import { 
-  GitBranch, 
-  Play, 
-  CheckCircle, 
-  XCircle, 
-  Clock, 
-  AlertCircle,
-  RefreshCw,
-  ChevronRight,
-  MoreHorizontal
-} from 'lucide-react';
+import {
+  GitBranch,
+  Play,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Warning,
+  ArrowsClockwise,
+  CaretRight,
+  DotsThreeOutline,
+} from '@phosphor-icons/react';
 import { GlassCard } from '../../design/GlassCard';
 
 interface DagNode {
@@ -156,7 +156,7 @@ export function KanbanDAG() {
               cursor: 'pointer'
             }}
           >
-            <RefreshCw size={14} color="#888" className={isLoading ? 'animate-spin' : ''} />
+            <ArrowsClockwise size={14} color="#888" className={isLoading ? 'animate-spin' : ''} />
           </button>
         </div>
 
@@ -267,7 +267,7 @@ export function KanbanDAG() {
                 cursor: 'pointer'
               }}
             >
-              <ChevronRight size={14} />
+              <CaretRight size={14} />
             </button>
           </div>
         )}
@@ -303,12 +303,12 @@ export function KanbanDAG() {
           }}>
             {isLoading ? (
               <>
-                <RefreshCw size={48} className="animate-spin" style={{ marginBottom: 16 }} />
+                <ArrowsClockwise size={48} className="animate-spin" style={{ marginBottom: 16 }} />
                 <p>Loading DAG structure...</p>
               </>
             ) : (
               <>
-                <AlertCircle size={48} style={{ marginBottom: 16, opacity: 0.3 }} />
+                <Warning size={48} style={{ marginBottom: 16, opacity: 0.3 }} />
                 <p>No nodes in this DAG</p>
               </>
             )}
@@ -461,9 +461,9 @@ function NodeStatusIcon({ status }: { status: string }) {
     case 'running':
       return <Clock {...iconProps} color="#0a84ff" />;
     case 'blocked':
-      return <AlertCircle {...iconProps} color="#f59e0b" />;
+      return <Warning {...iconProps} color="#f59e0b" />;
     default:
-      return <MoreHorizontal {...iconProps} color="#888" />;
+      return <DotsThreeOutline {...iconProps} color="#888" />;
   }
 }
 

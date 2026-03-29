@@ -10,15 +10,15 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { 
-  Check, 
-  Lock, 
-  RefreshCw, 
-  Terminal, 
-  AlertCircle,
-  ChevronDown,
-  Loader2
-} from 'lucide-react';
+import {
+  Check,
+  Lock,
+  ArrowsClockwise,
+  Terminal,
+  Warning,
+  CaretDown,
+  CircleNotch,
+} from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -179,7 +179,7 @@ export function ProviderModelSelector({
     return (
       <div className={cn("flex items-center gap-2", className)}>
         <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted text-muted-foreground">
-          <Lock className="h-4 w-4" />
+          <Lock size={16} />
           <span className="text-sm">{providerName} locked</span>
         </div>
         
@@ -204,7 +204,7 @@ export function ProviderModelSelector({
               >
                 {isCreatingSession ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <CircleNotch className="mr-2 h-4 w-4 animate-spin" />
                     Opening terminal...
                   </>
                 ) : (
@@ -226,7 +226,7 @@ export function ProviderModelSelector({
     return (
       <div className={cn("flex items-center gap-2", className)}>
         <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted">
-          <Loader2 className="h-4 w-4 animate-spin" />
+          <CircleNotch className="h-4 w-4 animate-spin" />
           <span className="text-sm text-muted-foreground">Loading models...</span>
         </div>
       </div>
@@ -238,11 +238,11 @@ export function ProviderModelSelector({
     return (
       <div className={cn("flex items-center gap-2", className)}>
         <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-destructive/10 text-destructive">
-          <AlertCircle className="h-4 w-4" />
+          <Warning size={16} />
           <span className="text-sm">{state.error}</span>
         </div>
         <Button variant="outline" size="sm" onClick={handleRefresh}>
-          <RefreshCw className="h-4 w-4" />
+          <ArrowsClockwise size={16} />
         </Button>
       </div>
     );
@@ -283,14 +283,14 @@ export function ProviderModelSelector({
           disabled={state.isLoadingModels}
           title="Refresh models"
         >
-          <RefreshCw className={cn("h-4 w-4", state.isLoadingModels && "animate-spin")} />
+          <ArrowsClockwise className={cn("h-4 w-4", state.isLoadingModels && "animate-spin")} />
         </Button>
       </div>
 
       {/* Cache freshness indicator */}
       {state.lastFetched && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Check className="h-3 w-3" />
+          <Check size={12} />
           <span>
             Updated {formatTimeAgo(state.lastFetched)}
             {isStale && (
@@ -319,7 +319,7 @@ export function ProviderModelSelector({
             disabled={!freeformModelId.trim() || isValidating}
           >
             {isValidating ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <CircleNotch className="h-4 w-4 animate-spin" />
             ) : (
               "Validate"
             )}
@@ -328,7 +328,7 @@ export function ProviderModelSelector({
         
         {validationError && (
           <div className="mt-2 text-sm text-destructive flex items-center gap-1">
-            <AlertCircle className="h-4 w-4" />
+            <Warning size={16} />
             {validationError}
           </div>
         )}

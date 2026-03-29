@@ -12,15 +12,14 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
-  ChevronLeft,
-  ChevronRight,
-  ChevronUp,
-  ChevronDown,
-  PanelLeft,
-  PanelRight,
-  PanelTop,
-  PanelBottom,
-} from "lucide-react";
+  CaretLeft,
+  CaretRight,
+  CaretUp,
+  CaretDown,
+  Sidebar,
+  SidebarSimple,
+  Rows,
+} from '@phosphor-icons/react';
 
 import type {
   ResponsiveContainerProps,
@@ -186,26 +185,26 @@ export function DockPanelRenderer({
   const getCollapseIcon = () => {
     switch (props.position) {
       case "left":
-        return isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />;
+        return isCollapsed ? <CaretRight size={16} /> : <CaretLeft size={16} />;
       case "right":
-        return isCollapsed ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />;
+        return isCollapsed ? <CaretLeft size={16} /> : <CaretRight size={16} />;
       case "top":
-        return isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />;
+        return isCollapsed ? <CaretDown size={16} /> : <CaretUp size={16} />;
       case "bottom":
-        return isCollapsed ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />;
+        return isCollapsed ? <CaretUp size={16} /> : <CaretDown size={16} />;
     }
   };
 
   const getPositionIcon = () => {
     switch (props.position) {
       case "left":
-        return <PanelLeft className="w-4 h-4" />;
+        return <Sidebar size={16} />;
       case "right":
-        return <PanelRight className="w-4 h-4" />;
+        return <SidebarSimple size={16} />;
       case "top":
-        return <PanelTop className="w-4 h-4" />;
+        return <Rows size={16} />;
       case "bottom":
-        return <PanelBottom className="w-4 h-4" />;
+        return <Rows size={16} />;
     }
   };
 
@@ -237,7 +236,7 @@ export function DockPanelRenderer({
             >
               <div className="flex-1">{/* Header content */}</div>
               {props.collapsible && (
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleCollapse}>
+                <Button variant="ghost" size="icon" size={24} onClick={handleCollapse}>
                   {getCollapseIcon()}
                 </Button>
               )}
@@ -254,7 +253,7 @@ export function DockPanelRenderer({
       {/* Collapsed state */}
       {isCollapsed && props.collapsible && (
         <div className="flex flex-col items-center py-2">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCollapse}>
+          <Button variant="ghost" size="icon" size={32} onClick={handleCollapse}>
             {getPositionIcon()}
           </Button>
         </div>

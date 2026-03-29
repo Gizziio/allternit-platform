@@ -16,25 +16,25 @@ import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Brain,
-  Search,
+  MagnifyingGlass,
   Code,
-  Loader2,
-  ChevronDown,
-  ChevronUp,
+  CircleNotch,
+  CaretDown,
+  CaretUp,
   Play,
-  RotateCcw,
+  ArrowCounterClockwise,
   X,
   FileCode,
   FileImage,
   FileText,
-  Download,
+  DownloadSimple,
   Copy,
-  Maximize2,
-  Sparkles,
+  ArrowsOut,
+  Sparkle,
   Clock,
-  CheckCircle2,
-  AlertCircle,
-} from "lucide-react";
+  CheckCircle,
+  Warning,
+} from '@phosphor-icons/react';
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
@@ -60,7 +60,7 @@ const statusConfig: Record<
   }
 > = {
   idle: {
-    icon: <Brain className="w-5 h-5" />,
+    icon: <Brain size={20} />,
     label: "Ready",
     color: "var(--muted-foreground)",
   },
@@ -70,7 +70,7 @@ const statusConfig: Record<
     color: "var(--primary)",
   },
   searching: {
-    icon: <Search className="w-5 h-5 animate-pulse" />,
+    icon: <MagnifyingGlass className="w-5 h-5 animate-pulse" />,
     label: "Searching",
     color: "var(--primary)",
   },
@@ -80,12 +80,12 @@ const statusConfig: Record<
     color: "var(--primary)",
   },
   waiting: {
-    icon: <Loader2 className="w-5 h-5 animate-spin" />,
+    icon: <CircleNotch className="w-5 h-5 animate-spin" />,
     label: "Waiting",
     color: "var(--primary)",
   },
   planning: {
-    icon: <Sparkles className="w-5 h-5 animate-pulse" />,
+    icon: <Sparkle className="w-5 h-5 animate-pulse" />,
     label: "Planning",
     color: "var(--primary)",
   },
@@ -98,9 +98,9 @@ const statusConfig: Record<
 
 const stepStatusIcons = {
   pending: <div className="w-2 h-2 rounded-full bg-muted-foreground/30" />,
-  active: <Loader2 className="w-3 h-3 animate-spin text-primary" />,
-  completed: <CheckCircle2 className="w-3 h-3 text-green-500" />,
-  error: <AlertCircle className="w-3 h-3 text-destructive" />,
+  active: <CircleNotch className="w-3 h-3 animate-spin text-primary" />,
+  completed: <CheckCircle className="w-3 h-3 text-green-500" />,
+  error: <Warning className="w-3 h-3 text-destructive" />,
 };
 
 export function AgentThinkingRenderer({
@@ -164,14 +164,14 @@ export function AgentThinkingRenderer({
 
             {props.estimatedTime && (
               <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                <Clock className="w-4 h-4" />
+                <Clock size={16} />
                 ~{props.estimatedTime}s
               </div>
             )}
 
             {props.onCancel && (
               <Button variant="ghost" size="sm" onClick={handleCancel}>
-                <X className="w-4 h-4" />
+                <X size={16} />
               </Button>
             )}
 
@@ -182,9 +182,9 @@ export function AgentThinkingRenderer({
                 onClick={() => setIsExpanded(!isExpanded)}
               >
                 {isExpanded ? (
-                  <ChevronUp className="w-4 h-4" />
+                  <CaretUp size={16} />
                 ) : (
-                  <ChevronDown className="w-4 h-4" />
+                  <CaretDown size={16} />
                 )}
               </Button>
             )}
@@ -248,7 +248,7 @@ export function AgentThinkingRenderer({
 
       {props.showSparkles && (
         <div className="absolute top-2 right-2 opacity-50">
-          <Sparkles className="w-4 h-4 text-primary animate-pulse" />
+          <Sparkle className="w-4 h-4 text-primary animate-pulse" />
         </div>
       )}
     </Card>
@@ -328,7 +328,7 @@ export function ToolCallRenderer({
 
           <div className="flex items-center gap-2">
             {props.status === "running" && (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <CircleNotch className="w-4 h-4 animate-spin" />
             )}
 
             {props.duration && (
@@ -341,22 +341,22 @@ export function ToolCallRenderer({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6"
+                size={24}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleRerun();
                 }}
               >
-                <RotateCcw className="w-3 h-3" />
+                <ArrowCounterClockwise size={12} />
               </Button>
             )}
 
             {props.expandable !== false && (
-              <Button variant="ghost" size="icon" className="h-6 w-6">
+              <Button variant="ghost" size="icon" size={24}>
                 {isExpanded ? (
-                  <ChevronUp className="w-4 h-4" />
+                  <CaretUp size={16} />
                 ) : (
-                  <ChevronDown className="w-4 h-4" />
+                  <CaretDown size={16} />
                 )}
               </Button>
             )}
@@ -430,14 +430,14 @@ export function ToolCallRenderer({
 // ============================================================================
 
 const artifactIcons: Record<string, React.ReactNode> = {
-  code: <FileCode className="w-5 h-5" />,
-  image: <FileImage className="w-5 h-5" />,
-  markdown: <FileText className="w-5 h-5" />,
-  json: <FileCode className="w-5 h-5" />,
-  html: <FileCode className="w-5 h-5" />,
-  text: <FileText className="w-5 h-5" />,
-  pdf: <FileText className="w-5 h-5" />,
-  diagram: <FileImage className="w-5 h-5" />,
+  code: <FileCode size={20} />,
+  image: <FileImage size={20} />,
+  markdown: <FileText size={20} />,
+  json: <FileCode size={20} />,
+  html: <FileCode size={20} />,
+  text: <FileText size={20} />,
+  pdf: <FileText size={20} />,
+  diagram: <FileImage size={20} />,
 };
 
 export function ArtifactPreviewRenderer({
@@ -563,7 +563,7 @@ export function ArtifactPreviewRenderer({
       <CardHeader className="py-3 flex flex-row items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="text-muted-foreground">
-            {artifactIcons[props.type] || <FileText className="w-5 h-5" />}
+            {artifactIcons[props.type] || <FileText size={20} />}
           </div>
           <div>
             <CardTitle className="text-sm font-medium">
@@ -581,29 +581,29 @@ export function ArtifactPreviewRenderer({
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
+            size={32}
             onClick={handleCopy}
             title="Copy"
           >
-            <Copy className="w-4 h-4" />
+            <Copy size={16} />
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
+            size={32}
             onClick={handleDownload}
             title="Download"
           >
-            <Download className="w-4 h-4" />
+            <DownloadSimple size={16} />
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
+            size={32}
             onClick={handleFullscreen}
             title="Fullscreen"
           >
-            <Maximize2 className="w-4 h-4" />
+            <ArrowsOut size={16} />
           </Button>
         </div>
       </CardHeader>

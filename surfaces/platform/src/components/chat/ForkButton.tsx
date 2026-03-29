@@ -49,8 +49,10 @@ export function ForkButton({
     <button
       onClick={handleFork}
       disabled={disabled || isForking || isForked}
+      aria-label={isForking ? 'Forking conversation...' : isForked ? 'Forked!' : 'Fork conversation from here'}
+      aria-busy={isForking}
       className={cn(
-        "flex items-center gap-1.5 transition-all duration-200",
+        "flex items-center gap-1.5 transition-colors duration-200",
         className
       )}
       style={{
@@ -83,11 +85,11 @@ export function ForkButton({
       title="Fork conversation from here"
     >
       {isForking ? (
-        <Loader2 size={14} className="animate-spin" />
+        <Loader2 size={14} className="motion-safe:animate-spin" aria-hidden="true" />
       ) : isForked ? (
-        <Check size={14} />
+        <Check size={14} aria-hidden="true" />
       ) : (
-        <GitBranch size={14} />
+        <GitBranch size={14} aria-hidden="true" />
       )}
       
       {showLabel && (

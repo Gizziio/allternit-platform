@@ -2,19 +2,18 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Activity,
-  AlertCircle,
-  AlertTriangle,
+  Pulse as Activity,
+  Warning,
   Cpu,
-  DollarSign,
-  Loader2,
-  MemoryStick,
-  RefreshCw,
+  CurrencyDollar,
+  CircleNotch,
+  HardDrive,
+  ArrowsClockwise,
   Shield,
   Wallet,
-  Wifi,
-  Zap,
-} from 'lucide-react';
+  WifiHigh,
+  Lightning,
+} from '@phosphor-icons/react';
 import { GlassSurface } from '@/design/GlassSurface';
 import { useBudget } from '@/hooks/useBudget';
 import { ProgressBar } from '../components/ProgressBar';
@@ -107,7 +106,7 @@ export function BudgetDashboardView() {
   if (isLoading && !budget) {
     return (
       <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-accent" />
+        <CircleNotch className="h-8 w-8 animate-spin text-accent" />
       </div>
     );
   }
@@ -115,13 +114,13 @@ export function BudgetDashboardView() {
   if (error && !budget) {
     return (
       <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
-        <AlertTriangle className="mb-4 h-12 w-12 text-red-500" />
+        <Warning className="mb-4 h-12 w-12 text-red-500" />
         <p className="mb-4">Failed to load runtime budget</p>
         <button
           onClick={() => void refetch()}
           className="flex items-center gap-2 rounded-2xl bg-accent/15 px-4 py-2 text-accent transition-colors hover:bg-accent/25"
         >
-          <RefreshCw className="h-4 w-4" />
+          <ArrowsClockwise size={16} />
           Retry
         </button>
       </div>
@@ -156,7 +155,7 @@ export function BudgetDashboardView() {
                   onClick={() => void refetch()}
                   className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-black/15 px-3 py-1 text-[11px] text-foreground transition hover:bg-black/25"
                 >
-                  <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                  <ArrowsClockwise className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
                   Refresh
                 </button>
               </div>
@@ -166,7 +165,7 @@ export function BudgetDashboardView() {
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           <StatCard
-            icon={DollarSign}
+            icon={CurrencyDollar}
             label="Configured Credits / Hour"
             value={formatCredits(configuredCreditsPerHour)}
             unit="credits"
@@ -178,7 +177,7 @@ export function BudgetDashboardView() {
             unit="credits"
           />
           <StatCard
-            icon={Zap}
+            icon={Lightning}
             label="Projected Hourly Cost"
             value={formatCredits(budget?.projected_hourly_cost ?? 0)}
             unit="credits"
@@ -224,9 +223,9 @@ export function BudgetDashboardView() {
                   className="inline-flex items-center justify-center gap-2 rounded-2xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-sm font-medium text-amber-100 transition hover:bg-amber-300/20 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isSaving ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <CircleNotch className="h-4 w-4 animate-spin" />
                   ) : (
-                    <DollarSign className="h-4 w-4" />
+                    <CurrencyDollar size={16} />
                   )}
                   Apply quota
                 </button>
@@ -281,7 +280,7 @@ export function BudgetDashboardView() {
 
           <GlassSurface intensity="base" className="rounded-3xl p-6">
             <div className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-emerald-200" />
+              <Warning className="h-5 w-5 text-emerald-200" />
               <h3 className="text-lg font-medium text-foreground">Resource pressure</h3>
             </div>
             <p className="mt-2 text-sm text-muted-foreground">
@@ -340,7 +339,7 @@ export function BudgetDashboardView() {
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
           <GlassSurface intensity="thin" className="rounded-3xl p-6">
             <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-200" />
+              <Warning className="h-5 w-5 text-amber-200" />
               <h3 className="text-lg font-medium text-foreground">Runtime signals</h3>
             </div>
             <div className="mt-4 space-y-3">

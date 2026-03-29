@@ -13,9 +13,9 @@ import {
   Code,
   FolderOpen,
   Cpu,
-  Workflow,
+  Graph,
   Globe,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import { motion } from 'framer-motion';
 
 // Use the shell store which is already available
@@ -28,7 +28,7 @@ const PROGRAMS = [
   { id: 'code-preview', name: 'Code', icon: Code, color: '#8b5cf6', shortcut: 'C' },
   { id: 'asset-manager', name: 'Assets', icon: FolderOpen, color: '#ec4899', shortcut: 'A' },
   { id: 'orchestrator', name: 'Agents', icon: Cpu, color: '#ef4444', shortcut: 'O' },
-  { id: 'workflow-builder', name: 'Flow', icon: Workflow, color: '#06b6d4', shortcut: 'F' },
+  { id: 'workflow-builder', name: 'Flow', icon: Graph, color: '#06b6d4', shortcut: 'F' },
   { id: 'browser', name: 'Web', icon: Globe, color: '#6366f1', shortcut: 'W' },
 ] as const;
 

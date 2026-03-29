@@ -78,7 +78,7 @@ async function loadWasm(): Promise<WasmModule> {
   if (wasmModule) return wasmModule;
   
   try {
-    const mod = await import('../../../../0-substrate/a2r-agent-workspace/pkg');
+    const mod = await import(/* webpackIgnore: true */ '../../../../0-substrate/a2r-agent-workspace/pkg');
     wasmModule = mod as unknown as WasmModule;
     return wasmModule;
   } catch (error) {

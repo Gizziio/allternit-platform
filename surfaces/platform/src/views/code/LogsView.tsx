@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useUnifiedStore } from '@/lib/agents/unified.store';
-import { Filter, Download, Trash2 } from 'lucide-react';
+import {
+  Funnel,
+  DownloadSimple,
+  Trash,
+} from '@phosphor-icons/react';
 
 interface LogEntry {
   id: string;
@@ -71,7 +75,7 @@ export function LogsView() {
           border: '1px solid var(--border-subtle)',
           borderRadius: 6
         }}>
-          <Filter size={14} color="#888" />
+          <Funnel size={14} color="#888" />
           <input
             type="text"
             value={filter}
@@ -138,7 +142,7 @@ export function LogsView() {
           }}
           title="Export logs"
         >
-          <Download size={16} color="#888" />
+          <DownloadSimple size={16} color="#888" />
         </button>
 
         <button
@@ -155,7 +159,7 @@ export function LogsView() {
           }}
           title="Clear logs"
         >
-          <Trash2 size={16} color="#888" />
+          <Trash size={16} color="#888" />
         </button>
       </div>
 

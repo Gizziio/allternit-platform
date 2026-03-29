@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SwarmMonitor - Functional Demo</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+    
+    :root {
+      --bg: #0a0908;
+      --surface: #121110;
+      --surface-hover: #1a1917;
+      --border: #272522;
+      --text: #e8e6e3;
+      --text-muted: #8b8680;
+      --text-subtle: #5c5854;
+      --accent: #c17817;
+      --accent-dim: #c1781720;
+      --green: #4a9b5e;
+      --red: #c25d5d;
+      --blue: #3b82f6;
+      --purple: #a78bfa;
+    }
+    
+    * { box-sizing: border-box; }
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      height: 100vh;
+      overflow: hidden;
+      font-size: 13px;
+    }
+    
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    
+    .dropdown { position: relative; display: inline-block; }
+    
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      top: 100%;
+      right: 0;
+      min-width: 160px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      z-index: 100;
+      margin-top: 4px;
+    }
+    
+    .dropdown-content.show { display: block; }
+    
+    .dropdown-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-muted);
+      transition: all 0.15s;
+    }
+    
+    .dropdown-item:hover { background: var(--surface-hover); color: var(--text); }
+    .dropdown-item.active { color: var(--accent); background: var(--accent-dim); }
+    
+    .btn {
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .btn:hover { background: var(--surface-hover); color: var(--text); border-color: var(--text-subtle); }
+    .btn-primary { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+    .btn-primary:hover { background: var(--accent); color: var(--bg); }
+    .btn-sm { padding: 4px 8px; font-size: 11px; }
+    
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+    .status-working { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .status-idle { background: var(--text-subtle); }
+    
+    .workspace-panel { background: var(--surface); border-left: 1px solid var(--border); transition: transform 0.2s, width 0.2s; }
+    .workspace-panel.collapsed { width: 0; transform: translateX(100%); overflow: hidden; }
+    .workspace-panel.collapsed + #workspace-toggle { right: 0; }
+    #workspace-toggle { transition: right 0.2s; }
+    
+    /* Kanban specific */
+    .kanban-column { min-width: 260px; max-width: 300px; }
+    
+    .kanban-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 12px;
+      cursor: grab;
+      transition: all 0.15s;
+    }
+    
+    .kanban-card:hover { border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.04); }
+    .kanban-card.dragging { opacity: 0.5; cursor: grabbing; }
+    
+    .kanban-column.drag-over { background: rgba(193, 120, 23, 0.05); }
+    .kanban-column.drag-over .column-header { border-color: var(--accent); background: var(--accent-dim); }
+    
+    .priority-high { background: var(--red); }
+    .priority-medium { background: var(--accent); }
+    .priority-low { background: var(--text-subtle); }
+    
+    .console-line {
+      padding: 4px 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+    }
+    
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .modal.show { display: flex; }
+    
+    .modal-content {
+      background: var(--bg);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 20px;
+      width: 90%;
+      max-width: 400px;
+    }
+  </style>
+</head>
+<body class="flex flex-col">
+  
+  <!-- Header -->
+  <header class="h-12 border-b flex items-center justify-between px-4" style="border-color: var(--border); background: var(--surface);">
+    <!-- LEFT: Reserved for app mode switchers -->
+    <div class="w-48"></div>
+
+    <!-- CENTER: Search and Stats -->
+    <div class="flex items-center gap-6">
+      <div class="relative">
+        <i class="fas fa-search absolute left-2.5 top-1/2 -translate-y-1/2 text-xs" style="color: var(--text-subtle);"></i>
+        <input type="text" id="search-input" placeholder="Search agents..." class="btn btn-sm pl-7" style="width: 200px;">
+      </div>
+      
+      <div class="flex items-center gap-4 text-xs" style="color: var(--text-muted);">
+        <span class="flex items-center gap-1.5">
+          <span class="status-dot status-working"></span>
+          <span id="active-count">4</span> active
+        </span>
+        <span class="mono" id="total-cost">$5.73</span>
+        <span class="mono" id="total-tokens">139.4k tok</span>
+      </div>
+    </div>
+
+    <!-- RIGHT: Actions -->
+    <div class="flex items-center gap-2 w-48 justify-end">
+      <div class="flex items-center gap-1.5 px-2 py-1 rounded text-xs" style="color: var(--green);">
+        <span class="w-1.5 h-1.5 rounded-full status-dot status-working"></span>
+        Live
+      </div>
+      
+      <button onclick="showCreateTaskModal()" class="btn btn-primary btn-sm">
+        <i class="fas fa-plus"></i>
+      </button>
+      
+      <div class="dropdown">
+        <button onclick="toggleDropdown('view-dropdown')" class="btn" style="min-width: 120px; justify-content: space-between;">
+          <span id="current-view-label"><i class="fas fa-th-large mr-2"></i>Grid</span>
+          <i class="fas fa-chevron-down text-xs"></i>
+        </button>
+        <div id="view-dropdown" class="dropdown-content">
+          <div class="dropdown-item active" onclick="switchView('grid')">
+            <i class="fas fa-th-large w-4"></i> Grid
+          </div>
+          <div class="dropdown-item" onclick="switchView('topology')">
+            <i class="fas fa-project-diagram w-4"></i> Topology
+          </div>
+          <div class="dropdown-item" onclick="switchView('kanban')">
+            <i class="fas fa-columns w-4"></i> Kanban
+          </div>
+          <div class="dropdown-item" onclick="switchView('console')">
+            <i class="fas fa-terminal w-4"></i> Console
+          </div>
+          <div class="dropdown-item" onclick="switchView('history')">
+            <i class="fas fa-chart-line w-4"></i> History
+          </div>
+        </div>
+      </div>
+      
+      <button onclick="showExportMenu()" class="btn btn-sm">
+        <i class="fas fa-ellipsis-v"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <div class="flex-1 flex overflow-hidden">
+    
+    <main class="flex-1 overflow-auto p-4" id="main-content">
+      
+      <!-- GRID VIEW -->
+      <div id="view-grid" class="view-section">
+        <div class="flex items-center justify-between mb-4">
+          <div class="text-xs" style="color: var(--text-muted);">
+            <span class="mono" style="color: var(--accent);" id="agent-count">5</span> agents
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="btn btn-sm" onclick="toggleBatchMode()" id="batch-btn">
+              <i class="fas fa-check-square"></i> Select
+            </button>
+          </div>
+        </div>
+
+        <div class="grid gap-3" id="agent-grid" style="grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));">
+          <!-- Agents injected by JS -->
+        </div>
+      </div>
+
+      <!-- TOPOLOGY VIEW -->
+      <div id="view-topology" class="view-section hidden h-full flex flex-col">
+        <div class="flex items-center justify-between mb-4">
+          <div class="text-xs" style="color: var(--text-muted);">Hierarchical orchestration view</div>
+        </div>
+        <div class="flex-1 relative rounded-lg overflow-hidden" style="background: var(--surface);">
+          <svg class="w-full h-full" viewBox="0 0 800 400" id="topology-svg">
+            <!-- SVG content injected by JS -->
+          </svg>
+        </div>
+      </div>
+
+      <!-- KANBAN VIEW -->
+      <div id="view-kanban" class="view-section hidden h-full flex flex-col">
+        <div class="px-4 py-3 border-b flex items-center justify-between" style="border-color: rgba(255,255,255,0.05);">
+          <div class="flex items-center gap-4">
+            <div class="text-xs" style="color: var(--text-muted);">
+              <span class="mono" style="color: var(--accent);" id="task-count">7</span> tasks
+            </div>
+            <div class="flex items-center gap-2 text-xs" id="column-counts">
+              <!-- Counts injected by JS -->
+            </div>
+          </div>
+          <button onclick="showCreateTaskModal()" class="px-3 py-1.5 rounded-lg text-xs font-medium" style="background: var(--accent-dim); color: var(--accent);">
+            <i class="fas fa-plus mr-1.5"></i> New Task
+          </button>
+        </div>
+
+        <div class="flex-1 overflow-x-auto p-4">
+          <div class="flex gap-4 h-full" style="min-width: 1300px;" id="kanban-board">
+            <!-- Kanban columns injected by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- CONSOLE VIEW -->
+      <div id="view-console" class="view-section hidden h-full flex">
+        <div class="w-48 border-r overflow-auto" style="border-color: var(--border); background: var(--surface);">
+          <div class="p-2 text-xs font-medium mb-1" style="color: var(--text-subtle);">AGENTS</div>
+          <div class="space-y-0.5" id="console-agents">
+            <!-- Agent list injected by JS -->
+          </div>
+        </div>
+        <div class="flex-1 overflow-auto p-4 mono text-xs" id="console-logs" style="background: var(--bg);">
+          <!-- Logs injected by JS -->
+        </div>
+        <div class="w-52 border-l p-4" style="border-color: var(--border); background: var(--surface);">
+          <div class="text-xs font-medium mb-3" style="color: var(--text-subtle);">METRICS</div>
+          <div class="space-y-4" id="console-metrics">
+            <!-- Metrics injected by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- HISTORY VIEW -->
+      <div id="view-history" class="view-section hidden h-full flex">
+        <div class="flex-1 p-4">
+          <div class="flex items-center gap-2 mb-4">
+            <button class="btn btn-sm" onclick="setHistoryRange('1h')">1h</button>
+            <button class="btn btn-sm" onclick="setHistoryRange('6h')">6h</button>
+            <button class="btn btn-primary btn-sm" onclick="setHistoryRange('24h')">24h</button>
+            <button class="btn btn-sm" onclick="setHistoryRange('7d')">7d</button>
+          </div>
+          <div class="rounded-lg p-4" style="background: var(--surface); height: calc(100% - 40px);">
+            <canvas id="history-chart" class="w-full h-full"></canvas>
+          </div>
+        </div>
+        <div class="w-60 border-l p-4" style="border-color: var(--border); background: var(--surface);">
+          <div class="text-xs font-medium mb-3" style="color: var(--text-subtle);">Statistics</div>
+          <div class="space-y-3" id="history-stats">
+            <!-- Stats injected by JS -->
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- Workspace Panel Toggle -->
+    <button onclick="toggleWorkspace()" class="absolute right-64 top-14 z-10 w-6 h-12 rounded-l-lg flex items-center justify-center transition-all" style="background: var(--surface); border: 1px solid var(--border); border-right: none;" id="workspace-toggle">
+      <i class="fas fa-chevron-right text-xs" style="color: var(--text-subtle);"></i>
+    </button>
+
+    <!-- Workspace Panel -->
+    <aside class="w-64 workspace-panel flex flex-col transition-all" id="workspace-panel">
+      <div class="p-3 border-b flex items-center justify-between" style="border-color: var(--border);">
+        <span class="text-xs font-medium">Workspace</span>
+        <button class="btn btn-sm" onclick="showCreateTaskModal()">
+          <i class="fas fa-plus"></i> Task
+        </button>
+      </div>
+      
+      <div class="flex-1 overflow-auto p-3" id="workspace-tasks">
+        <!-- Tasks injected by JS -->
+      </div>
+      
+      <div id="batch-actions" class="hidden p-3 border-t" style="border-color: var(--border); background: var(--accent-dim);">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs" style="color: var(--accent);"><span id="selected-count">0</span> selected</span>
+          <button onclick="clearSelection()" class="text-xs" style="color: var(--text-muted);">Clear</button>
+        </div>
+        <div class="flex gap-2">
+          <button class="btn btn-sm flex-1 btn-primary" onclick="batchRestart()">Restart</button>
+          <button class="btn btn-sm flex-1" style="color: var(--red);" onclick="batchStop()">Stop</button>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- Create Task Modal -->
+  <div id="create-task-modal" class="modal">
+    <div class="modal-content">
+      <h3 class="text-base font-semibold mb-4">New Task</h3>
+      <form onsubmit="createTask(event)">
+        <div class="mb-4">
+          <label class="block text-xs mb-1.5" style="color: var(--text-subtle);">Title</label>
+          <input type="text" id="task-title" required autofocus class="w-full px-3 py-2 rounded-lg text-sm" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); color: var(--text);" placeholder="What needs to be done?">
+        </div>
+        <div class="mb-4">
+          <label class="block text-xs mb-1.5" style="color: var(--text-subtle);">Priority</label>
+          <div class="flex gap-2">
+            <button type="button" onclick="setTaskPriority('low')" class="priority-btn flex-1 py-2 rounded-lg text-xs font-medium" data-priority="low" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); color: var(--text-muted);">Low</button>
+            <button type="button" onclick="setTaskPriority('medium')" class="priority-btn flex-1 py-2 rounded-lg text-xs font-medium" data-priority="medium" style="background: var(--accent-dim); border: 1px solid var(--accent); color: var(--accent);">Medium</button>
+            <button type="button" onclick="setTaskPriority('high')" class="priority-btn flex-1 py-2 rounded-lg text-xs font-medium" data-priority="high" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); color: var(--text-muted);">High</button>
+          </div>
+        </div>
+        <div class="flex gap-3">
+          <button type="button" onclick="hideCreateTaskModal()" class="flex-1 py-2.5 rounded-lg text-sm" style="background: rgba(255,255,255,0.05); color: var(--text-muted);">Cancel</button>
+          <button type="submit" class="flex-1 py-2.5 rounded-lg text-sm font-medium" style="background: var(--accent-dim); color: var(--accent);">Create Task</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Export Menu Modal -->
+  <div id="export-modal" class="modal">
+    <div class="modal-content" style="max-width: 300px;">
+      <h3 class="text-base font-semibold mb-4">Export Data</h3>
+      <div class="space-y-2">
+        <button onclick="exportData('csv')" class="w-full btn justify-between">
+          <span><i class="fas fa-file-csv mr-2"></i> Export as CSV</span>
+          <i class="fas fa-download"></i>
+        </button>
+        <button onclick="exportData('json')" class="w-full btn justify-between">
+          <span><i class="fas fa-file-code mr-2"></i> Export as JSON</span>
+          <i class="fas fa-download"></i>
+        </button>
+        <button onclick="exportData('markdown')" class="w-full btn justify-between">
+          <span><i class="fas fa-file-alt mr-2"></i> Export as Markdown</span>
+          <i class="fas fa-download"></i>
+        </button>
+      </div>
+      <button onclick="hideExportModal()" class="w-full mt-4 py-2 rounded-lg text-sm" style="background: rgba(255,255,255,0.05); color: var(--text-muted);">Close</button>
+    </div>
+  </div>
+
+  <script>
+    // ============================================
+    // STATE
+    // ============================================
+    const state = {
+      currentView: 'grid',
+      batchMode: false,
+      selectedAgents: new Set(),
+      taskPriority: 'medium',
+      agents: [
+        { id: 'orch-01', name: 'Orchestrator Alpha', role: 'ORCH', status: 'working', color: '#c17817', icon: 'brain', tasks: 2, cost: 2.34, tokens: 45600, progress: 67 },
+        { id: 'work-01', name: 'Worker Beta', role: 'WORK', status: 'working', color: '#3b82f6', icon: 'robot', tasks: 1, cost: 0.87, tokens: 28900, progress: 78 },
+        { id: 'work-02', name: 'Worker Gamma', role: 'WORK', status: 'idle', color: '#6b7280', icon: 'robot', tasks: 0, cost: 0.37, tokens: 12400, progress: 0 },
+        { id: 'spec-01', name: 'Specialist Delta', role: 'SPEC', status: 'working', color: '#a78bfa', icon: 'microchip', tasks: 1, cost: 1.23, tokens: 34200, progress: 45 },
+        { id: 'rev-01', name: 'Reviewer Epsilon', role: 'REV', status: 'working', color: '#4a9b5e', icon: 'clipboard-check', tasks: 1, cost: 0.92, tokens: 18300, progress: 23 }
+      ],
+      kanbanTasks: [
+        { id: 't1', title: 'Architecture Review', status: 'in-progress', priority: 'high', agentId: 'orch-01', tags: ['design'] },
+        { id: 't2', title: 'Code Generation', status: 'in-progress', priority: 'medium', agentId: 'work-01', tags: ['dev'] },
+        { id: 't3', title: 'Query Optimization', status: 'in-progress', priority: 'high', agentId: 'spec-01', tags: ['db'] },
+        { id: 't4', title: 'Security Audit', status: 'review', priority: 'high', agentId: 'rev-01', tags: ['security'] },
+        { id: 't5', title: 'API Documentation', status: 'backlog', priority: 'low', agentId: null, tags: ['docs'] },
+        { id: 't6', title: 'Performance Optimization', status: 'ready', priority: 'high', agentId: null, tags: ['perf'] },
+        { id: 't7', title: 'Unit Tests', status: 'done', priority: 'medium', agentId: 'work-02', tags: ['testing'] }
+      ],
+      logs: [
+        { time: '14:32:18', agent: 'ORCH-01', msg: 'Initiated architecture review workflow' },
+        { time: '14:31:45', agent: 'WORK-01', msg: 'Received task batch from Orchestrator' },
+        { time: '14:30:12', agent: 'SPEC-01', msg: 'Completed schema migration analysis', type: 'success' },
+        { time: '14:29:58', agent: 'REV-01', msg: 'Flagged 3 potential security issues' },
+        { time: '14:28:33', agent: 'WORK-01', msg: 'Completed API endpoint generation', type: 'success' }
+      ]
+    };
+
+    const columns = [
+      { id: 'backlog', title: 'Backlog', color: '#6b7280' },
+      { id: 'ready', title: 'Ready', color: '#3b82f6' },
+      { id: 'in-progress', title: 'In Progress', color: '#c17817' },
+      { id: 'review', title: 'Review', color: '#a78bfa' },
+      { id: 'done', title: 'Done', color: '#4a9b5e' }
+    ];
+
+    // ============================================
+    // VIEW SWITCHING
+    // ============================================
+    function switchView(view) {
+      state.currentView = view;
+      document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+      document.getElementById('view-' + view).classList.remove('hidden');
+      
+      const labels = { grid: 'Grid', topology: 'Topology', kanban: 'Kanban', console: 'Console', history: 'History' };
+      const icons = { grid: 'fa-th-large', topology: 'fa-project-diagram', kanban: 'fa-columns', console: 'fa-terminal', history: 'fa-chart-line' };
+      document.getElementById('current-view-label').innerHTML = `<i class="fas ${icons[view]} mr-2"></i>${labels[view]}`;
+      
+      document.getElementById('view-dropdown').classList.remove('show');
+      document.querySelectorAll('#view-dropdown .dropdown-item').forEach(item => item.classList.remove('active'));
+      event.target.closest('.dropdown-item').classList.add('active');
+      
+      if (view === 'kanban') renderKanban();
+      if (view === 'grid') renderGrid();
+      if (view === 'topology') renderTopology();
+      if (view === 'console') renderConsole();
+      if (view === 'history') renderHistory();
+    }
+
+    function toggleDropdown(id) {
+      document.querySelectorAll('.dropdown-content').forEach(d => { if (d.id !== id) d.classList.remove('show'); });
+      document.getElementById(id).classList.toggle('show');
+    }
+
+    // ============================================
+    // GRID VIEW
+    // ============================================
+    function renderGrid() {
+      const grid = document.getElementById('agent-grid');
+      grid.innerHTML = state.agents.map(agent => `
+        <div class="p-4 rounded-lg border cursor-pointer transition-all hover:border-white/20 ${state.selectedAgents.has(agent.id) ? 'border-orange-500' : ''}" 
+             style="background: rgba(255,255,255,0.02); border-color: ${state.selectedAgents.has(agent.id) ? 'var(--accent)' : agent.status === 'working' ? agent.color : 'rgba(255,255,255,0.08)'};"
+             onclick="selectAgent('${agent.id}')">
+          <div class="flex items-start justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <div class="w-8 h-8 rounded flex items-center justify-center" style="background: ${agent.color}20;">
+                <i class="fas fa-${agent.icon} text-xs" style="color: ${agent.color};"></i>
+              </div>
+              <div>
+                <div class="font-medium">${agent.name}</div>
+                <div class="text-xs" style="color: var(--text-subtle);">${agent.role}</div>
+              </div>
+            </div>
+            <span class="w-1.5 h-1.5 rounded-full ${agent.status === 'working' ? 'status-working' : 'status-idle'}"></span>
+          </div>
+          ${agent.progress > 0 ? `
+          <div class="mb-3">
+            <div class="flex justify-between text-xs mb-1" style="color: var(--text-muted);">
+              <span>Task Progress</span>
+              <span>${agent.progress}%</span>
+            </div>
+            <div class="h-1 rounded-full overflow-hidden" style="background: rgba(255,255,255,0.05);">
+              <div class="h-full rounded-full" style="width: ${agent.progress}%; background: ${agent.color};"></div>
+            </div>
+          </div>` : ''}
+          <div class="flex items-center justify-between text-xs pt-2 border-t" style="border-color: rgba(255,255,255,0.05); color: var(--text-subtle);">
+            <span class="mono">$${agent.cost}</span>
+            <span>${agent.tasks} tasks</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function selectAgent(id) {
+      if (state.batchMode) {
+        if (state.selectedAgents.has(id)) state.selectedAgents.delete(id);
+        else state.selectedAgents.add(id);
+        updateBatchActions();
+        renderGrid();
+      }
+    }
+
+    function toggleBatchMode() {
+      state.batchMode = !state.batchMode;
+      const btn = document.getElementById('batch-btn');
+      btn.classList.toggle('btn-primary');
+      btn.innerHTML = state.batchMode ? '<i class="fas fa-check"></i> Done' : '<i class="fas fa-check-square"></i> Select';
+      if (!state.batchMode) {
+        state.selectedAgents.clear();
+        updateBatchActions();
+        renderGrid();
+      }
+    }
+
+    function updateBatchActions() {
+      const panel = document.getElementById('batch-actions');
+      document.getElementById('selected-count').textContent = state.selectedAgents.size;
+      panel.classList.toggle('hidden', state.selectedAgents.size === 0);
+    }
+
+    function clearSelection() {
+      state.selectedAgents.clear();
+      updateBatchActions();
+      renderGrid();
+    }
+
+    function batchRestart() { alert('Restarting ' + state.selectedAgents.size + ' agents'); }
+    function batchStop() { alert('Stopping ' + state.selectedAgents.size + ' agents'); }
+
+    // ============================================
+    // KANBAN VIEW
+    // ============================================
+    function renderKanban() {
+      const board = document.getElementById('kanban-board');
+      document.getElementById('task-count').textContent = state.kanbanTasks.length;
+      
+      // Update column counts
+      const countsHtml = columns.map(col => {
+        const count = state.kanbanTasks.filter(t => t.status === col.id).length;
+        return `<span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full" style="background: ${col.color};"></span>${count}</span>`;
+      }).join('');
+      document.getElementById('column-counts').innerHTML = countsHtml;
+      
+      board.innerHTML = columns.map(col => {
+        const tasks = state.kanbanTasks.filter(t => t.status === col.id);
+        return `
+          <div class="kanban-column flex-1 flex flex-col" data-status="${col.id}" 
+               ondragover="handleDragOver(event, '${col.id}')" 
+               ondragleave="handleDragLeave(event)"
+               ondrop="handleDrop(event, '${col.id}')">
+            <div class="column-header flex items-center justify-between px-3 py-2 rounded-t-lg border-t border-x" 
+                 style="background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.05);">
+              <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full" style="background: ${col.color};"></span>
+                <span class="text-xs font-medium">${col.title}</span>
+              </div>
+              <span class="text-xs px-1.5 py-0.5 rounded" style="background: rgba(255,255,255,0.05); color: var(--text-subtle);">${tasks.length}</span>
+            </div>
+            <div class="flex-1 p-2 rounded-b-lg border-b border-x overflow-y-auto" style="background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.05);">
+              <div class="space-y-2">
+                ${tasks.map(task => renderKanbanCard(task)).join('')}
+                ${tasks.length === 0 ? `<div class="p-4 rounded-lg border border-dashed text-center text-xs" style="border-color: rgba(255,255,255,0.05); color: var(--text-subtle);"><i class="fas fa-inbox mb-1 block"></i>No tasks</div>` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderKanbanCard(task) {
+      const agent = state.agents.find(a => a.id === task.agentId);
+      const priorityColors = { low: 'var(--text-subtle)', medium: 'var(--accent)', high: 'var(--red)' };
+      return `
+        <div class="kanban-card" draggable="true" data-task-id="${task.id}" 
+             ondragstart="handleDragStart(event, '${task.id}')"
+             ondragend="handleDragEnd(event)">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex gap-1">
+              ${task.tags.map(tag => `<span class="text-[10px] px-1.5 py-0.5 rounded" style="background: rgba(255,255,255,0.05); color: var(--text-subtle);">${tag}</span>`).join('')}
+            </div>
+            <span class="w-1.5 h-1.5 rounded-full" style="background: ${priorityColors[task.priority]};" title="Priority: ${task.priority}"></span>
+          </div>
+          <h4 class="text-sm font-medium mb-1">${task.title}</h4>
+          <div class="flex items-center justify-between pt-2 border-t" style="border-color: rgba(255,255,255,0.05);">
+            ${agent ? `
+              <div class="flex items-center gap-1.5">
+                <div class="w-5 h-5 rounded flex items-center justify-center" style="background: ${agent.color}20;">
+                  <i class="fas fa-${agent.icon} text-[10px]" style="color: ${agent.color};"></i>
+                </div>
+                <span class="text-[10px] truncate max-w-[80px]" style="color: var(--text-muted);">${agent.name.split(' ')[0]}</span>
+              </div>
+            ` : `
+              <button onclick="assignTask('${task.id}')" class="text-[10px] px-2 py-1 rounded hover:bg-white/5" style="color: var(--text-subtle);">
+                <i class="fas fa-user-plus mr-1"></i> Assign
+              </button>
+            `}
+            <button onclick="deleteTask('${task.id}')" class="text-[10px] p-1 rounded hover:bg-white/5" style="color: var(--text-subtle);">
+              <i class="fas fa-ellipsis-h"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function handleDragStart(e, taskId) {
+      e.dataTransfer.setData('taskId', taskId);
+      e.target.classList.add('dragging');
+    }
+
+    function handleDragEnd(e) {
+      e.target.classList.remove('dragging');
+      document.querySelectorAll('.kanban-column').forEach(col => col.classList.remove('drag-over'));
+    }
+
+    function handleDragOver(e, status) {
+      e.preventDefault();
+      e.currentTarget.classList.add('drag-over');
+    }
+
+    function handleDragLeave(e) {
+      e.currentTarget.classList.remove('drag-over');
+    }
+
+    function handleDrop(e, status) {
+      e.preventDefault();
+      const taskId = e.dataTransfer.getData('taskId');
+      const task = state.kanbanTasks.find(t => t.id === taskId);
+      if (task) {
+        task.status = status;
+        renderKanban();
+        renderWorkspace();
+      }
+    }
+
+    function assignTask(taskId) {
+      const agentNames = state.agents.map((a, i) => `${i + 1}. ${a.name}`).join('\n');
+      const choice = prompt(`Assign to agent:\n${agentNames}\n\nEnter number:`);
+      if (choice) {
+        const agent = state.agents[parseInt(choice) - 1];
+        if (agent) {
+          const task = state.kanbanTasks.find(t => t.id === taskId);
+          if (task) task.agentId = agent.id;
+          renderKanban();
+          renderWorkspace();
+        }
+      }
+    }
+
+    function deleteTask(taskId) {
+      if (confirm('Delete this task?')) {
+        state.kanbanTasks = state.kanbanTasks.filter(t => t.id !== taskId);
+        renderKanban();
+        renderWorkspace();
+      }
+    }
+
+    // ============================================
+    // TOPOLOGY VIEW
+    // ============================================
+    function renderTopology() {
+      const svg = document.getElementById('topology-svg');
+      const orch = state.agents.find(a => a.role === 'ORCH');
+      const workers = state.agents.filter(a => a.role !== 'ORCH');
+      
+      let svgContent = `
+        <g stroke="var(--border)" stroke-width="1" fill="none">
+          ${workers.map((w, i) => {
+            const angle = (i / workers.length) * 2 * Math.PI - Math.PI / 2;
+            const x = 400 + Math.cos(angle) * 180;
+            const y = 200 + Math.sin(angle) * 120;
+            return `<line x1="400" y1="100" x2="${x}" y2="${y}" stroke-dasharray="4,4"/>`;
+          }).join('')}
+        </g>
+        <g class="topology-node" transform="translate(400, 100)">
+          <circle r="28" fill="${orch.color}20" stroke="${orch.color}" stroke-width="2"/>
+          <text y="4" text-anchor="middle" fill="var(--text)" font-size="10">ORCH</text>
+        </g>
+      `;
+      
+      workers.forEach((agent, i) => {
+        const angle = (i / workers.length) * 2 * Math.PI - Math.PI / 2;
+        const x = 400 + Math.cos(angle) * 180;
+        const y = 200 + Math.sin(angle) * 120;
+        const isWorking = agent.status === 'working';
+        svgContent += `
+          <g class="topology-node" transform="translate(${x}, ${y})">
+            <circle r="22" fill="${agent.color}15" stroke="${agent.color}" stroke-width="1.5"/>
+            <text y="3" text-anchor="middle" fill="${agent.color}" font-size="9">${agent.role}</text>
+            ${isWorking ? `<circle cx="16" cy="-16" r="3" fill="var(--green)"/>` : ''}
+          </g>
+        `;
+      });
+      
+      svg.innerHTML = svgContent;
+    }
+
+    // ============================================
+    // CONSOLE VIEW
+    // ============================================
+    function renderConsole() {
+      document.getElementById('console-agents').innerHTML = state.agents.map(agent => `
+        <div class="px-3 py-2 text-xs cursor-pointer hover:bg-white/5 ${agent.role === 'ORCH' ? 'border-l-2' : ''}" 
+             style="${agent.role === 'ORCH' ? 'background: var(--accent-dim); border-color: var(--accent);' : ''}">
+          <div class="flex items-center gap-2">
+            <span class="status-dot ${agent.status === 'working' ? 'status-working' : 'status-idle'}"></span>
+            <span>${agent.role}-${agent.id.split('-')[1].toUpperCase()}</span>
+          </div>
+        </div>
+      `).join('');
+      
+      document.getElementById('console-logs').innerHTML = state.logs.map(log => `
+        <div class="console-line">
+          <span style="color: var(--text-subtle);">${log.time}</span>
+          <span style="color: var(--accent); margin: 0 8px;">${log.agent}</span>
+          <span style="color: ${log.type === 'success' ? 'var(--green)' : 'var(--text-muted)'};">${log.msg}</span>
+        </div>
+      `).join('');
+      
+      document.getElementById('console-metrics').innerHTML = `
+        <div><div class="text-[10px] mb-1" style="color: var(--text-subtle);">THROUGHPUT</div><div class="text-xl mono font-semibold" style="color: var(--accent);">4.2 <span class="text-xs">t/s</span></div></div>
+        <div><div class="text-[10px] mb-1" style="color: var(--text-subtle);">LATENCY</div><div class="text-xl mono font-semibold">234 <span class="text-xs">ms</span></div></div>
+        <div><div class="text-[10px] mb-1" style="color: var(--text-subtle);">COST/HR</div><div class="text-xl mono font-semibold" style="color: var(--green);">$0.14</div></div>
+      `;
+    }
+
+    // ============================================
+    // HISTORY VIEW
+    // ============================================
+    function renderHistory() {
+      const canvas = document.getElementById('history-chart');
+      const ctx = canvas.getContext('2d');
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+      
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw grid
+      ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+      ctx.setLineDash([3, 3]);
+      for (let i = 1; i < 5; i++) {
+        ctx.beginPath();
+        ctx.moveTo(0, canvas.height * i / 5);
+        ctx.lineTo(canvas.width, canvas.height * i / 5);
+        ctx.stroke();
+      }
+      
+      // Draw area chart
+      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      gradient.addColorStop(0, 'rgba(193, 120, 23, 0.3)');
+      gradient.addColorStop(1, 'rgba(193, 120, 23, 0)');
+      
+      ctx.beginPath();
+      ctx.moveTo(0, canvas.height * 0.7);
+      ctx.quadraticCurveTo(canvas.width * 0.3, canvas.height * 0.6, canvas.width * 0.6, canvas.height * 0.5);
+      ctx.quadraticCurveTo(canvas.width * 0.8, canvas.height * 0.45, canvas.width, canvas.height * 0.4);
+      ctx.lineTo(canvas.width, canvas.height);
+      ctx.lineTo(0, canvas.height);
+      ctx.fillStyle = gradient;
+      ctx.fill();
+      
+      ctx.beginPath();
+      ctx.moveTo(0, canvas.height * 0.7);
+      ctx.quadraticCurveTo(canvas.width * 0.3, canvas.height * 0.6, canvas.width * 0.6, canvas.height * 0.5);
+      ctx.quadraticCurveTo(canvas.width * 0.8, canvas.height * 0.45, canvas.width, canvas.height * 0.4);
+      ctx.strokeStyle = '#c17817';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([]);
+      ctx.stroke();
+      
+      document.getElementById('history-stats').innerHTML = `
+        <div class="p-3 rounded" style="background: var(--bg);"><div class="text-[10px] mb-1" style="color: var(--text-subtle);">Active Agents</div><div class="text-lg mono" style="color: var(--accent);">4</div></div>
+        <div class="p-3 rounded" style="background: var(--bg);"><div class="text-[10px] mb-1" style="color: var(--text-subtle);">Total Cost</div><div class="text-lg mono" style="color: var(--green);">$5.73</div></div>
+      `;
+    }
+
+    function setHistoryRange(range) {
+      renderHistory();
+    }
+
+    // ============================================
+    // WORKSPACE PANEL
+    // ============================================
+    function renderWorkspace() {
+      const tasks = state.kanbanTasks.filter(t => t.status !== 'done');
+      document.getElementById('workspace-tasks').innerHTML = `
+        <div class="text-[10px] uppercase tracking-wider mb-2" style="color: var(--text-subtle);">Active Tasks</div>
+        <div class="space-y-2">
+          ${tasks.map(task => {
+            const agent = state.agents.find(a => a.id === task.agentId);
+            return `
+              <div class="p-2 rounded border cursor-pointer" style="background: var(--bg); border-color: var(--border);">
+                <div class="flex items-center gap-2 mb-1">
+                  <i class="fas fa-circle text-[8px]" style="color: ${agent?.color || 'var(--text-subtle)'};"></i>
+                  <span class="text-xs font-medium truncate">${task.title}</span>
+                </div>
+                ${agent ? `<span class="text-[10px] px-1.5 rounded ml-4" style="background: ${agent.color}20; color: ${agent.color};">${agent.id.toUpperCase()}</span>` : '<span class="text-[10px] ml-4" style="color: var(--text-subtle);">Unassigned</span>'}
+              </div>
+            `;
+          }).join('')}
+        </div>
+        <div class="mt-6 text-[10px] uppercase tracking-wider mb-2" style="color: var(--text-subtle);">Unassigned</div>
+        <div class="p-3 rounded border border-dashed text-center cursor-pointer hover:border-solid" style="border-color: var(--border); color: var(--text-subtle);">
+          <i class="fas fa-plus mb-1"></i>
+          <div class="text-xs">Drag tasks here</div>
+        </div>
+      `;
+    }
+
+    // ============================================
+    // MODALS
+    // ============================================
+    function showCreateTaskModal() {
+      document.getElementById('create-task-modal').classList.add('show');
+      document.getElementById('task-title').focus();
+    }
+
+    function hideCreateTaskModal() {
+      document.getElementById('create-task-modal').classList.remove('show');
+      document.getElementById('task-title').value = '';
+    }
+
+    function setTaskPriority(priority) {
+      state.taskPriority = priority;
+      document.querySelectorAll('.priority-btn').forEach(btn => {
+        const isSelected = btn.dataset.priority === priority;
+        btn.style.background = isSelected ? 'var(--accent-dim)' : 'rgba(255,255,255,0.03)';
+        btn.style.borderColor = isSelected ? 'var(--accent)' : 'rgba(255,255,255,0.08)';
+        btn.style.color = isSelected ? 'var(--accent)' : 'var(--text-muted)';
+      });
+    }
+
+    function createTask(e) {
+      e.preventDefault();
+      const title = document.getElementById('task-title').value.trim();
+      if (title) {
+        state.kanbanTasks.push({
+          id: 't' + Date.now(),
+          title,
+          status: 'backlog',
+          priority: state.taskPriority,
+          agentId: null,
+          tags: []
+        });
+        hideCreateTaskModal();
+        if (state.currentView === 'kanban') renderKanban();
+        renderWorkspace();
+      }
+    }
+
+    function showExportMenu() {
+      document.getElementById('export-modal').classList.add('show');
+    }
+
+    function hideExportModal() {
+      document.getElementById('export-modal').classList.remove('show');
+    }
+
+    function exportData(format) {
+      alert(`Exporting as ${format.toUpperCase()}...\n\nIn production, this would download a file with actual data.`);
+      hideExportModal();
+    }
+
+    // ============================================
+    // WORKSPACE TOGGLE
+    // ============================================
+    let workspaceCollapsed = false;
+
+    function toggleWorkspace() {
+      workspaceCollapsed = !workspaceCollapsed;
+      const panel = document.getElementById('workspace-panel');
+      const toggle = document.getElementById('workspace-toggle');
+      const icon = toggle.querySelector('i');
+      
+      panel.classList.toggle('collapsed', workspaceCollapsed);
+      icon.className = workspaceCollapsed ? 'fas fa-chevron-left text-xs' : 'fas fa-chevron-right text-xs';
+      toggle.style.right = workspaceCollapsed ? '0' : '16rem';
+    }
+
+    // ============================================
+    // INIT
+    // ============================================
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.dropdown')) {
+        document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
+      }
+    });
+
+    // Initial render
+    renderGrid();
+    renderWorkspace();
+  </script>
+</body>
+</html>

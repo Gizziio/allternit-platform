@@ -4,6 +4,7 @@ import { useAgentSurfaceModeStore, type AgentModeSurface } from "@/stores/agent-
 
 import { useAgentStore } from "./agent.store";
 import type { Agent } from "./agent.types";
+import { useEmbeddedAgentSession } from "./embedded-agent-session.store";
 
 type AgentLike = Pick<Agent, "id" | "name" | "provider" | "model" | "config"> | null;
 
@@ -17,10 +18,17 @@ export interface AgentConversationContext {
   agentSessionKey?: string;
 }
 
+/**
+ * Derives whether agent mode is active for a surface from the embedded session.
+ * Agent mode is on when there is an active embedded session whose session_mode is 'agent'.
+ */
+export function useSurfaceAgentModeEnabled(surface: AgentModeSurface): boolean {
+  const { isEmbedded, descriptor } = useEmbeddedAgentSession(surface);
+  return isEmbedded && descriptor.sessionMode === "agent";
+}
+
 export function useSurfaceAgentSelection(surface: AgentModeSurface) {
-  const agentModeEnabled = useAgentSurfaceModeStore(
-    (state) => state.enabledBySurface[surface],
-  );
+  const agentModeEnabled = useSurfaceAgentModeEnabled(surface);
   const selectedAgentId = useAgentSurfaceModeStore(
     (state) => state.selectedAgentIdBySurface[surface],
   );

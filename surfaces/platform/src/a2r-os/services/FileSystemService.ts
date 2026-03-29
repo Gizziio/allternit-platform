@@ -535,27 +535,6 @@ export class FileSystemService {
       this.memoryStore.set(folder, entry);
     }
 
-    const sampleFiles = [
-      { name: 'welcome.md', folder: 'Documents', content: '# Welcome to A2r Drive\n\nThis is your personal file storage.' },
-      { name: 'sample-data.csv', folder: 'Exports', content: 'name,value\nA,10\nB,20\nC,30' },
-    ];
-
-    for (const file of sampleFiles) {
-      const path = this.joinPath(file.folder, file.name);
-      const entry: DriveEntry = {
-        id: this.generateId(),
-        name: file.name,
-        path,
-        type: 'file',
-        size: file.content.length,
-        createdAt: Date.now(),
-        modifiedAt: Date.now(),
-        mimeType: this.getMimeType(file.name),
-        parentId: file.folder,
-      };
-      this.memoryStore.set(path, entry);
-      this.memoryStore.set(`__content__${path}`, file.content as unknown as DriveEntry);
-    }
   }
 
   private listEntriesMemory(folderPath: string): DriveEntry[] {

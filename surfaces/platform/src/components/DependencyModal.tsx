@@ -8,15 +8,15 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import {
   X,
-  Download,
-  CheckCircle2,
-  AlertCircle,
+  DownloadSimple,
+  CheckCircle,
+  Warning,
   Package,
-  Loader2,
-  ChevronRight,
+  CircleNotch,
+  CaretRight,
   Info,
-  ListTree,
-} from 'lucide-react';
+  TreeView as ListTree,
+} from '@phosphor-icons/react';
 import type { DependencyResolutionResult, DependencyTreeNode } from '../plugins/dependencies';
 
 // ============================================================================
@@ -160,17 +160,17 @@ function DependencyItem({
           flexShrink: 0,
         }}
       >
-        {isSelected && <CheckCircle2 size={12} color={THEME.accent} />}
+        {isSelected && <CheckCircle size={12} color={THEME.accent} />}
       </button>
       
       {/* Status Icon */}
       <div style={{ flexShrink: 0 }}>
         {node.status === 'installed' ? (
-          <CheckCircle2 size={16} color={THEME.success} />
+          <CheckCircle size={16} color={THEME.success} />
         ) : node.status === 'missing' ? (
-          <AlertCircle size={16} color={THEME.danger} />
+          <Warning size={16} color={THEME.danger} />
         ) : node.status === 'conflict' ? (
-          <AlertCircle size={16} color={THEME.warning} />
+          <Warning size={16} color={THEME.warning} />
         ) : (
           <Package size={16} color={THEME.info} />
         )}
@@ -365,7 +365,7 @@ export function DependencyModal({
                 gap: 8,
               }}
             >
-              <Download size={18} color={THEME.accent} />
+              <DownloadSimple size={18} color={THEME.accent} />
               Install Dependencies
             </h2>
             <p style={{ fontSize: 12, color: THEME.textSecondary, margin: '4px 0 0' }}>
@@ -405,14 +405,14 @@ export function DependencyModal({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <CheckCircle2 size={14} color={THEME.success} />
+            <CheckCircle size={14} color={THEME.success} />
             <span style={{ fontSize: 12, color: THEME.textSecondary }}>
               {installedCount} installed
             </span>
           </div>
           {missingCount > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <AlertCircle size={14} color={THEME.danger} />
+              <Warning size={14} color={THEME.danger} />
               <span style={{ fontSize: 12, color: THEME.textSecondary }}>
                 {missingCount} to install
               </span>
@@ -420,7 +420,7 @@ export function DependencyModal({
           )}
           {conflictCount > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <AlertCircle size={14} color={THEME.warning} />
+              <Warning size={14} color={THEME.warning} />
               <span style={{ fontSize: 12, color: THEME.textSecondary }}>
                 {conflictCount} conflicts
               </span>
@@ -444,7 +444,7 @@ export function DependencyModal({
                 color: THEME.textSecondary,
               }}
             >
-              <CheckCircle2 size={48} color={THEME.success} style={{ marginBottom: 12 }} />
+              <CheckCircle size={48} color={THEME.success} style={{ marginBottom: 12 }} />
               <p style={{ fontSize: 14, margin: 0 }}>All dependencies are already installed!</p>
             </div>
           ) : (
@@ -509,7 +509,7 @@ export function DependencyModal({
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-              <Loader2 size={16} color={THEME.accent} style={{ animation: 'spin 1s linear infinite' }} />
+              <CircleNotch size={16} color={THEME.accent} style={{ animation: 'spin 1s linear infinite' }} />
               <span style={{ fontSize: 13, color: THEME.textSecondary }}>
                 Installing{installingPluginName ? ` ${installingPluginName}` : '...'}
               </span>
@@ -608,7 +608,7 @@ export function DependencyModal({
                   gap: 6,
                 }}
               >
-                <Download size={14} />
+                <DownloadSimple size={14} />
                 Install All ({missingCount})
               </button>
             ) : (
@@ -630,7 +630,7 @@ export function DependencyModal({
                   gap: 6,
                 }}
               >
-                <CheckCircle2 size={14} />
+                <CheckCircle size={14} />
                 Continue
               </button>
             )}

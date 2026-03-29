@@ -1,15 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import GlassSurface from '@/design/GlassSurface';
 import {
-  Store,
-  Search,
+  Storefront,
+  MagnifyingGlass,
   Check,
   Star,
   Package,
-  Plug,
-  Code2,
-  Zap,
-} from 'lucide-react';
+  PlugsConnected,
+  Code,
+  Lightning,
+} from '@phosphor-icons/react';
 
 type Category = 'all' | 'models' | 'tools' | 'integrations' | 'plugins';
 
@@ -80,7 +80,7 @@ const MARKETPLACE_ITEMS: MarketplaceItem[] = [
     version: '2.3.0',
     rating: 4.5,
     installed: true,
-    icon: <Search size={24} />,
+    icon: <MagnifyingGlass size={24} />,
     color: '#3b82f6',
   },
   {
@@ -92,7 +92,7 @@ const MARKETPLACE_ITEMS: MarketplaceItem[] = [
     version: '1.8.1',
     rating: 4.7,
     installed: false,
-    icon: <Code2 size={24} />,
+    icon: <Code size={24} />,
     color: '#ef4444',
   },
   {
@@ -160,7 +160,7 @@ const MARKETPLACE_ITEMS: MarketplaceItem[] = [
     version: '1.0.0',
     rating: 4.8,
     installed: false,
-    icon: <Zap size={24} />,
+    icon: <Lightning size={24} />,
     color: '#d4b08c',
   },
 ];
@@ -262,7 +262,7 @@ export const MarketplaceView: React.FC = () => {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-          <Store size={28} style={{ color: '#d4b08c' }} />
+          <Storefront size={28} style={{ color: '#d4b08c' }} />
           <h1 style={{ fontSize: '28px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
             Marketplace
           </h1>

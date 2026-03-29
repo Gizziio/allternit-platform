@@ -9,10 +9,19 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  GitBranch, Plus, Play, Square, CheckCircle, Clock, 
-  AlertTriangle, Loader2, Edit3, LayoutList, ArrowRight
-} from "lucide-react";
+import {
+  GitBranch,
+  Plus,
+  Play,
+  Square,
+  CheckCircle,
+  Clock,
+  Warning,
+  CircleNotch,
+  PencilSimple,
+  ListDashes,
+  ArrowRight,
+} from '@phosphor-icons/react';
 import type { DagDefinition, DagNode } from "../dak.types";
 
 export function DagPlanningPanel() {
@@ -58,7 +67,7 @@ export function DagPlanningPanel() {
       <Tabs defaultValue="plans" className="flex-1 flex flex-col">
         <TabsList className="mx-4 mt-4">
           <TabsTrigger value="plans">
-            <LayoutList className="w-4 h-4 mr-2" /> Plans
+            <ListDashes className="w-4 h-4 mr-2" /> Plans
           </TabsTrigger>
           <TabsTrigger value="create">
             <Plus className="w-4 h-4 mr-2" /> Create
@@ -163,7 +172,7 @@ export function DagPlanningPanel() {
                 disabled={!planInput.trim() || isLoading}
                 className="w-full"
               >
-                {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <GitBranch className="w-4 h-4 mr-2" />}
+                {isLoading ? <CircleNotch className="w-4 h-4 mr-2 animate-spin" /> : <GitBranch className="w-4 h-4 mr-2" />}
                 Generate DAG Plan
               </Button>
             </CardContent>
@@ -197,7 +206,7 @@ export function DagPlanningPanel() {
             </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm">
-                <Edit3 className="w-4 h-4 mr-1" /> Edit
+                <PencilSimple className="w-4 h-4 mr-1" /> Edit
               </Button>
               <Button 
                 size="sm" 
@@ -245,11 +254,11 @@ function ExecutionListItem({ execution, onCancel }: { execution: any; onCancel: 
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           {isRunning ? (
-            <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+            <CircleNotch className="w-4 h-4 animate-spin text-blue-500" />
           ) : execution.status === "completed" ? (
             <CheckCircle className="w-4 h-4 text-green-500" />
           ) : (
-            <AlertTriangle className="w-4 h-4 text-red-500" />
+            <Warning className="w-4 h-4 text-red-500" />
           )}
           <span className="font-medium text-sm font-mono">{execution.runId.slice(0, 12)}...</span>
         </div>
@@ -368,11 +377,11 @@ function NodeTree({ node, nodes, children, execution, depth }: {
   return (
     <div className="space-y-2" style={{ marginLeft: depth * 24 }}>
       <div className="flex items-center gap-2 p-2 rounded border hover:bg-muted/50">
-        {status === "running" && <Loader2 className="w-4 h-4 animate-spin text-blue-500" />}
+        {status === "running" && <CircleNotch className="w-4 h-4 animate-spin text-blue-500" />}
         {status === "completed" && <CheckCircle className="w-4 h-4 text-green-500" />}
-        {status === "failed" && <AlertTriangle className="w-4 h-4 text-red-500" />}
+        {status === "failed" && <Warning className="w-4 h-4 text-red-500" />}
         {status === "pending" && <Clock className="w-4 h-4 text-muted-foreground" />}
-        {status === "blocked" && <AlertTriangle className="w-4 h-4 text-yellow-500" />}
+        {status === "blocked" && <Warning className="w-4 h-4 text-yellow-500" />}
         
         <div className="flex-1 min-w-0">
           <div className="text-sm font-medium truncate">{node.id}</div>

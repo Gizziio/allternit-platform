@@ -8,13 +8,14 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import {
+  getRuntimeGatewayBaseUrl,
+  getRuntimeGatewayBaseUrlSync,
+} from '@/lib/runtime-backend-client';
 
-const GATEWAY_URL = process.env.NEXT_PUBLIC_GATEWAY_URL || 'http://127.0.0.1:8013';
 const API_VERSION = '/api/v1';
 const BROWSER_GATEWAY_ENABLED =
-  (typeof import.meta !== 'undefined' && import.meta.env
-    ? (import.meta.env as any).VITE_ENABLE_BROWSER_GATEWAY
-    : undefined) !== 'false';
+  process.env.NEXT_PUBLIC_ENABLE_BROWSER_GATEWAY !== 'false';
 
 // ═════════════════════════════════════════════════════════════════════════════
 // Types
@@ -78,17 +79,12 @@ export interface ActOptions {
 // ═════════════════════════════════════════════════════════════════════════════
 
 class BrowserGatewayClient {
-  private gatewayUrl: string;
-
-  constructor(gatewayUrl: string = GATEWAY_URL) {
-    this.gatewayUrl = gatewayUrl;
-  }
-
   private async gatewayRequest(
     tool: string,
     params: Record<string, unknown>
   ): Promise<any> {
-    const response = await fetch(`${this.gatewayUrl}${API_VERSION}/gateway/tool`, {
+    const gatewayUrl = await getRuntimeGatewayBaseUrl();
+    const response = await fetch(`${gatewayUrl}${API_VERSION}/gateway/tool`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -234,17 +230,12 @@ export const browserClient = new BrowserGatewayClient();
 // ═════════════════════════════════════════════════════════════════════════════
 
 class CanvasGatewayClient {
-  private gatewayUrl: string;
-
-  constructor(gatewayUrl: string = GATEWAY_URL) {
-    this.gatewayUrl = gatewayUrl;
-  }
-
   private async gatewayRequest(
     tool: string,
     params: Record<string, unknown>
   ): Promise<any> {
-    const response = await fetch(`${this.gatewayUrl}${API_VERSION}/gateway/tool`, {
+    const gatewayUrl = await getRuntimeGatewayBaseUrl();
+    const response = await fetch(`${gatewayUrl}${API_VERSION}/gateway/tool`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -499,7 +490,7 @@ export function useCanvasHost() {
     // Check if canvas host is available
     const checkReady = async () => {
       try {
-        const response = await fetch(`${GATEWAY_URL}${API_VERSION}/gateway/tool`, {
+        const response = await fetch(`${getRuntimeGatewayBaseUrlSync()}${API_VERSION}/gateway/tool`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

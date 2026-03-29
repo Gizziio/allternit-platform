@@ -13,24 +13,24 @@ import {
   Calendar,
   Clock,
   Play,
-  Save,
+  FloppyDisk,
   X,
-  ChevronRight,
-  ChevronLeft,
+  CaretRight,
+  CaretLeft,
   Check,
-  AlertCircle,
-  Loader2,
-  Sparkles,
+  Warning,
+  CircleNotch,
+  Sparkle,
   Terminal,
   Globe,
   FileText,
   Database,
-  Mail,
+  EnvelopeSimple,
   Code,
-  Settings,
-  Wand2,
-  Bot,
-} from "lucide-react";
+  GearSix,
+  MagicWand,
+  Robot,
+} from '@phosphor-icons/react';
 
 // ============================================================================
 // Types
@@ -219,7 +219,7 @@ const TASK_TEMPLATES: TaskTemplate[] = [
     id: "dependency-check",
     name: "Check Dependencies",
     description: "Check for outdated or vulnerable dependencies",
-    icon: <Settings size={20} />,
+    icon: <GearSix size={20} />,
     category: "maintenance",
     defaultPrompt: "Check the project dependencies and report on status:",
     parameters: [
@@ -605,7 +605,7 @@ const TASK_TEMPLATES: TaskTemplate[] = [
     id: "smart-backup",
     name: "Smart Project Backup",
     description: "Intelligent backup of important project files",
-    icon: <Save size={20} />,
+    icon: <FloppyDisk size={20} />,
     category: "maintenance",
     defaultPrompt: "Create a backup of the project, prioritizing important files:",
     parameters: [
@@ -668,7 +668,7 @@ const TASK_TEMPLATES: TaskTemplate[] = [
     id: "custom-task",
     name: "Custom Task",
     description: "Create your own recurring AI task",
-    icon: <Bot size={20} />,
+    icon: <Robot size={20} />,
     category: "custom",
     defaultPrompt: "",
     parameters: [
@@ -1118,7 +1118,7 @@ export function CronJobWizard({
                 fontSize: 13,
               }}
             >
-              <AlertCircle size={16} />
+              <Warning size={16} />
               {error}
             </div>
           )}
@@ -1150,7 +1150,7 @@ export function CronJobWizard({
                 cursor: "pointer",
               }}
             >
-              <ChevronLeft size={16} />
+              <CaretLeft size={16} />
               Back
             </button>
 
@@ -1175,12 +1175,12 @@ export function CronJobWizard({
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
+                    <CircleNotch size={16} style={{ animation: "spin 1s linear infinite" }} />
                     Creating...
                   </>
                 ) : (
                   <>
-                    <Save size={16} />
+                    <FloppyDisk size={16} />
                     Create Job
                   </>
                 )}
@@ -1203,7 +1203,7 @@ export function CronJobWizard({
                 }}
               >
                 Next
-                <ChevronRight size={16} />
+                <CaretRight size={16} />
               </button>
             )}
           </div>
@@ -1453,9 +1453,9 @@ function ConfigureStep({
             }}
           >
             {isGenerating ? (
-              <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} />
+              <CircleNotch size={14} style={{ animation: "spin 1s linear infinite" }} />
             ) : (
-              <Sparkles size={14} />
+              <Sparkle size={14} />
             )}
             {isGenerating ? "Generating..." : "Generate AI Prompt from Parameters"}
           </button>

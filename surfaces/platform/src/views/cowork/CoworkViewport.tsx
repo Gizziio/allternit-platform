@@ -8,15 +8,15 @@ import { cn } from '@/lib/utils';
 import { useCoworkStore } from './CoworkStore';
 import type { ObservationEvent } from './cowork.types';
 import {
-  ZoomIn,
-  ZoomOut,
-  Maximize,
-  Grid3x3,
+  MagnifyingGlassPlus,
+  MagnifyingGlassMinus,
+  ArrowsOut,
+  SquaresFour,
   Eye,
-  EyeOff,
-  MousePointer,
+  EyeSlash,
+  Cursor,
   Crosshair,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 
 // ============================================================================
 // Label Overlay Component
@@ -191,7 +191,7 @@ export const CoworkViewport = memo(function CoworkViewport() {
     return (
       <div className="h-full flex flex-col items-center justify-center bg-[#0d0d0d] text-white/30">
         <div className="w-16 h-16 rounded-full border-2 border-dashed border-white/20 flex items-center justify-center mb-4">
-          <Crosshair className="w-6 h-6" />
+          <Crosshair size={24} />
         </div>
         <p className="text-sm">No active session</p>
         <p className="text-xs text-white/20 mt-1">Start a cowork session to see the viewport</p>
@@ -224,7 +224,7 @@ export const CoworkViewport = memo(function CoworkViewport() {
             className="p-1.5 rounded hover:bg-white/10 text-white/50 hover:text-white/80"
             title="Zoom out"
           >
-            <ZoomOut className="w-4 h-4" />
+            <MagnifyingGlassMinus size={16} />
           </button>
           <span className="text-xs text-white/40 w-12 text-center">
             {Math.round(viewportZoom * 100)}%
@@ -234,7 +234,7 @@ export const CoworkViewport = memo(function CoworkViewport() {
             className="p-1.5 rounded hover:bg-white/10 text-white/50 hover:text-white/80"
             title="Zoom in"
           >
-            <ZoomIn className="w-4 h-4" />
+            <MagnifyingGlassPlus size={16} />
           </button>
         </div>
         
@@ -249,7 +249,7 @@ export const CoworkViewport = memo(function CoworkViewport() {
                 : "text-white/40 hover:text-white/60"
             )}
           >
-            <Grid3x3 className="w-3.5 h-3.5" />
+            <SquaresFour className="w-3.5 h-3.5" />
             Labels
           </button>
           
@@ -263,7 +263,7 @@ export const CoworkViewport = memo(function CoworkViewport() {
                 : "text-white/40 hover:text-white/60"
             )}
           >
-            {showOcr ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+            {showOcr ? <Eye className="w-3.5 h-3.5" /> : <EyeSlash className="w-3.5 h-3.5" />}
             OCR
           </button>
           
@@ -273,7 +273,7 @@ export const CoworkViewport = memo(function CoworkViewport() {
             className="p-1.5 rounded hover:bg-white/10 text-white/50 hover:text-white/80 ml-2"
             title="Fullscreen"
           >
-            <Maximize className="w-4 h-4" />
+            <ArrowsOut size={16} />
           </button>
         </div>
       </div>
@@ -342,7 +342,7 @@ export const CoworkViewport = memo(function CoworkViewport() {
           </div>
         ) : (
           <div className="text-center text-white/20">
-            <MousePointer className="w-12 h-12 mx-auto mb-3 opacity-30" />
+            <Cursor className="w-12 h-12 mx-auto mb-3 opacity-30" />
             <p className="text-sm">Waiting for observation...</p>
             <p className="text-xs text-white/10 mt-1 max-w-[280px]">
               The agent will stream screenshots here. Ensure the backend is connected.

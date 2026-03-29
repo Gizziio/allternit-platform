@@ -1,22 +1,21 @@
 "use client";
 
 import React, { useState, useCallback, useMemo } from 'react';
-import { 
-  GitBranch, 
-  Save, 
-  Play, 
+import {
+  GitBranch,
+  FloppyDisk,
+  Play,
   Plus,
-  Trash2,
-  Settings,
-  MousePointer2,
+  Trash,
+  GearSix,
+  CursorClick,
   ArrowRight,
   CheckCircle,
-  AlertCircle,
-  LayoutGrid,
-  Wand2,
-  AlertTriangle,
+  Warning,
+  SquaresFour,
+  MagicWand,
   X,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import { GlassSurface } from '@/design/GlassSurface';
 import { useWorkflow } from '@/hooks/useWorkflow';
 import { WorkflowPhase } from '@/types/workflow';
@@ -196,7 +195,7 @@ export function WorkflowDesignerView() {
       <div className="w-64 border-r border-border bg-secondary/20 flex flex-col">
         <div className="p-4 border-b border-border">
           <h3 className="font-medium flex items-center gap-2">
-            <MousePointer2 className="w-4 h-4" />
+            <CursorClick size={16} />
             Node Palette
           </h3>
         </div>
@@ -223,7 +222,7 @@ export function WorkflowDesignerView() {
               {validationResult.valid ? (
                 <CheckCircle className="w-4 h-4 text-green-500" />
               ) : (
-                <AlertCircle className="w-4 h-4 text-red-500" />
+                <Warning className="w-4 h-4 text-red-500" />
               )}
               <span className="text-sm font-medium">
                 {validationResult.valid ? 'Valid' : 'Invalid'}
@@ -261,7 +260,7 @@ export function WorkflowDesignerView() {
               className="flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg hover:bg-secondary transition-colors"
               title="Auto Layout"
             >
-              <Wand2 className="w-4 h-4" />
+              <MagicWand size={16} />
               Auto Layout
             </button>
             
@@ -278,23 +277,23 @@ export function WorkflowDesignerView() {
               }`}
             >
               {isValidating ? (
-                <LayoutGrid className="w-4 h-4 animate-spin" />
+                <SquaresFour className="w-4 h-4 animate-spin" />
               ) : validationResult?.valid ? (
-                <CheckCircle className="w-4 h-4" />
+                <CheckCircle size={16} />
               ) : validationResult?.errors.length ? (
-                <AlertCircle className="w-4 h-4" />
+                <Warning size={16} />
               ) : (
-                <CheckCircle className="w-4 h-4" />
+                <CheckCircle size={16} />
               )}
               Validate
             </button>
             
             <button className="flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg hover:bg-secondary transition-colors">
-              <Save className="w-4 h-4" />
+              <FloppyDisk size={16} />
               Save
             </button>
             <button className="flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg bg-accent/20 text-accent hover:bg-accent/30 transition-colors">
-              <Play className="w-4 h-4" />
+              <Play size={16} />
               Execute
             </button>
           </div>
@@ -361,10 +360,10 @@ export function WorkflowDesignerView() {
                     <span className="text-sm font-medium truncate">{node.name}</span>
                   </div>
                   {hasErrors && (
-                    <AlertTriangle className="absolute -top-2 -right-2 w-4 h-4 text-red-500" />
+                    <Warning className="absolute -top-2 -right-2 w-4 h-4 text-red-500" />
                   )}
                   {hasWarnings && !hasErrors && (
-                    <AlertCircle className="absolute -top-2 -right-2 w-4 h-4 text-yellow-500" />
+                    <Warning className="absolute -top-2 -right-2 w-4 h-4 text-yellow-500" />
                   )}
                   <button
                     onClick={(e) => {
@@ -373,7 +372,7 @@ export function WorkflowDesignerView() {
                     }}
                     className="absolute -top-2 -right-2 p-1 rounded-full bg-red-500 text-white opacity-0 hover:opacity-100 transition-opacity"
                   >
-                    <Trash2 className="w-3 h-3" />
+                    <Trash size={12} />
                   </button>
                 </div>
               );
@@ -479,7 +478,7 @@ export function WorkflowDesignerView() {
               </div>
             ) : (
               <div className="text-center text-muted-foreground py-8">
-                <MousePointer2 className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <CursorClick className="w-8 h-8 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">Select a node to edit properties</p>
               </div>
             )}
@@ -510,7 +509,7 @@ export function WorkflowDesignerView() {
                     {validationResult.valid ? (
                       <CheckCircle className="w-5 h-5 text-green-500" />
                     ) : (
-                      <AlertCircle className="w-5 h-5 text-red-500" />
+                      <Warning className="w-5 h-5 text-red-500" />
                     )}
                     <span className={validationResult.valid ? 'text-green-500' : 'text-red-500'}>
                       {validationResult.valid ? 'Valid workflow' : 'Validation failed'}
@@ -551,7 +550,7 @@ export function WorkflowDesignerView() {
                 {validationResult.warnings.length > 0 && (
                   <div>
                     <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-                      <AlertTriangle className="w-4 h-4 text-yellow-500" />
+                      <Warning className="w-4 h-4 text-yellow-500" />
                       Warnings ({validationResult.warnings.length})
                     </h4>
                     <div className="space-y-2">
@@ -587,14 +586,14 @@ export function WorkflowDesignerView() {
             onClick={handleValidate}
             className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors text-sm"
           >
-            <CheckCircle className="w-4 h-4" />
+            <CheckCircle size={16} />
             Validate Workflow
           </button>
           <button
             onClick={handleAutoLayout}
             className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-secondary hover:bg-secondary/80 transition-colors text-sm"
           >
-            <LayoutGrid className="w-4 h-4" />
+            <SquaresFour size={16} />
             Auto Layout
           </button>
         </div>

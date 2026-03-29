@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { 
-  BookOpen, 
-  ChevronRight, 
-  Search,
+import {
+  BookOpen,
+  CaretRight,
+  MagnifyingGlass,
   FileText,
   Terminal,
   Code,
-  Settings,
+  GearSix,
   Users,
-  HelpCircle
-} from 'lucide-react';
+  Question as HelpCircle,
+} from '@phosphor-icons/react';
 
 const docSections = [
   {
@@ -55,7 +55,7 @@ const docSections = [
   },
   {
     title: 'Configuration',
-    icon: Settings,
+    icon: GearSix,
     items: [
       { id: 'env-vars', title: 'Environment Variables', href: '/docs/env-vars' },
       { id: 'secrets', title: 'Secrets Management', href: '/docs/secrets' },
@@ -98,7 +98,7 @@ export default function Docs() {
         <div className="sticky top-24">
           {/* Search */}
           <div className="relative mb-6">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-a2r-text-muted" />
+            <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-a2r-text-muted" />
             <input
               type="text"
               placeholder="Search docs..."
@@ -120,10 +120,10 @@ export default function Docs() {
                     onClick={() => toggleSection(docSection.title)}
                     className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium text-a2r-text-secondary hover:text-a2r-text transition-colors"
                   >
-                    <ChevronRight 
+                    <CaretRight 
                       className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`} 
                     />
-                    <Icon className="w-4 h-4" />
+                    <Icon size={16} />
                     {docSection.title}
                   </button>
                   
@@ -155,9 +155,9 @@ export default function Docs() {
       <div className="flex-1 min-w-0">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-a2r-text-muted mb-6">
-          <BookOpen className="w-4 h-4" />
+          <BookOpen size={16} />
           <span>Documentation</span>
-          <ChevronRight className="w-4 h-4" />
+          <CaretRight size={16} />
           <span className="text-a2r-text">{currentDoc?.title || 'Introduction'}</span>
         </div>
 
@@ -215,12 +215,12 @@ export default function Docs() {
         {/* Page Navigation */}
         <div className="flex items-center justify-between mt-12 pt-8 border-t border-a2r-border">
           <button className="flex items-center gap-2 text-a2r-text-secondary hover:text-a2r-text transition-colors">
-            <ChevronRight className="w-4 h-4 rotate-180" />
+            <CaretRight className="w-4 h-4 rotate-180" />
             <span>Previous</span>
           </button>
           <button className="flex items-center gap-2 text-a2r-accent hover:text-a2r-accent-hover transition-colors">
             <span>Next</span>
-            <ChevronRight className="w-4 h-4" />
+            <CaretRight size={16} />
           </button>
         </div>
       </div>

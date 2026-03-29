@@ -1,23 +1,24 @@
-import React, { useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
 import { tokens } from '../../design/tokens';
 import { RailRowMenu } from '../../shell/rail/RailRowMenu';
-import { useCoworkStore, Task, TaskProject } from './CoworkStore';
+import { InlineRename, type InlineRenameHandle } from '@/components/InlineRename';
+import { groupSessionsByTime } from '@/lib/groupSessionsByTime';
+import { useCoworkStore, type Task } from './CoworkStore';
 import {
   Plus,
   Robot,
   CalendarCheck,
-  List,
   CheckSquare,
   FolderOpen,
   FolderPlus,
   CaretDown,
-  CaretRight,
+  MagnifyingGlass,
+  X,
 } from '@phosphor-icons/react';
 
 export function CoworkRail() {
-  // Use useStoreWithEqualityFn with shallow for array/object selectors to avoid Zustand v4 issues
   const tasks = useStoreWithEqualityFn(useCoworkStore, (s) => s.tasks, shallow);
   const projects = useStoreWithEqualityFn(useCoworkStore, (s) => s.projects, shallow);
   const activeTaskId = useStoreWithEqualityFn(useCoworkStore, (s) => s.activeTaskId);
@@ -33,88 +34,170 @@ export function CoworkRail() {
   const createProject = useStoreWithEqualityFn(useCoworkStore, (s) => s.createProject);
   const createTask = useStoreWithEqualityFn(useCoworkStore, (s) => s.createTask);
 
-  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(() => {
-    return new Set(projects.map((p) => p.id));
-  });
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(() =>
+    new Set(projects.map((p) => p.id)),
+  );
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
-  const toggleProject = (projectId: string) => {
-    const next = new Set(expandedProjects);
-    if (next.has(projectId)) {
-      next.delete(projectId);
+  // Per-item rename refs
+  const renameRefs = useRef<Map<string, InlineRenameHandle>>(new Map());
+  const getOrCreateRef = (id: string): React.RefCallback<InlineRenameHandle> => (handle) => {
+    if (handle) {
+      renameRefs.current.set(id, handle);
     } else {
-      next.add(projectId);
+      renameRefs.current.delete(id);
     }
-    setExpandedProjects(next);
   };
 
-  // Filter tasks by type based on active tab
-  const agentTasks = tasks.filter((t) => !t.projectId && t.mode === 'agent');
-  const regularTasks = tasks.filter((t) => !t.projectId && t.mode !== 'agent');
+  const toggleProject = useCallback((projectId: string) => {
+    setExpandedProjects((prev) => {
+      const next = new Set(prev);
+      if (next.has(projectId)) next.delete(projectId);
+      else next.add(projectId);
+      return next;
+    });
+  }, []);
+
+  // Tasks not in any project, filtered by active tab and search
+  const rootTasks = useMemo(() => {
+    const base = tasks
+      .filter((t) => !t.projectId)
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+
+    const byTab = activeTab === 'agent-tasks'
+      ? base.filter((t) => t.mode === 'agent')
+      : base.filter((t) => t.mode !== 'agent');
+
+    if (!searchQuery.trim()) return byTab;
+    const q = searchQuery.toLowerCase();
+    return byTab.filter((t) => t.title.toLowerCase().includes(q));
+  }, [tasks, activeTab, searchQuery]);
+
+  const agentTaskCount = useMemo(
+    () => tasks.filter((t) => !t.projectId && t.mode === 'agent').length,
+    [tasks],
+  );
+  const regularTaskCount = useMemo(
+    () => tasks.filter((t) => !t.projectId && t.mode !== 'agent').length,
+    [tasks],
+  );
+
+  const timeGroups = useMemo(
+    () => groupSessionsByTime<Task>(rootTasks, (t) => t.updatedAt),
+    [rootTasks],
+  );
+
+  const isSearchActive = searchQuery.trim().length > 0 || isSearchFocused;
 
   return (
     <div
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: tokens.space.md,
+        gap: tokens.space.sm,
         padding: `${tokens.space.sm}px`,
         height: '100%',
         overflow: 'auto',
       }}
     >
-      {/* Quick Actions - Top Section */}
+      {/* Quick Actions */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         <QuickActionButton
-          icon={Plus as any}
+          icon={Plus}
           label="New Task"
           shortcut="⌘N"
           onClick={() => createTask('New Task')}
           isPrimary
         />
-        <QuickActionButton
-          icon={Robot as any}
-          label="Agent Hub"
-          onClick={() => { /* Open Agent Hub */ }}
-        />
-        <QuickActionButton
-          icon={CalendarCheck as any}
-          label="Cron"
-          onClick={() => { /* Open Cron/Scheduler */ }}
-        />
+        <div style={{ display: 'flex', gap: 4 }}>
+          <QuickActionButton
+            icon={Robot}
+            label="Agent Hub"
+            onClick={() => { /* Open Agent Hub */ }}
+          />
+          <QuickActionButton
+            icon={CalendarCheck}
+            label="Cron"
+            onClick={() => { /* Open Cron */ }}
+          />
+        </div>
       </div>
 
       {/* Divider */}
-      <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
+      <div style={{ height: 1, background: 'var(--border-subtle)', margin: '2px 0' }} />
 
-      {/* Tasks Section with Tabs */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-        {/* Tabs Header */}
-        <div
+      {/* Search */}
+      <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+        <MagnifyingGlass
+          size={14}
           style={{
-            display: 'flex',
-            gap: 4,
-            padding: `0 ${tokens.space.xs}px`,
-            marginBottom: tokens.space.sm,
+            position: 'absolute',
+            left: 8,
+            color: isSearchActive ? 'var(--text-secondary)' : 'var(--text-tertiary)',
+            pointerEvents: 'none',
+            transition: `color ${tokens.motion.fast}`,
           }}
-        >
-          <TabButton
-            active={activeTab === 'tasks'}
-            onClick={() => setActiveTab('tasks')}
-            count={regularTasks.length}
+        />
+        <input
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          onFocus={() => setIsSearchFocused(true)}
+          onBlur={() => setIsSearchFocused(false)}
+          placeholder="Search tasks…"
+          style={{
+            width: '100%',
+            background: isSearchActive ? 'var(--bg-tertiary)' : 'transparent',
+            border: `1px solid ${isSearchActive ? 'var(--border-default)' : 'var(--border-subtle)'}`,
+            borderRadius: tokens.radius.sm,
+            color: 'var(--text-primary)',
+            fontSize: 12,
+            padding: '5px 28px 5px 28px',
+            outline: 'none',
+            transition: `all ${tokens.motion.fast}`,
+          }}
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            style={{
+              position: 'absolute',
+              right: 6,
+              background: 'none',
+              border: 'none',
+              color: 'var(--text-tertiary)',
+              cursor: 'pointer',
+              padding: 2,
+              display: 'flex',
+              alignItems: 'center',
+            }}
           >
-            Tasks
-          </TabButton>
-          <TabButton
-            active={activeTab === 'agent-tasks'}
-            onClick={() => setActiveTab('agent-tasks')}
-            count={agentTasks.length}
-          >
-            Agent Tasks
-          </TabButton>
-        </div>
+            <X size={12} />
+          </button>
+        )}
+      </div>
 
-        {/* Projects Section */}
-        <div style={{ marginBottom: tokens.space.md }}>
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 4 }}>
+        <TabButton
+          active={activeTab === 'tasks'}
+          onClick={() => setActiveTab('tasks')}
+          count={regularTaskCount}
+        >
+          Tasks
+        </TabButton>
+        <TabButton
+          active={activeTab === 'agent-tasks'}
+          onClick={() => setActiveTab('agent-tasks')}
+          count={agentTaskCount}
+        >
+          Agent
+        </TabButton>
+      </div>
+
+      {/* Projects — hidden while searching */}
+      {!searchQuery && (
+        <div style={{ marginBottom: tokens.space.xs }}>
           <SectionHeader
             title="Projects"
             count={projects.length}
@@ -129,7 +212,7 @@ export function CoworkRail() {
               return (
                 <div key={project.id}>
                   <CoworkRailItem
-                    icon={FolderOpen as any}
+                    icon={FolderOpen}
                     label={project.title}
                     isActive={isActive}
                     onClick={() => setActiveProject(project.id)}
@@ -137,18 +220,18 @@ export function CoworkRail() {
                     isFolder
                     isExpanded={isExpanded}
                     onToggle={() => toggleProject(project.id)}
+                    renameRef={getOrCreateRef(`proj-${project.id}`)}
+                    onSaveRename={(title) => renameProject(project.id, title)}
                     actions={
                       <RailRowMenu
                         onDelete={() => deleteProject(project.id)}
-                        onRename={() => {
-                          const newTitle = prompt('Rename project:', project.title);
-                          if (newTitle) renameProject(project.id, newTitle);
-                        }}
+                        onRename={() =>
+                          renameRefs.current.get(`proj-${project.id}`)?.startEdit()
+                        }
                       />
                     }
                   />
 
-                  {/* Project Tasks */}
                   {isExpanded && projectTasks.length > 0 && (
                     <div
                       style={{
@@ -163,18 +246,19 @@ export function CoworkRail() {
                       {projectTasks.map((task) => (
                         <CoworkRailItem
                           key={task.id}
-                          icon={task.mode === 'agent' ? (Robot as any) : (CheckSquare as any)}
+                          icon={task.mode === 'agent' ? Robot : CheckSquare}
                           label={task.title}
                           isActive={activeTaskId === task.id}
                           isNested
                           onClick={() => setActiveTask(task.id)}
+                          renameRef={getOrCreateRef(task.id)}
+                          onSaveRename={(title) => renameTask(task.id, title)}
                           actions={
                             <RailRowMenu
                               onDelete={() => deleteTask(task.id)}
-                              onRename={() => {
-                                const newTitle = prompt('Rename task:', task.title);
-                                if (newTitle) renameTask(task.id, newTitle);
-                              }}
+                              onRename={() =>
+                                renameRefs.current.get(task.id)?.startEdit()
+                              }
                             />
                           }
                         />
@@ -185,75 +269,97 @@ export function CoworkRail() {
               );
             })}
 
-            {/* New Project Button */}
             <NewItemButton
-              icon={FolderPlus as any}
+              icon={FolderPlus}
               label="New Project"
               onClick={() => createProject('New Project')}
             />
           </div>
         </div>
+      )}
 
-        {/* Active Tab Content */}
-        {activeTab === 'tasks' && regularTasks.length > 0 && (
-          <div>
-            <SectionHeader title="Active Tasks" count={regularTasks.length} />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {regularTasks.map((task) => (
-                <CoworkRailItem
-                  key={task.id}
-                  icon={CheckSquare as any}
-                  label={task.title}
-                  isActive={activeTaskId === task.id}
-                  onClick={() => setActiveTask(task.id)}
-                  actions={
-                    <RailRowMenu
-                      onDelete={() => deleteTask(task.id)}
-                      onRename={() => {
-                        const newTitle = prompt('Rename task:', task.title);
-                        if (newTitle) renameTask(task.id, newTitle);
-                      }}
-                    />
-                  }
-                />
-              ))}
+      {/* Time-grouped task list */}
+      {timeGroups.length > 0 && (
+        <div style={{ flex: 1 }}>
+          {!searchQuery && (
+            <SectionHeader
+              title={activeTab === 'agent-tasks' ? 'Agent Tasks' : 'Tasks'}
+              count={rootTasks.length}
+            />
+          )}
+          {timeGroups.map((group) => (
+            <div key={group.key} style={{ marginBottom: tokens.space.sm }}>
+              <TimeGroupLabel label={group.label} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {group.items.map((task) => (
+                  <CoworkRailItem
+                    key={task.id}
+                    icon={task.mode === 'agent' ? Robot : CheckSquare}
+                    label={task.title}
+                    isActive={activeTaskId === task.id}
+                    onClick={() => setActiveTask(task.id)}
+                    renameRef={getOrCreateRef(task.id)}
+                    onSaveRename={(title) => renameTask(task.id, title)}
+                    actions={
+                      <RailRowMenu
+                        onDelete={() => deleteTask(task.id)}
+                        onRename={() => renameRefs.current.get(task.id)?.startEdit()}
+                      />
+                    }
+                  />
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          ))}
+        </div>
+      )}
 
-        {activeTab === 'agent-tasks' && agentTasks.length > 0 && (
-          <div>
-            <SectionHeader title="Agent Tasks" count={agentTasks.length} />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {agentTasks.map((task) => (
-                <CoworkRailItem
-                  key={task.id}
-                  icon={Robot as any}
-                  label={task.title}
-                  isActive={activeTaskId === task.id}
-                  onClick={() => setActiveTask(task.id)}
-                  actions={
-                    <RailRowMenu
-                      onDelete={() => deleteTask(task.id)}
-                      onRename={() => {
-                        const newTitle = prompt('Rename task:', task.title);
-                        if (newTitle) renameTask(task.id, newTitle);
-                      }}
-                    />
-                  }
-                />
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+      {/* Empty search state */}
+      {searchQuery && timeGroups.length === 0 && (
+        <div
+          style={{
+            padding: `${tokens.space.lg}px ${tokens.space.md}px`,
+            textAlign: 'center',
+            color: 'var(--text-tertiary)',
+            fontSize: 12,
+          }}
+        >
+          No tasks matching &ldquo;{searchQuery}&rdquo;
+        </div>
+      )}
     </div>
   );
 }
 
-// Quick Action Button Component
+// ---------------------------------------------------------------------------
+// Time group label
+// ---------------------------------------------------------------------------
+
+function TimeGroupLabel({ label }: { label: string }) {
+  return (
+    <div
+      style={{
+        fontSize: 11,
+        fontWeight: 700,
+        textTransform: 'uppercase',
+        letterSpacing: '0.05em',
+        color: 'var(--text-tertiary)',
+        padding: `${tokens.space.xs}px ${tokens.space.md}px`,
+        marginTop: tokens.space.xs,
+        opacity: 0.6,
+      }}
+    >
+      {label}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Quick Action Button
+// ---------------------------------------------------------------------------
+
 interface QuickActionButtonProps {
-  icon: React.ComponentType<{ size?: number | string; weight?: string; color?: string }>;
+  icon: React.ComponentType<{ size?: number; weight?: string }>;
   label: string;
   shortcut?: string;
   onClick: () => void;
@@ -261,27 +367,34 @@ interface QuickActionButtonProps {
 }
 
 function QuickActionButton({ icon: Icon, label, shortcut, onClick, isPrimary }: QuickActionButtonProps) {
+  const [isHovered, setIsHovered] = useState(false);
   return (
     <button
       onClick={onClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       style={{
         display: 'flex',
         alignItems: 'center',
         gap: tokens.space.sm,
         padding: `${tokens.space.sm}px ${tokens.space.md}px`,
-        borderRadius: tokens.radius.md,
+        borderRadius: tokens.radius.sm,
         border: isPrimary ? 'none' : '1px solid var(--border-subtle)',
-        background: isPrimary ? 'var(--accent-primary)' : 'transparent',
-        color: isPrimary ? 'var(--accent-primary-text)' : 'var(--text-secondary)',
+        background: isPrimary
+          ? 'var(--accent-cowork, var(--accent-primary))'
+          : isHovered
+            ? 'var(--rail-hover)'
+            : 'transparent',
+        color: isPrimary ? '#fff' : 'var(--text-secondary)',
         cursor: 'pointer',
         fontSize: 13,
-        fontWeight: 500,
+        fontWeight: isPrimary ? 600 : 500,
         width: '100%',
         textAlign: 'left',
-        transition: 'all 0.15s ease',
+        transition: `all ${tokens.motion.fast}`,
       }}
     >
-      <Icon size={18} weight={isPrimary ? "bold" : "regular"} />
+      <Icon size={16} weight={isPrimary ? 'bold' : 'regular'} />
       <span style={{ flex: 1 }}>{label}</span>
       {shortcut && (
         <span style={{ fontSize: 11, opacity: 0.6, fontWeight: 400 }}>{shortcut}</span>
@@ -290,7 +403,10 @@ function QuickActionButton({ icon: Icon, label, shortcut, onClick, isPrimary }: 
   );
 }
 
-// Tab Button Component
+// ---------------------------------------------------------------------------
+// Tab Button
+// ---------------------------------------------------------------------------
+
 interface TabButtonProps {
   active: boolean;
   onClick: () => void;
@@ -307,7 +423,7 @@ function TabButton({ active, onClick, count, children }: TabButtonProps) {
         padding: `${tokens.space.xs}px ${tokens.space.sm}px`,
         borderRadius: tokens.radius.sm,
         border: 'none',
-        background: active ? 'var(--bg-elevated)' : 'transparent',
+        background: active ? 'var(--bg-tertiary)' : 'transparent',
         color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
         fontSize: 12,
         fontWeight: 600,
@@ -316,6 +432,7 @@ function TabButton({ active, onClick, count, children }: TabButtonProps) {
         alignItems: 'center',
         justifyContent: 'center',
         gap: tokens.space.xs,
+        transition: `all ${tokens.motion.fast}`,
       }}
     >
       {children}
@@ -324,10 +441,10 @@ function TabButton({ active, onClick, count, children }: TabButtonProps) {
           style={{
             fontSize: 10,
             fontWeight: 700,
-            color: 'var(--text-tertiary)',
-            background: 'var(--bg-elevated)',
-            padding: '2px 6px',
-            borderRadius: tokens.radius.sm,
+            color: active ? 'var(--text-primary)' : 'var(--text-tertiary)',
+            background: 'var(--bg-secondary)',
+            padding: '1px 5px',
+            borderRadius: tokens.radius.full,
           }}
         >
           {count}
@@ -337,7 +454,10 @@ function TabButton({ active, onClick, count, children }: TabButtonProps) {
   );
 }
 
-// Section Header Component
+// ---------------------------------------------------------------------------
+// Section Header
+// ---------------------------------------------------------------------------
+
 interface SectionHeaderProps {
   title: string;
   count?: number;
@@ -383,28 +503,29 @@ function SectionHeader({ title, count, onAdd }: SectionHeaderProps) {
         <button
           onClick={onAdd}
           style={{
-            background: 'transparent',
+            background: 'none',
             border: 'none',
-            padding: tokens.space.xs,
+            color: 'var(--text-tertiary)',
             cursor: 'pointer',
-            borderRadius: tokens.radius.sm,
-            color: 'var(--text-secondary)',
+            padding: 2,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
+            borderRadius: 4,
           }}
-          title="Add new"
         >
-          <Plus size={14} weight="bold" />
+          <Plus size={14} />
         </button>
       )}
     </div>
   );
 }
 
-// Cowork Rail Item Component
+// ---------------------------------------------------------------------------
+// Cowork Rail Item
+// ---------------------------------------------------------------------------
+
 interface CoworkRailItemProps {
-  icon: React.ComponentType<{ size?: number | string; weight?: string; color?: string }>;
+  icon: React.ComponentType<{ size?: number; weight?: string; color?: string; style?: React.CSSProperties }>;
   label: string;
   isActive?: boolean;
   isNested?: boolean;
@@ -414,6 +535,8 @@ interface CoworkRailItemProps {
   onClick: () => void;
   onToggle?: () => void;
   actions?: React.ReactNode;
+  renameRef?: React.RefCallback<InlineRenameHandle>;
+  onSaveRename?: (newName: string) => void;
 }
 
 function CoworkRailItem({
@@ -427,85 +550,125 @@ function CoworkRailItem({
   onClick,
   onToggle,
   actions,
+  renameRef,
+  onSaveRename,
 }: CoworkRailItemProps) {
+  const [isHovered, setIsHovered] = useState(false);
+
   return (
     <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: tokens.space.xs,
-        padding: `${tokens.space.xs}px ${tokens.space.sm}px`,
-        paddingLeft: isNested ? tokens.space.md : tokens.space.sm,
-        borderRadius: tokens.radius.md,
-        background: isActive ? 'var(--bg-elevated)' : 'transparent',
-        cursor: 'pointer',
-        fontSize: 13,
-        fontWeight: isActive ? 500 : 400,
-        color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-        transition: 'all 0.1s ease',
-      }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      style={{ position: 'relative', display: 'flex', alignItems: 'center' }}
     >
-      {isFolder && onToggle && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggle();
-          }}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            padding: 0,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            color: 'var(--text-tertiary)',
-          }}
-        >
-          {isExpanded ? (
-            <CaretDown size={12} weight="bold" />
-          ) : (
-            <CaretRight size={12} weight="bold" />
-          )}
-        </button>
-      )}
-      
-      <Icon size={16} weight={isActive ? "fill" : "regular"} />
-      
-      <span
+      <button
         onClick={onClick}
         style={{
           flex: 1,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
+          display: 'flex',
+          alignItems: 'center',
+          gap: tokens.space.xs,
+          padding: `${tokens.space.xs}px ${tokens.space.sm}px`,
+          paddingLeft: isNested ? tokens.space.md : tokens.space.sm,
+          paddingRight: actions ? 36 : tokens.space.sm,
+          borderRadius: tokens.radius.sm,
+          border: 'none',
+          background: isActive
+            ? 'var(--rail-active-bg)'
+            : isHovered
+              ? 'var(--rail-hover)'
+              : 'transparent',
+          color: isActive ? 'var(--rail-active-fg)' : 'var(--text-secondary)',
+          cursor: 'pointer',
+          fontSize: 13,
+          fontWeight: isActive ? 600 : 400,
+          textAlign: 'left',
+          transition: `all ${tokens.motion.fast}`,
+          minWidth: 0,
+          width: '100%',
         }}
       >
-        {label}
-      </span>
+        {isFolder && onToggle && (
+          <span
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggle();
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 16,
+              height: 16,
+              cursor: 'pointer',
+              opacity: 0.5,
+              transition: `transform ${tokens.motion.fast}`,
+              transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+              flexShrink: 0,
+            }}
+          >
+            <CaretDown size={10} weight="bold" />
+          </span>
+        )}
 
-      {badge !== undefined && badge > 0 && (
-        <span
-          style={{
-            fontSize: 10,
-            fontWeight: 700,
-            color: 'var(--text-tertiary)',
-            background: 'var(--bg-elevated)',
-            padding: '2px 6px',
-            borderRadius: tokens.radius.sm,
-            marginLeft: 'auto',
-          }}
-        >
-          {badge}
-        </span>
-      )}
+        <Icon
+          size={isNested ? 14 : 16}
+          weight={isActive ? 'fill' : 'regular'}
+          color={isActive ? 'var(--rail-active-fg)' : 'var(--text-tertiary)'}
+          style={{ flexShrink: 0 }}
+        />
+
+        {renameRef && onSaveRename ? (
+          <InlineRename
+            ref={renameRef}
+            value={label}
+            onSave={onSaveRename}
+            style={{
+              color: isActive ? 'var(--rail-active-fg)' : 'var(--text-secondary)',
+              fontWeight: isActive ? 600 : 400,
+              fontSize: 13,
+            }}
+          />
+        ) : (
+          <span
+            style={{
+              flex: 1,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {label}
+          </span>
+        )}
+
+        {badge !== undefined && badge > 0 && (
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              color: 'var(--text-tertiary)',
+              background: 'var(--bg-secondary)',
+              padding: '1px 5px',
+              borderRadius: tokens.radius.full,
+              flexShrink: 0,
+            }}
+          >
+            {badge}
+          </span>
+        )}
+      </button>
 
       {actions && (
         <div
           style={{
-            opacity: 0,
-            transition: 'opacity 0.15s ease',
+            position: 'absolute',
+            right: tokens.space.xs,
+            opacity: isHovered ? 1 : 0,
+            pointerEvents: isHovered ? 'auto' : 'none',
+            transition: `opacity ${tokens.motion.fast}`,
+            zIndex: 10,
           }}
-          className="rail-item-actions"
         >
           {actions}
         </div>
@@ -514,25 +677,31 @@ function CoworkRailItem({
   );
 }
 
-// New Item Button Component
+// ---------------------------------------------------------------------------
+// New Item Button
+// ---------------------------------------------------------------------------
+
 interface NewItemButtonProps {
-  icon: React.ComponentType<{ size?: number | string; weight?: string; color?: string }>;
+  icon: React.ComponentType<{ size?: number; weight?: string }>;
   label: string;
   onClick: () => void;
 }
 
 function NewItemButton({ icon: Icon, label, onClick }: NewItemButtonProps) {
+  const [isHovered, setIsHovered] = useState(false);
   return (
     <button
       onClick={onClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       style={{
         display: 'flex',
         alignItems: 'center',
         gap: tokens.space.sm,
         padding: `${tokens.space.xs}px ${tokens.space.sm}px`,
-        borderRadius: tokens.radius.md,
+        borderRadius: tokens.radius.sm,
         border: '1px dashed var(--border-subtle)',
-        background: 'transparent',
+        background: isHovered ? 'var(--rail-hover)' : 'transparent',
         color: 'var(--text-tertiary)',
         cursor: 'pointer',
         fontSize: 12,
@@ -540,7 +709,7 @@ function NewItemButton({ icon: Icon, label, onClick }: NewItemButtonProps) {
         width: '100%',
         textAlign: 'left',
         marginTop: tokens.space.xs,
-        transition: 'all 0.15s ease',
+        transition: `all ${tokens.motion.fast}`,
       }}
     >
       <Icon size={14} />

@@ -6,7 +6,16 @@ import { nodeTerminalService, type TerminalSession, type SandboxConfig, type Vol
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
-import { X, Plus, Terminal, Settings2, ChevronDown, ChevronUp, Container, Shield } from 'lucide-react';
+import {
+  X,
+  Plus,
+  Terminal,
+  GearSix,
+  CaretDown,
+  CaretUp,
+  Cube,
+  Shield,
+} from '@phosphor-icons/react';
 import {
   Dialog,
   DialogContent,
@@ -79,6 +88,7 @@ const SHELL_OPTIONS = [
 export function TerminalTabs({ initialNodeId, className = '' }: TerminalTabsProps) {
   const [sessions, setSessions] = useState<TerminalSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [statusTick, setStatusTick] = useState(0);
   const [showNewDialog, setShowNewDialog] = useState(false);
   const [availableNodes, setAvailableNodes] = useState<Array<{ id: string; hostname: string }>>([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -104,6 +114,13 @@ export function TerminalTabs({ initialNodeId, className = '' }: TerminalTabsProp
       createSession(initialNodeId);
     }
   }, [initialNodeId]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setStatusTick((value) => value + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const createSession = useCallback(async (nodeId: string, opts?: Partial<TerminalOptions>) => {
     const sessionOpts: Parameters<typeof nodeTerminalService.createSession>[1] = {
@@ -270,43 +287,76 @@ export function TerminalTabs({ initialNodeId, className = '' }: TerminalTabsProp
       <div className="flex items-center gap-2 px-2 py-1 bg-muted border-b">
         <div className="flex-1 flex gap-1 overflow-x-auto">
           {sessions.map((session) => (
-            <button
-              key={session.id}
-              onClick={() => setActiveSessionId(session.id)}
-              className={`flex items-center gap-2 px-3 py-1.5 text-xs rounded-md whitespace-nowrap transition-colors ${
-                activeSessionId === session.id
-                  ? 'bg-background text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
-              }`}
-            >
-              <div
-                className={`w-2 h-2 rounded-full ${
-                  nodeTerminalService.isConnected(session.id)
-                    ? 'bg-green-500'
-                    : 'bg-red-500'
-                }`}
-              />
-              <span className="max-w-[120px] truncate">
-                {session.nodeId.slice(0, 8)}...
-              </span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  closeSession(session.id);
-                }}
-                className="ml-1 p-0.5 hover:bg-muted-foreground/20 rounded"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </button>
+            (() => {
+              const connected = nodeTerminalService.isConnected(session.id);
+              const hasSnapshot = !!nodeTerminalService.getSnapshot(session.id);
+              const restored = session.isReconnected;
+              const degraded = !connected && !hasSnapshot;
+
+              return (
+                <button
+                  key={session.id}
+                  onClick={() => setActiveSessionId(session.id)}
+                  className={`flex items-center gap-2 px-3 py-1.5 text-xs rounded-md whitespace-nowrap transition-colors ${
+                    activeSessionId === session.id
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                  }`}
+                >
+                  <div
+                    className={`w-2 h-2 rounded-full ${
+                      connected ? 'bg-green-500' : degraded ? 'bg-red-500' : 'bg-amber-500'
+                    }`}
+                  />
+                  <span className="max-w-[120px] truncate">
+                    {session.nodeId.slice(0, 8)}...
+                  </span>
+                  {restored ? (
+                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                      restored
+                    </span>
+                  ) : null}
+                  {!connected && hasSnapshot ? (
+                    <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                      replay
+                    </span>
+                  ) : null}
+                  {degraded ? (
+                    <span className="px-1.5 py-0.5 rounded bg-red-500/15 text-red-600 dark:text-red-400">
+                      degraded
+                    </span>
+                  ) : null}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      closeSession(session.id);
+                    }}
+                    className="ml-1 p-0.5 hover:bg-muted-foreground/20 rounded"
+                  >
+                    <X size={12} />
+                  </button>
+                </button>
+              );
+            })()
           ))}
+        </div>
+
+        <div className="hidden md:flex items-center gap-1 text-[11px]">
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-slate-700 text-slate-100">
+            <Cube size={12} />
+            sidecar
+          </span>
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-slate-700 text-slate-100">
+            <Shield size={12} />
+            snapshots
+          </span>
         </div>
 
         <button
           className="h-7 w-7 flex items-center justify-center rounded hover:bg-white/10 transition-colors"
           onClick={() => setShowNewDialog(true)}
         >
-          <Plus className="h-4 w-4" />
+          <Plus size={16} />
         </button>
       </div>
 
@@ -461,12 +511,12 @@ function NewTerminalDialog({
             onClick={() => setShowAdvanced(!showAdvanced)}
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            <Settings2 className="h-4 w-4" />
+            <GearSix size={16} />
             Advanced Options
             {showAdvanced ? (
-              <ChevronUp className="h-4 w-4" />
+              <CaretUp size={16} />
             ) : (
-              <ChevronDown className="h-4 w-4" />
+              <CaretDown size={16} />
             )}
           </button>
 
@@ -519,7 +569,7 @@ function NewTerminalDialog({
                         onClick={() => removeEnvVar(index)}
                         className="p-2 hover:bg-muted rounded"
                       >
-                        <X className="h-4 w-4" />
+                        <X size={16} />
                       </button>
                     </div>
                   ))}
@@ -570,7 +620,7 @@ function NewTerminalDialog({
               {/* Sandbox Mode */}
               <div className="space-y-4 pt-4 border-t">
                 <div className="flex items-center gap-2">
-                  <Container className="h-4 w-4 text-primary" />
+                  <Cube className="h-4 w-4 text-primary" />
                   <Label className="font-medium">Sandbox Mode</Label>
                 </div>
                 
@@ -692,7 +742,7 @@ function NewTerminalDialog({
                               onClick={() => removeVolumeMount?.(index)}
                               className="p-2 hover:bg-muted rounded"
                             >
-                              <X className="h-4 w-4" />
+                              <X size={16} />
                             </button>
                           </div>
                         ))}

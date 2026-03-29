@@ -21,20 +21,19 @@ import * as RadixSelect from '@radix-ui/react-select';
 import * as RadixDropdownMenu from '@radix-ui/react-dropdown-menu';
 import {
   Check,
-  ChevronDown,
-  ChevronRight,
-  ChevronLeft,
-  ChevronUp,
+  CaretDown,
+  CaretRight,
+  CaretLeft,
+  CaretUp,
   X,
-  AlertCircle,
-  CheckCircle2,
-  AlertTriangle,
+  Warning,
+  CheckCircle,
   Info,
-  Search,
-  MoreHorizontal,
-  Loader2,
+  MagnifyingGlass,
+  DotsThreeOutline,
+  CircleNotch,
   Copy,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -382,7 +381,7 @@ function ButtonRenderer({ node, context }: ComponentRendererProps) {
       }}
       style={props.style}
     >
-      {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+      {isLoading && <CircleNotch className="w-4 h-4 animate-spin" />}
       {props.icon && props.iconPosition !== 'right' && <span>{props.icon}</span>}
       {label}
       {props.icon && props.iconPosition === 'right' && <span>{props.icon}</span>}
@@ -512,7 +511,7 @@ function SpinnerRenderer({ node, context }: ComponentRendererProps) {
   };
 
   return (
-    <Loader2
+    <CircleNotch
       className={cn(
         'animate-spin',
         sizeClasses[props.size || 'md'],
@@ -535,19 +534,19 @@ function AlertRenderer({ node, context }: ComponentRendererProps) {
 
   const variantConfig: Record<string, { icon: React.ReactNode; className: string }> = {
     info: {
-      icon: <Info className="w-4 h-4" />,
+      icon: <Info size={16} />,
       className: 'bg-blue-500/10 border-blue-500/20 text-blue-700',
     },
     success: {
-      icon: <CheckCircle2 className="w-4 h-4" />,
+      icon: <CheckCircle size={16} />,
       className: 'bg-green-500/10 border-green-500/20 text-green-700',
     },
     warning: {
-      icon: <AlertTriangle className="w-4 h-4" />,
+      icon: <Warning size={16} />,
       className: 'bg-yellow-500/10 border-yellow-500/20 text-yellow-700',
     },
     error: {
-      icon: <AlertCircle className="w-4 h-4" />,
+      icon: <Warning size={16} />,
       className: 'bg-red-500/10 border-red-500/20 text-red-700',
     },
   };
@@ -573,7 +572,7 @@ function AlertRenderer({ node, context }: ComponentRendererProps) {
           onClick={() => props.onDismiss && context.onAction(props.onDismiss)}
           className="shrink-0 opacity-60 hover:opacity-100"
         >
-          <X className="w-4 h-4" />
+          <X size={16} />
         </button>
       )}
     </div>
@@ -692,7 +691,7 @@ function CodeRenderer({ node, context }: ComponentRendererProps) {
                      opacity-0 group-hover:opacity-100 transition-opacity
                      text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
         >
-          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+          {copied ? <Check size={16} /> : <Copy size={16} />}
         </button>
       )}
       <pre

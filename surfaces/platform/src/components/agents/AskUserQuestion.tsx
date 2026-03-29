@@ -10,13 +10,13 @@
 
 import React, { useState, useCallback } from "react";
 import {
-  MessageCircle,
+  ChatCircle,
   Check,
   X,
-  ChevronRight,
-  Loader2,
-  HelpCircle,
-} from "lucide-react";
+  CaretRight,
+  CircleNotch,
+  Question as HelpCircle,
+} from '@phosphor-icons/react';
 import {
   useAskUserToolStore,
   type QuestionConfig,
@@ -305,11 +305,11 @@ export function AskUserQuestion({
           }}
         >
           {isLoading ? (
-            <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} />
+            <CircleNotch size={14} style={{ animation: "spin 1s linear infinite" }} />
           ) : (
             <>
               Submit
-              <ChevronRight size={14} />
+              <CaretRight size={14} />
             </>
           )}
         </button>
@@ -680,7 +680,7 @@ export function QuestionWizard({
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-          <MessageCircle size={16} style={{ color: accentColor }} />
+          <ChatCircle size={16} style={{ color: accentColor }} />
           <span style={{ fontSize: 13, fontWeight: 700, color: "#f6eee7" }}>{title}</span>
           <span style={{ fontSize: 11, color: "#7a6b5d", marginLeft: "auto" }}>
             Step {currentIndex + 1} of {questions.length}

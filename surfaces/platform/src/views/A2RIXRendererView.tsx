@@ -10,9 +10,18 @@
 import React, { useState } from 'react';
 import { GlassSurface } from '@/design/GlassSurface';
 import {
-  Zap, Code, CheckCircle, AlertCircle, Play, Menu, X,
-  ChevronDown, Plus, Copy, RotateCcw
-} from 'lucide-react';
+  Lightning,
+  Code,
+  CheckCircle,
+  Warning,
+  Play,
+  List,
+  X,
+  CaretDown,
+  Plus,
+  Copy,
+  ArrowCounterClockwise,
+} from '@phosphor-icons/react';
 
 interface ComponentInfo {
   name: string;
@@ -160,7 +169,7 @@ export function A2RIXRendererView() {
       <div className="p-4 border-b border-[var(--border-subtle)]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Zap className="w-6 h-6 text-[var(--accent-primary)]" />
+            <Lightning className="w-6 h-6 text-[var(--accent-primary)]" />
             <div>
               <h2 className="text-lg font-semibold">A2R-IX Renderer</h2>
               <p className="text-sm text-[var(--text-tertiary)]">
@@ -174,7 +183,7 @@ export function A2RIXRendererView() {
               className="p-2 hover:bg-[var(--bg-secondary)] rounded-lg transition-colors"
               title={catalogOpen ? 'Hide catalog' : 'Show catalog'}
             >
-              {catalogOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {catalogOpen ? <X size={20} /> : <List size={20} />}
             </button>
           </div>
         </div>
@@ -197,7 +206,7 @@ export function A2RIXRendererView() {
                   disabled={!isValid}
                   className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-[var(--accent-primary)] text-[var(--bg-primary)] font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
                 >
-                  <Play className="w-4 h-4" />
+                  <Play size={16} />
                   Render
                 </button>
                 <button
@@ -205,14 +214,14 @@ export function A2RIXRendererView() {
                   className="px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)] hover:bg-[var(--bg-primary)] transition-colors"
                   title="Copy JSON"
                 >
-                  <Copy className="w-4 h-4" />
+                  <Copy size={16} />
                 </button>
                 <button
                   onClick={handleReset}
                   className="px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)] hover:bg-[var(--bg-primary)] transition-colors"
                   title="Reset to default"
                 >
-                  <RotateCcw className="w-4 h-4" />
+                  <ArrowCounterClockwise size={16} />
                 </button>
               </div>
             </div>
@@ -236,7 +245,7 @@ export function A2RIXRendererView() {
                 </>
               ) : (
                 <>
-                  <AlertCircle className="w-4 h-4 text-red-500" />
+                  <Warning className="w-4 h-4 text-red-500" />
                   <span>{parseResult.error || 'Invalid JSON'}</span>
                 </>
               )}
@@ -274,7 +283,7 @@ export function A2RIXRendererView() {
           <div className="w-[240px] border-l border-[var(--border-subtle)] overflow-hidden flex flex-col">
             <div className="px-4 py-3 border-b border-[var(--border-subtle)]">
               <h3 className="text-xs font-semibold text-[var(--text-secondary)] flex items-center gap-2">
-                <ChevronDown className="w-4 h-4" />
+                <CaretDown size={16} />
                 COMPONENT CATALOG
               </h3>
             </div>
@@ -294,7 +303,7 @@ export function A2RIXRendererView() {
                 </div>
               ))}
               <button className="w-full p-3 rounded-lg border border-dashed border-[var(--border-subtle)] text-[var(--text-tertiary)] hover:text-[var(--accent-primary)] text-sm flex items-center justify-center gap-2 transition-colors">
-                <Plus className="w-4 h-4" />
+                <Plus size={16} />
                 Add Component
               </button>
             </div>

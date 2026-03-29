@@ -2,15 +2,15 @@
 
 import React, { useMemo, useState } from 'react';
 import {
-  History,
+  ClockCounterClockwise,
   Play,
   CheckCircle,
-  Clock3,
-  RefreshCw,
-  Search,
-  AlertTriangle,
-  Orbit,
-} from 'lucide-react';
+  Clock,
+  ArrowsClockwise,
+  MagnifyingGlass,
+  Warning,
+  Planet,
+} from '@phosphor-icons/react';
 import { GlassSurface } from '@/design/GlassSurface';
 import { useReplay } from '@/hooks/useReplay';
 import { StatCard } from '../components/StatCard';
@@ -51,7 +51,7 @@ export function ReplayManagerView() {
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <RefreshCw className="h-8 w-8 animate-spin text-accent" />
+        <ArrowsClockwise className="h-8 w-8 animate-spin text-accent" />
       </div>
     );
   }
@@ -59,13 +59,13 @@ export function ReplayManagerView() {
   if (error) {
     return (
       <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
-        <AlertTriangle className="mb-4 h-12 w-12 text-red-500" />
+        <Warning className="mb-4 h-12 w-12 text-red-500" />
         <p className="mb-4">Failed to load replay sessions</p>
         <button
           onClick={() => void refetch()}
           className="flex items-center gap-2 rounded-2xl bg-accent/15 px-4 py-2 text-accent transition-colors hover:bg-accent/25"
         >
-          <RefreshCw className="h-4 w-4" />
+          <ArrowsClockwise size={16} />
           Retry
         </button>
       </div>
@@ -79,7 +79,7 @@ export function ReplayManagerView() {
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] uppercase tracking-[0.24em] text-muted-foreground">
-                <Orbit className="h-3.5 w-3.5 text-sky-300" />
+                <Planet className="h-3.5 w-3.5 text-sky-300" />
                 Deterministic Runtime
               </div>
               <h2 className="text-3xl font-semibold tracking-tight text-foreground">Replay Manager</h2>
@@ -90,7 +90,7 @@ export function ReplayManagerView() {
 
             <div className="flex w-full max-w-xl flex-col gap-3 sm:flex-row">
               <div className="relative flex-1">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <input
                   type="text"
                   placeholder="Search by run ID..."
@@ -119,14 +119,14 @@ export function ReplayManagerView() {
         </GlassSurface>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <StatCard icon={History} label="Captured Runs" value={manifests.length} />
+          <StatCard icon={ClockCounterClockwise} label="Captured Runs" value={manifests.length} />
           <StatCard
             icon={CheckCircle}
             label="Full Capture"
             value={manifests.filter((manifest) => manifest.capture_level === 'full').length}
           />
           <StatCard
-            icon={Clock3}
+            icon={Clock}
             label="Captured Outputs"
             value={manifests.reduce((total, manifest) => total + manifest.output_count, 0)}
           />
@@ -174,9 +174,9 @@ export function ReplayManagerView() {
                     className="inline-flex items-center gap-2 rounded-2xl border border-sky-300/20 bg-sky-300/10 px-4 py-3 text-sm font-medium text-sky-100 transition hover:bg-sky-300/20 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {replaying === manifest.run_id ? (
-                      <RefreshCw className="h-4 w-4 animate-spin" />
+                      <ArrowsClockwise className="h-4 w-4 animate-spin" />
                     ) : (
-                      <Play className="h-4 w-4" />
+                      <Play size={16} />
                     )}
                     Replay Session
                   </button>
@@ -188,7 +188,7 @@ export function ReplayManagerView() {
 
         {filteredManifests.length === 0 && (
           <GlassSurface intensity="thin" className="rounded-3xl p-10 text-center">
-            <History className="mx-auto h-12 w-12 text-muted-foreground/50" />
+            <ClockCounterClockwise className="mx-auto h-12 w-12 text-muted-foreground/50" />
             <h3 className="mt-4 text-lg font-medium text-foreground">No replay sessions found</h3>
             <p className="mt-2 text-sm text-muted-foreground">
               {searchQuery || captureFilter !== 'all'

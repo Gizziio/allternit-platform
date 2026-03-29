@@ -10,9 +10,21 @@
 import React, { useState } from 'react';
 import { GlassSurface } from '@/design/GlassSurface';
 import {
-  LayoutGrid, MessageCircle, Code, Globe, Zap, FileText, Terminal, Activity,
-  GitBranch, CheckCircle, AlertCircle, Clock, Eye, ExternalLink
-} from 'lucide-react';
+  SquaresFour,
+  ChatCircle,
+  Code,
+  Globe,
+  Lightning,
+  FileText,
+  Terminal,
+  Pulse as Activity,
+  GitBranch,
+  CheckCircle,
+  Warning,
+  Clock,
+  Eye,
+  ArrowSquareOut,
+} from '@phosphor-icons/react';
 
 interface CanvasType {
   id: string;
@@ -37,7 +49,7 @@ const CANVAS_TYPES: CanvasType[] = [
   {
     id: 'chat',
     name: 'Chat Canvas',
-    icon: <MessageCircle className="w-6 h-6" />,
+    icon: <ChatCircle size={24} />,
     description: 'Multi-turn conversational interface with streaming support',
     status: 'Active',
     specVersion: 'v1.4.2',
@@ -45,7 +57,7 @@ const CANVAS_TYPES: CanvasType[] = [
   {
     id: 'code',
     name: 'Code Canvas',
-    icon: <Code className="w-6 h-6" />,
+    icon: <Code size={24} />,
     description: 'Editor with syntax highlighting and inline execution',
     status: 'Active',
     specVersion: 'v1.3.1',
@@ -53,7 +65,7 @@ const CANVAS_TYPES: CanvasType[] = [
   {
     id: 'cowork',
     name: 'Cowork Canvas',
-    icon: <Zap className="w-6 h-6" />,
+    icon: <Lightning size={24} />,
     description: 'Collaborative workspace with real-time sync and planning',
     status: 'Active',
     specVersion: 'v1.2.0',
@@ -61,7 +73,7 @@ const CANVAS_TYPES: CanvasType[] = [
   {
     id: 'browser',
     name: 'Browser Canvas',
-    icon: <Globe className="w-6 h-6" />,
+    icon: <Globe size={24} />,
     description: 'Web browsing interface with context preservation',
     status: 'Beta',
     specVersion: 'v0.9.0',
@@ -69,7 +81,7 @@ const CANVAS_TYPES: CanvasType[] = [
   {
     id: 'agent',
     name: 'Agent Canvas',
-    icon: <Zap className="w-6 h-6" />,
+    icon: <Lightning size={24} />,
     description: 'Agent execution dashboard with task monitoring',
     status: 'Active',
     specVersion: 'v1.1.5',
@@ -77,7 +89,7 @@ const CANVAS_TYPES: CanvasType[] = [
   {
     id: 'form',
     name: 'Form Canvas',
-    icon: <FileText className="w-6 h-6" />,
+    icon: <FileText size={24} />,
     description: 'Dynamic form rendering with validation and submission',
     status: 'Active',
     specVersion: 'v1.0.8',
@@ -85,7 +97,7 @@ const CANVAS_TYPES: CanvasType[] = [
   {
     id: 'terminal',
     name: 'Terminal Canvas',
-    icon: <Terminal className="w-6 h-6" />,
+    icon: <Terminal size={24} />,
     description: 'Interactive shell with command history and output streaming',
     status: 'Beta',
     specVersion: 'v0.8.2',
@@ -93,7 +105,7 @@ const CANVAS_TYPES: CanvasType[] = [
   {
     id: 'monitor',
     name: 'Monitor Canvas',
-    icon: <Activity className="w-6 h-6" />,
+    icon: <Activity size={24} />,
     description: 'Real-time metrics and system monitoring dashboard',
     status: 'Active',
     specVersion: 'v1.1.0',
@@ -101,7 +113,7 @@ const CANVAS_TYPES: CanvasType[] = [
   {
     id: 'deploy',
     name: 'Deploy Canvas',
-    icon: <GitBranch className="w-6 h-6" />,
+    icon: <GitBranch size={24} />,
     description: 'Deployment orchestration with rollback capabilities',
     status: 'Planned',
     specVersion: 'v0.5.0',
@@ -183,7 +195,7 @@ function CanvasTypeCard({ canvas }: { canvas: CanvasType }) {
         </span>
         <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--accent-primary)] text-[var(--bg-primary)] text-xs font-medium hover:opacity-90 transition-opacity">
           Open
-          <ExternalLink className="w-3 h-3" />
+          <ArrowSquareOut size={12} />
         </button>
       </div>
     </div>
@@ -248,7 +260,7 @@ export function CanvasProtocolView() {
       <div className="p-6 border-b border-[var(--border-subtle)]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <LayoutGrid className="w-7 h-7 text-[var(--accent-primary)]" />
+            <SquaresFour className="w-7 h-7 text-[var(--accent-primary)]" />
             <div>
               <h1 className="text-2xl font-semibold text-[var(--text-primary)]">
                 Canvas Protocol
@@ -309,7 +321,7 @@ export function CanvasProtocolView() {
           <div>40+ canonical view types</div>
           <div>Renderer-agnostic protocol</div>
           <div className="flex items-center gap-2">
-            <Clock className="w-3 h-3" />
+            <Clock size={12} />
             Hot-reload enabled
           </div>
         </div>

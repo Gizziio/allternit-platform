@@ -6,7 +6,13 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, Download, Clock, Package, ChevronRight } from 'lucide-react';
+import {
+  X,
+  DownloadSimple,
+  Clock,
+  Package,
+  CaretRight,
+} from '@phosphor-icons/react';
 import type { UpdateInfo } from '../plugins/updateChecker';
 
 // ============================================================================
@@ -157,7 +163,7 @@ function SingleNotification({
               <span style={{ textDecoration: 'line-through', opacity: 0.6 }}>
                 v{update.currentVersion}
               </span>
-              <ChevronRight size={12} color={THEME.textTertiary} />
+              <CaretRight size={12} color={THEME.textTertiary} />
               <span style={{ color: THEME.success, fontWeight: 500 }}>
                 v{update.latestVersion}
               </span>
@@ -255,7 +261,7 @@ function SingleNotification({
               transition: 'opacity 0.15s',
             }}
           >
-            <Download size={14} />
+            <DownloadSimple size={14} />
             Update Now
           </button>
 

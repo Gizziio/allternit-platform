@@ -13,7 +13,13 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AlertCircle, CheckCircle2, Plus, Sparkles, Trash2 } from "lucide-react";
+import {
+  Warning,
+  CheckCircle,
+  Plus,
+  Sparkle,
+  Trash,
+} from '@phosphor-icons/react';
 
 function toMultiline(values: string[]): string {
   return values.join("\n");
@@ -122,7 +128,7 @@ export function CharacterLayerPanel({ agentId }: { agentId: string }) {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="text-lg font-semibold flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-primary" />
+            <Sparkle className="w-5 h-5 text-primary" />
             Character Layer
           </h3>
           <p className="text-sm text-muted-foreground">
@@ -335,7 +341,7 @@ export function CharacterLayerPanel({ agentId }: { agentId: string }) {
                         }))
                       }
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash size={16} />
                     </Button>
                   </div>
                   <Textarea
@@ -630,7 +636,7 @@ export function CharacterLayerPanel({ agentId }: { agentId: string }) {
                           }))
                         }
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash size={16} />
                       </Button>
                     </div>
                   </div>
@@ -788,7 +794,7 @@ export function CharacterLayerPanel({ agentId }: { agentId: string }) {
                           })
                         }
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash size={16} />
                       </Button>
                     </div>
                   </div>
@@ -846,21 +852,21 @@ export function CharacterLayerPanel({ agentId }: { agentId: string }) {
             <CardContent className="space-y-3">
               {!compiled ? (
                 <Alert>
-                  <AlertCircle className="w-4 h-4" />
+                  <Warning size={16} />
                   <AlertDescription>Compile to generate deterministic config artifacts.</AlertDescription>
                 </Alert>
               ) : (
                 <>
                   {compiled.lint.length === 0 ? (
                     <Alert className="border-green-200 bg-green-50">
-                      <CheckCircle2 className="w-4 h-4 text-green-600" />
+                      <CheckCircle className="w-4 h-4 text-green-600" />
                       <AlertDescription className="text-green-700">No lint issues.</AlertDescription>
                     </Alert>
                   ) : (
                     <div className="space-y-2">
                       {compiled.lint.map((issue, i) => (
                         <Alert key={`${issue.code}-${i}`} className={issue.level === "error" ? "border-red-200 bg-red-50" : "border-amber-200 bg-amber-50"}>
-                          <AlertCircle className="w-4 h-4" />
+                          <Warning size={16} />
                           <AlertDescription>
                             <span className="font-medium">{issue.level.toUpperCase()}</span> {issue.code}: {issue.message}
                           </AlertDescription>

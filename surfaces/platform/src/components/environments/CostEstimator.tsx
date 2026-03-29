@@ -11,19 +11,19 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  DollarSign,
+  CurrencyDollar,
   Calculator,
-  Server,
+  HardDrives,
   Cloud,
   HardDrive,
   Network,
   Info,
-  TrendingUp,
+  TrendUp,
   Clock,
   Calendar,
-  ChevronDown,
-  ChevronUp,
-} from 'lucide-react';
+  CaretDown,
+  CaretUp,
+} from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -241,12 +241,12 @@ export function CostEstimator({
           >
             {showDetails ? (
               <>
-                <ChevronUp className="w-3 h-3" />
+                <CaretUp size={12} />
                 Hide breakdown
               </>
             ) : (
               <>
-                <ChevronDown className="w-3 h-3" />
+                <CaretDown size={12} />
                 Show breakdown
               </>
             )}
@@ -261,26 +261,26 @@ export function CostEstimator({
                 className="space-y-2"
               >
                 <CostLineItem
-                  icon={<Server className="w-3 h-3" />}
+                  icon={<HardDrives size={12} />}
                   label="Compute"
                   description="CPU & Memory"
                   cost={getDisplayCost(costBreakdown.compute)}
                 />
                 <CostLineItem
-                  icon={<HardDrive className="w-3 h-3" />}
+                  icon={<HardDrive size={12} />}
                   label="Storage"
                   description="Disk space"
                   cost={getDisplayCost(costBreakdown.storage)}
                 />
                 <CostLineItem
-                  icon={<Network className="w-3 h-3" />}
+                  icon={<Network size={12} />}
                   label="Network"
                   description="Data transfer"
                   cost={getDisplayCost(costBreakdown.network)}
                 />
                 {costBreakdown.extras > 0 && (
                   <CostLineItem
-                    icon={<TrendingUp className="w-3 h-3" />}
+                    icon={<TrendUp size={12} />}
                     label="Extras"
                     description="GPU, Load Balancer"
                     cost={getDisplayCost(costBreakdown.extras)}

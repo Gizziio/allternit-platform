@@ -14,27 +14,26 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  AlertTriangle,
+  Warning,
   User,
   FileText,
   Code,
   Database,
   Globe,
-  Settings,
-  ChevronRight,
-  ChevronDown,
-  RefreshCw,
-  Search,
-  Filter,
-  MoreVertical,
+  GearSix,
+  CaretRight,
+  CaretDown,
+  ArrowsClockwise,
+  MagnifyingGlass,
+  Funnel,
+  DotsThreeVertical,
   Check,
   X,
-  AlertCircle,
   Timer,
   Users,
   Lock,
-  Unlock,
-} from 'lucide-react';
+  LockOpen,
+} from '@phosphor-icons/react';
 import {
   listApprovals,
   getPendingApprovals,
@@ -52,7 +51,7 @@ import type {
 const APPROVAL_TYPES: { value: ApprovalType; label: string; icon: React.ReactNode; color: string }[] = [
   { value: 'tool_execution', label: 'Tool Execution', icon: <Code size={16} />, color: '#3b82f6' },
   { value: 'file_access', label: 'File Access', icon: <FileText size={16} />, color: '#10b981' },
-  { value: 'policy_override', label: 'Policy Override', icon: <Unlock size={16} />, color: '#f59e0b' },
+  { value: 'policy_override', label: 'Policy Override', icon: <LockOpen size={16} />, color: '#f59e0b' },
   { value: 'deployment', label: 'Deployment', icon: <Globe size={16} />, color: '#8b5cf6' },
   { value: 'data_export', label: 'Data Export', icon: <Database size={16} />, color: '#ef4444' },
 ];
@@ -285,7 +284,7 @@ export function PolicyGating() {
             background: '#1a1a1a',
           }}>
             <div style={{ position: 'relative', flex: 1, maxWidth: 300 }}>
-              <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#666' }} />
+              <MagnifyingGlass size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#666' }} />
               <input
                 type="text"
                 placeholder="Search requests..."
@@ -332,7 +331,7 @@ export function PolicyGating() {
                 cursor: 'pointer',
               }}
             >
-              <RefreshCw size={16} />
+              <ArrowsClockwise size={16} />
             </button>
           </div>
 
@@ -854,7 +853,7 @@ function WorkflowConfiguration() {
                     justifyContent: 'center',
                     color: '#d4b08c',
                   }}>
-                    <Settings size={20} />
+                    <GearSix size={20} />
                   </div>
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>
@@ -985,7 +984,7 @@ function StatCard({
 function LoadingState() {
   return (
     <div style={{ textAlign: 'center', padding: 60, color: '#666' }}>
-      <RefreshCw size={32} style={{ animation: 'spin 1s linear infinite' }} />
+      <ArrowsClockwise size={32} style={{ animation: 'spin 1s linear infinite' }} />
       <p>Loading approvals...</p>
     </div>
   );
@@ -994,7 +993,7 @@ function LoadingState() {
 function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
     <div style={{ textAlign: 'center', padding: 60 }}>
-      <AlertCircle size={32} color="#ef4444" />
+      <Warning size={32} color="#ef4444" />
       <p style={{ color: '#ef4444', marginBottom: 16 }}>{message}</p>
       <button
         onClick={onRetry}

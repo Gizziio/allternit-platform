@@ -10,12 +10,12 @@ import {
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import {
-  CheckCircle2Icon,
-  ChevronRightIcon,
-  CircleDotIcon,
-  CircleIcon,
-  XCircleIcon,
-} from "lucide-react";
+  CheckCircle as CheckCircle2Icon,
+  CaretRight as ChevronRightIcon,
+  Circle as CircleDotIcon,
+  Circle as CircleIcon,
+  XCircle as XCircleIcon,
+} from '@phosphor-icons/react';
 import { createContext, useContext, useMemo } from "react";
 
 type TestStatus = "passed" | "failed" | "skipped" | "running";

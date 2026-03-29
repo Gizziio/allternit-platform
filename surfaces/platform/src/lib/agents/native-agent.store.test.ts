@@ -12,9 +12,9 @@ import {
   selectActiveSession,
   selectActiveMessages,
   selectSessionCanvases,
-  selectIsStreaming,
+  selectIsSessionStreaming,
   selectSessionSyncState,
-  selectStreamingError,
+  selectSessionStreamingError,
   type NativeSession,
   type ToolResult,
 } from "./native-agent.store";
@@ -420,6 +420,97 @@ describe("Native Agent Store", () => {
       assert.equal(state.error, "Send failed");
       assert.deepEqual(state.messages["session-1"], []);
     });
+
+    it("auto-titles the session from the first user message content", async () => {
+      // Session starts with sentinel name "New Chat"
+      useNativeAgentStore.setState({
+        sessions: [createMockSession({ id: "session-1", name: "New Chat" })],
+        messages: { "session-1": [] },
+      });
+
+      // First call: send message succeeds
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => createMockMessage({ id: "msg-1", content: "Hello world" }),
+      });
+      // Second call: updateSession (PATCH) succeeds
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          id: "session-1",
+          name: "Hello world",
+          description: "",
+          created_at: new Date().toISOString(),
+          message_count: 1,
+          active: true,
+        }),
+      });
+
+      await useNativeAgentStore
+        .getState()
+        .sendMessage("session-1", "Hello world");
+
+      // Give the .catch() micro-task a turn to settle
+      await new Promise((r) => setTimeout(r, 0));
+
+      // PATCH must have been called
+      assert.equal(mockFetch.mock.calls.length, 2);
+      expect(mockFetch.mock.calls[1][0]).toContain("/agent-sessions/session-1");
+      assert.equal(mockFetch.mock.calls[1][1]?.method, "PATCH");
+    });
+
+    it("surfaces auto-title updateSession failure through store error state (no silent failure)", async () => {
+      // Session starts with sentinel name "Untitled"
+      useNativeAgentStore.setState({
+        sessions: [createMockSession({ id: "session-1", name: "Untitled" })],
+        messages: { "session-1": [] },
+      });
+
+      // First call: send message succeeds
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => createMockMessage({ id: "msg-1", content: "Tell me about AI" }),
+      });
+      // Second call: updateSession fails
+      mockFetch.mockRejectedValueOnce(new Error("Network error on title update"));
+
+      await useNativeAgentStore
+        .getState()
+        .sendMessage("session-1", "Tell me about AI");
+
+      // Give the .catch() micro-task a turn to settle
+      await new Promise((r) => setTimeout(r, 0));
+
+      // Error must be surfaced in store state — no silent swallow
+      assert.equal(
+        useNativeAgentStore.getState().error,
+        "Network error on title update",
+      );
+    });
+
+    it("does not auto-title on a second message (session already has a non-sentinel name)", async () => {
+      // Session has already been titled
+      useNativeAgentStore.setState({
+        sessions: [createMockSession({ id: "session-1", name: "Existing Title" })],
+        messages: {
+          "session-1": [
+            createMockMessage({ id: "prev", role: "user", content: "Previous message" }),
+          ],
+        },
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => createMockMessage({ id: "msg-2", content: "Second message" }),
+      });
+
+      await useNativeAgentStore
+        .getState()
+        .sendMessage("session-1", "Second message");
+
+      // Only 1 fetch call — no updateSession PATCH
+      assert.equal(mockFetch.mock.calls.length, 1);
+    });
   });
 
   describe("Runtime Execution Mode", () => {
@@ -520,8 +611,8 @@ describe("Native Agent Store", () => {
 
       const state = useNativeAgentStore.getState();
       assert.equal(state.error, "Stream failed");
-      assert.equal(state.streaming.error, "Stream failed");
-      assert.equal(state.streaming.isStreaming, false);
+      assert.equal(state.streamingBySession["session-1"]?.error, "Stream failed");
+      assert.equal(state.streamingBySession["session-1"]?.isStreaming, false);
     });
 
     it("aborts the active stream and notifies the session abort endpoint", async () => {
@@ -548,7 +639,7 @@ describe("Native Agent Store", () => {
 
       assert.equal(abortSpy.mock.calls.length, 1);
       assert.equal(
-        useNativeAgentStore.getState().streaming.abortController,
+        useNativeAgentStore.getState().streamingBySession["session-1"]?.abortController,
         null,
       );
       expect(mockFetch.mock.calls[0][0]).toContain(
@@ -765,12 +856,14 @@ describe("Native Agent Store", () => {
         messages: { "session-1": [createMockMessage({ id: "msg-1" })] },
         canvases: { "canvas-1": canvas },
         sessionCanvases: { "session-1": ["canvas-1"] },
-        streaming: {
-          isStreaming: true,
-          currentMessageId: "assistant-1",
-          abortController: null,
-          error: "stream failed",
-          streamBuffer: "",
+        streamingBySession: {
+          "session-1": {
+            isStreaming: true,
+            currentMessageId: "assistant-1",
+            abortController: null,
+            error: "stream failed",
+            streamBuffer: "",
+          },
         },
         isSessionSyncConnected: true,
         sessionSyncError: null,
@@ -780,8 +873,8 @@ describe("Native Agent Store", () => {
       assert.equal(selectActiveSession(state)?.id, "session-1");
       assert.equal(selectActiveMessages(state).length, 1);
       assert.equal(selectSessionCanvases(state, "session-1").length, 1);
-      assert.equal(selectIsStreaming(state), true);
-      assert.equal(selectStreamingError(state), "stream failed");
+      assert.equal(selectIsSessionStreaming(state, "session-1"), true);
+      assert.equal(selectSessionStreamingError(state, "session-1"), "stream failed");
       assert.deepEqual(selectSessionSyncState(state), {
         isConnected: true,
         error: null,

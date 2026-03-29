@@ -20,17 +20,17 @@
 
 import React, { useEffect, useRef, useCallback } from 'react';
 import {
-  MousePointer2,
+  CursorClick,
   Hand,
-  Type,
+  TextT,
   Scroll,
   Eye,
   Camera,
-  Download,
-  AlertTriangle,
+  DownloadSimple,
+  Warning,
   CheckCircle,
   Clock,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import {
   BrowserActionType,
   OverlayHighlightEvent,
@@ -119,7 +119,7 @@ export function BrowserAgentOverlay({
       case 'Download':
         return Download;
       case 'ConfirmGate':
-        return AlertTriangle;
+        return Warning;
       case 'Select':
       case 'Wait':
       default:
@@ -258,7 +258,7 @@ export function BrowserAgentOverlay({
           whiteSpace: 'nowrap',
         }}
       >
-        <ActionIcon className="w-4 h-4" />
+        <ActionIcon size={16} />
         <span className="text-xs font-semibold">{label}</span>
       </div>
 
@@ -284,7 +284,7 @@ export function BrowserAgentOverlay({
       {status === 'WaitingApproval' && (
         <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px]">
           <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 rounded-full bg-yellow-500/90 text-white shadow-lg animate-pulse">
-            <AlertTriangle className="w-4 h-4" />
+            <Warning size={16} />
             <span className="text-sm font-medium">Waiting for approval...</span>
           </div>
         </div>

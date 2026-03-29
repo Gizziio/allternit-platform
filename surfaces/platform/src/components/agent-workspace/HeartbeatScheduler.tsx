@@ -10,20 +10,20 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Clock,
   Plus,
-  Trash2,
+  Trash,
   Play,
   Pause,
-  AlertCircle,
+  Warning,
   CheckCircle,
   Calendar,
   Repeat,
-  ChevronDown,
-  ChevronRight,
-  Settings,
-  Save,
-  RefreshCw,
+  CaretDown,
+  CaretRight,
+  GearSix,
+  FloppyDisk,
+  ArrowsClockwise,
   X,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import { agentWorkspaceService } from '@/lib/agents/agent-workspace.service';
 import {
   createScheduledJob,
@@ -327,7 +327,7 @@ export function HeartbeatScheduler({ agentId, onClose, theme = STUDIO_THEME }: H
               justifyContent: 'center',
             }}
           >
-            <RefreshCw style={{ width: 16, height: 16, animation: isLoading ? 'spin 1s linear infinite' : undefined }} />
+            <ArrowsClockwise style={{ width: 16, height: 16, animation: isLoading ? 'spin 1s linear infinite' : undefined }} />
           </button>
           <button
             onClick={() => setShowAddForm(true)}
@@ -369,7 +369,7 @@ export function HeartbeatScheduler({ agentId, onClose, theme = STUDIO_THEME }: H
               whiteSpace: 'nowrap',
             }}
           >
-            <Save style={{ width: 14, height: 14 }} />
+            <FloppyDisk style={{ width: 14, height: 14 }} />
             <span>{isSaving ? 'Saving...' : 'Save'}</span>
           </button>
           <button
@@ -405,7 +405,7 @@ export function HeartbeatScheduler({ agentId, onClose, theme = STUDIO_THEME }: H
             gap: '8px',
           }}
         >
-          <AlertCircle style={{ width: 16, height: 16, color: '#ef4444' }} />
+          <Warning style={{ width: 16, height: 16, color: '#ef4444' }} />
           <span style={{ fontSize: '13px', color: '#ef4444' }}>{error}</span>
         </div>
       )}
@@ -527,9 +527,9 @@ export function HeartbeatScheduler({ agentId, onClose, theme = STUDIO_THEME }: H
                 onClick={() => setExpandedTask(expandedTask === task.id ? null : task.id)}
               >
                 {expandedTask === task.id ? (
-                  <ChevronDown style={{ width: 16, height: 16, color: theme.textMuted }} />
+                  <CaretDown style={{ width: 16, height: 16, color: theme.textMuted }} />
                 ) : (
-                  <ChevronRight style={{ width: 16, height: 16, color: theme.textMuted }} />
+                  <CaretRight style={{ width: 16, height: 16, color: theme.textMuted }} />
                 )}
                 
                 <Switch
@@ -595,7 +595,7 @@ export function HeartbeatScheduler({ agentId, onClose, theme = STUDIO_THEME }: H
                     }}
                     title="Remove task"
                   >
-                    <Trash2 style={{ width: 14, height: 14 }} />
+                    <Trash style={{ width: 14, height: 14 }} />
                   </button>
                 </div>
               </div>
@@ -665,7 +665,7 @@ export function HeartbeatScheduler({ agentId, onClose, theme = STUDIO_THEME }: H
           gap: '12px',
         }}
       >
-        <Settings style={{ width: 16, height: 16, color: theme.accent }} />
+        <GearSix style={{ width: 16, height: 16, color: theme.accent }} />
         <p style={{ fontSize: '12px', color: theme.textSecondary, margin: 0 }}>
           Heartbeat tasks are stored in <code style={{ background: theme.bg, padding: '2px 6px', borderRadius: '4px' }}>.a2r/governance/HEARTBEAT.md</code> and synced with the Cron scheduler.
         </p>

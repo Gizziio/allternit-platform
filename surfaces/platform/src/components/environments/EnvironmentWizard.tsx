@@ -16,38 +16,37 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Box,
-  Search,
-  Filter,
+  Cube,
+  MagnifyingGlass,
+  Funnel,
   Check,
-  ChevronRight,
-  ChevronLeft,
-  Server,
+  CaretRight,
+  CaretLeft,
+  HardDrives,
   Cloud,
   Cpu,
-  MemoryStick,
   HardDrive,
   Globe,
   Terminal,
-  Settings,
-  AlertCircle,
-  CheckCircle2,
+  GearSix,
+  Warning,
+  CheckCircle,
   XCircle,
-  Loader2,
+  CircleNotch,
   Clock,
-  Zap,
+  Lightning,
   Shield,
-  Code2,
+  Code,
   Database,
   Layout,
-  Sparkles,
+  Sparkle,
   X,
   Eye,
-  EyeOff,
+  EyeSlash,
   Copy,
-  ExternalLink,
-  RefreshCw,
-} from 'lucide-react';
+  ArrowSquareOut,
+  ArrowsClockwise,
+} from '@phosphor-icons/react';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -624,7 +623,7 @@ function WizardHeader({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-            <Box className="w-5 h-5 text-primary" />
+            <Cube className="w-5 h-5 text-primary" />
           </div>
           <div>
             <h2 className="text-lg font-semibold">Create Environment</h2>
@@ -639,7 +638,7 @@ function WizardHeader({
             onClick={onClose}
             className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"
           >
-            <X className="w-4 h-4" />
+            <X size={16} />
           </button>
         )}
       </div>
@@ -650,8 +649,8 @@ function WizardHeader({
 function StepIndicator({ step }: { step: number }) {
   const steps = [
     { id: 1, label: 'Template', icon: Layout },
-    { id: 2, label: 'Configure', icon: Settings },
-    { id: 3, label: 'Target', icon: Server },
+    { id: 2, label: 'Configure', icon: GearSix },
+    { id: 3, label: 'Target', icon: HardDrives },
     { id: 4, label: 'Deploy', icon: Cloud },
   ];
 
@@ -675,9 +674,9 @@ function StepIndicator({ step }: { step: number }) {
                   )}
                 >
                   {isCompleted ? (
-                    <Check className="w-4 h-4" />
+                    <Check size={16} />
                   ) : (
-                    <Icon className="w-4 h-4" />
+                    <Icon size={16} />
                   )}
                 </div>
                 <span
@@ -738,7 +737,7 @@ function TemplateSelectionStep({
     return (
       <div className="h-full flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <CircleNotch className="w-8 h-8 animate-spin text-primary" />
           <p className="text-muted-foreground">Loading templates...</p>
         </div>
       </div>
@@ -750,7 +749,7 @@ function TemplateSelectionStep({
       {/* Search and Filters */}
       <div className="p-6 border-b space-y-4">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Search templates..."
             value={searchQuery}
@@ -786,7 +785,7 @@ function TemplateSelectionStep({
         </div>
         {templates.length === 0 && (
           <div className="text-center py-12">
-            <Filter className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <Funnel className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
             <p className="text-muted-foreground">No templates match your search</p>
           </div>
         )}
@@ -805,9 +804,9 @@ function TemplateCard({
   onClick: () => void;
 }) {
   const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-    sparkles: Sparkles,
-    bot: Box,
-    code: Code2,
+    sparkles: Sparkle,
+    bot: Cube,
+    code: Code,
     brain: Database,
     cpu: Cpu,
     globe: Globe,
@@ -831,7 +830,7 @@ function TemplateCard({
               "w-10 h-10 rounded-lg flex items-center justify-center",
               isSelected ? "bg-primary text-primary-foreground" : "bg-muted"
             )}>
-              <Icon className="w-5 h-5" />
+              <Icon size={20} />
             </div>
             <div>
               <CardTitle className="text-base">{template.name}</CardTitle>
@@ -842,13 +841,13 @@ function TemplateCard({
                   </Badge>
                 )}
                 <span className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
+                  <Clock size={12} />
                   {template.setupTime}
                 </span>
               </div>
             </div>
           </div>
-          {isSelected && <CheckCircle2 className="w-5 h-5 text-primary" />}
+          {isSelected && <CheckCircle className="w-5 h-5 text-primary" />}
         </div>
       </CardHeader>
       <CardContent className="pt-0">
@@ -888,7 +887,7 @@ function ConfigurationStep({
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Template Info */}
         <div className="flex items-center gap-4 p-4 bg-muted rounded-lg">
-          <Box className="w-8 h-8 text-primary" />
+          <Cube className="w-8 h-8 text-primary" />
           <div>
             <h3 className="font-medium">{template.name}</h3>
             <p className="text-sm text-muted-foreground">{template.description}</p>
@@ -913,7 +912,7 @@ function ConfigurationStep({
         {/* Resource Limits */}
         <div className="space-y-4">
           <h4 className="text-sm font-medium flex items-center gap-2">
-            <Cpu className="w-4 h-4" />
+            <Cpu size={16} />
             Resource Limits
           </h4>
           <div className="grid grid-cols-2 gap-4">
@@ -956,7 +955,7 @@ function ConfigurationStep({
         {variables.length > 0 && (
           <div className="space-y-4">
             <h4 className="text-sm font-medium flex items-center gap-2">
-              <Settings className="w-4 h-4" />
+              <GearSix size={16} />
               Configuration Variables
             </h4>
             <div className="space-y-4">
@@ -976,7 +975,7 @@ function ConfigurationStep({
         {template.defaultPorts && template.defaultPorts.length > 0 && (
           <div className="space-y-2">
             <h4 className="text-sm font-medium flex items-center gap-2">
-              <Globe className="w-4 h-4" />
+              <Globe size={16} />
               Exposed Ports
             </h4>
             <div className="flex flex-wrap gap-2">
@@ -1102,7 +1101,7 @@ function VariableInput({
               onClick={() => setShowSecret(!showSecret)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
-              {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              {showSecret ? <EyeSlash size={16} /> : <Eye size={16} />}
             </button>
           </div>
         </div>
@@ -1146,7 +1145,7 @@ function TargetSelectionStep({
           details={[
             { icon: Cpu, label: 'Uses local resources' },
             { icon: HardDrive, label: 'Data persists locally' },
-            { icon: Zap, label: 'Fastest setup' },
+            { icon: Lightning, label: 'Fastest setup' },
           ]}
         />
 
@@ -1155,7 +1154,7 @@ function TargetSelectionStep({
           id="vps"
           name="Connected VPS"
           description="Deploy to one of your connected VPS instances"
-          icon={Server}
+          icon={HardDrives}
           isSelected={target === 'vps'}
           onClick={() => onTargetChange('vps')}
           disabled={vpsConnections.length === 0}
@@ -1221,7 +1220,7 @@ function TargetSelectionStep({
               {selectedProvider && (
                 <div className="p-3 bg-muted rounded-lg text-sm">
                   <div className="flex items-center gap-2 text-muted-foreground">
-                    <AlertCircle className="w-4 h-4" />
+                    <Warning size={16} />
                     Estimated cost: ~${(selectedProvider.startingPrice * 730).toFixed(2)}/month
                   </div>
                 </div>
@@ -1273,12 +1272,12 @@ function TargetCard({
             "w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0",
             isSelected ? "bg-primary text-primary-foreground" : "bg-muted"
           )}>
-            <Icon className="w-6 h-6" />
+            <Icon size={24} />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <h3 className="font-medium">{name}</h3>
-              {isSelected && <CheckCircle2 className="w-4 h-4 text-primary" />}
+              {isSelected && <CheckCircle className="w-4 h-4 text-primary" />}
             </div>
             <p className="text-sm text-muted-foreground mt-1">{description}</p>
             
@@ -1295,7 +1294,7 @@ function TargetCard({
 
             {disabled && disabledMessage && (
               <div className="mt-3 flex items-center gap-2 text-xs text-amber-500">
-                <AlertCircle className="w-4 h-4" />
+                <Warning size={16} />
                 {disabledMessage}
               </div>
             )}
@@ -1334,7 +1333,7 @@ function ReviewDeployStep({
       <div className="h-full flex items-center justify-center p-6">
         <div className="text-center space-y-6 max-w-md">
           <div className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mx-auto">
-            <CheckCircle2 className="w-10 h-10 text-green-500" />
+            <CheckCircle className="w-10 h-10 text-green-500" />
           </div>
           <div>
             <h3 className="text-xl font-semibold">Environment Ready!</h3>
@@ -1347,7 +1346,7 @@ function ReviewDeployStep({
               Close
             </Button>
             <Button onClick={() => {/* Open environment */}}>
-              <ExternalLink className="w-4 h-4 mr-2" />
+              <ArrowSquareOut className="w-4 h-4 mr-2" />
               Open Environment
             </Button>
           </div>
@@ -1372,7 +1371,7 @@ function ReviewDeployStep({
               Close
             </Button>
             <Button onClick={onRetry} variant="outline">
-              <RefreshCw className="w-4 h-4 mr-2" />
+              <ArrowsClockwise className="w-4 h-4 mr-2" />
               Try Again
             </Button>
           </div>
@@ -1417,9 +1416,9 @@ function ReviewDeployStep({
           <div className="p-3 bg-muted rounded-lg space-y-2">
             <div className="text-xs text-muted-foreground uppercase">Target</div>
             <div className="flex items-center gap-2">
-              {state.target === 'local' && <Terminal className="w-4 h-4" />}
-              {state.target === 'vps' && <Server className="w-4 h-4" />}
-              {state.target === 'cloud' && <Cloud className="w-4 h-4" />}
+              {state.target === 'local' && <Terminal size={16} />}
+              {state.target === 'vps' && <HardDrives size={16} />}
+              {state.target === 'cloud' && <Cloud size={16} />}
               <span className="capitalize">{state.target}</span>
             </div>
           </div>
@@ -1438,7 +1437,7 @@ function ReviewDeployStep({
           {!state.preFlightPassed && state.preFlightIssues.length > 0 && (
             <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-sm text-red-600">
               <div className="flex items-center gap-2">
-                <AlertCircle className="w-4 h-4" />
+                <Warning size={16} />
                 <span>{state.preFlightIssues.length} issue(s) found</span>
               </div>
             </div>
@@ -1451,7 +1450,7 @@ function ReviewDeployStep({
           <div className="flex-1 bg-black rounded-lg p-4 font-mono text-sm overflow-auto">
             {logs.length === 0 ? (
               <div className="text-muted-foreground flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <CircleNotch className="w-4 h-4 animate-spin" />
                 Waiting to start...
               </div>
             ) : (
@@ -1483,12 +1482,12 @@ function ReviewDeployStep({
         >
           {state.isDeploying ? (
             <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              <CircleNotch className="w-4 h-4 mr-2 animate-spin" />
               Deploying...
             </>
           ) : !state.preFlightPassed ? (
             <>
-              <AlertCircle className="w-4 h-4 mr-2" />
+              <Warning className="w-4 h-4 mr-2" />
               Fix Issues to Deploy
             </>
           ) : (
@@ -1527,7 +1526,7 @@ function WizardFooter({
       >
         {step === 1 ? 'Cancel' : (
           <>
-            <ChevronLeft className="w-4 h-4 mr-2" />
+            <CaretLeft className="w-4 h-4 mr-2" />
             Back
           </>
         )}
@@ -1538,7 +1537,7 @@ function WizardFooter({
         disabled={!canProceed || isDeploying}
       >
         Next
-        <ChevronRight className="w-4 h-4 ml-2" />
+        <CaretRight className="w-4 h-4 ml-2" />
       </Button>
     </div>
   );

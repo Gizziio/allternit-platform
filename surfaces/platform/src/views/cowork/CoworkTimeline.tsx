@@ -16,17 +16,17 @@ import type {
 import { useCoworkStore } from './CoworkStore';
 import {
   Camera,
-  MousePointerClick,
+  Cursor as MousePointerClick,
   Keyboard,
   CheckCircle,
   XCircle,
   Flag,
-  MessageSquare,
+  Chat,
   Pause,
   Play,
-  AlertCircle,
+  Warning,
   Clock,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 
 // ============================================================================
 // Event Icons
@@ -41,13 +41,13 @@ const EventIcon = memo(function EventIcon({ type }: { type: AnyCoworkEvent['type
     case 'cowork.action':
       return <MousePointerClick className={cn(iconClass, "text-green-400")} />;
     case 'cowork.approval_request':
-      return <AlertCircle className={cn(iconClass, "text-yellow-400")} />;
+      return <Warning className={cn(iconClass, "text-yellow-400")} />;
     case 'cowork.approval_result':
       return <CheckCircle className={cn(iconClass, "text-green-400")} />;
     case 'cowork.checkpoint':
       return <Flag className={cn(iconClass, "text-purple-400")} />;
     case 'cowork.narration':
-      return <MessageSquare className={cn(iconClass, "text-gray-400")} />;
+      return <Chat className={cn(iconClass, "text-gray-400")} />;
     case 'cowork.takeover':
       return <Keyboard className={cn(iconClass, "text-orange-400")} />;
     default:

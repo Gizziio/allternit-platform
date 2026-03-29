@@ -24,9 +24,9 @@ import {
   XCircle,
   Clock,
   Pause,
-  DollarSign,
-  TrendingUp,
-} from 'lucide-react';
+  CurrencyDollar,
+  TrendUp,
+} from '@phosphor-icons/react';
 import type { Agent, AgentStatus } from '../types';
 import { metaSwarmClient } from '../api';
 
@@ -35,11 +35,11 @@ interface AgentStatusPanelProps {
 }
 
 const statusConfig: Record<AgentStatus, { color: string; icon: React.ReactNode; label: string }> = {
-  idle: { color: 'bg-gray-400', icon: <Pause className="h-3 w-3" />, label: 'Idle' },
+  idle: { color: 'bg-gray-400', icon: <Pause size={12} />, label: 'Idle' },
   working: { color: 'bg-blue-500', icon: <Cpu className="h-3 w-3 animate-pulse" />, label: 'Working' },
-  waiting: { color: 'bg-yellow-500', icon: <Clock className="h-3 w-3" />, label: 'Waiting' },
-  completed: { color: 'bg-green-500', icon: <CheckCircle className="h-3 w-3" />, label: 'Completed' },
-  failed: { color: 'bg-red-500', icon: <XCircle className="h-3 w-3" />, label: 'Failed' },
+  waiting: { color: 'bg-yellow-500', icon: <Clock size={12} />, label: 'Waiting' },
+  completed: { color: 'bg-green-500', icon: <CheckCircle size={12} />, label: 'Completed' },
+  failed: { color: 'bg-red-500', icon: <XCircle size={12} />, label: 'Failed' },
 };
 
 export function AgentStatusPanel({ className }: AgentStatusPanelProps) {
@@ -74,7 +74,7 @@ export function AgentStatusPanel({ className }: AgentStatusPanelProps) {
       <Card className={className}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Cpu className="h-5 w-5" />
+            <Cpu size={20} />
             Agent Status
           </CardTitle>
         </CardHeader>
@@ -93,7 +93,7 @@ export function AgentStatusPanel({ className }: AgentStatusPanelProps) {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Cpu className="h-5 w-5" />
+              <Cpu size={20} />
               Agent Status
             </div>
             <div className="flex gap-2 text-sm font-normal">
@@ -119,7 +119,7 @@ export function AgentStatusPanel({ className }: AgentStatusPanelProps) {
                 <Tooltip key={agent.id.id}>
                   <TooltipTrigger asChild>
                     <div className="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent transition-colors cursor-pointer">
-                      <Avatar className="h-10 w-10">
+                      <Avatar size={40}>
                         <AvatarFallback className={status.color}>
                           {agent.role.name.charAt(0)}
                         </AvatarFallback>
@@ -142,11 +142,11 @@ export function AgentStatusPanel({ className }: AgentStatusPanelProps) {
 
                       <div className="text-right text-sm">
                         <div className="flex items-center gap-1 text-green-600">
-                          <TrendingUp className="h-3 w-3" />
+                          <TrendUp size={12} />
                           <span>{(agent.stats.success_rate * 100).toFixed(0)}%</span>
                         </div>
                         <div className="flex items-center gap-1 text-muted-foreground">
-                          <DollarSign className="h-3 w-3" />
+                          <CurrencyDollar size={12} />
                           <span>${agent.stats.total_cost.estimated_usd.toFixed(2)}</span>
                         </div>
                       </div>

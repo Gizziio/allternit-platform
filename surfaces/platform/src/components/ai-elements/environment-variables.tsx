@@ -6,7 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import { CheckIcon, CopyIcon, EyeIcon, EyeOffIcon } from "lucide-react";
+import {
+  Check as CheckIcon,
+  Copy as CopyIcon,
+  Eye as EyeIcon,
+  EyeSlash as EyeOffIcon,
+} from '@phosphor-icons/react';
 import {
   createContext,
   useCallback,

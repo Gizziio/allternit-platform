@@ -63,12 +63,12 @@ export class MyA2RPlugin {
   /**
    * Storage instance for persisting plugin data
    */
-  private storage: any = null;
+  private _storage: any = null;
 
   /**
    * Logger instance
    */
-  private logger: any = null;
+  private _logger: any = null;
 
   /**
    * Plugin settings
@@ -306,7 +306,7 @@ export class MyA2RPlugin {
   /**
    * Handle workspace change event
    */
-  private handleWorkspaceChange(data: any): void {
+  private _handleWorkspaceChange(data: any): void {
     console.log(`[${this.name}] Workspace changed:`, data);
     // Implementation: React to workspace changes
   }
@@ -314,7 +314,7 @@ export class MyA2RPlugin {
   /**
    * Handle configuration change
    */
-  private handleConfigChange(key: string): void {
+  private _handleConfigChange(key: string): void {
     console.log(`[${this.name}] Config changed:`, key);
     // Implementation: React to config changes
   }
@@ -326,7 +326,7 @@ export class MyA2RPlugin {
   /**
    * Handle a plugin action
    */
-  private handleAction(args: any): void {
+  private _handleAction(args: any): void {
     console.log(`[${this.name}] Handling action:`, args);
     // Implementation: Execute plugin functionality
   }

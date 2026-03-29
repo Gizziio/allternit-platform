@@ -71,6 +71,7 @@ export async function createCoreChatAgent({
   // Get MCP tools if connectors are configured
   const { tools: mcpTools, cleanup: mcpCleanup } = await getMcpTools({
     connectors: mcpConnectors,
+    dataStream,
   });
 
   // Get base tools

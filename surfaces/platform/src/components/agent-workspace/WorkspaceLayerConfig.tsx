@@ -15,7 +15,7 @@ import {
   Briefcase,
   Check,
   Info,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 
 export interface WorkspaceLayerConfig {
   cognitive: boolean;

@@ -1,6 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GlassCard } from '../../design/GlassCard';
-import { ShieldCheck, CheckCircle, XCircle, AlertCircle, ChevronDown, ChevronUp, FolderOpen, Settings } from 'lucide-react';
+import {
+  ShieldCheck,
+  CheckCircle,
+  XCircle,
+  Warning,
+  CaretDown,
+  CaretUp,
+  FolderOpen,
+  GearSix,
+} from '@phosphor-icons/react';
 
 type ProposalStatus = 'pending' | 'approved' | 'rejected';
 type SortBy = 'date' | 'risk' | 'author';
@@ -23,95 +32,6 @@ interface Proposal {
   affectedFiles: ProposalFile[];
   reviewers?: string[];
 }
-
-const mockProposals: Proposal[] = [
-  {
-    id: 'PROP-001',
-    title: 'Update Core Type Schemas',
-    description: 'Refactor type definitions to improve type safety across the platform',
-    author: 'agent-alpha',
-    timestamp: '2h ago',
-    status: 'pending',
-    ciChecks: 'passed',
-    riskLevel: 'Medium',
-    affectedFiles: [
-      { path: 'src/types/core.ts', additions: 45, deletions: 32 },
-      { path: 'src/types/index.ts', additions: 8, deletions: 5 }
-    ]
-  },
-  {
-    id: 'PROP-002',
-    title: 'Add MCP Filesystem Integration',
-    description: 'Implement filesystem MCP connector for file operations in agents',
-    author: 'architect',
-    timestamp: '4h ago',
-    status: 'approved',
-    ciChecks: 'passed',
-    riskLevel: 'High',
-    affectedFiles: [
-      { path: 'src/mcp/FilesystemConnector.ts', additions: 320, deletions: 0 },
-      { path: 'src/mcp/index.ts', additions: 12, deletions: 2 },
-      { path: 'tests/mcp.test.ts', additions: 280, deletions: 0 }
-    ]
-  },
-  {
-    id: 'PROP-003',
-    title: 'Optimize Database Query Performance',
-    description: 'Add indexing and query optimization for frequently accessed tables',
-    author: 'bot-performance',
-    timestamp: '30m ago',
-    status: 'pending',
-    ciChecks: 'running',
-    riskLevel: 'Low',
-    affectedFiles: [
-      { path: 'src/db/migrations/001_add_indexes.sql', additions: 52, deletions: 0 },
-      { path: 'src/db/QueryOptimizer.ts', additions: 145, deletions: 28 }
-    ]
-  },
-  {
-    id: 'PROP-004',
-    title: 'Fix Memory Leak in Event Emitter',
-    description: 'Clean up event listeners on component unmount to prevent memory leaks',
-    author: 'agent-beta',
-    timestamp: '1d ago',
-    status: 'rejected',
-    ciChecks: 'failed',
-    riskLevel: 'Medium',
-    affectedFiles: [
-      { path: 'src/events/EventEmitter.ts', additions: 24, deletions: 18 }
-    ]
-  },
-  {
-    id: 'PROP-005',
-    title: 'Add Real-time Collaboration Features',
-    description: 'Implement WebSocket-based collaboration for multi-user editing',
-    author: 'architect',
-    timestamp: '12h ago',
-    status: 'pending',
-    ciChecks: 'passed',
-    riskLevel: 'High',
-    affectedFiles: [
-      { path: 'src/collaboration/WebSocketServer.ts', additions: 456, deletions: 0 },
-      { path: 'src/collaboration/SyncEngine.ts', additions: 380, deletions: 0 },
-      { path: 'src/ui/CollaborationPanel.tsx', additions: 220, deletions: 40 },
-      { path: 'tests/collaboration.test.ts', additions: 310, deletions: 0 }
-    ]
-  },
-  {
-    id: 'PROP-006',
-    title: 'Update Dependencies - Q1 2025',
-    description: 'Upgrade React, TypeScript, and related dependencies to latest stable versions',
-    author: 'dependabot',
-    timestamp: '6h ago',
-    status: 'approved',
-    ciChecks: 'passed',
-    riskLevel: 'Low',
-    affectedFiles: [
-      { path: 'package.json', additions: 8, deletions: 8 },
-      { path: 'package-lock.json', additions: 1240, deletions: 1120 }
-    ]
-  }
-];
 
 const getRiskColor = (risk: string): string => {
   switch (risk) {
@@ -144,21 +64,31 @@ export function PromotionDashboardView() {
   const [filterStatus, setFilterStatus] = useState<'All' | ProposalStatus>('All');
   const [sortBy, setSortBy] = useState<SortBy>('date');
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [proposalStates, setProposalStates] = useState<Record<string, ProposalStatus>>(
-    mockProposals.reduce((acc, p) => ({ ...acc, [p.id]: p.status }), {})
-  );
+  const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [proposalStates, setProposalStates] = useState<Record<string, ProposalStatus>>({});
 
-  const filteredProposals = mockProposals.filter(p => 
+  useEffect(() => {
+    fetch('/api/v1/promotion/proposals')
+      .then(r => r.json())
+      .then((data: Proposal[]) => {
+        setProposals(data);
+        setProposalStates(data.reduce((acc, p) => ({ ...acc, [p.id]: p.status }), {}));
+      })
+      .catch(() => {});
+  }, []);
+
+  const filteredProposals = proposals.filter(p => 
     filterStatus === 'All' ? true : proposalStates[p.id] === filterStatus
   );
 
   const sortedProposals = [...filteredProposals].sort((a, b) => {
     switch (sortBy) {
       case 'date':
-        return mockProposals.findIndex(p => p.id === b.id) - mockProposals.findIndex(p => p.id === a.id);
-      case 'risk':
+        return proposals.findIndex(p => p.id === b.id) - proposals.findIndex(p => p.id === a.id);
+      case 'risk': {
         const riskOrder = { 'High': 3, 'Medium': 2, 'Low': 1 };
         return riskOrder[b.riskLevel as keyof typeof riskOrder] - riskOrder[a.riskLevel as keyof typeof riskOrder];
+      }
       case 'author':
         return a.author.localeCompare(b.author);
       default:
@@ -343,7 +273,7 @@ export function PromotionDashboardView() {
 
                   {/* Risk Level */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <AlertCircle size={14} color={getRiskColor(proposal.riskLevel)} />
+                    <Warning size={14} color={getRiskColor(proposal.riskLevel)} />
                     <span
                       style={{
                         fontSize: 11,
@@ -376,7 +306,7 @@ export function PromotionDashboardView() {
                       cursor: 'pointer'
                     }}
                   >
-                    {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    {isExpanded ? <CaretUp size={16} /> : <CaretDown size={16} />}
                   </button>
                 </div>
 

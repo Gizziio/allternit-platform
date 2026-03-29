@@ -1,6 +1,12 @@
 import React, { useEffect } from 'react';
 import { GlassCard } from '../../design/GlassCard';
-import { History, CheckCircle, XCircle, Play, Loader2 } from 'lucide-react';
+import {
+  ClockCounterClockwise,
+  CheckCircle,
+  XCircle,
+  Play,
+  CircleNotch,
+} from '@phosphor-icons/react';
 import { useUnifiedStore } from '@/lib/agents/unified.store';
 
 export function RunsView() {
@@ -54,7 +60,7 @@ export function RunsView() {
           justifyContent: 'center',
           color: '#666'
         }}>
-          <History size={64} style={{ marginBottom: 16, opacity: 0.3 }} />
+          <ClockCounterClockwise size={64} style={{ marginBottom: 16, opacity: 0.3 }} />
           <p>No executions yet. Start one from the Plan tab.</p>
         </div>
       ) : (
@@ -79,7 +85,7 @@ export function RunsView() {
                          'rgba(10,132,255,0.1)'
             }}>
               {run.status === 'running' ? (
-                <Loader2 size={20} color="#0a84ff" className="animate-spin" />
+                <CircleNotch size={20} color="#0a84ff" className="animate-spin" />
               ) : run.status === 'completed' ? (
                 <CheckCircle size={20} color="#34c759" />
               ) : (
@@ -109,7 +115,7 @@ export function RunsView() {
               )}
             </div>
             <div style={{ fontSize: 12, opacity: 0.5, display: 'flex', alignItems: 'center', gap: 4 }}>
-              <History size={14} />
+              <ClockCounterClockwise size={14} />
               {formatDuration(Date.now() - run.startedAt)}
             </div>
             {run.status === 'running' ? (

@@ -10,15 +10,15 @@ import {
 } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import {
-  Volume2,
-  VolumeX,
-  Settings,
+  SpeakerHigh,
+  SpeakerSlash,
+  GearSix,
   Play,
-  AlertCircle,
+  Warning,
   Headphones,
-  Mic,
+  Microphone,
   UserCircle,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import { useVoice } from '@/providers/voice-provider';
 import { speechToText } from '@/services/voice';
 import { Persona } from './persona';
@@ -115,7 +115,7 @@ export function VoiceOverlay({ className }: VoiceOverlayProps) {
         {/* Recording overlay icon */}
         {isRecording && (
           <div className="absolute inset-0 flex items-center justify-center bg-background/30 rounded-full">
-            <Mic className="w-4 h-4 text-white drop-shadow-md" />
+            <Microphone className="w-4 h-4 text-white drop-shadow-md" />
           </div>
         )}
       </button>
@@ -132,7 +132,7 @@ export function VoiceOverlay({ className }: VoiceOverlayProps) {
               !serviceAvailable && "text-muted-foreground"
             )}
           >
-            <Settings className="h-3.5 w-3.5" />
+            <GearSix className="h-3.5 w-3.5" />
             {!serviceAvailable && (
               <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-amber-500 rounded-full" />
             )}
@@ -170,7 +170,7 @@ export function VoiceOverlay({ className }: VoiceOverlayProps) {
           {!serviceAvailable && (
             <div className="bg-amber-500/10 border border-amber-500/20 rounded-md p-2 mb-3">
               <div className="flex items-start gap-2">
-                <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
+                <Warning className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
                 <div className="space-y-1">
                   <p className="text-[10px] text-muted-foreground">Start voice service:</p>
                   <code className="block bg-background px-1.5 py-0.5 rounded text-[9px]">
@@ -193,7 +193,7 @@ export function VoiceOverlay({ className }: VoiceOverlayProps) {
           {/* Mic Selector */}
           <div className="space-y-1.5 mb-3">
             <label className="text-[10px] font-medium text-muted-foreground flex items-center gap-1">
-              <UserCircle className="h-3 w-3" />
+              <UserCircle size={12} />
               Microphone
             </label>
             <MicSelector>
@@ -219,7 +219,7 @@ export function VoiceOverlay({ className }: VoiceOverlayProps) {
           {/* Voice Selector */}
           <div className="space-y-1.5 mb-3">
             <label className="text-[10px] font-medium text-muted-foreground flex items-center gap-1">
-              <Settings className="h-3 w-3" />
+              <GearSix size={12} />
               Voice
             </label>
             <VoiceSelector>
@@ -256,9 +256,9 @@ export function VoiceOverlay({ className }: VoiceOverlayProps) {
               disabled={!serviceAvailable}
             >
               {autoPlay ? (
-                <><Volume2 className="h-3 w-3 mr-1" /> On</>
+                <><SpeakerHigh className="h-3 w-3 mr-1" /> On</>
               ) : (
-                <><VolumeX className="h-3 w-3 mr-1" /> Off</>
+                <><SpeakerSlash className="h-3 w-3 mr-1" /> Off</>
               )}
             </Button>
           </div>

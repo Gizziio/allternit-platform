@@ -7,10 +7,19 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  Package, Download, FileText, GitBranch, Key, Hash,
-  Search, Calendar, RefreshCw, ChevronRight, Receipt
-} from "lucide-react";
+import {
+  Package,
+  DownloadSimple,
+  FileText,
+  GitBranch,
+  Key,
+  Hash,
+  MagnifyingGlass,
+  Calendar,
+  ArrowsClockwise,
+  CaretRight,
+  Receipt,
+} from '@phosphor-icons/react';
 import type { ContextPack } from "../dak.types";
 
 export function ContextPackBrowser() {
@@ -58,7 +67,7 @@ export function ContextPackBrowser() {
           </div>
         </div>
         <Button variant="outline" onClick={() => fetchContextPacks()}>
-          <RefreshCw className="w-4 h-4 mr-2" /> Refresh
+          <ArrowsClockwise className="w-4 h-4 mr-2" /> Refresh
         </Button>
       </div>
       
@@ -69,7 +78,7 @@ export function ContextPackBrowser() {
           <CardHeader>
             <CardTitle className="text-base flex items-center justify-between">
               <span className="flex items-center gap-2">
-                <Package className="w-4 h-4" /> Context Packs
+                <Package size={16} /> Context Packs
               </span>
               <Badge variant="secondary">{filteredPacks.length} sealed</Badge>
             </CardTitle>
@@ -140,19 +149,19 @@ function PackListItem({
         <Badge variant="outline" className="text-xs">v{pack.version}</Badge>
       </div>
       <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-        <GitBranch className="w-3 h-3" />
+        <GitBranch size={12} />
         <span className="truncate">{pack.inputs.dagId}</span>
-        <ChevronRight className="w-3 h-3" />
-        <Hash className="w-3 h-3" />
+        <CaretRight size={12} />
+        <Hash size={12} />
         <span className="truncate">{pack.inputs.nodeId}</span>
       </div>
       <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
         <span className="flex items-center gap-1">
-          <Receipt className="w-3 h-3" />
+          <Receipt size={12} />
           {pack.inputs.receiptRefs?.length || 0} receipts
         </span>
         <span className="flex items-center gap-1">
-          <Calendar className="w-3 h-3" />
+          <Calendar size={12} />
           {new Date(pack.createdAt).toLocaleDateString()}
         </span>
       </div>
@@ -169,8 +178,8 @@ function PackDetails({ pack }: { pack: ContextPack }) {
         <label className="text-sm font-medium">Context Pack ID</label>
         <div className="flex items-center gap-2 mt-1">
           <p className="text-sm font-mono text-muted-foreground break-all flex-1">{pack.contextPackId}</p>
-          <Button size="icon" variant="ghost" className="h-8 w-8" title="Copy ID">
-            <FileText className="w-4 h-4" />
+          <Button size="icon" variant="ghost" size={32} title="Copy ID">
+            <FileText size={16} />
           </Button>
         </div>
       </div>
@@ -274,7 +283,7 @@ function PackDetails({ pack }: { pack: ContextPack }) {
       
       <div className="border-t pt-4 flex gap-2">
         <Button className="flex-1">
-          <Download className="w-4 h-4 mr-2" /> Download Pack
+          <DownloadSimple className="w-4 h-4 mr-2" /> Download Pack
         </Button>
         <Button variant="outline" onClick={() => setShowRaw(!showRaw)}>
           {showRaw ? "Hide" : "View"} Raw

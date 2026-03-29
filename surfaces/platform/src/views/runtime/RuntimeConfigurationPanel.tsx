@@ -2,19 +2,19 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  AlertCircle,
-  Boxes,
-  CheckCircle2,
+  Warning,
+  Stack,
+  CheckCircle,
   Cpu,
   Gauge,
   GitBranch,
-  History,
-  Loader2,
-  RefreshCw,
-  RotateCcw,
+  ClockCounterClockwise,
+  CircleNotch,
+  ArrowsClockwise,
+  ArrowCounterClockwise,
   Shield,
-  Sparkles,
-} from "lucide-react";
+  Sparkle,
+} from '@phosphor-icons/react';
 import {
   useRuntimeSettings,
   type RuntimeDriverRecord,
@@ -172,7 +172,7 @@ export function RuntimeConfigurationPanel({
   if (isLoading && !settings) {
     return (
       <div className="flex h-48 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-accent" />
+        <CircleNotch className="h-8 w-8 animate-spin text-accent" />
       </div>
     );
   }
@@ -190,7 +190,7 @@ export function RuntimeConfigurationPanel({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="max-w-2xl">
           <div className="flex items-center gap-2">
-            <Boxes className="h-5 w-5 text-amber-200" />
+            <Stack className="h-5 w-5 text-amber-200" />
             <h3 className="text-lg font-medium text-foreground">
               Active Driver Fabric
             </h3>
@@ -208,7 +208,7 @@ export function RuntimeConfigurationPanel({
             onClick={() => void onRefresh?.()}
             className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-black/15 px-4 py-3 text-sm text-foreground transition hover:bg-black/25"
           >
-            <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+            <ArrowsClockwise className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
             Refresh
           </button>
           <button
@@ -218,9 +218,9 @@ export function RuntimeConfigurationPanel({
             className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-black/15 px-4 py-3 text-sm text-foreground transition hover:bg-black/25 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isResetting ? (
-              <RefreshCw className="h-4 w-4 animate-spin" />
+              <ArrowsClockwise className="h-4 w-4 animate-spin" />
             ) : (
-              <RotateCcw className="h-4 w-4" />
+              <ArrowCounterClockwise size={16} />
             )}
             Reset defaults
           </button>
@@ -231,9 +231,9 @@ export function RuntimeConfigurationPanel({
             className="inline-flex items-center gap-2 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-4 py-3 text-sm font-medium text-emerald-100 transition hover:bg-emerald-300/20 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isSaving ? (
-              <RefreshCw className="h-4 w-4 animate-spin" />
+              <ArrowsClockwise className="h-4 w-4 animate-spin" />
             ) : (
-              <CheckCircle2 className="h-4 w-4" />
+              <CheckCircle size={16} />
             )}
             Save runtime settings
           </button>
@@ -444,7 +444,7 @@ export function RuntimeConfigurationPanel({
 
         <div className="rounded-3xl border border-white/5 bg-black/10 p-5">
           <div className="flex items-center gap-2">
-            <History className="h-5 w-5 text-amber-200" />
+            <ClockCounterClockwise className="h-5 w-5 text-amber-200" />
             <h4 className="text-base font-medium text-foreground">
               Replay, Prewarm, and Versioning
             </h4>
@@ -672,7 +672,7 @@ export function RuntimeConfigurationPanel({
       {showManagementLinks ? (
         <div className="rounded-3xl border border-white/5 bg-black/10 p-5">
           <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-sky-200" />
+            <Sparkle className="h-5 w-5 text-sky-200" />
             <h4 className="text-base font-medium text-foreground">
               Runtime Navigation
             </h4>

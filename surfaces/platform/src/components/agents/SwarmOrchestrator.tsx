@@ -62,46 +62,45 @@ import {
   Play,
   Pause,
   Square,
-  Settings,
-  MessageSquare,
+  GearSix,
+  Chat,
   GitBranch,
-  Share2,
-  Trash2,
+  ShareNetwork,
+  Trash,
   Copy,
-  Save,
-  Zap,
-  Activity,
-  MoreVertical,
-  ChevronRight,
-  ChevronDown,
+  FloppyDisk,
+  Lightning,
+  Pulse as Activity,
+  DotsThreeVertical,
+  CaretRight,
+  CaretDown,
   Network,
   Target,
-  GripVertical,
+  DotsSixVertical,
   X,
   Check,
-  AlertCircle,
-  RefreshCw,
-  Download,
-  Upload,
-  Undo,
-  Redo,
-  Maximize2,
-  Minimize2,
+  Warning,
+  ArrowsClockwise,
+  DownloadSimple,
+  UploadSimple,
+  ArrowCounterClockwise,
+  ArrowClockwise,
+  ArrowsOut,
+  ArrowsIn,
   Lock,
-  Unlock,
+  LockOpen,
   Eye,
-  EyeOff,
-  Search,
-  Filter,
-  Layers,
+  EyeSlash,
+  MagnifyingGlass,
+  Funnel,
+  Stack,
   Cpu,
   Clock,
-  TrendingUp,
+  TrendUp,
   Radio,
   StopCircle,
   PlayCircle,
-  RotateCcw,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 
 import {
   SAND,
@@ -419,22 +418,22 @@ const EXECUTION_MODE_CONFIG: Record<ExecutionMode, {
   parallel: {
     label: 'Parallel',
     description: 'All agents execute simultaneously',
-    icon: Zap,
+    icon: Lightning,
   },
   sequential: {
     label: 'Sequential',
     description: 'Agents execute one after another',
-    icon: ChevronRight,
+    icon: CaretRight,
   },
   adaptive: {
     label: 'Adaptive',
     description: 'Dynamic execution based on workload',
-    icon: RefreshCw,
+    icon: ArrowsClockwise,
   },
   pipeline: {
     label: 'Pipeline',
     description: 'Data flows through agents in stages',
-    icon: Layers,
+    icon: Stack,
   },
 };
 
@@ -451,7 +450,7 @@ const ROUTING_STRATEGY_CONFIG: Record<RoutingStrategy, {
   roundRobin: {
     label: 'Round Robin',
     description: 'Rotate between agents evenly',
-    icon: RotateCcw,
+    icon: ArrowCounterClockwise,
   },
   capabilityBased: {
     label: 'Capability Based',
@@ -461,12 +460,12 @@ const ROUTING_STRATEGY_CONFIG: Record<RoutingStrategy, {
   loadBalanced: {
     label: 'Load Balanced',
     description: 'Distribute based on current load',
-    icon: TrendingUp,
+    icon: TrendUp,
   },
   priorityBased: {
     label: 'Priority Based',
     description: 'Route to highest priority agent',
-    icon: Zap,
+    icon: Lightning,
   },
   weightedRandom: {
     label: 'Weighted Random',
@@ -547,7 +546,7 @@ const AgentNodeComponent: React.FC<NodeProps<AgentNodeData>> = ({
               <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
             )}
             {data.executionStatus === 'error' && (
-              <AlertCircle size={10} className="text-red-400" />
+              <Warning size={10} className="text-red-400" />
             )}
           </div>
         </div>
@@ -1351,19 +1350,19 @@ const SwarmOrchestratorInner: React.FC<SwarmOrchestratorProps> = ({
                 }}
               >
                 <ToolbarButton
-                  icon={showGrid ? Eye : EyeOff}
+                  icon={showGrid ? Eye : EyeSlash}
                   active={showGrid}
                   onClick={() => setShowGrid(!showGrid)}
                   tooltip="Toggle Grid"
                 />
                 <ToolbarButton
-                  icon={showMinimap ? Minimize2 : Maximize2}
+                  icon={showMinimap ? Minimize2 : ArrowsOut}
                   active={showMinimap}
                   onClick={() => setShowMinimap(!showMinimap)}
                   tooltip="Toggle Minimap"
                 />
                 <ToolbarButton
-                  icon={snapToGrid ? Lock : Unlock}
+                  icon={snapToGrid ? Lock : LockOpen}
                   active={snapToGrid}
                   onClick={() => setSnapToGrid(!snapToGrid)}
                   tooltip="Snap to Grid"
@@ -1522,7 +1521,7 @@ function OrchestratorHeader({
 
   const tabs = [
     { id: 'design' as const, label: 'Design', icon: Network },
-    { id: 'configure' as const, label: 'Configure', icon: Settings },
+    { id: 'configure' as const, label: 'Configure', icon: GearSix },
     { id: 'monitor' as const, label: 'Monitor', icon: Activity },
   ];
 
@@ -1626,7 +1625,7 @@ function OrchestratorHeader({
                 color: TEXT.secondary,
               }}
             >
-              <Download size={14} />
+              <DownloadSimple size={14} />
               Export
             </button>
             
@@ -1639,7 +1638,7 @@ function OrchestratorHeader({
                 color: TEXT.secondary,
               }}
             >
-              <Save size={14} />
+              <FloppyDisk size={14} />
               {isSaving ? 'Saving...' : 'Save'}
             </button>
           </>
@@ -1823,7 +1822,7 @@ function AgentPalette({
                   >
                     {agent.name}
                   </span>
-                  <ChevronRight
+                  <CaretRight
                     size={14}
                     style={{
                       color: TEXT.tertiary,
@@ -2137,7 +2136,7 @@ function NodeConfigPanel({
             border: '1px solid rgba(248,113,113,0.2)',
           }}
         >
-          <Trash2 size={14} />
+          <Trash size={14} />
           Remove Agent
         </button>
       </div>
@@ -2627,7 +2626,7 @@ function MonitoringPanel({
                 <MetricCard
                   label="Messages"
                   value={currentExecution.messagesExchanged.toString()}
-                  icon={MessageSquare}
+                  icon={Chat}
                   modeColors={modeColors as typeof MODE_COLORS.chat}
                 />
                 <MetricCard
@@ -2645,7 +2644,7 @@ function MonitoringPanel({
                 <MetricCard
                   label="Current Stage"
                   value={currentExecution.currentStage || 'idle'}
-                  icon={Layers}
+                  icon={Stack}
                   modeColors={modeColors as typeof MODE_COLORS.chat}
                 />
               </div>
@@ -2726,13 +2725,13 @@ function MonitoringPanel({
                   <MetricCard
                     label="Avg Latency"
                     value={`${Math.round(currentExecution.metrics.averageLatency)}ms`}
-                    icon={TrendingUp}
+                    icon={TrendUp}
                     modeColors={modeColors as typeof MODE_COLORS.chat}
                   />
                   <MetricCard
                     label="Tokens Used"
                     value={currentExecution.metrics.tokensUsed.toLocaleString()}
-                    icon={Zap}
+                    icon={Lightning}
                     modeColors={modeColors as typeof MODE_COLORS.chat}
                   />
                   <MetricCard
@@ -2923,7 +2922,7 @@ function ValidationPanel({ errors, onClose, modeColors }: ValidationPanelProps) 
                   }`,
                 }}
               >
-                <AlertCircle
+                <Warning
                   size={16}
                   className={
                     error.severity === 'error' ? 'text-red-400' : 'text-yellow-400'

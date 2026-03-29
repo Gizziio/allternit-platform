@@ -10,7 +10,16 @@
  */
 
 import React, { ReactNode, useState, useEffect } from 'react';
-import { ArrowLeft, MoreHorizontal, Star, Plus, FileText, X, Pencil, Trash2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  DotsThreeOutline,
+  Star,
+  Plus,
+  FileText,
+  X,
+  PencilSimple,
+  Trash,
+} from '@phosphor-icons/react';
 
 export interface ProjectViewTab {
   id: string;
@@ -557,7 +566,7 @@ export function ProjectMenuButton({ children }: { children: ReactNode }) {
           transition: 'all 0.2s',
         }}
       >
-        <MoreHorizontal size={18} />
+        <DotsThreeOutline size={18} />
       </button>
       {isOpen && (
         <>
@@ -791,7 +800,7 @@ export function InstructionItem({ text, onEdit, onDelete }: InstructionItemProps
               gap: 4,
             }}
           >
-            <Pencil size={12} />
+            <PencilSimple size={12} />
             Edit
           </button>
         )}
@@ -810,7 +819,7 @@ export function InstructionItem({ text, onEdit, onDelete }: InstructionItemProps
               gap: 4,
             }}
           >
-            <Trash2 size={12} />
+            <Trash size={12} />
             Delete
           </button>
         )}

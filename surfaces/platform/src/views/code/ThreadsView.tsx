@@ -1,7 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import { MessageSquare, Plus, ChevronDown, ChevronUp, CheckCircle2, Circle } from 'lucide-react';
+import {
+  Chat,
+  Plus,
+  CaretDown,
+  CaretUp,
+  CheckCircle,
+  Circle,
+} from '@phosphor-icons/react';
 import GlassSurface from '@/design/GlassSurface';
 
 interface ThreadMessage {
@@ -26,145 +33,15 @@ interface CodeThread {
   messages: ThreadMessage[];
 }
 
-const mockThreads: CodeThread[] = [
-  {
-    id: '1',
-    title: 'Refactor authentication flow',
-    linkedFile: 'ShellApp.tsx',
-    linkedLine: 247,
-    lastMessage: 'I think we should also add OAuth2 support here',
-    replyCount: 5,
-    unreadCount: 2,
-    timestamp: '2 hours ago',
-    status: 'open',
-    messages: [
-      {
-        id: 'm1',
-        author: 'Sarah Chen',
-        avatar: 'SC',
-        avatarColor: '#ec4899',
-        message: 'Looking at the current auth implementation, should we refactor this to be more modular?',
-        timestamp: '4 hours ago',
-      },
-      {
-        id: 'm2',
-        author: 'Marcus Dev',
-        avatar: 'MD',
-        avatarColor: '#3b82f6',
-        message: 'I think we should also add OAuth2 support here',
-        timestamp: '2 hours ago',
-      },
-    ],
-  },
-  {
-    id: '2',
-    title: 'Performance optimization needed',
-    linkedFile: 'ChatView.tsx',
-    linkedLine: 89,
-    lastMessage: 'Can we use useMemo for this calculation?',
-    replyCount: 3,
-    unreadCount: 0,
-    timestamp: '5 hours ago',
-    status: 'open',
-    messages: [
-      {
-        id: 'm1',
-        author: 'Alex Quinn',
-        avatar: 'AQ',
-        avatarColor: '#f59e0b',
-        message: 'This component is rendering too often. Need to optimize.',
-        timestamp: '6 hours ago',
-      },
-      {
-        id: 'm2',
-        author: 'Casey Moore',
-        avatar: 'CM',
-        avatarColor: '#06b6d4',
-        message: 'Can we use useMemo for this calculation?',
-        timestamp: '5 hours ago',
-      },
-    ],
-  },
-  {
-    id: '3',
-    title: 'Type safety improvements',
-    linkedFile: 'ShellRail.tsx',
-    linkedLine: 156,
-    lastMessage: 'Let me check the component props first',
-    replyCount: 2,
-    unreadCount: 0,
-    timestamp: '1 day ago',
-    status: 'resolved',
-    messages: [
-      {
-        id: 'm1',
-        author: 'Jordan Park',
-        avatar: 'JP',
-        avatarColor: '#8b5cf6',
-        message: 'We need stricter types for the navigation props',
-        timestamp: '1 day ago',
-      },
-    ],
-  },
-  {
-    id: '4',
-    title: 'CSS Grid layout bug',
-    linkedFile: 'EvolutionLayerView.tsx',
-    linkedLine: 312,
-    lastMessage: 'Fixed in commit a3f2b91',
-    replyCount: 4,
-    unreadCount: 1,
-    timestamp: '1 day ago',
-    status: 'resolved',
-    messages: [
-      {
-        id: 'm1',
-        author: 'Casey Moore',
-        avatar: 'CM',
-        avatarColor: '#06b6d4',
-        message: 'The grid layout is broken on mobile',
-        timestamp: '2 days ago',
-      },
-      {
-        id: 'm2',
-        author: 'Sarah Chen',
-        avatar: 'SC',
-        avatarColor: '#ec4899',
-        message: 'Fixed in commit a3f2b91',
-        timestamp: '1 day ago',
-      },
-    ],
-  },
-  {
-    id: '5',
-    title: 'Documentation for API endpoints',
-    linkedFile: 'colors.ts',
-    linkedLine: 42,
-    lastMessage: 'I can help with the OpenAPI spec',
-    replyCount: 1,
-    unreadCount: 0,
-    timestamp: '3 days ago',
-    status: 'open',
-    messages: [
-      {
-        id: 'm1',
-        author: 'Marcus Dev',
-        avatar: 'MD',
-        avatarColor: '#3b82f6',
-        message: 'We need to document all API endpoints properly',
-        timestamp: '3 days ago',
-      },
-    ],
-  },
-];
 
 type FilterType = 'all' | 'open' | 'resolved';
 
 export const ThreadsView: React.FC = () => {
   const [expandedThread, setExpandedThread] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterType>('all');
+  const [threads, setThreads] = useState<CodeThread[]>([]);
 
-  const filteredThreads = mockThreads.filter((thread) => {
+  const filteredThreads = threads.filter((thread) => {
     if (filter === 'open') return thread.status === 'open';
     if (filter === 'resolved') return thread.status === 'resolved';
     return true;
@@ -181,7 +58,7 @@ export const ThreadsView: React.FC = () => {
         <div style={{ padding: '16px', borderBottom: '1px solid var(--border-subtle)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <MessageSquare size={20} color="var(--accent-primary)" />
+              <Chat size={20} color="var(--accent-primary)" />
               <div>
                 <div style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>Threads</div>
                 <div style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>Contextual code discussions</div>
@@ -286,9 +163,9 @@ export const ThreadsView: React.FC = () => {
                   >
                     <div style={{ marginTop: '2px' }}>
                       {isExpanded ? (
-                        <ChevronUp size={16} color="var(--text-secondary)" />
+                        <CaretUp size={16} color="var(--text-secondary)" />
                       ) : (
-                        <ChevronDown size={16} color="var(--text-secondary)" />
+                        <CaretDown size={16} color="var(--text-secondary)" />
                       )}
                     </div>
 
@@ -364,7 +241,7 @@ export const ThreadsView: React.FC = () => {
                               </>
                             ) : (
                               <>
-                                <CheckCircle2 size={10} color="var(--text-tertiary)" />
+                                <CheckCircle size={10} color="var(--text-tertiary)" />
                                 <span>Resolved</span>
                               </>
                             )}

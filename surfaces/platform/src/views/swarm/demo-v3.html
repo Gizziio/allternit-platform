@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SwarmMonitor</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+    
+    :root {
+      --bg: #0a0908;
+      --surface: #121110;
+      --surface-hover: #1a1917;
+      --border: #272522;
+      --text: #e8e6e3;
+      --text-muted: #8b8680;
+      --text-subtle: #5c5854;
+      --accent: #c17817;
+      --accent-dim: #c1781720;
+      --green: #4a9b5e;
+      --red: #c25d5d;
+    }
+    
+    * { box-sizing: border-box; }
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      height: 100vh;
+      overflow: hidden;
+      font-size: 13px;
+    }
+    
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    
+    .dropdown {
+      position: relative;
+      display: inline-block;
+    }
+    
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      top: 100%;
+      right: 0;
+      min-width: 160px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      z-index: 100;
+      margin-top: 4px;
+    }
+    
+    .dropdown-content.show { display: block; }
+    
+    .dropdown-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-muted);
+      transition: all 0.15s;
+    }
+    
+    .dropdown-item:hover {
+      background: var(--surface-hover);
+      color: var(--text);
+    }
+    
+    .dropdown-item.active {
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+    
+    .agent-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    
+    .agent-card:hover {
+      border-color: var(--text-subtle);
+      background: var(--surface-hover);
+    }
+    
+    .agent-card.active {
+      border-color: var(--accent);
+    }
+    
+    .btn {
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .btn:hover {
+      background: var(--surface-hover);
+      color: var(--text);
+      border-color: var(--text-subtle);
+    }
+    
+    .btn-primary {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    
+    .btn-primary:hover {
+      background: var(--accent);
+      color: var(--bg);
+    }
+    
+    .btn-sm { padding: 4px 8px; font-size: 11px; }
+    
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    
+    .status-working { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .status-idle { background: var(--text-subtle); }
+    .status-offline { background: var(--red); }
+    
+    .workspace-panel {
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+    }
+    
+    .context-menu {
+      position: absolute;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      min-width: 180px;
+      z-index: 1000;
+      display: none;
+    }
+    
+    .context-menu.show { display: block; }
+    
+    .context-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .context-item:hover {
+      background: var(--surface-hover);
+      color: var(--text);
+    }
+    
+    .context-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 4px 0;
+    }
+    
+    .topology-node { cursor: pointer; transition: all 0.2s; }
+    .topology-node:hover circle { filter: brightness(1.2); }
+    
+    .console-line {
+      padding: 4px 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+    }
+    
+    .console-timestamp { color: var(--text-subtle); margin-right: 12px; }
+    .console-agent { color: var(--accent); margin-right: 12px; }
+    .console-msg { color: var(--text-muted); }
+  </style>
+</head>
+<body class="flex flex-col">
+  
+  <!-- Header - LEFT SIDE RESERVED FOR APP MODE SWITCHERS -->
+  <header class="h-12 border-b flex items-center justify-between px-4" style="border-color: var(--border); background: var(--surface);">
+    
+    <!-- LEFT: Empty space reserved for app's mode switchers -->
+    <div class="w-48">
+      <!-- App mode switchers will go here -->
+    </div>
+
+    <!-- CENTER: Search and Stats (moved from left to avoid collision) -->
+    <div class="flex items-center gap-6">
+      <!-- Search -->
+      <div class="relative">
+        <i class="fas fa-search absolute left-2.5 top-1/2 -translate-y-1/2 text-xs" style="color: var(--text-subtle);"></i>
+        <input type="text" placeholder="Search agents..." class="btn btn-sm pl-7" style="width: 200px;">
+      </div>
+      
+      <!-- Quick Stats -->
+      <div class="flex items-center gap-4 text-xs" style="color: var(--text-muted);">
+        <span class="flex items-center gap-1.5">
+          <span class="status-dot status-working"></span>
+          4 active
+        </span>
+        <span class="mono">$5.73</span>
+        <span class="mono">139.4k tok</span>
+      </div>
+    </div>
+
+    <!-- RIGHT: View Selector Dropdown + Actions -->
+    <div class="flex items-center gap-2 w-48 justify-end">
+      <!-- Live Status -->
+      <div class="flex items-center gap-1.5 px-2 py-1 rounded text-xs" style="color: var(--green);">
+        <span class="w-1.5 h-1.5 rounded-full status-dot status-working"></span>
+        Live
+      </div>
+      
+      <!-- Add Agent -->
+      <button onclick="showAddMenu()" class="btn btn-primary btn-sm">
+        <i class="fas fa-plus"></i>
+      </button>
+      
+      <!-- View Selector Dropdown (TOP RIGHT) -->
+      <div class="dropdown">
+        <button onclick="toggleDropdown('view-dropdown')" class="btn" style="min-width: 120px; justify-content: space-between;">
+          <span id="current-view-label"><i class="fas fa-th-large mr-2"></i>Grid</span>
+          <i class="fas fa-chevron-down text-xs"></i>
+        </button>
+        <div id="view-dropdown" class="dropdown-content">
+          <div class="dropdown-item active" onclick="switchView('grid', 'Grid', 'fa-th-large')">
+            <i class="fas fa-th-large w-4"></i> Grid
+          </div>
+          <div class="dropdown-item" onclick="switchView('topology', 'Topology', 'fa-project-diagram')">
+            <i class="fas fa-project-diagram w-4"></i> Topology
+          </div>
+          <div class="dropdown-item" onclick="switchView('timeline', 'Timeline', 'fa-stream')">
+            <i class="fas fa-stream w-4"></i> Timeline
+          </div>
+          <div class="dropdown-item" onclick="switchView('console', 'Console', 'fa-terminal')">
+            <i class="fas fa-terminal w-4"></i> Console
+          </div>
+          <div class="dropdown-item" onclick="switchView('history', 'History', 'fa-chart-line')">
+            <i class="fas fa-chart-line w-4"></i> History
+          </div>
+        </div>
+      </div>
+      
+      <!-- More Actions (Export, etc) -->
+      <button onclick="showExportMenu()" class="btn btn-sm">
+        <i class="fas fa-ellipsis-v"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <div class="flex-1 flex overflow-hidden">
+    
+    <!-- Main View Area -->
+    <main class="flex-1 overflow-auto p-4">
+      
+      <!-- GRID VIEW -->
+      <div id="view-grid" class="view-section">
+        <div class="flex items-center justify-between mb-4">
+          <div class="text-xs" style="color: var(--text-muted);">
+            <span class="mono" style="color: var(--accent);">5</span> agents in workspace
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="btn btn-sm" onclick="toggleBatchMode()" id="batch-btn">
+              <i class="fas fa-check-square"></i> Select
+            </button>
+            <div class="dropdown">
+              <button onclick="toggleDropdown('filter-dropdown')" class="btn btn-sm">
+                <i class="fas fa-filter"></i> Filter
+              </button>
+              <div id="filter-dropdown" class="dropdown-content">
+                <div class="dropdown-item"><i class="fas fa-circle text-xs" style="color: var(--green);"></i> Working</div>
+                <div class="dropdown-item"><i class="fas fa-circle text-xs" style="color: var(--text-subtle);"></i> Idle</div>
+                <div class="dropdown-item"><i class="fas fa-circle text-xs" style="color: var(--red);"></i> Offline</div>
+                <div class="context-divider"></div>
+                <div class="dropdown-item">Orchestrator</div>
+                <div class="dropdown-item">Worker</div>
+                <div class="dropdown-item">Specialist</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Agent Grid -->
+        <div class="grid gap-3" style="grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));">
+          
+          <!-- Agent 1 - Orchestrator -->
+          <div class="agent-card" onclick="selectAgent(this, 'orch-01')" oncontextmenu="showAgentMenu(event, 'orch-01')">
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded flex items-center justify-center" style="background: var(--accent-dim);">
+                  <i class="fas fa-brain text-xs" style="color: var(--accent);"></i>
+                </div>
+                <div>
+                  <div class="font-medium">Orchestrator Alpha</div>
+                  <div class="text-xs" style="color: var(--text-subtle);">ORCH-01</div>
+                </div>
+              </div>
+              <span class="status-dot status-working"></span>
+            </div>
+            
+            <div class="space-y-2 mb-3">
+              <div>
+                <div class="flex justify-between text-xs mb-1" style="color: var(--text-muted);">
+                  <span>Architecture Review</span>
+                  <span>67%</span>
+                </div>
+                <div class="h-1 rounded-full overflow-hidden" style="background: var(--border);">
+                  <div class="h-full rounded-full" style="width: 67%; background: var(--accent);"></div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="flex items-center justify-between text-xs pt-2 border-t" style="border-color: var(--border); color: var(--text-subtle);">
+              <span class="mono">$2.34</span>
+              <span>2 tasks</span>
+            </div>
+          </div>
+
+          <!-- Agent 2 - Worker -->
+          <div class="agent-card" onclick="selectAgent(this, 'work-01')" oncontextmenu="showAgentMenu(event, 'work-01')">
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded flex items-center justify-center" style="background: rgba(96, 165, 250, 0.1);">
+                  <i class="fas fa-robot text-xs" style="color: #60a5fa;"></i>
+                </div>
+                <div>
+                  <div class="font-medium">Worker Beta</div>
+                  <div class="text-xs" style="color: var(--text-subtle);">WORK-01</div>
+                </div>
+              </div>
+              <span class="status-dot status-working"></span>
+            </div>
+            
+            <div class="space-y-2 mb-3">
+              <div>
+                <div class="flex justify-between text-xs mb-1" style="color: var(--text-muted);">
+                  <span>Code Generation</span>
+                  <span>78%</span>
+                </div>
+                <div class="h-1 rounded-full overflow-hidden" style="background: var(--border);">
+                  <div class="h-full rounded-full" style="width: 78%; background: #60a5fa;"></div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="flex items-center justify-between text-xs pt-2 border-t" style="border-color: var(--border); color: var(--text-subtle);">
+              <span class="mono">$0.87</span>
+              <span>1 task</span>
+            </div>
+          </div>
+
+          <!-- Agent 3 - Idle Worker -->
+          <div class="agent-card" onclick="selectAgent(this, 'work-02')" oncontextmenu="showAgentMenu(event, 'work-02')">
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded flex items-center justify-center" style="background: var(--surface-hover);">
+                  <i class="fas fa-robot text-xs" style="color: var(--text-subtle);"></i>
+                </div>
+                <div>
+                  <div class="font-medium">Worker Gamma</div>
+                  <div class="text-xs" style="color: var(--text-subtle);">WORK-02</div>
+                </div>
+              </div>
+              <span class="status-dot status-idle"></span>
+            </div>
+            
+            <div class="flex items-center justify-between text-xs pt-8 border-t" style="border-color: var(--border); color: var(--text-subtle);">
+              <span class="mono">$0.37</span>
+              <span>Idle</span>
+            </div>
+          </div>
+
+          <!-- Agent 4 - Specialist -->
+          <div class="agent-card" onclick="selectAgent(this, 'spec-01')" oncontextmenu="showAgentMenu(event, 'spec-01')">
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded flex items-center justify-center" style="background: rgba(167, 139, 250, 0.1);">
+                  <i class="fas fa-microchip text-xs" style="color: #a78bfa;"></i>
+                </div>
+                <div>
+                  <div class="font-medium">Specialist Delta</div>
+                  <div class="text-xs" style="color: var(--text-subtle);">SPEC-01</div>
+                </div>
+              </div>
+              <span class="status-dot status-working"></span>
+            </div>
+            
+            <div class="space-y-2 mb-3">
+              <div>
+                <div class="flex justify-between text-xs mb-1" style="color: var(--text-muted);">
+                  <span>Query Optimization</span>
+                  <span>45%</span>
+                </div>
+                <div class="h-1 rounded-full overflow-hidden" style="background: var(--border);">
+                  <div class="h-full rounded-full" style="width: 45%; background: #a78bfa;"></div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="flex items-center justify-between text-xs pt-2 border-t" style="border-color: var(--border); color: var(--text-subtle);">
+              <span class="mono">$1.23</span>
+              <span>1 task</span>
+            </div>
+          </div>
+
+          <!-- Agent 5 - Reviewer -->
+          <div class="agent-card" onclick="selectAgent(this, 'rev-01')" oncontextmenu="showAgentMenu(event, 'rev-01')">
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded flex items-center justify-center" style="background: rgba(74, 155, 94, 0.1);">
+                  <i class="fas fa-clipboard-check text-xs" style="color: var(--green);"></i>
+                </div>
+                <div>
+                  <div class="font-medium">Reviewer Epsilon</div>
+                  <div class="text-xs" style="color: var(--text-subtle);">REV-01</div>
+                </div>
+              </div>
+              <span class="status-dot status-working"></span>
+            </div>
+            
+            <div class="space-y-2 mb-3">
+              <div>
+                <div class="flex justify-between text-xs mb-1" style="color: var(--text-muted);">
+                  <span>Security Audit</span>
+                  <span>23%</span>
+                </div>
+                <div class="h-1 rounded-full overflow-hidden" style="background: var(--border);">
+                  <div class="h-full rounded-full" style="width: 23%; background: var(--green);"></div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="flex items-center justify-between text-xs pt-2 border-t" style="border-color: var(--border); color: var(--text-subtle);">
+              <span class="mono">$0.92</span>
+              <span>1 task</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- TOPOLOGY VIEW -->
+      <div id="view-topology" class="view-section hidden h-full flex flex-col">
+        <div class="flex items-center justify-between mb-4">
+          <div class="text-xs" style="color: var(--text-muted);">Hierarchical orchestration view</div>
+          <div class="flex items-center gap-2">
+            <button class="btn btn-sm"><i class="fas fa-compress-arrows-alt"></i> Auto-layout</button>
+          </div>
+        </div>
+        
+        <div class="flex-1 relative rounded-lg overflow-hidden" style="background: var(--surface);">
+          <svg class="w-full h-full" viewBox="0 0 800 400">
+            <g stroke="var(--border)" stroke-width="1" fill="none">
+              <path d="M 400 80 L 200 200" stroke-dasharray="4,4"/>
+              <path d="M 400 80 L 400 200"/>
+              <path d="M 400 80 L 600 200" stroke-dasharray="4,4"/>
+              <path d="M 400 80 L 300 320" stroke-dasharray="4,4"/>
+              <path d="M 400 80 L 500 320" stroke-dasharray="4,4"/>
+            </g>
+            
+            <circle r="3" fill="var(--accent)">
+              <animateMotion dur="2s" repeatCount="indefinite" path="M 400 80 L 200 200"/>
+            </circle>
+            
+            <g class="topology-node" transform="translate(400, 80)">
+              <circle r="30" fill="var(--accent-dim)" stroke="var(--accent)" stroke-width="2"/>
+              <text y="5" text-anchor="middle" fill="var(--text)" font-size="11">ORCH</text>
+              <text y="45" text-anchor="middle" fill="var(--text-muted)" font-size="10">Alpha</text>
+            </g>
+            
+            <g class="topology-node" transform="translate(200, 200)">
+              <circle r="24" fill="rgba(96, 165, 250, 0.1)" stroke="#60a5fa" stroke-width="1.5"/>
+              <text y="4" text-anchor="middle" fill="#60a5fa" font-size="9">WORK</text>
+              <text y="38" text-anchor="middle" fill="var(--text-muted)" font-size="9">Beta</text>
+              <circle cx="18" cy="-18" r="4" fill="var(--green)"/>
+            </g>
+            
+            <g class="topology-node" transform="translate(400, 200)">
+              <circle r="24" fill="var(--surface-hover)" stroke="var(--text-subtle)" stroke-width="1.5"/>
+              <text y="4" text-anchor="middle" fill="var(--text-subtle)" font-size="9">WORK</text>
+              <text y="38" text-anchor="middle" fill="var(--text-muted)" font-size="9">Gamma</text>
+            </g>
+            
+            <g class="topology-node" transform="translate(600, 200)">
+              <circle r="24" fill="rgba(167, 139, 250, 0.1)" stroke="#a78bfa" stroke-width="1.5"/>
+              <text y="4" text-anchor="middle" fill="#a78bfa" font-size="9">SPEC</text>
+              <text y="38" text-anchor="middle" fill="var(--text-muted)" font-size="9">Delta</text>
+              <circle cx="18" cy="-18" r="4" fill="var(--green)"/>
+            </g>
+            
+            <g class="topology-node" transform="translate(300, 320)">
+              <circle r="24" fill="rgba(74, 155, 94, 0.1)" stroke="var(--green)" stroke-width="1.5"/>
+              <text y="4" text-anchor="middle" fill="var(--green)" font-size="9">REV</text>
+              <text y="38" text-anchor="middle" fill="var(--text-muted)" font-size="9">Epsilon</text>
+              <circle cx="18" cy="-18" r="4" fill="var(--green)"/>
+            </g>
+          </svg>
+          
+          <div class="absolute bottom-4 left-4 px-3 py-2 rounded-lg text-xs" style="background: var(--bg); border: 1px solid var(--border);">
+            <div class="flex items-center gap-4">
+              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background: var(--accent);"></span> Orchestrator</span>
+              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background: #60a5fa;"></span> Worker</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TIMELINE VIEW -->
+      <div id="view-timeline" class="view-section hidden h-full flex flex-col">
+        <div class="flex items-center justify-between mb-4">
+          <div class="text-xs" style="color: var(--text-muted);">Task execution timeline</div>
+          <div class="flex items-center gap-2">
+            <button class="btn btn-sm">1h</button>
+            <button class="btn btn-sm">6h</button>
+            <button class="btn btn-primary btn-sm">24h</button>
+            <button class="btn btn-sm">7d</button>
+          </div>
+        </div>
+        
+        <div class="flex-1 overflow-auto" style="background: var(--surface); border-radius: 6px;">
+          <div class="p-4" style="min-width: 800px;">
+            <div class="flex mb-2 text-xs" style="color: var(--text-subtle); margin-left: 140px;">
+              <div class="flex-1 text-center">00:00</div>
+              <div class="flex-1 text-center">06:00</div>
+              <div class="flex-1 text-center">12:00</div>
+              <div class="flex-1 text-center">18:00</div>
+              <div class="flex-1 text-center">Now</div>
+            </div>
+            
+            <div class="space-y-2">
+              <div class="flex items-center">
+                <div class="w-36 text-xs truncate pr-4" style="color: var(--text-muted);">Orchestrator Alpha</div>
+                <div class="flex-1 relative h-8 rounded" style="background: var(--bg);">
+                  <div class="absolute h-6 rounded top-1" style="left: 5%; width: 40%; background: var(--accent-dim); border: 1px solid var(--accent);"></div>
+                  <div class="absolute h-6 rounded top-1" style="left: 50%; width: 45%; background: var(--accent-dim); border: 1px solid var(--accent);"></div>
+                  <div class="absolute top-0 bottom-0 w-px" style="left: 95%; background: var(--accent);"></div>
+                </div>
+              </div>
+              
+              <div class="flex items-center">
+                <div class="w-36 text-xs truncate pr-4" style="color: var(--text-muted);">Worker Beta</div>
+                <div class="flex-1 relative h-8 rounded" style="background: var(--bg);">
+                  <div class="absolute h-6 rounded top-1" style="left: 20%; width: 75%; background: rgba(96, 165, 250, 0.1); border: 1px solid #60a5fa;">
+                    <div class="h-full rounded" style="width: 78%; background: #60a5fa40;"></div>
+                  </div>
+                  <div class="absolute top-0 bottom-0 w-px" style="left: 95%; background: var(--accent);"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONSOLE VIEW -->
+      <div id="view-console" class="view-section hidden h-full flex">
+        <div class="w-48 border-r overflow-auto" style="border-color: var(--border); background: var(--surface);">
+          <div class="p-2 text-xs font-medium mb-1" style="color: var(--text-subtle);">AGENTS</div>
+          <div class="space-y-0.5">
+            <div class="px-3 py-2 text-xs cursor-pointer" style="background: var(--accent-dim); border-left: 2px solid var(--accent);">
+              <div class="flex items-center gap-2">
+                <span class="status-dot status-working"></span>
+                <span>ORCH-01</span>
+              </div>
+            </div>
+            <div class="px-3 py-2 text-xs cursor-pointer hover:bg-white/5">
+              <div class="flex items-center gap-2">
+                <span class="status-dot status-working"></span>
+                <span>WORK-01</span>
+              </div>
+            </div>
+            <div class="px-3 py-2 text-xs cursor-pointer hover:bg-white/5">
+              <div class="flex items-center gap-2">
+                <span class="status-dot status-idle"></span>
+                <span>WORK-02</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="flex-1 overflow-auto p-4 mono text-xs" style="background: var(--bg);">
+          <div class="console-line">
+            <span class="console-timestamp">14:32:18</span>
+            <span class="console-agent">ORCH-01</span>
+            <span class="console-msg">Initiated architecture review workflow</span>
+          </div>
+          <div class="console-line">
+            <span class="console-timestamp">14:31:45</span>
+            <span class="console-agent">WORK-01</span>
+            <span class="console-msg">Received task batch from Orchestrator</span>
+          </div>
+          <div class="console-line">
+            <span class="console-timestamp">14:30:12</span>
+            <span class="console-agent">SPEC-01</span>
+            <span style="color: var(--green);">✓ Completed schema migration analysis</span>
+          </div>
+          <div class="console-line">
+            <span class="console-timestamp">14:29:58</span>
+            <span class="console-agent">REV-01</span>
+            <span class="console-msg">Flagged 3 potential security issues</span>
+          </div>
+        </div>
+        
+        <div class="w-52 border-l p-4" style="border-color: var(--border); background: var(--surface);">
+          <div class="text-xs font-medium mb-3" style="color: var(--text-subtle);">METRICS</div>
+          <div class="space-y-4">
+            <div>
+              <div class="text-[10px] mb-1" style="color: var(--text-subtle);">THROUGHPUT</div>
+              <div class="text-xl mono font-semibold" style="color: var(--accent);">4.2 <span class="text-xs">t/s</span></div>
+            </div>
+            <div>
+              <div class="text-[10px] mb-1" style="color: var(--text-subtle);">LATENCY</div>
+              <div class="text-xl mono font-semibold">234 <span class="text-xs">ms</span></div>
+            </div>
+            <div>
+              <div class="text-[10px] mb-1" style="color: var(--text-subtle);">COST/HR</div>
+              <div class="text-xl mono font-semibold" style="color: var(--green);">$0.14</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- HISTORY VIEW -->
+      <div id="view-history" class="view-section hidden h-full flex">
+        <div class="flex-1 p-4">
+          <div class="flex items-center gap-2 mb-4">
+            <button class="btn btn-sm btn-primary">24h</button>
+            <button class="btn btn-sm">7d</button>
+            <div class="ml-auto flex items-center gap-2">
+              <span class="flex items-center gap-1.5 text-xs" style="color: var(--text-muted);">
+                <span class="w-2 h-2 rounded" style="background: var(--accent);"></span> Agents
+              </span>
+            </div>
+          </div>
+          
+          <div class="rounded-lg p-4" style="background: var(--surface); height: calc(100% - 40px);">
+            <svg viewBox="0 0 700 250" class="w-full h-full">
+              <defs>
+                <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.3"/>
+                  <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <g stroke="var(--border)" stroke-dasharray="3,3">
+                <line x1="0" y1="50" x2="700" y2="50"/>
+                <line x1="0" y1="100" x2="700" y2="100"/>
+                <line x1="0" y1="150" x2="700" y2="150"/>
+                <line x1="0" y1="200" x2="700" y2="200"/>
+              </g>
+              <path d="M 0,180 Q 100,170 200,160 T 400,140 T 600,130 L 700,125 L 700,250 L 0,250 Z" fill="url(#areaGradient)"/>
+              <path d="M 0,180 Q 100,170 200,160 T 400,140 T 600,130 L 700,125" fill="none" stroke="var(--accent)" stroke-width="2"/>
+            </svg>
+          </div>
+        </div>
+        
+        <div class="w-60 border-l p-4" style="border-color: var(--border); background: var(--surface);">
+          <div class="text-xs font-medium mb-3" style="color: var(--text-subtle);">Statistics</div>
+          <div class="space-y-3">
+            <div class="p-3 rounded" style="background: var(--bg);">
+              <div class="text-[10px] mb-1" style="color: var(--text-subtle);">Active Agents</div>
+              <div class="text-lg mono" style="color: var(--accent);">4</div>
+            </div>
+            <div class="p-3 rounded" style="background: var(--bg);">
+              <div class="text-[10px] mb-1" style="color: var(--text-subtle);">Total Cost</div>
+              <div class="text-lg mono" style="color: var(--green);">$5.73</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- Right Panel - Workspace -->
+    <aside class="w-64 workspace-panel flex flex-col">
+      <div class="p-3 border-b flex items-center justify-between" style="border-color: var(--border);">
+        <span class="text-xs font-medium">Workspace</span>
+        <button class="btn btn-sm" onclick="createNewTask()">
+          <i class="fas fa-plus"></i> Task
+        </button>
+      </div>
+      
+      <div class="flex-1 overflow-auto p-3">
+        <div class="text-[10px] uppercase tracking-wider mb-2" style="color: var(--text-subtle);">Tasks</div>
+        
+        <div class="space-y-2">
+          <div class="p-2 rounded border cursor-pointer hover:border-white/20" style="background: var(--bg); border-color: var(--border);">
+            <div class="flex items-center gap-2 mb-1">
+              <i class="fas fa-circle text-[8px]" style="color: var(--accent);"></i>
+              <span class="text-xs font-medium truncate">Architecture Review</span>
+            </div>
+            <div class="flex items-center gap-1 ml-4">
+              <span class="text-[10px] px-1.5 rounded" style="background: var(--accent-dim); color: var(--accent);">ORCH-01</span>
+            </div>
+          </div>
+          
+          <div class="p-2 rounded border cursor-pointer hover:border-white/20" style="background: var(--bg); border-color: var(--border);">
+            <div class="flex items-center gap-2 mb-1">
+              <i class="fas fa-circle text-[8px]" style="color: #60a5fa;"></i>
+              <span class="text-xs font-medium truncate">Code Generation</span>
+            </div>
+            <div class="flex items-center gap-1 ml-4">
+              <span class="text-[10px] px-1.5 rounded" style="background: rgba(96, 165, 250, 0.1); color: #60a5fa;">WORK-01</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mt-6 text-[10px] uppercase tracking-wider mb-2" style="color: var(--text-subtle);">Unassigned</div>
+        <div class="p-3 rounded border border-dashed text-center cursor-pointer hover:border-solid" style="border-color: var(--border); color: var(--text-subtle);">
+          <i class="fas fa-plus mb-1"></i>
+          <div class="text-xs">Drag agents here</div>
+        </div>
+      </div>
+      
+      <!-- Batch Actions -->
+      <div id="batch-actions" class="hidden p-3 border-t" style="border-color: var(--border); background: var(--accent-dim);">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs" style="color: var(--accent);"><span id="selected-count">0</span> selected</span>
+          <button onclick="clearSelection()" class="text-xs" style="color: var(--text-muted);">Clear</button>
+        </div>
+        <div class="flex gap-2">
+          <button class="btn btn-sm flex-1 btn-primary">Restart</button>
+          <button class="btn btn-sm flex-1" style="color: var(--red);">Stop</button>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- Context Menu -->
+  <div id="context-menu" class="context-menu">
+    <div class="context-item" onclick="addToTask()">
+      <i class="fas fa-tasks"></i> Add to Task
+    </div>
+    <div class="context-item" onclick="viewLogs()">
+      <i class="fas fa-terminal"></i> View Logs
+    </div>
+    <div class="context-divider"></div>
+    <div class="context-item" onclick="restartAgent()">
+      <i class="fas fa-redo"></i> Restart
+    </div>
+    <div class="context-item" onclick="stopAgent()">
+      <i class="fas fa-stop"></i> Stop
+    </div>
+  </div>
+
+  <script>
+    let batchMode = false;
+    let selectedAgents = new Set();
+    let currentAgentId = null;
+
+    function toggleDropdown(id) {
+      document.querySelectorAll('.dropdown-content').forEach(d => {
+        if (d.id !== id) d.classList.remove('show');
+      });
+      document.getElementById(id).classList.toggle('show');
+    }
+
+    function switchView(view, label, icon) {
+      document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+      document.getElementById('view-' + view).classList.remove('hidden');
+      
+      document.getElementById('current-view-label').innerHTML = `<i class="fas ${icon} mr-2"></i>${label}`;
+      document.getElementById('view-dropdown').classList.remove('show');
+      
+      document.querySelectorAll('#view-dropdown .dropdown-item').forEach(item => item.classList.remove('active'));
+      event.target.closest('.dropdown-item').classList.add('active');
+    }
+
+    function selectAgent(card, id) {
+      if (batchMode) {
+        card.classList.toggle('active');
+        if (selectedAgents.has(id)) selectedAgents.delete(id);
+        else selectedAgents.add(id);
+        updateBatchActions();
+      } else {
+        document.querySelectorAll('.agent-card').forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+      }
+    }
+
+    function toggleBatchMode() {
+      batchMode = !batchMode;
+      const btn = document.getElementById('batch-btn');
+      if (batchMode) {
+        btn.classList.add('btn-primary');
+        btn.innerHTML = '<i class="fas fa-check"></i> Done';
+      } else {
+        btn.classList.remove('btn-primary');
+        btn.innerHTML = '<i class="fas fa-check-square"></i> Select';
+        selectedAgents.clear();
+        document.querySelectorAll('.agent-card').forEach(c => c.classList.remove('active'));
+        updateBatchActions();
+      }
+    }
+
+    function updateBatchActions() {
+      const panel = document.getElementById('batch-actions');
+      document.getElementById('selected-count').textContent = selectedAgents.size;
+      panel.classList.toggle('hidden', selectedAgents.size === 0);
+    }
+
+    function clearSelection() {
+      selectedAgents.clear();
+      document.querySelectorAll('.agent-card').forEach(c => c.classList.remove('active'));
+      updateBatchActions();
+    }
+
+    function showAgentMenu(event, id) {
+      event.preventDefault();
+      currentAgentId = id;
+      const menu = document.getElementById('context-menu');
+      menu.style.left = event.pageX + 'px';
+      menu.style.top = event.pageY + 'px';
+      menu.classList.add('show');
+    }
+
+    function hideContextMenu() {
+      document.getElementById('context-menu').classList.remove('show');
+    }
+
+    function showAddMenu() { alert('Add Agent modal'); }
+    function showExportMenu() { alert('Export: CSV, JSON, Markdown'); }
+    function createNewTask() { 
+      const name = prompt('Task name:'); 
+      if (name) alert(`Created: ${name}`);
+    }
+    function addToTask() { hideContextMenu(); alert(`Add ${currentAgentId} to task`); }
+    function viewLogs() { hideContextMenu(); alert(`Logs for ${currentAgentId}`); }
+    function restartAgent() { hideContextMenu(); alert(`Restart ${currentAgentId}`); }
+    function stopAgent() { hideContextMenu(); alert(`Stop ${currentAgentId}`); }
+
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.dropdown')) {
+        document.querySelectorAll('.dropdown-content').forEach(d => d.classList.remove('show'));
+      }
+      hideContextMenu();
+    });
+  </script>
+</body>
+</html>

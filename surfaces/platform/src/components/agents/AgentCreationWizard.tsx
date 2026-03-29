@@ -13,24 +13,24 @@
 
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Bot, 
-  UserCircle, 
-  Wrench, 
-  Check, 
-  ChevronRight, 
-  ChevronLeft,
-  Sparkles,
+import {
+  Robot,
+  UserCircle,
+  Wrench,
+  Check,
+  CaretRight,
+  CaretLeft,
+  Sparkle,
   Brain,
   Shield,
   Code,
   Palette,
-  Settings,
-  ChevronDown,
-  ChevronUp,
+  GearSix,
+  CaretDown,
+  CaretUp,
   Info,
-  AlertCircle,
-} from 'lucide-react';
+  Warning,
+} from '@phosphor-icons/react';
 
 import {
   SAND,
@@ -97,9 +97,9 @@ const MODELS = [
 const CAPABILITIES = [
   { id: 'code', name: 'Code Generation', icon: Code, description: 'Write and review code' },
   { id: 'analysis', name: 'Data Analysis', icon: Brain, description: 'Process and analyze data' },
-  { id: 'creative', name: 'Creative Writing', icon: Sparkles, description: 'Generate creative content' },
-  { id: 'research', name: 'Research', icon: Bot, description: 'Gather and synthesize information' },
-  { id: 'planning', name: 'Task Planning', icon: Settings, description: 'Break down complex tasks' },
+  { id: 'creative', name: 'Creative Writing', icon: Sparkle, description: 'Generate creative content' },
+  { id: 'research', name: 'Research', icon: Robot, description: 'Gather and synthesize information' },
+  { id: 'planning', name: 'Task Planning', icon: GearSix, description: 'Break down complex tasks' },
   { id: 'security', name: 'Security Review', icon: Shield, description: 'Review for security issues' },
 ];
 
@@ -314,7 +314,7 @@ function WizardHeader({
               border: `1px solid ${modeColors.border}`,
             }}
           >
-            <Sparkles size={20} style={{ color: modeColors.accent }} />
+            <Sparkle size={20} style={{ color: modeColors.accent }} />
           </div>
           <div>
             <h2 className="text-lg font-semibold" style={{ color: TEXT.primary }}>
@@ -738,7 +738,7 @@ function ReviewStep({
           border: '1px solid rgba(251,191,36,0.2)',
         }}
       >
-        <AlertCircle size={18} style={{ color: '#fbbf24', marginTop: 2 }} />
+        <Warning size={18} style={{ color: '#fbbf24', marginTop: 2 }} />
         <div className="text-sm" style={{ color: TEXT.secondary }}>
           After creation, you can test your agent in the playground and deploy it when ready.
         </div>
@@ -784,7 +784,7 @@ function AgentPreview({
             border: `1px solid ${modeColors.border}`,
           }}
         >
-          <Bot size={24} style={{ color: modeColors.accent }} />
+          <Robot size={24} style={{ color: modeColors.accent }} />
         </div>
 
         <div 
@@ -823,7 +823,7 @@ function AgentPreview({
             borderTop: `1px solid ${modeColors.border}`,
           }}
         >
-          <Settings size={12} />
+          <GearSix size={12} />
           {config.setup}
         </div>
       </div>
@@ -1000,7 +1000,7 @@ function SetupCard({
               color: isSelected ? '#1A1612' : TEXT.secondary,
             }}
           >
-            <Sparkles size={18} />
+            <Sparkle size={18} />
           </div>
           <div>
             <div 
@@ -1159,7 +1159,7 @@ function WizardFooter({
           background: 'transparent',
         }}
       >
-        <ChevronLeft size={16} />
+        <CaretLeft size={16} />
         Back
       </button>
 
@@ -1184,7 +1184,7 @@ function WizardFooter({
             </>
           ) : (
             <>
-              <Sparkles size={16} />
+              <Sparkle size={16} />
               Create Agent
             </>
           )}
@@ -1200,7 +1200,7 @@ function WizardFooter({
           }}
         >
           Next
-          <ChevronRight size={16} />
+          <CaretRight size={16} />
         </button>
       )}
     </div>

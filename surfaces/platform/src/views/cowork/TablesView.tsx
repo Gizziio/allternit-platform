@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { Table2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  Table as Table2,
+} from '@phosphor-icons/react';
 import GlassSurface from '@/design/GlassSurface';
 
 interface DataTable {
@@ -11,43 +13,13 @@ interface DataTable {
   lastUpdated: string;
 }
 
-const mockTables: DataTable[] = [
-  {
-    id: '1',
-    name: 'User Analytics',
-    rowCount: 15247,
-    columnCount: 12,
-    columns: ['user_id', 'email', 'signup_date', 'last_active'],
-    lastUpdated: '2 hours ago',
-  },
-  {
-    id: '2',
-    name: 'Agent Runs',
-    rowCount: 3482,
-    columnCount: 8,
-    columns: ['run_id', 'status', 'duration', 'timestamp'],
-    lastUpdated: '30 mins ago',
-  },
-  {
-    id: '3',
-    name: 'Document Index',
-    rowCount: 8934,
-    columnCount: 15,
-    columns: ['doc_id', 'title', 'content', 'tags', 'created_at'],
-    lastUpdated: '1 day ago',
-  },
-  {
-    id: '4',
-    name: 'Performance Metrics',
-    rowCount: 45123,
-    columnCount: 10,
-    columns: ['timestamp', 'cpu_usage', 'memory', 'response_time'],
-    lastUpdated: '5 mins ago',
-  },
-];
-
 export const TablesView: React.FC = () => {
   const [hoveredTableId, setHoveredTableId] = useState<string | null>(null);
+  const [tables, setTables] = useState<DataTable[]>([]);
+
+  useEffect(() => {
+    fetch('/api/v1/workspace/tables').then(r => r.json()).then(setTables).catch(() => {});
+  }, []);
 
   return (
     <div style={{ padding: 'var(--spacing-lg)' }}>
@@ -68,7 +40,7 @@ export const TablesView: React.FC = () => {
           gap: 'var(--spacing-lg)',
         }}
       >
-        {mockTables.map((table) => (
+        {tables.map((table) => (
           <GlassSurface
             key={table.id}
             style={{

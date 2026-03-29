@@ -10,20 +10,20 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { 
-  CheckCircle, 
-  XCircle, 
-  Clock, 
-  User, 
-  FileText, 
-  Lock, 
-  Unlock,
+import {
+  CheckCircle,
+  XCircle,
+  Clock,
+  User,
+  FileText,
+  Lock,
+  LockOpen,
   Play,
-  AlertCircle,
-  Filter,
-  ChevronRight,
-  RefreshCw
-} from "lucide-react";
+  Warning,
+  Funnel,
+  CaretRight,
+  ArrowsClockwise,
+} from '@phosphor-icons/react';
 import { useUnifiedStore } from "@/lib/agents/unified.store";
 import type { WihInfo, ManagedLease, ContextPack } from "@/lib/agents";
 
@@ -134,7 +134,7 @@ export function WorkTab() {
               gap: 8,
             }}
           >
-            <Filter size={14} color="#888" />
+            <Funnel size={14} color="#888" />
             <select
               value={filter}
               onChange={(e) => setFilter(e.target.value as any)}
@@ -166,7 +166,7 @@ export function WorkTab() {
                 justifyContent: "center",
               }}
             >
-              <RefreshCw size={14} color="#888" />
+              <ArrowsClockwise size={14} color="#888" />
             </button>
           </div>
 
@@ -282,7 +282,7 @@ export function WorkTab() {
                   <span>{currentWih.wih_id}</span>
                   {currentWih.dag_id && (
                     <>
-                      <ChevronRight size={14} />
+                      <CaretRight size={14} />
                       <button
                         onClick={() => currentWih.dag_id && selectDag(currentWih.dag_id)}
                         style={{
@@ -609,7 +609,7 @@ function WihCard({ wih, isSelected, onClick, onPickup, onClose }: WihCardProps) 
             marginBottom: 8,
           }}
         >
-          <AlertCircle size={12} />
+          <Warning size={12} />
           Blocked by: {wih.blocked_by.join(", ")}
         </div>
       )}
@@ -652,7 +652,7 @@ function LeaseCard({ lease, onRenew, onRelease }: LeaseCardProps) {
             gap: 8,
           }}
         >
-          {isExpired ? <Unlock size={14} color="#ff3b30" /> : <Lock size={14} color="#10b981" />}
+          {isExpired ? <LockOpen size={14} color="#ff3b30" /> : <Lock size={14} color="#10b981" />}
           <span
             style={{
               fontSize: 12,

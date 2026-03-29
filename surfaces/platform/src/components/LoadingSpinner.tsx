@@ -16,7 +16,9 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { Loader2 } from 'lucide-react';
+import {
+  CircleNotch,
+} from '@phosphor-icons/react';
 
 export type SpinnerSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 export type SpinnerVariant = 'default' | 'sand' | 'primary' | 'muted';
@@ -70,7 +72,7 @@ export function LoadingSpinner({
       aria-live="polite"
       aria-label={label}
     >
-      <Loader2
+      <CircleNotch
         className={cn(
           'animate-spin',
           sizeMap[size],

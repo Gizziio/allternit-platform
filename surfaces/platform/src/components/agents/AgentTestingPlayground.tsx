@@ -17,24 +17,24 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Play,
   Pause,
-  RotateCcw,
-  Settings,
-  MessageSquare,
+  ArrowCounterClockwise,
+  GearSix,
+  Chat,
   Wrench,
   Clock,
-  Zap,
-  ChevronDown,
-  ChevronUp,
+  Lightning,
+  CaretDown,
+  CaretUp,
   Terminal,
-  Activity,
-  Save,
-  Share,
+  Pulse as Activity,
+  FloppyDisk,
+  ShareNetwork,
   Bug,
   CheckCircle,
   XCircle,
-  AlertCircle,
-  Loader2,
-} from 'lucide-react';
+  Warning,
+  CircleNotch,
+} from '@phosphor-icons/react';
 
 import {
   SAND,
@@ -344,7 +344,7 @@ function PlaygroundHeader({
             color: TEXT.secondary,
           }}
         >
-          <RotateCcw size={14} />
+          <ArrowCounterClockwise size={14} />
           Reset
         </button>
         {onDeploy && (
@@ -482,7 +482,7 @@ function MessageBubble({
             )}
             {message.tokens && (
               <span className="flex items-center gap-1">
-                <Zap size={10} />
+                <Lightning size={10} />
                 {message.tokens} tokens
               </span>
             )}
@@ -512,7 +512,7 @@ function ToolCallDisplay({
           className="ml-auto"
           style={{ color: TEXT.tertiary }}
         >
-          {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          {expanded ? <CaretUp size={14} /> : <CaretDown size={14} />}
         </button>
       </div>
       
@@ -652,9 +652,9 @@ function InputArea({
           }}
         >
           {isRunning ? (
-            <Loader2 size={16} className="animate-spin" />
+            <CircleNotch size={16} className="animate-spin" />
           ) : (
-            <ChevronUp size={16} />
+            <CaretUp size={16} />
           )}
         </button>
       </div>
@@ -713,7 +713,7 @@ function PlaygroundSidebar({
             <Activity size={16} style={{ color: modeColors.accent }} />
             Performance
           </span>
-          {showMetrics ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          {showMetrics ? <CaretUp size={16} /> : <CaretDown size={16} />}
         </button>
         
         <AnimatePresence>
@@ -727,7 +727,7 @@ function PlaygroundSidebar({
               <MetricCard
                 label="Total Tokens"
                 value={metrics.totalTokens.toLocaleString()}
-                icon={Zap}
+                icon={Lightning}
                 modeColors={modeColors}
               />
               <MetricCard
@@ -745,7 +745,7 @@ function PlaygroundSidebar({
               <MetricCard
                 label="Messages"
                 value={metrics.messageCount.toString()}
-                icon={MessageSquare}
+                icon={Chat}
                 modeColors={modeColors}
               />
             </motion.div>
@@ -764,7 +764,7 @@ function PlaygroundSidebar({
             <Terminal size={16} style={{ color: modeColors.accent }} />
             Variables
           </span>
-          {showVariables ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          {showVariables ? <CaretUp size={16} /> : <CaretDown size={16} />}
         </button>
 
         <AnimatePresence>

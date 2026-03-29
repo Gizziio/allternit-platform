@@ -10,17 +10,17 @@ import type { AnyCoworkEvent } from './cowork.types';
 import {
   CheckCircle,
   Circle,
-  ChevronDown,
-  ChevronRight,
+  CaretDown,
+  CaretRight,
   FolderOpen,
   FileText,
   Globe,
   Terminal,
   HardDrive,
-  MessageSquare,
+  Chat,
   Copy,
   Check,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 
 type StepStatus = 'complete' | 'active' | 'pending';
 
@@ -196,7 +196,7 @@ const RailCard = memo(function RailCard({ title, open, onToggle, children }: Rai
         className="w-full flex items-center justify-between px-3 py-2.5 text-left"
       >
         <span className="text-[12px] font-semibold text-white/80">{title}</span>
-        {open ? <ChevronDown className="w-4 h-4 text-white/50" /> : <ChevronRight className="w-4 h-4 text-white/50" />}
+        {open ? <CaretDown className="w-4 h-4 text-white/50" /> : <CaretRight className="w-4 h-4 text-white/50" />}
       </button>
       {open && <div className="px-3 pb-3">{children}</div>}
     </section>
@@ -330,7 +330,7 @@ export const CoworkRightRail = memo(function CoworkRightRail() {
                     title="Ask a question or recommend a change"
                     className="mt-0.5 text-white/45 hover:text-white/80 transition-colors"
                   >
-                    <MessageSquare className="w-3.5 h-3.5" />
+                    <Chat className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>

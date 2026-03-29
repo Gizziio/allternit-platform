@@ -3,24 +3,49 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAgentSurfaceModeStore } from '@/stores/agent-surface-mode.store';
 
-const { addMessage, createThread, openDrawer, setConsoleTab, chatState } = vi.hoisted(() => {
-  const addMessage = vi.fn(() => Promise.resolve());
+const embeddedSessionState = vi.hoisted(() => ({
+  isEmbedded: false,
+  sessionId: null as string | null,
+  session: null,
+  descriptor: { sessionMode: 'regular' as 'agent' | 'regular', agentId: null as string | null },
+}));
+
+vi.mock('@/lib/agents/embedded-agent-session.store', () => ({
+  useEmbeddedAgentSession: () => embeddedSessionState,
+  useEmbeddedAgentSessionStore: Object.assign(
+    (selector?: (state: any) => unknown) => {
+      const state = { sessionIdBySurface: { chat: null, cowork: null, code: null, browser: null }, clearSurfaceSession: vi.fn() };
+      return selector ? selector(state) : state;
+    },
+    { getState: () => ({ clearSurfaceSession: vi.fn() }) },
+  ),
+}));
+
+vi.mock('@/lib/agents/surface-agent-context', () => ({
+  useSurfaceAgentSelection: () => ({
+    agentModeEnabled: embeddedSessionState.isEmbedded && embeddedSessionState.descriptor.sessionMode === 'agent',
+    selectedAgentId: null,
+    selectedAgent: null,
+  }),
+  buildAgentConversationContext: () => ({ conversationMode: 'llm' }),
+}));
+
+const { createThread, openDrawer, setConsoleTab, chatState } = vi.hoisted(() => {
   const createThread = vi.fn(() => Promise.resolve('thread-code'));
   const openDrawer = vi.fn();
   const setConsoleTab = vi.fn();
   const chatState = {
-    threads: [{ id: 'thread-code', messages: [] as Array<any> }],
+    threads: [{ id: 'thread-code' }],
     activeThreadId: 'thread-code',
   };
 
-  return { addMessage, createThread, openDrawer, setConsoleTab, chatState };
+  return { createThread, openDrawer, setConsoleTab, chatState };
 });
 
 vi.mock('../chat/ChatStore', () => ({
   useChatStore: () => ({
     threads: chatState.threads,
     activeThreadId: chatState.activeThreadId,
-    addMessage,
     createThread,
   }),
 }));
@@ -85,19 +110,11 @@ import { CodeCanvas } from './CodeCanvas';
 describe('CodeCanvas', () => {
   beforeEach(() => {
     useCodeModeStore.setState(createInitialCodeModeState());
+    embeddedSessionState.isEmbedded = false;
+    embeddedSessionState.sessionId = null;
+    embeddedSessionState.session = null;
+    embeddedSessionState.descriptor = { sessionMode: 'regular', agentId: null };
     useAgentSurfaceModeStore.setState({
-      enabledBySurface: {
-        chat: false,
-        cowork: false,
-        code: false,
-        browser: false,
-      },
-      pulseBySurface: {
-        chat: 0,
-        cowork: 0,
-        code: 0,
-        browser: 0,
-      },
       selectedAgentIdBySurface: {
         chat: null,
         cowork: null,
@@ -107,8 +124,7 @@ describe('CodeCanvas', () => {
     });
     window.localStorage.clear();
     chatState.activeThreadId = 'thread-code';
-    chatState.threads = [{ id: 'thread-code', messages: [] }];
-    addMessage.mockClear();
+    chatState.threads = [{ id: 'thread-code' }];
     createThread.mockClear();
     openDrawer.mockClear();
     setConsoleTab.mockClear();
@@ -180,12 +196,7 @@ describe('CodeCanvas', () => {
         index === 0 ? ({ ...workspace, repo_status: undefined } as any) : workspace,
       ),
     });
-    chatState.threads = [
-      {
-        id: 'thread-code',
-        messages: [{ role: 'user', text: 'hello' }],
-      },
-    ];
+    chatState.threads = [{ id: 'thread-code' }];
 
     render(<CodeCanvas isPreviewCollapsed={false} />);
 
@@ -194,19 +205,10 @@ describe('CodeCanvas', () => {
   });
 
   it('renders the code agent backdrop when code agent mode is enabled', () => {
+    embeddedSessionState.isEmbedded = true;
+    embeddedSessionState.sessionId = 'session-code-1';
+    embeddedSessionState.descriptor = { sessionMode: 'agent', agentId: 'agent-1' };
     useAgentSurfaceModeStore.setState({
-      enabledBySurface: {
-        chat: false,
-        cowork: false,
-        code: true,
-        browser: false,
-      },
-      pulseBySurface: {
-        chat: 0,
-        cowork: 0,
-        code: 1,
-        browser: 0,
-      },
       selectedAgentIdBySurface: {
         chat: null,
         cowork: null,

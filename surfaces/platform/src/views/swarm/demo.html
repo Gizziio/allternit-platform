@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SwarmMonitor - A2R Platform</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+    
+    :root {
+      --bg-primary: #0d0b09;
+      --bg-secondary: rgba(255,255,255,0.02);
+      --border-color: rgba(255,255,255,0.08);
+      --accent: #d97757;
+      --text-primary: #ffffff;
+      --text-secondary: rgba(255,255,255,0.7);
+      --text-tertiary: rgba(255,255,255,0.5);
+    }
+    
+    * { box-sizing: border-box; }
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.1);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+    
+    /* Animations */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    
+    /* Card hover effect */
+    .agent-card {
+      transition: all 0.2s ease;
+    }
+    .agent-card:hover {
+      border-color: rgba(255,255,255,0.2) !important;
+      transform: translateY(-2px);
+    }
+    
+    /* Chart tooltip */
+    .chart-tooltip {
+      background: rgba(13, 11, 9, 0.95);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 12px;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body class="h-screen flex flex-col">
+  <!-- Header -->
+  <header class="flex items-center justify-between px-6 py-4 border-b" style="border-color: var(--border-color);">
+    <div class="flex items-center gap-6">
+      <h1 class="text-lg font-bold tracking-tight" style="color: var(--accent);">Swarm ADE</h1>
+      
+      <!-- View Toggle -->
+      <div class="flex items-center rounded-lg p-1" style="background: rgba(255,255,255,0.03);">
+        <button onclick="switchView('grid')" id="btn-grid" class="view-btn flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all" style="background: rgba(217, 119, 87, 0.2); color: #d97757;">
+          <i class="fas fa-th-large"></i> GRID
+        </button>
+        <button onclick="switchView('topology')" id="btn-topology" class="view-btn flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all" style="color: rgba(255,255,255,0.5);">
+          <i class="fas fa-project-diagram"></i> TOPOLOGY
+        </button>
+        <button onclick="switchView('timeline')" id="btn-timeline" class="view-btn flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all" style="color: rgba(255,255,255,0.5);">
+          <i class="fas fa-stream"></i> TIMELINE
+        </button>
+        <button onclick="switchView('console')" id="btn-console" class="view-btn flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all" style="color: rgba(255,255,255,0.5);">
+          <i class="fas fa-terminal"></i> CONSOLE
+        </button>
+        <button onclick="switchView('history')" id="btn-history" class="view-btn flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all" style="color: rgba(255,255,255,0.5);">
+          <i class="fas fa-chart-line"></i> HISTORY
+        </button>
+        <button onclick="switchView('detail')" id="btn-detail" class="view-btn flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all" style="color: rgba(255,255,255,0.5);">
+          <i class="fas fa-list-alt"></i> DETAIL
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="flex items-center gap-6 text-xs">
+      <div class="flex items-center gap-2">
+        <div class="w-2 h-2 rounded-full animate-pulse" style="background: var(--accent);"></div>
+        <span style="color: var(--text-secondary);">4 active</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <i class="fas fa-coins text-[10px]" style="color: var(--text-tertiary);"></i>
+        <span style="color: var(--text-secondary);">$5.73</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <i class="fas fa-microchip text-[10px]" style="color: var(--text-tertiary);"></i>
+        <span style="color: var(--text-secondary);">139.4k tokens</span>
+      </div>
+      
+      <!-- Export Button -->
+      <button class="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium" style="background: rgba(255,255,255,0.05); color: var(--text-secondary);">
+        <i class="fas fa-download"></i> Export
+      </button>
+    </div>
+  </header>
+
+  <!-- Filter Bar -->
+  <div id="filter-bar" class="px-6 py-3 border-b flex items-center gap-4" style="border-color: rgba(255,255,255,0.05);">
+    <!-- Search -->
+    <div class="relative flex-1 max-w-md">
+      <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-sm" style="color: var(--text-tertiary);"></i>
+      <input type="text" placeholder="Search agents..." class="w-full pl-9 pr-4 py-2 rounded-lg text-sm outline-none" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); color: var(--text-primary);">
+    </div>
+
+    <!-- Role Filters -->
+    <div class="flex items-center gap-1">
+      <span class="text-xs mr-2" style="color: var(--text-tertiary);">Role:</span>
+      <button class="px-2.5 py-1 rounded-md text-xs font-medium" style="background: rgba(217, 119, 87, 0.2); color: #d97757; border: 1px solid rgba(217, 119, 87, 0.4);">Orch</button>
+      <button class="px-2.5 py-1 rounded-md text-xs font-medium" style="background: rgba(255,255,255,0.03); color: var(--text-secondary);">Work</button>
+      <button class="px-2.5 py-1 rounded-md text-xs font-medium" style="background: rgba(255,255,255,0.03); color: var(--text-secondary);">Spec</button>
+      <button class="px-2.5 py-1 rounded-md text-xs font-medium" style="background: rgba(255,255,255,0.03); color: var(--text-secondary);">Rev</button>
+    </div>
+
+    <!-- Status Filters -->
+    <div class="flex items-center gap-1">
+      <span class="text-xs mr-2" style="color: var(--text-tertiary);">Status:</span>
+      <button class="px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5" style="background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.4);">
+        <span class="w-1.5 h-1.5 rounded-full" style="background: #22c55e;"></span> Active
+      </button>
+      <button class="px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5" style="background: rgba(255,255,255,0.03); color: var(--text-secondary);">
+        <span class="w-1.5 h-1.5 rounded-full" style="background: #888;"></span> Idle
+      </button>
+    </div>
+
+    <!-- Results Count -->
+    <div class="ml-auto text-xs" style="color: var(--text-tertiary);">
+      Showing <span style="color: var(--accent);">5</span> of 5
+    </div>
+  </div>
+
+  <!-- Live Indicator -->
+  <div class="absolute top-14 right-4 flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-medium z-10" style="background: rgba(34, 197, 94, 0.1); color: #22c55e;">
+    <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> LIVE
+  </div>
+
+  <!-- Main Content -->
+  <main class="flex-1 overflow-hidden relative">
+    
+    <!-- GRID VIEW -->
+    <div id="view-grid" class="view-section h-full p-6 overflow-auto">
+      <div class="grid gap-4" style="grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); grid-auto-rows: 180px;">
+        
+        <!-- Orchestrator Card (2x2) -->
+        <div class="agent-card col-span-2 row-span-2 relative p-5 rounded-xl border cursor-pointer" style="background: rgba(255,255,255,0.02); border-color: #d97757;">
+          <div class="flex items-start justify-between mb-4">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: rgba(217, 119, 87, 0.2);">
+                <i class="fas fa-brain text-sm" style="color: #d97757;"></i>
+              </div>
+              <div>
+                <h3 class="font-semibold text-sm">Orchestrator Alpha</h3>
+                <div class="flex items-center gap-2 mt-0.5">
+                  <span class="text-[10px] font-bold tracking-wider" style="color: #d97757;">ORCH</span>
+                  <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background: #d97757; box-shadow: 0 0 6px #d97757;"></span>
+                </div>
+              </div>
+            </div>
+            <div class="text-xs mono px-2 py-1 rounded" style="background: rgba(255,255,255,0.03); color: var(--text-tertiary);">45.6k</div>
+          </div>
+
+          <!-- Active Tasks -->
+          <div class="space-y-2 mb-4">
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span style="color: var(--text-secondary);">Architecture Review</span>
+                <span style="color: #d97757;">67%</span>
+              </div>
+              <div class="h-1.5 rounded-full overflow-hidden" style="background: rgba(255,255,255,0.05);">
+                <div class="h-full rounded-full transition-all" style="width: 67%; background: #d97757;"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span style="color: var(--text-secondary);">Task Distribution</span>
+                <span style="color: #d97757;">34%</span>
+              </div>
+              <div class="h-1.5 rounded-full overflow-hidden" style="background: rgba(255,255,255,0.05);">
+                <div class="h-full rounded-full transition-all" style="width: 34%; background: #d97757;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer Metrics -->
+          <div class="absolute bottom-5 left-5 right-5 pt-3 flex justify-between text-xs border-t" style="border-color: rgba(255,255,255,0.05);">
+            <span style="color: var(--text-tertiary);">$2.34</span>
+            <span style="color: var(--text-tertiary);">2 tasks</span>
+          </div>
+        </div>
+
+        <!-- Worker Card -->
+        <div class="agent-card relative p-5 rounded-xl border cursor-pointer" style="background: rgba(255,255,255,0.02); border-color: #60a5fa;">
+          <div class="flex items-start justify-between mb-4">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: rgba(96, 165, 250, 0.2);">
+                <i class="fas fa-robot text-sm" style="color: #60a5fa;"></i>
+              </div>
+              <div>
+                <h3 class="font-semibold text-sm">Worker Beta</h3>
+                <div class="flex items-center gap-2 mt-0.5">
+                  <span class="text-[10px] font-bold tracking-wider" style="color: #60a5fa;">WORK</span>
+                  <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background: #60a5fa; box-shadow: 0 0 6px #60a5fa;"></span>
+                </div>
+              </div>
+            </div>
+            <div class="text-xs mono px-2 py-1 rounded" style="background: rgba(255,255,255,0.03); color: var(--text-tertiary);">28.9k</div>
+          </div>
+
+          <div class="space-y-2 mb-4">
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span style="color: var(--text-secondary);">Code Generation</span>
+                <span style="color: #60a5fa;">78%</span>
+              </div>
+              <div class="h-1.5 rounded-full overflow-hidden" style="background: rgba(255,255,255,0.05);">
+                <div class="h-full rounded-full transition-all" style="width: 78%; background: #60a5fa;"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="absolute bottom-5 left-5 right-5 pt-3 flex justify-between text-xs border-t" style="border-color: rgba(255,255,255,0.05);">
+            <span style="color: var(--text-tertiary);">$0.87</span>
+            <span style="color: var(--text-tertiary);">1 task</span>
+          </div>
+        </div>
+
+        <!-- Idle Worker Card -->
+        <div class="agent-card relative p-5 rounded-xl border cursor-pointer" style="background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.08);">
+          <div class="flex items-start justify-between mb-4">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: rgba(96, 165, 250, 0.1);">
+                <i class="fas fa-robot text-sm" style="color: #60a5fa;"></i>
+              </div>
+              <div>
+                <h3 class="font-semibold text-sm">Worker Gamma</h3>
+                <div class="flex items-center gap-2 mt-0.5">
+                  <span class="text-[10px] font-bold tracking-wider" style="color: #60a5fa;">WORK</span>
+                  <span class="w-1.5 h-1.5 rounded-full" style="background: var(--text-tertiary);"></span>
+                </div>
+              </div>
+            </div>
+            <div class="text-xs mono px-2 py-1 rounded" style="background: rgba(255,255,255,0.03); color: var(--text-tertiary);">12.4k</div>
+          </div>
+
+          <div class="absolute bottom-5 left-5 right-5 pt-3 flex justify-between text-xs border-t" style="border-color: rgba(255,255,255,0.05);">
+            <span style="color: var(--text-tertiary);">$0.37</span>
+            <span style="color: var(--text-tertiary);">0 tasks</span>
+          </div>
+        </div>
+
+        <!-- Specialist Card -->
+        <div class="agent-card relative p-5 rounded-xl border cursor-pointer" style="background: rgba(255,255,255,0.02); border-color: #a78bfa;">
+          <div class="flex items-start justify-between mb-4">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: rgba(167, 139, 250, 0.2);">
+                <i class="fas fa-microchip text-sm" style="color: #a78bfa;"></i>
+              </div>
+              <div>
+                <h3 class="font-semibold text-sm">Specialist Delta</h3>
+                <div class="flex items-center gap-2 mt-0.5">
+                  <span class="text-[10px] font-bold tracking-wider" style="color: #a78bfa;">SPEC</span>
+                  <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background: #a78bfa; box-shadow: 0 0 6px #a78bfa;"></span>
+                </div>
+              </div>
+            </div>
+            <div class="text-xs mono px-2 py-1 rounded" style="background: rgba(255,255,255,0.03); color: var(--text-tertiary);">34.2k</div>
+          </div>
+
+          <div class="space-y-2 mb-4">
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span style="color: var(--text-secondary);">Query Optimization</span>
+                <span style="color: #a78bfa;">45%</span>
+              </div>
+              <div class="h-1.5 rounded-full overflow-hidden" style="background: rgba(255,255,255,0.05);">
+                <div class="h-full rounded-full transition-all" style="width: 45%; background: #a78bfa;"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="absolute bottom-5 left-5 right-5 pt-3 flex justify-between text-xs border-t" style="border-color: rgba(255,255,255,0.05);">
+            <span style="color: var(--text-tertiary);">$1.23</span>
+            <span style="color: var(--text-tertiary);">1 task</span>
+          </div>
+        </div>
+
+        <!-- Reviewer Card -->
+        <div class="agent-card relative p-5 rounded-xl border cursor-pointer" style="background: rgba(255,255,255,0.02); border-color: #4ade80;">
+          <div class="flex items-start justify-between mb-4">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: rgba(74, 222, 128, 0.2);">
+                <i class="fas fa-clipboard-check text-sm" style="color: #4ade80;"></i>
+              </div>
+              <div>
+                <h3 class="font-semibold text-sm">Reviewer Epsilon</h3>
+                <div class="flex items-center gap-2 mt-0.5">
+                  <span class="text-[10px] font-bold tracking-wider" style="color: #4ade80;">REV</span>
+                  <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background: #4ade80; box-shadow: 0 0 6px #4ade80;"></span>
+                </div>
+              </div>
+            </div>
+            <div class="text-xs mono px-2 py-1 rounded" style="background: rgba(255,255,255,0.03); color: var(--text-tertiary);">18.3k</div>
+          </div>
+
+          <div class="space-y-2 mb-4">
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span style="color: var(--text-secondary);">Security Audit</span>
+                <span style="color: #4ade80;">23%</span>
+              </div>
+              <div class="h-1.5 rounded-full overflow-hidden" style="background: rgba(255,255,255,0.05);">
+                <div class="h-full rounded-full transition-all" style="width: 23%; background: #4ade80;"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="absolute bottom-5 left-5 right-5 pt-3 flex justify-between text-xs border-t" style="border-color: rgba(255,255,255,0.05);">
+            <span style="color: var(--text-tertiary);">$0.92</span>
+            <span style="color: var(--text-tertiary);">1 task</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- HISTORY VIEW -->
+    <div id="view-history" class="view-section hidden h-full flex flex-col">
+      <!-- Controls -->
+      <div class="px-6 py-4 border-b flex items-center justify-between" style="border-color: rgba(255,255,255,0.05);">
+        <div class="flex items-center gap-4">
+          <!-- Chart Type -->
+          <div class="flex items-center gap-2">
+            <span class="text-xs" style="color: var(--text-tertiary);">Chart:</span>
+            <button class="px-3 py-1.5 rounded-md text-xs font-medium capitalize" style="background: rgba(217, 119, 87, 0.2); color: #d97757; border: 1px solid rgba(217, 119, 87, 0.4);">Area</button>
+            <button class="px-3 py-1.5 rounded-md text-xs font-medium capitalize" style="background: rgba(255,255,255,0.03); color: var(--text-secondary);">Line</button>
+            <button class="px-3 py-1.5 rounded-md text-xs font-medium capitalize" style="background: rgba(255,255,255,0.03); color: var(--text-secondary);">Bar</button>
+          </div>
+
+          <!-- Time Range -->
+          <div class="flex items-center gap-2">
+            <span class="text-xs" style="color: var(--text-tertiary);">Range:</span>
+            <button class="px-3 py-1.5 rounded-md text-xs font-medium" style="background: rgba(255,255,255,0.03); color: var(--text-secondary);">1 Hour</button>
+            <button class="px-3 py-1.5 rounded-md text-xs font-medium" style="background: rgba(255,255,255,0.03); color: var(--text-secondary);">6 Hours</button>
+            <button class="px-3 py-1.5 rounded-md text-xs font-medium" style="background: rgba(217, 119, 87, 0.2); color: #d97757; border: 1px solid rgba(217, 119, 87, 0.4);">24 Hours</button>
+            <button class="px-3 py-1.5 rounded-md text-xs font-medium" style="background: rgba(255,255,255,0.03); color: var(--text-secondary);">7 Days</button>
+          </div>
+        </div>
+
+        <!-- Export -->
+        <div class="flex items-center gap-2">
+          <button class="px-3 py-1.5 rounded-md text-xs font-medium" style="background: rgba(255,255,255,0.03); color: var(--text-secondary);">
+            <i class="fas fa-file-csv mr-1.5"></i> CSV
+          </button>
+          <button class="px-3 py-1.5 rounded-md text-xs font-medium" style="background: rgba(255,255,255,0.03); color: var(--text-secondary);">
+            <i class="fas fa-file-code mr-1.5"></i> JSON
+          </button>
+        </div>
+      </div>
+
+      <!-- Chart Area -->
+      <div class="flex-1 flex">
+        <div class="flex-1 p-6">
+          <!-- Simulated Chart -->
+          <div class="h-full flex flex-col">
+            <svg viewBox="0 0 800 300" class="w-full flex-1" style="min-height: 300px;">
+              <!-- Grid lines -->
+              <g stroke="rgba(255,255,255,0.05)" stroke-dasharray="3,3">
+                <line x1="50" y1="50" x2="750" y2="50"/>
+                <line x1="50" y1="100" x2="750" y2="100"/>
+                <line x1="50" y1="150" x2="750" y2="150"/>
+                <line x1="50" y1="200" x2="750" y2="200"/>
+                <line x1="50" y1="250" x2="750" y2="250"/>
+              </g>
+              
+              <!-- Active Agents Area -->
+              <defs>
+                <linearGradient id="agentGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stop-color="#d97757" stop-opacity="0.3"/>
+                  <stop offset="95%" stop-color="#d97757" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <path d="M 50,180 L 150,170 L 250,160 L 350,165 L 450,150 L 550,140 L 650,130 L 750,125 L 750,280 L 50,280 Z" fill="url(#agentGradient)"/>
+              <path d="M 50,180 L 150,170 L 250,160 L 350,165 L 450,150 L 550,140 L 650,130 L 750,125" fill="none" stroke="#d97757" stroke-width="2"/>
+              
+              <!-- Throughput Line -->
+              <path d="M 50,220 L 150,210 L 250,205 L 350,195 L 450,185 L 550,190 L 650,180 L 750,175" fill="none" stroke="#a78bfa" stroke-width="2"/>
+              
+              <!-- X Axis labels -->
+              <text x="50" y="295" fill="rgba(255,255,255,0.5)" font-size="11" text-anchor="middle">00:00</text>
+              <text x="200" y="295" fill="rgba(255,255,255,0.5)" font-size="11" text-anchor="middle">06:00</text>
+              <text x="400" y="295" fill="rgba(255,255,255,0.5)" font-size="11" text-anchor="middle">12:00</text>
+              <text x="600" y="295" fill="rgba(255,255,255,0.5)" font-size="11" text-anchor="middle">18:00</text>
+              <text x="750" y="295" fill="rgba(255,255,255,0.5)" font-size="11" text-anchor="middle">Now</text>
+              
+              <!-- Data points -->
+              <circle cx="750" cy="125" r="4" fill="#d97757"/>
+              <circle cx="750" cy="175" r="4" fill="#a78bfa"/>
+            </svg>
+            
+            <!-- Legend -->
+            <div class="flex items-center justify-center gap-6 mt-4">
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded" style="background: #d97757;"></span>
+                <span class="text-xs" style="color: var(--text-secondary);">Active Agents</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded" style="background: #a78bfa;"></span>
+                <span class="text-xs" style="color: var(--text-secondary);">Throughput</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="w-72 border-l p-4" style="background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.05);">
+          <h3 class="text-xs font-bold uppercase tracking-wider mb-3" style="color: var(--text-tertiary);">Metrics</h3>
+          
+          <!-- Metric Toggle Cards -->
+          <div class="space-y-2">
+            <div class="w-full p-3 rounded-xl border" style="background: rgba(217, 119, 87, 0.1); border-color: rgba(217, 119, 87, 0.3);">
+              <div class="flex items-center justify-between mb-1">
+                <div class="flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full" style="background: #d97757;"></span>
+                  <span class="text-xs font-medium">Active Agents</span>
+                </div>
+                <span class="text-xs mono" style="color: #d97757;">4</span>
+              </div>
+              <div class="mt-2 pt-2 border-t space-y-1" style="border-color: rgba(255,255,255,0.05);">
+                <div class="flex justify-between text-[10px]">
+                  <span style="color: var(--text-tertiary);">Min</span>
+                  <span style="color: var(--text-secondary);">2</span>
+                </div>
+                <div class="flex justify-between text-[10px]">
+                  <span style="color: var(--text-tertiary);">Max</span>
+                  <span style="color: var(--text-secondary);">5</span>
+                </div>
+                <div class="flex justify-between text-[10px]">
+                  <span style="color: var(--text-tertiary);">Avg</span>
+                  <span style="color: var(--text-secondary);">3.8</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="w-full p-3 rounded-xl border" style="background: rgba(96, 165, 250, 0.1); border-color: rgba(96, 165, 250, 0.3);">
+              <div class="flex items-center justify-between mb-1">
+                <div class="flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full" style="background: #60a5fa;"></span>
+                  <span class="text-xs font-medium">Tokens</span>
+                </div>
+                <span class="text-xs mono" style="color: #60a5fa;">139.4k</span>
+              </div>
+            </div>
+
+            <div class="w-full p-3 rounded-xl border" style="background: rgba(34, 197, 94, 0.1); border-color: rgba(34, 197, 94, 0.3);">
+              <div class="flex items-center justify-between mb-1">
+                <div class="flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full" style="background: #22c55e;"></span>
+                  <span class="text-xs font-medium">Cost</span>
+                </div>
+                <span class="text-xs mono" style="color: #22c55e;">$5.73</span>
+              </div>
+            </div>
+
+            <div class="w-full p-3 rounded-xl border" style="background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.05);">
+              <div class="flex items-center justify-between mb-1">
+                <div class="flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full" style="background: #a78bfa;"></span>
+                  <span class="text-xs font-medium" style="color: var(--text-secondary);">Throughput</span>
+                </div>
+                <span class="text-xs mono" style="color: #a78bfa;">4.2 t/s</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Data Info -->
+          <div class="mt-4 pt-4 border-t" style="border-color: rgba(255,255,255,0.05);">
+            <h3 class="text-xs font-bold uppercase tracking-wider mb-3" style="color: var(--text-tertiary);">Data</h3>
+            <div class="space-y-2 text-xs">
+              <div class="flex justify-between">
+                <span style="color: var(--text-tertiary);">Points</span>
+                <span style="color: var(--text-secondary);">2,880</span>
+              </div>
+              <div class="flex justify-between">
+                <span style="color: var(--text-tertiary);">Time Span</span>
+                <span style="color: var(--text-secondary);">24h</span>
+              </div>
+              <div class="flex justify-between">
+                <span style="color: var(--text-tertiary);">Resolution</span>
+                <span style="color: var(--text-secondary);">30s</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DETAIL VIEW -->
+    <div id="view-detail" class="view-section hidden h-full flex">
+      <!-- Sidebar -->
+      <div class="w-64 border-r overflow-auto" style="background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.05);">
+        <div class="p-4 border-b" style="border-color: rgba(255,255,255,0.05);">
+          <button onclick="switchView('grid')" class="flex items-center gap-2 text-sm transition-colors hover:opacity-70" style="color: var(--text-secondary);">
+            <i class="fas fa-arrow-left"></i>
+            <span>Back to Grid</span>
+          </button>
+        </div>
+
+        <div class="p-2 space-y-1">
+          <!-- Active Agent -->
+          <button class="w-full p-3 rounded-xl text-left transition-all" style="background: rgba(217, 119, 87, 0.1); border: 1px solid rgba(217, 119, 87, 0.3);">
+            <div class="flex items-center gap-2">
+              <div class="w-2 h-2 rounded-full animate-pulse" style="background: #d97757;"></div>
+              <span class="text-sm font-medium">Orchestrator Alpha</span>
+            </div>
+            <div class="text-xs mt-1" style="color: var(--text-tertiary);">2 threads</div>
+          </button>
+
+          <button class="w-full p-3 rounded-xl text-left transition-all hover:bg-white/5" style="background: rgba(96, 165, 250, 0.1); border: 1px solid rgba(96, 165, 250, 0.3);">
+            <div class="flex items-center gap-2">
+              <div class="w-2 h-2 rounded-full animate-pulse" style="background: #60a5fa;"></div>
+              <span class="text-sm">Worker Beta</span>
+            </div>
+            <div class="text-xs mt-1" style="color: var(--text-tertiary);">1 thread</div>
+          </button>
+
+          <button class="w-full p-3 rounded-xl text-left transition-all hover:bg-white/5" style="border: 1px solid rgba(255,255,255,0.05);">
+            <div class="flex items-center gap-2">
+              <div class="w-2 h-2 rounded-full" style="background: var(--text-tertiary);"></div>
+              <span class="text-sm">Worker Gamma</span>
+            </div>
+            <div class="text-xs mt-1" style="color: var(--text-tertiary);">idle</div>
+          </button>
+
+          <button class="w-full p-3 rounded-xl text-left transition-all hover:bg-white/5" style="background: rgba(167, 139, 250, 0.1); border: 1px solid rgba(167, 139, 250, 0.3);">
+            <div class="flex items-center gap-2">
+              <div class="w-2 h-2 rounded-full animate-pulse" style="background: #a78bfa;"></div>
+              <span class="text-sm">Specialist Delta</span>
+            </div>
+            <div class="text-xs mt-1" style="color: var(--text-tertiary);">1 thread</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Detail Panel -->
+      <div class="flex-1 overflow-auto p-6">
+        <div class="max-w-2xl mx-auto">
+          <!-- Header Card -->
+          <div class="p-6 rounded-2xl border mb-6" style="background: rgba(255,255,255,0.02); border-color: #d97757; border-width: 2px;">
+            <div class="flex items-center justify-center mb-4">
+              <div class="w-24 h-24 rounded-3xl flex items-center justify-center" style="background: rgba(217, 119, 87, 0.2);">
+                <i class="fas fa-brain text-4xl" style="color: #d97757;"></i>
+              </div>
+            </div>
+            <div class="text-center">
+              <h2 class="text-xl font-bold mb-1">Orchestrator Alpha</h2>
+              <p class="text-sm mono" style="color: var(--text-tertiary);">ORCH-01</p>
+            </div>
+          </div>
+
+          <!-- Status Grid -->
+          <div class="grid grid-cols-2 gap-4 mb-6">
+            <div class="p-4 rounded-xl border" style="background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.05);">
+              <div class="text-xs mb-1" style="color: var(--text-tertiary);">Status</div>
+              <div class="flex items-center gap-2 text-lg font-semibold" style="color: #d97757;">
+                <div class="w-2 h-2 rounded-full animate-pulse" style="background: #d97757; box-shadow: 0 0 8px #d97757;"></div>
+                <span class="uppercase">working</span>
+              </div>
+            </div>
+
+            <div class="p-4 rounded-xl border" style="background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.05);">
+              <div class="text-xs mb-1" style="color: var(--text-tertiary);">Role</div>
+              <div class="text-lg font-semibold" style="color: #d97757;">Orchestrator</div>
+            </div>
+
+            <div class="p-4 rounded-xl border" style="background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.05);">
+              <div class="text-xs mb-1" style="color: var(--text-tertiary);">Model</div>
+              <div class="text-sm mono" style="color: var(--text-primary);">gpt-4o</div>
+            </div>
+
+            <div class="p-4 rounded-xl border" style="background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.05);">
+              <div class="text-xs mb-1" style="color: var(--text-tertiary);">Uptime</div>
+              <div class="text-lg mono font-semibold" style="color: var(--text-primary);">2h 34m</div>
+            </div>
+          </div>
+
+          <!-- Metrics -->
+          <div class="p-4 rounded-xl border mb-6" style="background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.05);">
+            <div class="grid grid-cols-4 gap-4">
+              <div class="text-center">
+                <div class="text-2xl mono font-bold" style="color: var(--text-primary);">45.6k</div>
+                <div class="text-[10px] uppercase tracking-wider" style="color: var(--text-tertiary);">Tokens</div>
+              </div>
+              <div class="text-center">
+                <div class="text-2xl mono font-bold" style="color: var(--text-primary);">$2.34</div>
+                <div class="text-[10px] uppercase tracking-wider" style="color: var(--text-tertiary);">Cost</div>
+              </div>
+              <div class="text-center">
+                <div class="text-2xl mono font-bold" style="color: #d97757;">2</div>
+                <div class="text-[10px] uppercase tracking-wider" style="color: var(--text-tertiary);">Threads</div>
+              </div>
+              <div class="text-center">
+                <div class="text-2xl mono font-bold" style="color: var(--text-primary);">234</div>
+                <div class="text-[10px] uppercase tracking-wider" style="color: var(--text-tertiary);">ms avg</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Active Tasks -->
+          <div class="mb-6">
+            <h3 class="text-xs font-bold uppercase tracking-wider mb-3" style="color: var(--text-tertiary);">Active Threads (2)</h3>
+            <div class="space-y-3">
+              <div class="p-4 rounded-xl border" style="background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.05);">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-sm font-medium">Architecture Review</span>
+                  <span class="text-xs mono" style="color: #d97757;">67%</span>
+                </div>
+                <div class="h-2 rounded-full overflow-hidden mb-3" style="background: rgba(255,255,255,0.05);">
+                  <div class="h-full rounded-full transition-all" style="width: 67%; background: #d97757;"></div>
+                </div>
+                <div class="flex items-center justify-between text-xs" style="color: var(--text-tertiary);">
+                  <span class="mono">23.0k tokens</span>
+                  <span class="mono">$1.15</span>
+                  <span>5m 23s</span>
+                </div>
+              </div>
+
+              <div class="p-4 rounded-xl border" style="background: rgba(255,255,255,0.02); border-color: rgba(255,255,255,0.05);">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-sm font-medium">Task Distribution</span>
+                  <span class="text-xs mono" style="color: #d97757;">34%</span>
+                </div>
+                <div class="h-2 rounded-full overflow-hidden mb-3" style="background: rgba(255,255,255,0.05);">
+                  <div class="h-full rounded-full transition-all" style="width: 34%; background: #d97757;"></div>
+                </div>
+                <div class="flex items-center justify-between text-xs" style="color: var(--text-tertiary);">
+                  <span class="mono">12.0k tokens</span>
+                  <span class="mono">$0.60</span>
+                  <span>3m 12s</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex gap-3">
+            <button class="flex-1 py-3 rounded-xl text-sm font-medium transition-colors hover:bg-white/5" style="background: rgba(255,255,255,0.03); color: var(--text-secondary); border: 1px solid rgba(255,255,255,0.08);">
+              <i class="fas fa-terminal mr-2"></i> View Logs
+            </button>
+            <button class="flex-1 py-3 rounded-xl text-sm font-medium transition-colors hover:bg-white/5" style="background: rgba(217, 119, 87, 0.2); color: #d97757; border: 1px solid rgba(217, 119, 87, 0.4);">
+              <i class="fas fa-redo mr-2"></i> Restart
+            </button>
+            <button class="flex-1 py-3 rounded-xl text-sm font-medium transition-colors hover:bg-white/5" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);">
+              <i class="fas fa-stop mr-2"></i> Stop
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    function switchView(viewName) {
+      // Hide all views
+      document.querySelectorAll('.view-section').forEach(el => {
+        el.classList.add('hidden');
+      });
+      
+      // Show selected view
+      document.getElementById('view-' + viewName).classList.remove('hidden');
+      
+      // Update buttons
+      document.querySelectorAll('.view-btn').forEach(btn => {
+        btn.style.background = 'transparent';
+        btn.style.color = 'rgba(255,255,255,0.5)';
+      });
+      
+      const activeBtn = document.getElementById('btn-' + viewName);
+      if (activeBtn) {
+        activeBtn.style.background = 'rgba(217, 119, 87, 0.2)';
+        activeBtn.style.color = '#d97757';
+      }
+      
+      // Show/hide filter bar
+      const filterBar = document.getElementById('filter-bar');
+      if (viewName === 'detail' || viewName === 'history') {
+        filterBar.classList.add('hidden');
+      } else {
+        filterBar.classList.remove('hidden');
+      }
+    }
+  </script>
+</body>
+</html>

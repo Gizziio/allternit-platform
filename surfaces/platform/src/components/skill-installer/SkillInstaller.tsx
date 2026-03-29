@@ -9,6 +9,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Card, Table, Tag, Space, Input, Select, Modal, Progress, Alert } from 'antd';
 import { DownloadOutlined, UploadOutlined, SearchOutlined, CheckCircleOutlined, CloseCircleOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import { SkillInstallerApiService } from '@/services/SkillInstallerApiService';
 
 const { Column } = Table;
 
@@ -79,94 +80,22 @@ const SkillInstaller: React.FC<SkillInstallerProps> = ({
   // State for installation modal visibility
   const [installModalVisible, setInstallModalVisible] = useState<boolean>(false);
 
+  const skillApi = React.useMemo(() => new SkillInstallerApiService(apiEndpoint), [apiEndpoint]);
+
   // Fetch skills from API
   useEffect(() => {
-    const fetchSkills = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // In a real implementation, this would fetch from the API
-        // For now, we'll simulate with mock data
-        const mockSkills: Skill[] = [
-          {
-            id: 'github',
-            name: 'GitHub',
-            description: 'GitHub CLI integration for repository management',
-            version: '1.0.0',
-            author: 'A2R Team',
-            status: 'available',
-            category: 'development',
-            tags: ['git', 'repository', 'cli'],
-            requires: ['gh'],
-            source: 'a2r-registry',
-            license: 'MIT',
-            lastUpdated: '2026-01-15'
-          },
-          {
-            id: 'bash',
-            name: 'Bash Tools',
-            description: 'Execute bash commands and scripts',
-            version: '1.2.1',
-            author: 'A2R Team',
-            status: 'installed',
-            installedVersion: '1.2.1',
-            category: 'system',
-            tags: ['shell', 'terminal', 'execution'],
-            requires: ['bash'],
-            source: 'a2r-registry',
-            license: 'MIT',
-            lastUpdated: '2026-01-20'
-          },
-          {
-            id: 'browser',
-            name: 'Browser Automation',
-            description: 'Automate web browsers using Puppeteer',
-            version: '0.9.5',
-            author: 'OpenClaw Contributors',
-            status: 'available',
-            category: 'automation',
-            tags: ['web', 'automation', 'puppeteer'],
-            requires: ['chrome', 'firefox'],
-            source: 'openclaw-registry',
-            downloadUrl: 'https://registry.openclaw.example.com/browser-0.9.5.tgz',
-            license: 'Apache-2.0',
-            lastUpdated: '2026-01-10'
-          },
-          {
-            id: 'notion',
-            name: 'Notion',
-            description: 'Integrate with Notion workspaces',
-            version: '0.8.2',
-            author: 'Third-party',
-            status: 'available',
-            category: 'productivity',
-            tags: ['notes', 'workspace', 'api'],
-            requires: [],
-            source: 'remote',
-            downloadUrl: 'https://notion.a2r.example.com/notion-0.8.2.tgz',
-            license: 'Commercial',
-            lastUpdated: '2026-01-05'
-          }
-        ];
-
-        setSkills(mockSkills);
-        
-        // Initialize installation status
+    setLoading(true);
+    setError(null);
+    skillApi.listSkills()
+      .then(({ skills: fetched }) => {
+        setSkills(fetched);
         const initialStatus: Record<string, 'idle' | 'installing' | 'success' | 'error'> = {};
-        mockSkills.forEach(skill => {
-          initialStatus[skill.id] = 'idle';
-        });
+        fetched.forEach(skill => { initialStatus[skill.id] = 'idle'; });
         setInstallationStatus(initialStatus);
-      } catch (err) {
-        setError('Failed to load skills: ' + (err as Error).message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchSkills();
-  }, []);
+      })
+      .catch(err => setError('Failed to load skills: ' + (err as Error).message))
+      .finally(() => setLoading(false));
+  }, [skillApi]);
 
   // Filter skills based on search and category
   const filteredSkills = skills.filter(skill => {
@@ -188,63 +117,25 @@ const SkillInstaller: React.FC<SkillInstallerProps> = ({
       return; // Already installed
     }
 
+    setInstallationStatus(prev => ({ ...prev, [skill.id]: 'installing' }));
+    setInstallationProgress(prev => ({ ...prev, [skill.id]: 0 }));
     try {
-      // Update installation status
-      setInstallationStatus(prev => ({
-        ...prev,
-        [skill.id]: 'installing'
-      }));
-      
-      // Simulate installation progress
-      setInstallationProgress(prev => ({
-        ...prev,
-        [skill.id]: 0
-      }));
-
-      // In a real implementation, this would call the API
-      // For now, we'll simulate the installation process
-      for (let i = 0; i <= 10; i++) {
-        await new Promise(resolve => setTimeout(resolve, 200)); // Simulate delay
-        setInstallationProgress(prev => ({
-          ...prev,
-          [skill.id]: i * 10
-        }));
-      }
-
-      // Simulate API call
-      const response: InstallationResponse = {
-        success: true,
-        message: `Successfully installed ${skill.name}`,
-        skillId: skill.id
-      };
-
+      const response = await skillApi.installSkill({ skillId: skill.id, version: skill.version });
       if (response.success) {
-        // Update skill status
-        setSkills(prev => prev.map(s => 
+        setSkills(prev => prev.map(s =>
           s.id === skill.id ? { ...s, status: 'installed', installedVersion: s.version } : s
         ));
-        
-        setInstallationStatus(prev => ({
-          ...prev,
-          [skill.id]: 'success'
-        }));
-
-        // Call the callback if provided
+        setInstallationStatus(prev => ({ ...prev, [skill.id]: 'success' }));
+        setInstallationProgress(prev => ({ ...prev, [skill.id]: 100 }));
         if (onSkillInstalled) {
           onSkillInstalled({ ...skill, status: 'installed', installedVersion: skill.version });
         }
       } else {
-        setInstallationStatus(prev => ({
-          ...prev,
-          [skill.id]: 'error'
-        }));
+        setInstallationStatus(prev => ({ ...prev, [skill.id]: 'error' }));
         setError(response.error || `Failed to install ${skill.name}`);
       }
     } catch (err) {
-      setInstallationStatus(prev => ({
-        ...prev,
-        [skill.id]: 'error'
-      }));
+      setInstallationStatus(prev => ({ ...prev, [skill.id]: 'error' }));
       setError('Installation failed: ' + (err as Error).message);
     }
   };
@@ -252,20 +143,11 @@ const SkillInstaller: React.FC<SkillInstallerProps> = ({
   // Handle skill uninstallation
   const handleUninstallSkill = async (skillId: string) => {
     try {
-      // In a real implementation, this would call the API
-      // For now, we'll simulate the uninstallation process
-      
-      // Update skill status
-      setSkills(prev => prev.map(s => 
+      await skillApi.uninstallSkill({ skillId });
+      setSkills(prev => prev.map(s =>
         s.id === skillId ? { ...s, status: 'available', installedVersion: undefined } : s
       ));
-      
-      setInstallationStatus(prev => ({
-        ...prev,
-        [skillId]: 'idle'
-      }));
-
-      // Call the callback if provided
+      setInstallationStatus(prev => ({ ...prev, [skillId]: 'idle' }));
       if (onSkillUninstalled) {
         onSkillUninstalled(skillId);
       }

@@ -35,17 +35,35 @@ function isElectron(): boolean {
      (window.process?.versions?.electron !== undefined));
 }
 
+type SidecarApi = NonNullable<Window['a2rSidecar']>;
+
+function hasSidecarMethods(
+  sidecar: Window['a2rSidecar'],
+  methods: Array<keyof SidecarApi>,
+): sidecar is SidecarApi {
+  return Boolean(
+    sidecar &&
+      methods.every((method) => typeof sidecar[method] === 'function'),
+  );
+}
+
 /**
  * Discover server from Electron sidecar
  */
 async function discoverFromElectron(): Promise<DiscoveredServer | null> {
-  if (!isElectron() || !window.a2rSidecar) {
+  if (!isElectron()) {
+    return null;
+  }
+
+  const sidecar = window.a2rSidecar;
+  if (!hasSidecarMethods(sidecar, ['getStatus', 'getApiUrl', 'getBasicAuth'])) {
+    console.log('[Discovery] Electron sidecar API unavailable in this shell');
     return null;
   }
 
   try {
     // Check if sidecar is running
-    const status = await window.a2rSidecar.getStatus();
+    const status = await sidecar.getStatus();
     if (status !== 'running') {
       console.log('[Discovery] Electron sidecar not running');
       return null;
@@ -53,8 +71,8 @@ async function discoverFromElectron(): Promise<DiscoveredServer | null> {
 
     // Get API URL and credentials
     const [apiUrl, basicAuth] = await Promise.all([
-      window.a2rSidecar.getApiUrl(),
-      window.a2rSidecar.getBasicAuth(),
+      sidecar.getApiUrl(),
+      sidecar.getBasicAuth(),
     ]);
 
     if (!apiUrl) {
@@ -86,12 +104,18 @@ async function discoverFromElectron(): Promise<DiscoveredServer | null> {
  * Discover server from persisted configuration
  */
 async function discoverFromPersisted(): Promise<DiscoveredServer | null> {
-  if (!isElectron() || !window.a2rSidecar) {
+  if (!isElectron()) {
+    return null;
+  }
+
+  const sidecar = window.a2rSidecar;
+  if (!hasSidecarMethods(sidecar, ['getPersistedConfig'])) {
+    console.log('[Discovery] Persisted sidecar config API unavailable in this shell');
     return null;
   }
 
   try {
-    const config = await window.a2rSidecar.getPersistedConfig();
+    const config = await sidecar.getPersistedConfig();
     if (!config) {
       return null;
     }
@@ -213,11 +237,11 @@ export function getWebSocketUrl(httpUrl: string): string {
 declare global {
   interface Window {
     a2rSidecar?: {
-      getStatus: () => Promise<'stopped' | 'starting' | 'running' | 'error' | 'crashed'>;
-      getApiUrl: () => Promise<string | undefined>;
-      getBasicAuth: () => Promise<{ username: string; password: string; header: string } | undefined>;
-      getPersistedConfig: () => Promise<{ apiUrl: string; password: string; port: number } | null>;
-      clearPersistedConfig: () => Promise<boolean>;
+      getStatus?: () => Promise<'stopped' | 'starting' | 'running' | 'error' | 'crashed'>;
+      getApiUrl?: () => Promise<string | undefined>;
+      getBasicAuth?: () => Promise<{ username: string; password: string; header: string } | undefined>;
+      getPersistedConfig?: () => Promise<{ apiUrl: string; password: string; port: number } | null>;
+      clearPersistedConfig?: () => Promise<boolean>;
     };
     process?: {
       versions?: {

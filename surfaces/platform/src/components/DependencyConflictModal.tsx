@@ -8,14 +8,13 @@
 import React, { useState, useCallback } from 'react';
 import {
   X,
-  AlertTriangle,
-  AlertCircle,
-  CheckCircle2,
+  Warning,
+  CheckCircle,
   ArrowRight,
   Package,
   Info,
-  ShieldAlert,
-} from 'lucide-react';
+  ShieldWarning,
+} from '@phosphor-icons/react';
 import type { DependencyConflict } from '../plugins/dependencies';
 
 // ============================================================================
@@ -230,7 +229,7 @@ function ResolutionCard({
             flexShrink: 0,
           }}
         >
-          {isSelected && <CheckCircle2 size={12} color="#0c0a09" />}
+          {isSelected && <CheckCircle size={12} color="#0c0a09" />}
         </div>
       </div>
     </button>
@@ -328,7 +327,7 @@ export function DependencyConflictModal({
                 justifyContent: 'center',
               }}
             >
-              <AlertTriangle size={20} color={THEME.warning} />
+              <Warning size={20} color={THEME.warning} />
             </div>
             <div>
               <h2
@@ -475,11 +474,11 @@ export function DependencyConflictModal({
               onSelect={() => setSelectedOption('keep')}
               title="Keep Current Version"
               description={`Continue with ${pluginId} v${installedVersion}. This may cause compatibility issues with ${installingPlugin.name}.`}
-              icon={<CheckCircle2 size={20} color={THEME.success} />}
+              icon={<CheckCircle size={20} color={THEME.success} />}
               risk="medium"
               details={
                 <div style={{ fontSize: 11, color: THEME.warning }}>
-                  <ShieldAlert size={12} style={{ marginRight: 6, verticalAlign: 'middle' }} />
+                  <ShieldWarning size={12} style={{ marginRight: 6, verticalAlign: 'middle' }} />
                   {installingPlugin.name} may not work correctly
                 </div>
               }
@@ -545,12 +544,12 @@ export function DependencyConflictModal({
               onSelect={() => setSelectedOption('force')}
               title="Force Install"
               description={`Install the version required by ${installingPlugin.name}, potentially breaking other plugins.`}
-              icon={<AlertCircle size={20} color={THEME.danger} />}
+              icon={<Warning size={20} color={THEME.danger} />}
               risk="high"
               details={
                 <div>
                   <div style={{ fontSize: 11, color: THEME.danger, marginBottom: 8 }}>
-                    <ShieldAlert size={12} style={{ marginRight: 6, verticalAlign: 'middle' }} />
+                    <ShieldWarning size={12} style={{ marginRight: 6, verticalAlign: 'middle' }} />
                     This may break: {otherReqs.map(r => r.requiredBy).join(', ')}
                   </div>
                   {availableVersions && availableVersions.length > 0 && (
@@ -591,7 +590,7 @@ export function DependencyConflictModal({
               gap: 10,
             }}
           >
-            <AlertTriangle size={16} color={THEME.danger} style={{ flexShrink: 0, marginTop: 2 }} />
+            <Warning size={16} color={THEME.danger} style={{ flexShrink: 0, marginTop: 2 }} />
             <div>
               <div style={{ fontSize: 12, fontWeight: 600, color: THEME.danger, marginBottom: 2 }}>
                 Warning: Potential Breakage

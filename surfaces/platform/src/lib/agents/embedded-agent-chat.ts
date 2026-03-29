@@ -1,5 +1,5 @@
 import type { NativeMessage } from "./native-agent.store";
-import type { ChatMessage as StreamChatMessage } from "@/lib/ai/rust-stream-adapter";
+import type { ChatMessage as StreamChatMessage, UIPart } from "@/lib/ai/rust-stream-adapter";
 
 function normalizeRole(
   role: NativeMessage["role"],
@@ -11,9 +11,23 @@ function normalizeRole(
   return role;
 }
 
-function normalizeContent(message: NativeMessage): string {
+function normalizeContent(message: NativeMessage): StreamChatMessage["content"] {
   if (message.role === "tool") {
     return `Tool result\n${message.content}`;
+  }
+
+  if (message.role === "assistant" && message.thinking) {
+    const parts: UIPart[] = [
+      {
+        type: "reasoning",
+        reasoningId: `thinking-${message.id}`,
+        text: message.thinking,
+      } as UIPart,
+    ];
+    if (message.content) {
+      parts.push({ type: "text", text: message.content } as UIPart);
+    }
+    return parts;
   }
 
   return message.content;

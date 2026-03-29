@@ -16,29 +16,28 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  HelpCircle,
+  Question as HelpCircle,
   X,
-  ChevronRight,
-  ChevronLeft,
+  CaretRight,
+  CaretLeft,
   Lightbulb,
   BookOpen,
-  ExternalLink,
-  CheckCircle2,
-  AlertCircle,
-  AlertTriangle,
+  ArrowSquareOut,
+  CheckCircle,
+  Warning,
   Info,
-  Sparkles,
-  RotateCcw,
+  Sparkle,
+  ArrowCounterClockwise,
   SkipForward,
-  MessageSquare,
-  Search,
+  Chat,
+  MagnifyingGlass,
   Star,
-  Zap,
+  Lightning,
   Target,
   ArrowRight,
-  Maximize2,
-  Minimize2,
-} from 'lucide-react';
+  ArrowsOut,
+  ArrowsIn,
+} from '@phosphor-icons/react';
 
 import {
   STEP_HELP_CONTENT,
@@ -197,7 +196,7 @@ export function HelpPanel({ isOpen, onClose, currentStepId, modeColors }: HelpPa
                 <ul className="space-y-2">
                   {helpContent.whatYouLlDo.map((item, idx) => (
                     <li key={idx} className="flex items-start gap-2 text-sm" style={{ color: TEXT.secondary }}>
-                      <ChevronRight size={16} style={{ color: modeColors.accent }} className="flex-shrink-0 mt-0.5" />
+                      <CaretRight size={16} style={{ color: modeColors.accent }} className="flex-shrink-0 mt-0.5" />
                       <span>{item}</span>
                     </li>
                   ))}
@@ -216,7 +215,7 @@ export function HelpPanel({ isOpen, onClose, currentStepId, modeColors }: HelpPa
                 <ul className="space-y-2">
                   {helpContent.bestPractices.map((item, idx) => (
                     <li key={idx} className="flex items-start gap-2 text-sm" style={{ color: TEXT.secondary }}>
-                      <CheckCircle2 size={16} className="flex-shrink-0 mt-0.5 text-emerald-500" />
+                      <CheckCircle size={16} className="flex-shrink-0 mt-0.5 text-emerald-500" />
                       <span>{item}</span>
                     </li>
                   ))}
@@ -245,7 +244,7 @@ export function HelpPanel({ isOpen, onClose, currentStepId, modeColors }: HelpPa
               {/* Common Questions */}
               <div>
                 <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: TEXT.primary }}>
-                  <MessageSquare size={16} style={{ color: modeColors.accent }} />
+                  <Chat size={16} style={{ color: modeColors.accent }} />
                   Common Questions
                 </h3>
                 <div className="space-y-3">
@@ -286,7 +285,7 @@ export function HelpPanel({ isOpen, onClose, currentStepId, modeColors }: HelpPa
                         <span className="text-sm" style={{ color: TEXT.secondary }}>
                           {link.label}
                         </span>
-                        <ExternalLink size={14} style={{ color: TEXT.tertiary }} className="group-hover:text-primary transition-colors" />
+                        <ArrowSquareOut size={14} style={{ color: TEXT.tertiary }} className="group-hover:text-primary transition-colors" />
                       </a>
                     ))}
                   </div>
@@ -364,7 +363,7 @@ export function HelpButton({ fieldId, stepId, modeColors, size = 'md' }: HelpBut
                 className="mt-2 text-xs flex items-start gap-1"
                 style={{ color: '#F59E0B' }}
               >
-                <AlertTriangle size={12} className="flex-shrink-0 mt-0.5" />
+                <Warning size={12} className="flex-shrink-0 mt-0.5" />
                 <span>{tooltip.warning}</span>
               </div>
             )}
@@ -451,7 +450,7 @@ export function OnboardingTour({
             style={{ background: modeColors.soft }}
           >
             <div className="flex items-center gap-2">
-              <Sparkles size={18} style={{ color: modeColors.accent }} />
+              <Sparkle size={18} style={{ color: modeColors.accent }} />
               <span className="text-sm font-semibold" style={{ color: modeColors.accent }}>
                 Quick Tour
               </span>
@@ -503,7 +502,7 @@ export function OnboardingTour({
               style={{ color: TEXT.secondary }}
             >
               <div className="flex items-center gap-1">
-                <ChevronLeft size={16} />
+                <CaretLeft size={16} />
                 Back
               </div>
             </button>
@@ -526,7 +525,7 @@ export function OnboardingTour({
                 }}
               >
                 {tourStepIndex === ONBOARDING_TOUR_STEPS.length - 1 ? 'Finish' : 'Next'}
-                {tourStepIndex !== ONBOARDING_TOUR_STEPS.length - 1 && <ChevronRight size={16} />}
+                {tourStepIndex !== ONBOARDING_TOUR_STEPS.length - 1 && <CaretRight size={16} />}
               </button>
             </div>
           </div>
@@ -552,9 +551,9 @@ export function SmartSuggestions({ suggestions, onApplySuggestion, modeColors }:
       case 'tool':
         return Target;
       case 'capability':
-        return Sparkles;
+        return Sparkle;
       case 'prompt':
-        return MessageSquare;
+        return Chat;
       case 'setting':
         return RotateCcw;
       default:
@@ -637,9 +636,9 @@ export function ValidationFeedback({ validations, modeColors }: ValidationFeedba
   const getIcon = (severity: string) => {
     switch (severity) {
       case 'error':
-        return AlertCircle;
+        return Warning;
       case 'warning':
-        return AlertTriangle;
+        return Warning;
       case 'info':
         return Info;
       default:
@@ -750,7 +749,7 @@ export function QuickTip({ modeColors }: QuickTipProps) {
         className="p-1 rounded hover:bg-white/5 transition-colors"
         aria-label="Show another tip"
       >
-        <RotateCcw size={12} style={{ color: TEXT.tertiary }} />
+        <ArrowCounterClockwise size={12} style={{ color: TEXT.tertiary }} />
       </button>
     </div>
   );

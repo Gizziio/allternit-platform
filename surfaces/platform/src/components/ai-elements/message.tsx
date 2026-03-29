@@ -19,7 +19,10 @@ import { cjk } from "@streamdown/cjk";
 import { code } from "@streamdown/code";
 import { math } from "@streamdown/math";
 import { mermaid } from "@streamdown/mermaid";
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import {
+  CaretLeft as ChevronLeftIcon,
+  CaretRight as ChevronRightIcon,
+} from '@phosphor-icons/react';
 import {
   createContext,
   memo,

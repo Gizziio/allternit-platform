@@ -8,14 +8,19 @@
 
 import React from 'react';
 import { GlassSurface } from '@/design/GlassSurface';
-import { TrendingUp, Brain, Cpu, Activity } from 'lucide-react';
+import {
+  TrendUp,
+  Brain,
+  Cpu,
+  Pulse as Activity,
+} from '@phosphor-icons/react';
 
 export function EvolutionLayerView() {
   return (
     <GlassSurface className="h-full w-full flex flex-col">
       <div className="p-4 border-b border-[var(--border-subtle)]">
         <div className="flex items-center gap-3">
-          <TrendingUp className="w-6 h-6 text-[var(--accent-primary)]" />
+          <TrendUp className="w-6 h-6 text-[var(--accent-primary)]" />
           <div>
             <h2 className="text-lg font-semibold">Evolution Layer</h2>
             <p className="text-sm text-[var(--text-tertiary)]">
@@ -41,7 +46,7 @@ export function EvolutionLayerView() {
           <p className="text-xs text-[var(--text-tertiary)]">Model escalation pipeline</p>
         </div>
         <div className="p-4 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
-          <TrendingUp className="w-8 h-8 mb-2 text-[var(--accent-primary)]" />
+          <TrendUp className="w-8 h-8 mb-2 text-[var(--accent-primary)]" />
           <h3 className="font-medium mb-1">Trajectory Optimization (TOE)</h3>
           <p className="text-xs text-[var(--text-tertiary)]">Efficiency reward optimization</p>
         </div>

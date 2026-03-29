@@ -7,21 +7,21 @@
 
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Image, 
-  ZoomIn, 
-  ZoomOut, 
-  Download, 
-  Share2, 
-  Edit, 
-  Maximize2,
-  ChevronLeft,
-  ChevronRight,
-  Grid3x3,
+import {
+  Image,
+  MagnifyingGlassPlus,
+  MagnifyingGlassMinus,
+  DownloadSimple,
+  ShareNetwork,
+  PencilSimple,
+  ArrowsOut,
+  CaretLeft,
+  CaretRight,
+  SquaresFour,
   List,
-  MoreHorizontal,
-  Palette
-} from 'lucide-react';
+  DotsThreeOutline,
+  Palette,
+} from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import type { ArtifactUIPart } from '@/lib/ai/rust-stream-adapter';
 import { cn } from '@/lib/utils';
@@ -54,41 +54,14 @@ export function ImageRenderer({
 
   // Parse images from artifact
   const images = useMemo<ImageAsset[]>(() => {
-    // Mock images for demo
-    const mockImages: ImageAsset[] = [
-      {
-        id: 'img-1',
-        url: 'https://picsum.photos/800/600',
-        title: 'Generated Image 1',
-        width: 800,
-        height: 600,
-      },
-      {
-        id: 'img-2',
-        url: 'https://picsum.photos/600/800',
-        title: 'Generated Image 2',
-        width: 600,
-        height: 800,
-      },
-      {
-        id: 'img-3',
-        url: 'https://picsum.photos/800/800',
-        title: 'Generated Image 3',
-        width: 800,
-        height: 800,
-      },
-    ];
-
-    if (!artifact.content && artifact.type === 'artifact' && artifact.kind === 'image') {
-      // Single image from artifact
+    if (artifact.type === 'artifact' && artifact.kind === 'image') {
       return [{
         id: artifact.artifactId,
         url: artifact.url || '',
         title: artifact.title,
       }];
     }
-
-    return mockImages;
+    return [];
   }, [artifact]);
 
   // Lightbox navigation
@@ -142,7 +115,7 @@ export function ImageRenderer({
               }}
               className="h-9 w-9 p-0 text-white"
             >
-              <ZoomIn className="w-4 h-4" />
+              <MagnifyingGlassPlus size={16} />
             </Button>
             <Button
               variant="ghost"
@@ -153,7 +126,7 @@ export function ImageRenderer({
               }}
               className="h-9 w-9 p-0 text-white"
             >
-              <Edit className="w-4 h-4" />
+              <PencilSimple size={16} />
             </Button>
             <Button
               variant="ghost"
@@ -164,7 +137,7 @@ export function ImageRenderer({
               }}
               className="h-9 w-9 p-0 text-white"
             >
-              <Download className="w-4 h-4" />
+              <DownloadSimple size={16} />
             </Button>
           </div>
 
@@ -221,21 +194,21 @@ export function ImageRenderer({
               onClick={() => handleDrawToEdit(image)}
               className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
             >
-              <Edit className="w-4 h-4" />
+              <PencilSimple size={16} />
             </Button>
             <Button
               variant="ghost"
               size="sm"
               className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
             >
-              <Download className="w-4 h-4" />
+              <DownloadSimple size={16} />
             </Button>
             <Button
               variant="ghost"
               size="sm"
               className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
             >
-              <MoreHorizontal className="w-4 h-4" />
+              <DotsThreeOutline size={16} />
             </Button>
           </div>
         </div>
@@ -266,7 +239,7 @@ export function ImageRenderer({
               viewMode === 'grid' && "text-[var(--accent-primary)]"
             )}
           >
-            <Grid3x3 className="w-4 h-4" />
+            <SquaresFour size={16} />
           </Button>
           <Button
             variant="ghost"
@@ -277,17 +250,17 @@ export function ImageRenderer({
               viewMode === 'list' && "text-[var(--accent-primary)]"
             )}
           >
-            <List className="w-4 h-4" />
+            <List size={16} />
           </Button>
           <div className="w-px h-4 bg-[var(--border-subtle)]" />
           <Button variant="ghost" size="sm" className="text-[var(--text-tertiary)]">
-            <Palette className="w-4 h-4" />
+            <Palette size={16} />
           </Button>
           <Button variant="ghost" size="sm" className="text-[var(--text-tertiary)]">
-            <Download className="w-4 h-4" />
+            <DownloadSimple size={16} />
           </Button>
           <Button variant="ghost" size="sm" className="text-[var(--text-tertiary)]">
-            <Share2 className="w-4 h-4" />
+            <ShareNetwork size={16} />
           </Button>
         </div>
       </div>
@@ -332,7 +305,7 @@ export function ImageRenderer({
                 disabled={selectedImageIndex === 0}
                 className="text-white hover:bg-white/20 disabled:opacity-30"
               >
-                <ChevronLeft className="w-5 h-5" />
+                <CaretLeft size={20} />
               </Button>
               
               <span className="text-white text-sm font-medium min-w-[100px] text-center">
@@ -346,7 +319,7 @@ export function ImageRenderer({
                 disabled={selectedImageIndex === images.length - 1}
                 className="text-white hover:bg-white/20 disabled:opacity-30"
               >
-                <ChevronRight className="w-5 h-5" />
+                <CaretRight size={20} />
               </Button>
 
               <div className="w-px h-4 bg-white/30" />
@@ -357,7 +330,7 @@ export function ImageRenderer({
                 onClick={() => setZoom(z => Math.max(0.5, z - 0.25))}
                 className="text-white hover:bg-white/20"
               >
-                <ZoomOut className="w-4 h-4" />
+                <MagnifyingGlassMinus size={16} />
               </Button>
 
               <span className="text-white text-xs min-w-[40px] text-center">
@@ -370,7 +343,7 @@ export function ImageRenderer({
                 onClick={() => setZoom(z => Math.min(3, z + 0.25))}
                 className="text-white hover:bg-white/20"
               >
-                <ZoomIn className="w-4 h-4" />
+                <MagnifyingGlassPlus size={16} />
               </Button>
 
               <div className="w-px h-4 bg-white/30" />
@@ -381,7 +354,7 @@ export function ImageRenderer({
                 onClick={() => handleDrawToEdit(images[selectedImageIndex])}
                 className="text-white hover:bg-white/20"
               >
-                <Edit className="w-4 h-4" />
+                <PencilSimple size={16} />
               </Button>
 
               <Button
@@ -390,7 +363,7 @@ export function ImageRenderer({
                 onClick={() => setLightboxOpen(false)}
                 className="text-white hover:bg-white/20"
               >
-                <Maximize2 className="w-4 h-4" />
+                <ArrowsOut size={16} />
               </Button>
             </div>
 
@@ -399,7 +372,7 @@ export function ImageRenderer({
               onClick={() => setLightboxOpen(false)}
               className="absolute top-4 right-4 text-white/60 hover:text-white"
             >
-              <Maximize2 className="w-6 h-6 rotate-45" />
+              <ArrowsOut className="w-6 h-6 rotate-45" />
             </button>
           </motion.div>
         )}

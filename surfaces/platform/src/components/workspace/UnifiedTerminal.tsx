@@ -248,8 +248,12 @@ export function UnifiedTerminal({ sessionId = 'a2r-session' }: UnifiedTerminalPr
 
   // Initial load only - no polling
   useEffect(() => {
-    workspaceClient.healthCheck().then(setIsConnected);
-    ensureSession().then(() => loadPanes());
+    workspaceClient.healthCheck().then((healthy) => {
+      setIsConnected(healthy);
+      if (healthy) {
+        ensureSession().then(() => loadPanes());
+      }
+    });
   }, [ensureSession, loadPanes]);
 
   // Create new pane

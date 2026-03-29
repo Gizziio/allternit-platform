@@ -15,11 +15,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import JSZip from 'jszip';
 import {
   Package,
-  Download,
-  Upload,
+  DownloadSimple,
+  UploadSimple,
   FileArchive,
   CheckCircle,
-  AlertCircle,
+  Warning,
   X,
   FolderOpen,
   FileText,
@@ -27,10 +27,10 @@ import {
   Clock,
   User,
   Tag,
-  ChevronRight,
-  RefreshCw,
-  Save,
-} from 'lucide-react';
+  CaretRight,
+  ArrowsClockwise,
+  FloppyDisk,
+} from '@phosphor-icons/react';
 import { agentWorkspaceService } from '@/lib/agents/agent-workspace.service';
 import type { AgentWorkspace } from '@/lib/agents/agent.types';
 import { Button } from '@/components/ui/button';
@@ -316,7 +316,7 @@ export function PackageManager({ agentId, onClose, onImport, theme = STUDIO_THEM
                 textTransform: 'capitalize',
               }}
             >
-              {tab === 'export' ? <Download style={{ width: 16, height: 16 }} /> : <Upload style={{ width: 16, height: 16 }} />}
+              {tab === 'export' ? <DownloadSimple style={{ width: 16, height: 16 }} /> : <UploadSimple style={{ width: 16, height: 16 }} />}
               {tab}
             </button>
           ))}
@@ -336,7 +336,7 @@ export function PackageManager({ agentId, onClose, onImport, theme = STUDIO_THEM
               alignItems: 'center',
               gap: '8px',
             }}>
-              <AlertCircle style={{ width: 16, height: 16, color: '#ef4444' }} />
+              <Warning style={{ width: 16, height: 16, color: '#ef4444' }} />
               <span style={{ fontSize: '13px', color: '#ef4444' }}>{error}</span>
             </div>
           )}
@@ -475,12 +475,12 @@ export function PackageManager({ agentId, onClose, onImport, theme = STUDIO_THEM
                 >
                   {isExporting ? (
                     <>
-                      <RefreshCw style={{ width: 18, height: 18, animation: 'spin 1s linear infinite' }} />
+                      <ArrowsClockwise style={{ width: 18, height: 18, animation: 'spin 1s linear infinite' }} />
                       Exporting...
                     </>
                   ) : (
                     <>
-                      <Download style={{ width: 18, height: 18 }} />
+                      <DownloadSimple style={{ width: 18, height: 18 }} />
                       Export .a2r Package
                     </>
                   )}
@@ -659,12 +659,12 @@ export function PackageManager({ agentId, onClose, onImport, theme = STUDIO_THEM
                       >
                         {isImporting ? (
                           <>
-                            <RefreshCw style={{ width: 18, height: 18, animation: 'spin 1s linear infinite', marginRight: '8px' }} />
+                            <ArrowsClockwise style={{ width: 18, height: 18, animation: 'spin 1s linear infinite', marginRight: '8px' }} />
                             Importing...
                           </>
                         ) : (
                           <>
-                            <Upload style={{ width: 18, height: 18, marginRight: '8px' }} />
+                            <UploadSimple style={{ width: 18, height: 18, marginRight: '8px' }} />
                             Import Package
                           </>
                         )}

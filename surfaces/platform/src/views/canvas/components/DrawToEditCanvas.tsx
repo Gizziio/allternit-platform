@@ -7,18 +7,18 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Brush, 
-  Eraser, 
-  Undo2, 
-  Redo2, 
-  Trash2, 
-  Download, 
+import {
+  PaintBrush,
+  Eraser,
+  ArrowCounterClockwise,
+  ArrowClockwise,
+  Trash,
+  DownloadSimple,
   X,
-  Sparkles,
+  Sparkle,
   Minus,
-  Plus
-} from 'lucide-react';
+  Plus,
+} from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -287,7 +287,7 @@ export function DrawToEditCanvas({
             onClick={onClose}
             className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
           >
-            <X className="w-5 h-5" />
+            <X size={20} />
           </Button>
         </div>
 
@@ -349,7 +349,7 @@ export function DrawToEditCanvas({
                     mode === 'draw' && "bg-[var(--accent-primary)] text-[var(--bg-primary)]"
                   )}
                 >
-                  <Brush className="w-4 h-4 mr-2" />
+                  <PaintBrush className="w-4 h-4 mr-2" />
                   Draw
                 </Button>
                 <Button
@@ -379,7 +379,7 @@ export function DrawToEditCanvas({
                     onClick={() => setBrushSize(Math.max(5, brushSize - 5))}
                     className="h-8 w-8 p-0"
                   >
-                    <Minus className="w-4 h-4" />
+                    <Minus size={16} />
                   </Button>
                   <input
                     type="range"
@@ -395,7 +395,7 @@ export function DrawToEditCanvas({
                     onClick={() => setBrushSize(Math.min(100, brushSize + 5))}
                     className="h-8 w-8 p-0"
                   >
-                    <Plus className="w-4 h-4" />
+                    <Plus size={16} />
                   </Button>
                 </div>
               </div>
@@ -414,7 +414,7 @@ export function DrawToEditCanvas({
                   disabled={historyIndex <= 0}
                   className="flex-1 text-[var(--text-tertiary)] disabled:opacity-30"
                 >
-                  <Undo2 className="w-4 h-4 mr-2" />
+                  <ArrowCounterClockwise className="w-4 h-4 mr-2" />
                   Undo
                 </Button>
                 <Button
@@ -424,7 +424,7 @@ export function DrawToEditCanvas({
                   disabled={historyIndex >= history.length - 1}
                   className="flex-1 text-[var(--text-tertiary)] disabled:opacity-30"
                 >
-                  <Redo2 className="w-4 h-4 mr-2" />
+                  <ArrowClockwise className="w-4 h-4 mr-2" />
                   Redo
                 </Button>
               </div>
@@ -434,7 +434,7 @@ export function DrawToEditCanvas({
                 onClick={handleClear}
                 className="w-full text-[var(--text-tertiary)] hover:text-red-500"
               >
-                <Trash2 className="w-4 h-4 mr-2" />
+                <Trash className="w-4 h-4 mr-2" />
                 Clear Mask
               </Button>
             </div>
@@ -459,7 +459,7 @@ export function DrawToEditCanvas({
                 disabled={!prompt.trim() || isGenerating}
                 className="w-full bg-[var(--accent-primary)] text-[var(--bg-primary)] hover:opacity-90"
               >
-                <Sparkles className="w-4 h-4 mr-2" />
+                <Sparkle className="w-4 h-4 mr-2" />
                 {isGenerating ? 'Generating...' : 'Generate'}
               </Button>
               <Button
@@ -467,7 +467,7 @@ export function DrawToEditCanvas({
                 onClick={handleDownload}
                 className="w-full text-[var(--text-tertiary)]"
               >
-                <Download className="w-4 h-4 mr-2" />
+                <DownloadSimple className="w-4 h-4 mr-2" />
                 Download Mask
               </Button>
             </div>

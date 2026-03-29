@@ -1,7 +1,18 @@
 'use client';
 
-import React, { useCallback, useState } from 'react';
-import { FolderTree, ChevronRight, ChevronDown, FileText, Code2, FileJson, Palette, BookOpen, Upload, FileCode } from 'lucide-react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { filesApi } from '@/lib/agents/files-api';
+import {
+  FolderOpen,
+  CaretRight,
+  CaretDown,
+  FileText,
+  Code,
+  FileCode,
+  Palette,
+  BookOpen,
+  UploadSimple,
+} from '@phosphor-icons/react';
 import GlassSurface from '@/design/GlassSurface';
 import { useDropTarget, type FileWithData } from '@/components/GlobalDropzone';
 
@@ -22,97 +33,6 @@ interface DroppedFile {
   extractedText?: string;
 }
 
-const mockFileTree: FileNode[] = [
-  {
-    name: 'src',
-    type: 'folder',
-    path: 'src',
-    children: [
-      {
-        name: 'views',
-        type: 'folder',
-        path: 'src/views',
-        children: [
-          {
-            name: 'ChatView.tsx',
-            type: 'file',
-            language: 'tsx',
-            path: 'src/views/ChatView.tsx',
-          },
-          {
-            name: 'EvolutionLayerView.tsx',
-            type: 'file',
-            language: 'tsx',
-            path: 'src/views/EvolutionLayerView.tsx',
-          },
-        ],
-      },
-      {
-        name: 'shell',
-        type: 'folder',
-        path: 'src/shell',
-        children: [
-          {
-            name: 'ShellApp.tsx',
-            type: 'file',
-            language: 'tsx',
-            path: 'src/shell/ShellApp.tsx',
-          },
-          {
-            name: 'ShellRail.tsx',
-            type: 'file',
-            language: 'tsx',
-            path: 'src/shell/ShellRail.tsx',
-          },
-        ],
-      },
-      {
-        name: 'design',
-        type: 'folder',
-        path: 'src/design',
-        children: [
-          {
-            name: 'tokens',
-            type: 'folder',
-            path: 'src/design/tokens',
-            children: [
-              {
-                name: 'colors.ts',
-                type: 'file',
-                language: 'ts',
-                path: 'src/design/tokens/colors.ts',
-              },
-            ],
-          },
-          {
-            name: 'glass',
-            type: 'folder',
-            path: 'src/design/glass',
-            children: [],
-          },
-        ],
-      },
-    ],
-  },
-  {
-    name: 'package.json',
-    type: 'file',
-    language: 'json',
-    path: 'package.json',
-  },
-  {
-    name: 'tsconfig.json',
-    type: 'file',
-    language: 'json',
-    path: 'tsconfig.json',
-  },
-  {
-    name: 'vite.config.ts',
-    type: 'file',
-    language: 'ts',
-    path: 'vite.config.ts',
-  },
-];
 
 interface FileTreeItemProps {
   node: FileNode;
@@ -134,11 +54,11 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({
   const getLanguageIcon = (language?: string) => {
     switch (language) {
       case 'tsx':
-        return <Code2 size={16} color="#3b82f6" />;
+        return <Code size={16} color="#3b82f6" />;
       case 'ts':
-        return <Code2 size={16} color="#3b82f6" />;
+        return <Code size={16} color="#3b82f6" />;
       case 'json':
-        return <FileJson size={16} color="#f59e0b" />;
+        return <FileCode size={16} color="#f59e0b" />;
       case 'css':
         return <Palette size={16} color="#a855f7" />;
       case 'md':
@@ -176,8 +96,8 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({
             (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
           }}
         >
-          {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-          <FolderTree size={16} color="var(--text-secondary)" />
+          {isExpanded ? <CaretDown size={18} /> : <CaretRight size={18} />}
+          <FolderOpen size={16} color="var(--text-secondary)" />
           <span>{node.name}</span>
           {node.children && (
             <span style={{ marginLeft: 'auto', fontSize: '12px', color: 'var(--text-tertiary)' }}>
@@ -242,10 +162,30 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({
 };
 
 export const ExplorerView: React.FC = () => {
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['src', 'src/views', 'src/shell']));
-  const [selectedFile, setSelectedFile] = useState<string | null>('src/views/ChatView.tsx');
+  const [fileTree, setFileTree] = useState<FileNode[]>([]);
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [filterText, setFilterText] = useState('');
   const [droppedFiles, setDroppedFiles] = useState<DroppedFile[]>([]);
+
+  useEffect(() => {
+    filesApi.listDirectory({ path: '.' })
+      .then((entries) => {
+        const toNode = (entry: (typeof entries)[number]): FileNode => ({
+          name: entry.name,
+          path: entry.path,
+          type: entry.type === 'directory' ? 'folder' : 'file',
+          language: entry.name.match(/\.tsx$/) ? 'tsx'
+            : entry.name.match(/\.ts$/) ? 'ts'
+            : entry.name.match(/\.json$/) ? 'json'
+            : entry.name.match(/\.css$/) ? 'css'
+            : entry.name.match(/\.md$/) ? 'md'
+            : undefined,
+        });
+        setFileTree(entries.map(toNode));
+      })
+      .catch(() => {});
+  }, []);
 
   const handleDroppedFiles = useCallback(async (files: FileWithData[]) => {
     const newFiles: DroppedFile[] = files.map(({ file, dataUrl, extractedText }) => {
@@ -296,7 +236,7 @@ export const ExplorerView: React.FC = () => {
     if (file.type === 'document') {
       return <FileText size={16} color="#ef4444" />;
     }
-    return <Upload size={16} color="var(--text-secondary)" />;
+    return <UploadSimple size={16} color="var(--text-secondary)" />;
   };
 
   const formatFileSize = (bytes: number) => {
@@ -311,7 +251,7 @@ export const ExplorerView: React.FC = () => {
         {/* Header */}
         <div style={{ padding: '16px', borderBottom: '1px solid var(--border-subtle)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-            <FolderTree size={20} color="var(--accent-primary)" />
+            <FolderOpen size={20} color="var(--accent-primary)" />
             <div>
               <div style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>Explorer</div>
               <div style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>Project file structure — drag & drop to upload</div>
@@ -383,7 +323,7 @@ export const ExplorerView: React.FC = () => {
 
         {/* File Tree */}
         <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
-          {mockFileTree.map((node) => (
+          {fileTree.map((node) => (
             <FileTreeItem
               key={node.path}
               node={node}

@@ -34,7 +34,7 @@ export function ShellHeader({
   onOpenControlCenter,
   onSidecarToggle,
   sidecarOpen,
-  currentEnvironment = 'cloud',
+  currentEnvironment = 'local',
   onEnvironmentChange,
 }: any) {
   const modeColors: Record<string, string> = {
@@ -48,31 +48,33 @@ export function ShellHeader({
     <GlassSurface 
       intensity="elevated"
       style={{ 
-        height: 64, 
+        height: 40, 
         display: 'flex', 
         alignItems: 'center', 
-        padding: '0 ' + tokens.space.lg + 'px', 
+        padding: '0 16px 0 90px', 
         borderRadius: 0, 
-        borderBottom: '1px solid var(--border-subtle)',
+        borderBottom: 'none',
         justifyContent: 'space-between',
-        background: 'var(--glass-bg-elevated)',
-        position: 'relative'
+        background: 'transparent',
+        position: 'relative',
+        WebkitAppRegion: 'drag'
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, WebkitAppRegion: 'no-drag' }}>
         <button 
           onClick={onRailToggle}
           style={{
-            background: isRailCollapsed ? 'var(--accent-chat)' : 'rgba(128,128,128,0.05)',
+            background: isRailCollapsed ? 'var(--shell-control-active-bg)' : 'var(--shell-control-bg)',
             border: '1px solid var(--border-subtle)',
             borderRadius: 8,
-            padding: 8,
-            color: isRailCollapsed ? 'white' : 'var(--text-secondary)',
+            padding: 6,
+            color: isRailCollapsed ? 'var(--shell-control-active-fg)' : 'var(--shell-control-muted-fg)',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             transition: 'all 0.2s',
+            WebkitAppRegion: 'no-drag',
           }}
           title={isRailCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
         >
@@ -94,13 +96,14 @@ export function ShellHeader({
         </div>
       </div>
 
-      {/* Centered Mode Switcher */}
+      {/* Left-aligned Mode Switcher */}
       <div style={{
         position: 'absolute',
-        left: '50%',
+        left: '90px',
         top: '50%',
-        transform: 'translate(-50%, -50%)',
-        zIndex: 10
+        transform: 'translateY(-50%)',
+        zIndex: 10,
+        WebkitAppRegion: 'no-drag'
       }}>
         <ModeSwitcher 
           activeMode={activeMode} 
@@ -111,7 +114,7 @@ export function ShellHeader({
         />
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, WebkitAppRegion: 'no-drag' }}>
         {/* Environment Selector */}
         <EnvironmentSelector
           currentEnvironment={currentEnvironment}
@@ -126,14 +129,15 @@ export function ShellHeader({
         <button
           onClick={onSidecarToggle}
           style={{
-            background: sidecarOpen ? 'var(--accent-chat)' : 'rgba(128,128,128,0.05)',
+            background: sidecarOpen ? 'var(--shell-control-active-bg)' : 'var(--shell-control-bg)',
             border: '1px solid var(--border-subtle)',
             borderRadius: 8,
             padding: 8,
             display: 'flex',
-            color: sidecarOpen ? 'white' : 'var(--text-primary)',
+            color: sidecarOpen ? 'var(--shell-control-active-fg)' : 'var(--shell-control-fg)',
             cursor: 'pointer',
             transition: 'all 0.2s',
+            WebkitAppRegion: 'no-drag',
           }}
           title="Toggle Artifact Sidecar (Cmd+Shift+A)"
         >
@@ -144,12 +148,13 @@ export function ShellHeader({
         <button
           onClick={onOpenControlCenter}
           style={{
-            background: 'rgba(128,128,128,0.05)',
+            background: 'var(--shell-control-bg)',
             border: '1px solid var(--border-subtle)',
             borderRadius: 8,
             padding: 8,
             display: 'flex',
-            color: 'var(--text-primary)',
+            color: 'var(--shell-control-fg)',
+            WebkitAppRegion: 'no-drag',
             cursor: 'pointer',
           }}
           title="Control Center"
@@ -157,11 +162,11 @@ export function ShellHeader({
           <Gear size={18} />
         </button>
 
-        <div style={{ display: 'flex', gap: 4 }}>
-          <button onClick={onBack} style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 4 }}>
+        <div style={{ display: 'flex', gap: 4, WebkitAppRegion: 'no-drag' }}>
+          <button onClick={onBack} style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 4, WebkitAppRegion: 'no-drag' }}>
             <CaretLeft size={18} />
           </button>
-          <button onClick={onForward} style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 4 }}>
+          <button onClick={onForward} style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 4, WebkitAppRegion: 'no-drag' }}>
             <CaretRight size={18} />
           </button>
         </div>
@@ -169,13 +174,14 @@ export function ShellHeader({
         <button 
           onClick={onThemeToggle}
           style={{ 
-            background: 'rgba(128,128,128,0.05)', 
+            background: 'var(--shell-control-bg)', 
             border: '1px solid var(--border-subtle)',
             borderRadius: 8,
             padding: 8,
             display: 'flex',
-            color: 'var(--text-primary)',
-            cursor: 'pointer'
+            color: 'var(--shell-control-fg)',
+            cursor: 'pointer',
+            WebkitAppRegion: 'no-drag'
           }}
         >
           {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}

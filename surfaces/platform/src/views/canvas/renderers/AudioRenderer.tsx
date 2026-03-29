@@ -6,18 +6,18 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  Play, 
-  Pause, 
-  Volume2, 
-  VolumeX, 
-  Download, 
-  Share2,
+import {
+  Play,
+  Pause,
+  SpeakerHigh,
+  SpeakerSlash,
+  DownloadSimple,
+  ShareNetwork,
   SkipBack,
   SkipForward,
-  Music,
-  Headphones
-} from 'lucide-react';
+  MusicNote,
+  Headphones,
+} from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import type { ArtifactUIPart } from '@/lib/ai/rust-stream-adapter';
 import { cn } from '@/lib/utils';
@@ -161,10 +161,10 @@ export function AudioRenderer({
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" className="text-[var(--text-tertiary)]">
-            <Download className="w-4 h-4" />
+            <DownloadSimple size={16} />
           </Button>
           <Button variant="ghost" size="sm" className="text-[var(--text-tertiary)]">
-            <Share2 className="w-4 h-4" />
+            <ShareNetwork size={16} />
           </Button>
         </div>
       </div>
@@ -174,7 +174,7 @@ export function AudioRenderer({
         <div className="w-full max-w-2xl space-y-6">
           {/* Album art / visualization */}
           <div className="aspect-square max-w-xs mx-auto rounded-2xl bg-gradient-to-br from-[var(--accent-primary)] to-[var(--bg-secondary)] flex items-center justify-center shadow-2xl">
-            <Music className="w-24 h-24 text-white/50" />
+            <MusicNote className="w-24 h-24 text-white/50" />
           </div>
 
           {/* Title */}
@@ -220,7 +220,7 @@ export function AudioRenderer({
               onClick={() => skip(-10)}
               className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
             >
-              <SkipBack className="w-5 h-5" />
+              <SkipBack size={20} />
             </Button>
 
             {/* Play/Pause */}
@@ -231,7 +231,7 @@ export function AudioRenderer({
               className="w-16 h-16 rounded-full bg-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/90"
             >
               {isPlaying ? (
-                <Pause className="w-8 h-8" />
+                <Pause size={32} />
               ) : (
                 <Play className="w-8 h-8 ml-1" />
               )}
@@ -244,7 +244,7 @@ export function AudioRenderer({
               onClick={() => skip(10)}
               className="text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
             >
-              <SkipForward className="w-5 h-5" />
+              <SkipForward size={20} />
             </Button>
           </div>
 
@@ -257,9 +257,9 @@ export function AudioRenderer({
               className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
             >
               {isMuted ? (
-                <VolumeX className="w-4 h-4" />
+                <SpeakerSlash size={16} />
               ) : (
-                <Volume2 className="w-4 h-4" />
+                <SpeakerHigh size={16} />
               )}
             </Button>
             <input

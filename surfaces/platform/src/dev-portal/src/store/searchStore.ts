@@ -21,7 +21,7 @@ interface SearchStore extends SearchState {
 
 const MAX_RECENT_SEARCHES = 10;
 
-export const useSearchStore = create<SearchStore>((set, get) => ({
+export const useSearchStore = create<SearchStore>((set, _get) => ({
   query: '',
   results: [],
   isSearching: false,

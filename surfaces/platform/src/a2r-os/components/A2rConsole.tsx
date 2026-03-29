@@ -68,6 +68,44 @@ interface AutomationSequence {
 // ============================================================================
 
 const AgentTerminal: React.FC = () => {
+  const [summary, setSummary] = useState({
+    attached: 0,
+    restored: 0,
+    replaying: 0,
+    degraded: 0,
+  });
+
+  useEffect(() => {
+    const refresh = () => {
+      const sessions = nodeTerminalService.getActiveSessions();
+      const next = sessions.reduce(
+        (acc, session) => {
+          const connected = nodeTerminalService.isConnected(session.id);
+          const hasSnapshot = !!nodeTerminalService.getSnapshot(session.id);
+          if (connected) {
+            acc.attached += 1;
+          }
+          if (session.isReconnected) {
+            acc.restored += 1;
+          }
+          if (!connected && hasSnapshot) {
+            acc.replaying += 1;
+          }
+          if (!connected && !hasSnapshot) {
+            acc.degraded += 1;
+          }
+          return acc;
+        },
+        { attached: 0, restored: 0, replaying: 0, degraded: 0 },
+      );
+      setSummary(next);
+    };
+
+    refresh();
+    const interval = setInterval(refresh, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Use the REAL TerminalTabs component for multi-session terminal support
   // This connects to actual PTY via WebSocket - not a simulation
   return (
@@ -79,8 +117,26 @@ const AgentTerminal: React.FC = () => {
           <span>Multi-Session Terminal</span>
         </div>
         <div className="flex items-center gap-2 text-xs text-gray-400">
-          <span className="px-2 py-0.5 bg-gray-700 rounded">Real PTY</span>
-          <span className="px-2 py-0.5 bg-gray-700 rounded">WebSocket</span>
+          <span className="px-2 py-0.5 bg-gray-700 rounded">Sidecar PTY</span>
+          <span className="px-2 py-0.5 bg-gray-700 rounded">Snapshot Restore</span>
+          <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 rounded">
+            attached {summary.attached}
+          </span>
+          {summary.restored > 0 ? (
+            <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-300 rounded">
+              restored {summary.restored}
+            </span>
+          ) : null}
+          {summary.replaying > 0 ? (
+            <span className="px-2 py-0.5 bg-amber-500/20 text-amber-300 rounded">
+              replaying {summary.replaying}
+            </span>
+          ) : null}
+          {summary.degraded > 0 ? (
+            <span className="px-2 py-0.5 bg-red-500/20 text-red-300 rounded">
+              degraded {summary.degraded}
+            </span>
+          ) : null}
         </div>
       </div>
       

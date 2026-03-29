@@ -23,14 +23,14 @@ import {
 import { useBrowserStore } from "@/capsules/browser/browser.store";
 import type { A2UIPayload } from "@/capsules/a2ui/a2ui.types";
 import {
-  ExternalLink,
-  Maximize2,
+  ArrowSquareOut,
+  ArrowsOut,
   Copy,
-  MoreHorizontal,
+  DotsThreeOutline,
   Globe,
-  LayoutGrid,
+  SquaresFour,
   Terminal,
-} from "lucide-react";
+} from '@phosphor-icons/react';
 
 // ============================================================================
 // Props
@@ -98,7 +98,7 @@ export function OpenInBrowserButton({
             onClick={handleOpen}
             className={className}
           >
-            <ExternalLink className="w-4 h-4 mr-1" />
+            <ArrowSquareOut className="w-4 h-4 mr-1" />
             {showLabel && "Open in Browser"}
           </Button>
         </TooltipTrigger>
@@ -134,10 +134,10 @@ export function PopOutButton({
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
+            size={32}
             onClick={handlePopOut}
           >
-            <Maximize2 className="w-4 h-4" />
+            <ArrowsOut size={16} />
           </Button>
         </TooltipTrigger>
         <TooltipContent>
@@ -172,13 +172,13 @@ export function MessageA2UIActions({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8">
-          <MoreHorizontal className="w-4 h-4" />
+        <Button variant="ghost" size="icon" size={32}>
+          <DotsThreeOutline size={16} />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={handleOpenInBrowser}>
-          <ExternalLink className="w-4 h-4 mr-2" />
+          <ArrowSquareOut className="w-4 h-4 mr-2" />
           Open in Browser
         </DropdownMenuItem>
         <DropdownMenuItem onClick={handleDuplicate}>
@@ -232,13 +232,13 @@ export function ChatBrowserBridge({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="secondary" size="sm">
-              <ExternalLink className="w-4 h-4 mr-1" />
+              <ArrowSquareOut className="w-4 h-4 mr-1" />
               Open Apps ({payloads.length})
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuItem onClick={openAllInBrowser}>
-              <LayoutGrid className="w-4 h-4 mr-2" />
+              <SquaresFour className="w-4 h-4 mr-2" />
               Open All in Browser
             </DropdownMenuItem>
             <div className="h-px bg-border my-1" />
@@ -249,7 +249,7 @@ export function ChatBrowserBridge({
                   addA2UITab(payload, title || `App ${idx + 1}`, `chat-${chatId}`)
                 }
               >
-                <LayoutGrid className="w-4 h-4 mr-2" />
+                <SquaresFour className="w-4 h-4 mr-2" />
                 {title || `App ${idx + 1}`}
               </DropdownMenuItem>
             ))}

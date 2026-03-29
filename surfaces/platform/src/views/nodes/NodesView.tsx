@@ -18,7 +18,13 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Cloud, Server, Terminal, X } from 'lucide-react';
+import {
+  Plus,
+  Cloud,
+  HardDrives,
+  Terminal,
+  X,
+} from '@phosphor-icons/react';
 
 // Extend NodesView to include Cloud Deploy integration
 interface NodesViewProps {
@@ -77,11 +83,11 @@ export function NodesView({ initialTab = 'nodes' }: NodesViewProps = {}) {
           <div className="flex items-center gap-2">
             <TabsList>
               <TabsTrigger value="nodes" className="gap-2">
-                <Server className="h-4 w-4" />
+                <HardDrives size={16} />
                 Nodes ({nodes.length})
               </TabsTrigger>
               {(TabsTrigger as any)({ value: "terminal", className: "gap-2", disabled: !terminalNodeId, children: [
-                <Terminal key="icon" className="h-4 w-4" />,
+                <Terminal key="icon" size={16} />,
                 " Terminal",
                 terminalNodeId && (
                   <span key="close"
@@ -91,12 +97,12 @@ export function NodesView({ initialTab = 'nodes' }: NodesViewProps = {}) {
                     }}
                     className="ml-1 p-0.5 hover:bg-muted rounded"
                   >
-                    <X className="h-3 w-3" />
+                    <X size={12} />
                   </span>
                 )
               ]})}
               <TabsTrigger value="deploy" className="gap-2">
-                <Cloud className="h-4 w-4" />
+                <Cloud size={16} />
                 Deploy New
               </TabsTrigger>
             </TabsList>

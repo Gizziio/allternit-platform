@@ -12,7 +12,6 @@ import {
   Plus,
   ArrowUp,
   ArrowDown,
-  Share2,
   Briefcase,
   CheckCircle,
   Clock,
@@ -62,19 +61,21 @@ import { useModeCanvasBridge } from "@/hooks/useModeCanvasBridge";
 
 // Cowork mode components
 import { CoworkTranscript } from "./cowork/CoworkTranscript";
+import { PermissionModal } from "./cowork/PermissionModal";
+import { QuestionModal } from "./cowork/QuestionModal";
 
 // ============================================================================
-// Theme Colors (warm dark brown to match Claude.ai)
+// Shared semantic theme bridge
 // ============================================================================
 const THEME = {
-  bg: '#2B2520',
-  bgGradient: 'linear-gradient(to top, #2B2520 60%, transparent)',
-  bgInput: '#352F29',
-  textPrimary: '#ECECEC',
-  textSecondary: '#9B9B9B',
-  textMuted: '#6B6B6B',
-  accent: '#D4956A',
-  borderSubtle: 'rgba(255,255,255,0.06)',
+  bg: 'var(--surface-canvas)',
+  bgGradient: 'linear-gradient(to top, color-mix(in srgb, var(--surface-canvas) 94%, transparent) 60%, transparent)',
+  bgInput: 'var(--chat-composer-bg)',
+  textPrimary: 'var(--ui-text-primary)',
+  textSecondary: 'var(--ui-text-secondary)',
+  textMuted: 'var(--ui-text-muted)',
+  accent: 'var(--accent-chat)',
+  borderSubtle: 'var(--ui-border-muted)',
 };
 
 // ============================================================================
@@ -82,51 +83,35 @@ const THEME = {
 // ============================================================================
 
 const TypingText = ({ text, delay = 0, speed = 0.05, className = "", style = {} }: { text: string, delay?: number, speed?: number, className?: string, style?: any }) => {
-  const letters = text.split("");
+  // Render as plain text without per-character animation to prevent missing letters
   return (
     <span className={className} style={style}>
-      {letters.map((char, i) => (
-        <motion.span
-          key={i}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{
-            duration: 0.01,
-            delay: delay + i * speed,
-            ease: "linear"
-          }}
-          style={char === '&' ? { color: THEME.accent, opacity: 0.8, margin: '0 4px' } : {}}
-        >
+      {text.split('').map((char, i) => (
+        <span key={i} style={char === '&' ? { color: THEME.accent, opacity: 0.8, margin: '0 4px' } : {}}>
           {char}
-        </motion.span>
+        </span>
       ))}
     </span>
   );
 };
 
 const StaggeredReveal = ({ text, delay = 0, className = "", style = {} }: { text: string, delay?: number, className?: string, style?: any }) => {
+  // Render as plain text without per-character animation to prevent missing letters
   const words = text.split(" ");
   return (
     <span className={className} style={{ ...style, display: 'inline-block' }}>
       {words.map((word, i) => (
         <span key={i} style={{ display: 'inline-block', whiteSpace: 'pre' }}>
           {word.split("").map((char, j) => (
-            <motion.span
+            <span
               key={j}
-              initial={{ opacity: 0, y: 10, filter: 'blur(4px)' }}
-              animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-              transition={{
-                duration: 0.4,
-                delay: delay + (i * 0.1) + (j * 0.03),
-                ease: [0.2, 0.65, 0.3, 0.9]
-              }}
               style={{
                 display: 'inline-block',
                 ...(char === '&' ? { color: THEME.accent, opacity: 0.8, margin: '0 4px' } : {})
               }}
             >
               {char}
-            </motion.span>
+            </span>
           ))}
           {i < words.length - 1 && <span> </span>}
         </span>
@@ -178,7 +163,9 @@ export function ChatView({
   const abortNativeGeneration = useNativeAgentStore(
     (state) => state.abortGeneration,
   );
-  const nativeStreaming = useNativeAgentStore((state) => state.streaming);
+  const nativeStreaming = useNativeAgentStore((state) => ({
+    isStreaming: state.streamingBySession[embeddedAgentSession.sessionId ?? '']?.isStreaming ?? false,
+  }));
   const nativeMessages = useNativeAgentStore((state) =>
     embeddedAgentSession.sessionId
       ? state.messages[embeddedAgentSession.sessionId] || []
@@ -253,7 +240,9 @@ export function ChatView({
     ? embeddedStreamMessages
     : messages;
   const isAgentSessionEmbedded = embeddedAgentSession.isEmbedded;
-  const effectiveAgentModeEnabled = agentModeEnabled || isAgentSessionEmbedded;
+  // Only show the agent-mode backdrop for actual agent sessions, not plain LLM sessions
+  // that happen to be embedded (e.g. regular chat after the first message).
+  const effectiveAgentModeEnabled = agentModeEnabled;
   const activeIsLoading = isAgentSessionEmbedded
     ? nativeStreaming.isStreaming
     : isLoading;
@@ -294,7 +283,6 @@ export function ChatView({
   const mascotResetTimeoutRef = useRef<number | null>(null);
   
   // Share dialog state (placeholder)
-  const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const shareVisibility: 'private' | 'workspace' | 'public' = 'private';
   const currentChatId = chatId || 'welcome';
 
@@ -460,10 +448,18 @@ export function ChatView({
     } else if (shouldSpawnLlmThread) {
       try {
         const newId = await createThread(text.slice(0, 40), undefined, "llm");
-        if (newId) effectiveChatId = newId;
+        if (newId) {
+          // Wire the new session as the embedded chat session so future messages
+          // route via sendNativeMessageStream (store-level), which survives the
+          // ChatView remount triggered by the activeThreadId/effectiveChatId change.
+          useNativeAgentStore.getState().setSurfaceSession('chat', newId);
+          await sendNativeMessageStream(newId, text.trim());
+          return;
+        }
       } catch (err) {
         console.error("Failed to create thread:", err);
       }
+      return;
     }
 
     const continueActiveAgentThread =
@@ -625,7 +621,11 @@ export function ChatView({
 
   const showTopActions = mode === 'chat';
   const embeddedAgentDescriptor = embeddedAgentSession.descriptor;
-  const embeddedAgentStrip = isAgentSessionEmbedded ? (
+  // Only show the agent context strip for actual agent sessions (sessionMode === 'agent').
+  // LLM/regular sessions use setSurfaceSession too (for message routing), but should
+  // not render the agent workspace panel.
+  const isActualAgentSession = isAgentSessionEmbedded && embeddedAgentSession.descriptor.sessionMode === 'agent';
+  const embeddedAgentStrip = isActualAgentSession ? (
     <AgentContextStrip
       surface={agentSurface}
       sessionName={embeddedAgentSession.session?.name || "Agent Session"}
@@ -656,13 +656,12 @@ export function ChatView({
     if (!isAgentSessionEmbedded) {
       return hideEmptyState || mode === 'cowork' || mode === 'chat' ? 'transparent' : THEME.bg;
     }
-    // Branded embedded session styling for chat surface (amber tones)
-    return 'radial-gradient(circle at top right, rgba(212,149,106,0.08), transparent 34%), linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(0,0,0,0) 18%)';
+    return 'radial-gradient(circle at top right, color-mix(in srgb, var(--accent-chat) 10%, transparent), transparent 34%), linear-gradient(180deg, color-mix(in srgb, var(--surface-floating) 18%, transparent) 0%, transparent 18%)';
   };
 
   const getEmbeddedChatBoxShadow = () => {
     if (!isAgentSessionEmbedded) return 'none';
-    return 'inset 0 0 0 1px rgba(212,149,106,0.08), inset 0 24px 120px rgba(212,149,106,0.04)';
+    return 'inset 0 0 0 1px color-mix(in srgb, var(--accent-chat) 12%, transparent), inset 0 24px 120px color-mix(in srgb, var(--accent-chat) 8%, transparent)';
   };
 
   return (
@@ -728,7 +727,7 @@ export function ChatView({
                   padding: '20px'
                 }}
               >
-                <div className="absolute inset-0 bg-[#D4956A]/5 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                <div className="absolute inset-0 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" style={{ background: 'color-mix(in srgb, var(--accent-chat) 8%, transparent)' }} />
                 <div
                   className="relative z-10 transition-transform duration-500 group-hover:scale-110"
                 >
@@ -782,7 +781,7 @@ export function ChatView({
             </div>
 
             {/* Centered Composer */}
-            <div style={{ width: '100%', marginBottom: '64px' }}>
+            <div style={{ width: '100%', marginBottom: '64px', marginInline: 'auto' }}>
               <ChatComposer
                 onSend={handleSend}
                 onAgentSend={onOpenAgentSession ? (text) => onOpenAgentSession(text, agentSurface) : undefined}
@@ -800,132 +799,62 @@ export function ChatView({
               />
             </div>
 
-            {/* Task List - Dynamic WIHs */}
-            <div style={{ width: '100%', borderTop: `1px solid ${THEME.borderSubtle}` }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '24px 8px 16px 8px', opacity: 0.4 }}>
-                <Plus size={14} color={THEME.textPrimary} />
-                <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: THEME.textPrimary }}>
-                  {quickTasks.length > 0 ? 'Quick Tasks' : 'Pick a task, any task'}
-                </span>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-                {quickTasks.length > 0 ? (
-                  // Dynamic WIH tasks
-                  quickTasks.map((wih) => (
-                    <button
-                      key={wih.wih_id}
-                      onClick={() => handleWihClick(wih)}
-                      onMouseEnter={() => {
-                        if (!useMonolithLogo) {
-                          setLaunchMascotAttention({ state: 'locked-on', target: { x: 0, y: 0.76 } });
-                          pulseMascot('focused');
-                        }
-                      }}
-                      onMouseLeave={() => {
-                        if (!useMonolithLogo) {
-                          setLaunchMascotAttention(null);
-                          setLaunchMascotEmotion('steady');
-                        }
-                      }}
-                      style={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '16px',
-                        padding: '16px',
-                        background: 'transparent',
-                        border: 'none',
-                        borderBottom: `1px solid ${THEME.borderSubtle}`,
-                        cursor: 'pointer',
-                        textAlign: 'left'
-                      }}
-                    >
-                      <div style={{
-                        padding: '8px',
-                        borderRadius: '8px',
-                        background: THEME.bgInput,
-                        border: `1px solid ${THEME.borderSubtle}`,
-                        color: wih.status === 'ready' ? THEME.accent : THEME.textSecondary
-                      }}>
-                        {getWihIcon(wih)}
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1 }}>
-                        <span style={{ fontSize: '15px', fontWeight: 500, color: THEME.textSecondary }}>
-                          {wih.title || `Task ${wih.wih_id.slice(0, 8)}`}
-                        </span>
-                        {wih.description && (
-                          <span style={{ fontSize: '12px', color: THEME.textMuted, lineHeight: 1.4 }}>
-                            {wih.description.length > 60 ? `${wih.description.slice(0, 60)}...` : wih.description}
-                          </span>
-                        )}
-                      </div>
-                      {wih.status === 'ready' && (
-                        <span style={{
-                          fontSize: '10px',
-                          fontWeight: 600,
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.05em',
-                          color: THEME.accent,
-                          padding: '2px 6px',
-                          borderRadius: '4px',
-                          background: 'rgba(212,149,106,0.1)'
-                        }}>
-                          Ready
-                        </span>
-                      )}
-                    </button>
-                  ))
-                ) : (
-                  // Fallback static suggestions when no WIHs available
-                  <>
-                    {[
-                      { icon: <CalendarClock size={20} />, label: "Optimize my week" },
-                      { icon: <Image size={20} />, label: "Organize my screenshots" },
-                      { icon: <FileText size={20} />, label: "Find insights in files" },
-                    ].map((item) => (
-                      <button
-                        key={item.label}
-                        onClick={() => handleSend(item.label, [])}
-                        onMouseEnter={() => {
-                          if (!useMonolithLogo) {
-                            setLaunchMascotAttention({ state: 'locked-on', target: { x: 0, y: 0.76 } });
-                            pulseMascot('focused');
-                          }
-                        }}
-                        onMouseLeave={() => {
-                          if (!useMonolithLogo) {
-                            setLaunchMascotAttention(null);
-                            setLaunchMascotEmotion('steady');
-                          }
-                        }}
-                        style={{
-                          width: '100%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '16px',
-                          padding: '16px',
-                          background: 'transparent',
-                          border: 'none',
-                          borderBottom: `1px solid ${THEME.borderSubtle}`,
-                          cursor: 'pointer',
-                          textAlign: 'left'
-                        }}
-                      >
-                        <div style={{
-                          padding: '8px',
-                          borderRadius: '8px',
-                          background: THEME.bgInput,
-                          border: `1px solid ${THEME.borderSubtle}`,
-                          color: THEME.textSecondary
-                        }}>
-                          {item.icon}
-                        </div>
-                        <span style={{ fontSize: '15px', fontWeight: 500, color: THEME.textSecondary }}>{item.label}</span>
-                      </button>
-                    ))}
-                  </>
-                )}
+            {/* Suggested Prompts - Inline with input */}
+            <div style={{ 
+              width: '87.3%',
+              maxWidth: '248px',
+              margin: '32px auto 0',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px'
+            }}>
+              <span style={{ 
+                fontSize: '11px', 
+                fontWeight: 500, 
+                color: THEME.textMuted,
+                textAlign: 'center'
+              }}>
+                Try asking
+              </span>
+              <div style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                justifyContent: 'center',
+                gap: '8px'
+              }}>
+                {[
+                  "Help me plan my week",
+                  "Summarize my last meeting",
+                  "Create a todo list",
+                  "Explain this code",
+                ].map((prompt) => (
+                  <button
+                    key={prompt}
+                    onClick={() => handleSend(prompt)}
+                    style={{
+                      padding: '8px 16px',
+                      background: 'var(--chat-composer-soft)',
+                      border: `1px solid ${THEME.borderSubtle}`,
+                      borderRadius: '20px',
+                      color: THEME.textSecondary,
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'var(--chat-composer-hover)';
+                      e.currentTarget.style.color = THEME.textPrimary;
+                      e.currentTarget.style.borderColor = 'var(--ui-border-default)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'var(--chat-composer-soft)';
+                      e.currentTarget.style.color = THEME.textSecondary;
+                      e.currentTarget.style.borderColor = THEME.borderSubtle;
+                    }}
+                  >
+                    {prompt}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
@@ -938,50 +867,6 @@ export function ChatView({
             boxSizing: 'border-box',
             position: 'relative'
           }}>
-            {/* Share Button - Top Right */}
-            <button
-              onClick={() => setShareDialogOpen(true)}
-              style={{
-                position: 'absolute',
-                top: '16px',
-                right: '20px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 14px',
-                borderRadius: '8px',
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                color: THEME.textSecondary,
-                fontSize: '13px',
-                fontWeight: 500,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                zIndex: 10,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-                e.currentTarget.style.color = THEME.textPrimary;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                e.currentTarget.style.color = THEME.textSecondary;
-              }}
-            >
-              <Share2 size={14} />
-              Share
-            </button>
-            
-            {/* Share Dialog - Placeholder */}
-            {shareDialogOpen && (
-              <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-                <div style={{ background: '#252525', padding: 24, borderRadius: 12 }}>
-                  <p>Share functionality coming soon</p>
-                  <button onClick={() => setShareDialogOpen(false)} style={{ marginTop: 12 }}>Close</button>
-                </div>
-              </div>
-            )}
-            
             {embeddedAgentStrip}
             {mode === 'cowork' ? (
               // Cowork mode: messages + inline work blocks
@@ -1056,6 +941,22 @@ export function ChatView({
       )}
 
       </div>{/* end content row */}
+
+      {/* Gate overlay: permission + question modals above composer */}
+      {embeddedAgentSession.sessionId && (
+        <div style={{
+          position: 'absolute',
+          bottom: '100px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: 'min(480px, calc(100% - 32px))',
+          zIndex: 50,
+          pointerEvents: 'auto',
+        }}>
+          <PermissionModal sessionId={embeddedAgentSession.sessionId} />
+          <QuestionModal sessionId={embeddedAgentSession.sessionId} />
+        </div>
+      )}
 
       {/* 2. Floating Bottom Input + Disclaimer */}
       {/* Always show input in cowork mode, otherwise depend on chat state */}

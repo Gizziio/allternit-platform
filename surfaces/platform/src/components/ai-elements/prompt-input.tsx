@@ -57,12 +57,12 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import {
-  CornerDownLeftIcon,
-  ImageIcon,
-  PlusIcon,
-  SquareIcon,
-  XIcon,
-} from "lucide-react";
+  ArrowDownLeft as CornerDownLeftIcon,
+  Image as ImageIcon,
+  Plus as PlusIcon,
+  Square as SquareIcon,
+  X as XIcon,
+} from '@phosphor-icons/react';
 import { nanoid } from "nanoid";
 import {
   Children,

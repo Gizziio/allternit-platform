@@ -17,7 +17,14 @@
  */
 
 import React, { useCallback, useState } from 'react';
-import { Bot, Zap, RefreshCw, Sparkles, ChevronRight, Users } from 'lucide-react';
+import {
+  Robot,
+  Lightning,
+  ArrowsClockwise,
+  Sparkle,
+  CaretRight,
+  Users,
+} from '@phosphor-icons/react';
 import {
   AskUserQuestion,
   AskUserQuestionProps,
@@ -228,7 +235,7 @@ function SwarmSuggestionCard({
           marginBottom: 16,
         }}
       >
-        <Sparkles size={14} style={{ color: '#79C47C' }} />
+        <Sparkle size={14} style={{ color: '#79C47C' }} />
         <span style={{ fontSize: 12, color: '#79C47C' }}>{suggestion.description}</span>
       </div>
 
@@ -270,7 +277,7 @@ function SwarmSuggestionCard({
         >
           <Users size={16} />
           Execute with Swarm
-          <ChevronRight size={14} />
+          <CaretRight size={14} />
         </button>
       </div>
     </div>
@@ -305,7 +312,7 @@ function SwarmQuickAction({
         alignSelf: 'flex-start',
       }}
     >
-      <Bot size={14} />
+      <Robot size={14} />
       <span>Or use Swarm Mode</span>
     </button>
   );
@@ -365,7 +372,7 @@ export function SwarmAwareWizard({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <Zap size={14} style={{ color: '#79C47C' }} />
+            <Lightning size={14} style={{ color: '#79C47C' }} />
             <span style={{ fontSize: 12, fontWeight: 600, color: '#79C47C' }}>
               Swarm Mode Active
             </span>
@@ -407,13 +414,13 @@ function getModeIcon(mode: string): React.ReactNode {
   
   switch (mode) {
     case 'swarm_agentic':
-      return <Sparkles {...iconProps} />;
+      return <Sparkle {...iconProps} />;
     case 'claude_swarm':
-      return <Zap {...iconProps} />;
+      return <Lightning {...iconProps} />;
     case 'closed_loop':
-      return <RefreshCw {...iconProps} />;
+      return <ArrowsClockwise {...iconProps} />;
     case 'hybrid':
-      return <Bot {...iconProps} />;
+      return <Robot {...iconProps} />;
     default:
       return <Users {...iconProps} />;
   }

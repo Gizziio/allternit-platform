@@ -1,58 +1,102 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useChatStore } from './ChatStore';
 
-const { sendMessage } = vi.hoisted(() => ({
-  sendMessage: vi.fn(),
-}));
+const createSession = vi.fn(() =>
+  Promise.resolve({
+    id: 'test-session-id',
+    name: 'Test',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    lastAccessedAt: new Date().toISOString(),
+    messageCount: 0,
+    isActive: true,
+    tags: [],
+  }),
+);
+const deleteSession = vi.fn(() => Promise.resolve());
+const updateSession = vi.fn(() => Promise.resolve());
+const setActiveSession = vi.fn();
 
-vi.mock('../../integration/kernel/chat', () => ({
-  createThread: vi.fn(),
-  sendMessage,
+vi.mock('@/lib/agents/native-agent.store', () => ({
+  useNativeAgentStore: Object.assign(
+    (selector?: (state: any) => unknown) => {
+      const state = {
+        sessions: [],
+        activeSessionId: null,
+        sessionIdBySurface: { chat: null, cowork: null, code: null, browser: null },
+        setSurfaceSession: vi.fn(),
+        clearSurfaceSession: vi.fn(),
+        clearAllSurfaceSessions: vi.fn(),
+        createSession,
+        deleteSession,
+        updateSession,
+        setActiveSession,
+      };
+      return selector ? selector(state) : state;
+    },
+    {
+      getState: () => ({
+        sessions: [],
+        activeSessionId: null,
+        sessionIdBySurface: { chat: null, cowork: null, code: null, browser: null },
+        setSurfaceSession: vi.fn(),
+        clearSurfaceSession: vi.fn(),
+        clearAllSurfaceSessions: vi.fn(),
+        createSession,
+        deleteSession,
+        updateSession,
+        setActiveSession,
+      }),
+      subscribe: vi.fn(() => () => {}),
+    },
+  ),
 }));
 
 vi.mock('../../integration/kernel/projects', () => ({
-  createProject: vi.fn(),
+  createProject: vi.fn(() => Promise.resolve({ id: 'test-project-id' })),
 }));
 
 describe('ChatStore', () => {
   beforeEach(() => {
     localStorage.clear();
-    sendMessage.mockReset();
+    createSession.mockClear();
+    deleteSession.mockClear();
+    updateSession.mockClear();
+    setActiveSession.mockClear();
     useChatStore.setState({
-      threads: [
-        {
-          id: 'welcome',
-          title: 'Welcome Session',
-          mode: 'llm',
-          messages: [{ id: 'm1', role: 'assistant', text: 'Hello! I am A2rchitech. How can I help?' }],
-          updatedAt: Date.now(),
-        },
-      ],
+      threads: [],
+      activeThreadId: null,
       projects: [],
-      activeThreadId: 'welcome',
-      sandboxMode: 'read-only',
       activeProjectId: null,
-      openclawConnected: false,
-      agentSessions: new Map(),
+      activeProjectLocalKey: null,
+      sandboxMode: 'read-only',
     });
   });
 
-  it('adds the user message locally before the backend send resolves', async () => {
-    let resolveSend: (() => void) | undefined;
-    sendMessage.mockImplementation(
-      () =>
-        new Promise<void>((resolve) => {
-          resolveSend = resolve;
-        }),
-    );
+  it('createThread calls NativeAgentStore.createSession and returns the id', async () => {
+    const id = await useChatStore.getState().createThread('My Thread');
+    expect(createSession).toHaveBeenCalledWith('My Thread', undefined, expect.objectContaining({ sessionMode: 'regular' }));
+    expect(typeof id).toBe('string');
+  });
 
-    const addMessagePromise = useChatStore.getState().addMessage('welcome', 'user', 'Ship it');
-    const optimisticThread = useChatStore.getState().threads.find((thread) => thread.id === 'welcome');
+  it('deleteThread calls NativeAgentStore.deleteSession', () => {
+    useChatStore.getState().deleteThread('some-id');
+    expect(deleteSession).toHaveBeenCalledWith('some-id');
+  });
 
-    expect(optimisticThread?.messages.at(-1)?.text).toBe('Ship it');
-    expect(optimisticThread?.messages.at(-1)?.role).toBe('user');
+  it('renameThread calls NativeAgentStore.updateSession', () => {
+    useChatStore.getState().renameThread('some-id', 'New Name');
+    expect(updateSession).toHaveBeenCalledWith('some-id', { name: 'New Name' });
+  });
 
-    resolveSend?.();
-    await addMessagePromise;
+  it('setActiveThread calls NativeAgentStore.setActiveSession', () => {
+    useChatStore.getState().setActiveThread('some-id');
+    expect(setActiveSession).toHaveBeenCalledWith('some-id');
+  });
+
+  it('sandboxMode persists and toggles', () => {
+    expect(useChatStore.getState().sandboxMode).toBe('read-only');
+    useChatStore.getState().setSandboxMode('full');
+    expect(useChatStore.getState().sandboxMode).toBe('full');
   });
 });

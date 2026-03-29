@@ -37,6 +37,14 @@ export function ShellFrame({
     mode === 'code' ? 'code' : 'chat';
     
   const isAgentActive = !!selectedAgentIdBySurface[currentSurface];
+  
+  // Pre-compute gradient backgrounds to avoid SWC parser issues
+  const railGradient = isAgentActive 
+    ? 'linear-gradient(180deg, ' + getAgentModeSurfaceTheme(currentSurface).wash + ' 0%, ' + getAgentModeSurfaceTheme(currentSurface).soft + ' 50%, transparent 100%)'
+    : 'transparent';
+  const canvasGradient = isAgentActive 
+    ? 'radial-gradient(100% 80% at 50% 0%, ' + getAgentModeSurfaceTheme(currentSurface).fog + ' 0%, ' + getAgentModeSurfaceTheme(currentSurface).soft + ' 60%, ' + getAgentModeSurfaceTheme(currentSurface).panelTint + ' 100%)'
+    : 'transparent';
 
   const sidecarWidth = useSidecarStore((s) => s.width);
   const setWidth = useSidecarStore((s) => s.setWidth);
@@ -72,12 +80,12 @@ export function ShellFrame({
     <div style={{
       display: 'grid',
       gridTemplateColumns: isRailCollapsed
-        ? `0px 1fr ${sidecarOpen ? sidecarWidth + 'px' : '0px'}`
-        : `284px 1fr ${sidecarOpen ? sidecarWidth + 'px' : '0px'}`,
+        ? ('0px 1fr ' + (sidecarOpen ? ('minmax(200px, ' + sidecarWidth + 'px)') : '0px'))
+        : ('minmax(0px, 284px) 1fr ' + (sidecarOpen ? ('minmax(200px, ' + sidecarWidth + 'px)') : '0px')),
       gridTemplateRows: 'minmax(0, 1fr)',
-      height: '100vh',
-      background: '#161616',
-      color: 'var(--text-primary)',
+      height: '100dvh',
+      background: 'var(--shell-frame-bg)',
+      color: 'var(--shell-item-fg)',
       overflow: 'hidden',
       position: 'relative'
     }}>
@@ -91,11 +99,9 @@ export function ShellFrame({
           display: 'flex',
           minHeight: 0,
           overflow: 'hidden',
-          padding: '12px 0 12px 12px',
+          padding: '0px',
           zIndex: 1,
-          background: isAgentActive 
-            ? `linear-gradient(180deg, ${getAgentModeSurfaceTheme(currentSurface).wash} 0%, ${getAgentModeSurfaceTheme(currentSurface).soft} 50%, transparent 100%)`
-            : 'transparent',
+          background: railGradient,
         }}>
           {rail}
         </div>
@@ -106,25 +112,26 @@ export function ShellFrame({
         gridRow: '1',
         gridColumn: '2',
         position: 'relative',
-        overflow: isImmersive ? 'visible' : 'hidden',
-        padding: '12px',
+        overflow: isImmersive ? 'visible' : 'auto',
+        padding: '0px',
         zIndex: 1,
-        background: isAgentActive 
-          ? `radial-gradient(100% 80% at 50% 0%, ${getAgentModeSurfaceTheme(currentSurface).fog} 0%, ${getAgentModeSurfaceTheme(currentSurface).soft} 60%, ${getAgentModeSurfaceTheme(currentSurface).panelTint} 100%)`
-          : 'transparent',
+        minWidth: 0,
+        background: canvasGradient,
         transition: 'background 0.3s ease',
       }}>
         <div data-shell-card style={{
           height: '100%',
           width: '100%',
-          borderRadius: isImmersive ? 0 : 24,
-          border: isImmersive ? 'none' : '1px solid #333',
+          minWidth: 0,
+          borderRadius: 0,
+          border: 'none',
           background: 'transparent',
-          overflow: isImmersive ? 'visible' : 'hidden',
-          boxShadow: isImmersive ? 'none' : '0 10px 40px rgba(0,0,0,0.2)',
+          overflow: isImmersive ? 'hidden' : 'auto',
+          boxShadow: 'none',
           display: 'flex',
           flexDirection: 'column',
           transition: 'none',
+          WebkitAppRegion: 'no-drag'
         }}>
           {canvas}
         </div>
@@ -138,7 +145,7 @@ export function ShellFrame({
           gridRow: '1',
           gridColumn: '3',
           overflow: 'hidden',
-          padding: '12px 12px 12px 0',
+          padding: '0px',
           zIndex: 1,
           position: 'relative',
         }}>
@@ -148,8 +155,8 @@ export function ShellFrame({
             style={{
               position: 'absolute',
               left: 0,
-              top: 12,
-              bottom: 12,
+              top: 0,
+              bottom: 0,
               width: 6,
               cursor: 'col-resize',
               zIndex: 10,
@@ -176,10 +183,11 @@ export function ShellFrame({
           <div style={{
             height: '100%',
             width: '100%',
-            borderRadius: 24,
-            border: '1px solid #333',
-            background: '#1e1e1e',
+            borderRadius: 0,
+            border: 'none',
+            background: 'var(--shell-panel-bg)',
             overflow: 'hidden',
+            WebkitAppRegion: 'no-drag'
           }}>
             {sidecar}
           </div>

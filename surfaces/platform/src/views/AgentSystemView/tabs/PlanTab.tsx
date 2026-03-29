@@ -9,7 +9,15 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { Send, FileText, Clock, ChevronDown, ChevronUp, Play, MoreHorizontal } from "lucide-react";
+import {
+  PaperPlaneTilt,
+  FileText,
+  Clock,
+  CaretDown,
+  CaretUp,
+  Play,
+  DotsThreeOutline,
+} from '@phosphor-icons/react';
 import { useUnifiedStore } from "@/lib/agents/unified.store";
 
 export function PlanTab() {
@@ -159,7 +167,7 @@ export function PlanTab() {
                 justifyContent: "center",
               }}
             >
-              <Send size={16} />
+              <PaperPlaneTilt size={16} />
             </button>
           </div>
         </div>
@@ -192,7 +200,7 @@ export function PlanTab() {
             >
               Templates
             </h3>
-            {showTemplates ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            {showTemplates ? <CaretUp size={16} /> : <CaretDown size={16} />}
           </div>
 
           {showTemplates && (
@@ -321,7 +329,7 @@ export function PlanTab() {
             gap: 8,
           }}
         >
-          {showEditor ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+          {showEditor ? <CaretDown size={14} /> : <CaretUp size={14} />}
           {showEditor ? "Hide Editor" : "Show Editor"}
         </button>
       </div>

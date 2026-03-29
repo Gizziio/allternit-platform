@@ -2,7 +2,9 @@ import React, { useRef, useEffect } from 'react';
 import { Message, MessagePart } from '../../core/contracts';
 import { UnifiedMessageRenderer } from './UnifiedMessageRenderer';
 import { cn } from '@/lib/utils';
-import { Loader2 } from 'lucide-react';
+import {
+  CircleNotch,
+} from '@phosphor-icons/react';
 
 interface StreamingMessageProps {
   message: Message;
@@ -50,7 +52,7 @@ export function StreamingMessage({ message, className }: StreamingMessageProps) 
         
         {isStreaming && (
           <div className="flex items-center gap-1.5 text-[10px] text-accent-chat font-medium animate-pulse">
-            <Loader2 className="w-3 h-3 animate-spin" />
+            <CircleNotch className="w-3 h-3 animate-spin" />
             STREAMING
           </div>
         )}

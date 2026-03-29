@@ -6,7 +6,16 @@
  */
 
 import React from "react";
-import { AlertTriangle, Check, X, Terminal, FileText, Globe, Database, Settings } from "lucide-react";
+import {
+  Warning,
+  Check,
+  X,
+  Terminal,
+  FileText,
+  Globe,
+  Database,
+  GearSix,
+} from '@phosphor-icons/react';
 import {
   usePendingToolConfirmations,
   PendingToolConfirmation,
@@ -22,9 +31,9 @@ const TOOL_ICONS: Record<string, React.ReactNode> = {
   execute_command: <Terminal size={18} />,
   read_file: <FileText size={18} />,
   write_file: <FileText size={18} />,
-  ask_user: <Settings size={18} />,
-  schedule_job: <Settings size={18} />,
-  default: <Settings size={18} />,
+  ask_user: <GearSix size={18} />,
+  schedule_job: <GearSix size={18} />,
+  default: <GearSix size={18} />,
 };
 
 export function ToolConfirmation({
@@ -83,7 +92,7 @@ export function ToolConfirmation({
             color: accentColor,
           }}
         >
-          <AlertTriangle size={18} />
+          <Warning size={18} />
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: "#f6eee7" }}>

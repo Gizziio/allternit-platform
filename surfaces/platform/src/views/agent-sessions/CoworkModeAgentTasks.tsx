@@ -17,16 +17,16 @@ import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Play,
-  Settings,
+  GearSix,
   Shield,
   FileText,
-  Activity,
-  CheckCircle2,
+  Pulse as Activity,
+  CheckCircle,
   Clock,
-  AlertCircle,
+  Warning,
   Database,
   Lock,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 
 import {
   MODE_COLORS,
@@ -110,7 +110,7 @@ export function CoworkModeAgentTasks({
             <div className="space-y-2">
               <PolicyItem icon={Lock} label="Filesystem Read/Write" status="Authorized" color="#4ade80" />
               <PolicyItem icon={Database} label="Long-term Memory Access" status="Authorized" color="#4ade80" />
-              <PolicyItem icon={AlertCircle} label="Destructive Actions" status="Requires Confirmation" color="#fbbf24" />
+              <PolicyItem icon={Warning} label="Destructive Actions" status="Requires Confirmation" color="#fbbf24" />
             </div>
           </div>
 
@@ -222,7 +222,7 @@ function DagNode({ label, status, mode }: { label: string; status: 'completed' |
       className="flex items-center gap-3 p-3 rounded-lg border border-white/5"
       style={{ background: status === 'active' ? modeColors.soft : 'transparent' }}
     >
-      {status === 'completed' && <CheckCircle2 size={14} className="text-green-500" />}
+      {status === 'completed' && <CheckCircle size={14} className="text-green-500" />}
       {status === 'active' && <Activity size={14} className="text-violet-400 animate-pulse" />}
       {status === 'pending' && <Clock size={14} className="text-white/20" />}
       <span className={`text-sm ${status === 'pending' ? 'text-white/30' : 'text-white/70'}`}>{label}</span>

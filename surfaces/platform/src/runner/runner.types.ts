@@ -2,7 +2,7 @@ export type RunState = "idle" | "received" | "thinking" | "tooling" | "writing" 
 export interface RunnerRun { id: string; prompt: string; state: RunState; startedAt: number; output: string; }
 
 export type TraceStatus = "running" | "success" | "error";
-export type TraceKind = "info" | "tool" | "system" | "error";
+export type TraceKind = "info" | "tool" | "system" | "error" | "success";
 
 export interface RunnerTraceEntry {
   id: string;

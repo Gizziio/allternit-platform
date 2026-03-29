@@ -12,23 +12,23 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Archive,
-  RotateCcw,
-  Download,
-  Upload,
+  ArrowCounterClockwise,
+  DownloadSimple,
+  UploadSimple,
   Plus,
-  Trash2,
+  Trash,
   Clock,
   Calendar,
   Check,
   X,
-  Loader2,
+  CircleNotch,
   HardDrive,
   Database,
-  Settings,
-  MoreVertical,
-  AlertTriangle,
-  Search,
-} from 'lucide-react';
+  GearSix,
+  DotsThreeVertical,
+  Warning,
+  MagnifyingGlass,
+} from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -200,7 +200,7 @@ export function BackupRestore({
         return <X className="w-4 h-4 text-red-500" />;
       case 'in-progress':
       case 'restoring':
-        return <Loader2 className="w-4 h-4 text-primary animate-spin" />;
+        return <CircleNotch className="w-4 h-4 text-primary animate-spin" />;
       default:
         return null;
     }
@@ -209,13 +209,13 @@ export function BackupRestore({
   const getTypeIcon = (type: Backup['type']) => {
     switch (type) {
       case 'manual':
-        return <Archive className="w-4 h-4" />;
+        return <Archive size={16} />;
       case 'scheduled':
-        return <Calendar className="w-4 h-4" />;
+        return <Calendar size={16} />;
       case 'auto':
-        return <Clock className="w-4 h-4" />;
+        return <Clock size={16} />;
       default:
-        return <Archive className="w-4 h-4" />;
+        return <Archive size={16} />;
     }
   };
 
@@ -227,7 +227,7 @@ export function BackupRestore({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="font-semibold flex items-center gap-2">
-            <Archive className="w-4 h-4" />
+            <Archive size={16} />
             Backups & Restore
           </h3>
           <p className="text-xs text-muted-foreground">
@@ -235,14 +235,14 @@ export function BackupRestore({
           </p>
         </div>
         <Button size="sm" onClick={() => setShowCreateDialog(true)} className="gap-2">
-          <Plus className="w-4 h-4" />
+          <Plus size={16} />
           Create Backup
         </Button>
       </div>
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
           placeholder="Search backups..."
           value={searchQuery}
@@ -290,7 +290,7 @@ export function BackupRestore({
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
-                      <MoreVertical className="w-4 h-4" />
+                      <DotsThreeVertical size={16} />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
@@ -300,18 +300,18 @@ export function BackupRestore({
                         setShowRestoreDialog(true);
                       }}
                     >
-                      <RotateCcw className="w-4 h-4 mr-2" />
+                      <ArrowCounterClockwise className="w-4 h-4 mr-2" />
                       Restore
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => onBackupExport(backup.id)}>
-                      <Download className="w-4 h-4 mr-2" />
+                      <DownloadSimple className="w-4 h-4 mr-2" />
                       Export
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => onBackupDelete(backup.id)}
                       className="text-red-600"
                     >
-                      <Trash2 className="w-4 h-4 mr-2" />
+                      <Trash className="w-4 h-4 mr-2" />
                       Delete
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -430,7 +430,7 @@ export function BackupRestore({
             >
               {isProcessing ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <CircleNotch className="w-4 h-4 mr-2 animate-spin" />
                   Creating...
                 </>
               ) : (
@@ -449,7 +449,7 @@ export function BackupRestore({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="text-red-600 flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5" />
+              <Warning size={20} />
               Restore Backup
             </DialogTitle>
             <DialogDescription>
@@ -493,12 +493,12 @@ export function BackupRestore({
             >
               {isProcessing ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <CircleNotch className="w-4 h-4 mr-2 animate-spin" />
                   Restoring...
                 </>
               ) : (
                 <>
-                  <RotateCcw className="w-4 h-4 mr-2" />
+                  <ArrowCounterClockwise className="w-4 h-4 mr-2" />
                   Restore Backup
                 </>
               )}

@@ -1,43 +1,41 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { 
-  ArrowUpRight, 
-  Monitor, 
-  Cloud, 
-  Code2,
+import {
+  ArrowUpRight,
+  Monitor,
+  Cloud,
+  Code,
   Terminal,
   Laptop,
   Globe,
-  Download,
-  Sparkles,
+  DownloadSimple,
+  Sparkle,
   X,
-  Puzzle,
-  Server,
+  PuzzlePiece as Puzzle,
+  HardDrives,
   Cpu,
   Shield,
-  Rocket,
+  RocketLaunch,
   ArrowRight,
   Key,
-  Boxes,
-  MousePointer,
-  MessageSquare,
+  Stack,
+  Cursor,
+  Chat,
   Camera,
   FileText,
-  FormInput,
-  Zap,
-  CheckCircle2,
+  TextT,
+  Lightning,
+  CheckCircle,
   Copy,
-  ExternalLink,
-  ChevronRight,
+  ArrowSquareOut,
+  CaretRight,
   Play,
-  Box,
+  Cube,
   Wrench,
   Eye,
-  Type,
   Command,
-  Store,
-  Code,
-  ShoppingBag
-} from 'lucide-react';
+  Storefront,
+  ShoppingBag,
+} from '@phosphor-icons/react';
 import { GizziMascot } from '@/components/ai-elements/GizziMascot';
 import { MatrixLogo } from '@/components/ai-elements/MatrixLogo';
 
@@ -317,7 +315,7 @@ export const ProductsDiscoveryView: React.FC = () => {
             description="Build, debug, and ship from your terminal or IDE. Your AI pair programmer that lives in your development workflow."
             gradient="linear-gradient(135deg, #D97757 0%, #B08D6E 100%)"
             accentColor="#D97757"
-            icon={<Code2 size={32} color="#fff" />}
+            icon={<Code size={32} color="#fff" />}
             mascot={<GizziMascot size={90} emotion="proud" />}
             platforms={[
               { icon: <TerminalIcon size={18} />, name: 'Terminal', action: 'Install', color: '#6e6e6e' },
@@ -414,7 +412,7 @@ export const ProductsDiscoveryView: React.FC = () => {
             icon={<Code size={32} color="#fff" />}
             platforms={[
               { 
-                icon: <ExternalLink size={18} />, 
+                icon: <ArrowSquareOut size={18} />, 
                 name: 'Dev Portal', 
                 action: 'Open', 
                 color: '#6366f1',
@@ -448,7 +446,7 @@ export const ProductsDiscoveryView: React.FC = () => {
             icon={<ShoppingBag size={32} color="#fff" />}
             platforms={[
               { 
-                icon: <Store size={18} />, 
+                icon: <Storefront size={18} />, 
                 name: 'Browse', 
                 action: 'Open', 
                 color: '#10b981',
@@ -462,7 +460,7 @@ export const ProductsDiscoveryView: React.FC = () => {
                 onClick: () => window.open('https://marketplace.a2r.dev/plugins', '_blank')
               },
               { 
-                icon: <Sparkles size={18} />, 
+                icon: <Sparkle size={18} />, 
                 name: 'Publish', 
                 action: 'Submit', 
                 color: '#14b8a6',
@@ -665,7 +663,7 @@ export const ProductsDiscoveryView: React.FC = () => {
                 alignItems: 'center',
                 justifyContent: 'center',
               }}>
-                <Server size={28} color="#d4b08c" />
+                <HardDrives size={28} color="#d4b08c" />
               </div>
               <div>
                 <h3 style={{
@@ -729,7 +727,7 @@ export const ProductsDiscoveryView: React.FC = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}>
-                    <Rocket size={20} color="#22c55e" />
+                    <RocketLaunch size={20} color="#22c55e" />
                   </div>
                   <span style={{ fontSize: '13px', color: '#22c55e', fontWeight: 600 }}>New</span>
                 </div>
@@ -848,7 +846,7 @@ export const ProductsDiscoveryView: React.FC = () => {
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}>
-                    <Boxes size={20} color="#7b68ee" />
+                    <Stack size={20} color="#7b68ee" />
                   </div>
                 </div>
                 <h4 style={{
@@ -957,7 +955,7 @@ export const ProductsDiscoveryView: React.FC = () => {
             filter: 'blur(40px)',
           }} />
 
-          <Sparkles size={32} color="#d4b08c" style={{ marginBottom: 16 }} />
+          <Sparkle size={32} color="#d4b08c" style={{ marginBottom: 16 }} />
           <p style={{ fontSize: '20px', color: '#fff', margin: '0 0 8px 0', fontWeight: 500, position: 'relative' }}>
             Want early access?
           </p>
@@ -1003,13 +1001,13 @@ function ExtensionDetailSection({ onClose }: { onClose: () => void }) {
 
   const features: ExtensionFeature[] = [
     {
-      icon: <MousePointer size={24} color="#4285F4" />,
+      icon: <Cursor size={24} color="#4285F4" />,
       title: 'Browser Automation',
       description: 'Click, type, scroll, and interact with any webpage using natural language commands.',
       shortcut: 'Ctrl+Shift+A',
     },
     {
-      icon: <MessageSquare size={24} color="#34A853" />,
+      icon: <Chat size={24} color="#34A853" />,
       title: 'Ask AI Anywhere',
       description: 'Select text on any page and ask questions, get explanations, or rewrite content.',
       shortcut: 'Ctrl+Shift+Q',
@@ -1027,13 +1025,13 @@ function ExtensionDetailSection({ onClose }: { onClose: () => void }) {
       shortcut: 'Ctrl+Shift+Z',
     },
     {
-      icon: <FormInput size={24} color="#4285F4" />,
+      icon: <TextT size={24} color="#4285F4" />,
       title: 'Form Filling',
       description: 'Automatically fill forms with AI assistance. Smart field detection.',
       shortcut: 'Ctrl+Shift+F',
     },
     {
-      icon: <Zap size={24} color="#34A853" />,
+      icon: <Lightning size={24} color="#34A853" />,
       title: 'Quick Access',
       description: 'Access your agents from any webpage with a single click or keyboard shortcut.',
       shortcut: 'Ctrl+Shift+G',
@@ -1213,7 +1211,7 @@ function ExtensionDetailSection({ onClose }: { onClose: () => void }) {
                     Official release • Auto-updates
                   </div>
                 </div>
-                <ExternalLink size={18} color="#4285F4" style={{ marginLeft: 'auto' }} />
+                <ArrowSquareOut size={18} color="#4285F4" style={{ marginLeft: 'auto' }} />
               </a>
 
               <a
@@ -1240,7 +1238,7 @@ function ExtensionDetailSection({ onClose }: { onClose: () => void }) {
                   e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
-                <Download size={32} color="#d4b08c" />
+                <DownloadSimple size={32} color="#d4b08c" />
                 <div>
                   <div style={{ fontSize: '16px', fontWeight: '600', color: '#fff', marginBottom: '4px' }}>
                     Download .crx
@@ -1249,7 +1247,7 @@ function ExtensionDetailSection({ onClose }: { onClose: () => void }) {
                     Manual installation • Latest build
                   </div>
                 </div>
-                <ExternalLink size={18} color="#d4b08c" style={{ marginLeft: 'auto' }} />
+                <ArrowSquareOut size={18} color="#d4b08c" style={{ marginLeft: 'auto' }} />
               </a>
             </div>
 
@@ -1262,7 +1260,7 @@ function ExtensionDetailSection({ onClose }: { onClose: () => void }) {
               alignItems: 'center',
               gap: '12px',
             }}>
-              <CheckCircle2 size={20} color="#22c55e" />
+              <CheckCircle size={20} color="#22c55e" />
               <span style={{ fontSize: '14px', color: '#22c55e' }}>
                 Compatible with Chrome, Edge, Brave, Opera, and all Chromium-based browsers
               </span>
@@ -1311,7 +1309,7 @@ function ExtensionDetailSection({ onClose }: { onClose: () => void }) {
                     Official release • Auto-updates
                   </div>
                 </div>
-                <ExternalLink size={18} color="#FF7139" style={{ marginLeft: 'auto' }} />
+                <ArrowSquareOut size={18} color="#FF7139" style={{ marginLeft: 'auto' }} />
               </a>
 
               <a
@@ -1338,7 +1336,7 @@ function ExtensionDetailSection({ onClose }: { onClose: () => void }) {
                   e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
-                <Box size={32} color="#d4b08c" />
+                <Cube size={32} color="#d4b08c" />
                 <div>
                   <div style={{ fontSize: '16px', fontWeight: '600', color: '#fff', marginBottom: '4px' }}>
                     Download .xpi
@@ -1347,7 +1345,7 @@ function ExtensionDetailSection({ onClose }: { onClose: () => void }) {
                     Manual installation • Latest build
                   </div>
                 </div>
-                <ExternalLink size={18} color="#d4b08c" style={{ marginLeft: 'auto' }} />
+                <ArrowSquareOut size={18} color="#d4b08c" style={{ marginLeft: 'auto' }} />
               </a>
             </div>
 
@@ -1360,7 +1358,7 @@ function ExtensionDetailSection({ onClose }: { onClose: () => void }) {
               alignItems: 'center',
               gap: '12px',
             }}>
-              <CheckCircle2 size={20} color="#FF7139" />
+              <CheckCircle size={20} color="#FF7139" />
               <span style={{ fontSize: '14px', color: '#FF7139' }}>
                 Compatible with Firefox, Waterfox, LibreWolf, and Firefox-based browsers
               </span>
@@ -1427,7 +1425,7 @@ function ExtensionDetailSection({ onClose }: { onClose: () => void }) {
                     }}
                     title="Copy command"
                   >
-                    {copiedCommand === item.command ? <CheckCircle2 size={16} /> : <Copy size={16} />}
+                    {copiedCommand === item.command ? <CheckCircle size={16} /> : <Copy size={16} />}
                   </button>
                 </div>
               ))}
@@ -1525,8 +1523,8 @@ function ExtensionDetailSection({ onClose }: { onClose: () => void }) {
             { icon: <ChromeIcon size={20} />, name: 'Chrome', version: '88+' },
             { icon: <FirefoxIcon size={20} />, name: 'Firefox', version: '109+' },
             { icon: <EdgeIcon size={20} />, name: 'Edge', version: '88+' },
-            { icon: <div style={{ color: '#FBBC04' }}><Box size={20} /></div>, name: 'Brave', version: '1.20+' },
-            { icon: <div style={{ color: '#FF1B2D' }}><Box size={20} /></div>, name: 'Opera', version: '74+' },
+            { icon: <div style={{ color: '#FBBC04' }}><Cube size={20} /></div>, name: 'Brave', version: '1.20+' },
+            { icon: <div style={{ color: '#FF1B2D' }}><Cube size={20} /></div>, name: 'Opera', version: '74+' },
           ].map((browser, index) => (
             <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               {browser.icon}

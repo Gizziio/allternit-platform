@@ -5,15 +5,15 @@ import { useWorkflow } from '@/hooks/useWorkflow';
 import {
   GitBranch,
   Play,
-  Trash2,
-  Edit3,
-  Search,
-  Clock3,
-  Loader2,
-  Layers3,
-  Sparkles,
-  Activity,
-} from 'lucide-react';
+  Trash,
+  PencilSimple,
+  MagnifyingGlass,
+  Clock,
+  CircleNotch,
+  StackSimple,
+  Sparkle,
+  Pulse as Activity,
+} from '@phosphor-icons/react';
 import { GlassSurface } from '@/design/GlassSurface';
 import { StatusBadge } from '../components/StatusBadge';
 import { StatCard } from '../components/StatCard';
@@ -58,7 +58,7 @@ export function WorkflowListView() {
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-accent" />
+        <CircleNotch className="h-8 w-8 animate-spin text-accent" />
       </div>
     );
   }
@@ -70,7 +70,7 @@ export function WorkflowListView() {
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] uppercase tracking-[0.24em] text-muted-foreground">
-                <Sparkles className="h-3.5 w-3.5 text-accent" />
+                <Sparkle className="h-3.5 w-3.5 text-accent" />
                 Workflow Control Plane
               </div>
               <h2 className="text-3xl font-semibold tracking-tight text-foreground">Workflows</h2>
@@ -80,7 +80,7 @@ export function WorkflowListView() {
             </div>
 
             <div className="relative w-full max-w-md">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Search workflows, descriptions, and intent..."
@@ -95,7 +95,7 @@ export function WorkflowListView() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <StatCard icon={GitBranch} label="Registered" value={workflows.length} />
           <StatCard icon={Activity} label="Active" value={activeCount} trend={activeCount > 0 ? 'up' : 'neutral'} />
-          <StatCard icon={Layers3} label="Total Nodes" value={nodeCount} />
+          <StatCard icon={StackSimple} label="Total Nodes" value={nodeCount} />
         </div>
 
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
@@ -129,7 +129,7 @@ export function WorkflowListView() {
                         className="rounded-xl p-2 text-muted-foreground transition hover:bg-white/5 hover:text-foreground"
                         aria-label={`Edit ${workflow.name}`}
                       >
-                        <Edit3 className="h-4 w-4" />
+                        <PencilSimple size={16} />
                       </button>
                     </Link>
                     <button
@@ -137,7 +137,7 @@ export function WorkflowListView() {
                       className="rounded-xl p-2 text-muted-foreground transition hover:bg-red-500/10 hover:text-red-400"
                       aria-label={`Delete ${workflow.name}`}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash size={16} />
                     </button>
                   </div>
                 </div>
@@ -161,7 +161,7 @@ export function WorkflowListView() {
 
                 <div className="mt-5 flex items-center justify-between border-t border-white/5 pt-4 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1.5">
-                    <Clock3 className="h-3.5 w-3.5" />
+                    <Clock className="h-3.5 w-3.5" />
                     {lastExecuted ? new Date(lastExecuted).toLocaleDateString() : 'Never executed'}
                   </span>
                   <button
@@ -170,9 +170,9 @@ export function WorkflowListView() {
                     className="inline-flex items-center gap-2 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-3 py-2 text-sm font-medium text-emerald-100 transition hover:bg-emerald-300/20 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {executing === workflowId ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <CircleNotch className="h-4 w-4 animate-spin" />
                     ) : (
-                      <Play className="h-4 w-4" />
+                      <Play size={16} />
                     )}
                     Execute
                   </button>
@@ -193,7 +193,7 @@ export function WorkflowListView() {
             </p>
             {!searchQuery && (
               <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-sm text-muted-foreground">
-                <Sparkles className="h-4 w-4 text-accent" />
+                <Sparkle className="h-4 w-4 text-accent" />
                 Workflow designer wiring is now aligned with the live `/api/v1/workflows` surface.
               </div>
             )}

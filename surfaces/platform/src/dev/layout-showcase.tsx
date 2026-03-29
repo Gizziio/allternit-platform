@@ -16,37 +16,37 @@ import {
   type LayoutPreset,
 } from '@/shell/layout';
 import {
-  Home,
-  Settings,
+  House as Home,
+  GearSix as Settings,
   Users,
   FileText,
   Code,
   Terminal,
-  Search,
+  MagnifyingGlass as Search,
   Bell,
-  Menu,
+  List as Menu,
   Layout,
-  Maximize,
-  Minimize,
+  ArrowsOut as Maximize,
+  ArrowsIn as Minimize,
   Columns,
-  PanelLeft,
-  PanelRight,
-  PanelBottom,
-  Wifi,
-  WifiOff,
-  Loader2,
-  CheckCircle2,
-  AlertCircle,
+  SidebarSimple as PanelLeft,
+  SidebarSimple as PanelRight,
+  SidebarSimple as PanelBottom,
+  WifiHigh as Wifi,
+  WifiSlash as WifiOff,
+  CircleNotch as Loader2,
+  CheckCircle as CheckCircle2,
+  Warning as AlertCircle,
   Moon,
   Sun,
   GitBranch,
   Command,
-  LayoutGrid,
-  Focus,
-  Fullscreen,
+  SquaresFour as LayoutGrid,
+  CrosshairSimple as Focus,
+  ArrowsOut as Fullscreen,
   AppWindow,
   X,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 
 // =============================================================================
@@ -490,23 +490,23 @@ function CustomDemo() {
             <h4 className="font-medium mb-2">Interactive Features</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-green-500" />
+                <CheckCircle className="w-4 h-4 text-green-500" />
                 Click connection status in bottom bar to cycle states
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-green-500" />
+                <CheckCircle className="w-4 h-4 text-green-500" />
                 Click sync status in bottom bar to cycle states
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-green-500" />
+                <CheckCircle className="w-4 h-4 text-green-500" />
                 Try keyboard navigation (Arrow keys, Enter, Escape)
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-green-500" />
+                <CheckCircle className="w-4 h-4 text-green-500" />
                 Use Cmd+K to open global search
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-green-500" />
+                <CheckCircle className="w-4 h-4 text-green-500" />
                 Resize sidebar by dragging its right edge
               </li>
             </ul>

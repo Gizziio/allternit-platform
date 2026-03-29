@@ -8,22 +8,22 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Search,
-  Filter,
-  Grid3X3,
+  MagnifyingGlass,
+  Funnel,
+  GridNine as Grid3X3,
   List,
-  Sparkles,
-  Code2,
+  Sparkle,
+  Code,
   Bug,
   FileText,
   TestTube,
-  Rocket,
+  RocketLaunch,
   Shield,
-  Zap,
+  Lightning,
   Users,
   Check,
   X,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import {
   PREDEFINED_AGENT_TEMPLATES,
   type AgentTemplate,
@@ -40,7 +40,7 @@ const CATEGORY_CONFIG: Record<string, {
 }> = {
   Development: {
     label: 'Development',
-    icon: Code2,
+    icon: Code,
     color: '#60a5fa',
   },
   Testing: {
@@ -60,12 +60,12 @@ const CATEGORY_CONFIG: Record<string, {
   },
   Deployment: {
     label: 'Deployment',
-    icon: Rocket,
+    icon: RocketLaunch,
     color: '#f472b6',
   },
   Optimization: {
     label: 'Optimization',
-    icon: Zap,
+    icon: Lightning,
     color: '#2dd4bf',
   },
 };
@@ -244,7 +244,7 @@ export function SwarmTemplateGallery({
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-sm font-bold text-white/90 flex items-center gap-2">
-              <Sparkles size={16} className="text-yellow-400" />
+              <Sparkle size={16} className="text-yellow-400" />
               Swarm Templates
             </h2>
             <p className="text-xs text-white/40 mt-0.5">
@@ -340,7 +340,7 @@ export function SwarmTemplateGallery({
                 border: '1px solid rgba(255,255,255,0.1)',
               }}
             >
-              <Search size={32} className="text-white/20" />
+              <MagnifyingGlass size={32} className="text-white/20" />
             </div>
             <p className="text-sm font-medium text-white/60 mb-1">No templates found</p>
             <p className="text-xs text-white/40">Try adjusting your search or filters</p>

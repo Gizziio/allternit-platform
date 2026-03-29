@@ -1,7 +1,14 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Bug, Play, Square, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import {
+  Bug,
+  Play,
+  Square,
+  Trash,
+  CaretDown,
+  CaretRight,
+} from '@phosphor-icons/react';
 import { GlassSurface } from '@/design/GlassSurface';
 
 interface DebugVariable {
@@ -27,96 +34,6 @@ interface Breakpoint {
 
 type FilterLevel = 'All Levels' | 'Error' | 'Warning' | 'Info';
 
-const mockVariables: DebugVariable[] = [
-  {
-    name: 'globals',
-    value: '{...}',
-    type: 'object',
-    children: [
-      { name: 'window', value: 'Window {...}', type: 'primitive' },
-      { name: 'document', value: 'Document {...}', type: 'primitive' },
-      { name: '__DEV__', value: 'true', type: 'primitive' },
-    ],
-  },
-  {
-    name: 'locals',
-    value: '{...}',
-    type: 'object',
-    children: [
-      { name: 'searchQuery', value: '"component structure"', type: 'primitive' },
-      { name: 'activeFilter', value: '"All"', type: 'primitive' },
-    ],
-  },
-  {
-    name: 'call_stack',
-    value: '[...]',
-    type: 'object',
-    children: [
-      { name: 'SearchView', value: 'at src/views/SearchView.tsx:42', type: 'primitive' },
-      { name: 'RootLayout', value: 'at src/layout.tsx:15', type: 'primitive' },
-      { name: 'AppProvider', value: 'at src/providers.tsx:8', type: 'primitive' },
-    ],
-  },
-];
-
-const mockLogs: ConsoleLogEntry[] = [
-  {
-    id: '1',
-    timestamp: '10:24:32.145',
-    level: 'LOG',
-    message: 'SearchView mounted successfully',
-  },
-  {
-    id: '2',
-    timestamp: '10:24:32.156',
-    level: 'INFO',
-    message: 'Initializing search state with empty query',
-  },
-  {
-    id: '3',
-    timestamp: '10:24:35.234',
-    level: 'LOG',
-    message: 'Search query updated: "component"',
-  },
-  {
-    id: '4',
-    timestamp: '10:24:36.891',
-    level: 'WARN',
-    message: 'Search results limited to 50 items, 127 total matches',
-  },
-  {
-    id: '5',
-    timestamp: '10:24:37.002',
-    level: 'LOG',
-    message: 'Filter changed to: Files',
-  },
-  {
-    id: '6',
-    timestamp: '10:24:38.445',
-    level: 'ERROR',
-    message:
-      'Failed to fetch recent searches: NetworkError - unable to reach API',
-  },
-  {
-    id: '7',
-    timestamp: '10:24:39.123',
-    level: 'INFO',
-    message: 'Recovered from error, showing cached results',
-  },
-  {
-    id: '8',
-    timestamp: '10:24:40.567',
-    level: 'LOG',
-    message: 'User navigated to result: component-structure.tsx',
-  },
-];
-
-const mockBreakpoints: Breakpoint[] = [
-  { id: '1', file: 'SearchView.tsx', line: 42, enabled: true },
-  { id: '2', file: 'DebugView.tsx', line: 156, enabled: true },
-  { id: '3', file: 'api.ts', line: 78, enabled: false },
-];
-
 const VariableTreeNode: React.FC<{
   variable: DebugVariable;
   level: number;
@@ -139,9 +56,9 @@ const VariableTreeNode: React.FC<{
         {hasChildren && (
           <div style={{ width: '16px' }}>
             {isExpanded ? (
-              <ChevronDown size={14} />
+              <CaretDown size={14} />
             ) : (
-              <ChevronRight size={14} />
+              <CaretRight size={14} />
             )}
           </div>
         )}
@@ -169,7 +86,7 @@ export function DebugView() {
   const [filterLevel, setFilterLevel] = useState<FilterLevel>('All Levels');
   const [consoleInput, setConsoleInput] = useState('');
   const consoleOutputRef = useRef<HTMLDivElement>(null);
-  const [breakpoints, setBreakpoints] = useState<Breakpoint[]>(mockBreakpoints);
+  const [breakpoints, setBreakpoints] = useState<Breakpoint[]>([]);
 
   const handleClearConsole = () => {
     // In a real implementation, this would clear the logs
@@ -213,8 +130,8 @@ export function DebugView() {
 
   const filteredLogs =
     filterLevel === 'All Levels'
-      ? mockLogs
-      : mockLogs.filter((log) => {
+      ? []
+  : ([] as ConsoleLogEntry[]).filter((log) => {
           switch (filterLevel) {
             case 'Error':
               return log.level === 'ERROR';
@@ -307,7 +224,7 @@ export function DebugView() {
             fontWeight: '500',
           }}
         >
-          <Trash2 size={14} />
+          <Trash size={14} />
           Clear
         </button>
 
@@ -366,7 +283,7 @@ export function DebugView() {
               fontSize: '12px',
             }}
           >
-            {mockVariables.map((variable, idx) => (
+            {([] as DebugVariable[]).map((variable, idx) => (
               <VariableTreeNode key={idx} variable={variable} level={0} />
             ))}
           </div>

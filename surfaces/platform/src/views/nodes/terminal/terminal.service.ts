@@ -6,9 +6,13 @@
  * Supports session persistence with reconnection and heartbeat.
  */
 
-import { GATEWAY_BASE_URL } from '@/integration/api-client';
+import {
+  getRuntimeGatewayBaseUrl,
+  getRuntimeGatewayWsBaseUrl,
+} from '@/lib/runtime-backend-client';
 
 const TERMINAL_SESSIONS_STORAGE_KEY = 'a2r_terminal_sessions';
+const TERMINAL_SNAPSHOTS_STORAGE_KEY = 'a2r_terminal_snapshots';
 
 export interface VolumeMount {
   source: string;
@@ -57,9 +61,25 @@ export interface TimeoutWarning {
   message: string;
 }
 
+export interface TerminalSnapshotFrame {
+  type: 'snapshot';
+  snapshot: string;
+  cols: number;
+  rows: number;
+  updated_at?: string;
+}
+
+export interface TerminalSnapshotState {
+  snapshot: string;
+  cols: number;
+  rows: number;
+  updatedAt: string;
+}
+
 export type TerminalDataHandler = (data: string) => void;
 export type TerminalStatusHandler = (connected: boolean) => void;
 export type TerminalTimeoutWarningHandler = (warning: TimeoutWarning) => void;
+export type TerminalSnapshotHandler = (frame: TerminalSnapshotFrame) => void;
 
 // File operations types
 export interface FileEntry {
@@ -98,9 +118,18 @@ class NodeTerminalService {
   private dataHandlers: Map<string, TerminalDataHandler> = new Map();
   private statusHandlers: Map<string, TerminalStatusHandler> = new Map();
   private timeoutWarningHandlers: Map<string, TerminalTimeoutWarningHandler> = new Map();
+  private snapshotHandlers: Map<string, TerminalSnapshotHandler> = new Map();
   private sessions: Map<string, TerminalSession> = new Map();
   private reconnectionAttempts: Map<string, ReconnectionAttempt> = new Map();
   private keepaliveIntervals: Map<string, ReturnType<typeof setInterval>> = new Map();
+
+  private async buildGatewayUrl(path: string): Promise<string> {
+    return `${await getRuntimeGatewayBaseUrl()}${path}`;
+  }
+
+  private async buildGatewayWsUrl(path: string): Promise<string> {
+    return `${await getRuntimeGatewayWsBaseUrl()}${path}`;
+  }
 
   constructor() {
     // Restore sessions from localStorage on initialization
@@ -158,6 +187,37 @@ class NodeTerminalService {
 
   private _pendingRestoredSessions: any[] = [];
 
+  private readSnapshotsFromStorage(): Record<string, TerminalSnapshotState> {
+    if (typeof window === 'undefined') {
+      return {};
+    }
+    try {
+      const stored = localStorage.getItem(TERMINAL_SNAPSHOTS_STORAGE_KEY);
+      if (!stored) {
+        return {};
+      }
+      return JSON.parse(stored) as Record<string, TerminalSnapshotState>;
+    } catch (e) {
+      console.warn('[Terminal] Failed to read snapshots from localStorage:', e);
+      return {};
+    }
+  }
+
+  private writeSnapshotsToStorage(snapshots: Record<string, TerminalSnapshotState>): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    try {
+      if (Object.keys(snapshots).length === 0) {
+        localStorage.removeItem(TERMINAL_SNAPSHOTS_STORAGE_KEY);
+        return;
+      }
+      localStorage.setItem(TERMINAL_SNAPSHOTS_STORAGE_KEY, JSON.stringify(snapshots));
+    } catch (e) {
+      console.warn('[Terminal] Failed to write snapshots to localStorage:', e);
+    }
+  }
+
   /**
    * Get pending restored sessions (call this on component mount)
    */
@@ -167,12 +227,43 @@ class NodeTerminalService {
     return sessions;
   }
 
+  saveSnapshot(sessionId: string, snapshot: string, cols: number, rows: number): void {
+    if (!this.sessions.has(sessionId)) {
+      return;
+    }
+    if (!snapshot.trim()) {
+      return;
+    }
+    const snapshots = this.readSnapshotsFromStorage();
+    snapshots[sessionId] = {
+      snapshot,
+      cols,
+      rows,
+      updatedAt: new Date().toISOString(),
+    };
+    this.writeSnapshotsToStorage(snapshots);
+  }
+
+  getSnapshot(sessionId: string): TerminalSnapshotState | null {
+    const snapshots = this.readSnapshotsFromStorage();
+    return snapshots[sessionId] ?? null;
+  }
+
+  clearSnapshot(sessionId: string): void {
+    const snapshots = this.readSnapshotsFromStorage();
+    if (!(sessionId in snapshots)) {
+      return;
+    }
+    delete snapshots[sessionId];
+    this.writeSnapshotsToStorage(snapshots);
+  }
+
   /**
    * Check if a session can be reconnected
    */
   async checkSessionStatus(sessionId: string): Promise<SessionStatusResponse | null> {
     try {
-      const response = await fetch(`${GATEWAY_BASE_URL}/api/v1/terminal/sessions/${sessionId}/status`, {
+      const response = await fetch(await this.buildGatewayUrl(`/api/v1/terminal/sessions/${sessionId}/status`), {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -207,7 +298,7 @@ class NodeTerminalService {
       const actualNodeId = nodeId || status.node_id!;
       
       // Try to create session with reconnect flag
-      const response = await fetch(`${GATEWAY_BASE_URL}/api/v1/nodes/${actualNodeId}/terminal`, {
+      const response = await fetch(await this.buildGatewayUrl(`/api/v1/nodes/${actualNodeId}/terminal`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -297,7 +388,7 @@ class NodeTerminalService {
         requestBody.sandbox = sandbox;
       }
       
-      const response = await fetch(`${GATEWAY_BASE_URL}/api/v1/nodes/${nodeId}/terminal`, {
+      const response = await fetch(await this.buildGatewayUrl(`/api/v1/nodes/${nodeId}/terminal`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
@@ -338,18 +429,15 @@ class NodeTerminalService {
   /**
    * Connect WebSocket for a terminal session
    */
-  private connectWebSocket(sessionId: string): Promise<void> {
+  private async connectWebSocket(sessionId: string): Promise<void> {
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      throw new Error('Session not found');
+    }
+
+    const wsUrl = await this.buildGatewayWsUrl(`/ws/terminal/${sessionId}`);
+
     return new Promise((resolve, reject) => {
-      const session = this.sessions.get(sessionId);
-      if (!session) {
-        reject(new Error('Session not found'));
-        return;
-      }
-
-      // Convert http to ws
-      const wsBase = GATEWAY_BASE_URL.replace(/^http/, 'ws');
-      const wsUrl = `${wsBase}/ws/terminal/${sessionId}`;
-
       const socket = new WebSocket(wsUrl);
       this.sockets.set(sessionId, socket);
 
@@ -385,6 +473,13 @@ class NodeTerminalService {
               const warningHandler = this.timeoutWarningHandlers.get(sessionId);
               if (warningHandler) {
                 warningHandler(parsed as TimeoutWarning);
+              }
+              return;
+            }
+            if (parsed.type === 'snapshot') {
+              const snapshotHandler = this.snapshotHandlers.get(sessionId);
+              if (snapshotHandler) {
+                snapshotHandler(parsed as TerminalSnapshotFrame);
               }
               return;
             }
@@ -564,6 +659,19 @@ class NodeTerminalService {
     }
   }
 
+  sendSnapshot(sessionId: string, snapshot: string, cols: number, rows: number): void {
+    const socket = this.sockets.get(sessionId);
+    this.saveSnapshot(sessionId, snapshot, cols, rows);
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({
+        type: 'snapshot',
+        snapshot,
+        cols,
+        rows,
+      }));
+    }
+  }
+
   /**
    * Register data handler for a session
    */
@@ -585,6 +693,10 @@ class NodeTerminalService {
     this.timeoutWarningHandlers.set(sessionId, handler);
   }
 
+  onSnapshot(sessionId: string, handler: TerminalSnapshotHandler): void {
+    this.snapshotHandlers.set(sessionId, handler);
+  }
+
   /**
    * Close a terminal session
    */
@@ -602,13 +714,19 @@ class NodeTerminalService {
     this.dataHandlers.delete(sessionId);
     this.statusHandlers.delete(sessionId);
     this.timeoutWarningHandlers.delete(sessionId);
+    this.snapshotHandlers.delete(sessionId);
     this.sessions.delete(sessionId);
     this.reconnectionAttempts.delete(sessionId);
+    this.clearSnapshot(sessionId);
 
     // Notify API to close session on node
-    fetch(`${GATEWAY_BASE_URL}/api/v1/terminal/${sessionId}`, {
-      method: 'DELETE',
-    }).catch(console.error);
+    this.buildGatewayUrl(`/api/v1/terminal/${sessionId}`)
+      .then((url) =>
+        fetch(url, {
+          method: 'DELETE',
+        }),
+      )
+      .catch(console.error);
     
     // Save updated sessions to storage
     this.saveSessionsToStorage();
@@ -661,7 +779,7 @@ class NodeTerminalService {
   async listFiles(sessionId: string, path: string): Promise<FileListResponse | null> {
     try {
       const response = await fetch(
-        `${GATEWAY_BASE_URL}/api/v1/terminal/${sessionId}/files/list?path=${encodeURIComponent(path)}`,
+        await this.buildGatewayUrl(`/api/v1/terminal/${sessionId}/files/list?path=${encodeURIComponent(path)}`),
         {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
@@ -720,8 +838,14 @@ class NodeTerminalService {
           resolve({ success: false, error: 'Upload failed' });
         });
 
-        xhr.open('POST', `${GATEWAY_BASE_URL}/api/v1/terminal/${sessionId}/files/upload?path=${encodeURIComponent(path)}`);
-        xhr.send(new Blob([data as BlobPart]));
+        this.buildGatewayUrl(`/api/v1/terminal/${sessionId}/files/upload?path=${encodeURIComponent(path)}`)
+          .then((url) => {
+            xhr.open('POST', url);
+            xhr.send(new Blob([data as BlobPart]));
+          })
+          .catch(() => {
+            resolve({ success: false, error: 'Upload failed' });
+          });
       });
     } catch (error) {
       console.error('[Terminal] Error uploading file:', error);
@@ -735,7 +859,7 @@ class NodeTerminalService {
   async downloadFile(sessionId: string, path: string, filename?: string): Promise<boolean> {
     try {
       const response = await fetch(
-        `${GATEWAY_BASE_URL}/api/v1/terminal/${sessionId}/files/download?path=${encodeURIComponent(path)}`
+        await this.buildGatewayUrl(`/api/v1/terminal/${sessionId}/files/download?path=${encodeURIComponent(path)}`)
       );
 
       if (!response.ok) {
@@ -766,7 +890,7 @@ class NodeTerminalService {
   async deleteFile(sessionId: string, path: string): Promise<{ success: boolean; error?: string }> {
     try {
       const response = await fetch(
-        `${GATEWAY_BASE_URL}/api/v1/terminal/${sessionId}/files?path=${encodeURIComponent(path)}`,
+        await this.buildGatewayUrl(`/api/v1/terminal/${sessionId}/files?path=${encodeURIComponent(path)}`),
         {
           method: 'DELETE',
         }
@@ -790,7 +914,7 @@ class NodeTerminalService {
   async createDirectory(sessionId: string, path: string): Promise<{ success: boolean; error?: string }> {
     try {
       const response = await fetch(
-        `${GATEWAY_BASE_URL}/api/v1/terminal/${sessionId}/files/mkdir?path=${encodeURIComponent(path)}`,
+        await this.buildGatewayUrl(`/api/v1/terminal/${sessionId}/files/mkdir?path=${encodeURIComponent(path)}`),
         {
           method: 'POST',
         }
@@ -814,7 +938,7 @@ class NodeTerminalService {
   async statFile(sessionId: string, path: string): Promise<FileEntry | null> {
     try {
       const response = await fetch(
-        `${GATEWAY_BASE_URL}/api/v1/terminal/${sessionId}/files/stat?path=${encodeURIComponent(path)}`
+        await this.buildGatewayUrl(`/api/v1/terminal/${sessionId}/files/stat?path=${encodeURIComponent(path)}`)
       );
 
       if (!response.ok) {

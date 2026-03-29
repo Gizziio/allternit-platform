@@ -7,15 +7,15 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  FileText, 
-  ArrowUpRight, 
-  Clock, 
-  Maximize2,
-  ChevronDown,
-  ChevronUp,
-  Quote
-} from 'lucide-react';
+import {
+  FileText,
+  ArrowUpRight,
+  Clock,
+  ArrowsOut,
+  CaretDown,
+  CaretUp,
+  Quotes,
+} from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -120,7 +120,7 @@ export function DocumentCard({
             onClick={onOpenFull}
             className="h-7 text-[#888] hover:text-[#ECECEC] hover:bg-[#333]"
           >
-            <Maximize2 className="w-3.5 h-3.5 mr-1" />
+            <ArrowsOut className="w-3.5 h-3.5 mr-1" />
             <span className="text-xs">Open Full</span>
           </Button>
         )}
@@ -167,7 +167,7 @@ export function DocumentCard({
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-[#666]">
-                    <Quote className="w-5 h-5" />
+                    <Quotes size={20} />
                   </div>
                 )}
               </div>
@@ -193,7 +193,7 @@ export function DocumentCard({
               >
                 <span>[{citation.id}]</span>
                 <span className="truncate max-w-[120px]">{citation.source}</span>
-                <ArrowUpRight className="w-3 h-3" />
+                <ArrowUpRight size={12} />
               </a>
             ))}
             {citations.length > 4 && (
@@ -212,7 +212,7 @@ export function DocumentCard({
             )}
             {metadata?.createdAt && (
               <span className="flex items-center gap-1">
-                <Clock className="w-3 h-3" />
+                <Clock size={12} />
                 {formatTime(metadata.createdAt)}
               </span>
             )}
@@ -225,12 +225,12 @@ export function DocumentCard({
             >
               {isExpanded ? (
                 <>
-                  <ChevronUp className="w-3.5 h-3.5" />
+                  <CaretUp className="w-3.5 h-3.5" />
                   Show Less
                 </>
               ) : (
                 <>
-                  <ChevronDown className="w-3.5 h-3.5" />
+                  <CaretDown className="w-3.5 h-3.5" />
                   Show More
                 </>
               )}

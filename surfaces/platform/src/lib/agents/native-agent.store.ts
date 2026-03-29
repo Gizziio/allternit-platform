@@ -27,6 +27,12 @@ import {
   type CreateNativeAgentSessionRequest,
   type RuntimeExecutionMode,
   type SessionMessageAddedEvent,
+  type SessionPartDeltaEvent,
+  type SessionPartRemovedEvent,
+  type SessionPartUpdatedEvent,
+  type SessionPermissionAskedEvent,
+  type SessionQuestionAskedEvent,
+  type SessionQuestionRepliedEvent,
   type SessionSyncEvent,
   type SessionUpdatedEvent,
 } from "./native-agent-api";
@@ -43,8 +49,41 @@ import {
   createConfirmationHook,
 } from "./tools/tool-hooks";
 import { useToolRegistryStore } from "./tool-registry.store";
+import type { AgentModeSurface } from "@/stores/agent-surface-mode.store";
 
 const APP_API_BASE = API_BASE_URL.replace(/\/api\/v1$/i, "");
+
+// ============================================================================
+// Auto-title utility
+// ============================================================================
+
+/**
+ * Derives a concise session title from the user's first message.
+ * Strips common markdown syntax, collapses whitespace, and truncates at a
+ * word boundary to ≤ maxLength characters (default 50).
+ */
+function deriveSessionTitle(content: string, maxLength = 50): string {
+  const stripped = content
+    .replace(/^#{1,6}\s+/gm, "")           // headings
+    .replace(/\*{1,2}(.+?)\*{1,2}/g, "$1") // bold / italic
+    .replace(/`{1,3}[^`]*`{1,3}/g, "")     // inline + fenced code
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1") // links / images
+    .replace(/>\s*/gm, "")                 // blockquotes
+    .replace(/[-*+]\s+/gm, "")             // list markers
+    .replace(/\s+/g, " ")                  // collapse whitespace
+    .trim();
+
+  if (!stripped) return "";
+  if (stripped.length <= maxLength) return stripped;
+
+  const truncated = stripped.slice(0, maxLength);
+  const lastSpace = truncated.lastIndexOf(" ");
+  const cut = lastSpace > maxLength * 0.6 ? lastSpace : maxLength;
+  return truncated.slice(0, cut) + "…";
+}
+
+/** Default names that should be replaced by auto-title. */
+const AUTO_TITLE_SENTINELS = new Set(["New Chat", "Untitled", ""]);
 
 // ============================================================================
 // Types
@@ -56,6 +95,7 @@ export interface NativeMessage {
   id: string;
   role: MessageRole;
   content: string;
+  thinking?: string;
   timestamp: string;
   metadata?: Record<string, unknown>;
   toolCalls?: ToolCall[];
@@ -135,6 +175,28 @@ export interface Canvas {
   metadata?: Record<string, unknown>;
 }
 
+export interface PendingPermissionRequest {
+  requestId: string;
+  sessionId: string;
+  permission: string;
+  patterns: string[];
+  metadata: Record<string, unknown>;
+  always: string[];
+  tool?: { messageID: string; callID: string };
+}
+
+export interface PendingQuestionRequest {
+  requestId: string;
+  sessionId: string;
+  questions: Array<{
+    header: string;
+    question: string;
+    options: Array<{ label: string; description: string }>;
+    custom?: boolean;
+    multiple?: boolean;
+  }>;
+}
+
 export type StreamEventType =
   | "message_start"
   | "message_delta"
@@ -170,7 +232,6 @@ export interface StreamingState {
 }
 
 const LOCAL_DRAFT_SESSION_FLAG = "a2r_local_draft";
-const LOCAL_DRAFT_SESSION_SOURCE = "local-draft";
 
 function isNetworkRequestError(error: unknown): boolean {
   if (error instanceof TypeError) {
@@ -186,110 +247,10 @@ function isNetworkRequestError(error: unknown): boolean {
   );
 }
 
-function normalizeOptionalText(value: string | undefined): string | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-
-  const normalized = value.trim();
-  return normalized.length > 0 ? normalized : undefined;
-}
-
 export function isLocalDraftSession(
   session?: Pick<NativeSession, "metadata"> | null,
 ): boolean {
   return session?.metadata?.[LOCAL_DRAFT_SESSION_FLAG] === true;
-}
-
-function buildLocalDraftSession(
-  name?: string,
-  description?: string,
-  options: Pick<CreateSessionInput, "metadata" | "tags"> = {},
-): NativeSession {
-  const now = new Date().toISOString();
-
-  return {
-    id: `local-session-${Date.now()}`,
-    name: normalizeOptionalText(name) ?? "Agent Session",
-    description: normalizeOptionalText(description),
-    createdAt: now,
-    updatedAt: now,
-    lastAccessedAt: now,
-    messageCount: 0,
-    isActive: true,
-    tags: options.tags ?? [],
-    metadata: {
-      ...(options.metadata ?? {}),
-      [LOCAL_DRAFT_SESSION_FLAG]: true,
-      sync_state: LOCAL_DRAFT_SESSION_SOURCE,
-    },
-  };
-}
-
-function applyLocalSessionUpdates(
-  session: NativeSession,
-  updates: SessionUpdateInput,
-): NativeSession {
-  const nextMetadata =
-    updates.metadata === undefined
-      ? session.metadata
-      : {
-          ...(session.metadata ?? {}),
-          ...updates.metadata,
-          [LOCAL_DRAFT_SESSION_FLAG]: true,
-          sync_state: LOCAL_DRAFT_SESSION_SOURCE,
-        };
-
-  return {
-    ...session,
-    name:
-      updates.name === undefined
-        ? session.name
-        : normalizeOptionalText(updates.name),
-    description:
-      updates.description === undefined
-        ? session.description
-        : normalizeOptionalText(updates.description),
-    isActive: updates.isActive ?? session.isActive,
-    tags: updates.tags ?? session.tags,
-    metadata: nextMetadata,
-    updatedAt: new Date().toISOString(),
-    lastAccessedAt: new Date().toISOString(),
-  };
-}
-
-function appendLocalDraftMessages(
-  session: NativeSession,
-  existingMessages: NativeMessage[],
-  content: string,
-): { messages: NativeMessage[]; session: NativeSession } {
-  const timestamp = new Date().toISOString();
-  const userMessage: NativeMessage = {
-    id: `local-user-${Date.now()}`,
-    role: "user",
-    content,
-    timestamp,
-  };
-  const assistantMessage: NativeMessage = {
-    id: `local-assistant-${Date.now() + 1}`,
-    role: "assistant",
-    content:
-      "Agent services are offline, so this session is running as a local draft. You can keep the brief, notes, and canvases here until the runtime reconnects.",
-    timestamp,
-    metadata: {
-      [LOCAL_DRAFT_SESSION_FLAG]: true,
-    },
-  };
-
-  return {
-    messages: [...existingMessages, userMessage, assistantMessage],
-    session: {
-      ...session,
-      messageCount: existingMessages.length + 2,
-      updatedAt: timestamp,
-      lastAccessedAt: timestamp,
-    },
-  };
 }
 
 // ============================================================================
@@ -335,6 +296,7 @@ function transformBackendMessage(backend: BackendMessage): NativeMessage {
     id: backend.id,
     role: backend.role as MessageRole,
     content: backend.content,
+    thinking: backend.thinking,
     timestamp: backend.timestamp,
     metadata: backend.metadata,
   };
@@ -387,9 +349,27 @@ function appendUniqueMessage(
   messages: NativeMessage[],
   nextMessage: NativeMessage,
 ): NativeMessage[] {
-  if (messages.some((message) => message.id === nextMessage.id)) {
-    return messages;
+  const existingIndex = messages.findIndex((m) => m.id === nextMessage.id);
+
+  if (existingIndex !== -1) {
+    // Message already exists — update content only when the new version has
+    // real content (not a gizzi stub placeholder).
+    const hasRealContent =
+      nextMessage.content &&
+      nextMessage.content !== "[No text content]";
+    if (!hasRealContent) return messages;
+    const updated = [...messages];
+    updated[existingIndex] = {
+      ...messages[existingIndex],
+      content: nextMessage.content,
+      metadata: nextMessage.metadata,
+    };
+    return updated;
   }
+
+  // New message — skip empty gizzi stubs. sendMessageStream will add the real
+  // content once the model responds.
+  if (nextMessage.content === "[No text content]") return messages;
 
   return [...messages, nextMessage];
 }
@@ -418,6 +398,29 @@ function applyMessageAdded(
 ): Partial<NativeAgentState> {
   const nextMessage = transformBackendMessage(event);
   const existingMessages = state.messages[event.session_id] || [];
+  const isAlreadyPresent = existingMessages.some((m) => m.id === nextMessage.id);
+
+  // Increment unread count only for sessions the user is not currently viewing
+  const isBackground = state.activeSessionId !== event.session_id;
+  const currentUnread = state.unreadCounts[event.session_id] ?? 0;
+
+  // When the final assistant message arrives with real content, clear the
+  // streaming flag set by part_delta (in case sendMessageStream didn't clear it).
+  const isRealAssistantContent =
+    nextMessage.role === "assistant" &&
+    nextMessage.content &&
+    nextMessage.content !== "[No text content]";
+  const streamingClear: Partial<NativeAgentState> = isRealAssistantContent
+    ? {
+        streamingBySession: {
+          ...state.streamingBySession,
+          [event.session_id]: {
+            ...(state.streamingBySession[event.session_id] ?? {}),
+            isStreaming: false,
+          } as StreamingState,
+        },
+      }
+    : {};
 
   return {
     sessions: sortSessions(
@@ -425,9 +428,7 @@ function applyMessageAdded(
         session.id === event.session_id
           ? {
               ...session,
-              messageCount: existingMessages.some(
-                (message) => message.id === nextMessage.id,
-              )
+              messageCount: isAlreadyPresent
                 ? session.messageCount
                 : session.messageCount + 1,
               updatedAt: event.timestamp,
@@ -440,6 +441,10 @@ function applyMessageAdded(
       ...state.messages,
       [event.session_id]: appendUniqueMessage(existingMessages, nextMessage),
     },
+    unreadCounts: isBackground && !isAlreadyPresent
+      ? { ...state.unreadCounts, [event.session_id]: currentUnread + 1 }
+      : state.unreadCounts,
+    ...streamingClear,
   };
 }
 
@@ -448,13 +453,16 @@ function applySessionSyncEvent(
   event: SessionSyncEvent,
 ): Partial<NativeAgentState> {
   switch (event.type) {
-    case "created":
+    case "created": {
+      const newSession = transformSessionSnapshot(event);
+      const createdSurface = newSession.metadata?.surface as AgentModeSurface | undefined;
       return {
-        sessions: upsertSession(
-          state.sessions,
-          transformSessionSnapshot(event),
-        ),
+        sessions: upsertSession(state.sessions, newSession),
+        sessionIdBySurface: createdSurface
+          ? { ...state.sessionIdBySurface, [createdSurface]: newSession.id }
+          : state.sessionIdBySurface,
       };
+    }
 
     case "updated":
       return {
@@ -499,6 +507,164 @@ function applySessionSyncEvent(
     case "message_added":
       return applyMessageAdded(state, event);
 
+    case "part_updated": {
+      const e = event as SessionPartUpdatedEvent;
+      const partId = e.part.id as string | undefined;
+      if (!partId) return {};
+      const sessionParts = state.parts[e.session_id] ?? {};
+      const msgParts = sessionParts[e.message_id] ?? [];
+      const idx = msgParts.findIndex((p) => p.id === partId);
+      const nextParts = idx >= 0
+        ? [...msgParts.slice(0, idx), e.part, ...msgParts.slice(idx + 1)]
+        : [...msgParts, e.part];
+      return {
+        parts: {
+          ...state.parts,
+          [e.session_id]: { ...sessionParts, [e.message_id]: nextParts },
+        },
+      };
+    }
+
+    case "part_delta": {
+      const e = event as SessionPartDeltaEvent;
+      const sessionParts = state.parts[e.session_id] ?? {};
+      const msgParts = sessionParts[e.message_id] ?? [];
+      const idx = msgParts.findIndex((p) => p.id === e.part_id);
+
+      // Build updated parts — create the part if we haven't seen it yet
+      let nextParts: typeof msgParts;
+      if (idx < 0) {
+        nextParts = [...msgParts, { id: e.part_id, [e.field]: e.delta } as (typeof msgParts)[number]];
+      } else {
+        const existing = msgParts[idx];
+        const currentField = existing[e.field];
+        const nextPart = {
+          ...existing,
+          [e.field]: typeof currentField === "string" ? currentField + e.delta : e.delta,
+        };
+        nextParts = [...msgParts.slice(0, idx), nextPart, ...msgParts.slice(idx + 1)];
+      }
+
+      const partsUpdate = {
+        parts: {
+          ...state.parts,
+          [e.session_id]: { ...sessionParts, [e.message_id]: nextParts },
+        },
+      };
+
+      // For text fields: also stream into state.messages so the UI updates
+      // token-by-token (matching Claude Code desktop streaming behaviour).
+      if ((e.field === "text" || e.field === "content") && e.delta) {
+        const sessionMessages = state.messages[e.session_id] ?? [];
+        const msgIdx = sessionMessages.findIndex((m) => m.id === e.message_id);
+
+        let nextMessages: NativeMessage[];
+        if (msgIdx >= 0) {
+          const updated = [...sessionMessages];
+          updated[msgIdx] = {
+            ...sessionMessages[msgIdx],
+            content: (sessionMessages[msgIdx].content ?? "") + e.delta,
+          };
+          nextMessages = updated;
+        } else {
+          // First delta for this message — create the assistant message stub
+          nextMessages = [
+            ...sessionMessages,
+            {
+              id: e.message_id,
+              role: "assistant" as const,
+              content: e.delta,
+              timestamp: new Date().toISOString(),
+            },
+          ];
+        }
+
+        // Record the gizzi message ID in streaming state so sendMessageStream can
+        // find the SSE-created message rather than creating a duplicate.
+        const existingStreaming = state.streamingBySession[e.session_id];
+        const streamingUpdate: Partial<NativeAgentState> = {
+          streamingBySession: {
+            ...state.streamingBySession,
+            [e.session_id]: {
+              isStreaming: true,
+              currentMessageId: e.message_id,
+              abortController: existingStreaming?.abortController ?? null,
+              error: null,
+              streamBuffer: existingStreaming?.streamBuffer ?? "",
+              ...(existingStreaming ?? {}),
+              currentMessageId: e.message_id,
+            } as StreamingState,
+          },
+        };
+
+        return {
+          ...partsUpdate,
+          messages: { ...state.messages, [e.session_id]: nextMessages },
+          ...streamingUpdate,
+        };
+      }
+
+      return partsUpdate;
+    }
+
+    case "part_removed": {
+      const e = event as SessionPartRemovedEvent;
+      const sessionParts = state.parts[e.session_id] ?? {};
+      const msgParts = sessionParts[e.message_id] ?? [];
+      const nextParts = msgParts.filter((p) => p.id !== e.part_id);
+      return {
+        parts: {
+          ...state.parts,
+          [e.session_id]: { ...sessionParts, [e.message_id]: nextParts },
+        },
+      };
+    }
+
+    case "permission_asked": {
+      const e = event as SessionPermissionAskedEvent;
+      return {
+        pendingPermissions: {
+          ...state.pendingPermissions,
+          [e.request_id]: {
+            requestId: e.request_id,
+            sessionId: e.session_id,
+            permission: e.permission,
+            patterns: e.patterns,
+            metadata: e.metadata,
+            always: e.always,
+            tool: e.tool,
+          },
+        },
+      };
+    }
+
+    case "permission_replied": {
+      const nextPermissions = { ...state.pendingPermissions };
+      delete nextPermissions[event.request_id];
+      return { pendingPermissions: nextPermissions };
+    }
+
+    case "question_asked": {
+      const e = event as SessionQuestionAskedEvent;
+      return {
+        pendingQuestions: {
+          ...state.pendingQuestions,
+          [e.request_id]: {
+            requestId: e.request_id,
+            sessionId: e.session_id,
+            questions: e.questions,
+          },
+        },
+      };
+    }
+
+    case "question_replied": {
+      const e = event as SessionQuestionRepliedEvent;
+      const next = { ...state.pendingQuestions };
+      delete next[e.request_id];
+      return { pendingQuestions: next };
+    }
+
     case "status_changed":
       return {
         sessions: state.sessions.map((session) =>
@@ -531,8 +697,21 @@ interface NativeAgentState {
   sessionCanvases: Record<string, string[]>; // sessionId -> canvasIds
   executionMode: RuntimeExecutionModeStatus | null;
 
-  // Streaming state
-  streaming: StreamingState;
+  // Per-session streaming state (keyed by sessionId)
+  streamingBySession: Record<string, StreamingState>;
+
+  // Unread message counts for non-active sessions
+  unreadCounts: Record<string, number>;
+
+  // Part state: parts[sessionId][messageId] = Part[]
+  parts: Record<string, Record<string, Record<string, unknown>[]>>;
+
+  // Pending permission/question requests keyed by requestId
+  pendingPermissions: Record<string, PendingPermissionRequest>;
+  pendingQuestions: Record<string, PendingQuestionRequest>;
+
+  // Surface-to-session mapping (replaces EmbeddedAgentSessionStore)
+  sessionIdBySurface: Record<AgentModeSurface, string | null>;
 
   // UI State
   isLoadingSessions: boolean;
@@ -564,6 +743,11 @@ interface NativeAgentActions {
   ) => Promise<void>;
   deleteSession: (sessionId: string) => Promise<void>;
   setActiveSession: (sessionId: string | null) => void;
+
+  // Surface session mapping (replaces EmbeddedAgentSessionStore)
+  setSurfaceSession: (surface: AgentModeSurface, sessionId: string | null) => void;
+  clearSurfaceSession: (surface: AgentModeSurface) => void;
+  clearAllSurfaceSessions: () => void;
 
   // Runtime execution mode
   fetchExecutionMode: () => Promise<void>;
@@ -623,10 +807,27 @@ interface NativeAgentActions {
   ) => () => void;
   disconnectStream: () => void;
 
+  // Unread
+  markSessionRead: (sessionId: string) => void;
+
+  // Permissions
+  replyPermission: (
+    requestId: string,
+    reply: "once" | "always" | "reject",
+    message?: string,
+  ) => Promise<void>;
+
+  // Questions
+  replyQuestion: (
+    requestId: string,
+    answers: Array<{ questionIndex: number; answer: string | string[] }>,
+  ) => Promise<void>;
+  rejectQuestion: (requestId: string) => Promise<void>;
+
   // UI actions
   clearError: () => void;
   clearMessages: (sessionId: string) => void;
-  resetStreaming: () => void;
+  resetStreaming: (sessionId?: string) => void;
 }
 
 // ============================================================================
@@ -647,13 +848,12 @@ export const useNativeAgentStore = create<
         canvases: {},
         sessionCanvases: {},
         executionMode: null,
-        streaming: {
-          isStreaming: false,
-          currentMessageId: null,
-          abortController: null,
-          error: null,
-          streamBuffer: "",
-        },
+        streamingBySession: {},
+        unreadCounts: {},
+        sessionIdBySurface: { chat: null, cowork: null, code: null, browser: null },
+        parts: {},
+        pendingPermissions: {},
+        pendingQuestions: {},
         isLoadingSessions: false,
         isUpdatingSession: false,
         isLoadingMessages: false,
@@ -682,6 +882,10 @@ export const useNativeAgentStore = create<
             const sessions = sortSessions(
               backendSessions.map(transformBackendSession),
             );
+            // Do NOT rebuild sessionIdBySurface here. It is managed exclusively
+            // by setSurfaceSession / clearSurfaceSession (user-driven actions) and
+            // is persisted to localStorage. Rebuilding from session metadata would
+            // undo explicit clears (e.g. "New Chat") on every fetch.
             set({ sessions, isLoadingSessions: false });
           } catch (err) {
             const errorMsg =
@@ -731,9 +935,13 @@ export const useNativeAgentStore = create<
             const backendSession =
               await nativeAgentApi.sessions.createSession(request);
             const session = transformBackendSession(backendSession);
+            const surface = options.originSurface as AgentModeSurface | undefined;
             set((state) => ({
               sessions: upsertSession(state.sessions, session),
               activeSessionId: session.id,
+              sessionIdBySurface: surface
+                ? { ...state.sessionIdBySurface, [surface]: session.id }
+                : state.sessionIdBySurface,
             }));
             return session;
           } catch (err) {
@@ -777,9 +985,11 @@ export const useNativeAgentStore = create<
         },
 
         deleteSession: async (sessionId) => {
+          console.log('[NativeAgentStore] deleteSession called:', sessionId);
           set({ error: null });
           try {
             await nativeAgentApi.sessions.deleteSession(sessionId);
+            console.log('[NativeAgentStore] API delete successful:', sessionId);
             set((state) => {
               const newMessages = { ...state.messages };
               delete newMessages[sessionId];
@@ -796,7 +1006,9 @@ export const useNativeAgentStore = create<
                     : state.activeSessionId,
               };
             });
+            console.log('[NativeAgentStore] State updated after delete:', sessionId);
           } catch (err) {
+            console.error('[NativeAgentStore] Delete failed:', sessionId, err);
             const errorMsg =
               err instanceof Error ? err.message : "Failed to delete session";
             set({ error: errorMsg });
@@ -809,12 +1021,30 @@ export const useNativeAgentStore = create<
             return;
           }
 
-          set({ activeSessionId: sessionId });
+          set((state) => ({
+            activeSessionId: sessionId,
+            unreadCounts: sessionId
+              ? { ...state.unreadCounts, [sessionId]: 0 }
+              : state.unreadCounts,
+          }));
           if (sessionId) {
             void get().fetchMessages(sessionId);
             void get().fetchSessionCanvases(sessionId);
           }
         },
+
+        setSurfaceSession: (surface, sessionId) =>
+          set((state) => ({
+            sessionIdBySurface: { ...state.sessionIdBySurface, [surface]: sessionId },
+          })),
+
+        clearSurfaceSession: (surface) =>
+          set((state) => ({
+            sessionIdBySurface: { ...state.sessionIdBySurface, [surface]: null },
+          })),
+
+        clearAllSurfaceSessions: () =>
+          set({ sessionIdBySurface: { chat: null, cowork: null, code: null, browser: null } }),
 
         fetchExecutionMode: async () => {
           set({ error: null, isLoadingExecutionMode: true });
@@ -867,13 +1097,54 @@ export const useNativeAgentStore = create<
             const backendMessages =
               await nativeAgentApi.sessions.listMessages(sessionId);
 
-            set((state) => ({
-              messages: {
-                ...state.messages,
-                [sessionId]: backendMessages.map(transformBackendMessage),
-              },
-              isLoadingMessages: false,
-            }));
+            set((state) => {
+              const existingMsgs = state.messages[sessionId] ?? [];
+
+              // Gizzi's /messages endpoint stores assistant messages with parts:[]
+              // (no text content) because it doesn't capture the streaming response
+              // body. Any message marked "[No text content]" is a stale server stub.
+              // If the server data would drop messages that we have real content for
+              // in-memory (e.g. sent via sendMessageStream), keep the in-memory version.
+              // Don't overwrite in-memory messages when a stream is actively writing
+              // to this session. The stream will provide the authoritative content.
+              if (state.streamingBySession[sessionId]?.isStreaming && existingMsgs.length > 0) {
+                return { isLoadingMessages: false };
+              }
+
+              const validMessages = backendMessages.filter(
+                (m) => m.content !== "[No text content]"
+              );
+
+              // Backend returned nothing but we have optimistic in-memory messages
+              // (e.g. a new session where the message was just sent). Keep in-memory.
+              if (backendMessages.length === 0 && existingMsgs.length > 0) {
+                return { isLoadingMessages: false };
+              }
+
+              if (validMessages.length < backendMessages.length && existingMsgs.length > 0) {
+                // Some messages were filtered (gizzi stubs). Keep in-memory version
+                // because it has the real streamed content.
+                return { isLoadingMessages: false };
+              }
+
+              // Merge thinking content from in-memory messages — the backend doesn't
+              // persist reasoning/thinking blocks, so we preserve them from the
+              // live-stream in-memory state by ID.
+              const existingById = new Map(existingMsgs.map((m) => [m.id, m]));
+              return {
+                messages: {
+                  ...state.messages,
+                  [sessionId]: validMessages.map((m) => {
+                    const transformed = transformBackendMessage(m);
+                    const existing = existingById.get(transformed.id);
+                    return existing?.thinking
+                      ? { ...transformed, thinking: existing.thinking }
+                      : transformed;
+                  }),
+                },
+                isLoadingMessages: false,
+              };
+            });
           } catch (err) {
             set({ isLoadingMessages: false });
             // Don't re-throw - let the caller handle errors gracefully
@@ -882,6 +1153,18 @@ export const useNativeAgentStore = create<
 
         sendMessage: async (sessionId, content, role = "user") => {
           set({ error: null });
+
+          // Auto-title: capture state before adding this message.
+          const isFirstUserMessage =
+            role === "user" &&
+            !(get().messages[sessionId]?.some((m) => m.role === "user"));
+          const sessionBeforeSend = get().sessions.find(
+            (s) => s.id === sessionId,
+          );
+          const needsAutoTitle =
+            isFirstUserMessage &&
+            AUTO_TITLE_SENTINELS.has(sessionBeforeSend?.name ?? "");
+
           const optimisticMessage: NativeMessage = {
             id: `temp-${Date.now()}`,
             role,
@@ -917,6 +1200,23 @@ export const useNativeAgentStore = create<
                 ),
               },
             }));
+
+            // Auto-title after first successful user message
+            if (needsAutoTitle) {
+              const title = deriveSessionTitle(content);
+              if (title) {
+                get()
+                  .updateSession(sessionId, { name: title })
+                  .catch((err) => {
+                    set({
+                      error:
+                        err instanceof Error
+                          ? err.message
+                          : "Failed to auto-title session",
+                    });
+                  });
+              }
+            }
           } catch (err) {
             const errorMsg =
               err instanceof Error ? err.message : "Failed to send message";
@@ -938,21 +1238,36 @@ export const useNativeAgentStore = create<
         // ----------------------------------------------------------------------
 
         sendMessageStream: async (sessionId, content, onEvent) => {
-          const { isStreaming } = get().streaming;
-          if (isStreaming) {
+          const sessionStreaming = get().streamingBySession[sessionId];
+          if (sessionStreaming?.isStreaming) {
             throw new Error("Already streaming");
           }
 
-          set({
+          // Auto-title: capture state before adding this message.
+          const isFirstUserMessage = !(
+            get().messages[sessionId]?.some((m) => m.role === "user")
+          );
+          const sessionBeforeStream = get().sessions.find(
+            (s) => s.id === sessionId,
+          );
+          const needsAutoTitle =
+            isFirstUserMessage &&
+            AUTO_TITLE_SENTINELS.has(sessionBeforeStream?.name ?? "");
+
+          const abortController = new AbortController();
+          set((state) => ({
             error: null,
-            streaming: {
-              isStreaming: true,
-              currentMessageId: null,
-              abortController: new AbortController(),
-              error: null,
-              streamBuffer: "",
+            streamingBySession: {
+              ...state.streamingBySession,
+              [sessionId]: {
+                isStreaming: true,
+                currentMessageId: null,
+                abortController,
+                error: null,
+                streamBuffer: "",
+              },
             },
-          });
+          }));
 
           // Add user message
           const userMessage: NativeMessage = {
@@ -969,14 +1284,29 @@ export const useNativeAgentStore = create<
             },
           }));
 
-          const abortController = get().streaming.abortController;
-          if (!abortController) throw new Error("No abort controller");
+          // Auto-title after adding user message
+          if (needsAutoTitle) {
+            const title = deriveSessionTitle(content);
+            if (title) {
+              get()
+                .updateSession(sessionId, { name: title })
+                .catch((err) => {
+                  set({
+                    error:
+                      err instanceof Error
+                        ? err.message
+                        : "Failed to auto-title session",
+                  });
+                });
+            }
+          }
 
           let assistantMessageId: string | null = null;
           const assistantParts: string[] = [];
+          const thinkingParts: string[] = [];
 
           try {
-            const response = await fetch(`${APP_API_BASE}/api/agent-chat`, {
+            const response = await fetch(`/api/agent-chat`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ chatId: sessionId, message: content }),
@@ -1003,6 +1333,104 @@ export const useNativeAgentStore = create<
                 if (done) break;
 
                 buffer += decoder.decode(value, { stream: true });
+
+                // Gizzi returns a single JSON object (not SSE). Detect and handle it:
+                // format: {"data":{"info":{...},"parts":[{type:"text",text:"..."}]}}
+                const trimmed = buffer.trimStart();
+                if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+                  try {
+                    const gizziPayload = JSON.parse(buffer.trim()) as {
+                      data?: { info?: unknown; parts?: Array<{ type?: string; text?: string }> };
+                      info?: unknown;
+                      parts?: Array<{ type?: string; text?: string }>;
+                    };
+                    const inner = gizziPayload?.data ?? gizziPayload;
+                    if (inner && Array.isArray((inner as any).parts)) {
+                      const parts = (inner as any).parts as Array<{ type?: string; text?: string }>;
+                      const textContent = parts
+                        .filter((p) => p.type === "text" && typeof p.text === "string")
+                        .map((p) => p.text as string)
+                        .join("");
+
+                      // Check for gizzi-level error (e.g. ECONNRESET from the model API)
+                      const gizziError = (inner as any)?.info?.error?.message as string | undefined;
+
+                      if (textContent) {
+                        // Prefer the message ID that SSE part_delta events already created
+                        // (stored in streamingBySession.currentMessageId). This avoids
+                        // creating a duplicate assistant message alongside the streamed one.
+                        const sseMessageId = get().streamingBySession[sessionId]?.currentMessageId;
+                        if (!assistantMessageId) {
+                          if (sseMessageId) {
+                            // SSE already streamed this message — update it with final content
+                            assistantMessageId = sseMessageId;
+                            set((state) => ({
+                              messages: {
+                                ...state.messages,
+                                [sessionId]: state.messages[sessionId].map((m) =>
+                                  m.id === sseMessageId ? { ...m, content: textContent } : m,
+                                ),
+                              },
+                            }));
+                          } else {
+                            // SSE didn't deliver any deltas (fallback) — create message now
+                            const newMessage: NativeMessage = {
+                              id: `assistant-${Date.now()}`,
+                              role: "assistant",
+                              content: textContent,
+                              timestamp: new Date().toISOString(),
+                            };
+                            assistantMessageId = newMessage.id;
+                            set((state) => ({
+                              messages: {
+                                ...state.messages,
+                                [sessionId]: [...(state.messages[sessionId] || []), newMessage],
+                              },
+                            }));
+                          }
+                        } else {
+                          set((state) => ({
+                            messages: {
+                              ...state.messages,
+                              [sessionId]: state.messages[sessionId].map((m) =>
+                                m.id === assistantMessageId ? { ...m, content: textContent } : m,
+                              ),
+                            },
+                          }));
+                        }
+                        buffer = "";
+                      } else if (!textContent && gizziError) {
+                        // Gizzi got an error from the model (e.g. connection reset).
+                        // Surface it as an error message so the user knows what happened.
+                        const errorMessage: NativeMessage = {
+                          id: `error-${Date.now()}`,
+                          role: "assistant",
+                          content: `⚠️ ${gizziError}`,
+                          timestamp: new Date().toISOString(),
+                        };
+                        set((state) => ({
+                          error: gizziError,
+                          messages: {
+                            ...state.messages,
+                            [sessionId]: [...(state.messages[sessionId] || []), errorMessage],
+                          },
+                          streamingBySession: {
+                            ...state.streamingBySession,
+                            [sessionId]: {
+                              ...(state.streamingBySession[sessionId] ?? {}),
+                              isStreaming: false,
+                              error: gizziError,
+                            } as StreamingState,
+                          },
+                        }));
+                        buffer = "";
+                      }
+                    }
+                  } catch {
+                    // Not valid JSON yet — wait for more chunks
+                  }
+                }
+
                 const lines = buffer.split("\n");
                 buffer = lines.pop() ?? "";
 
@@ -1019,6 +1447,7 @@ export const useNativeAgentStore = create<
                       delta?: {
                         text?: string;
                         content?: string;
+                        thinking?: string;
                         type?: string;
                       };
                       tool_id?: string;
@@ -1047,9 +1476,12 @@ export const useNativeAgentStore = create<
                               newMessage,
                             ],
                           },
-                          streaming: {
-                            ...state.streaming,
-                            currentMessageId: newMessage.id,
+                          streamingBySession: {
+                            ...state.streamingBySession,
+                            [sessionId]: {
+                              ...(state.streamingBySession[sessionId] ?? {}),
+                              currentMessageId: newMessage.id,
+                            } as StreamingState,
                           },
                         }));
                       }
@@ -1068,9 +1500,27 @@ export const useNativeAgentStore = create<
                       }
 
                       case "content_block_delta": {
-                        const textDelta =
-                          rawEvent.delta?.text || rawEvent.delta?.content;
-                        if (textDelta) {
+                        const deltaType = rawEvent.delta?.type;
+                        const thinkingDelta = deltaType === "thinking_delta" ? rawEvent.delta?.thinking : undefined;
+                        const textDelta = thinkingDelta
+                          ? undefined
+                          : (rawEvent.delta?.text || rawEvent.delta?.content);
+
+                        if (thinkingDelta) {
+                          ensureAssistantMessage();
+                          thinkingParts.push(thinkingDelta);
+                          const fullThinking = thinkingParts.join("");
+                          set((state) => ({
+                            messages: {
+                              ...state.messages,
+                              [sessionId]: state.messages[sessionId].map((m) =>
+                                m.id === assistantMessageId
+                                  ? { ...m, thinking: fullThinking }
+                                  : m,
+                              ),
+                            },
+                          }));
+                        } else if (textDelta) {
                           ensureAssistantMessage();
                           assistantParts.push(textDelta);
                           const fullContent = assistantParts.join("");
@@ -1090,9 +1540,12 @@ export const useNativeAgentStore = create<
                                   : m,
                               ),
                             },
-                            streaming: {
-                              ...state.streaming,
-                              streamBuffer: fullContent,
+                            streamingBySession: {
+                              ...state.streamingBySession,
+                              [sessionId]: {
+                                ...(state.streamingBySession[sessionId] ?? {}),
+                                streamBuffer: fullContent,
+                              } as StreamingState,
                             },
                           }));
                         }
@@ -1175,10 +1628,13 @@ export const useNativeAgentStore = create<
                           timestamp,
                         });
                         set((state) => ({
-                          streaming: {
-                            ...state.streaming,
-                            isStreaming: false,
-                            currentMessageId: null,
+                          streamingBySession: {
+                            ...state.streamingBySession,
+                            [sessionId]: {
+                              ...(state.streamingBySession[sessionId] ?? {}),
+                              isStreaming: false,
+                              currentMessageId: null,
+                            } as StreamingState,
                           },
                         }));
                         break;
@@ -1193,10 +1649,13 @@ export const useNativeAgentStore = create<
                         });
                         set((state) => ({
                           error: rawEvent.error || "Stream error",
-                          streaming: {
-                            ...state.streaming,
-                            error: rawEvent.error || "Stream error",
-                            isStreaming: false,
+                          streamingBySession: {
+                            ...state.streamingBySession,
+                            [sessionId]: {
+                              ...(state.streamingBySession[sessionId] ?? {}),
+                              error: rawEvent.error || "Stream error",
+                              isStreaming: false,
+                            } as StreamingState,
                           },
                         }));
                         break;
@@ -1212,19 +1671,25 @@ export const useNativeAgentStore = create<
             }
 
             set((state) => ({
-              streaming: {
-                ...state.streaming,
-                isStreaming: false,
-                currentMessageId: null,
+              streamingBySession: {
+                ...state.streamingBySession,
+                [sessionId]: {
+                  ...(state.streamingBySession[sessionId] ?? {}),
+                  isStreaming: false,
+                  currentMessageId: null,
+                } as StreamingState,
               },
             }));
           } catch (err) {
             if (err instanceof Error && err.name === "AbortError") {
               // User aborted - not an error
               set((state) => ({
-                streaming: {
-                  ...state.streaming,
-                  isStreaming: false,
+                streamingBySession: {
+                  ...state.streamingBySession,
+                  [sessionId]: {
+                    ...(state.streamingBySession[sessionId] ?? {}),
+                    isStreaming: false,
+                  } as StreamingState,
                 },
               }));
             } else {
@@ -1232,10 +1697,13 @@ export const useNativeAgentStore = create<
                 err instanceof Error ? err.message : "Stream failed";
               set((state) => ({
                 error: errorMsg,
-                streaming: {
-                  ...state.streaming,
-                  error: errorMsg,
-                  isStreaming: false,
+                streamingBySession: {
+                  ...state.streamingBySession,
+                  [sessionId]: {
+                    ...(state.streamingBySession[sessionId] ?? {}),
+                    error: errorMsg,
+                    isStreaming: false,
+                  } as StreamingState,
                 },
               }));
             }
@@ -1245,19 +1713,22 @@ export const useNativeAgentStore = create<
         abortGeneration: async (sessionId) => {
           const targetSessionId = sessionId || get().activeSessionId;
 
-          // Abort local stream
-          const { streaming } = get();
-          if (streaming.abortController) {
-            streaming.abortController.abort();
+          if (targetSessionId) {
+            const sessionStream = get().streamingBySession[targetSessionId];
+            if (sessionStream?.abortController) {
+              sessionStream.abortController.abort();
+            }
+            set((state) => ({
+              streamingBySession: {
+                ...state.streamingBySession,
+                [targetSessionId]: {
+                  ...(state.streamingBySession[targetSessionId] ?? {}),
+                  isStreaming: false,
+                  abortController: null,
+                } as StreamingState,
+              },
+            }));
           }
-
-          set((state) => ({
-            streaming: {
-              ...state.streaming,
-              isStreaming: false,
-              abortController: null,
-            },
-          }));
 
           // Notify server
           if (targetSessionId) {
@@ -1269,20 +1740,31 @@ export const useNativeAgentStore = create<
           }
         },
 
-        resetStreaming: () => {
-          const { streaming } = get();
-          if (streaming.abortController) {
-            streaming.abortController.abort();
+        resetStreaming: (sessionId) => {
+          if (sessionId) {
+            const sessionStream = get().streamingBySession[sessionId];
+            if (sessionStream?.abortController) {
+              sessionStream.abortController.abort();
+            }
+            set((state) => ({
+              streamingBySession: {
+                ...state.streamingBySession,
+                [sessionId]: {
+                  isStreaming: false,
+                  currentMessageId: null,
+                  abortController: null,
+                  error: null,
+                  streamBuffer: "",
+                },
+              },
+            }));
+          } else {
+            const { streamingBySession } = get();
+            for (const stream of Object.values(streamingBySession)) {
+              stream.abortController?.abort();
+            }
+            set({ streamingBySession: {} });
           }
-          set({
-            streaming: {
-              isStreaming: false,
-              currentMessageId: null,
-              abortController: null,
-              error: null,
-              streamBuffer: "",
-            },
-          });
         },
 
         // ----------------------------------------------------------------------
@@ -1540,42 +2022,64 @@ export const useNativeAgentStore = create<
         connectSessionSync: () => {
           get().disconnectSessionSync();
 
-          const eventSource = nativeAgentApi.sessions.createSyncSource();
+          let cancelled = false;
+          let retryDelay = 1000; // ms — grows to max 30s
+          const MAX_RETRY_DELAY = 30_000;
 
-          eventSource.onopen = () => {
+          function connect() {
+            if (cancelled) return;
+
+            const eventSource = nativeAgentApi.sessions.createSyncSource();
+
+            eventSource.onopen = () => {
+              retryDelay = 1000; // reset on successful connection
+              set({
+                eventSource,
+                isSessionSyncConnected: true,
+                sessionSyncError: null,
+              });
+              // Refresh sessions when SSE connects — ensures we have a current
+              // snapshot even if the initial fetchSessions() fired before gizzi
+              // was ready (common in Electron where the app loads in parallel
+              // with the backend startup).
+              void get().fetchSessions().catch(() => {});
+            };
+
+            eventSource.onmessage = (event) => {
+              try {
+                const data = JSON.parse(event.data) as SessionSyncEvent;
+                set((state) => applySessionSyncEvent(state, data));
+              } catch {
+                // Ignore unparseable frames — do not drop the connection
+              }
+            };
+
+            eventSource.onerror = () => {
+              eventSource.close();
+              set({
+                eventSource: null,
+                isSessionSyncConnected: false,
+                sessionSyncError: "Session sync disconnected — retrying…",
+              });
+              if (!cancelled) {
+                setTimeout(() => {
+                  retryDelay = Math.min(retryDelay * 1.5, MAX_RETRY_DELAY);
+                  connect();
+                }, retryDelay);
+              }
+            };
+
             set({
               eventSource,
-              isSessionSyncConnected: true,
+              isSessionSyncConnected: false,
               sessionSyncError: null,
             });
-          };
+          }
 
-          eventSource.onmessage = (event) => {
-            try {
-              const data = JSON.parse(event.data) as SessionSyncEvent;
-              set((state) => applySessionSyncEvent(state, data));
-            } catch (error) {
-              set({
-                isSessionSyncConnected: false,
-                sessionSyncError: "Failed to parse session sync payload",
-              });
-            }
-          };
-
-          eventSource.onerror = () => {
-            set({
-              isSessionSyncConnected: false,
-              sessionSyncError: "Session sync disconnected",
-            });
-          };
-
-          set({
-            eventSource,
-            isSessionSyncConnected: false,
-            sessionSyncError: null,
-          });
+          connect();
 
           return () => {
+            cancelled = true;
             get().disconnectSessionSync();
           };
         },
@@ -1607,6 +2111,39 @@ export const useNativeAgentStore = create<
         // UI Actions
         // ----------------------------------------------------------------------
 
+        markSessionRead: (sessionId) => {
+          set((state) => ({
+            unreadCounts: { ...state.unreadCounts, [sessionId]: 0 },
+          }));
+        },
+
+        replyPermission: async (requestId, reply, message) => {
+          await nativeAgentApi.permissions.replyPermission(requestId, reply, message);
+          set((state) => {
+            const next = { ...state.pendingPermissions };
+            delete next[requestId];
+            return { pendingPermissions: next };
+          });
+        },
+
+        replyQuestion: async (requestId, answers) => {
+          await nativeAgentApi.questions.replyQuestion(requestId, answers);
+          set((state) => {
+            const next = { ...state.pendingQuestions };
+            delete next[requestId];
+            return { pendingQuestions: next };
+          });
+        },
+
+        rejectQuestion: async (requestId) => {
+          await nativeAgentApi.questions.rejectQuestion(requestId);
+          set((state) => {
+            const next = { ...state.pendingQuestions };
+            delete next[requestId];
+            return { pendingQuestions: next };
+          });
+        },
+
         clearError: () => set({ error: null }),
 
         clearMessages: (sessionId) => {
@@ -1625,6 +2162,8 @@ export const useNativeAgentStore = create<
           messages: state.messages,
           canvases: state.canvases,
           sessionCanvases: state.sessionCanvases,
+          unreadCounts: state.unreadCounts,
+          sessionIdBySurface: state.sessionIdBySurface,
         }),
       },
     ),
@@ -1659,16 +2198,18 @@ export const selectSessionCanvases = (
   return canvasIds.map((id) => canvases[id]).filter(Boolean);
 };
 
-export const selectIsStreaming = (
+export const selectIsSessionStreaming = (
   state: NativeAgentState & NativeAgentActions,
+  sessionId: string,
 ): boolean => {
-  return state.streaming.isStreaming;
+  return state.streamingBySession[sessionId]?.isStreaming ?? false;
 };
 
-export const selectStreamingError = (
+export const selectSessionStreamingError = (
   state: NativeAgentState & NativeAgentActions,
+  sessionId: string,
 ): string | null => {
-  return state.streaming.error;
+  return state.streamingBySession[sessionId]?.error ?? null;
 };
 
 export const selectSessionSyncState = (
@@ -1708,16 +2249,19 @@ export function useSessionCanvases(sessionId: string): Canvas[] {
   );
 }
 
-export function useStreamingState(): {
+export function useSessionStreamingState(sessionId: string): {
   isStreaming: boolean;
   error: string | null;
   buffer: string;
 } {
-  return useNativeAgentStore((state) => ({
-    isStreaming: state.streaming.isStreaming,
-    error: state.streaming.error,
-    buffer: state.streaming.streamBuffer,
-  }));
+  return useNativeAgentStore((state) => {
+    const s = state.streamingBySession[sessionId];
+    return {
+      isStreaming: s?.isStreaming ?? false,
+      error: s?.error ?? null,
+      buffer: s?.streamBuffer ?? "",
+    };
+  });
 }
 
 export function useSessionSyncState(): {

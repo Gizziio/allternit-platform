@@ -15,13 +15,13 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   FileLock,
-  AlertTriangle,
-  Unlock,
+  Warning,
+  LockOpen,
   Clock,
   User,
-  RefreshCw,
+  ArrowsClockwise,
   File,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import type { FileLock as FileLockType } from '../types';
 import { metaSwarmClient } from '../api';
 
@@ -105,13 +105,13 @@ export function FileConflictPanel({ className }: FileConflictPanelProps) {
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <FileLock className="h-5 w-5" />
+            <FileLock size={20} />
             File Locks
           </div>
           <div className="flex items-center gap-2">
             {conflicts.length > 0 && (
               <Badge variant="destructive">
-                <AlertTriangle className="h-3 w-3 mr-1" />
+                <Warning className="h-3 w-3 mr-1" />
                 {conflicts.length} Conflicts
               </Badge>
             )}
@@ -127,7 +127,7 @@ export function FileConflictPanel({ className }: FileConflictPanelProps) {
               onClick={fetchFileLocks}
               disabled={loading}
             >
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              <ArrowsClockwise className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             </Button>
           </div>
         </CardTitle>
@@ -135,14 +135,14 @@ export function FileConflictPanel({ className }: FileConflictPanelProps) {
       <CardContent className="space-y-4">
         {error && (
           <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
+            <Warning size={16} />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
 
         {conflicts.length > 0 && (
           <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
+            <Warning size={16} />
             <AlertDescription>
               {conflicts.length} file(s) have contention between agents
             </AlertDescription>
@@ -151,7 +151,7 @@ export function FileConflictPanel({ className }: FileConflictPanelProps) {
 
         {staleLocks.length > 0 && (
           <Alert className="border-yellow-500 text-yellow-600">
-            <Clock className="h-4 w-4" />
+            <Clock size={16} />
             <AlertDescription>
               {staleLocks.length} lock(s) are stale (held &gt; 5 minutes)
             </AlertDescription>
@@ -184,7 +184,7 @@ export function FileConflictPanel({ className }: FileConflictPanelProps) {
                 >
                   <div className="flex-shrink-0">
                     {hasConflict ? (
-                      <AlertTriangle className="h-5 w-5 text-red-500" />
+                      <Warning className="h-5 w-5 text-red-500" />
                     ) : isStale ? (
                       <Clock className="h-5 w-5 text-yellow-500" />
                     ) : (
@@ -203,7 +203,7 @@ export function FileConflictPanel({ className }: FileConflictPanelProps) {
                       {lock.file_path}
                     </div>
                     <div className="flex items-center gap-2 mt-1 text-xs">
-                      <User className="h-3 w-3" />
+                      <User size={12} />
                       <span className="font-mono">{lock.agent_id.id.slice(0, 8)}</span>
                       <Clock className="h-3 w-3 ml-2" />
                       <span>{getLockDuration(lock.locked_at)}</span>
@@ -222,7 +222,7 @@ export function FileConflictPanel({ className }: FileConflictPanelProps) {
                       </Badge>
                     )}
                     <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                      <Unlock className="h-4 w-4" />
+                      <LockOpen size={16} />
                     </Button>
                   </div>
                 </div>

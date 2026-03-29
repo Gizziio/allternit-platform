@@ -14,16 +14,15 @@
  * @version 1.0.0
  */
 
-import { API_BASE_URL } from "./api-config";
-
 // ============================================================================
 // API Configuration
 // ============================================================================
 
-const AGENT_SESSION_API_BASE = `${API_BASE_URL}/agent-sessions`;
-const TOOLS_API_BASE = API_BASE_URL;
-const RUNTIME_API_BASE = API_BASE_URL;
-const APP_API_BASE = API_BASE_URL.replace(/\/api\/v1$/i, "");
+const API_V1_BASE = "/api/v1";
+const AGENT_SESSION_API_BASE = `${API_V1_BASE}/agent-sessions`;
+const TOOLS_API_BASE = API_V1_BASE;
+const RUNTIME_API_BASE = API_V1_BASE;
+const APP_API_BASE = "";
 
 // ============================================================================
 // Types - Backend API Response Shapes
@@ -47,6 +46,7 @@ export interface BackendMessage {
   id: string;
   role: string;
   content: string;
+  thinking?: string;
   timestamp: string;
   metadata?: Record<string, unknown>;
 }
@@ -136,12 +136,79 @@ export interface SessionStatusChangedEvent {
   active: boolean;
 }
 
+export interface SessionPartUpdatedEvent {
+  type: "part_updated";
+  session_id: string;
+  message_id: string;
+  part: Record<string, unknown>;
+}
+
+export interface SessionPartDeltaEvent {
+  type: "part_delta";
+  session_id: string;
+  message_id: string;
+  part_id: string;
+  field: string;
+  delta: string;
+}
+
+export interface SessionPartRemovedEvent {
+  type: "part_removed";
+  session_id: string;
+  message_id: string;
+  part_id: string;
+}
+
+export interface SessionPermissionAskedEvent {
+  type: "permission_asked";
+  request_id: string;
+  session_id: string;
+  permission: string;
+  patterns: string[];
+  metadata: Record<string, unknown>;
+  always: string[];
+  tool?: { messageID: string; callID: string };
+}
+
+export interface SessionPermissionRepliedEvent {
+  type: "permission_replied";
+  request_id: string;
+  session_id?: string;
+  reply?: string;
+}
+
+export interface SessionQuestionAskedEvent {
+  type: "question_asked";
+  request_id: string;
+  session_id: string;
+  questions: Array<{
+    header: string;
+    question: string;
+    options: Array<{ label: string; description: string }>;
+    custom?: boolean;
+    multiple?: boolean;
+  }>;
+}
+
+export interface SessionQuestionRepliedEvent {
+  type: "question_replied";
+  request_id: string;
+  session_id?: string;
+}
+
 export type SessionSyncEvent =
   | SessionCreatedEvent
   | SessionUpdatedEvent
   | SessionDeletedEvent
   | SessionMessageAddedEvent
-  | SessionStatusChangedEvent;
+  | SessionStatusChangedEvent
+  | SessionPartUpdatedEvent
+  | SessionPartDeltaEvent
+  | SessionPartRemovedEvent
+  | SessionPermissionAskedEvent
+  | SessionPermissionRepliedEvent
+  | SessionQuestionAskedEvent
+  | SessionQuestionRepliedEvent;
 
 export type RuntimeExecutionMode = "plan" | "safe" | "auto";
 
@@ -351,13 +418,17 @@ export const sessionApi = {
    * DELETE /api/v1/agent-sessions/:id
    */
   async deleteSession(sessionId: string): Promise<void> {
+    const url = `${AGENT_SESSION_API_BASE}/${encodeURIComponent(sessionId)}`;
+    console.log('[NativeAgentApi] DELETE request to:', url);
     const response = await fetch(
-      `${AGENT_SESSION_API_BASE}/${encodeURIComponent(sessionId)}`,
+      url,
       {
         method: "DELETE",
       },
     );
+    console.log('[NativeAgentApi] DELETE response status:', response.status, response.statusText);
     if (!response.ok) {
+      console.error('[NativeAgentApi] DELETE failed, throwing error');
       await handleResponse(response);
     }
   },
@@ -688,6 +759,67 @@ export const canvasApi = {
 };
 
 // ============================================================================
+// Permissions API
+// ============================================================================
+
+export const permissionsApi = {
+  async replyPermission(
+    requestID: string,
+    reply: "once" | "always" | "reject",
+    message?: string,
+  ): Promise<void> {
+    const response = await fetch(
+      `/api/v1/permissions/${encodeURIComponent(requestID)}/reply`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reply, message }),
+      },
+    );
+    if (!response.ok) {
+      await handleResponse(response);
+    }
+  },
+};
+
+// ============================================================================
+// Questions API
+// ============================================================================
+
+export const questionsApi = {
+  async replyQuestion(
+    requestID: string,
+    answers: Array<{ questionIndex: number; answer: string | string[] }>,
+  ): Promise<void> {
+    const response = await fetch(
+      `/api/v1/questions/${encodeURIComponent(requestID)}/reply`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answers }),
+      },
+    );
+    if (!response.ok) {
+      await handleResponse(response);
+    }
+  },
+
+  async rejectQuestion(requestID: string): Promise<void> {
+    const response = await fetch(
+      `/api/v1/questions/${encodeURIComponent(requestID)}/reject`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      },
+    );
+    if (!response.ok) {
+      await handleResponse(response);
+    }
+  },
+};
+
+// ============================================================================
 // Combined Export
 // ============================================================================
 
@@ -697,6 +829,8 @@ export const nativeAgentApi = {
   runtime: runtimeApi,
   tools: toolsApi,
   canvas: canvasApi,
+  permissions: permissionsApi,
+  questions: questionsApi,
 };
 
 export default nativeAgentApi;

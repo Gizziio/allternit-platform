@@ -15,7 +15,10 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import { cn } from "@/lib/utils";
-import { ArrowLeftIcon, ArrowRightIcon } from "lucide-react";
+import {
+  ArrowLeft as ArrowLeftIcon,
+  ArrowRight as ArrowRightIcon,
+} from '@phosphor-icons/react';
 import {
   createContext,
   useCallback,

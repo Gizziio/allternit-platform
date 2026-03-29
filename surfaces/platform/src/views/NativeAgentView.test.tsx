@@ -47,7 +47,7 @@ vi.mock("@/lib/agents/native-agent.store", () => ({
   isLocalDraftSession: vi.fn(() => false),
   useActiveSession: vi.fn(),
   useActiveMessages: vi.fn(),
-  useStreamingState: vi.fn(),
+  useSessionStreamingState: vi.fn(),
   useSessionSyncState: vi.fn(),
   useSessionCanvases: vi.fn(),
 }));
@@ -175,7 +175,7 @@ import {
   isLocalDraftSession,
   useActiveSession,
   useActiveMessages,
-  useStreamingState,
+  useSessionStreamingState,
   useSessionSyncState,
   useSessionCanvases,
   type NativeSession,
@@ -197,7 +197,6 @@ const mockClearError = vi.fn();
 const mockCreateCanvas = vi.fn();
 const mockDeleteCanvas = vi.fn();
 const mockUpdateCanvas = vi.fn();
-const mockConnectSessionSync = vi.fn();
 const mockUpdateSession = vi.fn();
 const mockFetchExecutionMode = vi.fn();
 const mockSetExecutionMode = vi.fn();
@@ -226,7 +225,7 @@ describe("NativeAgentView", () => {
       activeSessionId: null,
       fetchSessions: mockFetchSessions,
       fetchExecutionMode: mockFetchExecutionMode,
-      connectSessionSync: mockConnectSessionSync.mockReturnValue(() => {}),
+
       createSession: mockCreateSession,
       updateSession: mockUpdateSession,
       deleteSession: mockDeleteSession,
@@ -263,7 +262,7 @@ describe("NativeAgentView", () => {
     (useActiveMessages as unknown as ReturnType<typeof vi.fn>).mockReturnValue(
       [],
     );
-    (useStreamingState as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+    (useSessionStreamingState as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       isStreaming: false,
       error: null,
       buffer: "",
@@ -274,7 +273,6 @@ describe("NativeAgentView", () => {
       isConnected: false,
       error: null,
     });
-    mockConnectSessionSync.mockReturnValue(() => {});
     (useSessionCanvases as unknown as ReturnType<typeof vi.fn>).mockReturnValue(
       [],
     );
@@ -294,12 +292,6 @@ describe("NativeAgentView", () => {
 
       assert.ok(screen.getByRole("heading", { name: "Agent Sessions" }));
       assert.ok(screen.getByTestId("select-value"));
-    });
-
-    it("should connect session sync on mount by default", () => {
-      render(<NativeAgentView />);
-
-      assert.equal(mockConnectSessionSync.mock.calls.length, 1);
     });
 
     it("should fetch execution mode on mount", () => {
@@ -345,7 +337,7 @@ describe("NativeAgentView", () => {
 
     it("should display streaming indicator when streaming", () => {
       (
-        useStreamingState as unknown as ReturnType<typeof vi.fn>
+        useSessionStreamingState as unknown as ReturnType<typeof vi.fn>
       ).mockReturnValue({
         isStreaming: true,
         error: null,
@@ -359,11 +351,10 @@ describe("NativeAgentView", () => {
 
     it("should skip auto bootstrap when manual mode is requested", () => {
       render(
-        <NativeAgentView bootstrapStrategy="manual" syncSessions={false} />,
+        <NativeAgentView bootstrapStrategy="manual" />,
       );
 
       assert.equal(mockFetchSessions.mock.calls.length, 0);
-      assert.equal(mockConnectSessionSync.mock.calls.length, 0);
     });
   });
 
@@ -651,7 +642,7 @@ describe("NativeAgentView", () => {
       });
 
       render(
-        <NativeAgentView bootstrapStrategy="manual" syncSessions={false} />,
+        <NativeAgentView bootstrapStrategy="manual" />,
       );
 
       fireEvent.change(screen.getByLabelText("Session name"), {
@@ -733,7 +724,7 @@ describe("NativeAgentView", () => {
       });
 
       (
-        useStreamingState as unknown as ReturnType<typeof vi.fn>
+        useSessionStreamingState as unknown as ReturnType<typeof vi.fn>
       ).mockReturnValue({
         isStreaming: true,
         error: null,
@@ -1141,7 +1132,7 @@ describe("NativeAgentView", () => {
         activeSessionId: "session-1",
         fetchSessions: mockFetchSessions,
         fetchExecutionMode: mockFetchExecutionMode,
-        connectSessionSync: mockConnectSessionSync.mockReturnValue(() => {}),
+  
         createSession: mockCreateSession,
         updateSession: mockUpdateSession,
         deleteSession: mockDeleteSession,
@@ -1212,7 +1203,7 @@ describe("NativeAgentView", () => {
       });
 
       (
-        useStreamingState as unknown as ReturnType<typeof vi.fn>
+        useSessionStreamingState as unknown as ReturnType<typeof vi.fn>
       ).mockReturnValue({
         isStreaming: true,
         error: null,
@@ -1253,7 +1244,7 @@ describe("NativeAgentView", () => {
       });
 
       (
-        useStreamingState as unknown as ReturnType<typeof vi.fn>
+        useSessionStreamingState as unknown as ReturnType<typeof vi.fn>
       ).mockReturnValue({
         isStreaming: true,
         error: null,

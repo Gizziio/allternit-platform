@@ -15,13 +15,13 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   GitBranch,
-  Layers,
+  Stack,
   CheckCircle,
   Circle,
   XCircle,
-  Loader2,
+  CircleNotch,
   Clock,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import type { Task, ProgressUpdate, Session } from '../types';
 import { metaSwarmClient } from '../api';
 
@@ -46,7 +46,7 @@ function WaveVisualization({ waves }: WaveVisualizationProps) {
       {waves.map((wave) => (
         <div key={wave.waveNumber} className="border rounded-lg p-4">
           <div className="flex items-center gap-2 mb-3">
-            <Layers className="h-4 w-4 text-blue-500" />
+            <Stack className="h-4 w-4 text-blue-500" />
             <span className="font-medium">Wave {wave.waveNumber}</span>
             <Badge variant="secondary" className="ml-auto">
               {wave.tasks.filter((t) => t.status === 'completed').length} / {wave.tasks.length}
@@ -136,10 +136,10 @@ function DAGVisualization({
         };
         
         const statusIcons = {
-          pending: <Circle className="h-3 w-3" />,
-          in_progress: <Loader2 className="h-3 w-3 animate-spin" />,
-          completed: <CheckCircle className="h-3 w-3" />,
-          failed: <XCircle className="h-3 w-3" />,
+          pending: <Circle size={12} />,
+          in_progress: <CircleNotch className="h-3 w-3 animate-spin" />,
+          completed: <CheckCircle size={12} />,
+          failed: <XCircle size={12} />,
         };
         
         return (
@@ -194,50 +194,43 @@ export function ProgressPanel({ className }: ProgressPanelProps) {
   const completedTasks = tasks.filter((t) => t.status === 'completed');
   const failedTasks = tasks.filter((t) => t.status === 'failed');
 
-  // Mock data for visualization
-  const mockWaves: WaveVisualizationProps['waves'] = [
-    {
-      waveNumber: 1,
-      tasks: [
-        { id: '1', name: 'Research', status: 'completed' },
-        { id: '2', name: 'Analysis', status: 'completed' },
-      ],
-    },
-    {
-      waveNumber: 2,
-      tasks: [
-        { id: '3', name: 'Design', status: 'in_progress' },
-        { id: '4', name: 'Planning', status: 'completed' },
-      ],
-    },
-    {
-      waveNumber: 3,
-      tasks: [
-        { id: '5', name: 'Implementation', status: 'pending' },
-        { id: '6', name: 'Testing', status: 'pending' },
-      ],
-    },
-  ];
+  // Derive wave visualization from real tasks (group by status order)
+  const waves: WaveVisualizationProps['waves'] = React.useMemo(() => {
+    const statusOrder = ['completed', 'in_progress', 'pending', 'failed'] as const;
+    return statusOrder
+      .map((status, i) => ({
+        waveNumber: i + 1,
+        tasks: tasks
+          .filter((t) => t.status === status)
+          .map((t) => ({ id: t.id.id, name: t.name, status: t.status as 'pending' | 'in_progress' | 'completed' | 'failed' })),
+      }))
+      .filter((w) => w.tasks.length > 0);
+  }, [tasks]);
 
-  const mockNodes: DAGNodeProps[] = [
-    { id: '1', name: 'Research', status: 'completed', x: 100, y: 50 },
-    { id: '2', name: 'Design', status: 'in_progress', x: 300, y: 50 },
-    { id: '3', name: 'Implement', status: 'pending', x: 500, y: 50 },
-    { id: '4', name: 'Test', status: 'pending', x: 700, y: 50 },
-  ];
+  // Derive DAG nodes from real tasks
+  const dagNodes: DAGNodeProps[] = React.useMemo(() =>
+    tasks.map((t, i) => ({
+      id: t.id.id,
+      name: t.name,
+      status: t.status as 'pending' | 'in_progress' | 'completed' | 'failed',
+      x: 100 + i * 200,
+      y: 50,
+    })),
+  [tasks]);
 
-  const mockEdges: DAGEdgeProps[] = [
-    { from: { x: 140, y: 50 }, to: { x: 260, y: 50 } },
-    { from: { x: 340, y: 50 }, to: { x: 460, y: 50 } },
-    { from: { x: 540, y: 50 }, to: { x: 660, y: 50 } },
-  ];
+  const dagEdges: DAGEdgeProps[] = React.useMemo(() =>
+    dagNodes.slice(0, -1).map((node, i) => ({
+      from: { x: node.x + 80, y: node.y },
+      to: { x: dagNodes[i + 1].x - 80, y: dagNodes[i + 1].y },
+    })),
+  [dagNodes]);
 
   return (
     <Card className={className}>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <GitBranch className="h-5 w-5" />
+            <GitBranch size={20} />
             Execution Progress
           </div>
           <div className="flex gap-2 text-sm font-normal">
@@ -269,7 +262,7 @@ export function ProgressPanel({ className }: ProgressPanelProps) {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     {task.status === 'in_progress' && (
-                      <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                      <CircleNotch className="h-4 w-4 animate-spin text-blue-500" />
                     )}
                     {task.status === 'completed' && (
                       <CheckCircle className="h-4 w-4 text-green-500" />
@@ -300,11 +293,11 @@ export function ProgressPanel({ className }: ProgressPanelProps) {
           </TabsContent>
 
           <TabsContent value="waves">
-            <WaveVisualization waves={mockWaves} />
+            <WaveVisualization waves={waves} />
           </TabsContent>
 
           <TabsContent value="dag">
-            <DAGVisualization nodes={mockNodes} edges={mockEdges} />
+            <DAGVisualization nodes={dagNodes} edges={dagEdges} />
           </TabsContent>
         </Tabs>
       </CardContent>

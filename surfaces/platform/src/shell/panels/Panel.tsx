@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 import { tokens } from '@/design/tokens';
 import { motion, AnimatePresence } from 'framer-motion';
 
-/** Icon names from lucide-react */
+/** Icon names (kebab-case, resolved dynamically via phosphor-icons) */
 export type IconName = 
   | 'folder' | 'search' | 'settings' | 'terminal' | 'output' | 'alert'
   | 'chat' | 'chevron-left' | 'chevron-right' | 'grip-vertical' | 'more-vertical'
@@ -256,8 +256,8 @@ export function WorkspacePanel({
   );
 }
 
-// Icon component using lucide-react
-import * as LucideIcons from 'lucide-react';
+// Icon component using phosphor-icons
+import * as PhosphorIcons from '@phosphor-icons/react';
 
 interface IconProps {
   name: string;
@@ -273,7 +273,7 @@ function Icon({ name, size = 'md', className }: IconProps) {
     lg: 20,
   };
 
-  const IconComponent = ((LucideIcons as unknown) as Record<string, React.ComponentType<{ size?: number; className?: string }>>)[
+  const IconComponent = ((PhosphorIcons as unknown) as Record<string, React.ComponentType<{ size?: number; className?: string }>>)[
     name
       .split('-')
       .map(part => part.charAt(0).toUpperCase() + part.slice(1))
@@ -282,7 +282,7 @@ function Icon({ name, size = 'md', className }: IconProps) {
 
   if (!IconComponent) {
     // Fallback to a generic icon if not found
-    return <LucideIcons.FileIcon size={sizeMap[size]} className={className} />;
+    return <PhosphorIcons.File size={sizeMap[size]} className={className} />;
   }
 
   return <IconComponent size={sizeMap[size]} className={className} />;

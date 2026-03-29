@@ -9,15 +9,14 @@ import { useCoworkStore } from './CoworkStore';
 import {
   Pause,
   Play,
-  StepForward,
+  SkipForward as StepForward,
   Square,
   Hand,
-  Activity,
-  Loader2,
-  AlertCircle,
-  PanelLeftClose,
-  PanelLeftOpen,
-} from 'lucide-react';
+  Pulse as Activity,
+  CircleNotch,
+  Warning,
+  SidebarSimple,
+} from '@phosphor-icons/react';
 
 interface CoworkStatusBarProps {
   onToggleRail?: () => void;
@@ -53,7 +52,7 @@ export const CoworkStatusBar = memo(function CoworkStatusBar({
       label: 'Paused'
     },
     waiting_approval: { 
-      icon: <AlertCircle className="w-3.5 h-3.5" />, 
+      icon: <Warning className="w-3.5 h-3.5" />, 
       color: 'text-orange-400',
       bg: 'bg-orange-500/10',
       label: 'Needs approval'
@@ -101,7 +100,7 @@ export const CoworkStatusBar = memo(function CoworkStatusBar({
         
         {pendingApprovals.length > 0 && (
           <div className="flex items-center gap-1.5 text-xs text-orange-400">
-            <AlertCircle className="w-3.5 h-3.5" />
+            <Warning className="w-3.5 h-3.5" />
             <span>{pendingApprovals.length} pending</span>
           </div>
         )}
@@ -181,9 +180,9 @@ export const CoworkStatusBar = memo(function CoworkStatusBar({
               title={showRail ? "Hide sidebar" : "Show sidebar"}
             >
               {showRail ? (
-                <PanelLeftClose className="w-3.5 h-3.5" />
+                <SidebarSimple className="w-3.5 h-3.5" />
               ) : (
-                <PanelLeftOpen className="w-3.5 h-3.5" />
+                <SidebarSimple className="w-3.5 h-3.5" />
               )}
             </button>
           </>

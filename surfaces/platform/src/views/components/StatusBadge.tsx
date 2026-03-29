@@ -1,14 +1,14 @@
 "use client";
 
 import React from 'react';
-import { 
-  CheckCircle2, 
-  XCircle, 
-  Clock, 
-  Loader2, 
-  AlertCircle,
-  PauseCircle
-} from 'lucide-react';
+import {
+  CheckCircle,
+  XCircle,
+  Clock,
+  CircleNotch,
+  Warning,
+  PauseCircle,
+} from '@phosphor-icons/react';
 
 export type StatusType = 
   | 'pending' 
@@ -29,13 +29,13 @@ interface StatusBadgeProps {
 export function StatusBadge({ status, text, size = 'sm' }: StatusBadgeProps) {
   const config = {
     pending: { icon: Clock, color: 'text-gray-400 bg-gray-400/10', label: 'Pending' },
-    running: { icon: Loader2, color: 'text-blue-400 bg-blue-400/10 animate-spin', label: 'Running' },
-    completed: { icon: CheckCircle2, color: 'text-green-400 bg-green-400/10', label: 'Completed' },
-    success: { icon: CheckCircle2, color: 'text-green-400 bg-green-400/10', label: 'Success' },
+    running: { icon: CircleNotch, color: 'text-blue-400 bg-blue-400/10 animate-spin', label: 'Running' },
+    completed: { icon: CheckCircle, color: 'text-green-400 bg-green-400/10', label: 'Completed' },
+    success: { icon: CheckCircle, color: 'text-green-400 bg-green-400/10', label: 'Success' },
     failed: { icon: XCircle, color: 'text-red-400 bg-red-400/10', label: 'Failed' },
     stopped: { icon: PauseCircle, color: 'text-orange-400 bg-orange-400/10', label: 'Stopped' },
     skipped: { icon: Clock, color: 'text-gray-500 bg-gray-500/10', label: 'Skipped' },
-    warning: { icon: AlertCircle, color: 'text-yellow-400 bg-yellow-400/10', label: 'Warning' },
+    warning: { icon: Warning, color: 'text-yellow-400 bg-yellow-400/10', label: 'Warning' },
   };
 
   const { icon: Icon, color, label } = config[status];

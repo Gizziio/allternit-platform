@@ -9,9 +9,17 @@
 import React from "react";
 import type { RichContentPart, A2UIPart, ArtifactPart } from "./ChatMessageTypes";
 import { MessageA2UI } from "./ChatA2UI";
+import { MessageResponse } from "@/components/ai-elements/message";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, CheckCircle2, AlertCircle, Search, Code, Brain } from "lucide-react";
+import {
+  CircleNotch,
+  CheckCircle,
+  Warning,
+  MagnifyingGlass,
+  Code,
+  Brain,
+} from '@phosphor-icons/react';
 import { cn } from "@/lib/utils";
 
 // ============================================================================
@@ -144,9 +152,9 @@ export function RichMessageParts({
         // Text Part (from UIPart)
         if (part.type === "text") {
           return (
-            <div key={`text-${idx}`} className="prose prose-sm dark:prose-invert max-w-none">
+            <MessageResponse key={`text-${idx}`} className="prose prose-sm dark:prose-invert max-w-none">
               {part.text}
-            </div>
+            </MessageResponse>
           );
         }
 
@@ -185,7 +193,7 @@ export function RichMessageParts({
 
       {isLoading && (
         <div className="flex items-center gap-2 text-muted-foreground">
-          <Loader2 className="w-4 h-4 animate-spin" />
+          <CircleNotch className="w-4 h-4 animate-spin" />
           <span className="text-sm">Thinking...</span>
         </div>
       )}
@@ -234,11 +242,11 @@ function AgentThinkingRenderer({
   part: Extract<RichContentPart, { type: "agent-thinking" }>;
 }) {
   const statusIcons: Record<string, React.ReactNode> = {
-    idle: <Brain className="w-4 h-4" />,
+    idle: <Brain size={16} />,
     reasoning: <Brain className="w-4 h-4 animate-pulse" />,
-    searching: <Search className="w-4 h-4 animate-pulse" />,
+    searching: <MagnifyingGlass className="w-4 h-4 animate-pulse" />,
     coding: <Code className="w-4 h-4 animate-pulse" />,
-    waiting: <Loader2 className="w-4 h-4 animate-spin" />,
+    waiting: <CircleNotch className="w-4 h-4 animate-spin" />,
   };
 
   const statusLabels: Record<string, string> = {
@@ -274,13 +282,13 @@ function AgentThinkingRenderer({
                 )}
               >
                 {step.status === "completed" && (
-                  <CheckCircle2 className="w-3 h-3" />
+                  <CheckCircle size={12} />
                 )}
                 {step.status === "active" && (
-                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <CircleNotch className="w-3 h-3 animate-spin" />
                 )}
                 {step.status === "error" && (
-                  <AlertCircle className="w-3 h-3" />
+                  <Warning size={12} />
                 )}
                 {step.status === "pending" && (
                   <div className="w-3 h-3 rounded-full border border-muted-foreground/30" />

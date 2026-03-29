@@ -575,7 +575,4 @@ export const useRunnerStore = create<{
       status: "error",
     });
   },
-}), {
-  name: 'RunnerStore',
-}) as any;
-
+})) as any;

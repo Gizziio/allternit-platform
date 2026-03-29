@@ -1,7 +1,13 @@
 'use client';
 
 import React, { createContext, useContext, useCallback, useState, useRef, useEffect, type ReactNode, type DragEvent } from 'react';
-import { Upload, X, MessageSquare, FolderOpen, Code } from 'lucide-react';
+import {
+  UploadSimple,
+  X,
+  Chat,
+  FolderOpen,
+  Code,
+} from '@phosphor-icons/react';
 import { supportsTextExtraction, extractTextFromFile } from '@/lib/attachments/extract-text';
 import { createModuleLogger } from '@/lib/logger';
 
@@ -285,12 +291,12 @@ interface GlobalDropzoneOverlayProps {
 
 function GlobalDropzoneOverlay({ target, isReject }: GlobalDropzoneOverlayProps) {
   const targetConfig = {
-    chat: { icon: MessageSquare, label: 'Drop to attach in chat', color: '#D4956A' },
+    chat: { icon: Chat, label: 'Drop to attach in chat', color: '#D4956A' },
     cowork: { icon: FolderOpen, label: 'Drop to upload to files', color: '#af52de' },
     code: { icon: Code, label: 'Drop to add to project', color: '#34c759' },
-    agent: { icon: Upload, label: 'Drop to use with agent', color: '#3b82f6' },
+    agent: { icon: UploadSimple, label: 'Drop to use with agent', color: '#3b82f6' },
     rail: { icon: FolderOpen, label: 'Drop to quick upload', color: '#D4956A' },
-    global: { icon: Upload, label: 'Drop files anywhere', color: '#D4956A' },
+    global: { icon: UploadSimple, label: 'Drop files anywhere', color: '#D4956A' },
   };
 
   const config = target ? targetConfig[target] : targetConfig.global;

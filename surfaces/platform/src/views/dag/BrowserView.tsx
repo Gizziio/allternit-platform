@@ -7,28 +7,28 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { 
-  Globe, 
-  RefreshCw, 
-  ArrowLeft, 
-  ArrowRight, 
+import {
+  Globe,
+  ArrowsClockwise,
+  ArrowLeft,
+  ArrowRight,
   Camera,
-  Bot,
-  Loader2,
-  AlertTriangle,
+  Robot,
+  CircleNotch,
+  Warning,
   Plus,
   X,
   Lock,
-  Search,
-  ChevronLeft,
-  ChevronRight,
-  MoreHorizontal,
+  MagnifyingGlass,
+  CaretLeft,
+  CaretRight,
+  DotsThreeOutline,
   Terminal,
-  Activity,
+  Pulse as Activity,
   Shield,
-  Zap,
-  History
-} from 'lucide-react';
+  Lightning,
+  ClockCounterClockwise,
+} from '@phosphor-icons/react';
 
 // Design System
 import { GlassSurface } from '@/design/glass/GlassSurface';
@@ -50,13 +50,19 @@ import { useBrowserAgentStore } from '@/capsules/browser/browserAgent.store';
 export function BrowserView() {
   // Store state
   const { tabs, activeTabId, addTab, closeTab, setActiveTab, updateTab } = useBrowserStore();
-  const { status: agentStatus, runGoal, stopExecution } = useBrowserAgentStore();
+  const { status: agentStatus, runGoal, stopExecution, setIsBrowserCapsuleMounted } = useBrowserAgentStore();
   
   // Local UI state
   const activeTab = tabs.find(t => t.id === activeTabId);
   const [urlInput, setUrlInput] = useState('');
   const [agentInput, setAgentInput] = useState('');
   const [isHoveringTab, setIsHoveringTab] = useState<string | null>(null);
+
+  // Mark browser capsule as mounted to suppress global ACIComputerUseSidecar
+  useEffect(() => {
+    setIsBrowserCapsuleMounted(true);
+    return () => { setIsBrowserCapsuleMounted(false); };
+  }, [setIsBrowserCapsuleMounted]);
 
   // Sync URL input with active tab
   useEffect(() => {
@@ -144,27 +150,27 @@ export function BrowserView() {
           onClick={() => addTab('https://www.google.com')}
           className="h-8 w-8 flex items-center justify-center rounded-t-lg hover:bg-[#D4B08C]/5 text-[#9B9B9B] transition-colors"
         >
-          <Plus className="w-4 h-4" />
+          <Plus size={16} />
         </button>
       </div>
 
-      {/* 2. NAVIGATION & CONTROL BAR */}
-      <div className="h-14 flex items-center gap-4 px-4 bg-[#1A1612] border-b border-[#D4B08C]/10 z-10 shadow-lg">
+      {/* 2. NAVIGATION & CONTROL BAR - CLEAN VERSION */}
+      <div className="h-12 flex items-center gap-3 px-4 bg-[#1A1612] border-b border-[#D4B08C]/10 z-10">
         {/* Navigation Buttons */}
         <div className="flex items-center gap-1">
           <GlassIconButton size="xs" className="text-[#9B9B9B] hover:text-[#D4B08C]">
-            <ChevronLeft className="w-4 h-4" />
+            <CaretLeft size={14} />
           </GlassIconButton>
           <GlassIconButton size="xs" className="text-[#9B9B9B] hover:text-[#D4B08C]">
-            <ChevronRight className="w-4 h-4" />
+            <CaretRight size={14} />
           </GlassIconButton>
           <GlassIconButton size="xs" className="text-[#D4B08C]/60 hover:text-[#D4B08C]">
-            <RefreshCw className="w-3.5 h-3.5" />
+            <ArrowsClockwise className="w-3 h-3" />
           </GlassIconButton>
         </div>
 
         {/* Address Bar */}
-        <form onSubmit={handleNavigate} className="flex-1 max-w-2xl">
+        <form onSubmit={handleNavigate} className="flex-1 max-w-3xl">
           <GlassSurface 
             intensity="thin" 
             rounded="full" 
@@ -179,46 +185,19 @@ export function BrowserView() {
               className="flex-1 bg-transparent text-[12px] font-mono text-[#D4B08C] outline-none placeholder:text-[#9B9B9B]/30"
               placeholder="ENTER SUBSTRATE COORDINATES..."
             />
-            <Search className="w-3.5 h-3.5 text-[#9B9B9B]/40 group-hover:text-[#D4B08C]/40" />
+            <MagnifyingGlass className="w-3.5 h-3.5 text-[#9B9B9B]/40 group-hover:text-[#D4B08C]/40" />
           </GlassSurface>
         </form>
 
-        {/* Agent Goal Input (The "Second" Bar, but styled as an Action Field) */}
-        <div className="flex-1 max-w-md hidden lg:flex items-center">
-          <GlassSurface 
-            intensity="thin" 
-            rounded="lg" 
-            border="subtle"
-            className="flex-1 flex items-center px-3 py-1.5 bg-[#D4B08C]/5 border-[#D4B08C]/10"
-          >
-            <Terminal className="w-3.5 h-3.5 text-[#D4B08C]/60 mr-2" />
-            <input
-              type="text"
-              value={agentInput}
-              onChange={(e) => setAgentInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleAgentRun()}
-              className="flex-1 bg-transparent text-[11px] font-medium text-[#ECECEC] outline-none placeholder:text-[#9B9B9B]/50"
-              placeholder="TELL GIZZI TO AUTOMATE..."
-            />
-            {agentStatus === 'Running' ? (
-              <button onClick={stopExecution} className="text-red-400 hover:text-red-300">
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              </button>
-            ) : (
-              <button onClick={handleAgentRun} className="text-[#D4B08C]/60 hover:text-[#D4B08C]">
-                <Zap className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </GlassSurface>
-        </div>
-
-        {/* Platform Actions */}
-        <div className="flex items-center gap-2">
-          <GlassIconButton size="xs" variant="primary" className="bg-[#D4B08C]/10 text-[#D4B08C] border-[#D4B08C]/20">
-            <Bot className="w-4 h-4" />
-          </GlassIconButton>
-          <div className="h-4 w-px bg-[#D4B08C]/10 mx-1" />
-          <MoreHorizontal className="w-4 h-4 text-[#9B9B9B] cursor-pointer hover:text-[#D4B08C]" />
+        {/* Status Indicator (Minimal) */}
+        <div className="flex items-center gap-2 ml-auto">
+          {agentStatus === 'Running' && (
+            <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-[#D4B08C]/10 border border-[#D4B08C]/20">
+              <CircleNotch className="w-3 h-3 animate-spin text-[#D4B08C]" />
+              <span className="text-[10px] text-[#D4B08C] uppercase tracking-wider">Running</span>
+            </div>
+          )}
+          <div className="h-2 w-2 rounded-full bg-green-500/50" />
         </div>
       </div>
 
@@ -269,14 +248,14 @@ export function BrowserView() {
                   type="submit"
                   className="bg-[#D4B08C] text-[#1A1612] p-2.5 rounded-lg hover:bg-[#B08D6E] transition-colors"
                 >
-                  <ArrowRight className="w-5 h-5" />
+                  <ArrowRight size={20} />
                 </button>
               </form>
             </div>
             <div className="mt-8 flex gap-8 text-[10px] font-mono text-[#9B9B9B]/40 uppercase tracking-[0.3em]">
               <div className="flex items-center gap-2"><Shield className="w-3.5 h-3.5" /> SECURE</div>
-              <div className="flex items-center gap-2"><Zap className="w-3.5 h-3.5" /> PERFORMANCE</div>
-              <div className="flex items-center gap-2"><Bot className="w-3.5 h-3.5" /> ASSISTED</div>
+              <div className="flex items-center gap-2"><Lightning className="w-3.5 h-3.5" /> PERFORMANCE</div>
+              <div className="flex items-center gap-2"><Robot className="w-3.5 h-3.5" /> ASSISTED</div>
             </div>
           </div>
         )}

@@ -6,7 +6,15 @@
  */
 
 import React, { useState, useEffect } from "react"
-import { MessageCircle, AtSign, Hash, Radio, Check, CheckCheck, Clock } from "lucide-react"
+import {
+  ChatCircle,
+  At,
+  Hash,
+  Radio,
+  Check,
+
+  Clock,
+} from '@phosphor-icons/react';
 
 // ============================================================================
 // Types
@@ -82,7 +90,7 @@ export function AgentMessageDisplay({
           fontSize: 13,
         }}
       >
-        <MessageCircle size={32} style={{ margin: "0 auto 12px", opacity: 0.5 }} />
+        <ChatCircle size={32} style={{ margin: "0 auto 12px", opacity: 0.5 }} />
         No agent messages yet
       </div>
     )
@@ -226,7 +234,7 @@ function AgentMessageBubble({
         ) : messageType === "broadcast" ? (
           <Radio size={14} color="#fff" />
         ) : (
-          <AtSign size={14} color="#fff" />
+          <At size={14} color="#fff" />
         )}
       </div>
 
@@ -319,7 +327,7 @@ function AgentMessageBubble({
           >
             {message.read ? (
               <>
-                <CheckCheck size={12} />
+                <CheckFat size={12} />
                 Read
               </>
             ) : (

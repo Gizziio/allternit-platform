@@ -20,8 +20,10 @@ export interface Logger {
 }
 
 // Check if debug logging is enabled
-const isDebugEnabled = import.meta.env.DEV && import.meta.env.VITE_LOG_LEVEL === 'debug';
-const isInfoEnabled = import.meta.env.DEV;
+// Use process.env.NODE_ENV instead of import.meta.env (Vite-only) for Next.js compatibility
+const isDev = process.env.NODE_ENV !== 'production';
+const isDebugEnabled = isDev && process.env.NEXT_PUBLIC_LOG_LEVEL === 'debug';
+const isInfoEnabled = isDev;
 
 export function createModuleLogger(module: string): Logger {
   const prefix = `[${module}]`;

@@ -13,7 +13,11 @@ import { useBrowserStore } from "@/capsules/browser/browser.store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ExternalLink, Maximize2, X, RefreshCw, Beaker } from "lucide-react";
+import {
+  ArrowSquareOut,
+  ArrowsOut,
+  X,
+} from '@phosphor-icons/react';
 
 // ============================================================================
 // Types
@@ -24,7 +28,6 @@ export interface ChatA2UIPart {
   payload: A2UIPayload;
   title?: string;
   source?: string; // Agent ID that generated this
-  isMockData?: boolean; // True if this UI was generated using mock data
   actions?: Array<{
     label: string;
     action: string;
@@ -109,7 +112,7 @@ export function MessageA2UI({ part, messageId, onAction }: MessageA2UIProps) {
               size="sm"
               onClick={() => setIsExpanded(true)}
             >
-              <Maximize2 className="w-4 h-4 mr-1" />
+              <ArrowsOut className="w-4 h-4 mr-1" />
               Expand
             </Button>
           </div>
@@ -130,31 +133,25 @@ export function MessageA2UI({ part, messageId, onAction }: MessageA2UIProps) {
                 via {part.source}
               </span>
             )}
-            {part.isMockData && (
-              <Badge variant="secondary" className="text-xs bg-amber-500/20 text-amber-700 hover:bg-amber-500/30 border-amber-500/30">
-                <Beaker className="w-3 h-3 mr-1" />
-                Demo
-              </Badge>
-            )}
           </CardTitle>
           <div className="flex items-center gap-1">
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              size={32}
               onClick={handleOpenInBrowser}
               title="Open in Browser"
             >
-              <ExternalLink className="w-4 h-4" />
+              <ArrowSquareOut size={16} />
             </Button>
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              size={32}
               onClick={() => setIsExpanded(false)}
               title="Collapse"
             >
-              <X className="w-4 h-4" />
+              <X size={16} />
             </Button>
           </div>
         </div>

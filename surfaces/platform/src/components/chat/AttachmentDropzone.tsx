@@ -2,7 +2,7 @@
 
 import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { X, FileText, Image, File, Loader2, AlertCircle, Check } from 'lucide-react';
+import { X, FileText, ImageIcon, File, Loader2, AlertTriangle, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAttachmentUpload, AttachmentUpload } from '@/hooks/useAttachmentUpload';
 import { formatFileSize, getFileIcon } from '@/lib/attachments/extract-text';
@@ -76,15 +76,15 @@ export function AttachmentDropzone({
     
     switch (iconType) {
       case 'image':
-        return <Image size={16} style={{ color: THEME.accent }} />;
+        return <ImageIcon size={16} style={{ color: THEME.accent }} aria-hidden="true" />;
       case 'pdf':
-        return <FileText size={16} style={{ color: '#ef4444' }} />;
+        return <FileText size={16} style={{ color: '#ef4444' }} aria-hidden="true" />;
       case 'word':
-        return <FileText size={16} style={{ color: '#3b82f6' }} />;
+        return <FileText size={16} style={{ color: '#3b82f6' }} aria-hidden="true" />;
       case 'text':
-        return <FileText size={16} style={{ color: THEME.textSecondary }} />;
+        return <FileText size={16} style={{ color: THEME.textSecondary }} aria-hidden="true" />;
       default:
-        return <File size={16} style={{ color: THEME.textSecondary }} />;
+        return <File size={16} style={{ color: THEME.textSecondary }} aria-hidden="true" />;
     }
   };
 
@@ -92,11 +92,11 @@ export function AttachmentDropzone({
     switch (status) {
       case 'uploading':
       case 'processing':
-        return <Loader2 size={14} style={{ color: THEME.accent }} className="animate-spin" />;
+        return <Loader2 size={14} style={{ color: THEME.accent }} className="motion-safe:animate-spin" aria-hidden="true" />;
       case 'complete':
-        return <Check size={14} style={{ color: THEME.success }} />;
+        return <Check size={14} style={{ color: THEME.success }} aria-hidden="true" />;
       case 'error':
-        return <AlertCircle size={14} style={{ color: THEME.error }} />;
+        return <AlertTriangle size={14} style={{ color: THEME.error }} aria-hidden="true" />;
       default:
         return null;
     }
@@ -112,7 +112,7 @@ export function AttachmentDropzone({
           borderRadius: 12,
           padding: attachments.length > 0 ? '12px' : '24px',
           background: isDragActive ? 'rgba(212,149,106,0.05)' : THEME.inputBg,
-          transition: 'all 0.2s',
+          transition: 'border-color 0.2s, background-color 0.2s',
           cursor: attachments.length > 0 ? 'default' : 'pointer',
         }}
       >
@@ -133,7 +133,7 @@ export function AttachmentDropzone({
                 margin: '0 auto 12px',
               }}
             >
-              <Image size={24} style={{ color: THEME.textSecondary }} />
+              <ImageIcon size={24} style={{ color: THEME.textSecondary }} aria-hidden="true" />
             </div>
             <p style={{ fontSize: 14, color: THEME.textPrimary, margin: '0 0 4px' }}>
               Drop files here or click to upload
@@ -267,6 +267,7 @@ export function AttachmentDropzone({
                       e.stopPropagation();
                       removeAttachment(att.id);
                     }}
+                    aria-label={`Remove ${att.name}`}
                     style={{
                       width: 24,
                       height: 24,
@@ -278,6 +279,7 @@ export function AttachmentDropzone({
                       alignItems: 'center',
                       justifyContent: 'center',
                       color: THEME.textMuted,
+                      transition: 'color 0.15s, background-color 0.15s',
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.color = THEME.error;
@@ -288,7 +290,7 @@ export function AttachmentDropzone({
                       e.currentTarget.style.background = 'transparent';
                     }}
                   >
-                    <X size={14} />
+                    <X size={14} aria-hidden="true" />
                   </button>
                 </div>
               </div>

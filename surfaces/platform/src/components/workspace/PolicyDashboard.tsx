@@ -5,87 +5,26 @@
  * Shows safety rules, tool permissions, and file access controls.
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { WorkspaceAPI } from '../../agent-workspace';
 import { PolicyRule } from './types';
+import { usePolicies } from '@/lib/governance/policy.service';
 
 interface PolicyDashboardProps {
   api: WorkspaceAPI;
 }
 
-export function PolicyDashboard({ api }: PolicyDashboardProps) {
+export function PolicyDashboard({ api: _api }: PolicyDashboardProps) {
+  const { policies: fetchedRules } = usePolicies();
   const [rules, setRules] = useState<PolicyRule[]>([]);
   const [selectedRule, setSelectedRule] = useState<PolicyRule | null>(null);
   const [filter, setFilter] = useState<'all' | 'allow' | 'deny' | 'require_approval'>('all');
   const [isEditing, setIsEditing] = useState(false);
 
-  useEffect(() => {
-    // Load policy rules
-    const loadRules = async () => {
-      // Mock data - replace with actual API call
-      const mockRules: PolicyRule[] = [
-        {
-          id: 'policy-1',
-          name: 'File System Write',
-          description: 'Allow writing files within workspace',
-          toolId: 'filesystem.write',
-          action: 'allow',
-          enabled: true,
-          priority: 100,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: 'policy-2',
-          name: 'File System Delete',
-          description: 'Require approval for file deletion',
-          toolId: 'filesystem.delete',
-          action: 'require_approval',
-          enabled: true,
-          priority: 90,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: 'policy-3',
-          name: 'External Network Access',
-          description: 'Deny external network access by default',
-          toolId: 'network.http',
-          action: 'deny',
-          enabled: true,
-          priority: 1000,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: 'policy-4',
-          name: 'System Command Execution',
-          description: 'System commands require explicit approval',
-          toolId: 'system.exec',
-          action: 'require_approval',
-          enabled: true,
-          priority: 500,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-        {
-          id: 'policy-5',
-          name: 'Sensitive File Access',
-          description: 'Block access to sensitive files',
-          filePattern: '*.key,*.pem,.env',
-          operation: 'read',
-          action: 'deny',
-          enabled: true,
-          priority: 200,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-      ];
-      setRules(mockRules);
-    };
-
-    loadRules();
-  }, [api]);
+  // Sync fetched rules into local state for toggle mutations
+  useState(() => {
+    if (fetchedRules?.length) setRules(fetchedRules as unknown as PolicyRule[]);
+  });
 
   const toggleRule = (ruleId: string) => {
     setRules(prev => prev.map(rule => 

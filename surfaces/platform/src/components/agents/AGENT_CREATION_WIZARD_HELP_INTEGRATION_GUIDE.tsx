@@ -205,7 +205,7 @@ function WizardHeader({ steps, currentStep, onClose, modeColors, onOpenHelp }: W
           style={{ background: modeColors.soft }}
           aria-hidden="true"
         >
-          <Sparkles size={20} style={{ color: modeColors.accent }} />
+          <Sparkle size={20} style={{ color: modeColors.accent }} />
         </div>
         <div>
           <h2 className="text-base sm:text-lg font-semibold" style={{ color: TEXT.primary }}>
@@ -347,7 +347,7 @@ function IdentityStep({
         {name && name.length >= 2 && !nameError && (
           <p className="text-xs mt-1" style={{ color: '#10B981' }} role="status" aria-live="polite">
             <span className="inline-flex items-center gap-1">
-              <CheckCircle2 size={12} />
+              <CheckCircle size={12} />
               Name is available
             </span>
           </p>

@@ -6,17 +6,16 @@
  */
 
 import React, { useEffect, useCallback } from 'react';
-import { 
-  Sparkles, 
-  Palette, 
-  Eye, 
-  Radio, 
+import {
+  Sparkle,
+  Palette,
+  Eye,
+  Radio,
   SlidersHorizontal,
-  Undo2,
-  Redo2,
-  RotateCcw,
-  Wand2,
-} from 'lucide-react';
+  ArrowCounterClockwise,
+  ArrowClockwise,
+  MagicWand,
+} from '@phosphor-icons/react';
 import { useAvatarCreatorStore, AVATAR_TEMPLATES, type CreatorTab } from '../../stores/avatar-creator.store';
 import { AgentAvatar } from '../../components/Avatar';
 import { AvatarPreview } from '../../components/Avatar/AvatarPreview';
@@ -27,7 +26,7 @@ import type { AgentSetup } from '../../lib/agents/character.types';
 const TABS: { id: CreatorTab; label: string; icon: React.ReactNode }[] = [
   { id: 'body', label: 'Body', icon: <Palette size={16} /> },
   { id: 'eyes', label: 'Eyes', icon: <Eye size={16} /> },
-  { id: 'colors', label: 'Colors', icon: <Sparkles size={16} /> },
+  { id: 'colors', label: 'Colors', icon: <Sparkle size={16} /> },
   { id: 'antennas', label: 'Antennas', icon: <Radio size={16} /> },
   { id: 'personality', label: 'Personality', icon: <SlidersHorizontal size={16} /> },
 ];
@@ -123,7 +122,7 @@ export const AvatarCreatorStep: React.FC<AvatarCreatorStepProps> = ({
               gap: '8px',
             }}
           >
-            <Wand2 size={16} />
+            <MagicWand size={16} />
             Templates
           </h3>
           
@@ -202,7 +201,7 @@ export const AvatarCreatorStep: React.FC<AvatarCreatorStepProps> = ({
               fontSize: '12px',
             }}
           >
-            <Undo2 size={14} />
+            <ArrowCounterClockwise size={14} />
             Undo
           </button>
           
@@ -225,7 +224,7 @@ export const AvatarCreatorStep: React.FC<AvatarCreatorStepProps> = ({
               fontSize: '12px',
             }}
           >
-            <Redo2 size={14} />
+            <ArrowClockwise size={14} />
             Redo
           </button>
           
@@ -242,7 +241,7 @@ export const AvatarCreatorStep: React.FC<AvatarCreatorStepProps> = ({
             }}
             title="Reset to defaults"
           >
-            <RotateCcw size={14} />
+            <ArrowCounterClockwise size={14} />
           </button>
         </div>
       </div>

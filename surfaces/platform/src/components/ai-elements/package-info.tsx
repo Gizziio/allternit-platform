@@ -4,7 +4,12 @@ import type { HTMLAttributes } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { ArrowRightIcon, MinusIcon, PackageIcon, PlusIcon } from "lucide-react";
+import {
+  ArrowRight as ArrowRightIcon,
+  Minus as MinusIcon,
+  Package as PackageIcon,
+  Plus as PlusIcon,
+} from '@phosphor-icons/react';
 import { createContext, useContext } from "react";
 
 type ChangeType = "major" | "minor" | "patch" | "added" | "removed";

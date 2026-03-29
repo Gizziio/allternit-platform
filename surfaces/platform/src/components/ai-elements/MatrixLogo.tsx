@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, memo } from 'react';
-import { motion, useSpring, useMotionValue, useTransform, AnimatePresence } from 'framer-motion';
+import { motion, MotionConfig, useSpring, useMotionValue, useTransform, AnimatePresence, useMotionTemplate } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 interface MatrixLogoProps {
@@ -31,6 +31,7 @@ export const MatrixLogo = memo(({
   const isSpeaking = state === "speaking";
   const isListening = state === "listening";
   const isCompacting = state === "compacting";
+  const isAsleep = state === "asleep";
   const isSmall = size <= 48;
 
   // Global mouse tracking
@@ -83,10 +84,11 @@ export const MatrixLogo = memo(({
   }, [isSmall]);
 
   return (
-    <div 
-      className={cn("relative flex items-center justify-center cursor-pointer", className)} 
-      style={{ 
-        width: size, 
+    <MotionConfig reducedMotion="user">
+    <div
+      className={cn("relative flex items-center justify-center cursor-pointer", className)}
+      style={{
+        width: size,
         height: size,
         perspective: isSmall ? "600px" : "1200px",
         transformStyle: "preserve-3d"
@@ -111,8 +113,8 @@ export const MatrixLogo = memo(({
         <motion.div 
           className="absolute inset-0"
           style={{ transform: `translateZ(${isSmall ? -15 : -30}px)`, color: '#D4B08C' }}
-          animate={isCompacting ? { rotate: 360 } : isThinking ? { rotate: 360 } : { rotate: 0 }}
-          transition={isCompacting ? { repeat: Infinity, duration: 0.8, ease: "linear" } : isThinking ? { repeat: Infinity, duration: 8, ease: "linear" } : { type: "spring" }}
+          animate={isCompacting ? { rotate: 360 } : isThinking ? { rotate: 360 } : isListening ? { rotate: 360 } : { rotate: 0 }}
+          transition={isCompacting ? { repeat: Infinity, duration: 0.8, ease: "linear" } : isThinking ? { repeat: Infinity, duration: 8, ease: "linear" } : isListening ? { repeat: Infinity, duration: 4, ease: "linear" } : { type: "spring" }}
         >
           <svg viewBox="0 0 100 100" className="size-full overflow-visible">
             {extensions.map((ext, i) => (
@@ -123,7 +125,7 @@ export const MatrixLogo = memo(({
                   strokeWidth={isSmall ? "1" : "0.5"}
                   initial={{ y2: ext.y2, opacity: ext.opacity, strokeDashoffset: 0 }}
                   animate={{
-                    opacity: isCompacting ? [0.1, 1, 0.1] : isThinking ? [ext.opacity, 0.6, ext.opacity] : ext.opacity,
+                    opacity: isCompacting ? [0.1, 1, 0.1] : isThinking ? [ext.opacity, 0.6, ext.opacity] : isListening ? [ext.opacity * 0.5, ext.opacity * 1.4, ext.opacity * 0.5] : isAsleep ? ext.opacity * 0.15 : ext.opacity,
                     y2: isCompacting ? 48 : isSpeaking ? ext.y2 - (energy * (isSmall ? 4 : 8)) : ext.y2,
                     strokeDasharray: isCompacting ? "2 1" : isThinking ? ["4 2", "1 4", "4 2"] : "none",
                     strokeDashoffset: isCompacting ? [0, -10] : 0
@@ -169,18 +171,29 @@ export const MatrixLogo = memo(({
             transform: `translateZ(${isSmall ? 30 : 60}px)`,
             boxShadow: `0 0 ${15 + energy * (isSmall ? 20 : 40)}px #D4B08C`
           }}
-          animate={isCompacting ? { 
-            scale: [1, 10, 1], 
+          animate={isCompacting ? {
+            scale: [1, 10, 1],
             opacity: [0.2, 1, 0.2],
             boxShadow: [`0 0 10px #D4B08C`, `0 0 80px #D4B08C`, `0 0 10px #D4B08C`]
-          } : isThinking ? { 
-            opacity: [0.4, 1, 0.4], 
-            scale: [1, 2.5, 1] 
+          } : isThinking ? {
+            opacity: [0.4, 1, 0.4],
+            scale: [1, 2.5, 1]
+          } : isListening ? {
+            opacity: [0.5, 1, 0.5],
+            scale: [1, 1.8, 1],
+            boxShadow: [`0 0 8px #D4B08C`, `0 0 22px #D4B08C`, `0 0 8px #D4B08C`]
+          } : isSpeaking ? {
+            opacity: [0.6, 1, 0.6],
+            scale: [1, 2, 1]
+          } : state === "asleep" ? {
+            opacity: [0.1, 0.25, 0.1],
+            scale: [0.8, 1, 0.8]
           } : { opacity: 0.8 }}
-          transition={{ repeat: Infinity, duration: isCompacting ? 0.2 : 1.2 }}
+          transition={{ repeat: Infinity, duration: isCompacting ? 0.2 : isListening ? 1.4 : isSpeaking ? 0.7 : state === "asleep" ? 4 : 1.2 }}
         />
       </motion.div>
     </div>
+    </MotionConfig>
   );
 });
 
@@ -190,6 +203,8 @@ export const MatrixLogo = memo(({
 const Block = ({ data, mouseX, mouseY, state, energy, isSmall }: any) => {
   const isThinking = state === "thinking";
   const isSpeaking = state === "speaking";
+  const isListening = state === "listening";
+  const isAsleep = state === "asleep";
   const isCompacting = state === "compacting";
 
   const blockSize = isSmall ? 8 : 10;
@@ -197,19 +212,23 @@ const Block = ({ data, mouseX, mouseY, state, energy, isSmall }: any) => {
   const x = data.x * (blockSize + gap);
   const y = data.y * (blockSize + gap);
 
-  // Magnetic lift calculation
-  const dist = useTransform([mouseX, mouseY], ([mx, my]: any) => {
-    const dx = (data.x / 3) - mx; 
+  // Magnetic lift calculation — v12 callback form (array form removed in Framer Motion v12)
+  const dist = useTransform(() => {
+    const mx = mouseX.get();
+    const my = mouseY.get();
+    const dx = (data.x / 3) - mx;
     const dy = (data.y / 3) - my;
     const distance = Math.sqrt(dx * dx + dy * dy);
-    return Math.max(0, 1 - distance * 2.5); 
+    return Math.max(0, 1 - distance * 2.5);
   });
 
   const springConfig = { damping: 15, stiffness: 200 };
-  
+
   const zLift = useSpring(useTransform(dist, [0, 1], [isSmall ? data.z / 2 : data.z, isSmall ? (data.z / 2) + 20 : data.z + 50]), springConfig);
   const brightness = useTransform(dist, [0, 1], [0.8, 1.8]);
-  const scale = useTransform(dist, [0, 1], [1, 1.25]);
+  const magneticScale = useTransform(dist, [0, 1], [1, 1.25]);
+  // Reactive filter string — useMotionTemplate keeps it live as dist changes
+  const filterStyle = useMotionTemplate`brightness(${brightness})`;
 
   return (
     <motion.div
@@ -226,31 +245,63 @@ const Block = ({ data, mouseX, mouseY, state, energy, isSmall }: any) => {
         backgroundColor: '#D4B08C',
         opacity: data.accent ? 0.7 : 1,
         transformStyle: "preserve-3d",
-        scale: isSpeaking && data.accent ? 1 + energy * 1.8 : scale,
-        filter: `brightness(${brightness.get()})`,
+        // Variants no longer animate scale, so magnetic scale is safe here.
+        // Speaking accent block gets energy-driven scale override.
+        scale: (isSpeaking && data.accent) ? 1 + energy * 1.8 : magneticScale,
+        filter: filterStyle,
       }}
       variants={{
-        idle: {},
+        idle: {
+          opacity: [0.85, 1, 0.85],
+          transition: { repeat: Infinity, duration: 3, ease: "easeInOut", delay: Math.abs(data.x + data.y) * 0.1 }
+        },
+        listening: {
+          // Orbit-ring: blocks lift in a ripple from outer to inner — z via translateZ in transform
+          opacity: [0.7, 1, 0.7],
+          transition: {
+            repeat: Infinity,
+            duration: 1.6,
+            ease: "easeInOut",
+            delay: Math.sqrt(data.x*data.x + data.y*data.y) * 0.15
+          }
+        },
         thinking: {
-          z: [isSmall ? data.z / 2 : data.z, (isSmall ? data.z / 2 : data.z) + (isSmall ? 15 : 30), isSmall ? data.z / 2 : data.z],
           rotateY: [0, 180, 360],
           opacity: [1, 0.6, 1],
-          transition: { 
-            repeat: Infinity, 
-            duration: 3, 
-            delay: Math.sqrt(data.x*data.x + data.y*data.y) * 0.2 // Radial wave delay
+          transition: {
+            repeat: Infinity,
+            duration: 3,
+            delay: Math.sqrt(data.x*data.x + data.y*data.y) * 0.2
+          }
+        },
+        speaking: {
+          // Frequency bands: pulse by Y row (like audio bars)
+          opacity: [0.6, 1, 0.6],
+          transition: {
+            repeat: Infinity,
+            duration: 0.7,
+            ease: "easeInOut",
+            delay: Math.abs(data.y) * 0.12
+          }
+        },
+        asleep: {
+          // Heartbeat: very slow dim pulse
+          opacity: [0.2, 0.38, 0.2],
+          transition: {
+            repeat: Infinity,
+            duration: 4,
+            ease: "easeInOut",
+            delay: Math.abs(data.x * data.y) * 0.05
           }
         },
         compacting: {
           x: [x, 0, x],
           y: [y, 0, y],
-          z: [data.z, -20, data.z],
-          scale: [1, 0.2, 1],
           rotateZ: [0, 180, 360],
           opacity: [1, 0.3, 1],
-          transition: { 
-            repeat: Infinity, 
-            duration: 0.8, 
+          transition: {
+            repeat: Infinity,
+            duration: 0.8,
             ease: "circInOut",
             delay: Math.abs(data.x + data.y) * 0.05
           }

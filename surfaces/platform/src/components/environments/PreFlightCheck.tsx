@@ -11,17 +11,17 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  CheckCircle2,
+  CheckCircle,
   XCircle,
-  Loader2,
-  Server,
-  Container,
+  CircleNotch,
+  HardDrives,
+  Cube,
   Cpu,
-  MemoryStick,
+  HardDrive,
   Network,
-  AlertTriangle,
-  RefreshCw,
-} from 'lucide-react';
+  Warning,
+  ArrowsClockwise,
+} from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { vpsApi } from '@/api/infrastructure';
@@ -53,35 +53,35 @@ export function PreFlightCheck({
     {
       id: 'vps-connectivity',
       name: 'VPS Connectivity',
-      icon: <Server className="w-4 h-4" />,
+      icon: <HardDrives size={16} />,
       status: 'pending',
       message: 'Waiting to check...',
     },
     {
       id: 'docker-available',
       name: 'Docker Available',
-      icon: <Container className="w-4 h-4" />,
+      icon: <Cube size={16} />,
       status: 'pending',
       message: 'Waiting to check...',
     },
     {
       id: 'cpu-resources',
       name: 'CPU Resources',
-      icon: <Cpu className="w-4 h-4" />,
+      icon: <Cpu size={16} />,
       status: 'pending',
       message: 'Waiting to check...',
     },
     {
       id: 'memory-resources',
       name: 'Memory Resources',
-      icon: <MemoryStick className="w-4 h-4" />,
+      icon: <HardDrive size={16} />,
       status: 'pending',
       message: 'Waiting to check...',
     },
     {
       id: 'port-availability',
       name: 'Port Availability',
-      icon: <Network className="w-4 h-4" />,
+      icon: <Network size={16} />,
       status: 'pending',
       message: 'Waiting to check...',
     },
@@ -219,13 +219,13 @@ export function PreFlightCheck({
   const getStatusIcon = (status: CheckItem['status']) => {
     switch (status) {
       case 'passed':
-        return <CheckCircle2 className="w-5 h-5 text-green-500" />;
+        return <CheckCircle className="w-5 h-5 text-green-500" />;
       case 'failed':
         return <XCircle className="w-5 h-5 text-red-500" />;
       case 'warning':
-        return <AlertTriangle className="w-5 h-5 text-yellow-500" />;
+        return <Warning className="w-5 h-5 text-yellow-500" />;
       case 'checking':
-        return <Loader2 className="w-5 h-5 text-primary animate-spin" />;
+        return <CircleNotch className="w-5 h-5 text-primary animate-spin" />;
       default:
         return <div className="w-5 h-5 rounded-full border-2 border-muted" />;
     }
@@ -267,9 +267,9 @@ export function PreFlightCheck({
           className="gap-2"
         >
           {isRunning ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <CircleNotch className="w-4 h-4 animate-spin" />
           ) : (
-            <RefreshCw className="w-4 h-4" />
+            <ArrowsClockwise size={16} />
           )}
           {isRunning ? 'Checking...' : 'Run Checks'}
         </Button>
@@ -278,7 +278,7 @@ export function PreFlightCheck({
       {!targetVpsId && (
         <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-sm text-yellow-700">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4" />
+            <Warning size={16} />
             <span>Select a VPS to run pre-flight checks</span>
           </div>
         </div>
@@ -316,7 +316,7 @@ export function PreFlightCheck({
       {(passedCount > 0 || failedCount > 0 || warningCount > 0) && !isRunning && (
         <div className="flex items-center gap-4 text-xs">
           <div className="flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3 text-green-500" />
+            <CheckCircle className="w-3 h-3 text-green-500" />
             <span>{passedCount} passed</span>
           </div>
           {failedCount > 0 && (
@@ -327,7 +327,7 @@ export function PreFlightCheck({
           )}
           {warningCount > 0 && (
             <div className="flex items-center gap-1">
-              <AlertTriangle className="w-3 h-3 text-yellow-500" />
+              <Warning className="w-3 h-3 text-yellow-500" />
               <span>{warningCount} warnings</span>
             </div>
           )}

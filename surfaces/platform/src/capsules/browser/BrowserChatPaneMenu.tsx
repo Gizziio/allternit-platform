@@ -1,13 +1,18 @@
 /**
  * BrowserChatPaneMenu — Three-dot dropdown menu for browser chat pane header.
  *
- * Items: Convert to task, Settings, Language (submenu).
+ * Items: Convert to task, GearSix, Language (submenu).
  */
 
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { CalendarClock, ChevronRight, Globe, Settings } from "lucide-react";
+import {
+  CalendarBlank as CalendarClock,
+  CaretRight,
+  Globe,
+  GearSix,
+} from '@phosphor-icons/react';
 
 import { useBrowserChatPaneStore } from "./browserChatPane.store";
 
@@ -145,7 +150,7 @@ export function BrowserChatPaneMenu({
           e.currentTarget.style.background = "transparent";
         }}
       >
-        <Settings size={15} style={{ color: TEXT_SECONDARY }} />
+        <GearSix size={15} style={{ color: TEXT_SECONDARY }} />
         <span>Settings</span>
       </button>
 
@@ -172,7 +177,7 @@ export function BrowserChatPaneMenu({
           <span style={{ fontSize: 11, color: TEXT_SECONDARY, marginRight: 4 }}>
             {LANGUAGES.find((l) => l.id === language)?.label ?? language}
           </span>
-          <ChevronRight size={13} style={{ opacity: 0.5 }} />
+          <CaretRight size={13} style={{ opacity: 0.5 }} />
         </button>
 
         {showLangSubmenu && (

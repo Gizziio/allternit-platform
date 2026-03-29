@@ -16,23 +16,23 @@
 import React, { useState, useCallback } from 'react';
 import { A2rOSProvider } from '../a2r-os';
 import { A2rConsole, A2rConsoleToggle } from '../a2r-os/components/A2rConsole';
-import { 
-  Cpu, 
-  FileText, 
-  Table, 
-  Presentation, 
-  Code, 
-  FolderOpen, 
-  Workflow,
+import {
+  Cpu,
+  FileText,
+  Table,
+  Presentation,
+  Code,
+  FolderOpen,
+  Graph,
   Globe,
   Terminal,
-  LayoutGrid,
-  MessageSquare,
+  SquaresFour,
+  Chat,
   X,
   Play,
-  Settings,
-  Activity
-} from 'lucide-react';
+  GearSix,
+  Pulse as Activity,
+} from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { ViewContext } from '@/nav/nav.types';
@@ -45,7 +45,7 @@ const programsList = [
   { id: 'codepreview', name: 'CodePreview', desc: 'Multi-file code browser', icon: Code, color: 'bg-purple-500' },
   { id: 'assetmanager', name: 'AssetManager', desc: 'Image & file management', icon: FolderOpen, color: 'bg-pink-500' },
   { id: 'orchestrator', name: 'Orchestrator', desc: 'MoA execution dashboard', icon: Cpu, color: 'bg-red-500' },
-  { id: 'workflowbuilder', name: 'WorkflowBuilder', desc: 'Visual DAG builder', icon: Workflow, color: 'bg-cyan-500' },
+  { id: 'workflowbuilder', name: 'WorkflowBuilder', desc: 'Visual DAG builder', icon: Graph, color: 'bg-cyan-500' },
   { id: 'browser', name: 'Browser', desc: 'Web citations with screenshots', icon: Globe, color: 'bg-indigo-500' },
 ];
 
@@ -78,7 +78,7 @@ export function A2rOSView({ context }: A2rOSViewProps) {
         <header className="h-14 border-b bg-card flex items-center justify-between px-4 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-              <LayoutGrid className="w-4 h-4 text-white" />
+              <SquaresFour className="w-4 h-4 text-white" />
             </div>
             <div>
               <h1 className="font-semibold text-sm">A2rOS</h1>
@@ -94,7 +94,7 @@ export function A2rOSView({ context }: A2rOSViewProps) {
               onClick={() => setActiveTab('launcher')}
               className="gap-2"
             >
-              <LayoutGrid className="w-4 h-4" />
+              <SquaresFour size={16} />
               Launcher
             </Button>
             <Button 
@@ -103,7 +103,7 @@ export function A2rOSView({ context }: A2rOSViewProps) {
               onClick={() => setActiveTab('active')}
               className="gap-2"
             >
-              <Play className="w-4 h-4" />
+              <Play size={16} />
               Active
               {activePrograms.length > 0 && (
                 <Badge variant="secondary" className="ml-1 text-xs">{activePrograms.length}</Badge>
@@ -115,7 +115,7 @@ export function A2rOSView({ context }: A2rOSViewProps) {
               onClick={() => setActiveTab('chat')}
               className="gap-2"
             >
-              <MessageSquare className="w-4 h-4" />
+              <Chat size={16} />
               Chat
             </Button>
             <div className="w-px h-6 bg-border mx-2" />
@@ -125,7 +125,7 @@ export function A2rOSView({ context }: A2rOSViewProps) {
               onClick={() => setConsoleOpen(!consoleOpen)}
               className="gap-2"
             >
-              <Terminal className="w-4 h-4" />
+              <Terminal size={16} />
               Console
             </Button>
           </div>
@@ -142,7 +142,7 @@ export function A2rOSView({ context }: A2rOSViewProps) {
                 className={`w-10 h-10 rounded-lg flex items-center justify-center text-white hover:scale-105 transition-transform ${program.color}`}
                 title={program.name}
               >
-                <program.icon className="w-4 h-4" />
+                <program.icon size={16} />
               </button>
             ))}
           </aside>
@@ -171,7 +171,7 @@ export function A2rOSView({ context }: A2rOSViewProps) {
         {/* Footer Status */}
         <footer className="h-8 border-t bg-muted/50 flex items-center px-4 gap-4 text-xs shrink-0">
           <span className="flex items-center gap-1 text-green-600">
-            <Activity className="w-3 h-3" />
+            <Activity size={12} />
             Kernel Connected
           </span>
           <span className="text-muted-foreground">|</span>
@@ -206,7 +206,7 @@ function ProgramLauncher({ onLaunch }: { onLaunch: (id: string) => void }) {
               className="flex items-start gap-4 p-4 rounded-xl border bg-card hover:border-primary hover:shadow-md transition-all text-left"
             >
               <div className={`w-12 h-12 rounded-xl ${program.color} flex items-center justify-center text-white shrink-0`}>
-                <program.icon className="w-5 h-5" />
+                <program.icon size={20} />
               </div>
               <div>
                 <h3 className="font-medium">{program.name}</h3>
@@ -238,7 +238,7 @@ function ActivePrograms({ programs }: { programs: Array<{ id: string; type: stri
   if (programs.length === 0) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
-        <LayoutGrid className="w-12 h-12 mb-4 opacity-50" />
+        <SquaresFour className="w-12 h-12 mb-4 opacity-50" />
         <h3 className="text-lg font-medium mb-2">No Active Programs</h3>
         <p className="text-sm">Launch a program from the Launcher tab</p>
       </div>
@@ -259,7 +259,7 @@ function ActivePrograms({ programs }: { programs: Array<{ id: string; type: stri
                 className="flex items-center gap-4 p-4 rounded-xl border bg-card"
               >
                 <div className={`w-10 h-10 rounded-lg ${programDef?.color || 'bg-blue-500'} flex items-center justify-center text-white`}>
-                  <Icon className="w-5 h-5" />
+                  <Icon size={20} />
                 </div>
                 <div className="flex-1">
                   <h3 className="font-medium">{activeProgram.title}</h3>
@@ -362,7 +362,7 @@ function ProgramPreviewCard({ type, title, status }: { type: string; title: stri
     <div className="ml-11 p-4 rounded-xl border bg-card max-w-md">
       <div className="flex items-center gap-3 mb-3">
         <div className="w-10 h-10 rounded-lg bg-blue-500 flex items-center justify-center text-white">
-          <FileText className="w-5 h-5" />
+          <FileText size={20} />
         </div>
         <div>
           <h4 className="font-medium">{title}</h4>

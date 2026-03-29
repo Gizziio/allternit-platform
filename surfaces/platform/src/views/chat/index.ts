@@ -9,7 +9,6 @@ export {
   useChatStore,
   type ChatThread,
   type ChatProject,
-  type ChatMessage,
   type ProjectFile,
 } from "./ChatStore";
 

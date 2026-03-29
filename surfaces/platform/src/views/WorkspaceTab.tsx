@@ -20,15 +20,15 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Zap,
-  RefreshCw,
-  CheckCircle2,
-  AlertCircle,
-  ChevronRight,
+  Lightning,
+  ArrowsClockwise,
+  CheckCircle,
+  Warning,
+  CaretRight,
   Radio,
-  ExternalLink,
+  ArrowSquareOut,
   Plus,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import { useAgentStore, agentWorkspaceService } from '../lib/agents';
 import type { Agent } from '../lib/agents/agent.types';
 
@@ -233,9 +233,9 @@ function AgentCard({
             }}
           >
             {activating ? (
-              <RefreshCw size={11} className="animate-spin" />
+              <ArrowsClockwise size={11} className="animate-spin" />
             ) : (
-              <Zap size={11} />
+              <Lightning size={11} />
             )}
             {activating ? 'Activating…' : 'Set Active'}
           </button>
@@ -255,7 +255,7 @@ function AgentCard({
             gap: 5,
           }}
         >
-          <ExternalLink size={11} />
+          <ArrowSquareOut size={11} />
           Dashboard
         </button>
       </div>
@@ -317,12 +317,12 @@ function ActiveCard({ workspace }: { workspace: ActiveWorkspace }) {
             </span>
             {workspace.hasSoul && (
               <span style={{ fontSize: 11, color: '#86efac' }}>
-                <CheckCircle2 size={11} className="inline mr-1" />soul
+                <CheckCircle size={11} className="inline mr-1" />soul
               </span>
             )}
             {workspace.hasMemory && (
               <span style={{ fontSize: 11, color: '#86efac' }}>
-                <CheckCircle2 size={11} className="inline mr-1" />memory
+                <CheckCircle size={11} className="inline mr-1" />memory
               </span>
             )}
           </div>
@@ -415,7 +415,7 @@ export function WorkspaceTab({ onSwitchToRegistry }: WorkspaceTabProps = {}) {
         className="flex items-center justify-center"
         style={{ height: 240, color: '#555', fontSize: 13 }}
       >
-        <RefreshCw size={15} className="animate-spin mr-2" />
+        <ArrowsClockwise size={15} className="animate-spin mr-2" />
         Connecting…
       </div>
     );
@@ -434,7 +434,7 @@ export function WorkspaceTab({ onSwitchToRegistry }: WorkspaceTabProps = {}) {
           }}
         >
           <div className="flex items-start gap-3">
-            <AlertCircle size={16} color="#888" className="flex-shrink-0 mt-0.5" />
+            <Warning size={16} color="#888" className="flex-shrink-0 mt-0.5" />
             <div>
               <div style={{ fontSize: 14, color: '#ccc', marginBottom: 6 }}>
                 gizzi-code not running

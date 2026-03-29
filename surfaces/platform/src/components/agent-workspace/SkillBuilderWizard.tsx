@@ -15,23 +15,23 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Wrench,
   Plus,
-  Trash2,
-  ChevronRight,
-  ChevronLeft,
+  Trash,
+  CaretRight,
+  CaretLeft,
   Check,
   FileText,
   Code,
-  Settings,
+  GearSix,
   Play,
-  Save,
+  FloppyDisk,
   X,
-  AlertCircle,
+  Warning,
   Tag,
   User,
   Clock,
   Shield,
-  Box,
-} from 'lucide-react';
+  Cube,
+} from '@phosphor-icons/react';
 import { agentWorkspaceService } from '@/lib/agents/agent-workspace.service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -570,7 +570,7 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
                         onClick={() => removeInput(input.id)}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: theme.textMuted }}
                       >
-                        <Trash2 style={{ width: 14, height: 14 }} />
+                        <Trash style={{ width: 14, height: 14 }} />
                       </button>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '12px' }}>
@@ -641,7 +641,7 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
                         onClick={() => removeOutput(output.id)}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: theme.textMuted }}
                       >
-                        <Trash2 style={{ width: 14, height: 14 }} />
+                        <Trash style={{ width: 14, height: 14 }} />
                       </button>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
@@ -755,7 +755,7 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
               <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
                 {formData.requiredTools.map(tool => (
                   <Badge key={tool} variant="secondary" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Box style={{ width: 12, height: 12 }} />
+                    <Cube style={{ width: 12, height: 12 }} />
                     {tool}
                     <button onClick={() => updateForm('requiredTools', formData.requiredTools.filter(t => t !== tool))} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                       <X style={{ width: 12, height: 12 }} />
@@ -844,7 +844,7 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
                       onClick={() => removeExample(example.id)}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', color: theme.textMuted }}
                     >
-                      <Trash2 style={{ width: 14, height: 14 }} />
+                      <Trash style={{ width: 14, height: 14 }} />
                     </button>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -986,7 +986,7 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
             {error && (
               <div style={{ padding: '12px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <AlertCircle style={{ width: 16, height: 16, color: '#ef4444' }} />
+                  <Warning style={{ width: 16, height: 16, color: '#ef4444' }} />
                   <span style={{ fontSize: '13px', color: '#ef4444' }}>{error}</span>
                 </div>
               </div>
@@ -1094,7 +1094,7 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
             onClick={goToPreviousStep}
             disabled={currentStepIndex === 0}
           >
-            <ChevronLeft style={{ width: 16, height: 16, marginRight: '6px' }} />
+            <CaretLeft style={{ width: 16, height: 16, marginRight: '6px' }} />
             Back
           </Button>
 
@@ -1111,7 +1111,7 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
                 </>
               ) : (
                 <>
-                  <Save style={{ width: 16, height: 16, marginRight: '6px' }} />
+                  <FloppyDisk style={{ width: 16, height: 16, marginRight: '6px' }} />
                   Create Skill
                 </>
               )}
@@ -1123,7 +1123,7 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
               style={{ background: canProceed() ? theme.accent : undefined }}
             >
               Next
-              <ChevronRight style={{ width: 16, height: 16, marginLeft: '6px' }} />
+              <CaretRight style={{ width: 16, height: 16, marginLeft: '6px' }} />
             </Button>
           )}
         </div>

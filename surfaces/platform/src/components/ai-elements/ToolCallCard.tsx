@@ -4,16 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Shimmer } from './shimmer';
 import { CodeBlock } from './code-block';
-import { 
-  Wrench, 
-  Clock, 
-  CheckCircle, 
-  XCircle, 
-  AlertTriangle,
+import {
+  Wrench,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Warning,
   Play,
   Check,
-  X
-} from 'lucide-react';
+  X,
+} from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 
 interface ToolCallCardProps {
@@ -84,7 +84,7 @@ export function ToolCallCard({ toolCall, onApprove, onReject }: ToolCallCardProp
         {toolCall.status === 'error' && toolCall.error && (
           <div className="p-4 border-t bg-red-500/5 space-y-2">
             <div className="flex items-center gap-2 text-red-600 text-[10px] font-bold uppercase tracking-wider">
-              <XCircle className="w-3 h-3" />
+              <XCircle size={12} />
               Execution Failed
             </div>
             <div className="p-3 rounded-md bg-red-50 border border-red-100 text-xs text-red-700 font-mono">
@@ -110,7 +110,7 @@ function ApprovalSection({ show, onApprove, onReject }: any) {
   return (
     <div className="px-4 py-3 bg-amber-500/5 border-t border-b border-amber-500/10 flex flex-col gap-3">
       <div className="flex items-center gap-2 text-amber-600 text-xs font-medium">
-        <AlertTriangle className="w-4 h-4" />
+        <Warning size={16} />
         {'This action requires your approval'}
       </div>
       <div className="flex gap-2">
@@ -149,7 +149,7 @@ function StatusBadge({ status }: { status: ToolCall['status'] }) {
 
   return (
     <div className={cn("flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-muted border text-[10px] font-medium", config.color)}>
-      <Icon className="w-3 h-3" />
+      <Icon size={12} />
       {config.label}
     </div>
   );

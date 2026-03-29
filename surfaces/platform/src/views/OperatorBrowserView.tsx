@@ -20,19 +20,19 @@ import {
   Globe,
   Play,
   Square,
-  RefreshCw,
-  Activity,
+  ArrowsClockwise,
+  Pulse as Activity,
   CheckCircle,
-  AlertCircle,
+  Warning,
   Clock,
   Terminal,
   Eye,
-  MousePointer,
+  Cursor,
   Keyboard,
   Camera,
-  Download,
-  Search,
-} from 'lucide-react';
+  DownloadSimple,
+  MagnifyingGlass,
+} from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { GATEWAY_URL } from '@/integration/api-client';
 
@@ -173,7 +173,7 @@ export function OperatorBrowserView() {
       case 'running':
         return <Activity className="w-4 h-4 text-blue-500 animate-pulse" />;
       case 'failed':
-        return <AlertCircle className="w-4 h-4 text-red-500" />;
+        return <Warning className="w-4 h-4 text-red-500" />;
       default:
         return <Clock className="w-4 h-4 text-yellow-500" />;
     }
@@ -215,7 +215,7 @@ export function OperatorBrowserView() {
             {operatorStatus.available ? (
               <CheckCircle className="w-3 h-3 mr-1" />
             ) : (
-              <AlertCircle className="w-3 h-3 mr-1" />
+              <Warning className="w-3 h-3 mr-1" />
             )}
             {operatorStatus.available ? 'Operator Online' : 'Operator Offline'}
           </Badge>
@@ -225,7 +225,7 @@ export function OperatorBrowserView() {
             onClick={checkOperatorHealth}
             disabled={!operatorStatus.available}
           >
-            <RefreshCw className="w-4 h-4" />
+            <ArrowsClockwise size={16} />
           </Button>
         </div>
       </div>
@@ -253,9 +253,9 @@ export function OperatorBrowserView() {
                   size="icon"
                 >
                   {isCreating ? (
-                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <ArrowsClockwise className="w-4 h-4 animate-spin" />
                   ) : (
-                    <Play className="w-4 h-4" />
+                    <Play size={16} />
                   )}
                 </Button>
               </div>
@@ -295,7 +295,7 @@ export function OperatorBrowserView() {
                       {getStatusIcon(task.status)}
                     </div>
                     <div className="flex items-center gap-2 text-xs text-[var(--text-tertiary)]">
-                      <Clock className="w-3 h-3" />
+                      <Clock size={12} />
                       {new Date(task.createdAt).toLocaleTimeString()}
                       {task.status === 'completed' && task.completedAt && (
                         <>
@@ -345,7 +345,7 @@ export function OperatorBrowserView() {
                   {/* Actions */}
                   <GlassCard className="p-4">
                     <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
-                      <Terminal className="w-4 h-4" />
+                      <Terminal size={16} />
                       Actions
                     </h4>
                     <div className="space-y-2">
@@ -358,7 +358,7 @@ export function OperatorBrowserView() {
                             <Globe className="w-4 h-4 text-blue-400" />
                           )}
                           {action.type === 'click' && (
-                            <MousePointer className="w-4 h-4 text-green-400" />
+                            <Cursor className="w-4 h-4 text-green-400" />
                           )}
                           {action.type === 'type' && (
                             <Keyboard className="w-4 h-4 text-yellow-400" />
@@ -367,7 +367,7 @@ export function OperatorBrowserView() {
                             <Camera className="w-4 h-4 text-purple-400" />
                           )}
                           {action.type === 'extract' && (
-                            <Download className="w-4 h-4 text-cyan-400" />
+                            <DownloadSimple className="w-4 h-4 text-cyan-400" />
                           )}
                           {action.type === 'wait' && (
                             <Clock className="w-4 h-4 text-gray-400" />
@@ -389,7 +389,7 @@ export function OperatorBrowserView() {
                   {selectedTask.result && (
                     <GlassCard className="p-4">
                       <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
-                        <Eye className="w-4 h-4" />
+                        <Eye size={16} />
                         Result
                       </h4>
                       <pre className="text-xs bg-[var(--bg-secondary)] p-3 rounded overflow-auto max-h-64">

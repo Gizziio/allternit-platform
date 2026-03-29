@@ -12,15 +12,15 @@ import React, { useState, useMemo } from 'react';
 import {
   X,
   Package,
-  Download,
+  DownloadSimple,
   SkipForward,
   Check,
-  Loader2,
-  ChevronRight,
-  RefreshCw,
-  AlertCircle,
-  ExternalLink,
-} from 'lucide-react';
+  CircleNotch,
+  CaretRight,
+  ArrowsClockwise,
+  Warning,
+  ArrowSquareOut,
+} from '@phosphor-icons/react';
 import type { UpdateInfo } from '../plugins/updateChecker';
 
 // ============================================================================
@@ -173,11 +173,11 @@ function UpdateItem({
         }}
       >
         {isUpdating ? (
-          <Loader2 size={16} color={THEME.accent} style={{ animation: 'spin 1s linear infinite' }} />
+          <CircleNotch size={16} color={THEME.accent} style={{ animation: 'spin 1s linear infinite' }} />
         ) : isCompleted ? (
           <Check size={16} color={THEME.success} />
         ) : hasError ? (
-          <AlertCircle size={16} color={THEME.danger} />
+          <Warning size={16} color={THEME.danger} />
         ) : (
           <Package size={16} color={THEME.accent} />
         )}
@@ -233,7 +233,7 @@ function UpdateItem({
           <span style={{ textDecoration: 'line-through', opacity: 0.6 }}>
             v{update.currentVersion}
           </span>
-          <ChevronRight size={12} color={THEME.textTertiary} />
+          <CaretRight size={12} color={THEME.textTertiary} />
           <span style={{ color: THEME.success, fontWeight: 500 }}>
             v{update.latestVersion}
           </span>
@@ -276,7 +276,7 @@ function UpdateItem({
                 transition: 'opacity 0.15s',
               }}
             >
-              <Download size={12} />
+              <DownloadSimple size={12} />
               Update
             </button>
             <button
@@ -539,7 +539,7 @@ export function UpdateModal({
                 opacity: isChecking ? 0.6 : 1,
               }}
             >
-              <RefreshCw
+              <ArrowsClockwise
                 size={14}
                 style={{
                   animation: isChecking ? 'spin 1s linear infinite' : 'none',
@@ -693,12 +693,12 @@ export function UpdateModal({
             >
               {isUpdatingAll ? (
                 <>
-                  <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                  <CircleNotch size={14} style={{ animation: 'spin 1s linear infinite' }} />
                   Updating...
                 </>
               ) : (
                 <>
-                  <Download size={14} />
+                  <DownloadSimple size={14} />
                   Update {selectedIds.size > 0 ? `(${selectedIds.size})` : 'All'}
                 </>
               )}

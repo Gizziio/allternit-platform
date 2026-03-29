@@ -16,8 +16,8 @@ import {
   X,
   ChartLine,
   Gear,
+  Pulse as Activity,
 } from '@phosphor-icons/react';
-import { Activity } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -51,54 +51,6 @@ interface LogEntry {
   agent: string;
   message: string;
 }
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const MOCK_AGENTS: AgentMetric[] = [
-  {
-    id: 'a1', name: 'chat-agent-01', status: 'active', type: 'Chat', model: 'claude-opus-4-5',
-    taskCount: 42, tokensUsed: 184320, latencyMs: 312, uptime: '14h 22m', lastActivity: 'Now',
-    memMb: 128,
-  },
-  {
-    id: 'a2', name: 'cowork-planner', status: 'active', type: 'Cowork', model: 'claude-sonnet-4-5',
-    taskCount: 17, tokensUsed: 93400, latencyMs: 520, uptime: '6h 10m', lastActivity: '12s ago',
-    memMb: 64,
-  },
-  {
-    id: 'a3', name: 'code-reviewer', status: 'idle', type: 'Code', model: 'claude-haiku-4-5',
-    taskCount: 8, tokensUsed: 24100, latencyMs: 180, uptime: '2h 45m', lastActivity: '4m ago',
-    memMb: 48,
-  },
-  {
-    id: 'a4', name: 'runner-exec-02', status: 'error', type: 'Runner', model: 'gpt-4o',
-    taskCount: 3, tokensUsed: 7200, latencyMs: 0, uptime: '0h 18m', lastActivity: '1m ago',
-    memMb: 32,
-  },
-  {
-    id: 'a5', name: 'skill-orchestrator', status: 'paused', type: 'Orchestrator', model: 'claude-opus-4-5',
-    taskCount: 0, tokensUsed: 450, latencyMs: 0, uptime: '0h 5m', lastActivity: '6m ago',
-    memMb: 24,
-  },
-];
-
-const MOCK_SYSTEM: SystemMetric[] = [
-  { label: 'Total Requests', value: '1,284', unit: 'today', trend: 'up', trendValue: '+18%', color: 'var(--accent-chat)' },
-  { label: 'Avg Latency', value: '341', unit: 'ms', trend: 'down', trendValue: '-12%', color: '#34c759' },
-  { label: 'Token Spend', value: '309K', unit: 'tokens', trend: 'up', trendValue: '+24%', color: 'var(--accent-primary)' },
-  { label: 'Error Rate', value: '0.8', unit: '%', trend: 'stable', trendValue: '±0%', color: '#ff9f0a' },
-];
-
-const MOCK_LOGS: LogEntry[] = [
-  { id: 'l1', time: '14:42:07', level: 'info', agent: 'chat-agent-01', message: 'Task completed: "Summarize meeting notes" (312ms)' },
-  { id: 'l2', time: '14:41:55', level: 'warn', agent: 'runner-exec-02', message: 'Tool timeout on `bash_exec` — retrying (1/3)' },
-  { id: 'l3', time: '14:41:40', level: 'error', agent: 'runner-exec-02', message: 'Max retries exceeded: connection refused to localhost:8080' },
-  { id: 'l4', time: '14:41:22', level: 'info', agent: 'cowork-planner', message: 'Plan generated for project "Q3 Roadmap" — 8 tasks' },
-  { id: 'l5', time: '14:40:58', level: 'debug', agent: 'code-reviewer', message: 'Idle threshold reached — suspending context window' },
-  { id: 'l6', time: '14:40:11', level: 'info', agent: 'chat-agent-01', message: 'Thread created: tid_0x4a92b (model: claude-opus-4-5)' },
-  { id: 'l7', time: '14:39:44', level: 'info', agent: 'skill-orchestrator', message: 'Skill "docx" registered — v1.4.0' },
-  { id: 'l8', time: '14:38:30', level: 'warn', agent: 'cowork-planner', message: 'Context window at 82% capacity — consider summarizing' },
-];
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -155,15 +107,25 @@ function MetricCard({ metric }: { metric: SystemMetric }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function MonitorView() {
-  const [agents, setAgents] = useState<AgentMetric[]>(MOCK_AGENTS);
-  const [logs, setLogs] = useState<LogEntry[]>(MOCK_LOGS);
+  const [agents, setAgents] = useState<AgentMetric[]>([]);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [systemMetrics, setSystemMetrics] = useState<SystemMetric[]>([]);
   const [activeTab, setActiveTab] = useState<'agents' | 'logs'>('agents');
   const [logFilter, setLogFilter] = useState<'all' | 'info' | 'warn' | 'error'>('all');
   const [refreshing, setRefreshing] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
 
+  const loadData = () => {
+    fetch('/api/v1/monitor/agents').then(r => r.json()).then(setAgents).catch(() => {});
+    fetch('/api/v1/monitor/logs').then(r => r.json()).then(setLogs).catch(() => {});
+    fetch('/api/v1/monitor/system').then(r => r.json()).then(setSystemMetrics).catch(() => {});
+  };
+
+  useEffect(() => { loadData(); }, []);
+
   const handleRefresh = () => {
     setRefreshing(true);
+    loadData();
     setTimeout(() => setRefreshing(false), 600);
   };
 
@@ -208,7 +170,7 @@ export function MonitorView() {
 
       {/* ── System Metrics Row ── */}
       <div style={{ display: 'flex', gap: 16, marginBottom: 32, flexWrap: 'wrap' }}>
-        {MOCK_SYSTEM.map(m => <MetricCard key={m.label} metric={m} />)}
+        {systemMetrics.map(m => <MetricCard key={m.label} metric={m} />)}
       </div>
 
       {/* ── Quick Stats Chips ── */}

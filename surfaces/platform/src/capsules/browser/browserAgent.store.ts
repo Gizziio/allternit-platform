@@ -16,18 +16,120 @@ import {
   BrowserAgentMode,
   BrowserEndpoint,
   BrowserAction,
-  PageState,
   RiskTier,
 } from './browserAgent.types';
 import {
-  ReceiptGenerator,
-  getReceiptGenerator,
   ReceiptQueryParams,
   ReceiptQueryResult,
+  getReceiptGenerator,
 } from './receiptService';
-import { getPolicyEngine } from './policyService';
-import { getObservabilityService } from './observabilityService';
-import { getEnvironmentManager } from './environmentService';
+import type { PageAgentBridgeConfig } from '@/lib/page-agent/config';
+import {
+  getPageAgentRunEndpoint,
+  getPageAgentStopEndpoint,
+  getPageAgentStreamEndpoint,
+} from '@/lib/page-agent/runtime-client';
+
+export type PageAgentStatus = 'idle' | 'running' | 'completed' | 'error';
+
+export type PageAgentActivity =
+  | { type: 'thinking' }
+  | { type: 'executing'; tool: string; input?: unknown }
+  | { type: 'executed'; tool: string; input?: unknown; output?: string; duration?: number }
+  | { type: 'retrying'; attempt: number; maxAttempts: number }
+  | { type: 'error'; message: string };
+
+export type PageAgentHistoricalEvent =
+  | {
+      type: 'step';
+      stepIndex?: number;
+      reflection?: {
+        evaluation_previous_goal?: string;
+        memory?: string;
+        next_goal?: string;
+      };
+      action?: {
+        name: string;
+        input: unknown;
+        output: string;
+      };
+      rawRequest?: unknown;
+      rawResponse?: unknown;
+    }
+  | {
+      type: 'observation';
+      content: string;
+    }
+  | {
+      type: 'retry';
+      message: string;
+      attempt: number;
+      maxAttempts: number;
+    }
+  | {
+      type: 'error';
+      message: string;
+      rawResponse?: unknown;
+    }
+  | {
+      type: 'user_takeover';
+      message?: string;
+    };
+
+export interface PageAgentSessionRecord {
+  id: string;
+  sessionId: string | null;
+  task: string;
+  status: Extract<PageAgentStatus, 'completed' | 'error'>;
+  history: PageAgentHistoricalEvent[];
+  createdAt: number;
+}
+
+const PAGE_AGENT_SESSION_LIMIT = 20;
+
+function mapRemotePageAgentStatus(status: string): PageAgentStatus {
+  if (status === 'running') return 'running';
+  if (status === 'completed') return 'completed';
+  if (status === 'error') return 'error';
+  return 'idle';
+}
+
+function createPageAgentSessionId() {
+  return globalThis.crypto?.randomUUID?.() ?? `page-agent-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function ensurePageAgentHistory(
+  history: PageAgentHistoricalEvent[],
+  fallback: { success?: boolean; data?: string; message?: string },
+): PageAgentHistoricalEvent[] {
+  if (history.length > 0) {
+    return history;
+  }
+
+  if (fallback.message) {
+    return [{ type: 'error', message: fallback.message }];
+  }
+
+  if (fallback.data) {
+    return [{ type: 'observation', content: fallback.data }];
+  }
+
+  if (fallback.success === false) {
+    return [{ type: 'error', message: 'Task failed.' }];
+  }
+
+  return history;
+}
+
+function appendPageAgentSession(
+  sessions: PageAgentSessionRecord[],
+  record: PageAgentSessionRecord,
+) {
+  return [
+    record,
+    ...sessions.filter((session) => session.id !== record.id && session.sessionId !== record.sessionId),
+  ].slice(0, PAGE_AGENT_SESSION_LIMIT);
+}
 
 // ============================================================================
 // Store State
@@ -38,7 +140,7 @@ export interface BrowserAgentState {
   status: BrowserAgentStatus;
   mode: BrowserAgentMode;
   endpoint: BrowserEndpoint | null;
-  
+
   // Current execution
   currentRunId: string | null;
   currentAction: {
@@ -47,45 +149,88 @@ export interface BrowserAgentState {
     totalSteps: number;
     boundingBox?: { x: number; y: number; width: number; height: number } | null;
     label?: string;
+    selector?: string;
+    type?: string;
   } | null;
-  
+
   // Goal
   goal: string;
-  
+
+  // Streaming / observable state
+  lastEventMessage: string | null;
+  currentAdapterId: string | null;
+  currentLayer: string | null;
+  fallbackCount: number;
+
   // Approval
   requiresApproval: boolean;
   approvalActionSummary?: string;
   approvalRiskTier?: RiskTier;
-  
+
   // Receipts
   receipts: string[];  // Receipt IDs
-  
+
   // Connected endpoints
   connectedEndpoints: BrowserEndpoint[];
-  
+
+  // Active ACI engine session (set when runGoal posts to /api/aci/run)
+  aciSessionId: string | null;
+
+  // Live screenshot from the ACI SSE stream (base64 PNG, no data: prefix)
+  screenshot: string | null;
+
+  // Page-agent session (extension path via thin-client)
+  pageAgentSessionId: string | null;
+  pageAgentStatus: PageAgentStatus;
+  pageAgentActivity: PageAgentActivity | null;
+  pageAgentHistory: PageAgentHistoricalEvent[];
+  pageAgentSessions: PageAgentSessionRecord[];
+
+  // AI SDK model string used for computer-use runs — any vision-capable model
+  // e.g. 'anthropic/claude-sonnet-4.6', 'openai/gpt-5.4', 'google/gemini-2.5-pro'
+  aciModel: string;
+  setAciModel: (model: string) => void;
+
+  // BrowserCapsule mount tracking — used by ACIComputerUseSidecar to suppress
+  // the global portal panel when the capsule is already showing its own viewport
+  isBrowserCapsuleMounted: boolean;
+  setIsBrowserCapsuleMounted: (mounted: boolean) => void;
+
+  // ACI sidecar expanded/collapsed — shared between the right panel and the
+  // above-input compact bar so both use the same toggle
+  aciSidecarExpanded: boolean;
+  setAciSidecarExpanded: (expanded: boolean) => void;
+  toggleAciSidecar: () => void;
+
   // Actions
   setGoal: (goal: string) => void;
   runGoal: (goal: string) => void;
+  runPageAgentGoal: (goal: string, config?: PageAgentBridgeConfig) => void;
   stopExecution: () => void;
+  stopPageAgent: () => void;
+  deletePageAgentSession: (id: string) => void;
+  clearPageAgentSessions: () => void;
+  pauseExecution: () => void;
+  resumeExecution: () => void;
   takeOver: () => void;
   handOff: () => void;
   approveAction: () => void;
   denyAction: () => void;
   captureScreenshot: () => void;
   openDrawer: () => void;
-  
+
   // Mode
   setMode: (mode: BrowserAgentMode) => void;
-  
+
   // Endpoint
   setEndpoint: (endpoint: BrowserEndpoint | null) => void;
   addEndpoint: (endpoint: BrowserEndpoint) => void;
   removeEndpoint: (endpointId: string) => void;
-  
+
   // Receipts
   addReceipt: (receiptId: string) => void;
   queryReceipts: (params: ReceiptQueryParams) => Promise<ReceiptQueryResult>;
-  
+
   // Execution simulation (for demo)
   _simulateExecution: () => void;
 }
@@ -103,80 +248,301 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
     currentRunId: null,
     currentAction: null,
     goal: '',
+    lastEventMessage: null,
+    currentAdapterId: null,
+    currentLayer: null,
+    fallbackCount: 0,
     requiresApproval: false,
     approvalActionSummary: undefined,
     approvalRiskTier: undefined,
     receipts: [],
     connectedEndpoints: [],
+    aciSessionId: null,
+    screenshot: null,
+    pageAgentSessionId: null,
+    pageAgentStatus: 'idle',
+    pageAgentActivity: null,
+    pageAgentHistory: [],
+    pageAgentSessions: [],
+    aciModel: 'anthropic/claude-sonnet-4.6',
+    setAciModel: (model) => set({ aciModel: model }),
+    isBrowserCapsuleMounted: false,
+    setIsBrowserCapsuleMounted: (mounted) => set({ isBrowserCapsuleMounted: mounted }),
+    aciSidecarExpanded: true,
+    setAciSidecarExpanded: (expanded) => set({ aciSidecarExpanded: expanded }),
+    toggleAciSidecar: () => set((s) => ({ aciSidecarExpanded: !s.aciSidecarExpanded })),
     
     // Goal
     setGoal: (goal) => set({ goal }),
     
     // Run goal
     runGoal: (goal) => {
-      const runId = 'run_' + Date.now();
-      
-      // Log to observability
-      const obs = getObservabilityService();
-      obs.log({
-        event_type: 'agent.run.start',
-        severity: 'info',
-        source: 'browserAgentStore',
-        message: `Starting agent run with goal: ${goal}`,
-        payload: {
-          runId,
-          goal,
-          mode: get().mode,
-          endpoint: get().endpoint?.type,
-        },
-      });
-      
-      // Get current environment
-      const envManager = getEnvironmentManager();
-      envManager.getCurrentEnvironment().then(env => {
-        obs.log({
-          event_type: 'agent.run.environment',
-          severity: 'info',
-          source: 'browserAgentStore',
-          message: `Running in environment: ${env}`,
-          payload: { runId, environment: env },
-        });
-      });
-
       set({
         goal,
         status: 'Running',
-        currentRunId: runId,
+        currentAction: null,
+        screenshot: null,
+        aciSessionId: null,
+        pageAgentSessionId: null,
+        pageAgentStatus: 'idle',
+        pageAgentActivity: null,
+        pageAgentHistory: [],
       });
 
-      // Start simulated execution
-      get()._simulateExecution();
+      fetch('/api/aci/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ goal, model: get().aciModel }),
+      })
+        .then((res) => res.json())
+        .then(({ sessionId, adapterId }: { sessionId: string; adapterId: string }) => {
+          set({ aciSessionId: sessionId, currentAdapterId: adapterId });
+
+          const es = new EventSource(`/api/aci/stream/${sessionId}`);
+
+          es.onmessage = (e) => {
+            try {
+              const event = JSON.parse(e.data) as { type: string; data: unknown; ts: number };
+
+              if (event.type === 'state') {
+                // RunState shape from lib/aci/types.ts
+                const s = event.data as {
+                  status?: string;
+                  lastMessage?: string | null;
+                  adapterId?: string;
+                  stepIndex?: number;
+                  totalSteps?: number | null;
+                  currentAction?: {
+                    type?: string;
+                    label?: string;
+                    selector?: string;
+                    x?: number;
+                    y?: number;
+                    risk?: number;
+                  } | null;
+                };
+
+                const update: Partial<BrowserAgentState> = {};
+
+                if (s.status !== undefined) update.status = s.status as BrowserAgentStatus;
+                if (s.lastMessage != null) update.lastEventMessage = s.lastMessage;
+                if (s.adapterId) update.currentAdapterId = s.adapterId;
+
+                // Map AciAction → BrowserAgentState.currentAction
+                if ('currentAction' in s) {
+                  if (!s.currentAction) {
+                    update.currentAction = null;
+                  } else {
+                    const a = s.currentAction;
+                    update.currentAction = {
+                      action: { type: a.type } as BrowserAction,
+                      stepIndex: s.stepIndex ?? 0,
+                      totalSteps: s.totalSteps ?? undefined,
+                      label: a.label,
+                      selector: a.selector,
+                      type: a.type,
+                      boundingBox:
+                        a.x != null && a.y != null
+                          ? { x: a.x, y: a.y, width: 40, height: 20 }
+                          : null,
+                    };
+                  }
+                }
+
+                // Derive approval state from status
+                const isWaiting = s.status === 'WaitingApproval';
+                update.requiresApproval = isWaiting;
+                if (isWaiting && s.currentAction) {
+                  update.approvalActionSummary = s.currentAction.label ?? s.currentAction.type;
+                  update.approvalRiskTier = (s.currentAction.risk ?? 3) as RiskTier;
+                }
+
+                set(update);
+              } else if (event.type === 'screenshot') {
+                // runner sends { screenshot: base64 }
+                const d = event.data as { screenshot?: string };
+                if (d.screenshot) set({ screenshot: d.screenshot });
+              } else if (event.type === 'trace') {
+                const t = event.data as { message?: string; adapterId?: string };
+                if (t.message) set({ lastEventMessage: t.message });
+                if (t.adapterId) set({ currentAdapterId: t.adapterId });
+              } else if (event.type === 'done') {
+                es.close();
+              }
+            } catch {
+              // ignore malformed events
+            }
+          };
+
+          es.onerror = () => {
+            es.close();
+            if (get().status === 'Running') set({ status: 'Done' });
+          };
+        })
+        .catch(() => {
+          set({ status: 'Done' });
+        });
     },
     
+    // Run goal via browser extension (page-agent path)
+    runPageAgentGoal: (goal, config) => {
+      set({
+        goal,
+        status: 'Idle',
+        currentAction: null,
+        currentAdapterId: null,
+        currentLayer: null,
+        lastEventMessage: null,
+        fallbackCount: 0,
+        requiresApproval: false,
+        approvalActionSummary: undefined,
+        approvalRiskTier: undefined,
+        aciSessionId: null,
+        screenshot: null,
+        pageAgentSessionId: null,
+        pageAgentStatus: 'running',
+        pageAgentActivity: { type: 'thinking' },
+        pageAgentHistory: [],
+      });
+
+      fetch(getPageAgentRunEndpoint(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task: goal, config }),
+      })
+        .then((res) => res.json())
+        .then(({ sessionId, error }: { sessionId?: string; error?: string }) => {
+          if (error || !sessionId) {
+            set({
+              status: 'Idle',
+              pageAgentStatus: 'error',
+              pageAgentActivity: { type: 'error', message: error ?? 'Failed to start' },
+            });
+            return;
+          }
+
+          set({ pageAgentSessionId: sessionId });
+
+          const es = new EventSource(getPageAgentStreamEndpoint(sessionId));
+
+          es.onmessage = (e) => {
+            try {
+              const msg = JSON.parse(e.data) as {
+                type: string;
+                payload?: unknown;
+                timestamp: number;
+              };
+
+              if (msg.type === 'status') {
+                const { status } = msg.payload as { status: string };
+                const nextStatus = mapRemotePageAgentStatus(status);
+                set({
+                  pageAgentStatus: nextStatus,
+                  pageAgentActivity: nextStatus === 'running' ? get().pageAgentActivity : null,
+                });
+              } else if (msg.type === 'activity') {
+                const activity = msg.payload as PageAgentActivity;
+                set({ pageAgentActivity: activity });
+              } else if (msg.type === 'history') {
+                const payload = msg.payload as { events?: PageAgentHistoricalEvent[] };
+                set({ pageAgentHistory: payload.events ?? [] });
+              } else if (msg.type === 'done') {
+                const { success, data } = msg.payload as { success: boolean; data?: string };
+                set((s) => ({
+                  status: 'Idle',
+                  pageAgentStatus: success ? 'completed' : 'error',
+                  pageAgentActivity: null,
+                  pageAgentHistory: ensurePageAgentHistory(s.pageAgentHistory, { success, data }),
+                  pageAgentSessions: appendPageAgentSession(s.pageAgentSessions, {
+                    id: createPageAgentSessionId(),
+                    sessionId,
+                    task: goal,
+                    status: success ? 'completed' : 'error',
+                    history: ensurePageAgentHistory(s.pageAgentHistory, { success, data }),
+                    createdAt: Date.now(),
+                  }),
+                }));
+                es.close();
+              } else if (msg.type === 'error') {
+                const { message } = msg.payload as { message: string };
+                set((s) => ({
+                  status: 'Idle',
+                  pageAgentStatus: 'error',
+                  pageAgentActivity: null,
+                  pageAgentHistory: ensurePageAgentHistory(s.pageAgentHistory, { message }),
+                  pageAgentSessions: appendPageAgentSession(s.pageAgentSessions, {
+                    id: createPageAgentSessionId(),
+                    sessionId,
+                    task: goal,
+                    status: 'error',
+                    history: ensurePageAgentHistory(s.pageAgentHistory, { message }),
+                    createdAt: Date.now(),
+                  }),
+                }));
+                es.close();
+              }
+            } catch {
+              // ignore malformed events
+            }
+          };
+
+          es.onerror = () => {
+            es.close();
+            if (get().pageAgentStatus === 'running') {
+              set({
+                status: 'Idle',
+                pageAgentStatus: 'error',
+                pageAgentActivity: { type: 'error', message: 'Connection to the extension bridge was interrupted.' },
+              });
+            }
+          };
+        })
+        .catch(() => {
+          set({
+            status: 'Idle',
+            pageAgentStatus: 'error',
+            pageAgentActivity: { type: 'error', message: 'Could not reach desktop app.' },
+          });
+        });
+    },
+
+    // Stop page-agent task
+    stopPageAgent: () => {
+      const { pageAgentSessionId } = get();
+      set({ status: 'Idle', pageAgentStatus: 'idle', pageAgentActivity: null, currentAction: null });
+      if (pageAgentSessionId) {
+        fetch(getPageAgentStopEndpoint(pageAgentSessionId), { method: 'POST' }).catch(() => {});
+      }
+    },
+
+    deletePageAgentSession: (id) => {
+      set((state) => ({
+        pageAgentSessions: state.pageAgentSessions.filter((session) => session.id !== id),
+      }));
+    },
+
+    clearPageAgentSessions: () => {
+      set({ pageAgentSessions: [] });
+    },
+
     // Stop execution
     stopExecution: () => {
-      const state = get();
-      
-      // Log to observability
-      const obs = getObservabilityService();
-      obs.log({
-        event_type: 'agent.run.stop',
-        severity: 'info',
-        source: 'browserAgentStore',
-        message: 'Agent execution stopped by user',
-        payload: {
-          runId: state.currentRunId,
-          status: state.status,
-        },
-      });
-      
-      set({
-        status: 'Done',
-        currentAction: null,
-        requiresApproval: false,
-      });
+      const { aciSessionId } = get();
+      set({ status: 'Done', currentAction: null, requiresApproval: false });
+
+      if (aciSessionId) {
+        fetch(`/api/aci/stop/${aciSessionId}`, { method: 'POST' }).catch(() => {});
+      }
     },
     
+    // Pause / resume
+    pauseExecution: () => {
+      if (get().status === 'Running') set({ status: 'Blocked' });
+    },
+    resumeExecution: () => {
+      if (get().status === 'Blocked') set({ status: 'Running' });
+    },
+
     // Take over control
     takeOver: () => {
       set({ mode: 'Human', status: 'Blocked' });
@@ -189,62 +555,27 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
     
     // Approve action
     approveAction: () => {
-      const state = get();
-      
-      // Log approval to observability
-      const obs = getObservabilityService();
-      obs.log({
-        event_type: 'agent.approval.granted',
-        severity: 'info',
-        source: 'browserAgentStore',
-        message: 'User approved pending action',
-        payload: {
-          runId: state.currentRunId,
-          actionSummary: state.approvalActionSummary,
-          riskTier: state.approvalRiskTier,
-        },
-      });
-      
+      const { aciSessionId } = get();
       set({ requiresApproval: false });
-      // Continue execution
-      setTimeout(() => {
-        const currentState = get();
-        if (currentState.currentAction) {
-          // Simulate action completion
-          get()._simulateExecution();
-        }
-      }, 500);
+      if (aciSessionId) {
+        fetch(`/api/aci/approve/${aciSessionId}`, { method: 'POST' }).catch(() => {});
+      }
     },
-    
+
     // Deny action
     denyAction: () => {
-      set({
-        requiresApproval: false,
-        status: 'Blocked',
-      });
+      const { aciSessionId } = get();
+      set({ requiresApproval: false, status: 'Blocked' });
+      if (aciSessionId) {
+        fetch(`/api/aci/approve/${aciSessionId}?deny=true`, { method: 'POST' }).catch(() => {});
+      }
     },
     
     // Capture screenshot
     captureScreenshot: () => {
-      const state = get();
-      
-      // Log to observability
-      const obs = getObservabilityService();
-      obs.log({
-        event_type: 'agent.screenshot.capture',
-        severity: 'info',
-        source: 'browserAgentStore',
-        message: 'Screenshot captured',
-        payload: {
-          runId: state.currentRunId,
-          status: state.status,
-        },
-      });
-      
       console.log('Capturing screenshot...');
       // @placeholder APPROVED - Browser runtime integration pending
       // @ticket GAP-56
-      // Stub: call browser runtime to capture
     },
 
     // Open drawer
@@ -290,177 +621,8 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
       return generator.queryReceipts(params);
     },
     
-    // Simulated execution (for demo)
-    _simulateExecution: () => {
-      const state = get();
-      if (!state.currentRunId) return;
-      
-      // Simulated action sequence
-      const actions: Array<{
-        type: string;
-        label: string;
-        riskTier: RiskTier;
-        requiresApproval: boolean;
-        boundingBox: { x: number; y: number; width: number; height: number };
-      }> = [
-        { type: 'Navigate', label: 'Navigating...', riskTier: 1, requiresApproval: false, boundingBox: { x: 0, y: 0, width: 0, height: 0 } },
-        { type: 'Click', label: 'Clicking login...', riskTier: 1, requiresApproval: false, boundingBox: { x: 100, y: 200, width: 120, height: 40 } },
-        { type: 'Type', label: 'Typing credentials...', riskTier: 2, requiresApproval: false, boundingBox: { x: 100, y: 250, width: 200, height: 30 } },
-        { type: 'Click', label: 'Clicking submit...', riskTier: 3, requiresApproval: true, boundingBox: { x: 100, y: 300, width: 100, height: 40 } },
-        { type: 'Extract', label: 'Extracting data...', riskTier: 0, requiresApproval: false, boundingBox: { x: 0, y: 400, width: 800, height: 600 } },
-      ];
-      
-      let stepIndex = 0;
-      
-      const executeNext = () => {
-        const currentState = get();
-        if (currentState.status !== 'Running' || stepIndex >= actions.length) {
-          set({ status: 'Done', currentAction: null });
-          return;
-        }
-        
-        const action = actions[stepIndex];
-        
-        // Update current action
-        set({
-          currentAction: {
-            action: {
-              id: 'action_' + stepIndex,
-              type: action.type as any,
-              riskTier: action.riskTier,
-              timeoutMs: 5000,
-              retries: 0,
-              target: { strategy: 'css', value: '.element' },
-              evidence: { capture: ['screenshot_target', 'dom_hash'] },
-            },
-            stepIndex: stepIndex + 1,
-            totalSteps: actions.length,
-            boundingBox: action.boundingBox,
-            label: action.label,
-          },
-        });
-        
-        // Check if approval required
-        if (action.requiresApproval && currentState.mode === 'Agent') {
-          set({
-            status: 'WaitingApproval',
-            requiresApproval: true,
-            approvalActionSummary: action.label,
-            approvalRiskTier: action.riskTier,
-          });
-          return;  // Wait for approval
-        }
-        
-        // Simulate action completion
-        setTimeout(async () => {
-          const obs = getObservabilityService();
-          
-          // Log action start
-          await obs.log({
-            event_type: 'agent.action.start',
-            severity: 'info',
-            source: 'browserAgentStore',
-            message: `Starting action: ${action.label}`,
-            payload: {
-              runId: currentState.currentRunId!,
-              actionId: 'action_' + stepIndex,
-              actionType: action.type,
-              riskTier: action.riskTier,
-            },
-          });
-          
-          // Start trace span for action
-          const spanId = await obs.startSpan(`action:${action.type}`, {
-            action_type: action.type,
-            risk_tier: String(action.riskTier),
-            step_index: String(stepIndex),
-          });
-          
-          // Generate receipt
-          const generator = getReceiptGenerator();
-          generator.startAction({
-            runId: currentState.currentRunId!,
-            actionId: 'action_' + stepIndex,
-            action: {
-              id: 'action_' + stepIndex,
-              type: action.type as any,
-              riskTier: action.riskTier,
-              timeoutMs: 5000,
-              retries: 0,
-              target: { strategy: 'css', value: '.element' },
-              evidence: { capture: ['screenshot_target', 'dom_hash'] },
-            },
-            beforeState: {
-              url: 'https://example.com',
-              title: 'Example',
-              domHash: 'hash_' + stepIndex,
-            },
-          }).then(({ trace }) => {
-            generator.generateReceipt({
-              runId: currentState.currentRunId!,
-              actionId: 'action_' + stepIndex,
-              action: {
-                id: 'action_' + stepIndex,
-                type: action.type as any,
-                riskTier: action.riskTier,
-                timeoutMs: 5000,
-                retries: 0,
-                target: { strategy: 'css', value: '.element' },
-                evidence: { capture: ['screenshot_target', 'dom_hash'] },
-              },
-              status: 'success',
-              beforeState: {
-                url: 'https://example.com',
-                title: 'Example',
-                domHash: 'hash_before',
-              },
-              afterState: {
-                url: 'https://example.com',
-                title: 'Example',
-                domHash: 'hash_after',
-              },
-              artifacts: [
-                {
-                  kind: 'screenshot',
-                  sha256: 'screenshot_hash_' + stepIndex,
-                  mime: 'image/png',
-                },
-                {
-                  kind: 'dom_snippet',
-                  sha256: 'dom_hash_' + stepIndex,
-                },
-              ],
-              trace,
-            }).then(async (receipt) => {
-              get().addReceipt(receipt.runId + ':' + receipt.actionId);
-              
-              // Log receipt generation
-              await obs.log({
-                event_type: 'receipt.generated',
-                severity: 'info',
-                source: 'browserAgentStore',
-                message: `Receipt generated for action: ${action.type}`,
-                payload: {
-                  runId: receipt.runId,
-                  actionId: receipt.actionId,
-                },
-              });
-              
-              // End trace span
-              await obs.endSpan(spanId, 'ok');
-              
-              // Record performance
-              await obs.recordPerformance(1500, false);
-            });
-          });
-
-          stepIndex++;
-          executeNext();
-        }, 1500);
-      };
-      
-      executeNext();
-    },
+    // No-op — kept for interface compatibility; real execution runs via runGoal → SSE
+    _simulateExecution: () => {},
   }))
 );
 

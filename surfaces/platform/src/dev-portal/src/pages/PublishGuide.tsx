@@ -1,20 +1,18 @@
 import { useState } from 'react';
-import { 
-  Upload, 
-  CheckCircle, 
-  Circle,
+import {
+  UploadSimple,
+  CheckCircle,
   FileText,
   Package,
   Shield,
-  Rocket,
-  ChevronRight,
+  RocketLaunch,
   Copy,
   Check,
   Terminal,
-  AlertCircle,
+  Warning,
   Star,
-  Users
-} from 'lucide-react';
+  Users,
+} from '@phosphor-icons/react';
 
 const steps = [
   {
@@ -72,7 +70,7 @@ const steps = [
     number: 4,
     title: 'Publish',
     description: 'Submit to the marketplace',
-    icon: Rocket,
+    icon: RocketLaunch,
     content: {
       title: 'Publishing Options',
       items: [
@@ -157,7 +155,7 @@ export default function PublishGuide() {
                     ? 'bg-emerald-500/20 text-emerald-400'
                     : 'bg-a2r-bg text-a2r-text-muted'
               }`}>
-                {isPast ? <CheckCircle className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
+                {isPast ? <CheckCircle size={16} /> : <Icon size={16} />}
               </div>
               <div className="text-left">
                 <div className={`text-sm font-medium ${isActive ? 'text-a2r-accent' : 'text-a2r-text'}`}>
@@ -211,7 +209,7 @@ export default function PublishGuide() {
                 onClick={() => copyCommand('a2r validate && a2r build && a2r publish')}
                 className="p-1.5 text-a2r-text-muted hover:text-a2r-text hover:bg-a2r-surface-hover rounded transition-colors"
               >
-                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                {copied ? <Check size={16} /> : <Copy size={16} />}
               </button>
             </div>
             <div className="p-4">
@@ -265,7 +263,7 @@ Uploading...
           {/* Tips */}
           <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
             <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+              <Warning className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
               <div>
                 <h4 className="font-medium text-amber-400 mb-1">Pro Tips</h4>
                 <ul className="text-sm text-amber-400/80 space-y-1">
@@ -285,7 +283,7 @@ Uploading...
         {[
           { label: 'Published Skills', value: '1,234', icon: Package },
           { label: 'Active Publishers', value: '567', icon: Users },
-          { label: 'Total Downloads', value: '45.2K', icon: Upload },
+          { label: 'Total Downloads', value: '45.2K', icon: UploadSimple },
           { label: 'Avg Rating', value: '4.8', icon: Star },
         ].map((stat) => {
           const Icon = stat.icon;

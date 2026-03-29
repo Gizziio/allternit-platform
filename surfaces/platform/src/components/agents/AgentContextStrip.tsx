@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { filesApi } from "@/lib/agents/files-api";
 import {
   ArrowsOutCardinal,
   ClockCounterClockwise,
@@ -1114,16 +1115,20 @@ function WorkspaceDrawer({ workspaceScope, canvasCount, tags, palette }: Workspa
   const [fileTree, setFileTree] = useState<FileNode[]>([]);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
 
-  // Simulate fetching files when workspace tab is opened
+  // Fetch files when workspace tab is opened
   useEffect(() => {
     if (activeTab === "files" && fileTree.length === 0 && !isLoadingFiles) {
       setIsLoadingFiles(true);
-      // Simulate API call delay
-      const timer = setTimeout(() => {
-        setFileTree(generateMockFileTree(workspaceScope));
-        setIsLoadingFiles(false);
-      }, 600);
-      return () => clearTimeout(timer);
+      filesApi.listDirectory({ path: workspaceScope || '.' })
+        .then((entries) => {
+          const toNode = (entry: (typeof entries)[number]): FileNode => ({
+            name: entry.name,
+            type: entry.type === 'directory' ? 'directory' : 'file',
+          });
+          setFileTree(entries.map(toNode));
+        })
+        .catch(() => {})
+        .finally(() => setIsLoadingFiles(false));
     }
   }, [activeTab, fileTree.length, isLoadingFiles, workspaceScope]);
 
@@ -1467,31 +1472,6 @@ function WorkspaceInfo({
   );
 }
 
-// Mock file tree generator for demo purposes
-function generateMockFileTree(workspaceScope?: string): FileNode[] {
-  if (!workspaceScope) return [];
-
-  return [
-    {
-      name: "src",
-      type: "directory",
-      children: [
-        { name: "components", type: "directory", children: [{ name: "Button.tsx", type: "file" }] },
-        { name: "lib", type: "directory", children: [{ name: "utils.ts", type: "file" }] },
-        { name: "App.tsx", type: "file" },
-        { name: "index.ts", type: "file" },
-      ],
-    },
-    {
-      name: "docs",
-      type: "directory",
-      children: [{ name: "README.md", type: "file" }, { name: "API.md", type: "file" }],
-    },
-    { name: "package.json", type: "file" },
-    { name: "tsconfig.json", type: "file" },
-    { name: ".gitignore", type: "file" },
-  ];
-}
 
 // ============================================================================
 // Automation Drawer - Shows scheduled jobs and run history

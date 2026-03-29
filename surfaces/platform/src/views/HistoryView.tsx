@@ -9,7 +9,11 @@
 
 import React, { useMemo, useState } from 'react';
 import { GlassSurface } from '@/design/GlassSurface';
-import { Clock, Search } from 'lucide-react';
+import {
+  Clock,
+  MagnifyingGlass,
+} from '@phosphor-icons/react';
+import { useNativeAgentStore } from '@/lib/agents/native-agent.store';
 
 /**
  * Session data structure
@@ -31,60 +35,6 @@ const MODE_COLORS = {
   code: '#34c759',
 } as const;
 
-/**
- * Mock session data for development
- */
-const MOCK_SESSIONS: Session[] = [
-  {
-    id: 'session-1',
-    title: 'Refactor Design System Components',
-    messageCount: 12,
-    lastActivity: new Date(),
-    mode: 'code',
-  },
-  {
-    id: 'session-2',
-    title: 'Marketing Copy Review',
-    messageCount: 8,
-    lastActivity: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    mode: 'chat',
-  },
-  {
-    id: 'session-3',
-    title: 'Architecture Discussion',
-    messageCount: 24,
-    lastActivity: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-    mode: 'cowork',
-  },
-  {
-    id: 'session-4',
-    title: 'API Integration Planning',
-    messageCount: 15,
-    lastActivity: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-    mode: 'code',
-  },
-  {
-    id: 'session-5',
-    title: 'Feedback Collection',
-    messageCount: 5,
-    lastActivity: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-    mode: 'chat',
-  },
-  {
-    id: 'session-6',
-    title: 'Database Optimization',
-    messageCount: 18,
-    lastActivity: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
-    mode: 'code',
-  },
-  {
-    id: 'session-7',
-    title: 'Team Sync Notes',
-    messageCount: 11,
-    lastActivity: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000),
-    mode: 'cowork',
-  },
-];
 
 /**
  * Format relative time (e.g., "2 hours ago", "3 days ago")
@@ -218,14 +168,25 @@ function SessionRow({ session, selected, onSelect }: SessionRowProps) {
 export function HistoryView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+  const nativeSessions = useNativeAgentStore((state) => state.sessions);
+
+  const sessions: Session[] = useMemo(() =>
+    nativeSessions.map((ns) => ({
+      id: ns.id,
+      title: ns.name || 'Unnamed Session',
+      messageCount: ns.messageCount,
+      lastActivity: new Date(ns.lastAccessedAt || ns.updatedAt),
+      mode: 'chat' as const,
+    })),
+  [nativeSessions]);
 
   // Filter sessions based on search query
   const filteredSessions = useMemo(() => {
-    if (!searchQuery.trim()) return MOCK_SESSIONS;
-    return MOCK_SESSIONS.filter((session) =>
+    if (!searchQuery.trim()) return sessions;
+    return sessions.filter((session) =>
       session.title.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [searchQuery]);
+  }, [searchQuery, sessions]);
 
   // Group filtered sessions by date
   const groupedSessions = useMemo(() => {
@@ -282,9 +243,9 @@ export function HistoryView() {
               transition: 'all 0.2s',
             }}
           >
-            <Search
-              className="w-4 h-4 text-[var(--text-tertiary)] flex-shrink-0"
-              strokeWidth={2}
+            <MagnifyingGlass
+              size={16}
+              style={{ color: 'var(--text-tertiary)', flexShrink: 0 }}
             />
             <input
               type="text"

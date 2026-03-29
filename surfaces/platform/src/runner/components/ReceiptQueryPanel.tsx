@@ -7,11 +7,22 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  Receipt as ReceiptIcon, Search, Filter, Calendar, GitBranch, Hash,
-  RefreshCw, FileJson, ChevronDown, ChevronUp, Download,
-  CheckCircle, XCircle, AlertTriangle
-} from "lucide-react";
+import {
+  Receipt,
+  MagnifyingGlass,
+  Funnel,
+  Calendar,
+  GitBranch,
+  Hash,
+  ArrowsClockwise,
+  FileCode,
+  CaretDown,
+  CaretUp,
+  DownloadSimple,
+  CheckCircle,
+  XCircle,
+  Warning,
+} from '@phosphor-icons/react';
 import type { Receipt, ReceiptKind } from "../dak.types";
 
 const RECEIPT_KINDS: { value: ReceiptKind; label: string; color: string }[] = [
@@ -105,7 +116,7 @@ export function ReceiptQueryPanel() {
             {filteredReceipts.length} receipts found
           </div>
           <Button variant="outline" size="sm" onClick={() => fetchReceipts()}>
-            <RefreshCw className="w-4 h-4 mr-2" /> Refresh
+            <ArrowsClockwise className="w-4 h-4 mr-2" /> Refresh
           </Button>
         </div>
       </div>
@@ -176,19 +187,19 @@ function ReceiptListItem({
             {kindConfig.label}
           </Badge>
           <span className="font-mono text-sm truncate flex-1">{receipt.receiptId.slice(0, 20)}...</span>
-          {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          {isExpanded ? <CaretUp size={16} /> : <CaretDown size={16} />}
         </div>
         <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
-            <GitBranch className="w-3 h-3" />
+            <GitBranch size={12} />
             {receipt.dagId}
           </span>
           <span className="flex items-center gap-1">
-            <Hash className="w-3 h-3" />
+            <Hash size={12} />
             {receipt.nodeId}
           </span>
           <span className="flex items-center gap-1">
-            <Calendar className="w-3 h-3" />
+            <Calendar size={12} />
             {new Date(receipt.timestamp).toLocaleString()}
           </span>
         </div>
@@ -229,10 +240,10 @@ function ReceiptListItem({
             )}
             <div className="flex gap-2 pt-2">
               <Button size="sm" variant="outline">
-                <Download className="w-4 h-4 mr-2" /> Export
+                <DownloadSimple className="w-4 h-4 mr-2" /> Export
               </Button>
               <Button size="sm" variant="outline">
-                <FileJson className="w-4 h-4 mr-2" /> Copy JSON
+                <FileCode className="w-4 h-4 mr-2" /> Copy JSON
               </Button>
             </div>
           </div>

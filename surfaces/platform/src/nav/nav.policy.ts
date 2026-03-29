@@ -116,6 +116,7 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
 
   // Code views
   'new-file': { singleton: false, maxInstances: 20, allowNew: true, surface: 'view', ownsTabs: false },
+  'code-project': { singleton: false, maxInstances: 10, allowNew: true, surface: 'view', ownsTabs: false },
   search: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   debug: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'code-explorer': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },

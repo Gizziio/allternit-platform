@@ -1,5 +1,9 @@
-import React, { useState } from 'react';
-import { FileText, Search, MoreVertical } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  FileText,
+  MagnifyingGlass,
+  DotsThreeVertical,
+} from '@phosphor-icons/react';
 import GlassSurface from '@/design/GlassSurface';
 
 interface Document {
@@ -11,81 +15,6 @@ interface Document {
   path: string;
   modified: string;
 }
-
-const mockDocuments: Document[] = [
-  {
-    id: '1',
-    title: 'Product Roadmap 2024',
-    type: 'doc',
-    size: '2.4 MB',
-    pages: 12,
-    path: '/workspace/planning',
-    modified: '2 hours ago',
-  },
-  {
-    id: '2',
-    title: 'Customer Feedback Database',
-    type: 'table',
-    size: '1.8 MB',
-    pages: 1,
-    path: '/workspace/research',
-    modified: '5 hours ago',
-  },
-  {
-    id: '3',
-    title: 'React Component Library',
-    type: 'code',
-    size: '542 KB',
-    pages: 1,
-    path: '/workspace/code',
-    modified: '1 day ago',
-  },
-  {
-    id: '4',
-    title: 'Q4 Financial Report',
-    type: 'doc',
-    size: '3.2 MB',
-    pages: 18,
-    path: '/workspace/finance',
-    modified: '3 days ago',
-  },
-  {
-    id: '5',
-    title: 'User Analytics Sheet',
-    type: 'table',
-    size: '1.1 MB',
-    pages: 1,
-    path: '/workspace/analytics',
-    modified: '12 hours ago',
-  },
-  {
-    id: '6',
-    title: 'API Documentation',
-    type: 'doc',
-    size: '856 KB',
-    pages: 8,
-    path: '/workspace/docs',
-    modified: '2 days ago',
-  },
-  {
-    id: '7',
-    title: 'Data Pipeline Scripts',
-    type: 'code',
-    size: '234 KB',
-    pages: 1,
-    path: '/workspace/code',
-    modified: '6 hours ago',
-  },
-  {
-    id: '8',
-    title: 'Market Analysis Report',
-    type: 'doc',
-    size: '2.1 MB',
-    pages: 15,
-    path: '/workspace/research',
-    modified: '1 week ago',
-  },
-];
 
 type DocType = 'All' | 'Doc' | 'Table' | 'Code';
 type SortOption = 'Recent' | 'Name' | 'Size';
@@ -108,8 +37,13 @@ export const DocumentsView: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState<DocType>('All');
   const [sortBy, setSortBy] = useState<SortOption>('Recent');
   const [hoveredDocId, setHoveredDocId] = useState<string | null>(null);
+  const [documents, setDocuments] = useState<Document[]>([]);
 
-  const filteredDocs = mockDocuments
+  useEffect(() => {
+    fetch('/api/v1/workspace/documents').then(r => r.json()).then(setDocuments).catch(() => {});
+  }, []);
+
+  const filteredDocs = documents
     .filter((doc) => {
       const matchesSearch = doc.title.toLowerCase().includes(search.toLowerCase());
       const matchesType = typeFilter === 'All' || doc.type === typeFilter.toLowerCase();
@@ -140,7 +74,7 @@ export const DocumentsView: React.FC = () => {
       <div style={{ display: 'flex', gap: 'var(--spacing-md)', marginBottom: 'var(--spacing-lg)', alignItems: 'center', flexWrap: 'wrap' }}>
         {/* Search Input */}
         <div style={{ flex: 1, minWidth: '250px', position: 'relative' }}>
-          <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+          <MagnifyingGlass size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
           <input
             type="text"
             placeholder="Search documents..."
@@ -274,7 +208,7 @@ export const DocumentsView: React.FC = () => {
                       transition: 'all 0.2s ease',
                     }}
                   >
-                    <MoreVertical size={16} />
+                    <DotsThreeVertical size={16} />
                   </button>
                 </div>
               )}

@@ -12,20 +12,20 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus,
-  Trash2,
-  Edit2,
+  Trash,
+  PencilSimple,
   Cpu,
-  MemoryStick,
+  HardDrive,
   Clock,
-  TrendingUp,
-  TrendingDown,
-  Activity,
+  TrendUp,
+  TrendDown,
+  Pulse as Activity,
   Check,
   X,
-  AlertTriangle,
+  Warning,
   Play,
   Pause,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -151,7 +151,7 @@ export function AutoScalingRules({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="font-semibold flex items-center gap-2">
-            <Activity className="w-4 h-4" />
+            <Activity size={16} />
             Auto-Scaling Rules
           </h3>
           <p className="text-xs text-muted-foreground">
@@ -159,7 +159,7 @@ export function AutoScalingRules({
           </p>
         </div>
         <Button size="sm" onClick={openNewRule} className="gap-2">
-          <Plus className="w-4 h-4" />
+          <Plus size={16} />
           Add Rule
         </Button>
       </div>
@@ -245,7 +245,7 @@ export function AutoScalingRules({
                       onClick={() => openEditRule(rule)}
                       className="h-8 w-8 p-0"
                     >
-                      <Edit2 className="w-4 h-4" />
+                      <PencilSimple size={16} />
                     </Button>
                     <Button
                       size="sm"
@@ -253,7 +253,7 @@ export function AutoScalingRules({
                       onClick={() => handleDelete(rule.id)}
                       className="h-8 w-8 p-0 text-red-500 hover:text-red-600"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash size={16} />
                     </Button>
                   </div>
                 </div>

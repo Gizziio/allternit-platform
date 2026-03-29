@@ -23,22 +23,22 @@ import {
   Play,
   Square,
   Hand,
-  Sparkles,
+  Sparkle,
   CheckCircle,
-  AlertCircle,
+  Warning,
   XCircle,
   Clock,
-  ChevronDown,
+  CaretDown,
   Database,
-  Wifi,
-  WifiOff,
+  WifiHigh,
+  WifiSlash,
   Camera,
-  MoreVertical,
-  PanelRightOpen,
+  DotsThreeVertical,
+  SidebarSimple,
   Shield,
-  ShieldAlert,
-  Zap,
-} from 'lucide-react';
+  ShieldWarning,
+  Lightning,
+} from '@phosphor-icons/react';
 import { GlassSurface } from '@/design/GlassSurface';
 import {
   BrowserAgentStatus,
@@ -235,7 +235,7 @@ export function BrowserAgentBar({
       {guidanceMessages.length > 0 && (
         <div className="guidance-messages-bar px-4 py-2 border-b border-border/50 bg-purple-500/10">
           <div className="flex items-start gap-2">
-            <Sparkles className="w-4 h-4 text-purple-400 mt-0.5" />
+            <Sparkle className="w-4 h-4 text-purple-400 mt-0.5" />
             <div className="flex-1">
               {guidanceMessages.map((msg, idx) => (
                 <p key={idx} className="text-sm text-purple-200">{msg}</p>
@@ -259,12 +259,12 @@ export function BrowserAgentBar({
                 text-sm"
             >
               {isConnected ? (
-                <Wifi className="w-4 h-4 text-green-500" />
+                <WifiHigh className="w-4 h-4 text-green-500" />
               ) : (
-                <WifiOff className="w-4 h-4 text-red-500" />
+                <WifiSlash className="w-4 h-4 text-red-500" />
               )}
               <span className="max-w-[120px] truncate">{getEndpointLabel()}</span>
-              <ChevronDown className="w-3 h-3 opacity-50" />
+              <CaretDown className="w-3 h-3 opacity-50" />
             </button>
 
             {/* Endpoint Menu */}
@@ -316,7 +316,7 @@ export function BrowserAgentBar({
             />
             {policyDenialReason && (
               <div className="absolute -bottom-6 left-0 text-xs text-red-500 flex items-center gap-1">
-                <ShieldAlert className="w-3 h-3" />
+                <ShieldWarning size={12} />
                 {policyDenialReason}
               </div>
             )}
@@ -331,7 +331,7 @@ export function BrowserAgentBar({
                 text-red-500
                 transition-colors"
             >
-              <Square className="w-4 h-4" />
+              <Square size={16} />
               <span className="text-sm font-medium">Stop</span>
             </button>
           ) : (
@@ -349,7 +349,7 @@ export function BrowserAgentBar({
               {isPolicyCheckPending ? (
                 <Clock className="w-4 h-4 animate-spin" />
               ) : (
-                <Play className="w-4 h-4" />
+                <Play size={16} />
               )}
               <span className="text-sm font-medium">
                 {isPolicyCheckPending ? 'Checking...' : 'Run'}
@@ -373,7 +373,7 @@ export function BrowserAgentBar({
                 transition-colors
                 text-sm"
             >
-              <Hand className="w-4 h-4" />
+              <Hand size={16} />
               <span>Take Over</span>
             </button>
           ) : (
@@ -385,7 +385,7 @@ export function BrowserAgentBar({
                 transition-colors
                 text-sm"
             >
-              <Sparkles className="w-4 h-4" />
+              <Sparkle size={16} />
               <span>Hand Off</span>
             </button>
           )}
@@ -401,7 +401,7 @@ export function BrowserAgentBar({
                 animate-pulse
                 transition-colors"
             >
-              <CheckCircle className="w-4 h-4" />
+              <CheckCircle size={16} />
               <span className="font-medium">Approve</span>
             </button>
           )}
@@ -415,7 +415,7 @@ export function BrowserAgentBar({
               transition-colors"
             title="Capture screenshot"
           >
-            <Camera className="w-4 h-4" />
+            <Camera size={16} />
           </button>
 
           {/* Session Menu */}
@@ -427,7 +427,7 @@ export function BrowserAgentBar({
                 border border-border/50
                 transition-colors"
             >
-              <MoreVertical className="w-4 h-4" />
+              <DotsThreeVertical size={16} />
             </button>
 
             {showSessionMenu && (
@@ -450,9 +450,9 @@ export function BrowserAgentBar({
             `}
           >
             {status === 'Running' && <Clock className="w-3 h-3 animate-pulse" />}
-            {status === 'WaitingApproval' && <ShieldAlert className="w-3 h-3 animate-pulse" />}
-            {status === 'Blocked' && <XCircle className="w-3 h-3" />}
-            {status === 'Done' && <CheckCircle className="w-3 h-3" />}
+            {status === 'WaitingApproval' && <ShieldWarning className="w-3 h-3 animate-pulse" />}
+            {status === 'Blocked' && <XCircle size={12} />}
+            {status === 'Done' && <CheckCircle size={12} />}
             <span>{getStatusLabel()}</span>
           </div>
 
@@ -465,7 +465,7 @@ export function BrowserAgentBar({
               transition-colors
               text-sm"
           >
-            <PanelRightOpen className="w-4 h-4" />
+            <SidebarSimple size={16} />
             <span>Drawer</span>
           </button>
         </div>
@@ -478,7 +478,7 @@ export function BrowserAgentBar({
             <div className="flex items-center gap-2">
               {requiresApproval ? (
                 <span className="flex items-center gap-1 text-yellow-500">
-                  <ShieldAlert className="w-3 h-3" />
+                  <ShieldWarning size={12} />
                   {approvalActionSummary || 'Action requires approval'}
                   {approvalRiskTier && (
                     <span className="px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-500">
@@ -488,7 +488,7 @@ export function BrowserAgentBar({
                 </span>
               ) : (
                 <span className="flex items-center gap-1 text-blue-500">
-                  <Zap className="w-3 h-3" />
+                  <Lightning size={12} />
                   Agent executing...
                 </span>
               )}
@@ -560,9 +560,9 @@ function EndpointMenu({
               `}
             >
               {ep.type === 'shell_browser' ? (
-                <Database className="w-4 h-4" />
+                <Database size={16} />
               ) : (
-                <Wifi className="w-4 h-4" />
+                <WifiHigh size={16} />
               )}
               <span>
                 {ep.type === 'shell_browser'

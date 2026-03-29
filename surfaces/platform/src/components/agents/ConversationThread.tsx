@@ -8,24 +8,24 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  MessageSquare,
-  Bot,
+  Chat,
+  Robot,
   User,
-  Send,
-  CheckCircle2,
+  PaperPlaneTilt,
+  CheckCircle,
   XCircle,
-  AlertCircle,
+  Warning,
   Clock,
-  MoreVertical,
+  DotsThreeVertical,
   Copy,
   ThumbsUp,
   ThumbsDown,
   Flag,
   Archive,
-  Reply,
-  ChevronDown,
-  ChevronUp,
-} from 'lucide-react';
+  ArrowBendUpLeft as Reply,
+  CaretDown,
+  CaretUp,
+} from '@phosphor-icons/react';
 
 // ============================================================================
 // Types
@@ -95,11 +95,11 @@ function MessageBubble({
   const [replyContent, setReplyContent] = useState('');
 
   const typeConfig: Record<AgentMessageType, { color: string; icon: any; label: string }> = {
-    request: { color: '#60a5fa', icon: MessageSquare, label: 'Request' },
-    response: { color: '#4ade80', icon: CheckCircle2, label: 'Response' },
-    tool_result: { color: '#fb923c', icon: AlertCircle, label: 'Tool Result' },
-    approval: { color: '#22c55e', icon: CheckCircle2, label: 'Approved' },
-    info: { color: '#9ca3af', icon: MessageSquare, label: 'Info' },
+    request: { color: '#60a5fa', icon: Chat, label: 'Request' },
+    response: { color: '#4ade80', icon: CheckCircle, label: 'Response' },
+    tool_result: { color: '#fb923c', icon: Warning, label: 'Tool Result' },
+    approval: { color: '#22c55e', icon: CheckCircle, label: 'Approved' },
+    info: { color: '#9ca3af', icon: Chat, label: 'Info' },
     human_review: { color: '#a78bfa', icon: User, label: 'Human Review' },
   };
 
@@ -140,7 +140,7 @@ function MessageBubble({
           {message.from.isHuman ? (
             <User size={16} style={{ color: '#a78bfa' }} />
           ) : (
-            <Bot size={16} style={{ color: config.color }} />
+            <Robot size={16} style={{ color: config.color }} />
           )}
         </div>
 
@@ -224,7 +224,7 @@ function MessageBubble({
               </button>
               <div className="relative">
                 <button className="p-1.5 hover:bg-white/5 rounded transition-colors text-white/40 hover:text-white/70">
-                  <MoreVertical size={14} />
+                  <DotsThreeVertical size={14} />
                 </button>
               </div>
             </motion.div>
@@ -294,7 +294,7 @@ function MessageBubble({
               disabled={!replyContent.trim()}
               className="px-3 py-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-blue-400"
             >
-              <Send size={14} />
+              <PaperPlaneTilt size={14} />
             </button>
             <button
               onClick={() => setShowReplyInput(false)}
@@ -344,7 +344,7 @@ function HumanReviewRequest({
               onClick={onApprove}
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500/20 hover:bg-green-500/30 transition-colors text-green-400 text-sm font-medium"
             >
-              <CheckCircle2 size={16} />
+              <CheckCircle size={16} />
               Approve
             </button>
             <button
@@ -486,7 +486,7 @@ export function ConversationThread({
               disabled={!inputValue.trim() || isLoading}
               className="p-3 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-blue-400"
             >
-              <Send size={18} />
+              <PaperPlaneTilt size={18} />
             </button>
           </div>
           <p className="text-xs text-white/30 mt-2">

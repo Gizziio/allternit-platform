@@ -19,7 +19,7 @@ import {
   useNativeAgentStore,
   useActiveSession,
   useActiveMessages,
-  useStreamingState,
+  useSessionStreamingState,
   useSessionSyncState,
   useSessionCanvases,
   isLocalDraftSession,
@@ -42,7 +42,6 @@ import {
 // UI Components
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -63,44 +62,44 @@ import { Separator } from "@/components/ui/separator";
 
 // Icons
 import {
-  Send,
   Plus,
-  Trash2,
-  Square,
-  Bot,
+  Trash,
+  Robot,
   User,
-  Loader2,
+  CircleNotch,
   Copy,
-  Download,
-  PanelLeft,
-  PanelRight,
+  DownloadSimple,
+  Sidebar,
+  SidebarSimple,
   Layout,
   Code,
   FileText,
   Image,
   Terminal,
   Radio,
-  Activity,
-  Clock3,
-  Layers3,
-  Type,
-  FileJson,
+  Pulse as Activity,
+  Clock,
+  StackSimple,
+  TextT,
+  FileCode,
   Check,
   X,
-  AlertCircle,
-  Sparkles,
-  MessageSquare,
-  ChevronDown,
+  Warning,
+  Sparkle,
+  Chat,
+  CaretDown,
   Wrench,
   ArrowUpRight,
   Monitor,
-  Maximize2,
-  Minimize2,
-  Save,
-  RotateCcw,
-  Zap,
-} from "lucide-react";
+  ArrowsOut,
+  ArrowsIn,
+  FloppyDisk,
+  ArrowCounterClockwise,
+  Lightning,
+} from '@phosphor-icons/react';
 import { cn } from "@/lib/utils";
+import { GATEWAY_BASE_URL } from "@/lib/agents/api-config";
+import { SessionComposerRegion } from "@/components/session-composer";
 
 // ============================================================================
 // Types & Helpers
@@ -110,7 +109,6 @@ interface NativeAgentViewProps {
   initialSessionId?: string;
   defaultLayout?: number[];
   bootstrapStrategy?: "auto" | "manual";
-  syncSessions?: boolean;
   onOpenRuntimeOps?: () => void;
 }
 
@@ -143,7 +141,6 @@ export function NativeAgentView({
   initialSessionId,
   defaultLayout = [50, 50],
   bootstrapStrategy = "auto",
-  syncSessions = true,
   onOpenRuntimeOps,
 }: NativeAgentViewProps) {
   const {
@@ -156,7 +153,6 @@ export function NativeAgentView({
     fetchSessions,
     executionMode = null,
     fetchExecutionMode = async () => {},
-    connectSessionSync = () => () => {},
     isLoadingSessions = false,
     isUpdatingSession = false,
     isLoadingExecutionMode = false,
@@ -165,7 +161,7 @@ export function NativeAgentView({
   // A2R Native Context Integration
   const { a2rNativeState } = useWorkspace(activeSessionId || "");
 
-  const { isStreaming } = useStreamingState();
+  const { isStreaming } = useSessionStreamingState(activeSessionId ?? '');
   const { isConnected: isSessionSyncConnected, error: sessionSyncError } = useSessionSyncState();
   
   const [viewMode, setViewMode] = useState<ViewMode>("split");
@@ -194,11 +190,6 @@ export function NativeAgentView({
 
     return () => { isMounted = false; };
   }, [bootstrapStrategy, fetchSessions]);
-
-  useEffect(() => {
-    if (!syncSessions) return;
-    return connectSessionSync();
-  }, [connectSessionSync, syncSessions]);
 
   useEffect(() => {
     void fetchExecutionMode().catch(() => {});
@@ -334,7 +325,7 @@ function WorkspaceHeader({
   const canvases = useSessionCanvases(activeSessionId || "");
   const isLocalDraft = isLocalDraftSession(activeSession);
 
-  const ViewModeIcon = { split: Layout, "chat-only": PanelLeft, "canvas-only": PanelRight }[viewMode];
+  const ViewModeIcon = { split: Layout, "chat-only": Sidebar, "canvas-only": SidebarSimple }[viewMode];
 
   return (
     <div className="relative overflow-hidden border-b border-[color:var(--border-subtle)] bg-[color:var(--glass-bg-thick)] px-5 py-5 backdrop-blur-xl">
@@ -342,7 +333,7 @@ function WorkspaceHeader({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex min-w-0 items-start gap-3">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[24px] border border-[color:rgba(217,119,87,0.18)] bg-[linear-gradient(135deg,rgba(217,119,87,0.16),rgba(176,141,110,0.08))] shadow-[0_10px_32px_rgba(42,31,22,0.14)]">
-              <Bot className="h-5 w-5 text-[color:var(--accent-primary)]" />
+              <Robot className="h-5 w-5 text-[color:var(--accent-primary)]" />
             </div>
             <div className="min-w-0 space-y-1">
               <div className="flex items-center gap-2">
@@ -359,8 +350,8 @@ function WorkspaceHeader({
                 {activeSession?.name || "Initializing..."}
               </h1>
               <div className="flex items-center gap-3 text-xs text-[color:var(--text-tertiary)]">
-                <span className="flex items-center gap-1"><MessageSquare className="h-3 w-3" /> {messages.length} messages</span>
-                <span className="flex items-center gap-1"><Layers3 className="h-3 w-3" /> {canvases.length} canvases</span>
+                <span className="flex items-center gap-1"><Chat size={12} /> {messages.length} messages</span>
+                <span className="flex items-center gap-1"><StackSimple size={12} /> {canvases.length} canvases</span>
                 {isLocalDraft && <span className="text-amber-500 font-medium">● Local Draft</span>}
               </div>
             </div>
@@ -375,10 +366,10 @@ function WorkspaceHeader({
 
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="icon" onClick={onToggleViewMode} className="rounded-xl hover:bg-white/10">
-              <ViewModeIcon className="h-4 w-4" />
+              <ViewModeIcon size={16} />
             </Button>
             <Button variant="ghost" size="icon" onClick={onOpenRuntimeOps} className="rounded-xl hover:bg-white/10 text-accent-primary">
-              <Zap className="h-4 w-4" />
+              <Lightning size={16} />
             </Button>
           </div>
         </div>
@@ -421,7 +412,7 @@ function SessionWorkbenchRail({
         onClick={onNewSession}
         className="w-full justify-start gap-2 rounded-[20px] bg-accent-primary hover:bg-accent-primary/90 text-black font-bold h-12 shadow-lg"
       >
-        <Plus className="h-4 w-4" />
+        <Plus size={16} />
         New Session
       </Button>
 
@@ -433,7 +424,7 @@ function SessionWorkbenchRail({
           <div className="p-2 space-y-1">
             {isLoadingSessions && sessions.length === 0 ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-5 w-5 animate-spin text-white/20" />
+                <CircleNotch className="h-5 w-5 animate-spin text-white/20" />
               </div>
             ) : (
               sessions.map((session) => (
@@ -472,9 +463,10 @@ function SessionWorkbenchRail({
 
 function ChatPanel({ sessionId }: { sessionId: string | null }) {
   const messages = useActiveMessages();
-  const { isStreaming, currentMessageId, streamBuffer } = useStreamingState();
+  const { isStreaming, buffer: streamBuffer } = useSessionStreamingState(sessionId ?? '');
   const scrollRef = useRef<HTMLDivElement>(null);
-  
+  const [inputValue, setInputValue] = useState("");
+
   const { sendMessageStream, abortGeneration } = useNativeAgentStore();
 
   const scrollToBottom = useCallback(() => {
@@ -487,10 +479,12 @@ function ChatPanel({ sessionId }: { sessionId: string | null }) {
     scrollToBottom();
   }, [messages, streamBuffer, scrollToBottom]);
 
-  const handleSend = async (content: string) => {
-    if (!sessionId || !content.trim()) return;
-    await sendMessageStream(sessionId, content.trim());
-  };
+  const handleSubmit = useCallback(async () => {
+    if (!sessionId || !inputValue.trim() || isStreaming) return;
+    const content = inputValue.trim();
+    setInputValue("");
+    await sendMessageStream(sessionId, content);
+  }, [sessionId, inputValue, isStreaming, sendMessageStream]);
 
   return (
     <div className="flex h-full flex-col bg-transparent relative">
@@ -499,7 +493,7 @@ function ChatPanel({ sessionId }: { sessionId: string | null }) {
           {messages.length === 0 && !isStreaming && (
             <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 opacity-40">
               <div className="h-16 w-16 rounded-3xl bg-white/5 flex items-center justify-center">
-                <Sparkles className="h-8 w-8" />
+                <Sparkle size={32} />
               </div>
               <h3 className="text-xl font-medium">How can I assist you?</h3>
               <p className="text-sm max-w-xs">Start a conversation or use the A2R Native protocol to build your project.</p>
@@ -511,9 +505,9 @@ function ChatPanel({ sessionId }: { sessionId: string | null }) {
           ))}
 
           {isStreaming && streamBuffer && (
-            <ChatMessage 
+            <ChatMessage
               message={{
-                id: currentMessageId || "streaming",
+                id: "streaming",
                 role: "assistant",
                 content: streamBuffer,
                 timestamp: new Date().toISOString()
@@ -526,7 +520,15 @@ function ChatPanel({ sessionId }: { sessionId: string | null }) {
 
       <div className="absolute bottom-0 inset-x-0 p-6 bg-gradient-to-t from-[color:var(--glass-bg-elevated)] via-[color:var(--glass-bg-elevated)] to-transparent pointer-events-none">
         <div className="max-w-2xl mx-auto pointer-events-auto">
-          <ChatInput onSend={handleSend} isLoading={isStreaming} onStop={abortGeneration} />
+          <SessionComposerRegion
+            serverUrl={GATEWAY_BASE_URL}
+            sessionID={sessionId ?? ""}
+            isLoading={isStreaming}
+            value={inputValue}
+            onValueChange={setInputValue}
+            onSubmit={handleSubmit}
+            onStop={abortGeneration}
+          />
         </div>
       </div>
     </div>
@@ -549,7 +551,7 @@ function ChatMessage({ message, isStreaming }: { message: NativeMessage; isStrea
         "h-8 w-8 rounded-full flex items-center justify-center shrink-0 mt-1",
         isAssistant ? "bg-accent-primary text-black" : "bg-white/10 text-white/60"
       )}>
-        {isAssistant ? <Bot className="h-4 w-4" /> : <User className="h-4 w-4" />}
+        {isAssistant ? <Robot size={16} /> : <User size={16} />}
       </div>
       
       <div className={cn(
@@ -582,53 +584,6 @@ function ChatMessage({ message, isStreaming }: { message: NativeMessage; isStrea
   );
 }
 
-function ChatInput({ onSend, isLoading, onStop }: { onSend: (val: string) => void; isLoading: boolean; onStop?: () => void }) {
-  const [value, setValue] = useState("");
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-
-  const handleSubmit = () => {
-    if (!value.trim() || isLoading) return;
-    onSend(value);
-    setValue("");
-  };
-
-  return (
-    <div className="relative rounded-[24px] border border-white/10 bg-black/40 p-2 backdrop-blur-xl shadow-2xl transition-all focus-within:border-accent-primary/30">
-      <Textarea
-        ref={inputRef}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            handleSubmit();
-          }
-        }}
-        placeholder="Type a message..."
-        className="min-h-[44px] max-h-32 w-full resize-none bg-transparent border-none focus-visible:ring-0 py-3 px-4 text-sm"
-      />
-      <div className="flex items-center justify-between px-2 pb-1">
-        <div className="flex items-center gap-1">
-           <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-white/30 hover:text-white/60">
-             <Paperclip className="h-4 w-4" />
-           </Button>
-        </div>
-        <div className="flex items-center gap-2">
-          {isLoading ? (
-            <Button onClick={onStop} size="sm" variant="outline" className="h-8 rounded-full bg-white/5 border-white/10 hover:bg-white/10">
-              <Square className="h-3 w-3 mr-2" /> Stop
-            </Button>
-          ) : (
-            <Button onClick={handleSubmit} disabled={!value.trim()} size="sm" className="h-8 w-8 rounded-full bg-accent-primary hover:bg-accent-primary/90 text-black p-0 shadow-lg">
-              <Send className="h-4 w-4" />
-            </Button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ============================================================================
 // Canvas Panel Component
 // ============================================================================
@@ -650,7 +605,7 @@ function CanvasPanel({ sessionId }: { sessionId: string | null }) {
     return (
       <div className="flex h-full items-center justify-center p-12 text-center">
         <div className="max-w-xs space-y-4 opacity-20">
-          <Layers3 className="h-12 w-12 mx-auto" />
+          <StackSimple className="h-12 w-12 mx-auto" />
           <h3 className="text-lg font-medium">No Active Canvases</h3>
           <p className="text-xs">Canvases created by the agent for documents, code, or terminals will appear here.</p>
         </div>
@@ -695,14 +650,14 @@ function CanvasPanel({ sessionId }: { sessionId: string | null }) {
               </div>
               <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg"><Copy className="h-3.5 w-3.5" /></Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg"><Download className="h-3.5 w-3.5" /></Button>
+                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg"><DownloadSimple className="h-3.5 w-3.5" /></Button>
                 <Button 
                   variant="ghost" 
                   size="icon" 
                   className="h-7 w-7 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-400/10"
                   onClick={() => activeCanvasId && deleteCanvas(activeCanvasId)}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </div>
@@ -714,7 +669,7 @@ function CanvasPanel({ sessionId }: { sessionId: string | null }) {
           </div>
         ) : (
           <div className="flex h-full items-center justify-center">
-            <Loader2 className="h-6 w-6 animate-spin text-white/10" />
+            <CircleNotch className="h-6 w-6 animate-spin text-white/10" />
           </div>
         )}
       </div>
@@ -740,7 +695,7 @@ function ErrorBanner() {
         >
           <div className="px-6 py-2 flex items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-red-400 text-xs font-medium">
-              <AlertCircle className="h-3.5 w-3.5" />
+              <Warning className="h-3.5 w-3.5" />
               <span>{error}</span>
             </div>
             <Button 
@@ -749,7 +704,7 @@ function ErrorBanner() {
               onClick={clearError}
               className="h-6 w-6 rounded-md hover:bg-red-500/20 text-red-400"
             >
-              <X className="h-3 w-3" />
+              <X size={12} />
             </Button>
           </div>
         </motion.div>

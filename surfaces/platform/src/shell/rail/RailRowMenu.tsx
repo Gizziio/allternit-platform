@@ -1,79 +1,41 @@
 import React from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { MoreHorizontal, Pencil, Copy, Trash2, ArrowLeftRight, ChevronRight } from 'lucide-react';
-import { useChatStore } from '../../views/chat/ChatStore';
+import {
+  DotsThreeOutline,
+  PencilSimple,
+  Copy,
+  Trash,
+} from '@phosphor-icons/react';
 
-export function RailRowMenu({ onRename, onCopy, onDelete, threadId }: any) {
-  const { projects, moveThreadToProject } = useChatStore();
-
+export function RailRowMenu({ onRename, onCopy, onDelete }: any) {
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
-        <button 
+        <button
           style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 4 }}
           onClick={e => e.stopPropagation()}
         >
-          <MoreHorizontal size={18} strokeWidth={2.5} />
+          <DotsThreeOutline size={18} strokeWidth={2.5} />
         </button>
       </DropdownMenu.Trigger>
 
       <DropdownMenu.Portal>
-        <DropdownMenu.Content 
+        <DropdownMenu.Content
           style={{
             minWidth: 180,
             background: 'var(--bg-secondary)',
             borderRadius: 10,
             padding: 4,
             border: '1px solid var(--border-default)',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
+            boxShadow: 'var(--shadow-lg)',
             zIndex: 10000,
           }}
           sideOffset={5}
         >
-          <DropdownMenuItem icon={Pencil} label="Rename" onClick={onRename} />
+          <DropdownMenuItem icon={PencilSimple} label="Rename" onClick={onRename} />
           <DropdownMenuItem icon={Copy} label="Duplicate" onClick={onCopy} />
-          
-          {threadId && projects.length > 0 && (
-            <DropdownMenu.Sub>
-              <DropdownMenu.SubTrigger 
-                style={{
-                  fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', borderRadius: 6,
-                  display: 'flex', alignItems: 'center', height: 32, padding: '0 8px', gap: 10,
-                  outline: 'none', cursor: 'pointer', position: 'relative'
-                }}
-                className="dropdown-item-hover"
-              >
-                <ArrowLeftRight size={16} />
-                Move to Project
-                <ChevronRight size={14} style={{ marginLeft: 'auto' }} />
-              </DropdownMenu.SubTrigger>
-              <DropdownMenu.Portal>
-                <DropdownMenu.SubContent
-                  style={{
-                    minWidth: 160, background: 'var(--bg-secondary)', borderRadius: 10, padding: 4,
-                    border: '1px solid var(--border-default)', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', zIndex: 10001,
-                  }}
-                  sideOffset={2}
-                  alignOffset={-5}
-                >
-                  <DropdownMenuItem 
-                    label="No Project" 
-                    onClick={() => moveThreadToProject(threadId, null)} 
-                  />
-                  {projects.map(p => (
-                    <DropdownMenuItem 
-                      key={p.id} 
-                      label={p.title} 
-                      onClick={() => moveThreadToProject(threadId, p.id)} 
-                    />
-                  ))}
-                </DropdownMenu.SubContent>
-              </DropdownMenu.Portal>
-            </DropdownMenu.Sub>
-          )}
-
           <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
-          <DropdownMenuItem icon={Trash2} label="Delete" onClick={onDelete} color="#ef4444" />
+          <DropdownMenuItem icon={Trash} label="Delete" onClick={onDelete} color="var(--status-error)" />
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>
@@ -82,7 +44,7 @@ export function RailRowMenu({ onRename, onCopy, onDelete, threadId }: any) {
 
 function DropdownMenuItem({ icon: Icon, label, onClick, color }: any) {
   return (
-    <DropdownMenu.Item 
+    <DropdownMenu.Item
       onClick={onClick}
       style={{
         fontSize: 13,

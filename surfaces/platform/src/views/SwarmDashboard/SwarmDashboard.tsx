@@ -21,13 +21,13 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import {
-  Activity,
-  AlertTriangle,
+  Pulse as Activity,
+  Warning,
   CheckCircle,
-  RefreshCw,
-  ShieldAlert,
-  MessageSquare
-} from 'lucide-react';
+  ArrowsClockwise,
+  ShieldWarning,
+  Chat,
+} from '@phosphor-icons/react';
 
 // API base URL from environment or default
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1/swarm';
@@ -150,7 +150,7 @@ export function SwarmDashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <RefreshCw className="h-8 w-8 animate-spin text-blue-500" role="img" aria-label="Loading" />
+        <ArrowsClockwise className="h-8 w-8 animate-spin text-blue-500" role="img" aria-label="Loading" />
       </div>
     );
   }
@@ -159,7 +159,7 @@ export function SwarmDashboard() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <Warning className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <p className="text-red-500">{error}</p>
           <Button onClick={fetchData} className="mt-4">
             Retry
@@ -180,7 +180,7 @@ export function SwarmDashboard() {
           </p>
         </div>
         <Button onClick={fetchData} variant="outline">
-          <RefreshCw className="h-4 w-4 mr-2" />
+          <ArrowsClockwise className="h-4 w-4 mr-2" />
           Refresh
         </Button>
       </div>
@@ -207,7 +207,7 @@ export function SwarmDashboard() {
             <CardTitle className="text-sm font-medium">
               Quarantined Agents
             </CardTitle>
-            <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+            <ShieldWarning className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{quarantined?.length ?? 0}</div>
@@ -222,7 +222,7 @@ export function SwarmDashboard() {
             <CardTitle className="text-sm font-medium">
               Messages Sent
             </CardTitle>
-            <MessageSquare className="h-4 w-4 text-muted-foreground" />
+            <Chat className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">

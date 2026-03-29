@@ -45,6 +45,49 @@ const FIXTURES = {
     toolCallId: "tool-call-456",
     error: "Network timeout",
   },
+
+  mcpApp: {
+    type: "mcp_app" as const,
+    toolCallId: "tool-call-456",
+    toolName: "weather.dashboard",
+    connectorId: "connector-1",
+    connectorName: "Weather",
+    resourceUri: "ui://weather/dashboard",
+    title: "Weather Dashboard",
+    html: "<html><body>app</body></html>",
+    allow: "geolocation",
+    prefersBorder: false,
+    tool: {
+      name: "weather.dashboard",
+      title: "Weather Dashboard",
+      inputSchema: {
+        type: "object",
+      },
+      _meta: {
+        ui: {
+          resourceUri: "ui://weather/dashboard",
+        },
+      },
+    },
+    toolInput: {
+      location: "Austin",
+    },
+    toolResult: {
+      content: [
+        {
+          type: "text",
+          text: "Sunny",
+        },
+      ],
+    },
+    permissions: {
+      geolocation: {},
+    },
+    csp: {
+      connectDomains: ["https://api.example.com"],
+    },
+    domain: "https://apps.example.com",
+  },
   
   source: {
     type: "source" as const,
@@ -140,6 +183,38 @@ function mapRustEventToUIPart(event: RustStreamEvent): UIPart | null {
         mediaType: "text/html",
         title: event.title ?? "Source",
         url: event.url,
+      } as UIPart;
+
+    case "mcp_app":
+      if (
+        !event.toolCallId ||
+        !event.toolName ||
+        !event.connectorId ||
+        !event.connectorName ||
+        !event.resourceUri ||
+        !event.title ||
+        !event.html
+      ) {
+        return null;
+      }
+
+      return {
+        type: "mcp-app",
+        toolCallId: event.toolCallId,
+        toolName: event.toolName,
+        connectorId: event.connectorId,
+        connectorName: event.connectorName,
+        resourceUri: event.resourceUri,
+        title: event.title,
+        html: event.html,
+        allow: event.allow,
+        prefersBorder: event.prefersBorder,
+        tool: event.tool,
+        toolInput: event.toolInput,
+        toolResult: event.toolResult,
+        permissions: event.permissions,
+        csp: event.csp,
+        domain: event.domain,
       } as UIPart;
 
     case "plan":
@@ -300,6 +375,34 @@ describe("Rust Stream Adapter Mapping", () => {
     });
   });
 
+  describe("McpAppUIPart mapping", () => {
+    it("should map mcp_app event to an inline MCP app part", () => {
+      const part = mapRustEventToUIPart(FIXTURES.mcpApp);
+
+      expect(part).not.toBeNull();
+      expect(part?.type).toBe("mcp-app");
+      if (part?.type === "mcp-app") {
+        expect(part.toolCallId).toBe("tool-call-456");
+        expect(part.connectorName).toBe("Weather");
+        expect(part.resourceUri).toBe("ui://weather/dashboard");
+        expect(part.allow).toBe("geolocation");
+        expect(part.prefersBorder).toBe(false);
+        expect(part.tool?.name).toBe("weather.dashboard");
+        expect(part.toolInput).toEqual({ location: "Austin" });
+        expect(part.toolResult).toEqual({
+          content: [
+            {
+              type: "text",
+              text: "Sunny",
+            },
+          ],
+        });
+        expect(part.permissions).toEqual({ geolocation: {} });
+        expect(part.domain).toBe("https://apps.example.com");
+      }
+    });
+  });
+
   describe("ArtifactUIPart mapping", () => {
     it("should map artifact event to ArtifactUIPart", () => {
       const part = mapRustEventToUIPart(FIXTURES.artifact);
@@ -406,6 +509,7 @@ describe("Rust Stream Adapter Mapping", () => {
         "content_block_delta",
         "tool_result",
         "tool_error",
+        "mcp_app",
         "source",
         "plan",
         "plan_update",

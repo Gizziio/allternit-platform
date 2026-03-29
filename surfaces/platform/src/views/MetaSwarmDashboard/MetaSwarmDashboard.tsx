@@ -24,14 +24,14 @@ import { Separator } from '@/components/ui/separator';
 import {
   Cpu,
   GitBranch,
-  DollarSign,
+  CurrencyDollar,
   FileLock,
   BookOpen,
   Play,
   Plus,
-  RefreshCw,
-  Activity,
-} from 'lucide-react';
+  ArrowsClockwise,
+  Pulse as Activity,
+} from '@phosphor-icons/react';
 
 import { AgentStatusPanel } from './components/AgentStatusPanel';
 import { ProgressPanel } from './components/ProgressPanel';
@@ -155,7 +155,7 @@ export function MetaSwarmDashboard() {
                 disabled={submitting || !newTaskDescription.trim()}
               >
                 {submitting ? (
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  <ArrowsClockwise className="h-4 w-4 mr-2 animate-spin" />
                 ) : (
                   <Play className="h-4 w-4 mr-2" />
                 )}
@@ -179,7 +179,7 @@ export function MetaSwarmDashboard() {
             Progress
           </TabsTrigger>
           <TabsTrigger value="costs">
-            <DollarSign className="h-4 w-4 mr-2" />
+            <CurrencyDollar className="h-4 w-4 mr-2" />
             Costs
           </TabsTrigger>
           <TabsTrigger value="knowledge">

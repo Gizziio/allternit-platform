@@ -14,12 +14,12 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
-  DollarSign,
-  TrendingUp,
-  AlertTriangle,
-  PieChart,
-  BarChart3,
-} from 'lucide-react';
+  CurrencyDollar,
+  TrendUp,
+  Warning,
+  ChartPie,
+  ChartBar,
+} from '@phosphor-icons/react';
 import type { Agent, BudgetInfo } from '../types';
 import { metaSwarmClient } from '../api';
 
@@ -97,7 +97,7 @@ export function CostTracker({ className }: CostTrackerProps) {
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
+            <CurrencyDollar size={20} />
             Cost Tracker
           </div>
           {isOverBudget && (
@@ -141,7 +141,7 @@ export function CostTracker({ className }: CostTrackerProps) {
 
         {isNearLimit && (
           <Alert className={isOverBudget ? "border-red-500 text-red-500" : "border-yellow-500 text-yellow-600"}>
-            <AlertTriangle className="h-4 w-4" />
+            <Warning size={16} />
             <AlertDescription>
               {isOverBudget
                 ? `Budget exceeded by $${(budget!.spent - budget!.allocated).toFixed(2)}`
@@ -154,14 +154,14 @@ export function CostTracker({ className }: CostTrackerProps) {
         <div className="grid grid-cols-2 gap-4">
           <div className="p-3 rounded-lg bg-muted">
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-              <BarChart3 className="h-4 w-4" />
+              <ChartBar size={16} />
               Total Cost
             </div>
             <div className="text-2xl font-bold">${totalSpent.toFixed(2)}</div>
           </div>
           <div className="p-3 rounded-lg bg-muted">
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-              <TrendingUp className="h-4 w-4" />
+              <TrendUp size={16} />
               Total Tokens
             </div>
             <div className="text-2xl font-bold">{totalTokens.toLocaleString()}</div>
@@ -171,7 +171,7 @@ export function CostTracker({ className }: CostTrackerProps) {
         {/* Per-Agent Costs */}
         <div className="space-y-3">
           <div className="flex items-center gap-2 text-sm font-medium">
-            <PieChart className="h-4 w-4" />
+            <ChartPie size={16} />
             Per-Agent Costs
           </div>
           <CostBreakdown agents={agents} />

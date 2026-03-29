@@ -5,18 +5,18 @@
  */
 
 import React, { useState, useRef } from 'react';
-import { 
-  Play, 
-  Pause, 
-  Volume2, 
-  VolumeX, 
-  Maximize2, 
-  Download, 
-  Share2,
+import {
+  Play,
+  Pause,
+  SpeakerHigh,
+  SpeakerSlash,
+  ArrowsOut,
+  DownloadSimple,
+  ShareNetwork,
   SkipBack,
   SkipForward,
-  Film
-} from 'lucide-react';
+  FilmSlate,
+} from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import type { ArtifactUIPart } from '@/lib/ai/rust-stream-adapter';
 import { cn } from '@/lib/utils';
@@ -130,17 +130,17 @@ export function VideoRenderer({
       {/* Toolbar */}
       <div className="h-12 border-b border-[var(--border-subtle)] flex items-center justify-between px-4 bg-[var(--bg-secondary)]">
         <div className="flex items-center gap-3">
-          <Film className="w-4 h-4 text-[var(--accent-primary)]" />
+          <FilmSlate className="w-4 h-4 text-[var(--accent-primary)]" />
           <span className="text-sm font-medium text-[var(--text-primary)]">
             {artifact.title}
           </span>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" className="text-[var(--text-tertiary)]">
-            <Download className="w-4 h-4" />
+            <DownloadSimple size={16} />
           </Button>
           <Button variant="ghost" size="sm" className="text-[var(--text-tertiary)]">
-            <Share2 className="w-4 h-4" />
+            <ShareNetwork size={16} />
           </Button>
         </div>
       </div>
@@ -193,9 +193,9 @@ export function VideoRenderer({
                   className="text-white hover:bg-white/20"
                 >
                   {isPlaying ? (
-                    <Pause className="w-5 h-5" />
+                    <Pause size={20} />
                   ) : (
-                    <Play className="w-5 h-5" />
+                    <Play size={20} />
                   )}
                 </Button>
 
@@ -206,7 +206,7 @@ export function VideoRenderer({
                   onClick={() => skip(-10)}
                   className="text-white hover:bg-white/20"
                 >
-                  <SkipBack className="w-4 h-4" />
+                  <SkipBack size={16} />
                 </Button>
 
                 {/* Skip forward */}
@@ -216,7 +216,7 @@ export function VideoRenderer({
                   onClick={() => skip(10)}
                   className="text-white hover:bg-white/20"
                 >
-                  <SkipForward className="w-4 h-4" />
+                  <SkipForward size={16} />
                 </Button>
 
                 {/* Volume */}
@@ -228,9 +228,9 @@ export function VideoRenderer({
                     className="text-white hover:bg-white/20"
                   >
                     {isMuted ? (
-                      <VolumeX className="w-4 h-4" />
+                      <SpeakerSlash size={16} />
                     ) : (
-                      <Volume2 className="w-4 h-4" />
+                      <SpeakerHigh size={16} />
                     )}
                   </Button>
                   <input
@@ -268,7 +268,7 @@ export function VideoRenderer({
                   onClick={toggleFullscreen}
                   className="text-white hover:bg-white/20"
                 >
-                  <Maximize2 className="w-4 h-4" />
+                  <ArrowsOut size={16} />
                 </Button>
               </div>
             </div>

@@ -1,19 +1,26 @@
 /**
- * Thought Trace — Clean timeline of reasoning steps
+ * Thought Trace — Clean thinking section matching Claude.ai streaming UX
  *
- * Design principles:
- * - No pill boxes, no heavy borders — natural typography
- * - Vertical connecting line links all steps
- * - Text-first: readable 13px summaries, 11px labels
- * - Streaming: shows current step live, previous steps faded above
- * - Complete collapsed: single compact summary line
- * - Complete expanded: full timeline with status markers
+ * Streaming state:
+ *   [MatrixLogo animated ~20px] Thinking...          ← single step, collapsed
+ *   [MatrixLogo animated ~20px] current step  [▼]    ← multi-step, expandable
+ *     previous step 1 (faded)
+ *     previous step 2 (faded)
+ *     current active step (bright)
+ *
+ * Complete collapsed:
+ *   ▶  Thought process  ·  N steps
+ *
+ * Complete expanded:
+ *   ▼  Thought process  ·  N steps
+ *     step 1
+ *     step 2  ...
  */
 
 "use client";
 
 import { cn } from "@/lib/utils";
-import { ChevronRight, ChevronDown } from "lucide-react";
+import { CaretRight, CaretDown } from '@phosphor-icons/react';
 import { memo, useState } from "react";
 import { MatrixLogo } from "@/components/ai-elements/MatrixLogo";
 
@@ -44,50 +51,20 @@ interface ThoughtTraceProps {
 }
 
 // ============================================================================
-// Constants
-// ============================================================================
-
-const stepLabel: Record<ThoughtStep["type"], string> = {
-  reasoning: "Reasoning",
-  search: "Searching",
-  "file-read": "Reading",
-  "file-write": "Writing",
-  command: "Running",
-  agent: "Agent",
-  tool: "Tool",
-};
-
-// Accent colour per step type — used for the small label only
-const stepTone: Record<ThoughtStep["type"], string> = {
-  reasoning:  "text-[#C9B0F0]",
-  search:     "text-[#7EC8FF]",
-  "file-read":"text-[#7FD9A8]",
-  "file-write":"text-[#F0C47B]",
-  command:    "text-[#F2A97A]",
-  agent:      "text-[#F3A8D7]",
-  tool:       "text-[#7FD7D5]",
-};
-
-// ============================================================================
-// Text helpers (preserved from original — used in UnifiedMessageRenderer)
+// Text helpers (unchanged — used by parseThoughtSteps below)
 // ============================================================================
 
 function truncateSummary(summary: string, maxLength = 96): string {
   const normalized = summary.replace(/\s+/g, " ").trim();
   if (normalized.length <= maxLength) return normalized;
-  // Truncate at word boundary so we don't cut mid-word
   const rough = normalized.slice(0, maxLength - 1);
   const lastSpace = rough.lastIndexOf(" ");
-  // Only snap to word boundary if it's not too far back (>60% of max)
   const boundary = lastSpace > maxLength * 0.6 ? lastSpace : rough.length;
   return `${rough.slice(0, boundary).trimEnd()}…`;
 }
 
 function normalizeTraceSentence(sentence: string): string {
-  return sentence
-    .replace(/^[\s\-*•]+/, "")
-    .replace(/\s+/g, " ")
-    .trim();
+  return sentence.replace(/^[\s\-*•]+/, "").replace(/\s+/g, " ").trim();
 }
 
 function stripTracePrefix(sentence: string): string {
@@ -119,13 +96,11 @@ function summarizeSearchSentence(sentence: string): string {
   if (/ai-sdk\.dev\/docs/i.test(normalized)) return "Searching AI SDK docs";
   if (/\b(?:docs|documentation)\b/i.test(normalized))
     return /\b(?:code|coding)\b/i.test(normalized) ? "Searching coding docs" : "Searching documentation";
-
   const cleaned = stripTracePrefix(normalized)
     .replace(/^(?:web\s+search(?:\s+on)?|search(?:ing)?|look(?:ing)? up|find(?:ing)?|query(?:ing)?)\s+/i, "")
     .replace(/^(?:for|about|on|into|around|regarding)\s+/i, "")
     .replace(/^https?:\/\/\S+\s*(?:and\s+)?/i, "")
     .trim();
-
   if (!cleaned || /^(?:or|and|to|this|that|it)\b/i.test(cleaned)) return "Running search";
   return `Searched: ${truncateSummary(cleaned, 52)}`;
 }
@@ -134,7 +109,6 @@ function summarizeReasoningSentence(sentence: string): string {
   const normalized = normalizeTraceSentence(sentence);
   const stripped = stripTracePrefix(normalized);
   const quoted = extractQuotedLabel(normalized);
-
   if (/what specific information would you like/i.test(normalized) || /what recommendation are you referring to/i.test(normalized))
     return "Clarifying request";
   if (/don't have context from a previous conversation|do not have context from a previous conversation/i.test(normalized))
@@ -152,7 +126,6 @@ function summarizeReasoningSentence(sentence: string): string {
   if (/search more specifically|look for more specific/i.test(normalized)) return "Narrowing the search";
   if (/give a concise answer|answer in one sentence|reply with two words|two words plus a source/i.test(normalized))
     return "Preparing concise answer";
-
   return truncateSummary(stripped || normalized, 72);
 }
 
@@ -168,6 +141,10 @@ function selectSummaryStep(steps: ThoughtStep[]): ThoughtStep {
   const preferredGeneric = [...steps].reverse().find((step) => !isLowSignalSummary(step));
   return preferredGeneric ?? steps[steps.length - 1] ?? steps[0];
 }
+
+// ============================================================================
+// Type guards (used by coerceThoughtSteps)
+// ============================================================================
 
 function isThoughtStepType(value: unknown): value is ThoughtStep["type"] {
   return (
@@ -193,7 +170,6 @@ export function coerceThoughtSteps(value: unknown): ThoughtStep[] {
     if (!entry || typeof entry !== "object") continue;
     const record = entry as Record<string, unknown>;
     if (!isThoughtStepType(record.type) || typeof record.summary !== "string") continue;
-
     const metadataRecord =
       record.metadata && typeof record.metadata === "object"
         ? (record.metadata as Record<string, unknown>)
@@ -209,7 +185,6 @@ export function coerceThoughtSteps(value: unknown): ThoughtStep[] {
       : undefined;
     const normalizedMetadata =
       metadata && Object.values(metadata).some((e) => e !== undefined) ? metadata : undefined;
-
     results.push({
       type: record.type,
       summary: record.summary,
@@ -222,91 +197,23 @@ export function coerceThoughtSteps(value: unknown): ThoughtStep[] {
 }
 
 // ============================================================================
-// Sub-components
+// Logo state — maps current step type → MatrixLogo animation state
 // ============================================================================
 
-/** A single dot on the timeline */
-function StepDot({ active = false, complete = false }: { active?: boolean; complete?: boolean }) {
-  if (active) {
-    return (
-      <span
-        style={{
-          display: 'inline-block',
-          width: '8px',
-          height: '8px',
-          borderRadius: '50%',
-          background: '#D4B08C',
-          boxShadow: '0 0 0 3px rgba(212,176,140,0.15)',
-          flexShrink: 0,
-        }}
-      />
-    );
+function stepToLogoState(step: ThoughtStep | undefined): "thinking" | "listening" | "speaking" | "compacting" {
+  if (!step) return "thinking";
+  switch (step.type) {
+    case "search":      return "thinking";
+    case "file-read":   return "listening";
+    case "file-write":  return "speaking";
+    case "command":     return "compacting";
+    case "agent":       return "thinking";
+    default:            return "thinking";
   }
-  return (
-    <span
-      style={{
-        display: 'inline-block',
-        width: '6px',
-        height: '6px',
-        borderRadius: '50%',
-        background: complete ? 'rgba(74,222,128,0.45)' : 'rgba(255,255,255,0.22)',
-        flexShrink: 0,
-      }}
-    />
-  );
-}
-
-/** One row in the timeline */
-function TimelineRow({
-  step,
-  active = false,
-  showDetail = false,
-}: {
-  step: ThoughtStep;
-  active?: boolean;
-  showDetail?: boolean;
-}) {
-  const labelColor = stepTone[step.type];
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', minWidth: 0 }}>
-        {/* Label */}
-        <span
-          className={cn("flex-shrink-0", labelColor)}
-          style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', lineHeight: '20px' }}
-        >
-          {stepLabel[step.type]}
-        </span>
-        {/* Summary */}
-        <span
-          style={{
-            fontSize: '13px',
-            lineHeight: '20px',
-            color: active ? 'rgba(236,236,236,0.88)' : 'rgba(236,236,236,0.62)',
-            flex: 1,
-            minWidth: 0,
-            wordBreak: 'break-word',
-          }}
-        >
-          {truncateSummary(step.summary, active ? 140 : 90)}
-        </span>
-        {/* Complete check */}
-        {!active && (
-          <span style={{ fontSize: '10px', color: 'rgba(74,222,128,0.5)', flexShrink: 0, lineHeight: '20px' }}>✓</span>
-        )}
-      </div>
-      {/* Detail line (shown in expanded or active) */}
-      {showDetail && step.detail && step.detail !== step.summary && (
-        <div style={{ paddingLeft: '52px', fontSize: '12px', color: 'rgba(236,236,236,0.38)', lineHeight: '1.5' }}>
-          {step.detail.length > 180 ? step.detail.slice(0, 180) + '…' : step.detail}
-        </div>
-      )}
-    </div>
-  );
 }
 
 // ============================================================================
-// Main component
+// ThoughtTrace component
 // ============================================================================
 
 export const ThoughtTrace = memo(({ steps, isStreaming = false, isComplete = false, className }: ThoughtTraceProps) => {
@@ -314,90 +221,112 @@ export const ThoughtTrace = memo(({ steps, isStreaming = false, isComplete = fal
 
   if (!steps || steps.length === 0) return null;
 
+  const currentStep = steps[steps.length - 1];
+  const prevSteps = steps.slice(0, -1).slice(-6); // at most 6 previous steps
+
   // ---------------------------------------------------------------------------
-  // STREAMING MODE — current step live, previous steps faded above it
+  // STREAMING — [MatrixLogo spinner] + label + optional expand
   // ---------------------------------------------------------------------------
   if (isStreaming && !isComplete) {
-    const prevSteps = steps.slice(0, -1);
-    const currentStep = steps[steps.length - 1];
-    // Show last 3 previous steps max to keep it concise
-    const visiblePrev = prevSteps.slice(-3);
+    const logoState = stepToLogoState(currentStep);
+    // Header label: truncated current step summary (collapsed), or "Thinking" (expanded)
+    const headerLabel = isExpanded ? "Thinking" : truncateSummary(currentStep.summary, 58) || "Thinking...";
+    const canExpand = steps.length > 1;
 
     return (
       <div className={cn("my-2", className)} style={{ userSelect: 'none' }}>
-        <div style={{ position: 'relative', paddingLeft: '16px' }}>
-          {/* Vertical line */}
-          {(visiblePrev.length > 0) && (
-            <div
-              style={{
-                position: 'absolute',
-                left: '3px',
-                top: 0,
-                bottom: 0,
-                width: '1px',
-                background: 'rgba(255,255,255,0.09)',
-              }}
-            />
-          )}
-
-          {/* Previous steps — faded */}
-          {visiblePrev.map((step, idx) => (
-            <div
-              key={idx}
-              style={{
-                position: 'relative',
-                marginBottom: '6px',
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '8px',
-              }}
-            >
-              {/* Dot aligned with line */}
-              <div style={{ position: 'absolute', left: '-14px', top: '6px' }}>
-                <StepDot complete />
-              </div>
-              <TimelineRow step={step} active={false} />
-            </div>
-          ))}
-
-          {/* Current active step — MatrixLogo inline with the trace */}
-          <div
-            style={{
-              position: 'relative',
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '8px',
-            }}
-          >
-            {/* MatrixLogo inline with the timeline, replacing the dot */}
-            <div style={{ 
-              position: 'absolute', 
-              left: '-12px', 
-              top: '4px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+        {/* ── Header row ── */}
+        <button
+          onClick={() => canExpand && setIsExpanded(e => !e)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            background: 'none',
+            border: 'none',
+            padding: '0',
+            cursor: canExpand ? 'pointer' : 'default',
+            textAlign: 'left',
+            width: '100%',
+            maxWidth: '100%',
+          }}
+        >
+          {/* MatrixLogo IS the spinner — rendered at 48px internal, scaled to 20px visual */}
+          <div style={{
+            width: 20,
+            height: 20,
+            flexShrink: 0,
+            overflow: 'hidden',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <div style={{
+              transform: 'scale(0.417)',
+              transformOrigin: 'center',
+              width: 48,
+              height: 48,
             }}>
-              <MatrixLogo 
-                state={currentStep.type === 'search' ? 'thinking' : 
-                       currentStep.type === 'file-read' ? 'listening' : 
-                       currentStep.type === 'file-write' ? 'speaking' : 
-                       currentStep.type === 'command' ? 'compacting' : 'thinking'} 
-                size={8} 
-              />
+              <MatrixLogo state={logoState} size={48} />
             </div>
-            <TimelineRow step={currentStep} active showDetail />
           </div>
-        </div>
+
+          <span style={{
+            fontSize: '14px',
+            color: 'rgba(236,236,236,0.62)',
+            lineHeight: '20px',
+            flex: 1,
+            minWidth: 0,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}>
+            {headerLabel}
+          </span>
+
+          {canExpand && (
+            <span style={{ color: 'rgba(255,255,255,0.25)', flexShrink: 0, lineHeight: '20px' }}>
+              {isExpanded ? <CaretDown size={11} /> : <CaretRight size={11} />}
+            </span>
+          )}
+        </button>
+
+        {/* ── Expanded step list ── */}
+        {isExpanded && canExpand && (
+          <div style={{
+            marginTop: '8px',
+            paddingLeft: '28px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '5px',
+          }}>
+            {prevSteps.map((step, idx) => (
+              <div key={idx} style={{
+                fontSize: '13px',
+                lineHeight: '1.5',
+                color: 'rgba(236,236,236,0.35)',
+              }}>
+                {truncateSummary(step.summary, 90)}
+              </div>
+            ))}
+            {/* Current active step — brighter */}
+            <div style={{
+              fontSize: '13px',
+              lineHeight: '1.5',
+              color: 'rgba(236,236,236,0.78)',
+            }}>
+              {truncateSummary(currentStep.summary, 110)}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
 
   // ---------------------------------------------------------------------------
-  // COMPLETE — COLLAPSED: single summary line
+  // COMPLETE — COLLAPSED: ▶ Thought process · N steps
   // ---------------------------------------------------------------------------
   if (isComplete && !isStreaming && !isExpanded) {
-    const summaryStep = selectSummaryStep(steps);
     return (
       <div className={cn("my-1.5", className)}>
         <button
@@ -405,39 +334,19 @@ export const ThoughtTrace = memo(({ steps, isStreaming = false, isComplete = fal
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
+            gap: '5px',
             background: 'none',
             border: 'none',
             padding: '2px 0',
             cursor: 'pointer',
-            textAlign: 'left',
-            maxWidth: '100%',
           }}
         >
-          <ChevronRight
-            size={11}
-            style={{ color: 'rgba(255,255,255,0.28)', flexShrink: 0, transition: 'color 0.15s' }}
-          />
-          {/* Step count badge */}
-          <span style={{
-            fontSize: '10px',
-            fontWeight: 700,
-            color: 'rgba(212,176,140,0.55)',
-            letterSpacing: '0.08em',
-            flexShrink: 0,
-          }}>
-            {steps.length} steps
+          <CaretRight size={11} style={{ color: 'rgba(255,255,255,0.28)', flexShrink: 0 }} />
+          <span style={{ fontSize: '13px', color: 'rgba(236,236,236,0.48)', fontWeight: 400 }}>
+            Thought process
           </span>
-          <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.18)', flexShrink: 0 }}>—</span>
-          {/* Best summary */}
-          <span style={{
-            fontSize: '13px',
-            color: 'rgba(236,236,236,0.48)',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}>
-            {truncateSummary(summaryStep?.summary ?? "Thinking complete", 80)}
+          <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.20)' }}>
+            · {steps.length} {steps.length === 1 ? 'step' : 'steps'}
           </span>
         </button>
       </div>
@@ -445,18 +354,17 @@ export const ThoughtTrace = memo(({ steps, isStreaming = false, isComplete = fal
   }
 
   // ---------------------------------------------------------------------------
-  // COMPLETE — EXPANDED: full timeline
+  // COMPLETE — EXPANDED: ▼ Thought process + clean indented list
   // ---------------------------------------------------------------------------
   if (isComplete && !isStreaming && isExpanded) {
     return (
-      <div className={cn("my-3", className)}>
-        {/* Header / collapse button */}
+      <div className={cn("my-2", className)}>
         <button
           onClick={() => setIsExpanded(false)}
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
+            gap: '5px',
             background: 'none',
             border: 'none',
             padding: '2px 0',
@@ -464,53 +372,32 @@ export const ThoughtTrace = memo(({ steps, isStreaming = false, isComplete = fal
             cursor: 'pointer',
           }}
         >
-          <ChevronDown size={11} style={{ color: 'rgba(255,255,255,0.4)', flexShrink: 0 }} />
-          <span style={{
-            fontSize: '10px',
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            letterSpacing: '0.12em',
-            color: 'rgba(255,255,255,0.38)',
-          }}>
-            Thought trace · {steps.length} steps
+          <CaretDown size={11} style={{ color: 'rgba(255,255,255,0.38)', flexShrink: 0 }} />
+          <span style={{ fontSize: '13px', color: 'rgba(236,236,236,0.55)', fontWeight: 400 }}>
+            Thought process
+          </span>
+          <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.22)' }}>
+            · {steps.length} {steps.length === 1 ? 'step' : 'steps'}
           </span>
         </button>
 
-        {/* Timeline */}
-        <div style={{ position: 'relative', paddingLeft: '16px' }}>
-          {/* Vertical connecting line */}
-          <div
-            style={{
-              position: 'absolute',
-              left: '3px',
-              top: '6px',
-              bottom: '6px',
-              width: '1px',
-              background: 'rgba(255,255,255,0.10)',
-            }}
-          />
-
-          {steps.map((step, idx) => {
-            const isLast = idx === steps.length - 1;
-            return (
-              <div
-                key={idx}
-                style={{
-                  position: 'relative',
-                  marginBottom: isLast ? 0 : '10px',
-                  paddingBottom: isLast ? 0 : '2px',
-                }}
-              >
-                {/* Dot on the line */}
-                <div style={{ position: 'absolute', left: '-14px', top: '6px' }}>
-                  <StepDot complete />
-                </div>
-
-                {/* Step content */}
-                <TimelineRow step={step} active={false} showDetail />
-              </div>
-            );
-          })}
+        {/* Clean list — single left rule, no dots, no colored labels */}
+        <div style={{
+          paddingLeft: '16px',
+          borderLeft: '1px solid rgba(255,255,255,0.08)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '6px',
+        }}>
+          {steps.map((step, idx) => (
+            <div key={idx} style={{
+              fontSize: '13px',
+              lineHeight: '1.55',
+              color: 'rgba(236,236,236,0.48)',
+            }}>
+              {truncateSummary(step.summary, 100)}
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -522,7 +409,7 @@ export const ThoughtTrace = memo(({ steps, isStreaming = false, isComplete = fal
 ThoughtTrace.displayName = "ThoughtTrace";
 
 // ============================================================================
-// parseThoughtSteps — convert raw thinking text to structured steps
+// parseThoughtSteps — raw thinking text → structured ThoughtStep[]
 // ============================================================================
 
 export function parseThoughtSteps(text: string): ThoughtStep[] {

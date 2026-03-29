@@ -61,3 +61,11 @@ export type {
   LogOutputData,
   HealthCheckData 
 } from './websocket';
+
+// Re-export runtime backend resolver API
+export { runtimeBackendApi } from './runtime-backend';
+export type {
+  RuntimeBackendMode,
+  RuntimeBackendResponse,
+  RuntimeBackendTargetResponse,
+} from './runtime-backend';

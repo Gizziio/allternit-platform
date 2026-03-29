@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { useUnifiedStore } from '@/lib/agents/unified.store';
 import { GlassCard } from '../../design/GlassCard';
-import { 
-  CaretRight, 
-  CheckCircle, 
-  Warning, 
-  User, 
-  Clock
+import {
+  CaretRight,
+  CheckCircle,
+  Warning,
+  User,
+  Clock,
+  ArrowsClockwise,
 } from '@phosphor-icons/react';
-import { RefreshCw, AlertCircle } from 'lucide-react';
+
 import { KanbanDAG } from './KanbanDAG';
 
 const COLUMNS: { id: string; label: string; color: string }[] = [
@@ -180,7 +181,7 @@ export function KanbanBoard() {
             opacity: isLoading ? 0.5 : 1
           }}
         >
-          <RefreshCw size={12} className={isLoading ? 'animate-spin' : ''} />
+          <ArrowsClockwise size={12} className={isLoading ? 'animate-spin' : ''} />
           Refresh
         </button>
         {isUpdating && (
@@ -371,7 +372,7 @@ export function KanbanBoard() {
                 alignItems: 'center',
                 gap: 6
               }}>
-                <AlertCircle size={12} />
+                <Warning size={12} />
                 BLOCKED BY
               </div>
               {selectedWih.blocked_by.map(depId => (

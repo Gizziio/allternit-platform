@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
-import { Download, Loader } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  DownloadSimple,
+  CircleNotch,
+} from '@phosphor-icons/react';
 import GlassSurface from '@/design/GlassSurface';
 
 interface Export {
@@ -11,54 +14,6 @@ interface Export {
   created: string;
   status: 'ready' | 'processing';
 }
-
-const mockExports: Export[] = [
-  {
-    id: '1',
-    format: 'PDF',
-    name: 'Q4 Report Export',
-    source: 'Document: Q4 Report',
-    fileSize: '2.4 MB',
-    created: '2 hours ago',
-    status: 'ready',
-  },
-  {
-    id: '2',
-    format: 'CSV',
-    name: 'User Analytics Export',
-    source: 'Table: User Analytics',
-    fileSize: '856 KB',
-    created: '5 hours ago',
-    status: 'ready',
-  },
-  {
-    id: '3',
-    format: 'JSON',
-    name: 'Agent Runs Data',
-    source: 'Table: Agent Runs',
-    fileSize: '234 KB',
-    created: '12 hours ago',
-    status: 'processing',
-  },
-  {
-    id: '4',
-    format: 'XLSX',
-    name: 'Financial Summary',
-    source: 'Document: Financial Report',
-    fileSize: '1.1 MB',
-    created: '1 day ago',
-    status: 'ready',
-  },
-  {
-    id: '5',
-    format: 'PDF',
-    name: 'Meeting Notes Archive',
-    source: 'Document: Meeting Notes',
-    fileSize: '3.2 MB',
-    created: '3 days ago',
-    status: 'ready',
-  },
-];
 
 const getFormatColor = (format: Export['format']) => {
   switch (format) {
@@ -77,13 +32,18 @@ const getFormatColor = (format: Export['format']) => {
 
 export const ExportsView: React.FC = () => {
   const [hoveredExportId, setHoveredExportId] = useState<string | null>(null);
+  const [exports_, setExports] = useState<Export[]>([]);
+
+  useEffect(() => {
+    fetch('/api/v1/workspace/exports').then(r => r.json()).then(setExports).catch(() => {});
+  }, []);
 
   return (
     <div style={{ padding: 'var(--spacing-lg)' }}>
       {/* Header */}
       <div style={{ marginBottom: 'var(--spacing-xl)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)', marginBottom: 'var(--spacing-md)' }}>
-          <Download size={24} color="#af52de" />
+          <DownloadSimple size={24} color="#af52de" />
           <h1 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '24px', fontWeight: 600 }}>Exports</h1>
         </div>
         <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '14px' }}>Generated and exported files</p>
@@ -91,7 +51,7 @@ export const ExportsView: React.FC = () => {
 
       {/* Exports List */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
-        {mockExports.map((exp) => {
+        {exports_.map((exp) => {
           const formatColor = getFormatColor(exp.format);
 
           return (
@@ -152,7 +112,7 @@ export const ExportsView: React.FC = () => {
                         fontWeight: 500,
                       }}
                     >
-                      <Loader size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                      <CircleNotch size={16} style={{ animation: 'spin 1s linear infinite' }} />
                       Processing
                     </div>
                   ) : (
@@ -169,7 +129,7 @@ export const ExportsView: React.FC = () => {
                         fontWeight: 500,
                       }}
                     >
-                      <Download size={16} />
+                      <DownloadSimple size={16} />
                       Ready
                     </div>
                   )}
@@ -198,7 +158,7 @@ export const ExportsView: React.FC = () => {
                         e.currentTarget.style.opacity = '1';
                       }}
                     >
-                      <Download size={16} />
+                      <DownloadSimple size={16} />
                       Download
                     </button>
                   )}

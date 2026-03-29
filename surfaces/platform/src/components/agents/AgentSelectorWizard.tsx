@@ -16,20 +16,20 @@
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Bot,
+  Robot,
   Code,
   Palette,
   Megaphone,
-  ClipboardList,
+  ClipboardText,
   TestTube,
   Headphones,
   Target,
-  Boxes,
-  ChevronRight,
-  ChevronLeft,
+  Stack,
+  CaretRight,
+  CaretLeft,
   Check,
-  Sparkles,
-} from 'lucide-react';
+  Sparkle,
+} from '@phosphor-icons/react';
 
 import { SAND, MODE_COLORS, GLASS, TEXT, createGlassStyle } from '@/design/a2r.tokens';
 import { SPECIALIST_TEMPLATES, getTemplatesByCategory } from '@/lib/agents/agent-templates.specialist';
@@ -70,7 +70,7 @@ const CATEGORIES: { id: AgentCategory; label: string; icon: React.ReactNode; des
   { id: 'engineering', label: 'Engineering', icon: <Code size={24} />, description: 'Development, DevOps, and technical specialists' },
   { id: 'design', label: 'Design', icon: <Palette size={24} />, description: 'UI/UX, brand, and visual design experts' },
   { id: 'marketing', label: 'Marketing', icon: <Megaphone size={24} />, description: 'Growth, content, and social media specialists' },
-  { id: 'product', label: 'Product', icon: <ClipboardList size={24} />, description: 'Product management and research experts' },
+  { id: 'product', label: 'Product', icon: <ClipboardText size={24} />, description: 'Product management and research experts' },
   { id: 'testing', label: 'Testing', icon: <TestTube size={24} />, description: 'QA, performance, and accessibility specialists' },
   { id: 'support', label: 'Support', icon: <Headphones size={24} />, description: 'Customer service and operations experts' },
   { id: 'specialized', label: 'Specialized', icon: <Target size={24} />, description: 'Orchestration, data, and identity specialists' },
@@ -163,7 +163,7 @@ export function AgentSelectorWizard({
                 className="p-2 rounded-lg"
                 style={{ background: theme.soft }}
               >
-                <Bot size={24} style={{ color: theme.accent }} />
+                <Robot size={24} style={{ color: theme.accent }} />
               </div>
               <div>
                 <h2 className="text-lg font-semibold" style={{ color: TEXT.primary }}>
@@ -179,7 +179,7 @@ export function AgentSelectorWizard({
               className="p-2 rounded-lg transition-colors"
               style={{ color: TEXT.tertiary }}
             >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg size={20} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -385,7 +385,7 @@ function TemplateStep({ category, selectedTemplate, onSelect, onBack, theme }: T
 
       <div className="flex justify-start">
         <Button variant="ghost" onClick={onBack} className="gap-2">
-          <ChevronLeft size={16} />
+          <CaretLeft size={16} />
           Back
         </Button>
       </div>
@@ -416,7 +416,7 @@ function ReviewStep({ template, onBack, onNext, theme }: ReviewStepProps) {
             className="p-2 rounded-lg"
             style={{ background: theme.soft }}
           >
-            <Sparkles size={20} style={{ color: theme.accent }} />
+            <Sparkle size={20} style={{ color: theme.accent }} />
           </div>
           <div>
             <h3 className="font-semibold" style={{ color: TEXT.primary }}>
@@ -454,12 +454,12 @@ function ReviewStep({ template, onBack, onNext, theme }: ReviewStepProps) {
 
       <div className="flex gap-2">
         <Button variant="ghost" onClick={onBack} className="gap-2">
-          <ChevronLeft size={16} />
+          <CaretLeft size={16} />
           Back
         </Button>
         <Button variant="default" onClick={onNext} className="flex-1 gap-2" style={{ background: theme.accent, color: '#1A1612' }}>
           Continue
-          <ChevronRight size={16} />
+          <CaretRight size={16} />
         </Button>
       </div>
     </motion.div>
@@ -515,7 +515,7 @@ function NameStep({ template, agentName, onNameChange, onBack, onComplete, theme
 
       <div className="flex gap-2">
         <Button variant="ghost" onClick={onBack} className="gap-2">
-          <ChevronLeft size={16} />
+          <CaretLeft size={16} />
           Back
         </Button>
         <Button

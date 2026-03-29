@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { GitCommit, MessageSquare, User } from 'lucide-react';
+import { GitCommit, MessageCircle, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface TreeNode {
@@ -81,7 +81,7 @@ export function ConversationTree({
               cursor: 'pointer',
               textAlign: 'left',
               maxWidth: 280,
-              transition: 'all 0.2s',
+              transition: 'background-color 0.2s, border-color 0.2s',
             }}
             onMouseEnter={(e) => {
               if (!node.isActive) {
@@ -111,9 +111,9 @@ export function ConversationTree({
               }}
             >
               {node.role === 'user' ? (
-                <User size={12} style={{ color: THEME.userAccent }} />
+                <User size={12} style={{ color: THEME.userAccent }} aria-hidden="true" />
               ) : (
-                <MessageSquare size={12} style={{ color: THEME.accent }} />
+                <MessageCircle size={12} style={{ color: THEME.accent }} aria-hidden="true" />
               )}
             </div>
 
@@ -158,7 +158,7 @@ export function ConversationTree({
                   flexShrink: 0,
                 }}
               >
-                <GitCommit size={10} style={{ color: THEME.accent }} />
+                <GitCommit size={10} style={{ color: THEME.accent }} aria-hidden="true" />
               </div>
             )}
           </button>

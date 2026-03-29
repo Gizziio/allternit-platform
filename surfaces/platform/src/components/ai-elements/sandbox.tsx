@@ -15,7 +15,10 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { ChevronDownIcon, Code } from "lucide-react";
+import {
+  CaretDown as ChevronDownIcon,
+  Code,
+} from '@phosphor-icons/react';
 
 import { getStatusBadge } from "./tool";
 

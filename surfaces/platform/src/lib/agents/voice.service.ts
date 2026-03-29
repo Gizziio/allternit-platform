@@ -9,14 +9,30 @@
 
 import { VoicePreset, VoicesResponse } from './agent.types';
 
-const VOICE_SERVICE_BASE_URL = process.env.NEXT_PUBLIC_VOICE_SERVICE_URL || 'http://127.0.0.1:8001';
+const VOICE_SERVICE_API_BASE = '/api/v1/voice';
+
+function resolveVoiceAssetUrl(audioUrl: string): string {
+  if (/^https?:\/\//i.test(audioUrl)) {
+    return audioUrl;
+  }
+
+  if (audioUrl.startsWith('/v1/voice/')) {
+    return `/api${audioUrl}`;
+  }
+
+  if (audioUrl.startsWith('/')) {
+    return audioUrl;
+  }
+
+  return `${VOICE_SERVICE_API_BASE}/${audioUrl.replace(/^\/+/, '')}`;
+}
 
 /**
  * Fetch available voice presets from the voice service
  */
 export async function listVoices(): Promise<VoicePreset[]> {
   try {
-    const response = await fetch(`${VOICE_SERVICE_BASE_URL}/v1/voice/voices`);
+    const response = await fetch(`${VOICE_SERVICE_API_BASE}/voices`);
     
     if (!response.ok) {
       throw new Error(`Voice service error: ${response.status}`);
@@ -25,7 +41,6 @@ export async function listVoices(): Promise<VoicePreset[]> {
     const data: VoicesResponse = await response.json();
     return data.voices;
   } catch (error) {
-    console.error('[VoiceService] Failed to fetch voices:', error);
     // Return default voices as fallback
     return getDefaultVoices();
   }
@@ -36,7 +51,7 @@ export async function listVoices(): Promise<VoicePreset[]> {
  */
 export async function previewVoice(voiceId: string, text: string = "Hello, I'm your AI assistant."): Promise<string | null> {
   try {
-    const response = await fetch(`${VOICE_SERVICE_BASE_URL}/v1/voice/tts`, {
+    const response = await fetch(`${VOICE_SERVICE_API_BASE}/tts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -52,9 +67,8 @@ export async function previewVoice(voiceId: string, text: string = "Hello, I'm y
     }
     
     const data = await response.json();
-    return `${VOICE_SERVICE_BASE_URL}${data.audio_url}`;
+    return resolveVoiceAssetUrl(data.audio_url);
   } catch (error) {
-    console.error('[VoiceService] TTS preview failed:', error);
     return null;
   }
 }
@@ -64,7 +78,7 @@ export async function previewVoice(voiceId: string, text: string = "Hello, I'm y
  */
 export async function checkVoiceServiceHealth(): Promise<boolean> {
   try {
-    const response = await fetch(`${VOICE_SERVICE_BASE_URL}/health`, {
+    const response = await fetch(`${VOICE_SERVICE_API_BASE}/health`, {
       method: 'GET',
       signal: AbortSignal.timeout(3000),
     });

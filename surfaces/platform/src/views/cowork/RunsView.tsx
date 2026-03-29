@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
-import { Play, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import {
+  Play,
+  CaretDown,
+} from '@phosphor-icons/react';
 import GlassSurface from '@/design/GlassSurface';
 
 interface Run {
@@ -12,68 +15,16 @@ interface Run {
   logExcerpt: string[];
 }
 
-const mockRuns: Run[] = [
-  {
-    id: '042',
-    name: 'Agent Run #042',
-    status: 'running',
-    startTime: '2 mins ago',
-    duration: '2m 34s',
-    triggerType: 'Manual',
-    logExcerpt: ['[INFO] Processing document batch...', '[INFO] 156 items processed successfully'],
-  },
-  {
-    id: '041',
-    name: 'Document Analysis',
-    status: 'completed',
-    startTime: '15 mins ago',
-    duration: '8m 12s',
-    triggerType: 'Scheduled',
-    logExcerpt: ['[INFO] Analysis complete', '[INFO] Generated 3 reports'],
-  },
-  {
-    id: '040',
-    name: 'Data Import Pipeline',
-    status: 'failed',
-    startTime: '42 mins ago',
-    duration: '5m 07s',
-    triggerType: 'Webhook',
-    logExcerpt: ['[ERROR] Connection timeout on datasource', '[ERROR] Rollback initiated'],
-  },
-  {
-    id: '039',
-    name: 'Report Generation',
-    status: 'completed',
-    startTime: '1 hour ago',
-    duration: '12m 45s',
-    triggerType: 'Manual',
-    logExcerpt: ['[INFO] Compiling report sections...', '[INFO] PDF export complete'],
-  },
-  {
-    id: '038',
-    name: 'Agent Run #038',
-    status: 'queued',
-    startTime: 'Queued',
-    duration: '—',
-    triggerType: 'Scheduled',
-    logExcerpt: ['[QUEUE] Waiting for resources', '[QUEUE] Position: 3'],
-  },
-  {
-    id: '037',
-    name: 'Batch Processing',
-    status: 'completed',
-    startTime: '2 hours ago',
-    duration: '25m 30s',
-    triggerType: 'Manual',
-    logExcerpt: ['[INFO] Processing 5,234 records', '[INFO] All batches completed'],
-  },
-];
-
 type FilterType = 'All' | 'Running' | 'Completed' | 'Failed';
 
 export const RunsView: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<FilterType>('All');
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
+  const [runs, setRuns] = useState<Run[]>([]);
+
+  useEffect(() => {
+    fetch('/api/v1/workspace/runs').then(r => r.json()).then(setRuns).catch(() => {});
+  }, []);
 
   const getStatusColor = (status: Run['status']) => {
     switch (status) {
@@ -94,7 +45,7 @@ export const RunsView: React.FC = () => {
     return status.charAt(0).toUpperCase() + status.slice(1);
   };
 
-  const filteredRuns = mockRuns.filter((run) => {
+  const filteredRuns = runs.filter((run) => {
     if (activeFilter === 'All') return true;
     if (activeFilter === 'Running') return run.status === 'running';
     if (activeFilter === 'Completed') return run.status === 'completed';
@@ -103,10 +54,10 @@ export const RunsView: React.FC = () => {
   });
 
   const counts = {
-    All: mockRuns.length,
-    Running: mockRuns.filter((r) => r.status === 'running').length,
-    Completed: mockRuns.filter((r) => r.status === 'completed').length,
-    Failed: mockRuns.filter((r) => r.status === 'failed').length,
+    All: runs.length,
+    Running: runs.filter((r) => r.status === 'running').length,
+    Completed: runs.filter((r) => r.status === 'completed').length,
+    Failed: runs.filter((r) => r.status === 'failed').length,
   };
 
   return (
@@ -193,7 +144,7 @@ export const RunsView: React.FC = () => {
                 </div>
 
                 {/* Expand Icon */}
-                <ChevronDown
+                <CaretDown
                   size={18}
                   color="var(--text-tertiary)"
                   style={{

@@ -1,11 +1,16 @@
 "use client";
 
 import React from 'react';
-import { LucideIcon, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import {
+  TrendUp,
+  TrendDown,
+  Minus,
+} from '@phosphor-icons/react';
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { GlassSurface } from '@/design/GlassSurface';
 
 interface StatCardProps {
-  icon: LucideIcon;
+  icon: PhosphorIcon;
   label: string;
   value: string | number;
   unit?: string;
@@ -23,7 +28,7 @@ export function StatCard({
   trendValue,
   className = ''
 }: StatCardProps) {
-  const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus;
+  const TrendIcon = trend === 'up' ? TrendUp : trend === 'down' ? TrendDown : Minus;
   const trendColor = trend === 'up' ? 'text-green-500' : trend === 'down' ? 'text-red-500' : 'text-muted-foreground';
 
   return (
@@ -43,7 +48,7 @@ export function StatCard({
         </div>
         {trend && (
           <div className={`flex items-center gap-1 text-xs ${trendColor}`}>
-            <TrendIcon className="w-3 h-3" />
+            <TrendIcon size={12} />
             <span>{trendValue}</span>
           </div>
         )}

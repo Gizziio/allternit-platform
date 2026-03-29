@@ -2,20 +2,20 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  AlertCircle,
-  Boxes,
+  Warning,
+  Stack,
   Gauge,
-  History,
-  Loader2,
+  ClockCounterClockwise,
+  CircleNotch,
   Play,
-  RefreshCw,
-  Rocket,
+  ArrowsClockwise,
+  RocketLaunch,
   Shield,
   Thermometer,
   Wallet,
   Waves,
-  Zap,
-} from "lucide-react";
+  Lightning,
+} from '@phosphor-icons/react';
 import { GlassSurface } from "@/design/GlassSurface";
 import {
   useBudget,
@@ -359,7 +359,7 @@ export function RuntimeOperationsPanel({
           <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
             <div className="max-w-3xl">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] uppercase tracking-[0.24em] text-muted-foreground">
-                <Boxes className="h-3.5 w-3.5 text-amber-300" />
+                <Stack className="h-3.5 w-3.5 text-amber-300" />
                 Runtime Command
               </div>
               <h2 className="text-3xl font-semibold tracking-tight text-foreground">
@@ -388,7 +388,7 @@ export function RuntimeOperationsPanel({
                   onClick={() => void onRefreshAll?.()}
                   className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-black/15 px-3 py-1 text-[11px] text-foreground transition hover:bg-black/25"
                 >
-                  <RefreshCw
+                  <ArrowsClockwise
                     className={`h-3.5 w-3.5 ${isRefreshingAll ? "animate-spin" : ""}`}
                   />
                   Refresh all
@@ -444,13 +444,13 @@ export function RuntimeOperationsPanel({
             unit="credits/hr"
           />
           <StatCard
-            icon={Rocket}
+            icon={RocketLaunch}
             label="Warm Capacity"
             value={runtimeStatus?.available_instances ?? 0}
             unit="instances"
           />
           <StatCard
-            icon={History}
+            icon={ClockCounterClockwise}
             label="Replayable Runs"
             value={replayableCount}
             unit="sessions"
@@ -487,7 +487,7 @@ export function RuntimeOperationsPanel({
                       onClick={() => void onRefreshExecutionMode?.()}
                       className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-black/15 px-3 py-2 text-sm text-foreground transition hover:bg-black/25"
                     >
-                      <RefreshCw
+                      <ArrowsClockwise
                         className={`h-4 w-4 ${isLoadingExecutionMode ? "animate-spin" : ""}`}
                       />
                       Refresh
@@ -574,7 +574,7 @@ export function RuntimeOperationsPanel({
                       onClick={() => void onRefreshBudget?.()}
                       className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-black/15 px-3 py-2 text-sm text-foreground transition hover:bg-black/25"
                     >
-                      <RefreshCw
+                      <ArrowsClockwise
                         className={`h-4 w-4 ${isLoadingBudget ? "animate-spin" : ""}`}
                       />
                       Refresh
@@ -614,9 +614,9 @@ export function RuntimeOperationsPanel({
                       className="inline-flex items-center gap-2 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-4 py-3 text-sm font-medium text-emerald-100 transition hover:bg-emerald-300/20 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {isSavingBudget ? (
-                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        <ArrowsClockwise className="h-4 w-4 animate-spin" />
                       ) : (
-                        <Wallet className="h-4 w-4" />
+                        <Wallet size={16} />
                       )}
                       Apply quota
                     </button>
@@ -671,7 +671,7 @@ export function RuntimeOperationsPanel({
                           className="rounded-2xl border border-white/5 bg-black/10 px-4 py-3"
                         >
                           <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                            <AlertCircle className="h-4 w-4 text-amber-200" />
+                            <Warning className="h-4 w-4 text-amber-200" />
                             {alert.title}
                           </div>
                           <p className="mt-1 text-sm text-muted-foreground">
@@ -719,7 +719,7 @@ export function RuntimeOperationsPanel({
                       onClick={() => void onRefreshPrewarm?.()}
                       className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-black/15 px-3 py-2 text-sm text-foreground transition hover:bg-black/25"
                     >
-                      <RefreshCw
+                      <ArrowsClockwise
                         className={`h-4 w-4 ${isLoadingPrewarm ? "animate-spin" : ""}`}
                       />
                       Refresh
@@ -791,9 +791,9 @@ export function RuntimeOperationsPanel({
                       className="inline-flex items-center gap-2 rounded-2xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-sm font-medium text-amber-100 transition hover:bg-amber-300/20 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {isWarmingPool ? (
-                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        <ArrowsClockwise className="h-4 w-4 animate-spin" />
                       ) : (
-                        <Waves className="h-4 w-4" />
+                        <Waves size={16} />
                       )}
                       Trigger warmup
                     </button>
@@ -807,9 +807,9 @@ export function RuntimeOperationsPanel({
                       className="inline-flex items-center gap-2 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-4 py-3 text-sm font-medium text-emerald-100 transition hover:bg-emerald-300/20 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {isSavingPoolSize ? (
-                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        <ArrowsClockwise className="h-4 w-4 animate-spin" />
                       ) : (
-                        <Rocket className="h-4 w-4" />
+                        <RocketLaunch size={16} />
                       )}
                       Apply pool size
                     </button>
@@ -877,7 +877,7 @@ export function RuntimeOperationsPanel({
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div>
                     <div className="flex items-center gap-2">
-                      <History className="h-5 w-5 text-sky-200" />
+                      <ClockCounterClockwise className="h-5 w-5 text-sky-200" />
                       <h3 className="text-lg font-medium text-foreground">
                         Replay Readiness
                       </h3>
@@ -898,7 +898,7 @@ export function RuntimeOperationsPanel({
                       onClick={() => void onRefreshReplay?.()}
                       className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-black/15 px-3 py-2 text-sm text-foreground transition hover:bg-black/25"
                     >
-                      <RefreshCw
+                      <ArrowsClockwise
                         className={`h-4 w-4 ${isLoadingReplay ? "animate-spin" : ""}`}
                       />
                       Refresh
@@ -962,9 +962,9 @@ export function RuntimeOperationsPanel({
                           className="inline-flex items-center gap-2 rounded-2xl border border-sky-300/20 bg-sky-300/10 px-3 py-2 text-sm font-medium text-sky-100 transition hover:bg-sky-300/20 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {replayingRunId === manifest.run_id ? (
-                            <RefreshCw className="h-4 w-4 animate-spin" />
+                            <ArrowsClockwise className="h-4 w-4 animate-spin" />
                           ) : (
-                            <Play className="h-4 w-4" />
+                            <Play size={16} />
                           )}
                           Replay
                         </button>
@@ -997,7 +997,7 @@ export function RuntimeOperationsPanel({
               controls at {formatTimestamp(lastBudgetUpdatedAt)}.
             </div>
             <div className="flex items-center gap-2">
-              <Zap className="h-4 w-4 text-amber-200" />
+              <Lightning className="h-4 w-4 text-amber-200" />
               {latestActivity
                 ? latestActivity.details
                 : "No recent pool activity recorded."}
@@ -1082,7 +1082,7 @@ export function RuntimeOperationsView({
   ) {
     return (
       <div className="flex h-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-accent" />
+        <CircleNotch className="h-8 w-8 animate-spin text-accent" />
       </div>
     );
   }

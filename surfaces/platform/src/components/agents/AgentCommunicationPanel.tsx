@@ -12,18 +12,18 @@ import { AgentMessageDisplay, type AgentMessage } from "@/components/agents/Agen
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { 
-  MessageCircle, 
-  Hash, 
-  AtSign, 
-  Send, 
-  Users, 
-  Activity,
-  RefreshCw,
-  CheckCircle2,
-  AlertCircle,
-  X
-} from "lucide-react"
+import {
+  ChatCircle,
+  Hash,
+  At,
+  PaperPlaneTilt,
+  Users,
+  Pulse as Activity,
+  ArrowsClockwise,
+  CheckCircle,
+  Warning,
+  X,
+} from '@phosphor-icons/react';
 import { cn } from "@/lib/utils"
 
 // ============================================================================
@@ -213,7 +213,7 @@ export function AgentCommunicationPanel({ sessionId }: { sessionId?: string }) {
         <CardContent className="p-6">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
-              <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2 text-primary" />
+              <ArrowsClockwise className="w-8 h-8 animate-spin mx-auto mb-2 text-primary" />
               <p className="text-muted-foreground">Loading agent communication...</p>
             </div>
           </div>
@@ -227,7 +227,7 @@ export function AgentCommunicationPanel({ sessionId }: { sessionId?: string }) {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <MessageCircle className="w-5 h-5 text-primary" />
+            <ChatCircle className="w-5 h-5 text-primary" />
             <CardTitle className="text-lg">Agent Communication</CardTitle>
             {unreadCount > 0 && (
               <Badge variant="secondary" className="ml-2">
@@ -241,7 +241,7 @@ export function AgentCommunicationPanel({ sessionId }: { sessionId?: string }) {
               size="sm"
               onClick={() => setActiveTab("messages")}
             >
-              <MessageCircle className="w-4 h-4 mr-1" />
+              <ChatCircle className="w-4 h-4 mr-1" />
               Messages
             </Button>
             <Button
@@ -283,7 +283,7 @@ export function AgentCommunicationPanel({ sessionId }: { sessionId?: string }) {
             {replyTo && (
               <div className="border-t pt-4 mt-4">
                 <div className="flex items-start gap-2 mb-2">
-                  <AtSign className="w-4 h-4 text-primary mt-1" />
+                  <At className="w-4 h-4 text-primary mt-1" />
                   <div className="flex-1">
                     <p className="text-sm text-muted-foreground">
                       Replying to {replyTo.from.agentName}
@@ -300,7 +300,7 @@ export function AgentCommunicationPanel({ sessionId }: { sessionId?: string }) {
                       setReplyContent("")
                     }}
                   >
-                    <X className="w-4 h-4" />
+                    <X size={16} />
                   </Button>
                 </div>
                 <div className="flex gap-2">
@@ -328,7 +328,7 @@ export function AgentCommunicationPanel({ sessionId }: { sessionId?: string }) {
                     }}
                     disabled={!replyContent.trim()}
                   >
-                    <Send className="w-4 h-4" />
+                    <PaperPlaneTilt size={16} />
                   </Button>
                 </div>
               </div>
@@ -342,7 +342,7 @@ export function AgentCommunicationPanel({ sessionId }: { sessionId?: string }) {
                   size="sm"
                   onClick={() => sendMessage("@builder Please provide status update", { agentRole: "builder" })}
                 >
-                  <AtSign className="w-3 h-3 mr-1" />
+                  <At className="w-3 h-3 mr-1" />
                   Ask Builder
                 </Button>
                 <Button
@@ -350,7 +350,7 @@ export function AgentCommunicationPanel({ sessionId }: { sessionId?: string }) {
                   size="sm"
                   onClick={() => sendMessage("@validator Ready for validation", { agentRole: "validator" })}
                 >
-                  <AtSign className="w-3 h-3 mr-1" />
+                  <At className="w-3 h-3 mr-1" />
                   Notify Validator
                 </Button>
                 <Button
@@ -370,7 +370,7 @@ export function AgentCommunicationPanel({ sessionId }: { sessionId?: string }) {
                   onClick={markAsRead}
                   disabled={unreadCount === 0}
                 >
-                  <CheckCircle2 className="w-3 h-3 mr-1" />
+                  <CheckCircle className="w-3 h-3 mr-1" />
                   Mark Read
                 </Button>
               </div>

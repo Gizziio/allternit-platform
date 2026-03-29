@@ -5,6 +5,7 @@
  */
 
 import React, { useState } from 'react';
+import { InputModal } from '@/components/InputModal';
 import { useChatStore } from './chat/ChatStore';
 import { 
   BaseProjectView, 
@@ -14,7 +15,14 @@ import {
   InstructionItem,
 } from './BaseProjectView';
 import { ChatComposer } from './chat/ChatComposer';
-import { MessageSquare, Pencil, Archive, Trash2, FileText, Bot } from 'lucide-react';
+import {
+  Chat,
+  PencilSimple,
+  Archive,
+  Trash,
+  FileText,
+  Robot,
+} from '@phosphor-icons/react';
 import { useNav } from '@/nav/useNav';
 
 export function ProjectView() {
@@ -39,6 +47,7 @@ export function ProjectView() {
   
   // Modal states
   const [showAddFile, setShowAddFile] = useState(false);
+  const [showRenameModal, setShowRenameModal] = useState(false);
   const [showAddInstruction, setShowAddInstruction] = useState(false);
   const [instructionText, setInstructionText] = useState('');
   const [projectInstructions, setProjectInstructions] = useState<string[]>([]);
@@ -91,15 +100,12 @@ export function ProjectView() {
     dispatch({ type: 'OPEN_VIEW', viewType: 'chat' });
   };
 
-  const handleAddFile = () => {
-    const name = prompt('File name:');
-    if (name) {
-      addFileToProject(project.id, { 
-        name, 
-        size: 1024, 
-        type: 'text/markdown' 
-      });
-    }
+  const handleAddFile = (name: string) => {
+    addFileToProject(project.id, {
+      name,
+      size: 1024,
+      type: 'text/markdown',
+    });
     setShowAddFile(false);
   };
 
@@ -125,12 +131,7 @@ export function ProjectView() {
   const menuContent = (
     <ProjectMenuButton>
       <button
-        onClick={() => {
-          const newName = prompt('Rename project:', project.title);
-          if (newName && newName.trim() !== project.title) {
-            renameProject(project.id, newName.trim());
-          }
-        }}
+        onClick={() => setShowRenameModal(true)}
         style={{
           width: '100%',
           padding: '10px 16px',
@@ -145,7 +146,7 @@ export function ProjectView() {
           textAlign: 'left',
         }}
       >
-        <Pencil size={16} />
+        <PencilSimple size={16} />
         Edit details
       </button>
       <button
@@ -187,7 +188,7 @@ export function ProjectView() {
           textAlign: 'left',
         }}
       >
-        <Trash2 size={16} />
+        <Trash size={16} />
         Delete
       </button>
     </ProjectMenuButton>
@@ -277,7 +278,7 @@ export function ProjectView() {
                 title={thread.title}
                 subtitle={formatDate(thread.updatedAt)}
                 onClick={() => setActiveThread(thread.id)}
-                icon={<MessageSquare size={18} />}
+                icon={<Chat size={18} />}
               />
             ))}
           </div>
@@ -290,7 +291,7 @@ export function ProjectView() {
                 title={session.title}
                 subtitle={formatDate(session.updatedAt)}
                 onClick={() => setActiveThread(session.id)}
-                icon={<Bot size={18} />}
+                icon={<Robot size={18} />}
               />
             ))}
           </div>
@@ -309,13 +310,29 @@ export function ProjectView() {
         )}
       </BaseProjectView>
 
+      {/* Rename Modal */}
+      <InputModal
+        isOpen={showRenameModal}
+        title="Rename Project"
+        placeholder="Project name"
+        defaultValue={project.title}
+        confirmLabel="Rename"
+        onConfirm={(name) => {
+          renameProject(project.id, name);
+          setShowRenameModal(false);
+        }}
+        onCancel={() => setShowRenameModal(false)}
+      />
+
       {/* Add File Modal */}
-      {showAddFile && (
-        <AddFileModal
-          onClose={() => setShowAddFile(false)}
-          onUpload={handleAddFile}
-        />
-      )}
+      <InputModal
+        isOpen={showAddFile}
+        title="Add File"
+        placeholder="File name"
+        confirmLabel="Add"
+        onConfirm={handleAddFile}
+        onCancel={() => setShowAddFile(false)}
+      />
 
       {/* Add Instruction Modal */}
       {showAddInstruction && (

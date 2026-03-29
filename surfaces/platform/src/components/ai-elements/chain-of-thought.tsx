@@ -1,6 +1,6 @@
 "use client";
 
-import type { LucideIcon } from "lucide-react";
+import type { Icon as PhosphorIcon } from "@phosphor-icons/react";
 import type { ComponentProps, ReactNode } from "react";
 
 import { useControllableState } from "@radix-ui/react-use-controllable-state";
@@ -11,7 +11,11 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
-import { BrainIcon, ChevronDownIcon, DotIcon } from "lucide-react";
+import {
+  Brain as BrainIcon,
+  CaretDown as ChevronDownIcon,
+  Dot as DotIcon,
+} from '@phosphor-icons/react';
 import { createContext, memo, useContext, useMemo } from "react";
 
 interface ChainOfThoughtContextValue {
@@ -103,7 +107,7 @@ export const ChainOfThoughtHeader = memo(
 );
 
 export type ChainOfThoughtStepProps = ComponentProps<"div"> & {
-  icon?: LucideIcon;
+  icon?: PhosphorIcon;
   label: ReactNode;
   description?: ReactNode;
   status?: "complete" | "active" | "pending";

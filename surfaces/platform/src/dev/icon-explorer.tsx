@@ -19,7 +19,7 @@
 import * as React from 'react';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { Search, Copy, Check, Sun, Moon, Grid, List } from 'lucide-react';
+import { MagnifyingGlass as Search, Copy, Check, Sun, Moon, SquaresFour as Grid, List } from '@phosphor-icons/react';
 
 import { Icon } from '../design/icons/Icon';
 import { 
@@ -302,7 +302,7 @@ export function IconExplorer({
               )}
               aria-label="Grid view"
             >
-              <Grid className="w-4 h-4" />
+              <SquaresFour className="w-4 h-4" />
             </button>
             <button
               onClick={() => setViewMode('list')}

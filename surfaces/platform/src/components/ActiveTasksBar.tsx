@@ -7,7 +7,14 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Loader2, CheckCircle2, AlertCircle, Play, Clock } from 'lucide-react';
+import {
+  X,
+  CircleNotch,
+  CheckCircle,
+  Warning,
+  Play,
+  Clock,
+} from '@phosphor-icons/react';
 import { useUnifiedStore } from '@/lib/agents/unified.store';
 
 interface ActiveTasksBarProps {
@@ -45,18 +52,18 @@ export const ActiveTasksBar: React.FC<ActiveTasksBarProps> = ({
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'in_progress':
-        return <Loader2 className="w-3 h-3 text-amber-400 animate-spin" />;
+        return <CircleNotch className="w-3 h-3 text-amber-400 animate-spin" />;
       case 'ready':
       case 'open':
         return <Play className="w-3 h-3 text-blue-400" />;
       case 'blocked':
         return <Clock className="w-3 h-3 text-orange-400" />;
       case 'completed':
-        return <CheckCircle2 className="w-3 h-3 text-green-400" />;
+        return <CheckCircle className="w-3 h-3 text-green-400" />;
       case 'failed':
-        return <AlertCircle className="w-3 h-3 text-red-400" />;
+        return <Warning className="w-3 h-3 text-red-400" />;
       default:
-        return <Loader2 className="w-3 h-3 text-white/40" />;
+        return <CircleNotch className="w-3 h-3 text-white/40" />;
     }
   };
 

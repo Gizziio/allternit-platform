@@ -78,7 +78,7 @@ export function DeleteConfirmModal({
           position: 'absolute',
           inset: 0,
           zIndex: 2147483647,
-          background: 'rgba(0,0,0,0.75)',
+          background: 'var(--shell-overlay-backdrop)',
           backdropFilter: 'blur(4px)',
         }}
         onClick={onCancel}
@@ -89,13 +89,13 @@ export function DeleteConfirmModal({
         style={{
           position: 'relative',
           zIndex: 2147483648,
-          background: 'linear-gradient(180deg, rgba(35,32,28,0.98), rgba(25,22,20,0.98))',
+          background: 'var(--shell-dialog-bg)',
           borderRadius: 16,
-          border: '1px solid rgba(212,176,140,0.25)',
+          border: '1px solid var(--shell-dialog-border)',
           padding: '28px 32px',
           minWidth: 380,
           maxWidth: 460,
-          boxShadow: '0 25px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,0,0,0.3)',
+          boxShadow: 'var(--shadow-xl)',
           pointerEvents: 'auto',
         }}
         onClick={(e) => e.stopPropagation()}
@@ -105,7 +105,7 @@ export function DeleteConfirmModal({
           margin: '0 0 16px 0', 
           fontSize: 20, 
           fontWeight: 700, 
-          color: '#f0c8aa',
+          color: 'var(--shell-dialog-title)',
           letterSpacing: '-0.01em',
         }}>
           {title}
@@ -115,7 +115,7 @@ export function DeleteConfirmModal({
         <p style={{ 
           margin: '0 0 28px 0', 
           fontSize: 15, 
-          color: '#a0a0a0',
+          color: 'var(--shell-dialog-text)',
           lineHeight: 1.6,
         }}>
           {getDeleteMessage()}
@@ -128,9 +128,9 @@ export function DeleteConfirmModal({
             style={{
               padding: '11px 22px',
               borderRadius: 10,
-              border: '1px solid rgba(255,255,255,0.15)',
+              border: '1px solid var(--ui-border-default)',
               background: 'transparent',
-              color: '#9b9b9b',
+              color: 'var(--ui-text-secondary)',
               fontSize: 14,
               fontWeight: 600,
               cursor: 'pointer',
@@ -138,12 +138,12 @@ export function DeleteConfirmModal({
               pointerEvents: 'auto',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-              e.currentTarget.style.color = '#b8b0aa';
+              e.currentTarget.style.background = 'var(--shell-item-hover)';
+              e.currentTarget.style.color = 'var(--shell-item-fg)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = '#9b9b9b';
+              e.currentTarget.style.color = 'var(--ui-text-secondary)';
             }}
           >
             Cancel
@@ -154,21 +154,23 @@ export function DeleteConfirmModal({
               padding: '11px 22px',
               borderRadius: 10,
               border: 'none',
-              background: 'linear-gradient(135deg, rgba(220,50,50,0.9) 0%, rgba(200,40,40,0.9) 100%)',
-              color: '#fff',
+              background: 'var(--shell-danger-bg)',
+              color: 'var(--shell-danger-fg)',
               fontSize: 14,
               fontWeight: 600,
               cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(220,50,50,0.3)',
+              boxShadow: 'var(--shadow-sm)',
               transition: 'all 0.2s',
               pointerEvents: 'auto',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.boxShadow = '0 6px 16px rgba(220,50,50,0.4)';
+              e.currentTarget.style.background = 'var(--shell-danger-bg-hover)';
+              e.currentTarget.style.boxShadow = 'var(--shadow-md)';
               e.currentTarget.style.transform = 'translateY(-1px)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(220,50,50,0.3)';
+              e.currentTarget.style.background = 'var(--shell-danger-bg)';
+              e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
               e.currentTarget.style.transform = 'none';
             }}
           >

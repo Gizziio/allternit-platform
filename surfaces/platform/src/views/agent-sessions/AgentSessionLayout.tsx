@@ -16,15 +16,15 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
-  Maximize2,
-  Minimize2,
-  Terminal as TerminalIcon,
+  ArrowsOut,
+  ArrowsIn,
+  Terminal,
   Monitor,
   Layout,
-  Settings,
-  PanelRight,
-  MessageSquare,
-} from 'lucide-react';
+  GearSix,
+  SidebarSimple,
+  Chat,
+} from '@phosphor-icons/react';
 
 import {
   MODE_COLORS,
@@ -98,7 +98,7 @@ export function AgentSessionLayout({
             className="p-2 rounded-lg transition-colors"
             style={{ color: TEXT.tertiary }}
           >
-            {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+            {isFullscreen ? <ArrowsIn size={16} /> : <ArrowsOut size={16} />}
           </button>
           
           <button
@@ -203,7 +203,7 @@ export function WorkbenchSection({
           animate={{ rotate: expanded ? 90 : 0 }}
           transition={{ duration: 0.2 }}
         >
-          <PanelRight size={14} />
+          <SidebarSimple size={14} />
         </motion.span>
       </button>
       
@@ -286,7 +286,7 @@ export function CanvasPanel({
         style={{ borderColor: modeColors.border }}
       >
         <div className="flex items-center gap-2">
-          <MessageSquare size={16} style={{ color: modeColors.accent }} />
+          <Chat size={16} style={{ color: modeColors.accent }} />
           <span className="font-medium text-sm" style={{ color: TEXT.primary }}>
             {title}
           </span>

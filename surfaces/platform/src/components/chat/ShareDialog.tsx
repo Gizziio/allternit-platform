@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Link2, Globe, Lock, Copy, Check, QrCode, Download } from 'lucide-react';
+import { X, Link, Globe, Lock, Copy, Check, QrCode, Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Lightweight QR Code SVG Component
@@ -108,6 +108,14 @@ export function ShareDialog({
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Escape key closes the dialog
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   const shareUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/share/${chatId}`
     : '';
@@ -156,6 +164,7 @@ export function ShareDialog({
 
   return (
     <div
+      role="presentation"
       style={{
         position: 'fixed',
         inset: 0,
@@ -168,6 +177,9 @@ export function ShareDialog({
       onClick={onClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="share-dialog-title"
         style={{
           width: 420,
           maxWidth: '90vw',
@@ -190,6 +202,7 @@ export function ShareDialog({
         >
           <div>
             <h2
+              id="share-dialog-title"
               style={{
                 fontSize: 18,
                 fontWeight: 600,
@@ -215,6 +228,7 @@ export function ShareDialog({
           </div>
           <button
             onClick={onClose}
+            aria-label="Close share dialog"
             style={{
               width: 32,
               height: 32,
@@ -226,6 +240,7 @@ export function ShareDialog({
               alignItems: 'center',
               justifyContent: 'center',
               color: THEME.textMuted,
+              transition: 'background-color 0.15s, color 0.15s',
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.background = THEME.hoverBg;
@@ -236,7 +251,7 @@ export function ShareDialog({
               e.currentTarget.style.color = THEME.textMuted;
             }}
           >
-            <X size={18} />
+            <X size={18} aria-hidden="true" />
           </button>
         </div>
 
@@ -261,6 +276,7 @@ export function ShareDialog({
               <button
                 onClick={() => handleVisibilityChange('private')}
                 disabled={isLoading}
+                aria-pressed={visibility === 'private'}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -297,7 +313,7 @@ export function ShareDialog({
                     justifyContent: 'center',
                   }}
                 >
-                  <Lock size={18} style={{ color: THEME.textSecondary }} />
+                  <Lock size={18} style={{ color: THEME.textSecondary }} aria-hidden="true" />
                 </div>
                 <div style={{ flex: 1 }}>
                   <p
@@ -341,6 +357,7 @@ export function ShareDialog({
               <button
                 onClick={() => handleVisibilityChange('public')}
                 disabled={isLoading}
+                aria-pressed={visibility === 'public'}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -377,7 +394,7 @@ export function ShareDialog({
                     justifyContent: 'center',
                   }}
                 >
-                  <Globe size={18} style={{ color: THEME.accent }} />
+                  <Globe size={18} style={{ color: THEME.accent }} aria-hidden="true" />
                 </div>
                 <div style={{ flex: 1 }}>
                   <p
@@ -447,11 +464,12 @@ export function ShareDialog({
                     background: 'rgba(255,255,255,0.03)',
                   }}
                 >
-                  <Link2 size={16} style={{ color: THEME.textMuted, flexShrink: 0 }} />
+                  <Link size={16} style={{ color: THEME.textMuted, flexShrink: 0 }} aria-hidden="true" />
                   <input
                     type="text"
                     value={shareUrl}
                     readOnly
+                    aria-label="Share link URL"
                     style={{
                       flex: 1,
                       border: 'none',
@@ -478,7 +496,7 @@ export function ShareDialog({
                     fontSize: 13,
                     fontWeight: 500,
                     cursor: 'pointer',
-                    transition: 'all 0.2s',
+                    transition: 'background-color 0.2s, color 0.2s',
                   }}
                 >
                   {copied ? (
@@ -566,7 +584,7 @@ export function ShareDialog({
                     fontSize: 12,
                     fontWeight: 500,
                     cursor: 'pointer',
-                    transition: 'all 0.2s',
+                    transition: 'background-color 0.2s, color 0.2s',
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.background = THEME.hoverBg;
@@ -587,6 +605,7 @@ export function ShareDialog({
           {/* Error message */}
           {error && (
             <p
+              role="alert"
               style={{
                 fontSize: 13,
                 color: '#ef4444',

@@ -7,9 +7,12 @@
 
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { GlassSurface } from '@/design/GlassSurface';
-import { Archive, Search } from 'lucide-react';
+import {
+  Archive,
+  MagnifyingGlass,
+} from '@phosphor-icons/react';
 
 /**
  * Archived session data structure
@@ -31,39 +34,6 @@ const MODE_COLORS = {
   code: '#34c759',
 } as const;
 
-/**
- * Mock archived session data for development
- */
-const MOCK_ARCHIVED_SESSIONS: ArchivedSession[] = [
-  {
-    id: 'archived-1',
-    title: 'Legacy Codebase Analysis',
-    messageCount: 22,
-    archivedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-    mode: 'code',
-  },
-  {
-    id: 'archived-2',
-    title: 'Q1 Planning Session',
-    messageCount: 34,
-    archivedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
-    mode: 'cowork',
-  },
-  {
-    id: 'archived-3',
-    title: 'Customer Feedback Notes',
-    messageCount: 9,
-    archivedAt: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000),
-    mode: 'chat',
-  },
-  {
-    id: 'archived-4',
-    title: 'Mobile App Prototype Review',
-    messageCount: 16,
-    archivedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-    mode: 'code',
-  },
-];
 
 /**
  * Format archive date (e.g., "archived 2 weeks ago")
@@ -210,15 +180,25 @@ export function ArchivedView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [restoredSessions, setRestoredSessions] = useState<Set<string>>(new Set());
+  const [archivedSessions, setArchivedSessions] = useState<ArchivedSession[]>([]);
+
+  useEffect(() => {
+    fetch('/api/v1/sessions/archived')
+      .then(r => r.json())
+      .then((data: Array<{ id: string; title: string; messageCount: number; archivedAt: string; mode: ArchivedSession['mode'] }>) =>
+        setArchivedSessions(data.map(s => ({ ...s, archivedAt: new Date(s.archivedAt) })))
+      )
+      .catch(() => {});
+  }, []);
 
   // Filter sessions based on search query and exclude restored sessions
   const filteredSessions = useMemo(() => {
-    return MOCK_ARCHIVED_SESSIONS.filter(
+    return archivedSessions.filter(
       (session) =>
         !restoredSessions.has(session.id) &&
         session.title.toLowerCase().includes(searchQuery.toLowerCase())
     );
-  }, [searchQuery, restoredSessions]);
+  }, [searchQuery, restoredSessions, archivedSessions]);
 
   // Sort sessions by archive date (newest first)
   const sortedSessions = useMemo(() => {
@@ -233,8 +213,7 @@ export function ArchivedView() {
     setRestoredSessions(newRestored);
     setSelectedSessionId(null);
 
-    // In a real implementation, this would trigger a toast notification
-    console.log(`Session ${sessionId} restored`);
+    fetch(`/api/v1/sessions/${sessionId}/restore`, { method: 'POST' }).catch(() => {});
   };
 
   const isEmpty = sortedSessions.length === 0;

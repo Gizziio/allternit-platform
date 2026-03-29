@@ -1,21 +1,133 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import GlassSurface from '@/design/GlassSurface';
 import {
-  Settings, Palette, Cpu, Key, Keyboard, Info, Check, Trash2, Plus,
-  Sun, Moon, Smartphone, User, Server, Shield, Bot, Cloud, Network,
-  Lock, Target, Recycle, FileCode, Gauge, Code2, Briefcase, Puzzle,
-  CreditCard, ArrowUpRight, Terminal, AlertTriangle, X, Play, Pause,
-  RotateCcw, BarChart3, Clock, Zap, ChevronRight, ChevronDown, Filter,
-  Search, CheckCircle2, XCircle, RefreshCw, GitBranch, Layers, Activity,
-  FileCheck, Eye, ThumbsUp, ThumbsDown, History, Settings2, FileWarning,
-  Copy, ShieldCheck, FileText, CheckCircle,
-} from 'lucide-react';
-import { ClerkAuthPanel } from '../../../../../7-apps/shell/web/src/components/ClerkAuthPanel';
-import { VPSConnectionsPanel } from '../../../../../7-apps/shell/web/src/components/VPSConnectionsPanel';
+  GearSix,
+  Palette,
+  Cpu,
+  Key,
+  Keyboard,
+  Info,
+  Check,
+  Trash,
+  Plus,
+  Sun,
+  Moon,
+  DeviceMobile,
+  User,
+  HardDrives,
+  Shield,
+  Robot,
+  Cloud,
+  Network,
+  Lock,
+  Target,
+  Recycle,
+  FileCode,
+  Gauge,
+  Code,
+  Briefcase,
+  PuzzlePiece as Puzzle,
+  CreditCard,
+  ArrowUpRight,
+  Terminal,
+  Warning,
+  X,
+  Play,
+  Pause,
+  ArrowCounterClockwise,
+  ChartBar,
+  Clock,
+  Lightning,
+  CaretRight,
+  CaretDown,
+  Funnel,
+  MagnifyingGlass,
+  CheckCircle,
+  XCircle,
+  ArrowsClockwise,
+  GitBranch,
+  Stack,
+  Pulse as Activity,
+  FileText as FileCheck,
+  Eye,
+  ThumbsUp,
+  ThumbsDown,
+  ClockCounterClockwise,
+  Copy,
+  ShieldCheck,
+  FileText,
+} from '@phosphor-icons/react';
+import { VPSConnectionsPanel } from './VPSConnectionsPanel';
+import { ToastProvider } from '@/components/ui/toast-provider';
+import { usePlatformUser, usePlatformSignOut, PlatformSignIn, isPlatformAuthDisabled } from '@/lib/platform-auth-client';
+import { useThemeStore, type Theme } from '@/design/ThemeStore';
+
+function ClerkAuthPanel() {
+  const { isLoaded, isSignedIn, user } = usePlatformUser();
+  const signOut = usePlatformSignOut();
+
+  const label: React.CSSProperties = { fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 };
+  const card: React.CSSProperties = { background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 10, padding: '20px 24px', marginBottom: 16 };
+  const btn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 7, border: '1px solid var(--border-subtle)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' };
+  const btnDanger: React.CSSProperties = { ...btn, border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)', color: '#f87171' };
+
+  if (!isLoaded) {
+    return <div style={{ padding: 24, color: 'var(--text-tertiary)', fontSize: 13 }}>Loading…</div>;
+  }
+
+  if (isPlatformAuthDisabled()) {
+    return (
+      <div style={{ padding: 24 }}>
+        <div style={card}>
+          <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+            Authentication is disabled in this build. Running as local user.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isSignedIn) {
+    return (
+      <div style={{ padding: 24 }}>
+        <div style={{ ...label, marginBottom: 16 }}>Sign in to your A2R account</div>
+        <PlatformSignIn />
+      </div>
+    );
+  }
+
+  const name = [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'A2R User';
+  const email = user?.emailAddresses?.[0]?.emailAddress ?? '';
+  const initials = name.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase();
+
+  return (
+    <div style={{ padding: 24 }}>
+      <div style={label}>Account</div>
+      <div style={{ ...card, display: 'flex', alignItems: 'center', gap: 16 }}>
+        {user?.imageUrl ? (
+          <img src={user.imageUrl} alt={name} style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+        ) : (
+          <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 600, color: '#fff', flexShrink: 0 }}>
+            {initials}
+          </div>
+        )}
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>{name}</div>
+          {email && <div style={{ fontSize: 12, color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email}</div>}
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+        <button style={btnDanger} onClick={() => signOut({ redirectUrl: '/sign-in' })}>
+          <User size={14} /> Sign out
+        </button>
+      </div>
+    </div>
+  );
+}
 import { InfrastructureSettings } from './InfrastructureSettings';
 
 type SettingsSection = 'general' | 'appearance' | 'models' | 'api-keys' | 'shortcuts' | 'about' | 'signin' | 'vps' | 'infrastructure' | 'security' | 'agents' | 'gizziio-code' | 'cowork' | 'extensions' | 'billing';
-type Theme = 'light' | 'dark' | 'system';
 type FontSize = 'small' | 'medium' | 'large';
 type DefaultMode = 'chat' | 'cowork' | 'code';
 type AgentOpsTab = 'evaluation' | 'factory' | 'gc';
@@ -258,7 +370,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [enableTelemetry, setEnableTelemetry] = useState(true);
   const [autoSave, setAutoSave] = useState(true);
   const [defaultMode, setDefaultMode] = useState<DefaultMode>('chat');
-  const [theme, setTheme] = useState<Theme>('dark');
+  const theme = useThemeStore((state) => state.theme);
+  const setTheme = useThemeStore((state) => state.setTheme);
   const [fontSize, setFontSize] = useState<FontSize>('medium');
   const [compactDensity, setCompactDensity] = useState(false);
   const [showSidebarLabels, setShowSidebarLabels] = useState(true);
@@ -570,7 +683,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           }}
         >
           {toast.type === 'error' && <XCircle size={18} />}
-          {toast.type === 'success' && <CheckCircle2 size={18} />}
+          {toast.type === 'success' && <CheckCircle size={18} />}
           {toast.type === 'info' && <Info size={18} />}
           <span style={{ flex: 1 }}>{toast.message}</span>
           <button 
@@ -632,7 +745,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <div key={evalItem.id} style={{ padding: '16px', background: '#252525', borderRadius: '8px', border: selectedEval === evalItem.id ? '1px solid #d4b08c' : '1px solid transparent', cursor: 'pointer' }} onClick={() => setSelectedEval(selectedEval === evalItem.id ? null : evalItem.id)}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                {evalItem.status === 'passed' && <CheckCircle2 size={20} color="#22c55e" />}
+                {evalItem.status === 'passed' && <CheckCircle size={20} color="#22c55e" />}
                 {evalItem.status === 'failed' && <XCircle size={20} color="#ef4444" />}
                 {evalItem.status === 'pending' && <Clock size={20} color="#888" />}
                 <div>
@@ -646,7 +759,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <div style={{ fontSize: '11px', color: '#666' }}>Score</div>
                 </div>
                 <button onClick={(e) => { e.stopPropagation(); handleRunEvaluation(evalItem.id); }} disabled={isRunningEval} style={{ padding: '8px 12px', borderRadius: '6px', border: 'none', background: isRunningEval ? '#333' : '#d4b08c', color: '#1a1a1a', fontSize: '12px', fontWeight: '500', cursor: isRunningEval ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  {isRunningEval ? <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Play size={14} />} Run
+                  {isRunningEval ? <ArrowsClockwise size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Play size={14} />} Run
                 </button>
               </div>
             </div>
@@ -674,7 +787,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {evalResults.details?.map((detail: any, idx: number) => (
                     <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', background: '#1f1f1f', borderRadius: '6px' }}>
-                      {detail.status === 'passed' ? <CheckCircle2 size={16} color="#22c55e" /> : <XCircle size={16} color="#ef4444" />}
+                      {detail.status === 'passed' ? <CheckCircle size={16} color="#22c55e" /> : <XCircle size={16} color="#ef4444" />}
                       <span style={{ flex: 1, fontSize: '13px', color: '#ffffff' }}>{detail.test}</span>
                       <span style={{ fontSize: '12px', color: '#888' }}>{detail.duration}ms</span>
                       {detail.error && <span style={{ fontSize: '11px', color: '#ef4444' }}>{detail.error}</span>}
@@ -736,8 +849,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <div key={task.id} style={{ padding: '16px', background: '#252525', borderRadius: '8px', border: selectedTask === task.id ? '1px solid #d4b08c' : '1px solid transparent' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }} onClick={() => setSelectedTask(selectedTask === task.id ? null : task.id)}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                {task.status === 'completed' && <CheckCircle2 size={20} color="#22c55e" />}
-                {task.status === 'generating' && <RefreshCw size={20} color="#d4b08c" style={{ animation: 'spin 2s linear infinite' }} />}
+                {task.status === 'completed' && <CheckCircle size={20} color="#22c55e" />}
+                {task.status === 'generating' && <ArrowsClockwise size={20} color="#d4b08c" style={{ animation: 'spin 2s linear infinite' }} />}
                 {task.status === 'validating' && <FileCheck size={20} color="#3b82f6" />}
                 {task.status === 'pending_approval' && <Clock size={20} color="#f59e0b" />}
                 <div>
@@ -752,7 +865,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <div style={{ width: `${task.progress}%`, height: '100%', background: task.status === 'completed' ? '#22c55e' : '#d4b08c', borderRadius: '3px', transition: 'width 0.3s' }} />
                   </div>
                 </div>
-                {selectedTask === task.id ? <ChevronDown size={16} color="#888" /> : <ChevronRight size={16} color="#888" />}
+                {selectedTask === task.id ? <CaretDown size={16} color="#888" /> : <CaretRight size={16} color="#888" />}
               </div>
             </div>
 
@@ -788,7 +901,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <div style={{ fontSize: '13px', color: '#ffffff' }}>12 files</div>
                   </div>
                   <div style={{ padding: '12px', background: '#1f1f1f', borderRadius: '6px', textAlign: 'center' }}>
-                    <Layers size={16} color="#d4b08c" style={{ margin: '0 auto 8px' }} />
+                    <Stack size={16} color="#d4b08c" style={{ margin: '0 auto 8px' }} />
                     <div style={{ fontSize: '12px', color: '#888' }}>Risk Tier</div>
                     <div style={{ fontSize: '13px', color: '#ffffff' }}>Medium</div>
                   </div>
@@ -846,7 +959,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <p style={{ fontSize: '13px', color: entropyColor, margin: '4px 0 0 0' }}>{entropyStatus}</p>
             {gcErrors.cleanup && (
               <p style={{ fontSize: '12px', color: '#ef4444', margin: '4px 0 0 0', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <AlertTriangle size={12} /> {gcErrors.cleanup}
+                <Warning size={12} /> {gcErrors.cleanup}
               </p>
             )}
           </div>
@@ -856,7 +969,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           disabled={isRunningGC} 
           style={{ padding: '12px 24px', borderRadius: '6px', border: 'none', background: isRunningGC ? '#333' : '#d4b08c', color: '#1a1a1a', fontSize: '14px', fontWeight: '500', cursor: isRunningGC ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
         >
-          {isRunningGC ? <RefreshCw size={18} style={{ animation: 'spin 1s linear infinite' }} /> : <Zap size={18} />}
+          {isRunningGC ? <ArrowsClockwise size={18} style={{ animation: 'spin 1s linear infinite' }} /> : <Lightning size={18} />}
           {isRunningGC ? 'Running Cleanup...' : 'Run Full Cleanup'}
         </button>
       </div>
@@ -893,7 +1006,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   }}
                 >
                   {runningAgents.has(item.agent) ? (
-                    <><RefreshCw size={12} style={{ animation: 'spin 1s linear infinite' }} /> Running...</>
+                    <><ArrowsClockwise size={12} style={{ animation: 'spin 1s linear infinite' }} /> Running...</>
                   ) : (
                     'Run Now'
                   )}
@@ -916,7 +1029,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           {gcPolicies.map((policy) => (
             <div key={policy.id} style={{ padding: '14px 16px', background: '#252525', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <Settings2 size={18} color="#888" />
+                <GearSix size={18} color="#888" />
                 <div>
                   <div style={{ fontSize: '14px', fontWeight: '500', color: '#ffffff' }}>{policy.name}</div>
                   <div style={{ fontSize: '12px', color: '#888', marginTop: '2px' }}>Threshold: {(policy.threshold * 100).toFixed(0)}%</div>
@@ -942,7 +1055,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           {gcHistory.map((record, idx) => (
             <div key={idx} style={{ padding: '14px 16px', background: '#252525', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <History size={18} color="#888" />
+                <ClockCounterClockwise size={18} color="#888" />
                 <span style={{ fontSize: '14px', color: '#ffffff' }}>{record.date}</span>
               </div>
               <div style={{ display: 'flex', gap: '24px' }}>
@@ -992,8 +1105,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               }}
             >
               <div style={{ color: gcErrors[agentName] ? '#ef4444' : '#d4b08c', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {runningAgents.has(agentName) ? <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} /> : info.icon}
-                {gcErrors[agentName] && <AlertTriangle size={14} />}
+                {runningAgents.has(agentName) ? <ArrowsClockwise size={16} style={{ animation: 'spin 1s linear infinite' }} /> : info.icon}
+                {gcErrors[agentName] && <Warning size={14} />}
               </div>
               <div style={{ fontSize: '13px', fontWeight: '500', color: '#ffffff', textTransform: 'capitalize', marginBottom: '4px' }}>
                 {agentName.replace(/_/g, ' ')}
@@ -1012,13 +1125,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   // Main render functions
   const renderAgentsPanel = () => (
     <div style={{ maxWidth: '800px' }}>
-      <div style={{ display: 'flex', gap: '4px', padding: '4px', background: '#252525', borderRadius: '8px', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', gap: '4px', padding: '4px', background: 'var(--bg-secondary)', borderRadius: '8px', marginBottom: '24px' }}>
         {[
-          { id: 'evaluation', label: 'Evaluation Harness', icon: <BarChart3 size={16} /> },
-          { id: 'factory', label: 'Code Factory', icon: <Code2 size={16} /> },
+          { id: 'evaluation', label: 'Evaluation Harness', icon: <ChartBar size={16} /> },
+          { id: 'factory', label: 'Code Factory', icon: <Code size={16} /> },
           { id: 'gc', label: 'GC Agents', icon: <Recycle size={16} /> },
         ].map((tab) => (
-          <button key={tab.id} onClick={() => setAgentOpsTab(tab.id as AgentOpsTab)} style={{ flex: 1, padding: '10px 16px', borderRadius: '6px', border: 'none', background: agentOpsTab === tab.id ? '#d4b08c' : 'transparent', color: agentOpsTab === tab.id ? '#1a1a1a' : '#888', fontSize: '13px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}>
+          <button key={tab.id} onClick={() => setAgentOpsTab(tab.id as AgentOpsTab)} style={{ flex: 1, padding: '10px 16px', borderRadius: '6px', border: 'none', background: agentOpsTab === tab.id ? '#d4b08c' : 'transparent', color: agentOpsTab === tab.id ? '#1a1a1a' : 'var(--text-tertiary)', fontSize: '13px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}>
             {tab.icon} {tab.label}
           </button>
         ))}
@@ -1032,17 +1145,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const ToggleItem: React.FC<{ label: string; value: boolean; onChange: (v: boolean) => void; description?: string }> = ({ label, value, onChange, description }) => (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', marginBottom: '12px' }}>
       <div>
-        <div style={{ fontSize: '13px', fontWeight: '500', color: '#ffffff', marginBottom: '2px' }}>{label}</div>
-        {description && <div style={{ fontSize: '12px', color: '#b0b0b0' }}>{description}</div>}
+        <div style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-primary)', marginBottom: '2px' }}>{label}</div>
+        {description && <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{description}</div>}
       </div>
       <button onClick={() => onChange(!value)} style={{ width: '48px', height: '28px', borderRadius: '14px', border: 'none', backgroundColor: value ? '#d4b08c' : 'var(--border-subtle)', cursor: 'pointer', position: 'relative', transition: 'all 0.3s ease', padding: '0' }}>
-        <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#ffffff', position: 'absolute', left: value ? '2px' : '22px', transition: 'all 0.3s ease', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)' }} />
+        <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: 'var(--bg-elevated)', position: 'absolute', left: value ? '2px' : '22px', transition: 'all 0.3s ease', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)' }} />
       </button>
     </div>
   );
 
   const NavButton: React.FC<{ item: any; activeSection: SettingsSection; onClick: () => void }> = ({ item, activeSection, onClick }) => (
-    <button onClick={onClick} style={{ width: '100%', padding: '8px 12px', border: 'none', backgroundColor: activeSection === item.id ? '#2a2a2a' : 'transparent', color: activeSection === item.id ? '#ffffff' : '#a0a0a0', fontSize: '13px', fontWeight: '400', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', transition: 'all 0.15s ease', textAlign: 'left', borderRadius: '6px', position: 'relative' }} onMouseEnter={(e) => { if (activeSection !== item.id) { e.currentTarget.style.backgroundColor = '#252525'; e.currentTarget.style.color = '#e0e0e0'; } }} onMouseLeave={(e) => { if (activeSection !== item.id) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#a0a0a0'; } }}>
+    <button onClick={onClick} style={{ width: '100%', padding: '8px 12px', border: 'none', backgroundColor: activeSection === item.id ? 'var(--bg-secondary)' : 'transparent', color: activeSection === item.id ? 'var(--text-primary)' : 'var(--text-secondary)', fontSize: '13px', fontWeight: '400', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', transition: 'all 0.15s ease', textAlign: 'left', borderRadius: '6px', position: 'relative' }} onMouseEnter={(e) => { if (activeSection !== item.id) { e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'; e.currentTarget.style.color = 'var(--text-primary)'; } }} onMouseLeave={(e) => { if (activeSection !== item.id) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; } }}>
       {activeSection === item.id && <span style={{ position: 'absolute', left: '0', top: '50%', transform: 'translateY(-50%)', width: '3px', height: '16px', backgroundColor: '#d4b08c', borderRadius: '0 2px 2px 0' }} />}
       {item.label}
     </button>
@@ -1076,7 +1189,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <div style={{ display: 'flex', gap: '8px' }}>
           {(['light', 'dark', 'system'] as const).map((t) => (
             <button key={t} onClick={() => setTheme(t)} style={{ padding: '8px 16px', borderRadius: '6px', border: theme === t ? '2px solid #d4b08c' : '1px solid var(--border-subtle)', backgroundColor: theme === t ? 'rgba(212, 176, 140, 0.1)' : 'var(--bg-secondary)', color: '#ffffff', fontSize: '13px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              {t === 'light' && <Sun size={16} />}{t === 'dark' && <Moon size={16} />}{t === 'system' && <Smartphone size={16} />}{t.charAt(0).toUpperCase() + t.slice(1)}
+              {t === 'light' && <Sun size={16} />}{t === 'dark' && <Moon size={16} />}{t === 'system' && <DeviceMobile size={16} />}{t.charAt(0).toUpperCase() + t.slice(1)}
             </button>
           ))}
         </div>
@@ -1275,7 +1388,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       {/* Security Content */}
       {securityLoading ? (
         <div style={{ textAlign: 'center', padding: 60 }}>
-          <RefreshCw size={32} color="#666" style={{ animation: 'spin 1s linear infinite' }} />
+          <ArrowsClockwise size={32} color="#666" style={{ animation: 'spin 1s linear infinite' }} />
           <p style={{ color: '#666', marginTop: 16 }}>Loading security data...</p>
         </div>
       ) : (
@@ -1309,7 +1422,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {securityEvents.slice(0, 5).map((event: any) => (
                     <div key={event.id} style={{ padding: 14, background: '#252525', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <AlertTriangle size={18} color={event.severity === 'critical' ? '#ef4444' : event.severity === 'high' ? '#f97316' : '#f59e0b'} />
+                      <Warning size={18} color={event.severity === 'critical' ? '#ef4444' : event.severity === 'high' ? '#f97316' : '#f59e0b'} />
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 14, color: '#fff' }}>{event.title}</div>
                         <div style={{ fontSize: 12, color: '#888' }}>{event.description}</div>
@@ -1472,51 +1585,51 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       case 'cowork': return renderCoworkPanel();
       case 'extensions': return renderExtensionsPanel();
       case 'billing': return renderBillingPanel();
-      case 'infrastructure': return <InfrastructureSettings />;
-      case 'security': return renderSecurityPanel();
-      case 'agents': return renderAgentsPanel();
+      case 'infrastructure': return <ToastProvider><InfrastructureSettings /></ToastProvider>;
+      case 'security': return <ToastProvider>{renderSecurityPanel()}</ToastProvider>;
+      case 'agents': return <ToastProvider>{renderAgentsPanel()}</ToastProvider>;
       case 'about': return renderAboutPanel();
       case 'signin': return <ClerkAuthPanel />;
-      case 'vps': return <VPSConnectionsPanel />;
+      case 'vps': return <ToastProvider><VPSConnectionsPanel /></ToastProvider>;
       default: return null;
     }
   };
 
   const StatCard = ({ label, value, color }: { label: string; value: string | number; color: string }) => (
-    <div style={{ padding: 20, background: '#252525', borderRadius: 8, textAlign: 'center' }}>
+    <div style={{ padding: 20, background: 'var(--bg-secondary)', borderRadius: 8, textAlign: 'center' }}>
       <div style={{ fontSize: 28, fontWeight: 700, color }}>{value}</div>
-      <div style={{ fontSize: 12, color: '#888', marginTop: 4 }}>{label}</div>
+      <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 4 }}>{label}</div>
     </div>
   );
 
   const navigationItems = [
     { id: 'signin', label: 'Sign In', icon: <User size={18} />, group: 'account' },
     { id: 'billing', label: 'Billing', icon: <CreditCard size={18} />, group: 'account' },
-    { id: 'general', label: 'General', icon: <Settings size={18} />, group: 'platform' },
+    { id: 'general', label: 'General', icon: <GearSix size={18} />, group: 'platform' },
     { id: 'appearance', label: 'Appearance', icon: <Palette size={18} />, group: 'platform' },
     { id: 'models', label: 'Models', icon: <Cpu size={18} />, group: 'platform' },
     { id: 'api-keys', label: 'API Keys', icon: <Key size={18} />, group: 'platform' },
     { id: 'shortcuts', label: 'Shortcuts', icon: <Keyboard size={18} />, group: 'platform' },
-    { id: 'gizziio-code', label: 'Gizziio Code', icon: <Code2 size={18} />, group: 'products' },
+    { id: 'gizziio-code', label: 'Gizziio Code', icon: <Code size={18} />, group: 'products' },
     { id: 'cowork', label: 'Cowork', icon: <Briefcase size={18} />, group: 'products' },
     { id: 'extensions', label: 'Extensions', icon: <Puzzle size={18} />, group: 'products' },
     { id: 'infrastructure', label: 'Infrastructure', icon: <Cloud size={18} />, group: 'infrastructure' },
-    { id: 'vps', label: 'VPS Connections', icon: <Server size={18} />, group: 'infrastructure' },
+    { id: 'vps', label: 'VPS Connections', icon: <HardDrives size={18} />, group: 'infrastructure' },
     { id: 'security', label: 'Security', icon: <Shield size={18} />, group: 'infrastructure' },
-    { id: 'agents', label: 'Agents', icon: <Bot size={18} />, group: 'infrastructure' },
+    { id: 'agents', label: 'Agents', icon: <Robot size={18} />, group: 'infrastructure' },
     { id: 'about', label: 'About', icon: <Info size={18} />, group: 'about' },
   ];
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', height: '100vh', backgroundColor: 'transparent', overflow: 'hidden', position: 'relative', paddingTop: '80px' }}>
-      <button onClick={() => window.dispatchEvent(new CustomEvent('a2r:close-settings'))} style={{ position: 'absolute', top: 24, right: 24, width: 44, height: 44, borderRadius: 12, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#888' }}>
+    <div style={{ display: 'flex', justifyContent: 'center', height: '100vh', backgroundColor: 'transparent', overflow: 'hidden', position: 'relative', paddingTop: '80px', color: 'var(--text-primary)' }}>
+      <button onClick={() => window.dispatchEvent(new CustomEvent('a2r:close-settings'))} style={{ position: 'absolute', top: 24, right: 24, width: 44, height: 44, borderRadius: 12, background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-tertiary)' }}>
         <X size={20} />
       </button>
 
       <div style={{ display: 'flex', width: '100%', maxWidth: '1200px', minWidth: '600px', height: 'calc(100vh - 80px)', margin: '0 auto' }}>
         <div style={{ width: '220px', minWidth: '180px', height: 'calc(100vh - 80px)', backgroundColor: 'transparent', padding: '16px 16px 32px', overflowY: 'auto', flexShrink: 0 }}>
           <div style={{ padding: '0 12px', marginBottom: '24px' }}>
-            <button onClick={() => window.dispatchEvent(new CustomEvent('a2r:close-settings'))} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'transparent', border: 'none', color: '#c0c0c0', fontSize: '16px', fontWeight: '500', cursor: 'pointer' }}>
+            <button onClick={() => window.dispatchEvent(new CustomEvent('a2r:close-settings'))} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'transparent', border: 'none', color: 'var(--text-secondary)', fontSize: '16px', fontWeight: '500', cursor: 'pointer' }}>
               <span style={{ fontSize: '18px' }}>←</span> Settings
             </button>
           </div>
@@ -1524,21 +1637,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <div style={{ marginBottom: '8px' }}>
               {navigationItems.filter((i: any) => i.group === 'account').map((item: any) => <NavButton key={item.id} item={item} activeSection={activeSection} onClick={() => setActiveSection(item.id)} />)}
             </div>
-            <div style={{ height: '1px', background: '#333', margin: '12px 0' }} />
+            <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '12px 0' }} />
             <div style={{ marginBottom: '8px' }}>
               {navigationItems.filter((i: any) => i.group === 'platform').map((item: any) => <NavButton key={item.id} item={item} activeSection={activeSection} onClick={() => setActiveSection(item.id)} />)}
             </div>
-            <div style={{ height: '1px', background: '#333', margin: '12px 0' }} />
+            <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '12px 0' }} />
             <div style={{ marginBottom: '8px' }}>
-              <div style={{ padding: '8px 12px', fontSize: '11px', color: '#666', textTransform: 'uppercase' }}>Products</div>
+              <div style={{ padding: '8px 12px', fontSize: '11px', color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Products</div>
               {navigationItems.filter((i: any) => i.group === 'products').map((item: any) => <NavButton key={item.id} item={item} activeSection={activeSection} onClick={() => setActiveSection(item.id)} />)}
             </div>
-            <div style={{ height: '1px', background: '#333', margin: '12px 0' }} />
+            <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '12px 0' }} />
             <div style={{ marginBottom: '8px' }}>
-              <div style={{ padding: '8px 12px', fontSize: '11px', color: '#666', textTransform: 'uppercase' }}>Infrastructure</div>
+              <div style={{ padding: '8px 12px', fontSize: '11px', color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Infrastructure</div>
               {navigationItems.filter((i: any) => i.group === 'infrastructure').map((item: any) => <NavButton key={item.id} item={item} activeSection={activeSection} onClick={() => setActiveSection(item.id)} />)}
             </div>
-            <div style={{ height: '1px', background: '#333', margin: '12px 0' }} />
+            <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '12px 0' }} />
             <div>
               {navigationItems.filter((i: any) => i.group === 'about').map((item: any) => <NavButton key={item.id} item={item} activeSection={activeSection} onClick={() => setActiveSection(item.id)} />)}
             </div>
@@ -1547,7 +1660,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
         <div style={{ flex: 1, minWidth: '0', height: 'calc(100vh - 80px)', overflowY: 'auto' }}>
           <div style={{ padding: '32px 48px 120px', width: '100%', maxWidth: '800px' }}>
-            <h1 style={{ fontSize: '20px', fontWeight: '600', color: '#ffffff', margin: '0 0 32px 0' }}>
+            <h1 style={{ fontSize: '20px', fontWeight: '600', color: 'var(--text-primary)', margin: '0 0 32px 0' }}>
               {navigationItems.find((item: any) => item.id === activeSection)?.label}
             </h1>
             {renderContent()}

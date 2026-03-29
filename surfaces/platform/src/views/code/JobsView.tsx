@@ -55,7 +55,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Play, Square, RefreshCw, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import {
+  Plus,
+  Play,
+  Square,
+  ArrowsClockwise,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Warning,
+} from '@phosphor-icons/react';
 import { useToast } from '@/hooks/use-toast';
 
 export function JobsView() {
@@ -82,9 +91,9 @@ export function JobsView() {
       case 'scheduled':
         return <Clock className="h-4 w-4 text-yellow-500" />;
       case 'cancelled':
-        return <AlertCircle className="h-4 w-4 text-gray-500" />;
+        return <Warning className="h-4 w-4 text-gray-500" />;
       default:
-        return <Clock className="h-4 w-4" />;
+        return <Clock size={16} />;
     }
   };
 
@@ -107,7 +116,7 @@ export function JobsView() {
     return (
       <div className="container mx-auto p-6 h-full flex items-center justify-center">
         <div className="text-center">
-          <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <ArrowsClockwise className="h-8 w-8 animate-spin mx-auto mb-4" />
           <p className="text-muted-foreground">Loading job queue...</p>
         </div>
       </div>
@@ -125,7 +134,7 @@ export function JobsView() {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={handleRefresh}>
-            <RefreshCw className="h-4 w-4 mr-2" />
+            <ArrowsClockwise className="h-4 w-4 mr-2" />
             Refresh
           </Button>
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
@@ -182,7 +191,7 @@ export function JobsView() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Cancelled</CardTitle>
-              <AlertCircle className="h-4 w-4 text-muted-foreground" />
+              <Warning className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.cancelled}</div>
@@ -243,7 +252,7 @@ export function JobsView() {
                         size="sm"
                         onClick={() => cancelJob(job.job_id)}
                       >
-                        <Square className="h-4 w-4" />
+                        <Square size={16} />
                       </Button>
                     )}
                   </TableCell>

@@ -5,22 +5,22 @@
  */
 
 import React, { useEffect } from "react";
-import { 
-  GitBranch, 
-  ClipboardList, 
-  User, 
-  Clock, 
-  ChevronRight,
+import {
+  GitBranch,
+  ClipboardText,
+  User,
+  Clock,
+  CaretRight,
   Play,
   CheckCircle,
   XCircle,
-  RefreshCw,
+  ArrowsClockwise,
   Plus,
-  Mail,
-  Activity,
-  Settings2,
-  History
-} from "lucide-react";
+  EnvelopeSimple,
+  Pulse as Activity,
+  GearSix,
+  ClockCounterClockwise,
+} from '@phosphor-icons/react';
 import { useUnifiedStore } from "@/lib/agents/unified.store";
 
 export function ContextView() {
@@ -63,7 +63,7 @@ export function ContextView() {
     idle: { label: "Idle", color: "#6b7280", icon: Clock },
     planning: { label: "Planning", color: "#6366f1", icon: GitBranch },
     executing: { label: "Executing", color: "#f59e0b", icon: Play },
-    working: { label: "Working", color: "#10b981", icon: ClipboardList },
+    working: { label: "Working", color: "#10b981", icon: ClipboardText },
     reviewing: { label: "Reviewing", color: "#ec4899", icon: User },
     monitoring: { label: "Monitoring", color: "#06b6d4", icon: Activity },
   };
@@ -170,7 +170,7 @@ export function ContextView() {
             gap: 6
           }}
         >
-          <RefreshCw size={14} />
+          <ArrowsClockwise size={14} />
           <span style={{ fontSize: 12 }}>Refresh</span>
         </button>
       </div>
@@ -310,7 +310,7 @@ export function ContextView() {
                   }}
                 >
                   Open
-                  <ChevronRight size={14} />
+                  <CaretRight size={14} />
                 </button>
               </div>
             </div>
@@ -551,7 +551,7 @@ export function ContextView() {
             onClick={() => setActiveMainTab('plan')}
           />
           <ActionButton
-            icon={ClipboardList}
+            icon={ClipboardText}
             label="View Work Queue"
             color="#10b981"
             onClick={() => setActiveMainTab('work')}
@@ -563,13 +563,13 @@ export function ContextView() {
             onClick={() => setActiveMainTab('status')}
           />
           <ActionButton
-            icon={Mail}
+            icon={EnvelopeSimple}
             label="Check Mail"
             color="#f59e0b"
             onClick={() => setActiveMainTab('mail')}
           />
           <ActionButton
-            icon={History}
+            icon={ClockCounterClockwise}
             label="View Audit Log"
             color="#8b5cf6"
             onClick={() => setActiveMainTab('audit')}

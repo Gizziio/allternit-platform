@@ -7,29 +7,33 @@ import {
   Plus,
   Square,
   ArrowUp,
-  ChevronDown,
+  CaretDown,
   Folder,
   Code,
-  PenTool,
+  Pen as PenTool,
   BookOpen,
-  Sparkles,
+  Sparkle,
   X,
   FileText,
-  Image as ImageIcon,
-  Github,
+  Image,
+  GithubLogo as Github,
   Globe,
-  Zap,
-  MousePointer2,
+  Lightning,
+  CursorClick,
   Check,
-  ChevronRight,
-  Bot,
+  CaretRight,
+  Robot,
   Camera,
   Video,
-  Upload,
-  Plug,
-  Loader2,
-  AlertCircle,
-} from 'lucide-react';
+  UploadSimple,
+  PlugsConnected,
+  CircleNotch,
+  Warning,
+  Compass,
+  Hammer,
+  Image as ImageIcon,
+} from '@phosphor-icons/react';
+
 import { cn } from '@/lib/utils';
 import { formatFileSize, supportsTextExtraction, extractTextFromFile } from '@/lib/attachments/extract-text';
 import { createModuleLogger } from '@/lib/logger';
@@ -47,7 +51,7 @@ import { useAgentSurfaceModeStore, type AgentModeSurface, type AgentModeId } fro
 import { getProviderMeta } from '@/lib/providers/provider-registry';
 import { useRuntimeExecutionMode } from '@/hooks/useRuntimeExecutionMode';
 import type { RuntimeExecutionMode } from '@/lib/agents/native-agent-api';
-import { Compass, Hammer } from 'lucide-react';
+
 import {
   buildOpenClawImportInput,
   discoverOpenClawAgents,
@@ -58,6 +62,10 @@ import {
   type Agent,
   type OpenClawDiscoveredAgent,
 } from '@/lib/agents';
+import {
+  useEmbeddedAgentSession,
+  useEmbeddedAgentSessionStore,
+} from '@/lib/agents/embedded-agent-session.store';
 import { AgentModeGizzi } from './AgentModeGizzi';
 import { getAgentModeSurfaceTheme } from './agentModeSurfaceTheme';
 import { useRecordingStore } from '@/stores/recording.store';
@@ -76,16 +84,16 @@ const TERMINAL_SERVER_URL = typeof __TERMINAL_SERVER_URL__ !== 'undefined'
 // Theme
 // ============================================================================
 const THEME = {
-  bg: '#2B2520',
-  inputBg: '#352F29',
-  inputBorder: 'rgba(255,255,255,0.08)',
-  textPrimary: '#ECECEC',
-  textSecondary: '#9B9B9B',
-  textMuted: '#6B6B6B',
-  accent: '#D4956A',
-  hoverBg: 'rgba(255,255,255,0.05)',
-  menuBg: '#332D27',
-  menuBorder: 'rgba(255,255,255,0.08)',
+  bg: 'var(--surface-canvas)',
+  inputBg: 'var(--chat-composer-bg)',
+  inputBorder: 'var(--chat-composer-border)',
+  textPrimary: 'var(--ui-text-primary)',
+  textSecondary: 'var(--chat-composer-muted)',
+  textMuted: 'var(--ui-text-muted)',
+  accent: 'var(--accent-chat)',
+  hoverBg: 'var(--chat-composer-hover)',
+  menuBg: 'var(--chat-composer-menu-bg)',
+  menuBorder: 'var(--chat-composer-menu-border)',
 };
 
 export interface ChatAttachment {
@@ -212,7 +220,7 @@ const ACTION_CATEGORIES = [
   {
     id: 'a2r',
     label: "A2R's choice",
-    icon: <Sparkles size={14} />,
+    icon: <Sparkle size={14} />,
     options: [
       "Surprise me with a fun fact",
       "Give me a daily productivity tip",
@@ -247,7 +255,7 @@ const PLUS_MENU_ITEMS: ComposerMenuItem[] = [
       { id: 'technical', label: 'Technical' },
     ]
   },
-  { id: 'connectors', label: 'Add connectors', icon: <Zap size={16} /> },
+  { id: 'connectors', label: 'Add connectors', icon: <Lightning size={16} /> },
 ];
 
 // ============================================================================
@@ -538,12 +546,16 @@ export function ChatComposer({
   const [isLoadingOpenClawCandidates, setIsLoadingOpenClawCandidates] = useState(false);
   const [openClawError, setOpenClawError] = useState<string | null>(null);
   const [importingOpenClawAgentId, setImportingOpenClawAgentId] = useState<string | null>(null);
-  const agentModeEnabled = useAgentSurfaceModeStore((state) =>
-    agentModeSurface ? state.enabledBySurface[agentModeSurface] : false,
-  );
-  const agentModePulse = useAgentSurfaceModeStore((state) =>
-    agentModeSurface ? state.pulseBySurface[agentModeSurface] : 0,
-  );
+  const { isEmbedded: hasEmbeddedSession } = useEmbeddedAgentSession(agentModeSurface ?? 'chat');
+  const clearSurfaceSession = useEmbeddedAgentSessionStore((s) => s.clearSurfaceSession);
+  const [locallyEnabled, setLocallyEnabled] = useState(false);
+  const agentModeEnabled = hasEmbeddedSession || locallyEnabled;
+  const [agentModePulse, setAgentModePulse] = useState(0);
+  const prevAgentModeEnabledRef = useRef(agentModeEnabled);
+  if (prevAgentModeEnabledRef.current !== agentModeEnabled) {
+    prevAgentModeEnabledRef.current = agentModeEnabled;
+    if (agentModeEnabled) setAgentModePulse((p) => p + 1);
+  }
   
   // Plan/Build mode toggle
   const {
@@ -623,7 +635,14 @@ export function ChatComposer({
   // ── Browser-specific plus menu items ────────────────────────────────────
   const isBrowserSurface = agentModeSurface === 'browser';
 
-  const setAgentModeEnabled = useAgentSurfaceModeStore((state) => state.setEnabled);
+  const toggleAgentMode = () => {
+    if (agentModeEnabled) {
+      setLocallyEnabled(false);
+      if (agentModeSurface && hasEmbeddedSession) clearSurfaceSession(agentModeSurface);
+    } else {
+      setLocallyEnabled(true);
+    }
+  };
   const selectedSurfaceAgentId = useAgentSurfaceModeStore((state) =>
     agentModeSurface ? state.selectedAgentIdBySurface[agentModeSurface] : null,
   );
@@ -884,8 +903,6 @@ export function ChatComposer({
   useEffect(() => {
     setInput(inputValue);
   }, [inputValue]);
-
-
 
   const allModels = useMemo(() => {
     let models: any[] = [];
@@ -1347,8 +1364,8 @@ export function ChatComposer({
           display: 'flex',
           gap: '8px',
           marginBottom: '12px',
-          width: '100%',
-          maxWidth: '680px',
+          width: '720px',
+          maxWidth: '100%',
           justifyContent: 'center',
           flexWrap: 'wrap'
         }}
@@ -1374,7 +1391,7 @@ export function ChatComposer({
                   const targetMode = modeMapping[cat.id];
                   if (targetMode) {
                     // Enable agent mode
-                    setAgentModeEnabled(agentModeSurface, true);
+                    setLocallyEnabled(true);
                     // Select the corresponding mode
                     setSelectedMode(agentModeSurface, targetMode);
                     // Clear the active category overlay
@@ -1392,11 +1409,11 @@ export function ChatComposer({
                 gap: '6px',
                 padding: '6px 14px',
                 borderRadius: '10px',
-                background: activeCategory === cat.id ? 'rgba(212,149,106,0.15)' : 'rgba(255,255,255,0.03)',
-                border: `1px solid ${activeCategory === cat.id ? 'rgba(212,149,106,0.3)' : THEME.inputBorder}`,
-                color: activeCategory === cat.id ? THEME.accent : THEME.textSecondary,
+                background: activeCategory === cat.id ? 'var(--chat-mode-pill-active-bg)' : 'var(--chat-mode-pill-bg)',
+                border: `1px solid ${activeCategory === cat.id ? 'color-mix(in srgb, var(--accent-chat) 30%, transparent)' : THEME.inputBorder}`,
+                color: activeCategory === cat.id ? 'var(--chat-mode-pill-active-fg)' : 'var(--chat-mode-pill-fg)',
                 fontSize: '13px',
-                fontWeight: 500,
+                fontWeight: activeCategory === cat.id ? 600 : 550,
                 cursor: 'pointer',
                 transition: 'all 0.2s'
               }}
@@ -1410,8 +1427,8 @@ export function ChatComposer({
               }}
               onMouseLeave={(e) => {
                 if (activeCategory !== cat.id) {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
-                  e.currentTarget.style.color = THEME.textSecondary;
+                  e.currentTarget.style.background = 'var(--chat-mode-pill-bg)';
+                  e.currentTarget.style.color = 'var(--chat-mode-pill-fg)';
                 }
               }}
             >
@@ -1435,7 +1452,7 @@ export function ChatComposer({
             background: THEME.menuBg,
             borderRadius: '16px',
             border: `1px solid ${THEME.menuBorder}`,
-            boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+            boxShadow: 'var(--shadow-xl)',
             zIndex: 100,
             padding: '8px 0',
             marginBottom: '40px'
@@ -1495,7 +1512,7 @@ export function ChatComposer({
               }}
             >
               <span>{option}</span>
-              <MousePointer2 size={12} style={{ opacity: 0.3 }} />
+              <CursorClick size={12} style={{ opacity: 0.3 }} />
             </div>
           ))}
         </div>
@@ -1504,8 +1521,8 @@ export function ChatComposer({
       {/* ── Main Composer Box ── */}
       <div
         style={{
-          width: '100%',
-          maxWidth: '680px',
+          width: variant === 'large' ? '760px' : '600px',
+          maxWidth: '100%',
           position: 'relative',
           overflow: 'visible',
           zIndex: 14,
@@ -1526,11 +1543,13 @@ export function ChatComposer({
             width: '100%',
             background: THEME.inputBg,
             borderRadius: '24px 24px 0 0',
-            border: `1px solid ${agentModeEnabled ? agentModeTheme.glow : THEME.inputBorder}`,
+            borderTop: `1px solid ${agentModeEnabled ? agentModeTheme.glow : THEME.inputBorder}`,
+            borderRight: `1px solid ${agentModeEnabled ? agentModeTheme.glow : THEME.inputBorder}`,
+            borderLeft: `1px solid ${agentModeEnabled ? agentModeTheme.glow : THEME.inputBorder}`,
             borderBottom: 'none',
             boxShadow: agentModeEnabled
               ? `0 0 0 1px ${agentModeTheme.soft}, 0 12px 36px ${agentModeTheme.glow}`
-              : '0 8px 32px rgba(0,0,0,0.25)',
+              : 'var(--shadow-lg)',
             display: 'flex',
             flexDirection: 'column',
             overflow: 'visible',
@@ -1577,7 +1596,7 @@ export function ChatComposer({
               background: THEME.menuBg,
               borderRadius: 12,
               border: `1px solid ${THEME.menuBorder}`,
-              boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+              boxShadow: 'var(--shadow-xl)',
               padding: 6,
               zIndex: 250,
             }}
@@ -1701,7 +1720,7 @@ export function ChatComposer({
             }}
           >
             <div style={{ display: 'flex', minWidth: 0, alignItems: 'center', gap: 8 }}>
-              <Bot size={14} />
+              <Robot size={14} />
               <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {agentHelperText}
               </span>
@@ -1765,7 +1784,7 @@ export function ChatComposer({
                 width: '32px',
                 height: '32px',
                 borderRadius: '50%',
-                background: showPlusMenu ? 'rgba(255,255,255,0.08)' : 'transparent',
+                background: showPlusMenu ? 'var(--chat-composer-soft)' : 'transparent',
                 border: 'none',
                 color: THEME.textSecondary,
                 cursor: 'pointer',
@@ -1777,7 +1796,7 @@ export function ChatComposer({
                 setTrackingAttention(-0.44, 0.56, 'locked-on');
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = showPlusMenu ? 'rgba(255,255,255,0.08)' : 'transparent';
+                e.currentTarget.style.background = showPlusMenu ? 'var(--chat-composer-soft)' : 'transparent';
                 setTrackingAttention(0, 0.44);
               }}
             >
@@ -1906,7 +1925,7 @@ export function ChatComposer({
                     >
                       <span style={{ color: THEME.textSecondary }}>{item.icon}</span>
                       <span style={{ flex: 1, textAlign: 'left' }}>{item.label}</span>
-                      {item.hasSubmenu && <ChevronRight size={14} style={{ opacity: 0.5 }} />}
+                      {item.hasSubmenu && <CaretRight size={14} style={{ opacity: 0.5 }} />}
                       {item.isActive && !item.hasSubmenu && <Check size={14} style={{ color: THEME.accent }} />}
                     </button>
 
@@ -1967,7 +1986,7 @@ export function ChatComposer({
                 agentModeEnabled={agentModeEnabled}
                 selectedModeId={selectedModeId}
                 agentModeSurface={agentModeSurface}
-                onToggle={() => setAgentModeEnabled(agentModeSurface, !agentModeEnabled)}
+                onToggle={toggleAgentMode}
                 onInteractionSignal={onInteractionSignal}
                 setTrackingAttention={setTrackingAttention}
               />
@@ -2046,7 +2065,7 @@ export function ChatComposer({
                   <span style={{ fontWeight: 500 }}>{displayModelName}</span>
                 </>
               )}
-              <ChevronDown size={12} style={{ transform: showModelMenu ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', opacity: 0.6 }} />
+              <CaretDown size={12} style={{ transform: showModelMenu ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', opacity: 0.6 }} />
             </button>
 
             {/* Model Menu Popover */}
@@ -2102,7 +2121,7 @@ export function ChatComposer({
                     width: '32px',
                     height: '32px',
                     borderRadius: '50%',
-                    background: 'rgba(255,255,255,0.08)',
+                    background: 'var(--chat-composer-soft)',
                     border: `1px solid ${THEME.inputBorder}`,
                     color: THEME.accent,
                     display: 'flex',
@@ -2124,9 +2143,9 @@ export function ChatComposer({
                   width: '32px',
                   height: '32px',
                   borderRadius: '50%',
-                  background: canSubmit ? THEME.accent : 'rgba(255,255,255,0.06)',
+                  background: canSubmit ? THEME.accent : 'var(--chat-composer-soft)',
                   border: 'none',
-                  color: canSubmit ? '#FFF' : THEME.textMuted,
+                  color: canSubmit ? 'var(--shell-control-active-fg)' : 'var(--chat-composer-disabled)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -2155,20 +2174,29 @@ export function ChatComposer({
       </div>
       
       {/* Bottom Dock - Status bar below input container */}
-      <BottomDock
-        selectedModeId={selectedModeId}
-        agentModeSurface={agentModeSurface}
-        agentModeEnabled={agentModeEnabled}
-        agentModeTheme={agentModeTheme}
-        setShowAgentMenu={setShowAgentMenu}
-        showAgentMenu={showAgentMenu}
-        uiMode={uiMode}
-        handleToggleMode={handleToggleMode}
-        isLoadingExecMode={isLoadingExecMode}
-        isSavingExecMode={isSavingExecMode}
-        selectedSurfaceAgent={selectedSurfaceAgent}
-        customLeftContent={bottomDockContent}
-      />
+      <div style={{
+        width: variant === 'large' ? '760px' : '600px',
+        maxWidth: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        marginTop: '-1px',
+      }}>
+        <BottomDock
+          selectedModeId={selectedModeId}
+          agentModeSurface={agentModeSurface}
+          agentModeEnabled={agentModeEnabled}
+          agentModeTheme={agentModeTheme}
+          setShowAgentMenu={setShowAgentMenu}
+          showAgentMenu={showAgentMenu}
+          uiMode={uiMode}
+          handleToggleMode={handleToggleMode}
+          isLoadingExecMode={isLoadingExecMode}
+          isSavingExecMode={isSavingExecMode}
+          selectedSurfaceAgent={selectedSurfaceAgent}
+          customLeftContent={bottomDockContent}
+        />
+      </div>
       
       {/* Agent Selector Dropdown - Shows when clicking "Choose Agent" */}
       {showAgentMenu && agentModeSurface && (
@@ -2194,15 +2222,23 @@ export function ChatComposer({
       
       {/* Mode Dock - 8 Mode Tabs */}
       {agentModeSurface && agentModeEnabled && (
-        <ModeDock
-          selectedMode={selectedModeId}
-          onSelectMode={(modeId) => {
-            if (agentModeSurface) {
-              setSelectedMode(agentModeSurface, modeId as AgentModeId);
-            }
-          }}
-          agentModeSurface={agentModeSurface}
-        />
+        <div style={{
+          width: variant === 'large' ? '760px' : '600px',
+          maxWidth: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+        }}>
+          <ModeDock
+            selectedMode={selectedModeId}
+            onSelectMode={(modeId) => {
+              if (agentModeSurface) {
+                setSelectedMode(agentModeSurface, modeId as AgentModeId);
+              }
+            }}
+            agentModeSurface={agentModeSurface}
+          />
+        </div>
       )}
 
       <Dialog open={showOpenClawImportDialog} onOpenChange={(open) => {
@@ -2215,10 +2251,9 @@ export function ChatComposer({
           <div
             style={{
               borderRadius: 20,
-              border: '1px solid rgba(233,185,137,0.12)',
-              background:
-                'linear-gradient(180deg, rgba(43,37,32,0.98) 0%, rgba(32,28,24,0.98) 100%)',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+              border: `1px solid ${THEME.menuBorder}`,
+              background: 'var(--shell-dialog-bg)',
+              boxShadow: 'var(--shadow-xl)',
               overflow: 'hidden',
             }}
           >
@@ -2226,15 +2261,15 @@ export function ChatComposer({
               style={{
                 padding: '18px 20px 14px',
                 background:
-                  'linear-gradient(115deg, rgba(212,149,106,0.12), rgba(93,133,171,0.04) 48%, rgba(255,255,255,0.02) 100%)',
+                  'linear-gradient(115deg, color-mix(in srgb, var(--accent-chat) 12%, transparent), color-mix(in srgb, var(--status-info) 6%, transparent) 48%, color-mix(in srgb, var(--surface-floating) 24%, transparent) 100%)',
                 borderBottom: `1px solid ${THEME.inputBorder}`,
               }}
             >
               <DialogHeader>
-                <DialogTitle style={{ color: '#f5ede6', fontSize: 18, fontWeight: 600 }}>
+                <DialogTitle style={{ color: 'var(--shell-dialog-title)', fontSize: 18, fontWeight: 600 }}>
                   Import OpenClaw Agent
                 </DialogTitle>
-                <DialogDescription style={{ color: '#b8a99b', fontSize: 13, maxWidth: 480, lineHeight: 1.5 }}>
+                <DialogDescription style={{ color: 'var(--shell-dialog-text)', fontSize: 13, maxWidth: 480, lineHeight: 1.5 }}>
                   Import a local OpenClaw agent to bind this surface to a real agent workspace.
                 </DialogDescription>
               </DialogHeader>
@@ -2248,7 +2283,7 @@ export function ChatComposer({
                     border: `1px solid ${THEME.inputBorder}`,
                     padding: 18,
                     color: THEME.textSecondary,
-                    background: 'rgba(255,255,255,0.03)',
+                    background: 'var(--chat-composer-soft)',
                   }}
                 >
                   {isLoadingOpenClawCandidates
@@ -2263,8 +2298,8 @@ export function ChatComposer({
                       display: 'grid',
                       gap: 10,
                       borderRadius: 14,
-                      border: '1px solid rgba(255,255,255,0.06)',
-                      background: 'rgba(255,255,255,0.02)',
+                      border: `1px solid ${THEME.inputBorder}`,
+                      background: 'var(--chat-composer-soft)',
                       padding: 14,
                     }}
                   >
@@ -2277,9 +2312,9 @@ export function ChatComposer({
                               alignItems: 'center',
                               gap: 4,
                               borderRadius: 999,
-                              background: 'rgba(212,149,106,0.1)',
-                              border: '1px solid rgba(212,149,106,0.2)',
-                              color: '#e5b896',
+                              background: 'color-mix(in srgb, var(--accent-chat) 12%, transparent)',
+                              border: '1px solid color-mix(in srgb, var(--accent-chat) 24%, transparent)',
+                              color: 'var(--accent-primary)',
                               padding: '3px 8px',
                               fontSize: 9,
                               fontWeight: 700,
@@ -2287,7 +2322,7 @@ export function ChatComposer({
                               textTransform: 'uppercase',
                             }}
                           >
-                            <Bot size={10} />
+                            <Robot size={10} />
                             OpenClaw
                           </span>
                           <span style={{ color: THEME.textPrimary, fontSize: 15, fontWeight: 600 }}>
@@ -2305,11 +2340,11 @@ export function ChatComposer({
                         style={{
                           flexShrink: 0,
                           borderRadius: 999,
-                          border: '1px solid rgba(212,149,106,0.25)',
+                          border: '1px solid color-mix(in srgb, var(--accent-chat) 26%, transparent)',
                           background: importingOpenClawAgentId === candidate.agent_id
-                            ? 'rgba(212,149,106,0.08)'
-                            : 'rgba(212,149,106,0.14)',
-                          color: '#e5b896',
+                            ? 'color-mix(in srgb, var(--accent-chat) 10%, transparent)'
+                            : 'color-mix(in srgb, var(--accent-chat) 16%, transparent)',
+                          color: 'var(--accent-primary)',
                           fontSize: 11,
                           fontWeight: 700,
                           padding: '8px 12px',
@@ -2326,7 +2361,7 @@ export function ChatComposer({
                         style={{
                           borderRadius: 10,
                           border: `1px solid ${THEME.inputBorder}`,
-                          background: 'rgba(0,0,0,0.1)',
+                          background: 'var(--chat-composer-soft)',
                           padding: '10px 12px',
                         }}
                       >
@@ -2341,7 +2376,7 @@ export function ChatComposer({
                         style={{
                           borderRadius: 10,
                           border: `1px solid ${THEME.inputBorder}`,
-                          background: 'rgba(0,0,0,0.1)',
+                          background: 'var(--chat-composer-soft)',
                           padding: '10px 12px',
                         }}
                       >
@@ -2356,7 +2391,7 @@ export function ChatComposer({
                         style={{
                           borderRadius: 10,
                           border: `1px solid ${THEME.inputBorder}`,
-                          background: 'rgba(0,0,0,0.1)',
+                          background: 'var(--chat-composer-soft)',
                           padding: '10px 12px',
                         }}
                       >
@@ -2383,9 +2418,9 @@ export function ChatComposer({
                   gap: 8,
                   padding: '12px 14px',
                   borderRadius: 10,
-                  background: 'rgba(239,68,68,0.08)',
-                  border: '1px solid rgba(239,68,68,0.2)',
-                  color: '#fca5a5', 
+                  background: 'var(--shell-danger-soft-bg)',
+                  border: '1px solid color-mix(in srgb, var(--status-error) 28%, transparent)',
+                  color: 'var(--status-error)', 
                   fontSize: 13,
                   lineHeight: 1.5,
                 }}>
@@ -2419,7 +2454,6 @@ export function ChatComposer({
     </div>
   );
 }
-
 
 // ============================================================================
 // Agent Selector Dropdown Component
@@ -2481,7 +2515,6 @@ function TaskBar({ wihs, selectedWihId, onSelectWih, expanded, onToggleExpand, a
   return (
     <div style={{
       width: '100%',
-      maxWidth: '680px',
       marginBottom: '-1px',
       zIndex: 15,
     }}>
@@ -2506,7 +2539,7 @@ function TaskBar({ wihs, selectedWihId, onSelectWih, expanded, onToggleExpand, a
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Zap size={14} style={{ color: THEME.accent }} />
+            <Lightning size={14} style={{ color: THEME.accent }} />
             <span style={{ fontWeight: 500 }}>
               {activeWihs.length} Active Task{activeWihs.length !== 1 ? 's' : ''}
             </span>
@@ -2567,7 +2600,7 @@ function TaskBar({ wihs, selectedWihId, onSelectWih, expanded, onToggleExpand, a
           </div>
         </div>
         
-        <ChevronDown 
+        <CaretDown 
           size={16} 
           style={{ 
             transform: expanded ? 'rotate(180deg)' : 'none',
@@ -2582,7 +2615,8 @@ function TaskBar({ wihs, selectedWihId, onSelectWih, expanded, onToggleExpand, a
         <div style={{
           background: THEME.inputBg,
           border: `1px solid ${THEME.inputBorder}`,
-          borderTop: 'none',
+          borderTop: `1px solid ${borderColor}`,
+      marginTop: -1,
           borderRadius: '0 0 16px 16px',
           padding: '12px 16px 16px',
           maxHeight: '250px',
@@ -2811,7 +2845,7 @@ function AgentModeButton({
         }
       }}
     >
-      <Bot size={14} />
+      <Robot size={14} />
       {buttonText}
     </button>
   );
@@ -2879,17 +2913,19 @@ function BottomDock({
   return (
     <div style={{
       width: '100%',
-      maxWidth: '680px',
-      marginTop: '-1px',
+      boxSizing: 'border-box',
+      marginTop: 0,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      padding: '10px 16px 12px',
+      padding: '9px 16px 12px',
       background: THEME.inputBg,
-      border: `1px solid ${borderColor}`,
-      borderTop: 'none',
+      borderTop: `1px solid ${borderColor}`,
+      borderRight: `1px solid ${borderColor}`,
+      borderBottom: `1px solid ${borderColor}`,
+      borderLeft: `1px solid ${borderColor}`,
       borderRadius: '0 0 24px 24px',
-      zIndex: 9,
+      zIndex: 11,
       position: 'relative',
     }}>
       {/* Left: Custom content (utility pills) or Choose Agent */}
@@ -2915,15 +2951,15 @@ function BottomDock({
             transition: 'all 0.15s',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+            e.currentTarget.style.background = THEME.hoverBg;
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = 'transparent';
           }}
         >
-          <Bot size={16} />
+          <Robot size={16} />
           <span>{selectedSurfaceAgent ? selectedSurfaceAgent.name : 'Choose Agent'}</span>
-          <ChevronDown size={14} style={{ opacity: 0.5, transform: showAgentMenu ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+          <CaretDown size={14} style={{ opacity: 0.5, transform: showAgentMenu ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
         </button>
       )}
       
@@ -2939,7 +2975,7 @@ function BottomDock({
           gap: '6px',
           padding: '6px 10px',
           borderRadius: '8px',
-          background: 'rgba(255,255,255,0.05)',
+          background: 'var(--chat-composer-soft)',
           border: `1px solid ${uiMode === 'plan' ? 'rgba(212,149,106,0.4)' : THEME.inputBorder}`,
           color: uiMode === 'plan' ? THEME.accent : THEME.textSecondary,
           fontSize: '12px',
@@ -2950,13 +2986,13 @@ function BottomDock({
         }}
         onMouseEnter={(e) => {
           if (!isLoadingExecMode && !isSavingExecMode) {
-            e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+            e.currentTarget.style.background = THEME.hoverBg;
             e.currentTarget.style.borderColor = 'rgba(212,149,106,0.5)';
           }
         }}
         onMouseLeave={(e) => {
           if (!isLoadingExecMode && !isSavingExecMode) {
-            e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+            e.currentTarget.style.background = 'var(--chat-composer-soft)';
             e.currentTarget.style.borderColor = uiMode === 'plan' ? 'rgba(212,149,106,0.4)' : THEME.inputBorder;
           }
         }}
@@ -3031,7 +3067,6 @@ function ModeDock({ selectedMode, onSelectMode, agentModeSurface }: ModeDockProp
   return (
     <div style={{
       width: '100%',
-      maxWidth: '680px',
       marginTop: '8px',
       display: 'flex',
       flexDirection: 'column',
@@ -3379,7 +3414,7 @@ function AgentSelectorDropdown({
                       flexShrink: 0,
                     }}
                   >
-                    <Bot size={14} />
+                    <Robot size={14} />
                   </div>
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -3415,7 +3450,6 @@ function AgentSelectorDropdown({
     </>
   );
 }
-
 
 // ============================================================================
 // Model Selector Dropdown Component
@@ -3666,7 +3700,7 @@ function ModelSelectorDropdown({
             }}
             onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
           >
-            <Sparkles size={14} />
+            <Sparkle size={14} />
             Browse all models...
           </button>
           <button
@@ -3692,7 +3726,7 @@ function ModelSelectorDropdown({
             }}
             onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
           >
-            <Plug size={14} />
+            <PlugsConnected size={14} />
             Connect provider
           </button>
         </div>
@@ -3804,7 +3838,7 @@ function ConnectProviderOverlay({ isOpen, onClose }: ConnectProviderOverlayProps
                 background: 'transparent', border: 'none', color: THEME.textMuted,
                 fontSize: '13px', cursor: 'pointer', padding: 0, alignSelf: 'flex-start',
               }}>
-                <ChevronRight size={16} style={{ transform: 'rotate(180deg)' }} />
+                <CaretRight size={16} style={{ transform: 'rotate(180deg)' }} />
                 Back to providers
               </button>
 
@@ -3979,7 +4013,6 @@ function ConnectProviderOverlay({ isOpen, onClose }: ConnectProviderOverlayProps
     </div>
   );
 }
-
 
 // ============================================================================
 // Browse All Models Overlay - Same layout as ConnectProviderOverlay
@@ -4182,7 +4215,7 @@ function BrowseAllModelsOverlay({ isOpen, onClose, onSelectModel, currentModel }
                 background: 'transparent', border: 'none', color: THEME.textMuted,
                 fontSize: '13px', cursor: 'pointer', padding: 0, alignSelf: 'flex-start',
               }}>
-                <ChevronRight size={16} style={{ transform: 'rotate(180deg)' }} />
+                <CaretRight size={16} style={{ transform: 'rotate(180deg)' }} />
                 Back to providers
               </button>
 
@@ -4210,12 +4243,12 @@ function BrowseAllModelsOverlay({ isOpen, onClose, onSelectModel, currentModel }
 
               {loadingProvider ? (
                 <div style={{ padding: '40px', textAlign: 'center', color: THEME.textMuted }}>
-                  <Loader2 size={32} style={{ marginBottom: '12px', animation: 'spin 1s linear infinite' }} />
+                  <CircleNotch size={32} style={{ marginBottom: '12px', animation: 'spin 1s linear infinite' }} />
                   <p>Loading models...</p>
                 </div>
               ) : providerModels.length === 0 ? (
                 <div style={{ padding: '40px', textAlign: 'center', color: THEME.textMuted }}>
-                  <AlertCircle size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
+                  <Warning size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
                   <p>No models available</p>
                 </div>
               ) : (
@@ -4249,7 +4282,7 @@ function BrowseAllModelsOverlay({ isOpen, onClose, onSelectModel, currentModel }
                           alignItems: 'center', justifyContent: 'center',
                           background: 'rgba(255,255,255,0.05)', borderRadius: '10px', flexShrink: 0,
                         }}>
-                          <Sparkles size={20} style={{ color: isCurrent ? '#d4966a' : THEME.textMuted }} />
+                          <Sparkle size={20} style={{ color: isCurrent ? '#d4966a' : THEME.textMuted }} />
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{
@@ -4320,7 +4353,7 @@ function BrowseAllModelsOverlay({ isOpen, onClose, onSelectModel, currentModel }
               
               {loading && (
                 <div style={{ padding: '40px', textAlign: 'center', color: THEME.textMuted }}>
-                  <Loader2 size={32} style={{ marginBottom: '12px', animation: 'spin 1s linear infinite' }} />
+                  <CircleNotch size={32} style={{ marginBottom: '12px', animation: 'spin 1s linear infinite' }} />
                   <p>Loading providers from Terminal Server...</p>
                 </div>
               )}
@@ -4384,7 +4417,7 @@ function BrowseAllModelsOverlay({ isOpen, onClose, onSelectModel, currentModel }
                             {provider.id}
                           </div>
                         </div>
-                        <ChevronRight size={18} style={{ color: THEME.textMuted, opacity: 0.5, flexShrink: 0 }} />
+                        <CaretRight size={18} style={{ color: THEME.textMuted, opacity: 0.5, flexShrink: 0 }} />
                       </button>
                     );
                   })}

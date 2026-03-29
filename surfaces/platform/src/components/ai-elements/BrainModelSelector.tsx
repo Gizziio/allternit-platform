@@ -9,16 +9,16 @@
  */
 
 import { useState, useEffect } from 'react';
-import { 
-  Check, 
-  Lock, 
-  RefreshCw, 
-  Terminal, 
-  AlertCircle,
-  Loader2,
-  ChevronRight,
-  Brain
-} from 'lucide-react';
+import {
+  Check,
+  Lock,
+  ArrowsClockwise,
+  Terminal,
+  Warning,
+  CircleNotch,
+  CaretRight,
+  Brain,
+} from '@phosphor-icons/react';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
 import {
@@ -186,7 +186,7 @@ export function BrainModelSelector({
                     className="pointer-events-none opacity-50"
                   >
                     <div className="flex items-center gap-2 text-muted-foreground">
-                      <Terminal className="h-3 w-3" />
+                      <Terminal size={12} />
                       <span>{provider.providerName}</span>
                       <span className="text-xs">(use Terminal view)</span>
                     </div>

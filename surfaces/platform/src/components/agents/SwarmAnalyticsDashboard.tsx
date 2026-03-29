@@ -8,26 +8,26 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Activity,
-  TrendingUp,
-  TrendingDown,
+  Pulse as Activity,
+  TrendUp,
+  TrendDown,
   Clock,
-  DollarSign,
+  CurrencyDollar,
   Cpu,
-  Zap,
-  CheckCircle2,
-  AlertCircle,
+  Lightning,
+  CheckCircle,
+  Warning,
   XCircle,
   Pause,
   Play,
   StopCircle,
-  RefreshCw,
-  Download,
-  Share2,
-  MoreVertical,
-  ChevronDown,
-  ChevronUp,
-} from 'lucide-react';
+  ArrowsClockwise,
+  DownloadSimple,
+  ShareNetwork,
+  DotsThreeVertical,
+  CaretDown,
+  CaretUp,
+} from '@phosphor-icons/react';
 
 // ============================================================================
 // Types
@@ -130,7 +130,7 @@ function MetricCard({
               change >= 0 ? 'text-green-400' : 'text-red-400'
             }`}
           >
-            {change >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+            {change >= 0 ? <TrendUp size={12} /> : <TrendDown size={12} />}
             {Math.abs(change)}%
           </div>
         )}
@@ -153,8 +153,8 @@ function MetricCard({
 
 function HealthStatusCard({ health }: { health: SwarmHealthStatus }) {
   const statusConfig = {
-    healthy: { color: '#22c55e', label: 'Healthy', icon: CheckCircle2 },
-    degraded: { color: '#f59e0b', label: 'Degraded', icon: AlertCircle },
+    healthy: { color: '#22c55e', label: 'Healthy', icon: CheckCircle },
+    degraded: { color: '#f59e0b', label: 'Degraded', icon: Warning },
     unhealthy: { color: '#ef4444', label: 'Unhealthy', icon: XCircle },
   };
 
@@ -213,7 +213,7 @@ function HealthStatusCard({ health }: { health: SwarmHealthStatus }) {
               key={idx}
               className="flex items-start gap-2 text-xs p-2 rounded bg-white/5"
             >
-              <AlertCircle
+              <Warning
                 size={12}
                 className="mt-0.5 flex-shrink-0"
                 style={{
@@ -246,8 +246,8 @@ function HealthStatusCard({ health }: { health: SwarmHealthStatus }) {
 function ExecutionTimeline({ timeline }: { timeline: ExecutionTimelineEntry[] }) {
   const eventConfig: Record<string, { color: string; icon: any; label: string }> = {
     start: { color: '#22c55e', icon: Play, label: 'Started' },
-    checkpoint: { color: '#3b82f6', icon: CheckCircle2, label: 'Checkpoint' },
-    complete: { color: '#22c55e', icon: CheckCircle2, label: 'Completed' },
+    checkpoint: { color: '#3b82f6', icon: CheckCircle, label: 'Checkpoint' },
+    complete: { color: '#22c55e', icon: CheckCircle, label: 'Completed' },
     error: { color: '#ef4444', icon: XCircle, label: 'Error' },
     pause: { color: '#f59e0b', icon: Pause, label: 'Paused' },
     resume: { color: '#3b82f6', icon: Play, label: 'Resumed' },
@@ -392,7 +392,7 @@ export function SwarmAnalyticsDashboard({
               className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-white/70"
               title="Refresh"
             >
-              <RefreshCw size={16} />
+              <ArrowsClockwise size={16} />
             </button>
 
             <button
@@ -400,7 +400,7 @@ export function SwarmAnalyticsDashboard({
               className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-white/70"
               title="Export"
             >
-              <Download size={16} />
+              <DownloadSimple size={16} />
             </button>
           </div>
         </div>
@@ -426,7 +426,7 @@ export function SwarmAnalyticsDashboard({
             title="Success Rate"
             value={`${metrics.successRate}%`}
             change={2.5}
-            icon={CheckCircle2}
+            icon={CheckCircle}
             color="#22c55e"
           />
 
@@ -445,7 +445,7 @@ export function SwarmAnalyticsDashboard({
             title="Total Cost"
             value={`$${(metrics.totalCostCents / 100).toFixed(2)}`}
             change={1.8}
-            icon={DollarSign}
+            icon={CurrencyDollar}
             color="#f59e0b"
           />
 
@@ -463,7 +463,7 @@ export function SwarmAnalyticsDashboard({
             title="Messages/sec"
             value={metrics.messagesPerSecond}
             change={12.5}
-            icon={Zap}
+            icon={Lightning}
             color="#fbbf24"
           />
 
@@ -483,7 +483,7 @@ export function SwarmAnalyticsDashboard({
             value={(metrics.totalTokensUsed / 1000).toFixed(1)}
             suffix="K"
             change={8.4}
-            icon={Share2}
+            icon={ShareNetwork}
             color="#14b8a6"
           />
 
@@ -491,7 +491,7 @@ export function SwarmAnalyticsDashboard({
           <MetricCard
             title="Active Agents"
             value={`${metrics.activeAgents}/${metrics.totalAgents}`}
-            icon={CheckCircle2}
+            icon={CheckCircle}
             color="#60a5fa"
           />
         </div>
@@ -506,11 +506,11 @@ export function SwarmAnalyticsDashboard({
             >
               {showDetails ? (
                 <>
-                  <ChevronUp size={12} /> Hide Details
+                  <CaretUp size={12} /> Hide Details
                 </>
               ) : (
                 <>
-                  <ChevronDown size={12} /> Show Details
+                  <CaretDown size={12} /> Show Details
                 </>
               )}
             </button>

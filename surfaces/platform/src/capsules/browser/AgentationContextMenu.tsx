@@ -13,7 +13,12 @@
 "use client";
 
 import React, { useEffect, useCallback } from 'react';
-import { Sparkles, Eye, Camera, Play } from 'lucide-react';
+import {
+  Sparkle,
+  Eye,
+  Camera,
+  Play,
+} from '@phosphor-icons/react';
 import { GlassSurface } from '@/design/GlassSurface';
 
 // ============================================================================
@@ -99,7 +104,7 @@ export function AgentationContextMenu({
         {/* Header */}
         <div className="px-3 py-2 border-b border-border bg-secondary/30">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-purple-500" />
+            <Sparkle className="w-4 h-4 text-purple-500" />
             <span className="text-xs font-semibold">Agentation</span>
           </div>
         </div>
@@ -107,7 +112,7 @@ export function AgentationContextMenu({
         {/* Menu Items */}
         <div className="py-1">
           <MenuItem
-            icon={Sparkles}
+            icon={Sparkle}
             label="Annotate Element"
             description="Add notes for AI agents"
             onClick={() => {

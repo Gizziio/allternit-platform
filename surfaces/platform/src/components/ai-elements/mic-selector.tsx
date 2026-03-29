@@ -18,7 +18,9 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { ChevronsUpDownIcon } from "lucide-react";
+import {
+  CaretUpDown as ChevronsUpDownIcon,
+} from '@phosphor-icons/react';
 import {
   createContext,
   useCallback,

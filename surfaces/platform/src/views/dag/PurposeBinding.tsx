@@ -10,30 +10,29 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Target,
-  Bot,
+  Robot,
   Link,
-  Unlink,
-  AlertTriangle,
+  LinkBreak,
+  Warning,
   CheckCircle,
   XCircle,
   Plus,
-  Search,
-  Filter,
-  RefreshCw,
-  ChevronRight,
-  Settings,
+  MagnifyingGlass,
+  Funnel,
+  ArrowsClockwise,
+  CaretRight,
+  GearSix,
   Shield,
   Wrench,
   Database,
   Globe,
   FileCode,
   Clock,
-  AlertCircle,
   X,
-  MoreVertical,
-  Edit3,
-  Trash2,
-} from 'lucide-react';
+  DotsThreeVertical,
+  PencilSimple,
+  Trash,
+} from '@phosphor-icons/react';
 import {
   listPurposes,
   listAgentPurposeBindings,
@@ -52,7 +51,7 @@ const PURPOSE_CATEGORIES = [
   { value: 'data-analysis', label: 'Data Analysis', icon: <Database size={16} />, color: '#3b82f6' },
   { value: 'code-generation', label: 'Code Generation', icon: <FileCode size={16} />, color: '#10b981' },
   { value: 'web-research', label: 'Web Research', icon: <Globe size={16} />, color: '#8b5cf6' },
-  { value: 'system-admin', label: 'System Administration', icon: <Settings size={16} />, color: '#f59e0b' },
+  { value: 'system-admin', label: 'System Administration', icon: <GearSix size={16} />, color: '#f59e0b' },
   { value: 'security', label: 'Security Operations', icon: <Shield size={16} />, color: '#ef4444' },
 ];
 
@@ -236,7 +235,7 @@ export function PurposeBinding() {
           label="Total Violations" 
           value={stats.totalViolations} 
           color="#f59e0b" 
-          icon={<AlertTriangle size={20} />}
+          icon={<Warning size={20} />}
         />
         <StatCard 
           label="Open Violations" 
@@ -299,7 +298,7 @@ export function PurposeBinding() {
         background: '#1a1a1a',
       }}>
         <div style={{ position: 'relative', flex: 1, maxWidth: 300 }}>
-          <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#666' }} />
+          <MagnifyingGlass size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#666' }} />
           <input
             type="text"
             placeholder={`Search ${activeTab}...`}
@@ -348,7 +347,7 @@ export function PurposeBinding() {
             cursor: 'pointer',
           }}
         >
-          <RefreshCw size={16} />
+          <ArrowsClockwise size={16} />
         </button>
       </div>
 
@@ -496,7 +495,7 @@ function PurposeCard({
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <span style={{ fontSize: 12, color: '#666' }}>
-            <Bot size={12} style={{ display: 'inline', marginRight: 4 }} />
+            <Robot size={12} style={{ display: 'inline', marginRight: 4 }} />
             {bindingCount} bound agents
           </span>
           <span style={{ fontSize: 12, color: '#666' }}>
@@ -504,7 +503,7 @@ function PurposeCard({
             {purpose.allowedTools.length} tools
           </span>
         </div>
-        <ChevronRight size={16} color="#666" />
+        <CaretRight size={16} color="#666" />
       </div>
     </div>
   );
@@ -552,7 +551,7 @@ function BindingCard({
         justifyContent: 'center',
         color: '#d4b08c',
       }}>
-        <Bot size={20} />
+        <Robot size={20} />
       </div>
 
       <div style={{ flex: 1 }}>
@@ -613,7 +612,7 @@ function BindingCard({
               gap: 4,
             }}
           >
-            <Unlink size={14} />
+            <LinkBreak size={14} />
             Unbind
           </button>
         )}
@@ -656,7 +655,7 @@ function ViolationCard({ violation }: { violation: PurposeViolation }) {
           justifyContent: 'center',
           color: getSeverityColor(),
         }}>
-          <AlertTriangle size={18} />
+          <Warning size={18} />
         </div>
 
         <div style={{ flex: 1 }}>
@@ -688,7 +687,7 @@ function ViolationCard({ violation }: { violation: PurposeViolation }) {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 8 }}>
             <span style={{ fontSize: 12, color: '#888' }}>
-              <Bot size={12} style={{ display: 'inline', marginRight: 4 }} />
+              <Robot size={12} style={{ display: 'inline', marginRight: 4 }} />
               {violation.agentName}
             </span>
             <span style={{ fontSize: 12, color: '#888' }}>
@@ -916,7 +915,7 @@ function StatCard({ label, value, color, icon }: { label: string; value: number;
 function LoadingState() {
   return (
     <div style={{ textAlign: 'center', padding: 60, color: '#666' }}>
-      <RefreshCw size={32} style={{ animation: 'spin 1s linear infinite' }} />
+      <ArrowsClockwise size={32} style={{ animation: 'spin 1s linear infinite' }} />
       <p>Loading...</p>
     </div>
   );
@@ -925,7 +924,7 @@ function LoadingState() {
 function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
     <div style={{ textAlign: 'center', padding: 60 }}>
-      <AlertCircle size={32} color="#ef4444" />
+      <Warning size={32} color="#ef4444" />
       <p style={{ color: '#ef4444', marginBottom: 16 }}>{message}</p>
       <button
         onClick={onRetry}

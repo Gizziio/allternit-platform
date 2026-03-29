@@ -111,68 +111,66 @@ import type {
 
 // Icons
 import {
-  Bot,
+  Robot,
   Play,
   Pause,
   Square,
-  RotateCcw,
+  ArrowCounterClockwise,
   Plus,
-  Trash2,
-  Settings,
-  Activity,
+  Trash,
+  GearSix,
+  Pulse as Activity,
   CheckCircle,
   Circle,
   Clock,
-  AlertCircle,
+  Warning,
   GitCommit,
-  Save,
-  Loader2,
+  FloppyDisk,
+  CircleNotch,
   Paperclip,
-  Mic,
+  Microphone,
   Network,
-  Cog,
-  Volume2,
-  VolumeX,
-  Sparkles,
+  SpeakerHigh,
+  SpeakerSlash,
+  Sparkle,
   Headphones,
-  Mail,
-  Send,
-  Inbox,
-  MessageSquare,
+  EnvelopeSimple,
+  PaperPlaneTilt,
+  Tray,
+  Chat,
   Bell,
-  CheckCheck,
   Shield,
-  ShieldAlert,
+  ShieldWarning,
   ShieldCheck,
   ThumbsUp,
   ThumbsDown,
   Gavel,
   AppWindow,
-  Search,
+  MagnifyingGlass,
   Terminal,
   X,
-  ChevronRight,
-  Layers,
+  CaretRight,
+  Stack,
   Star,
-  Zap,
+  Lightning,
   Check,
   FileText,
   Coins,
   Leaf,
   Heart,
   Book,
-  Scale,
-  FlaskConical,
-  Gamepad2,
-  Music,
+  Scales,
+  Flask,
+  GameController,
+  MusicNote,
   Trophy,
-  Plane,
-  Utensils,
-  Home,
+  AirplaneTilt,
+  ForkKnife as Utensils,
+  House,
   ShoppingBag,
   Brain,
-  Globe
-} from "lucide-react";
+  Globe,
+} from '@phosphor-icons/react';
 
 // ============================================================================
 // Mascot System
@@ -341,28 +339,28 @@ export function MascotPreview({ config, name }: { config: any; name: string }) {
     const size = 48;
 
     switch (template) {
-      case 'bot': return <Bot size={size} style={iconStyle} />;
+      case 'bot': return <Robot size={size} style={iconStyle} />;
       case 'orb': return <Circle size={size} style={{ ...iconStyle, color: accentColor }} />;
       case 'geometric': return <Square size={size} style={iconStyle} />;
-      case 'cyber': return <Zap size={size} style={iconStyle} />;
-      case 'magic': return <Sparkles size={size} style={iconStyle} />;
+      case 'cyber': return <Lightning size={size} style={iconStyle} />;
+      case 'magic': return <Sparkle size={size} style={iconStyle} />;
       case 'nature': return <Leaf size={size} style={iconStyle} />;
       case 'data': return <Brain size={size} style={iconStyle} />;
       case 'security': return <Shield size={size} style={iconStyle} />;
       case 'finance': return <Coins size={size} style={iconStyle} />;
       case 'healthcare': return <Heart size={size} style={iconStyle} />;
       case 'education': return <Book size={size} style={iconStyle} />;
-      case 'legal': return <Scale size={size} style={iconStyle} />;
-      case 'science': return <FlaskConical size={size} style={iconStyle} />;
-      case 'gaming': return <Gamepad2 size={size} style={iconStyle} />;
-      case 'music': return <Music size={size} style={iconStyle} />;
+      case 'legal': return <Scales size={size} style={iconStyle} />;
+      case 'science': return <Flask size={size} style={iconStyle} />;
+      case 'gaming': return <GameController size={size} style={iconStyle} />;
+      case 'music': return <MusicNote size={size} style={iconStyle} />;
       case 'sports': return <Trophy size={size} style={iconStyle} />;
-      case 'travel': return <Plane size={size} style={iconStyle} />;
+      case 'travel': return <AirplaneTilt size={size} style={iconStyle} />;
       case 'food': return <Utensils size={size} style={iconStyle} />;
-      case 'fashion': return <Sparkles size={size} style={iconStyle} />;
-      case 'realEstate': return <Home size={size} style={iconStyle} />;
+      case 'fashion': return <Sparkle size={size} style={iconStyle} />;
+      case 'realEstate': return <House size={size} style={iconStyle} />;
       case 'retail': return <ShoppingBag size={size} style={iconStyle} />;
-      default: return <Bot size={size} style={iconStyle} />;
+      default: return <Robot size={size} style={iconStyle} />;
     }
   };
 
@@ -402,7 +400,7 @@ export function MascotPreview({ config, name }: { config: any; name: string }) {
 const CAPABILITY_CATEGORIES = [
   { id: 'core', label: 'Core Intelligence', icon: Brain },
   { id: 'system', label: 'System Access', icon: Terminal },
-  { id: 'data', label: 'Data & Analysis', icon: Search },
+  { id: 'data', label: 'Data & Analysis', icon: MagnifyingGlass },
   { id: 'communication', label: 'Communication', icon: Globe },
 ];
 
@@ -440,15 +438,15 @@ const ENHANCED_HARD_BAN_CATEGORIES: Record<string, {
   icon: any;
   severity: 'fatal' | 'warning';
 }> = {
-  publishing: { label: 'Publishing', description: 'No direct posting to public platforms', icon: ShieldAlert, severity: 'fatal' },
-  deploy: { label: 'Deployment', description: 'No production deployments', icon: ShieldAlert, severity: 'fatal' },
-  data_exfil: { label: 'Data Exfiltration', description: 'No unauthorized data export', icon: ShieldAlert, severity: 'fatal' },
-  payments: { label: 'Financial Transactions', description: 'No payment processing', icon: ShieldAlert, severity: 'fatal' },
+  publishing: { label: 'Publishing', description: 'No direct posting to public platforms', icon: ShieldWarning, severity: 'fatal' },
+  deploy: { label: 'Deployment', description: 'No production deployments', icon: ShieldWarning, severity: 'fatal' },
+  data_exfil: { label: 'Data Exfiltration', description: 'No unauthorized data export', icon: ShieldWarning, severity: 'fatal' },
+  payments: { label: 'Financial Transactions', description: 'No payment processing', icon: ShieldWarning, severity: 'fatal' },
   email_send: { label: 'Outbound Email', description: 'No sending emails externally', icon: Shield, severity: 'warning' },
-  file_delete: { label: 'Destructive Deletion', description: 'No permanent file deletion', icon: Trash2, severity: 'warning' },
-  system_modify: { label: 'System Modification', description: 'No system-level changes', icon: ShieldAlert, severity: 'fatal' },
+  file_delete: { label: 'Destructive Deletion', description: 'No permanent file deletion', icon: Trash, severity: 'warning' },
+  system_modify: { label: 'System Modification', description: 'No system-level changes', icon: ShieldWarning, severity: 'fatal' },
   external_communication: { label: 'External Communication', description: 'No communication with external services', icon: Shield, severity: 'warning' },
-  code_execution: { label: 'Code Execution', description: 'No arbitrary code execution', icon: ShieldAlert, severity: 'fatal' },
+  code_execution: { label: 'Code Execution', description: 'No arbitrary code execution', icon: ShieldWarning, severity: 'fatal' },
   other: { label: 'Custom Restriction', description: 'Other custom restrictions', icon: Gavel, severity: 'warning' },
 };
 
@@ -745,7 +743,7 @@ export function AgentView({ context, hideCreateButton = false, forceListMode = f
       return (
         <div className="flex h-full items-center justify-center">
           <div className="text-center">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+            <CircleNotch className="w-8 h-8 animate-spin mx-auto mb-4 text-muted-foreground" />
             <p className="text-muted-foreground">Loading agent...</p>
           </div>
         </div>
@@ -848,14 +846,14 @@ export function AgentView({ context, hideCreateButton = false, forceListMode = f
       }}>
         {error && error !== 'API_OFFLINE' && (
           <Alert variant="destructive" className="mb-4 bg-red-900/50 border-red-500/50">
-            <AlertCircle className="h-4 w-4 text-red-400" />
+            <Warning className="h-4 w-4 text-red-400" />
             <AlertDescription className="text-red-200">{error}</AlertDescription>
           </Alert>
         )}
 
         {error === 'API_OFFLINE' && (
           <Alert className="mb-4 bg-amber-900/30 border-amber-500/30">
-            <AlertCircle className="h-4 w-4 text-amber-400" />
+            <Warning className="h-4 w-4 text-amber-400" />
             <AlertDescription className="text-amber-200">
               API service is offline. Start it with: <code className="bg-amber-900/50 px-2 py-0.5 rounded text-amber-300">cd 6-apps/api && cargo run</code>
             </AlertDescription>
@@ -864,7 +862,7 @@ export function AgentView({ context, hideCreateButton = false, forceListMode = f
 
         {isLoadingAgents ? (
           <div className="flex items-center justify-center h-64">
-            <Loader2 className="w-8 h-8 animate-spin text-amber-400" />
+            <CircleNotch className="w-8 h-8 animate-spin text-amber-400" />
           </div>
         ) : agents.length === 0 ? (
           <EmptyAgentState 
@@ -930,10 +928,10 @@ function AgentCard({ agent, onClick }: { agent: Agent; onClick: () => void }) {
   const getTypeIcon = () => {
     switch (agent.type) {
       case 'orchestrator': return <Network style={{ width: 14, height: 14 }} />;
-      case 'worker': return <Cog style={{ width: 14, height: 14 }} />;
+      case 'worker': return <GearSix style={{ width: 14, height: 14 }} />;
       case 'specialist': return <Star style={{ width: 14, height: 14 }} />;
       case 'reviewer': return <CheckCircle style={{ width: 14, height: 14 }} />;
-      default: return <Bot style={{ width: 14, height: 14 }} />;
+      default: return <Robot style={{ width: 14, height: 14 }} />;
     }
   };
 
@@ -1075,7 +1073,7 @@ function AgentCard({ agent, onClick }: { agent: Agent; onClick: () => void }) {
               display: 'flex',
               alignItems: 'center'
             }}>
-              <Volume2 style={{ width: 14, height: 14, color: STUDIO_THEME.accent }} />
+              <SpeakerHigh style={{ width: 14, height: 14, color: STUDIO_THEME.accent }} />
             </div>
           )}
         </div>
@@ -1237,7 +1235,7 @@ const AGENT_TEMPLATES: AgentTemplate[] = [
     id: 'code-assistant',
     name: 'Code Assistant',
     description: 'Expert in software development, code review, and debugging',
-    icon: <Terminal className="w-6 h-6" />,
+    icon: <Terminal size={24} />,
     setup: 'coding',
     capabilities: ['code-generation', 'file-operations', 'terminal', 'planning', 'reasoning'],
     systemPrompt: 'You are an expert software developer. Help users write, review, and debug code. Always follow best practices and provide clear explanations.',
@@ -1249,7 +1247,7 @@ const AGENT_TEMPLATES: AgentTemplate[] = [
     id: 'research-analyst',
     name: 'Research Analyst',
     description: 'Gathers information, analyzes data, and synthesizes reports',
-    icon: <Search className="w-6 h-6" />,
+    icon: <MagnifyingGlass size={24} />,
     setup: 'research',
     capabilities: ['web-search', 'memory', 'reasoning', 'planning', 'api-integration'],
     systemPrompt: 'You are a thorough research analyst. Help users gather information, analyze data, and create comprehensive reports with proper citations.',
@@ -1261,7 +1259,7 @@ const AGENT_TEMPLATES: AgentTemplate[] = [
     id: 'creative-writer',
     name: 'Creative Writer',
     description: 'Creates engaging content, stories, and marketing copy',
-    icon: <Sparkles className="w-6 h-6" />,
+    icon: <Sparkle size={24} />,
     setup: 'creative',
     capabilities: ['planning', 'reasoning', 'memory', 'web-search'],
     systemPrompt: 'You are a creative writer. Help users craft engaging content, stories, and copy. Be imaginative while maintaining clarity and purpose.',
@@ -1273,7 +1271,7 @@ const AGENT_TEMPLATES: AgentTemplate[] = [
     id: 'operations-manager',
     name: 'Ops Manager',
     description: 'Handles deployments, monitoring, and infrastructure tasks',
-    icon: <Settings className="w-6 h-6" />,
+    icon: <GearSix size={24} />,
     setup: 'operations',
     capabilities: ['terminal', 'file-operations', 'planning', 'reasoning', 'database'],
     systemPrompt: 'You are an operations manager. Help users with deployments, monitoring, and infrastructure. Prioritize safety and always confirm before making changes.',
@@ -1287,7 +1285,7 @@ const AGENT_TEMPLATES: AgentTemplate[] = [
     id: 'cyber-specialist',
     name: 'Cyber Specialist',
     description: 'Futuristic security and network optimization',
-    icon: <Zap className="w-6 h-6" />,
+    icon: <Lightning size={24} />,
     setup: 'operations',
     capabilities: ['terminal', 'file-operations', 'reasoning'],
     systemPrompt: 'You are a cybersecurity expert. Monitor networks, detect vulnerabilities, and implement security protocols.',
@@ -1299,7 +1297,7 @@ const AGENT_TEMPLATES: AgentTemplate[] = [
     id: 'magic-assistant',
     name: 'Magic Assistant',
     description: 'Creative and mystical problem solving',
-    icon: <Sparkles className="w-6 h-6" />,
+    icon: <Sparkle size={24} />,
     setup: 'creative',
     capabilities: ['planning', 'reasoning', 'memory'],
     systemPrompt: 'You are a creative assistant with a mystical perspective. Approach problems with wonder and imagination.',
@@ -1311,7 +1309,7 @@ const AGENT_TEMPLATES: AgentTemplate[] = [
     id: 'nature-guide',
     name: 'Nature Guide',
     description: 'Organic and sustainable growth strategies',
-    icon: <Leaf className="w-6 h-6" />,
+    icon: <Leaf size={24} />,
     setup: 'generalist',
     capabilities: ['web-search', 'memory', 'planning'],
     systemPrompt: 'You are an environmental consultant. Help users build sustainable systems and understand ecological impact.',
@@ -1323,7 +1321,7 @@ const AGENT_TEMPLATES: AgentTemplate[] = [
     id: 'data-scientist',
     name: 'Data Scientist',
     description: 'Matrix nodes, data streams, and pattern recognition',
-    icon: <Search className="w-6 h-6" />,
+    icon: <MagnifyingGlass size={24} />,
     setup: 'research',
     capabilities: ['database', 'reasoning', 'planning'],
     systemPrompt: 'You are a data scientist. Extract insights from complex datasets and identify hidden patterns.',
@@ -1335,7 +1333,7 @@ const AGENT_TEMPLATES: AgentTemplate[] = [
     id: 'security-guardian',
     name: 'Security Guardian',
     description: 'Defensive systems and access control',
-    icon: <Shield className="w-6 h-6" />,
+    icon: <Shield size={24} />,
     setup: 'operations',
     capabilities: ['terminal', 'file-operations', 'reasoning'],
     systemPrompt: 'You are a security guardian. Protect digital assets and manage strict access controls.',
@@ -1347,7 +1345,7 @@ const AGENT_TEMPLATES: AgentTemplate[] = [
     id: 'finance-wizard',
     name: 'Finance Wizard',
     description: 'Market analysis and financial planning',
-    icon: <Coins className="w-6 h-6" />,
+    icon: <Coins size={24} />,
     setup: 'research',
     capabilities: ['database', 'web-search', 'reasoning'],
     systemPrompt: 'You are a financial advisor. Analyze markets, manage portfolios, and provide economic forecasts.',
@@ -1359,7 +1357,7 @@ const AGENT_TEMPLATES: AgentTemplate[] = [
     id: 'healthcare-pro',
     name: 'Health Pro',
     description: 'Medical knowledge and wellness coordination',
-    icon: <Heart className="w-6 h-6" />,
+    icon: <Heart size={24} />,
     setup: 'research',
     capabilities: ['web-search', 'memory', 'planning'],
     systemPrompt: 'You are a healthcare coordinator. Provide medical information and manage wellness schedules.',
@@ -1371,7 +1369,7 @@ const AGENT_TEMPLATES: AgentTemplate[] = [
     id: 'educator',
     name: 'Education Specialist',
     description: 'Learning paths and knowledge sharing',
-    icon: <Book className="w-6 h-6" />,
+    icon: <Book size={24} />,
     setup: 'generalist',
     capabilities: ['planning', 'memory', 'web-search'],
     systemPrompt: 'You are an educator. Help users learn new skills and create personalized educational content.',
@@ -1383,7 +1381,7 @@ const AGENT_TEMPLATES: AgentTemplate[] = [
     id: 'legal-advisor',
     name: 'Legal Advisor',
     description: 'Compliance, contracts, and legal research',
-    icon: <Scale className="w-6 h-6" />,
+    icon: <Scales size={24} />,
     setup: 'research',
     capabilities: ['file-operations', 'web-search', 'reasoning'],
     systemPrompt: 'You are a legal consultant. Review contracts, ensure compliance, and conduct legal research.',
@@ -1395,7 +1393,7 @@ const AGENT_TEMPLATES: AgentTemplate[] = [
     id: 'science-lab',
     name: 'Lab Assistant',
     description: 'Experimental design and scientific analysis',
-    icon: <FlaskConical className="w-6 h-6" />,
+    icon: <Flask size={24} />,
     setup: 'research',
     capabilities: ['reasoning', 'planning', 'web-search'],
     systemPrompt: 'You are a scientific researcher. Design experiments, analyze results, and synthesize scientific data.',
@@ -1407,7 +1405,7 @@ const AGENT_TEMPLATES: AgentTemplate[] = [
     id: 'gaming-buddy',
     name: 'Gaming Guide',
     description: 'Game design, strategy, and retro knowledge',
-    icon: <Gamepad2 className="w-6 h-6" />,
+    icon: <GameController size={24} />,
     setup: 'creative',
     capabilities: ['planning', 'memory', 'web-search'],
     systemPrompt: 'You are a gaming expert. Help with strategy, game design, and retro gaming history.',
@@ -1419,7 +1417,7 @@ const AGENT_TEMPLATES: AgentTemplate[] = [
     id: 'music-producer',
     name: 'Music Producer',
     description: 'Audio theory, composition, and rhythmic motion',
-    icon: <Music className="w-6 h-6" />,
+    icon: <MusicNote size={24} />,
     setup: 'creative',
     capabilities: ['planning', 'reasoning', 'memory'],
     systemPrompt: 'You are a music producer. Help with composition, audio theory, and rhythmic arrangement.',
@@ -1431,7 +1429,7 @@ const AGENT_TEMPLATES: AgentTemplate[] = [
     id: 'sports-coach',
     name: 'Performance Coach',
     description: 'Athletic strategy and energy optimization',
-    icon: <Trophy className="w-6 h-6" />,
+    icon: <Trophy size={24} />,
     setup: 'generalist',
     capabilities: ['planning', 'memory', 'reasoning'],
     systemPrompt: 'You are a performance coach. Help with athletic strategy, training schedules, and energy management.',
@@ -1443,7 +1441,7 @@ const AGENT_TEMPLATES: AgentTemplate[] = [
     id: 'travel-planner',
     name: 'Travel Planner',
     description: 'Adventure logic and logistical planning',
-    icon: <Plane className="w-6 h-6" />,
+    icon: <AirplaneTilt size={24} />,
     setup: 'generalist',
     capabilities: ['web-search', 'planning', 'memory'],
     systemPrompt: 'You are a travel coordinator. Plan adventurous trips and manage complex travel logistics.',
@@ -1455,7 +1453,7 @@ const AGENT_TEMPLATES: AgentTemplate[] = [
     id: 'food-critic',
     name: 'Culinary Expert',
     description: 'Gastronomy and kitchen coordination',
-    icon: <Utensils className="w-6 h-6" />,
+    icon: <Utensils size={24} />,
     setup: 'creative',
     capabilities: ['web-search', 'memory', 'planning'],
     systemPrompt: 'You are a culinary expert. Help with recipes, kitchen management, and gastronomic research.',
@@ -1467,7 +1465,7 @@ const AGENT_TEMPLATES: AgentTemplate[] = [
     id: 'fashion-designer',
     name: 'Fashion Designer',
     description: 'Chic aesthetics and elegant composition',
-    icon: <Sparkles className="w-6 h-6" />,
+    icon: <Sparkle size={24} />,
     setup: 'creative',
     capabilities: ['web-search', 'memory', 'reasoning'],
     systemPrompt: 'You are a fashion designer. Help with aesthetic trends, composition, and chic design patterns.',
@@ -1479,7 +1477,7 @@ const AGENT_TEMPLATES: AgentTemplate[] = [
     id: 'real-estate-pro',
     name: 'Estate Agent',
     description: 'Property logic and solid foundations',
-    icon: <Home className="w-6 h-6" />,
+    icon: <House size={24} />,
     setup: 'research',
     capabilities: ['database', 'web-search', 'reasoning'],
     systemPrompt: 'You are a real estate expert. Analyze property markets and manage estate logistics.',
@@ -1491,7 +1489,7 @@ const AGENT_TEMPLATES: AgentTemplate[] = [
     id: 'retail-manager',
     name: 'Retail Manager',
     description: 'Commercial flow and store optimization',
-    icon: <ShoppingBag className="w-6 h-6" />,
+    icon: <ShoppingBag size={24} />,
     setup: 'operations',
     capabilities: ['database', 'planning', 'reasoning'],
     systemPrompt: 'You are a retail operations manager. Optimize commercial flow and manage store logistics.',
@@ -1550,7 +1548,7 @@ function EmptyAgentState({ onCreate, onCreateFromTemplate }: EmptyAgentStateProp
           margin: '0 auto 24px auto',
           border: `1px solid ${STUDIO_THEME.accent}30`
         }}>
-          <Bot style={{ width: 40, height: 40, color: STUDIO_THEME.accent }} />
+          <Robot style={{ width: 40, height: 40, color: STUDIO_THEME.accent }} />
         </div>
         
         <h1 style={{
@@ -1635,7 +1633,7 @@ function EmptyAgentState({ onCreate, onCreateFromTemplate }: EmptyAgentStateProp
             gap: '8px'
           }}
         >
-          <Sparkles style={{ width: 18, height: 18 }} />
+          <Sparkle style={{ width: 18, height: 18 }} />
           {showTemplates ? 'Hide Templates' : 'Specialist Templates'}
         </button>
       </div>
@@ -1754,7 +1752,7 @@ function EmptyAgentState({ onCreate, onCreateFromTemplate }: EmptyAgentStateProp
           justifyContent: 'center'
         }}>
           {[
-            { icon: <Cog style={{ width: 16, height: 16, color: STUDIO_THEME.accent }} />, title: 'Customizable', desc: 'Configure capabilities' },
+            { icon: <GearSix style={{ width: 16, height: 16, color: STUDIO_THEME.accent }} />, title: 'Customizable', desc: 'Configure capabilities' },
             { icon: <Network style={{ width: 16, height: 16, color: STUDIO_THEME.accent }} />, title: 'Multi-Agent', desc: 'Orchestrator support' },
             { icon: <Shield style={{ width: 16, height: 16, color: STUDIO_THEME.accent }} />, title: 'Secure', desc: 'Built-in guardrails' },
           ].map((feature) => (
@@ -2476,15 +2474,25 @@ export function CreateAgentForm({
   async function fetchData() {
     try {
       const [providersRes, capabilitiesRes] = await Promise.all([
-        fetch(`${GATEWAY_URL}/api/v1/providers`),
-        fetch(`${GATEWAY_URL}/api/v1/capabilities`)
+        fetch('/api/v1/providers'),
+        fetch('/api/v1/capabilities')
       ]);
 
 
-      if (modelsRes.ok) {
-        const data = await modelsRes.json();
+      if (providersRes.ok) {
+        const data = await providersRes.json();
         const allModels: any[] = [];
-        if (data.providers) {
+        if (Array.isArray(data?.all)) {
+          data.all.forEach((provider: any) => {
+            provider?.models?.forEach((model: any) => {
+              allModels.push({
+                id: model.id,
+                name: model.name || model.id,
+                provider: provider.id,
+              });
+            });
+          });
+        } else if (data.providers) {
           Object.entries(data.providers).forEach(([pId, p]: [string, any]) => {
             if (p.models) {
               p.models.forEach((m: any) => allModels.push({ id: m.id, name: m.name || m.id, provider: pId }));
@@ -2494,9 +2502,9 @@ export function CreateAgentForm({
         setApiModels(allModels);
       }
 
-      if (capsRes.ok) {
-        const data = await capsRes.json();
-        setApiCapabilities(data.capabilities || []);
+      if (capabilitiesRes.ok) {
+        const data = await capabilitiesRes.json();
+        setApiCapabilities(Array.isArray(data) ? data : (data.capabilities || []));
       }
     } catch (err) {
       console.error('Failed to fetch enhanced data:', err);
@@ -2875,8 +2883,8 @@ export function CreateAgentForm({
   const getTypeIcon = (typeId: string) => {
     switch (typeId) {
       case 'orchestrator': return <Network style={{ width: 20, height: 20, color: STUDIO_THEME.textPrimary }} />;
-      case 'worker': return <Cog style={{ width: 20, height: 20, color: STUDIO_THEME.textPrimary }} />;
-      default: return <Bot style={{ width: 20, height: 20, color: STUDIO_THEME.textPrimary }} />;
+      case 'worker': return <GearSix style={{ width: 20, height: 20, color: STUDIO_THEME.textPrimary }} />;
+      default: return <Robot style={{ width: 20, height: 20, color: STUDIO_THEME.textPrimary }} />;
     }
   };
 
@@ -3087,7 +3095,7 @@ export function CreateAgentForm({
           boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
           animation: 'slideDown 0.3s ease-out'
         }}>
-          {submitStatus.type === 'success' ? <CheckCircle style={{ width: 20, height: 20 }} /> : <AlertCircle style={{ width: 20, height: 20 }} />}
+          {submitStatus.type === 'success' ? <CheckCircle style={{ width: 20, height: 20 }} /> : <Warning style={{ width: 20, height: 20 }} />}
           <span style={{ fontWeight: 500 }}>{submitStatus.message}</span>
         </div>
       )}
@@ -3102,13 +3110,13 @@ export function CreateAgentForm({
 
       {error && (
         <div style={alertErrorStyle}>
-          <AlertCircle style={{ width: 16, height: 16 }} />
+          <Warning style={{ width: 16, height: 16 }} />
           <span>{error}</span>
         </div>
       )}
       {workspaceWarning && (
         <div style={alertWarningStyle}>
-          <AlertCircle style={{ width: 16, height: 16 }} />
+          <Warning style={{ width: 16, height: 16 }} />
           <span>{workspaceWarning}</span>
         </div>
       )}
@@ -3283,7 +3291,7 @@ export function CreateAgentForm({
                       ease: "easeInOut"
                     }}
                   >
-                    <Bot style={{ width: 48, height: 48, color: '#fff' }} />
+                    <Robot style={{ width: 48, height: 48, color: '#fff' }} />
                   </motion.div>
                 </motion.div>
               </div>
@@ -3352,12 +3360,12 @@ export function CreateAgentForm({
             >
               {[
                 { 
-                  icon: Sparkles, 
+                  icon: Sparkle, 
                   title: "Define Personality", 
                   desc: "Configure creativity, verbosity, and temperament to match your workflow." 
                 },
                 { 
-                  icon: Settings, 
+                  icon: GearSix, 
                   title: "Equip Tools", 
                   desc: "Grant capabilities like code generation, web search, and file operations." 
                 },
@@ -3489,7 +3497,7 @@ export function CreateAgentForm({
           <section style={formSectionStyle}>
             <div style={{ marginBottom: '24px' }}>
               <h2 style={sectionTitleStyle}>
-                <Sparkles style={{ width: 20, height: 20, color: STUDIO_THEME.accent }} />
+                <Sparkle style={{ width: 20, height: 20, color: STUDIO_THEME.accent }} />
                 Agent Identity
               </h2>
               <p style={sectionSubtitleStyle}>
@@ -3622,7 +3630,7 @@ export function CreateAgentForm({
           <section style={formSectionStyle}>
             <div style={{ marginBottom: '24px' }}>
               <h2 style={sectionTitleStyle}>
-                <Sparkles style={{ width: 20, height: 20, color: STUDIO_THEME.accent }} />
+                <Sparkle style={{ width: 20, height: 20, color: STUDIO_THEME.accent }} />
                 Personality Profile
               </h2>
               <p style={sectionSubtitleStyle}>
@@ -3749,7 +3757,7 @@ export function CreateAgentForm({
             <div style={formSectionStyle}>
               <div style={{ marginBottom: '24px' }}>
                 <h2 style={sectionTitleStyle}>
-                  <Sparkles style={{ width: 20, height: 20, color: STUDIO_THEME.accent }} />
+                  <Sparkle style={{ width: 20, height: 20, color: STUDIO_THEME.accent }} />
                   Character Profile
                 </h2>
                 <p style={sectionSubtitleStyle}>
@@ -4201,7 +4209,7 @@ export function CreateAgentForm({
             <div style={formSectionStyle}>
               <div style={{ marginBottom: '24px' }}>
                 <h2 style={sectionTitleStyle}>
-                  <Settings style={{ width: 20, height: 20, color: STUDIO_THEME.accent }} />
+                  <GearSix style={{ width: 20, height: 20, color: STUDIO_THEME.accent }} />
                   Runtime Configuration
                 </h2>
                 <p style={sectionSubtitleStyle}>
@@ -4219,7 +4227,7 @@ export function CreateAgentForm({
                   alignItems: 'center',
                   gap: '8px',
                 }}>
-                  <Bot style={{ width: 18, height: 18, color: STUDIO_THEME.accent }} />
+                  <Robot style={{ width: 18, height: 18, color: STUDIO_THEME.accent }} />
                   Model Configuration
                 </h3>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '20px' }}>
@@ -4357,9 +4365,9 @@ export function CreateAgentForm({
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     {formData.voice?.enabled ? (
-                      <Volume2 style={{ width: 20, height: 20, color: '#22c55e' }} />
+                      <SpeakerHigh style={{ width: 20, height: 20, color: '#22c55e' }} />
                     ) : (
-                      <VolumeX style={{ width: 20, height: 20, color: STUDIO_THEME.textMuted }} />
+                      <SpeakerSlash style={{ width: 20, height: 20, color: STUDIO_THEME.textMuted }} />
                     )}
                     <div>
                       <div style={{ fontWeight: 500, color: STUDIO_THEME.textPrimary }}>Enable Voice</div>
@@ -4448,7 +4456,7 @@ export function CreateAgentForm({
                           }}
                         >
                           {isPlaying ? (
-                            <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />
+                            <CircleNotch style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />
                           ) : (
                             <Play style={{ width: 16, height: 16 }} />
                           )}
@@ -4543,7 +4551,7 @@ export function CreateAgentForm({
                   alignItems: 'center',
                   gap: '8px',
                 }}>
-                  <Zap style={{ width: 18, height: 18, color: STUDIO_THEME.accent }} />
+                  <Lightning style={{ width: 18, height: 18, color: STUDIO_THEME.accent }} />
                   Capabilities Marketplace
                 </h3>
                 <PluginConflictWarning selectedTools={formData.tools || []} />
@@ -4635,7 +4643,7 @@ export function CreateAgentForm({
                     alignItems: 'center',
                     gap: '8px',
                   }}>
-                    <Bot style={{ width: 18, height: 18, color: STUDIO_THEME.accent }} />
+                    <Robot style={{ width: 18, height: 18, color: STUDIO_THEME.accent }} />
                     System Prompt
                   </h3>
                   <div style={{ display: 'flex', gap: '8px' }}>
@@ -4778,7 +4786,7 @@ export function CreateAgentForm({
             <div style={formSectionStyle}>
               <div style={{ marginBottom: '24px' }}>
                 <h2 style={sectionTitleStyle}>
-                  <Layers style={{ width: 20, height: 20, color: STUDIO_THEME.accent }} />
+                  <Stack style={{ width: 20, height: 20, color: STUDIO_THEME.accent }} />
                   Workspace Configuration
                 </h2>
                 <p style={sectionSubtitleStyle}>
@@ -5206,12 +5214,12 @@ ${Object.entries(workspaceLayers).filter(([_, enabled]) => enabled).map(([key]) 
               >
                 {isBusy ? (
                   <>
-                    <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />
+                    <CircleNotch style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />
                     {isForgeQueued ? "Preparing..." : "Creating..."}
                   </>
                 ) : (
                   <>
-                    <Bot style={{ width: 16, height: 16 }} />
+                    <Robot style={{ width: 16, height: 16 }} />
                     Create Agent
                   </>
                 )}
@@ -5413,7 +5421,7 @@ function EditAgentForm({ agent, onCancel }: { agent: Agent; onCancel: () => void
       <div className="flex-1 overflow-auto p-4">
         {error && (
           <Alert variant="destructive" className="mb-4">
-            <AlertCircle className="h-4 w-4" />
+            <Warning size={16} />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
@@ -5552,9 +5560,9 @@ function EditAgentForm({ agent, onCancel }: { agent: Agent; onCancel: () => void
           <div className="flex items-center justify-between p-3 border rounded-lg">
             <div className="flex items-center gap-2">
               {formData.voice?.enabled ? (
-                <Volume2 className="w-4 h-4 text-green-500" />
+                <SpeakerHigh className="w-4 h-4 text-green-500" />
               ) : (
-                <VolumeX className="w-4 h-4 text-muted-foreground" />
+                <SpeakerSlash className="w-4 h-4 text-muted-foreground" />
               )}
               <span className="text-sm">Enable Voice</span>
             </div>
@@ -5594,7 +5602,7 @@ function EditAgentForm({ agent, onCancel }: { agent: Agent; onCancel: () => void
 
         <div className="flex gap-4 pt-4 border-t">
           <Button type="submit" disabled={isCreating} size="lg">
-            {isCreating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            {isCreating && <CircleNotch className="w-4 h-4 mr-2 animate-spin" />}
             Save Changes
           </Button>
           <Button type="button" variant="outline" onClick={onCancel} size="lg">
@@ -5858,7 +5866,7 @@ function AgentDetailView({ agentId }: { agentId: string }) {
               {agent.voice?.enabled && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: '12px', color: STUDIO_THEME.textMuted, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Volume2 style={{ width: 12, height: 12 }} />
+                    <SpeakerHigh style={{ width: 12, height: 12 }} />
                     Voice
                   </span>
                   <span style={{ fontSize: '13px', color: STUDIO_THEME.textPrimary }}>{agent.voice.voiceLabel || agent.voice.voiceId}</span>
@@ -5913,7 +5921,7 @@ function AgentDetailView({ agentId }: { agentId: string }) {
                   gap: '6px',
                 }}
               >
-                <Settings style={{ width: 16, height: 16 }} />
+                <GearSix style={{ width: 16, height: 16 }} />
                 Edit
               </button>
               <button
@@ -5931,7 +5939,7 @@ function AgentDetailView({ agentId }: { agentId: string }) {
                   justifyContent: 'center',
                 }}
               >
-                <Trash2 style={{ width: 16, height: 16 }} />
+                <Trash style={{ width: 16, height: 16 }} />
               </button>
             </div>
           </div>
@@ -6033,7 +6041,7 @@ function AgentDetailView({ agentId }: { agentId: string }) {
               </>
             ) : (
               <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                <Sparkles style={{ width: 32, height: 32, color: STUDIO_THEME.textMuted, margin: '0 auto 12px' }} />
+                <Sparkle style={{ width: 32, height: 32, color: STUDIO_THEME.textMuted, margin: '0 auto 12px' }} />
                 <p style={{ fontSize: '13px', color: STUDIO_THEME.textSecondary }}>
                   No character stats available
                 </p>
@@ -6075,7 +6083,7 @@ function AgentDetailView({ agentId }: { agentId: string }) {
       >
         <Activity style={{ width: 18, height: 18 }} />
         Launch Agent Dashboard
-        <ChevronRight style={{ width: 16, height: 16 }} />
+        <CaretRight style={{ width: 16, height: 16 }} />
       </motion.button>
 
       {/* Delete Confirmation */}
@@ -6163,9 +6171,9 @@ function RunCard({ run, isActive, onClick }: {
   onClick: () => void;
 }) {
   const statusIcon = {
-    running: <Loader2 className="w-4 h-4 animate-spin text-yellow-500" />,
+    running: <CircleNotch className="w-4 h-4 animate-spin text-yellow-500" />,
     completed: <CheckCircle className="w-4 h-4 text-green-500" />,
-    failed: <AlertCircle className="w-4 h-4 text-red-500" />,
+    failed: <Warning className="w-4 h-4 text-red-500" />,
     cancelled: <Square className="w-4 h-4 text-[var(--text-tertiary)]" />,
   }[run.status];
 
@@ -6238,7 +6246,7 @@ function CheckpointCard({ checkpoint }: { checkpoint: AgentCheckpoint }) {
       <Card className="border-0 shadow-none">
         <CardContent className="p-3">
           <div className="flex items-center gap-3">
-            <Save className="w-4 h-4 text-green-500" />
+            <FloppyDisk className="w-4 h-4 text-green-500" />
             <div className="flex-1">
               <div className="font-medium">{checkpoint.label}</div>
               {checkpoint.description && (
@@ -6318,7 +6326,7 @@ function AgentReviewsView({ agentId }: { agentId: string }) {
   if (isLoadingReviews) {
     return (
       <div className="flex items-center justify-center h-32">
-        <Loader2 className="w-6 h-6 animate-spin" />
+        <CircleNotch className="w-6 h-6 animate-spin" />
       </div>
     );
   }
@@ -6329,7 +6337,7 @@ function AgentReviewsView({ agentId }: { agentId: string }) {
       <div className="w-80 border-r pr-4">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-medium flex items-center gap-2">
-            <ShieldAlert className="w-4 h-4" />
+            <ShieldWarning size={16} />
             Pending Reviews
           </h3>
           <Badge variant={pendingReviews.length > 0 ? 'destructive' : 'secondary'}>
@@ -6352,7 +6360,7 @@ function AgentReviewsView({ agentId }: { agentId: string }) {
                 onClick={() => selectReview(review.id)}
               >
                 <div className="flex items-start gap-2">
-                  {review.severity === 'critical' && <ShieldAlert className="w-4 h-4 text-red-500 mt-0.5" />}
+                  {review.severity === 'critical' && <ShieldWarning className="w-4 h-4 text-red-500 mt-0.5" />}
                   {review.severity === 'warning' && <Shield className="w-4 h-4 text-orange-500 mt-0.5" />}
                   {review.severity === 'info' && <ShieldCheck className="w-4 h-4 text-blue-500 mt-0.5" />}
                   <div className="flex-1 min-w-0">
@@ -6378,7 +6386,7 @@ function AgentReviewsView({ agentId }: { agentId: string }) {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Gavel className="w-4 h-4" />
+                  <Gavel size={16} />
                   Review Details
                 </CardTitle>
                 <Badge 
@@ -6556,7 +6564,7 @@ function AgentMailView({ agentId }: { agentId: string }) {
   if (isLoadingMail) {
     return (
       <div className="flex items-center justify-center h-32">
-        <Loader2 className="w-6 h-6 animate-spin" />
+        <CircleNotch className="w-6 h-6 animate-spin" />
       </div>
     );
   }
@@ -6568,11 +6576,11 @@ function AgentMailView({ agentId }: { agentId: string }) {
       <div className="w-64 border-r pr-4">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-medium flex items-center gap-2">
-            <Inbox className="w-4 h-4" />
+            <Tray size={16} />
             Threads
           </h3>
           <Button size="sm" variant="ghost" onClick={() => setShowCompose(true)}>
-            <Send className="w-4 h-4" />
+            <PaperPlaneTilt size={16} />
           </Button>
         </div>
 
@@ -6591,7 +6599,7 @@ function AgentMailView({ agentId }: { agentId: string }) {
                 onClick={() => selectThread(thread.id)}
               >
                 <div className="flex items-start gap-2">
-                  <MessageSquare className="w-4 h-4 mt-0.5 text-muted-foreground" />
+                  <Chat className="w-4 h-4 mt-0.5 text-muted-foreground" />
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-sm truncate">{thread.subject}</div>
                     <div className="text-xs text-muted-foreground mt-1">
@@ -6616,7 +6624,7 @@ function AgentMailView({ agentId }: { agentId: string }) {
           <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
-                <Send className="w-4 h-4" />
+                <PaperPlaneTilt size={16} />
                 Compose Message
               </CardTitle>
             </CardHeader>
@@ -6655,7 +6663,7 @@ function AgentMailView({ agentId }: { agentId: string }) {
               </div>
               <div className="flex gap-2">
                 <Button onClick={handleSend}>
-                  <Send className="w-4 h-4 mr-2" />
+                  <PaperPlaneTilt className="w-4 h-4 mr-2" />
                   Send
                 </Button>
                 <Button variant="outline" onClick={() => setShowCompose(false)}>
@@ -6679,7 +6687,7 @@ function AgentMailView({ agentId }: { agentId: string }) {
                   </p>
                 </div>
                 <Button size="sm" variant="outline" onClick={() => openMonitor(selectedThreadId)}>
-                  <MessageSquare className="w-4 h-4" />
+                  <Chat size={16} />
                   Live Monitor
                 </Button>
               </div>
@@ -6748,7 +6756,7 @@ function MailMessageCard({
               </span>
               {message.requiresAck && message.status !== 'acknowledged' && (
                 <Button size="sm" variant="outline" onClick={onAck}>
-                  <CheckCheck className="w-3 h-3 mr-1" />
+                  <CheckFat className="w-3 h-3 mr-1" />
                   Acknowledge
                 </Button>
               )}
@@ -7001,7 +7009,7 @@ function AgentCapsuleView({ agentId }: { agentId: string }) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <CircleNotch className="w-8 h-8 animate-spin text-primary" />
         <span className="ml-2">Initializing capsule...</span>
       </div>
     );
@@ -7011,7 +7019,7 @@ function AgentCapsuleView({ agentId }: { agentId: string }) {
     return (
       <div className="p-4">
         <Alert variant="destructive">
-          <AlertCircle className="w-4 h-4" />
+          <Warning size={16} />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       </div>
@@ -7038,7 +7046,7 @@ function AgentCapsuleView({ agentId }: { agentId: string }) {
       {/* Debug Panel */}
       <div className="w-80 border-l p-4 space-y-4">
         <h3 className="font-medium flex items-center gap-2">
-          <Activity className="w-4 h-4" />
+          <Activity size={16} />
           Event Log
         </h3>
         <ScrollArea className="h-[400px] border rounded p-2">

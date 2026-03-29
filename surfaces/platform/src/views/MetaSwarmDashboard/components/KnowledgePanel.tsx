@@ -23,13 +23,13 @@ import {
 } from '@/components/ui/select';
 import {
   BookOpen,
-  Search,
-  TrendingUp,
+  MagnifyingGlass,
+  TrendUp,
   Star,
   Cpu,
-  Filter,
-  Sparkles,
-} from 'lucide-react';
+  Funnel,
+  Sparkle,
+} from '@phosphor-icons/react';
 import type { Pattern } from '../types';
 import { metaSwarmClient } from '../api';
 
@@ -174,7 +174,7 @@ export function KnowledgePanel({ className }: KnowledgePanelProps) {
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <BookOpen className="h-5 w-5" />
+            <BookOpen size={20} />
             Knowledge Base
           </div>
           <Badge variant="secondary">{totalPatterns} patterns</Badge>
@@ -184,7 +184,7 @@ export function KnowledgePanel({ className }: KnowledgePanelProps) {
         {/* Search and Filter */}
         <div className="flex gap-2">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search patterns..."
               value={searchQuery}
@@ -194,7 +194,7 @@ export function KnowledgePanel({ className }: KnowledgePanelProps) {
           </div>
           <Select value={selectedType} onValueChange={setSelectedType}>
             <SelectTrigger className="w-40">
-              <Filter className="h-4 w-4 mr-2" />
+              <Funnel className="h-4 w-4 mr-2" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -223,7 +223,7 @@ export function KnowledgePanel({ className }: KnowledgePanelProps) {
               </div>
             ) : filteredPatterns.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                <Sparkles className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <Sparkle className="h-12 w-12 mx-auto mb-2 opacity-50" />
                 <p>No patterns found</p>
               </div>
             ) : (
@@ -240,7 +240,7 @@ export function KnowledgePanel({ className }: KnowledgePanelProps) {
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 rounded-lg bg-muted">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                  <TrendingUp className="h-4 w-4" />
+                  <TrendUp size={16} />
                   Avg Success Rate
                 </div>
                 <div className="text-2xl font-bold">
@@ -249,7 +249,7 @@ export function KnowledgePanel({ className }: KnowledgePanelProps) {
               </div>
               <div className="p-4 rounded-lg bg-muted">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-                  <Cpu className="h-4 w-4" />
+                  <Cpu size={16} />
                   Total Usage
                 </div>
                 <div className="text-2xl font-bold">{totalUsage}</div>

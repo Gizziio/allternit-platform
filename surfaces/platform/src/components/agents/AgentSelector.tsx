@@ -8,7 +8,9 @@
  */
 
 import React from 'react';
-import { ChevronDown } from 'lucide-react';
+import {
+  CaretDown,
+} from '@phosphor-icons/react';
 import { useSurfaceAgentSelection } from '@/lib/agents/surface-agent-context';
 import { useAgentStore } from '@/lib/agents/agent.store';
 import { useAgentSurfaceModeStore } from '@/stores/agent-surface-mode.store';
@@ -91,7 +93,7 @@ export function AgentSelector({ surface, compact = false }: AgentSelectorProps) 
       </select>
 
       {/* Custom dropdown arrow */}
-      <ChevronDown
+      <CaretDown
         size={14}
         className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none"
         style={{ color: selectedAgent ? '#D4956A' : '#9B9B9B' }}

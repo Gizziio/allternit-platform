@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { 
-  Menu, 
-  X, 
-  Search, 
-  Github, 
-  Sun, 
-  Moon, 
+import {
+  List,
+  X,
+  MagnifyingGlass,
+  GithubLogo as Github,
+  Sun,
+  Moon,
   Monitor,
-  ChevronDown,
-  Sparkles,
-} from 'lucide-react';
+  CaretDown,
+  Sparkle,
+} from '@phosphor-icons/react';
 import { useThemeStore } from '../../store/themeStore';
 import { cn } from '../../utils/cn';
 
@@ -54,7 +54,7 @@ export function Header() {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 group">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-a2r-500 to-violet-500 flex items-center justify-center shadow-glow group-hover:shadow-glow-lg transition-shadow">
-              <Sparkles className="w-5 h-5 text-white" />
+              <Sparkle className="w-5 h-5 text-white" />
             </div>
             <span className="font-bold text-xl tracking-tight">
               A2R <span className="text-a2r-500">Dev</span>
@@ -76,7 +76,7 @@ export function Header() {
                 >
                   {item.label}
                   {item.children && (
-                    <ChevronDown className="w-4 h-4 transition-transform group-hover:rotate-180" />
+                    <CaretDown className="w-4 h-4 transition-transform group-hover:rotate-180" />
                   )}
                 </Link>
 
@@ -107,7 +107,7 @@ export function Header() {
               to="/search"
               className="flex items-center gap-2 px-3 py-2 rounded-lg text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-100 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors"
             >
-              <Search className="w-5 h-5" />
+              <MagnifyingGlass size={20} />
               <span className="hidden md:inline text-sm">Search</span>
               <kbd className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface-100 dark:bg-surface-800 text-xs font-mono">
                 ⌘K
@@ -122,11 +122,11 @@ export function Header() {
                 aria-label="Toggle theme"
               >
                 {mode === 'dark' ? (
-                  <Moon className="w-5 h-5" />
+                  <Moon size={20} />
                 ) : mode === 'light' ? (
-                  <Sun className="w-5 h-5" />
+                  <Sun size={20} />
                 ) : (
-                  <Monitor className="w-5 h-5" />
+                  <Monitor size={20} />
                 )}
               </button>
 
@@ -147,9 +147,9 @@ export function Header() {
                           : 'text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-100 hover:bg-surface-100 dark:hover:bg-surface-800'
                       )}
                     >
-                      {theme === 'light' && <Sun className="w-4 h-4" />}
-                      {theme === 'dark' && <Moon className="w-4 h-4" />}
-                      {theme === 'system' && <Monitor className="w-4 h-4" />}
+                      {theme === 'light' && <Sun size={16} />}
+                      {theme === 'dark' && <Moon size={16} />}
+                      {theme === 'system' && <Monitor size={16} />}
                       <span className="capitalize">{theme}</span>
                     </button>
                   ))}
@@ -165,7 +165,7 @@ export function Header() {
               className="hidden sm:flex p-2 rounded-lg text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-100 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors"
               aria-label="GitHub"
             >
-              <Github className="w-5 h-5" />
+              <Github size={20} />
             </a>
 
             {/* Mobile Menu Toggle */}
@@ -175,9 +175,9 @@ export function Header() {
               aria-label="Toggle menu"
             >
               {isMobileMenuOpen ? (
-                <X className="w-5 h-5" />
+                <X size={20} />
               ) : (
-                <Menu className="w-5 h-5" />
+                <List size={20} />
               )}
             </button>
           </div>

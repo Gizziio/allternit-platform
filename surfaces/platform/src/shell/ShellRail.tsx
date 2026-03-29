@@ -23,7 +23,7 @@ import {
   CheckSquare,
   Plus,
 } from '@phosphor-icons/react';
-import { useChatStore, ChatThread, ChatProject } from '../views/chat/ChatStore';
+import { useChatStore, type ChatProject } from '../views/chat/ChatStore';
 import { useArtifactStore } from '../views/cowork/ArtifactStore';
 import { useCoworkStore, Task, TaskProject } from '../views/cowork/CoworkStore';
 import { useCodeModeStore } from '../views/code/CodeModeStore';
@@ -34,9 +34,11 @@ import { useFeaturePlugins } from '../plugins/useFeaturePlugins';
 import { useBrowserStore } from '../capsules/browser/browser.store';
 import { LoadingSpinner } from '../components/LoadingSpinner';
 import { RailRowMenu } from './rail/RailRowMenu';
+import { ProjectRailSection, type UnifiedProject, type UnifiedItem } from './rail/ProjectRailSection';
 import {
   getOpenClawWorkspacePathFromAgent,
   useAgentStore,
+  useEmbeddedAgentSession,
   useEmbeddedAgentSessionStore,
   useNativeAgentStore,
   type NativeSession,
@@ -67,6 +69,8 @@ interface ShellRailProps {
   sidecarOpen?: boolean;
 }
 
+const RAIL_CONTROL_WIDTH = 228;
+
 export function ShellRail({
   activeViewType,
   onOpen,
@@ -80,53 +84,104 @@ export function ShellRail({
     mode === 'cowork' ? 'cowork' : 
     mode === 'code' ? 'code' : 'chat';
   
-  const enabledBySurface = useAgentSurfaceModeStore((s) => s.enabledBySurface);
-  const isAgentActive = enabledBySurface[currentSurface];
+  const currentSurfaceSession = useEmbeddedAgentSession(currentSurface);
+  const isAgentActive = currentSurfaceSession.isEmbedded && currentSurfaceSession.descriptor.sessionMode === 'agent';
   const surfaceTheme = isAgentActive ? getAgentModeSurfaceTheme(currentSurface) : null;
   const [foldedCategories, setFoldedCategories] = useState<Set<string>>(new Set(['workspace', 'ai_vision', 'infrastructure', 'security', 'execution', 'observability', 'services']));
   const [isLoading, setIsLoading] = useState(false);
 
-  // Use useStoreWithEqualityFn with shallow for array/object selectors to avoid infinite loops in Zustand v4
-  const threads = useStoreWithEqualityFn(useChatStore, (s) => s.threads, shallow);
-  const projects = useStoreWithEqualityFn(useChatStore, (s) => s.projects, shallow);
-  const activeThreadId = useStoreWithEqualityFn(useChatStore, (s) => s.activeThreadId);
-  const activeProjectId = useStoreWithEqualityFn(useChatStore, (s) => s.activeProjectId);
-  const setActiveThread = useStoreWithEqualityFn(useChatStore, (s) => s.setActiveThread);
-  const setActiveProject = useStoreWithEqualityFn(useChatStore, (s) => s.setActiveProject);
-  const createProject = useStoreWithEqualityFn(useChatStore, (s) => s.createProject);
-  const renameThread = useStoreWithEqualityFn(useChatStore, (s) => s.renameThread);
-  const deleteThread = useStoreWithEqualityFn(useChatStore, (s) => s.deleteThread);
-  const moveThreadToProject = useStoreWithEqualityFn(useChatStore, (s) => s.moveThreadToProject);
-  const renameProject = useStoreWithEqualityFn(useChatStore, (s) => s.renameProject);
-  const deleteProject = useStoreWithEqualityFn(useChatStore, (s) => s.deleteProject);
+  // Chat Store
+  const chatStore = useChatStore();
+  const chatProjects = useStoreWithEqualityFn(useChatStore, (s) => s.projects, shallow);
   
+  // Native Agent Store
   const nativeSessions = useStoreWithEqualityFn(useNativeAgentStore, (s) => s.sessions, shallow);
   const activeNativeSessionId = useStoreWithEqualityFn(useNativeAgentStore, (s) => s.activeSessionId);
-  const fetchNativeSessions = useStoreWithEqualityFn(useNativeAgentStore, (s) => s.fetchSessions);
   const createNativeSession = useStoreWithEqualityFn(useNativeAgentStore, (s) => s.createSession);
   const setActiveNativeSession = useStoreWithEqualityFn(useNativeAgentStore, (s) => s.setActiveSession);
+  const updateNativeSession = useStoreWithEqualityFn(useNativeAgentStore, (s) => s.updateSession);
+  const deleteNativeSession = useStoreWithEqualityFn(useNativeAgentStore, (s) => s.deleteSession);
   
-  const embeddedSessionIdBySurface = useStoreWithEqualityFn(useEmbeddedAgentSessionStore, (s) => s.sessionIdBySurface, shallow);
-  const setEmbeddedSession = useStoreWithEqualityFn(useEmbeddedAgentSessionStore, (s) => s.setSurfaceSession);
-  const clearEmbeddedSession = useStoreWithEqualityFn(useEmbeddedAgentSessionStore, (s) => s.clearSurfaceSession);
+  // Cowork Store
+  const coworkStore = useCoworkStore();
   
-  const setAgentModeEnabled = useStoreWithEqualityFn(useAgentSurfaceModeStore, (s) => s.setEnabled);
+  // Code Mode Store
+  const codeStore = useCodeModeStore();
+
+  const embeddedSessionIdBySurface = useEmbeddedAgentSessionStore((s) => s.sessionIdBySurface);
+  const setEmbeddedSession = useEmbeddedAgentSessionStore((s) => s.setSurfaceSession);
+  const clearEmbeddedSession = useEmbeddedAgentSessionStore((s) => s.clearSurfaceSession);
+  
   const setSelectedSurfaceAgent = useStoreWithEqualityFn(useAgentSurfaceModeStore, (s) => s.setSelectedAgent);
   const selectedAgentIdBySurface = useStoreWithEqualityFn(useAgentSurfaceModeStore, (s) => s.selectedAgentIdBySurface, shallow);
   
   const agents = useStoreWithEqualityFn(useAgentStore, (s) => s.agents, shallow);
-  const activeArtifactId = useStoreWithEqualityFn(useArtifactStore, (s) => s.activeArtifactId);
-  const setActiveArtifact = useStoreWithEqualityFn(useArtifactStore, (s) => s.setActiveArtifact);
   const tabs = useStoreWithEqualityFn(useBrowserStore, (s) => s.tabs, shallow);
   const activeTabId = useStoreWithEqualityFn(useBrowserStore, (s) => s.activeTabId);
   const setActiveTab = useStoreWithEqualityFn(useBrowserStore, (s) => s.setActiveTab);
   const setSidecarOpen = useStoreWithEqualityFn(useSidecarStore, (s) => s.setOpen);
   
-  // Cowork store for tasks
-  const coworkStore = useCoworkStore();
-  
   const isBrowser = activeViewType === 'browser';
   const { enabledPlugins } = useFeaturePlugins();
+
+  // Unified data mapping
+  const unifiedData = useMemo(() => {
+    if (mode === 'chat') {
+      const projects: UnifiedProject[] = chatProjects.map(p => ({
+        id: p.id,
+        title: p.title,
+        itemIds: p.threadIds
+      }));
+      const chatSessions = nativeSessions.filter(s => {
+        const surface = (s.metadata as any)?.surface;
+        return !surface || surface === 'chat';
+      });
+      const items: UnifiedItem[] = chatSessions.map(s => ({
+        id: s.id,
+        title: s.name || 'Untitled Session',
+        icon: (s.metadata as any)?.sessionMode === 'agent' ? Robot : ChatTeardropText,
+        projectId: (s.metadata as any)?.projectId,
+        isActive: activeNativeSessionId === s.id || embeddedSessionIdBySurface.chat === s.id,
+        metaLabel: formatAgentSessionMetaLabel(s.metadata)
+      }));
+      return { projects, items };
+    } 
+    
+    if (mode === 'cowork') {
+      const projects: UnifiedProject[] = coworkStore.projects.map(p => ({
+        id: p.id,
+        title: p.title,
+        itemIds: coworkStore.tasks.filter(t => t.projectId === p.id).map(t => t.id)
+      }));
+      const items: UnifiedItem[] = coworkStore.tasks.map(t => ({
+        id: t.id,
+        title: t.title,
+        icon: t.mode === 'agent' ? Robot : CheckSquare,
+        projectId: t.projectId,
+        isActive: coworkStore.activeTaskId === t.id,
+        metaLabel: t.status
+      }));
+      return { projects, items };
+    }
+
+    if (mode === 'code') {
+      const projects: UnifiedProject[] = codeStore.workspaces.map(ws => ({
+        id: ws.workspace_id,
+        title: ws.display_name,
+        itemIds: ws.sessions
+      }));
+      const items: UnifiedItem[] = codeStore.sessions.map(s => ({
+        id: s.session_id,
+        title: s.title,
+        icon: Cpu,
+        projectId: s.workspace_id,
+        isActive: codeStore.activeSessionId === s.session_id,
+        metaLabel: s.state
+      }));
+      return { projects, items };
+    }
+    return { projects: [], items: [] };
+  }, [mode, chatProjects, nativeSessions, activeNativeSessionId, embeddedSessionIdBySurface, coworkStore, codeStore]);
 
   // Build active config, then inject any enabled-plugin rail items
   let activeConfig: RailConfigSection[];
@@ -140,8 +195,6 @@ export function ShellRail({
       plugin.views.forEach(view => {
         const section = activeConfig.find(s => s.id === view.railSection);
         if (section && !section.items.some(item => item.id === view.viewType)) {
-          // Use a generic grid icon for plugin-injected items (icon resolved at render via RailConfigItem)
-          // Use Sparkle as the default plugin-injected rail icon
           const existingIcon = RAIL_CONFIG.flatMap(s => s.items).find(i => i.id === view.viewType)?.icon;
           section.items.push({
             id: view.viewType,
@@ -162,14 +215,6 @@ export function ShellRail({
       return next;
     });
   }, []);
-
-  const handleCreateProject = useCallback(() => {
-    createProject('New Project');
-  }, [createProject]);
-
-  useEffect(() => {
-    void fetchNativeSessions().catch(() => {});
-  }, [fetchNativeSessions]);
 
   if (isCollapsed) return null;
 
@@ -207,53 +252,39 @@ export function ShellRail({
 
   const openNativeSessionSurface = useCallback((session: NativeSession) => {
     const descriptor = getAgentSessionDescriptor(session.metadata);
-    const originSurface = descriptor.originSurface;
+    // Default to 'chat' if no originSurface is set - this ensures sessions always navigate
+    const originSurface = descriptor.originSurface || 'chat';
 
     setActiveNativeSession(session.id);
 
-    if (
-      originSurface === 'chat' ||
-      originSurface === 'code' ||
-      originSurface === 'cowork' ||
-      originSurface === 'browser'
-    ) {
-      setEmbeddedSession(originSurface, session.id);
-      setAgentModeEnabled(originSurface, true);
-      if (descriptor.agentId) {
-        setSelectedSurfaceAgent(originSurface, descriptor.agentId);
-      }
+    // Always embed the session to the appropriate surface
+    setEmbeddedSession(originSurface, session.id);
+    if (descriptor.agentId) {
+      setSelectedSurfaceAgent(originSurface, descriptor.agentId);
+    }
 
-      if (originSurface === 'browser') {
-        setSidecarOpen(true);
-        onOpen?.('browser');
-        return;
-      }
-
-      if (onModeChange) {
-        if (originSurface === 'code') {
-          onModeChange('code');
-        } else if (originSurface === 'cowork') {
-          onModeChange('cowork');
-        } else {
-          onModeChange('chat');
-        }
-        return;
-      }
-
-      if (originSurface === 'cowork') {
-        onOpen?.('workspace');
-      } else {
-        onOpen?.(originSurface === 'code' ? 'code' : 'chat');
-      }
+    if (originSurface === 'browser') {
+      setSidecarOpen(true);
+      onOpen?.('browser');
       return;
     }
 
-    onOpen?.('native-agent');
+    // Always notify mode change AND open the view
+    if (originSurface === 'code') {
+      onModeChange?.('code');
+      onOpen?.('code');
+    } else if (originSurface === 'cowork') {
+      onModeChange?.('cowork');
+      onOpen?.('workspace');
+    } else {
+      // Default to chat for 'chat' surface or any other/unknown surface
+      onModeChange?.('chat');
+      onOpen?.('chat');
+    }
   }, [
     onModeChange,
     onOpen,
     setActiveNativeSession,
-    setAgentModeEnabled,
     setEmbeddedSession,
     setSelectedSurfaceAgent,
     setSidecarOpen,
@@ -281,25 +312,27 @@ export function ShellRail({
       <div style={{ height: 104 }} />
 
       {/* SEARCH BAR */}
-      <div style={{ padding: '0 16px 12px 16px' }}>
+      <div style={{ padding: '0 8px 8px 8px' }}>
         <div style={{ 
+          width: RAIL_CONTROL_WIDTH,
+          maxWidth: '100%',
           display: 'flex', 
           alignItems: 'center', 
           gap: 8, 
-          background: 'rgba(255,255,255,0.03)', 
+          background: 'var(--shell-panel-bg)', 
           borderRadius: 14, 
           padding: '9px 12px', 
-          border: '1px solid rgba(255,255,255,0.06)',
+          border: '1px solid var(--shell-floating-border)',
           boxShadow: 'none'
         }}>
-          <MagnifyingGlass size={16} color="#b08d6e" weight="bold" />
+          <MagnifyingGlass size={16} color="var(--accent-primary)" weight="bold" />
           <input 
             placeholder="Search..." 
             style={{ 
               background: 'transparent', 
               border: 'none', 
               outline: 'none', 
-              color: '#ececec', 
+              color: 'var(--shell-item-fg)', 
               fontSize: 13, 
               width: '100%',
               fontWeight: 500
@@ -322,7 +355,7 @@ export function ShellRail({
               {showSeparator && (
                 <div style={{ 
                   padding: '8px 12px', 
-                  color: '#b08d6e', 
+                  color: 'var(--accent-secondary)', 
                   fontSize: 11, 
                   fontWeight: 800,
                   letterSpacing: '0.08em'
@@ -342,17 +375,17 @@ export function ShellRail({
                     background: 'transparent', 
                     border: 'none', 
                     cursor: 'pointer', 
-                    color: '#b08d6e',
+                    color: 'var(--accent-secondary)',
                     borderRadius: 12,
                     transition: 'background 0.2s, color 0.2s'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
-                    e.currentTarget.style.color = '#d4b08c';
+                    e.currentTarget.style.background = 'var(--shell-item-hover)';
+                    e.currentTarget.style.color = 'var(--accent-primary)';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.color = '#b08d6e';
+                    e.currentTarget.style.color = 'var(--accent-secondary)';
                   }}
                 >
                   {isFolded ? <CaretRight size={10} weight="bold" /> : <CaretDown size={10} weight="bold" />}
@@ -362,81 +395,97 @@ export function ShellRail({
 
               {!isFolded && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 2 }}>
-                  {category.id === 'sessions' ? (
-                    <SessionsSection
-                      projects={projects}
-                      threads={threads}
-                      activeProjectId={activeProjectId}
-                      activeThreadId={activeThreadId}
-                      onCreateProject={handleCreateProject}
-                      onSetActiveProject={setActiveProject}
-                      onSetActiveThread={setActiveThread}
-                      onOpenChatSurface={openChatSurface}
-                      onOpen={onOpen}
-                      onRenameThread={renameThread}
-                      onDeleteThread={deleteThread}
-                      onArchiveThread={(id: string) => {
-                        // Archive by moving to a special "archived" project or mark as archived
-                        // For now, we'll just show an alert - you can implement proper archiving
-                        console.log('Archive thread:', id);
+                  {category.id === 'sessions' || category.id === 'tasks' || category.id === 'threads' ? (
+                    <ProjectRailSection
+                      projects={unifiedData.projects}
+                      items={unifiedData.items}
+                      activeProjectId={
+                        mode === 'chat' ? chatStore.activeProjectId : 
+                        mode === 'cowork' ? coworkStore.activeProjectId : 
+                        codeStore.activeWorkspaceId
+                      }
+                      onCreateProject={() => {
+                        if (mode === 'chat') chatStore.createProject('New Project');
+                        else if (mode === 'cowork') coworkStore.createProject('New Project');
+                        else if (mode === 'code') {
+                          codeStore.createWorkspace('New Workspace');
+                          onOpen?.('code-project');
+                        }
                       }}
-                      onMoveThreadToProject={moveThreadToProject}
-                      onRenameProject={renameProject}
-                      onDeleteProject={deleteProject}
-                      activeViewType={activeViewType}
-                      nativeSessions={nativeSessions}
-                      activeNativeSessionId={activeNativeSessionId}
-                      onOpenHistory={() => onOpen?.('history')}
-                      onOpenArchived={() => onOpen?.('archived')}
-                      onOpenNativeWorkspace={() => onOpen?.('native-agent')}
-                      embeddedSessionIdBySurface={embeddedSessionIdBySurface}
-                      onOpenNativeSession={openNativeSessionSurface}
-                      onCreateNativeSession={async () => {
-                        try {
-                          const session = await createNativeSession(
-                            undefined,
-                            undefined,
-                            {
-                              originSurface: currentAgentSurface,
-                              sessionMode: 'agent',
-                              agentId: selectedAgent?.id,
-                              agentName: selectedAgent?.name,
-                              workspaceScope: getOpenClawWorkspacePathFromAgent(selectedAgent) ?? undefined,
-                              runtimeModel: selectedAgent?.model,
-                              agentFeatures: {
-                                workspace: true,
-                                tools: true,
-                              },
-                            },
-                          );
-                          openNativeSessionSurface(session);
-                          return;
-                        } catch (_error) {}
-                        onOpen?.('native-agent');
+                      onOpenProject={(id) => {
+                        if (mode === 'chat') { chatStore.setActiveProject(id); openChatSurface(); }
+                        else if (mode === 'cowork') { coworkStore.setActiveProject(id); openCoworkSurface(); }
+                        else if (mode === 'code') { codeStore.setActiveWorkspace(id); onOpen?.('code-project'); }
                       }}
-                    />
-                  ) : category.id === 'tasks' ? (
-                    <TasksSection
-                      projects={coworkStore.projects}
-                      tasks={coworkStore.tasks}
-                      activeProjectId={coworkStore.activeProjectId}
-                      activeTaskId={coworkStore.activeTaskId}
-                      onCreateProject={() => coworkStore.createProject('New Project')}
-                      onSetActiveProject={coworkStore.setActiveProject}
-                      onSetActiveTask={coworkStore.setActiveTask}
-                      onOpenCoworkSurface={openCoworkSurface}
-                      onOpen={onOpen}
-                      onRenameTask={coworkStore.renameTask}
-                      onDeleteTask={coworkStore.deleteTask}
-                      onMoveTaskToProject={coworkStore.moveTaskToProject}
-                      onRenameProject={coworkStore.renameProject}
-                      onDeleteProject={coworkStore.deleteProject}
-                      activeViewType={activeViewType}
-                    />
-                  ) : category.id === 'threads' && isCodeMode ? (
-                    <CodeThreadsSection
-                      onOpen={onOpen}
-                      activeViewType={activeViewType}
+                      onRenameProject={(id, title) => {
+                        if (mode === 'chat') chatStore.renameProject(id, title);
+                        else if (mode === 'cowork') coworkStore.renameProject(id, title);
+                        else if (mode === 'code') codeStore.renameWorkspace(id, title);
+                      }}
+                      onDeleteProject={(id) => {
+                        if (mode === 'chat') chatStore.deleteProject(id);
+                        else if (mode === 'cowork') coworkStore.deleteProject(id);
+                        else if (mode === 'code') codeStore.deleteWorkspace(id);
+                      }}
+                      onOpenItem={(id) => {
+                        if (mode === 'chat') {
+                          const session = nativeSessions.find(s => s.id === id);
+                          if (session) openNativeSessionSurface(session);
+                        } else if (mode === 'cowork') {
+                          coworkStore.setActiveTask(id);
+                          openCoworkSurface();
+                        } else if (mode === 'code') {
+                          if (codeStore.sessions.some(s => s.session_id === id)) {
+                            codeStore.setActiveSession(id);
+                            onOpen?.('code');
+                          } else {
+                            const session = nativeSessions.find(s => s.id === id);
+                            if (session) openNativeSessionSurface(session);
+                          }
+                        }
+                      }}
+                      onRenameItem={(id, title) => {
+                        if (mode === 'chat' || (mode === 'code' && !codeStore.sessions.some(s => s.session_id === id))) {
+                          updateNativeSession(id, { name: title });
+                        } else if (mode === 'cowork') {
+                          coworkStore.renameTask(id, title);
+                        }
+                      }}
+                      onDeleteItem={(id) => {
+                        if (mode === 'chat' || (mode === 'code' && !codeStore.sessions.some(s => s.session_id === id))) {
+                          deleteNativeSession(id);
+                        } else if (mode === 'cowork') {
+                          coworkStore.deleteTask(id);
+                        }
+                      }}
+                      onMoveItemToProject={(itemId, projectId) => {
+                        if (mode === 'chat') chatStore.moveThreadToProject(itemId, projectId);
+                        else if (mode === 'cowork') coworkStore.moveTaskToProject(itemId, projectId);
+                      }}
+                      emptyNotice={
+                        mode === 'chat' ? {
+                          icon: ChatTeardropText,
+                          title: "No sessions yet",
+                          description: "Start a chat or create an agent session.",
+                          actionLabel: "Open chat",
+                          onAction: () => onOpen?.('chat')
+                        } : mode === 'cowork' ? {
+                          icon: CheckSquare,
+                          title: "No tasks yet",
+                          description: "Create a task to get started.",
+                          actionLabel: "New Task",
+                          onAction: () => onOpen?.('cowork-new-task')
+                        } : {
+                          icon: Cpu,
+                          title: "No workspace",
+                          description: "Create a workspace to start coding.",
+                          actionLabel: "New Workspace",
+                          onAction: () => {
+                            codeStore.createWorkspace('New Workspace');
+                            onOpen?.('code-project');
+                          }
+                        }
+                      }
                     />
                   ) : (
                     category.items.map((item: any) => (
@@ -445,7 +494,7 @@ export function ShellRail({
                         id={item.id}
                         icon={item.icon}
                         label={item.label}
-                        isActive={activeViewType === item.payload}
+                        isActive={!item.isAction && activeViewType === item.payload}
                         onClick={() => {
                           onOpen?.(item.payload);
                           if (item.payload === 'chat') onModeChange?.('chat');
@@ -457,7 +506,7 @@ export function ShellRail({
                   )}
 
                   {category.id === 'core' && isBrowser && tabs.length > 0 && (
-                    <div style={{ paddingLeft: 8, borderLeft: '1px solid #333', marginTop: 4, marginLeft: 8 }}>
+                    <div style={{ paddingLeft: 8, borderLeft: '1px solid var(--border-subtle)', marginTop: 4, marginLeft: 8 }}>
                       {tabs.map(tab => (
                         <RailItem 
                           key={tab.id}
@@ -479,38 +528,38 @@ export function ShellRail({
       {/* FOOTER */}
       <div style={{ 
         padding: '16px 20px', 
-        borderTop: '1px solid #333', 
+        borderTop: '1px solid var(--shell-divider)', 
         display: 'flex', 
         alignItems: 'center', 
         gap: 12,
-        background: 'rgba(255,255,255,0.02)'
+        background: 'var(--shell-panel-bg)'
       }}>
         <div style={{ 
           width: 32, 
           height: 32, 
           borderRadius: 10, 
-          background: 'linear-gradient(135deg, #D97757 0%, #B08D6E 100%)', 
+          background: 'linear-gradient(135deg, var(--accent-chat) 0%, var(--accent-primary) 100%)', 
           flexShrink: 0,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: 'white',
+          color: 'var(--bg-primary)',
           fontSize: 14,
           fontWeight: 'bold'
         }}>U</div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ color: '#ececec', fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>User Name</div>
-          <div style={{ color: '#6e6e6e', fontSize: 11, fontWeight: 500 }}>Pro Plan</div>
+          <div style={{ color: 'var(--shell-item-fg)', fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>User Name</div>
+          <div style={{ color: 'var(--shell-item-muted)', fontSize: 11, fontWeight: 500 }}>Pro Plan</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button
             onClick={() => onOpen?.('products')}
             onMouseEnter={(e) => {
-              e.currentTarget.style.color = '#d4b08c';
-              e.currentTarget.style.background = 'rgba(212,176,140,0.1)';
+              e.currentTarget.style.color = 'var(--accent-primary)';
+              e.currentTarget.style.background = 'var(--shell-item-hover)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.color = '#6e6e6e';
+              e.currentTarget.style.color = 'var(--shell-item-muted)';
               e.currentTarget.style.background = 'transparent';
             }}
             style={{
@@ -519,7 +568,7 @@ export function ShellRail({
               borderRadius: 8,
               border: 'none',
               background: 'transparent',
-              color: '#6e6e6e',
+              color: 'var(--shell-item-muted)',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -533,11 +582,11 @@ export function ShellRail({
           <SettingsDrilldown>
             <button
               onMouseEnter={(e) => {
-                e.currentTarget.style.color = '#d4b08c';
-                e.currentTarget.style.background = 'rgba(212,176,140,0.1)';
+                e.currentTarget.style.color = 'var(--accent-primary)';
+                e.currentTarget.style.background = 'var(--shell-item-hover)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.color = '#6e6e6e';
+                e.currentTarget.style.color = 'var(--shell-item-muted)';
                 e.currentTarget.style.background = 'transparent';
               }}
               style={{
@@ -546,7 +595,7 @@ export function ShellRail({
                 borderRadius: 8,
                 border: 'none',
                 background: 'transparent',
-                color: '#6e6e6e',
+                color: 'var(--shell-item-muted)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -587,18 +636,11 @@ function formatNativeSessionTimestamp(value?: string): string {
 
 const SessionsSection = memo(function SessionsSection({
   projects,
-  threads,
   activeProjectId,
-  activeThreadId,
   onCreateProject,
   onSetActiveProject,
-  onSetActiveThread,
   onOpenChatSurface,
   onOpen,
-  onRenameThread,
-  onDeleteThread,
-  onArchiveThread,
-  onMoveThreadToProject,
   onRenameProject,
   onDeleteProject,
   activeViewType,
@@ -612,18 +654,11 @@ const SessionsSection = memo(function SessionsSection({
   onCreateNativeSession,
 }: {
   projects: ChatProject[];
-  threads: ChatThread[];
   activeProjectId: string | null;
-  activeThreadId: string | null;
   onCreateProject: () => void;
   onSetActiveProject: (id: string | null) => void;
-  onSetActiveThread: (id: string | null) => void;
   onOpenChatSurface: () => void;
   onOpen?: (view: string) => void;
-  onRenameThread: (id: string, title: string) => void;
-  onDeleteThread: (id: string) => void;
-  onArchiveThread: (id: string) => void;
-  onMoveThreadToProject: (threadId: string, projectId: string | null) => void;
   onRenameProject: (id: string, title: string) => void;
   onDeleteProject: (id: string) => void;
   activeViewType?: string;
@@ -636,114 +671,40 @@ const SessionsSection = memo(function SessionsSection({
   onOpenNativeSession: (session: NativeSession) => void;
   onCreateNativeSession: () => Promise<void>;
 }) {
-  const seenKeys = new Set<string>();
-  const getUniqueKey = (type: string, id: string, index: number) => {
-    const baseKey = `${type}-${id}`;
-    if (seenKeys.has(baseKey)) {
-      return `${baseKey}-${index}`;
-    }
-    seenKeys.add(baseKey);
-    return baseKey;
-  };
+  // Build a flat list of all sessions sorted by recency
+  const allItems = nativeSessions
+    .map((session) => ({
+      data: session,
+      key: `session-${session.id}`,
+      timestamp: Date.parse(session.updatedAt || session.createdAt) || 0,
+    }))
+    .sort((a, b) => b.timestamp - a.timestamp);
 
-  const conversationThreads = threads.filter((thread) => !thread.projectId);
-  const [activeTab, setActiveTab] = useState<'chats' | 'agents'>('chats');
-  
+  const GROUP_ORDER = ['Today', 'Yesterday', 'Past 7 days', 'Older'] as const;
+  type GroupName = typeof GROUP_ORDER[number];
+
+  function getDateGroup(timestamp: number): GroupName {
+    const diff = Date.now() - timestamp;
+    const day = 86400000;
+    if (diff < day) return 'Today';
+    if (diff < 2 * day) return 'Yesterday';
+    if (diff < 7 * day) return 'Past 7 days';
+    return 'Older';
+  }
+
+  const grouped = new Map<GroupName, UnifiedItem[]>();
+  for (const item of allItems) {
+    const group = getDateGroup(item.timestamp);
+    const bucket = grouped.get(group);
+    if (bucket) bucket.push(item);
+    else grouped.set(group, [item]);
+  }
+
+  const isEmpty = allItems.length === 0;
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 6 }}>
-      {/* Tabs for Chats / Agent Sessions */}
-      <div style={{ 
-        display: 'flex', 
-        gap: 6, 
-        padding: '3px 8px',
-      }}>
-        <button
-          onClick={() => setActiveTab('chats')}
-          onMouseEnter={(e) => {
-            if (activeTab !== 'chats') {
-              e.currentTarget.style.color = '#d4b08c';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (activeTab !== 'chats') {
-              e.currentTarget.style.color = '#888';
-            }
-          }}
-          style={{
-            flex: 1,
-            padding: '4px 6px',
-            borderRadius: '5px',
-            border: 'none',
-            background: activeTab === 'chats' 
-              ? 'linear-gradient(135deg, rgba(217,119,87,0.18) 0%, rgba(212,176,140,0.12) 100%)' 
-              : 'transparent',
-            color: activeTab === 'chats' ? '#f0c8aa' : '#888',
-            fontSize: '10px',
-            fontWeight: 600,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '3px',
-            transition: 'all 0.2s',
-            boxShadow: activeTab === 'chats' ? '0 4px 12px rgba(217,119,87,0.15)' : 'none',
-          }}
-        >
-          Chats
-          <span style={{ 
-            padding: '0px 3px', 
-            background: activeTab === 'chats' ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)', 
-            borderRadius: '2px',
-            fontSize: '9px',
-          }}>
-            {conversationThreads.length}
-          </span>
-        </button>
-        <button
-          onClick={() => setActiveTab('agents')}
-          onMouseEnter={(e) => {
-            if (activeTab !== 'agents') {
-              e.currentTarget.style.color = '#d4b08c';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (activeTab !== 'agents') {
-              e.currentTarget.style.color = '#888';
-            }
-          }}
-          style={{
-            flex: 1,
-            padding: '4px 6px',
-            borderRadius: '5px',
-            border: 'none',
-            background: activeTab === 'agents' 
-              ? 'linear-gradient(135deg, rgba(217,119,87,0.18) 0%, rgba(212,176,140,0.12) 100%)' 
-              : 'transparent',
-            color: activeTab === 'agents' ? '#f0c8aa' : '#888',
-            fontSize: '10px',
-            fontWeight: 600,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '3px',
-            transition: 'all 0.2s',
-            boxShadow: activeTab === 'agents' ? '0 4px 12px rgba(217,119,87,0.15)' : 'none',
-          }}
-        >
-          Agent Sessions
-          <span style={{ 
-            padding: '0px 3px', 
-            background: activeTab === 'agents' ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)', 
-            borderRadius: '2px',
-            fontSize: '9px',
-          }}>
-            {nativeSessions.length}
-          </span>
-        </button>
-      </div>
-
-      {/* Projects - Right under tabs */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingBottom: 6 }}>
+      {/* Projects */}
       <ProjectsStack
         projects={projects}
         activeProjectId={activeProjectId}
@@ -756,92 +717,48 @@ const SessionsSection = memo(function SessionsSection({
         onDeleteProject={onDeleteProject}
       />
 
-      {/* Chats Tab */}
-      {activeTab === 'chats' && (
-        <div style={{ padding: '0 8px' }}>
-          {conversationThreads.length > 0 ? (
-            conversationThreads.map((thread, idx) => (
-              <ThreadRailItem
-                key={getUniqueKey('thread', thread.id, idx)}
-                id={`thread-${thread.id}`}
-                thread={thread}
-                icon={thread.mode === 'agent' ? Robot : ChatTeardropText}
-                label={thread.title}
-                isActive={activeThreadId === thread.id}
-                projects={projects}
-                metaLabel={thread.mode === 'agent' ? 'Agent chat' : undefined}
-                onClick={() => {
-                  onSetActiveThread(thread.id);
-                  onOpenChatSurface();
-                }}
-                onRename={(newTitle: string) => onRenameThread?.(thread.id, newTitle)}
-                onDelete={() => onDeleteThread?.(thread.id)}
-                onArchive={() => onArchiveThread?.(thread.id)}
-                onMoveToProject={(projectId: string) => onMoveThreadToProject?.(thread.id, projectId)}
-              />
-            ))
-          ) : (
-            <GhostRailNotice
-              icon={ChatTeardropText}
-              title="No conversation sessions yet"
-              description="Start a chat to create the first regular session."
-              actionLabel="Open chat"
-              onClick={() => onOpen?.('chat')}
-            />
-          )}
-        </div>
-      )}
-
-      {/* Agent Sessions Tab */}
-      {activeTab === 'agents' && (
-        <div style={{ padding: '0 8px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '11px', color: '#888', textTransform: 'uppercase', fontWeight: 600 }}>
-              Workspaces
-            </span>
-            <button 
-              onClick={() => onCreateNativeSession()}
-              style={{
-                padding: '4px 8px',
-                background: 'rgba(212,176,140,0.1)',
-                border: 'none',
-                borderRadius: '4px',
-                color: '#d4b08c',
-                fontSize: '11px',
-                cursor: 'pointer',
-              }}
-            >
-              + New
-            </button>
-          </div>
-          {nativeSessions.length > 0 ? (
-            nativeSessions.map((session, idx) => (
-              <NativeSessionRailItem
-                key={getUniqueKey('native', session.id, idx)}
-                session={session}
-                isActive={
-                  (activeViewType === 'native-agent' && activeNativeSessionId === session.id) ||
-                  (activeViewType === 'chat' &&
-                    embeddedSessionIdBySurface.chat === session.id) ||
-                  (activeViewType === 'code' &&
-                    embeddedSessionIdBySurface.code === session.id)
-                }
-                onClick={() => onOpenNativeSession(session)}
-              />
-            ))
-          ) : (
-            <GhostRailNotice
-              icon={Cpu}
-              title="No agent sessions yet"
-              description="Open the agent-session workspace or create a durable operator session with its own brief and canvas state."
-              actionLabel="Open agent sessions"
-              onClick={() => {
-                onOpenNativeWorkspace?.();
-              }}
-            />
-          )}
-        </div>
-      )}
+      {/* Flat unified session list grouped by date */}
+      <div style={{ padding: '0 8px' }}>
+        {isEmpty ? (
+          <GhostRailNotice
+            icon={ChatTeardropText}
+            title="No sessions yet"
+            description="Start a chat or create an agent session."
+            actionLabel="Open chat"
+            onClick={() => onOpen?.('chat')}
+          />
+        ) : (
+          GROUP_ORDER.filter((g) => grouped.has(g)).map((group) => (
+            <div key={group}>
+              <div style={{
+                fontSize: 10,
+                fontWeight: 600,
+                color: 'var(--shell-item-muted)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                padding: '8px 4px 4px',
+              }}>
+                {group}
+              </div>
+              {grouped.get(group)!.map((item) => {
+                const session = item.data;
+                return (
+                  <NativeSessionRailItem
+                    key={item.key}
+                    session={session}
+                    isActive={
+                      (activeViewType === 'native-agent' && activeNativeSessionId === session.id) ||
+                      (activeViewType === 'chat' && embeddedSessionIdBySurface.chat === session.id) ||
+                      (activeViewType === 'code' && embeddedSessionIdBySurface.code === session.id)
+                    }
+                    onClick={() => onOpenNativeSession(session)}
+                  />
+                );
+              })}
+            </div>
+          ))
+        )}
+      </div>
     </div>
   );
 });
@@ -893,105 +810,11 @@ const TasksSection = memo(function TasksSection({
     return baseKey;
   };
 
-  const regularTasks = tasks.filter((task) => !task.projectId && task.mode === 'task');
-  const agentTasks = tasks.filter((task) => !task.projectId && task.mode === 'agent');
-  const [activeTab, setActiveTab] = useState<'tasks' | 'agent-tasks'>('tasks');
-  
+  const visibleTasks = tasks.filter((task) => !task.projectId);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingBottom: 6 }}>
-      {/* Tabs for Tasks / Agent Tasks */}
-      <div style={{ 
-        display: 'flex', 
-        gap: 6, 
-        padding: '3px 8px',
-      }}>
-        <button
-          onClick={() => setActiveTab('tasks')}
-          onMouseEnter={(e) => {
-            if (activeTab !== 'tasks') {
-              e.currentTarget.style.color = '#d4b08c';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (activeTab !== 'tasks') {
-              e.currentTarget.style.color = '#888';
-            }
-          }}
-          style={{
-            flex: 1,
-            padding: '4px 6px',
-            borderRadius: '5px',
-            border: 'none',
-            background: activeTab === 'tasks' 
-              ? 'linear-gradient(135deg, rgba(217,119,87,0.18) 0%, rgba(212,176,140,0.12) 100%)' 
-              : 'transparent',
-            color: activeTab === 'tasks' ? '#f0c8aa' : '#888',
-            fontSize: '10px',
-            fontWeight: 600,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '3px',
-            transition: 'all 0.2s',
-            boxShadow: activeTab === 'tasks' ? '0 4px 12px rgba(217,119,87,0.15)' : 'none',
-          }}
-        >
-          Tasks
-          <span style={{ 
-            padding: '0px 3px', 
-            background: activeTab === 'tasks' ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)', 
-            borderRadius: '2px',
-            fontSize: '9px',
-          }}>
-            {regularTasks.length}
-          </span>
-        </button>
-        <button
-          onClick={() => setActiveTab('agent-tasks')}
-          onMouseEnter={(e) => {
-            if (activeTab !== 'agent-tasks') {
-              e.currentTarget.style.color = '#d4b08c';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (activeTab !== 'agent-tasks') {
-              e.currentTarget.style.color = '#888';
-            }
-          }}
-          style={{
-            flex: 1,
-            padding: '4px 6px',
-            borderRadius: '5px',
-            border: 'none',
-            background: activeTab === 'agent-tasks' 
-              ? 'linear-gradient(135deg, rgba(217,119,87,0.18) 0%, rgba(212,176,140,0.12) 100%)' 
-              : 'transparent',
-            color: activeTab === 'agent-tasks' ? '#f0c8aa' : '#888',
-            fontSize: '10px',
-            fontWeight: 600,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '3px',
-            transition: 'all 0.2s',
-            boxShadow: activeTab === 'agent-tasks' ? '0 4px 12px rgba(217,119,87,0.15)' : 'none',
-          }}
-        >
-          Agent Tasks
-          <span style={{ 
-            padding: '0px 3px', 
-            background: activeTab === 'agent-tasks' ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)', 
-            borderRadius: '2px',
-            fontSize: '9px',
-          }}>
-            {agentTasks.length}
-          </span>
-        </button>
-      </div>
-
-      {/* Projects - Right under tabs */}
+      {/* Projects */}
       <TaskProjectsStack
         projects={projects}
         activeProjectId={activeProjectId}
@@ -1004,75 +827,38 @@ const TasksSection = memo(function TasksSection({
         onDeleteProject={onDeleteProject}
       />
 
-      {/* Tasks Tab */}
-      {activeTab === 'tasks' && (
-        <div style={{ padding: '0 8px' }}>
-          {regularTasks.length > 0 ? (
-            regularTasks.map((task, idx) => (
-              <TaskRailItem
-                key={getUniqueKey('task', task.id, idx)}
-                id={`task-${task.id}`}
-                task={task}
-                icon={CheckSquare}
-                label={task.title}
-                isActive={activeTaskId === task.id}
-                projects={projects}
-                metaLabel={task.status}
-                onClick={() => {
-                  onSetActiveTask(task.id);
-                  onOpenCoworkSurface();
-                }}
-                onRename={(newTitle: string) => onRenameTask?.(task.id, newTitle)}
-                onDelete={() => onDeleteTask?.(task.id)}
-                onMoveToProject={(projectId: string) => onMoveTaskToProject?.(task.id, projectId)}
-              />
-            ))
-          ) : (
-            <GhostRailNotice
-              icon={CheckSquare}
-              title="No tasks yet"
-              description="Create a task to get started with your work."
-              actionLabel="New Task"
-              onClick={() => onOpen?.('cowork-new-task')}
+      {/* All tasks — unified list */}
+      <div style={{ padding: '0 8px' }}>
+        {visibleTasks.length > 0 ? (
+          visibleTasks.map((task, idx) => (
+            <TaskRailItem
+              key={getUniqueKey('task', task.id, idx)}
+              id={`task-${task.id}`}
+              task={task}
+              icon={task.mode === 'agent' ? Robot : CheckSquare}
+              label={task.title}
+              isActive={activeTaskId === task.id}
+              projects={projects}
+              metaLabel={task.mode === 'agent' ? 'Agent task' : task.status}
+              onClick={() => {
+                onSetActiveTask(task.id);
+                onOpenCoworkSurface();
+              }}
+              onRename={(newTitle: string) => onRenameTask?.(task.id, newTitle)}
+              onDelete={() => onDeleteTask?.(task.id)}
+              onMoveToProject={(projectId: string) => onMoveTaskToProject?.(task.id, projectId)}
             />
-          )}
-        </div>
-      )}
-
-      {/* Agent Tasks Tab */}
-      {activeTab === 'agent-tasks' && (
-        <div style={{ padding: '0 8px' }}>
-          {agentTasks.length > 0 ? (
-            agentTasks.map((task, idx) => (
-              <TaskRailItem
-                key={getUniqueKey('agent-task', task.id, idx)}
-                id={`agent-task-${task.id}`}
-                task={task}
-                icon={Robot}
-                label={task.title}
-                isActive={activeTaskId === task.id}
-                projects={projects}
-                metaLabel="Agent task"
-                onClick={() => {
-                  onSetActiveTask(task.id);
-                  onOpenCoworkSurface();
-                }}
-                onRename={(newTitle: string) => onRenameTask?.(task.id, newTitle)}
-                onDelete={() => onDeleteTask?.(task.id)}
-                onMoveToProject={(projectId: string) => onMoveTaskToProject?.(task.id, projectId)}
-              />
-            ))
-          ) : (
-            <GhostRailNotice
-              icon={Robot}
-              title="No agent tasks yet"
-              description="Create an agent task to have AI automate your workflow."
-              actionLabel="New Agent Task"
-              onClick={() => onOpen?.('cowork-new-task')}
-            />
-          )}
-        </div>
-      )}
+          ))
+        ) : (
+          <GhostRailNotice
+            icon={CheckSquare}
+            title="No tasks yet"
+            description="Create a task to get started with your work."
+            actionLabel="New Task"
+            onClick={() => onOpen?.('cowork-new-task')}
+          />
+        )}
+      </div>
     </div>
   );
 });
@@ -1108,11 +894,11 @@ function TaskProjectsStack({
           type="button"
           onClick={onCreateProject}
           onMouseEnter={(e) => {
-            e.currentTarget.style.color = '#f0c8aa';
-            e.currentTarget.style.background = 'rgba(212,176,140,0.08)';
+            e.currentTarget.style.color = 'var(--accent-primary)';
+            e.currentTarget.style.background = 'var(--shell-item-hover)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.color = '#ececec';
+            e.currentTarget.style.color = 'var(--shell-item-fg)';
             e.currentTarget.style.background = 'transparent';
           }}
           style={{
@@ -1124,14 +910,14 @@ function TaskProjectsStack({
             borderRadius: 14,
             border: 'none',
             background: 'transparent',
-            color: '#ececec',
+            color: 'var(--shell-item-fg)',
             cursor: 'pointer',
             textAlign: 'left',
             transition: 'all 0.2s',
             fontWeight: 500,
           }}
         >
-          <FolderPlus size={18} weight="bold" color="#d4b08c" />
+          <FolderPlus size={18} weight="bold" color="var(--accent-primary)" />
           <div style={{ minWidth: 0, fontSize: 13, fontWeight: 700 }}>New Project</div>
         </button>
       </div>
@@ -1227,10 +1013,10 @@ function TaskProjectRailItem({
           gap: 10,
           padding: '8px 12px',
           borderRadius: 10,
-          background: isActive ? 'rgba(217, 119, 87, 0.1)' : 'transparent',
+          background: isActive ? 'var(--shell-item-active-bg)' : 'transparent',
         }}
       >
-        {Icon && <Icon size={18} weight={isActive ? 'fill' : 'bold'} color={isActive ? '#D97757' : '#9b9b9b'} />}
+        {Icon && <Icon size={18} weight={isActive ? 'fill' : 'bold'} color={isActive ? 'var(--accent-chat)' : 'var(--text-tertiary)'} />}
         <input
           type="text"
           value={editTitle}
@@ -1244,7 +1030,7 @@ function TaskProjectRailItem({
             background: 'transparent',
             border: 'none',
             outline: 'none',
-            color: isActive ? '#D97757' : '#9b9b9b',
+            color: isActive ? 'var(--accent-chat)' : 'var(--text-tertiary)',
             fontWeight: isActive ? 700 : 500,
           }}
         />
@@ -1255,11 +1041,11 @@ function TaskProjectRailItem({
   return (
     <div
       onMouseEnter={(e) => {
-        e.currentTarget.style.background = isActive ? 'rgba(217, 119, 87, 0.15)' : 'rgba(255,255,255,0.04)';
+        e.currentTarget.style.background = isActive ? 'var(--surface-hover)' : 'var(--shell-item-hover)';
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.background = isActive ? 'rgba(217, 119, 87, 0.1)' : 'transparent';
-        setShowMenu(false);
+        e.currentTarget.style.background = isActive ? 'var(--shell-item-active-bg)' : 'transparent';
+        // Don't close menu on mouse leave - let the overlay handle it
       }}
       data-rail-item={id}
       style={{
@@ -1269,7 +1055,7 @@ function TaskProjectRailItem({
         gap: 4,
         padding: '6px 8px',
         borderRadius: 10,
-        background: isActive ? 'rgba(217, 119, 87, 0.1)' : 'transparent',
+        background: isActive ? 'var(--shell-item-active-bg)' : 'transparent',
         cursor: 'pointer',
         transition: 'background 0.2s',
       }}
@@ -1287,7 +1073,7 @@ function TaskProjectRailItem({
           borderRadius: 6,
           border: 'none',
           background: 'transparent',
-          color: isActive ? '#f0c8aa' : '#b8b0aa',
+          color: isActive ? 'var(--shell-item-active-fg)' : 'var(--shell-item-fg)',
           cursor: 'pointer',
           textAlign: 'left',
           transition: 'all 0.2s',
@@ -1310,8 +1096,8 @@ function TaskProjectRailItem({
             height: 24,
             borderRadius: 6,
             border: 'none',
-            background: showMenu ? 'rgba(255,255,255,0.08)' : 'transparent',
-            color: '#8f8a86',
+            background: showMenu ? 'var(--shell-item-hover)' : 'transparent',
+            color: 'var(--shell-item-muted)',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -1343,10 +1129,10 @@ function TaskProjectRailItem({
                 right: 0,
                 marginTop: 4,
                 minWidth: 160,
-                background: 'linear-gradient(180deg, rgba(37,33,31,0.98), rgba(26,23,22,0.98))',
+                background: 'var(--glass-bg-thick)',
                 borderRadius: 14,
-                border: '1px solid rgba(212,176,140,0.14)',
-                boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
+                border: '1px solid var(--border-default)',
+                boxShadow: 'var(--shadow-lg)',
                 zIndex: 9999,
                 overflow: 'hidden',
               }}
@@ -1361,7 +1147,7 @@ function TaskProjectRailItem({
                   padding: '10px 14px',
                   border: 'none',
                   background: 'transparent',
-                  color: '#9b9b9b',
+                  color: 'var(--shell-item-fg)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -1370,14 +1156,14 @@ function TaskProjectRailItem({
                   textAlign: 'left',
                   transition: 'background 0.2s',
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--shell-item-hover)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
                 <Pencil size={16} />
                 Rename
               </button>
 
-              <div style={{ height: 1, background: '#333', margin: '4px 0' }} />
+              <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
 
               <button
                 onClick={handleDeleteClick}
@@ -1386,7 +1172,7 @@ function TaskProjectRailItem({
                   padding: '10px 14px',
                   border: 'none',
                   background: 'transparent',
-                  color: '#ef4444',
+                  color: 'var(--status-error)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -1395,7 +1181,7 @@ function TaskProjectRailItem({
                   textAlign: 'left',
                   transition: 'background 0.2s',
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239,68,68,0.1)'}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--shell-danger-soft-bg)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
                 <Trash size={16} />
@@ -1507,10 +1293,10 @@ function TaskRailItem({
           gap: 10,
           padding: '8px 12px',
           borderRadius: 10,
-          background: isActive ? 'rgba(217, 119, 87, 0.1)' : 'transparent',
+          background: isActive ? 'var(--shell-item-active-bg)' : 'transparent',
         }}
       >
-        {Icon && <Icon size={18} weight={isActive ? 'fill' : 'bold'} color={isActive ? '#D97757' : '#9b9b9b'} />}
+        {Icon && <Icon size={18} weight={isActive ? 'fill' : 'bold'} color={isActive ? 'var(--accent-chat)' : 'var(--text-tertiary)'} />}
         <input
           type="text"
           value={editTitle}
@@ -1524,7 +1310,7 @@ function TaskRailItem({
             background: 'transparent',
             border: 'none',
             outline: 'none',
-            color: isActive ? '#D97757' : '#9b9b9b',
+            color: isActive ? 'var(--accent-chat)' : 'var(--text-tertiary)',
             fontWeight: isActive ? 700 : 500,
           }}
         />
@@ -1535,11 +1321,11 @@ function TaskRailItem({
   return (
     <div
       onMouseEnter={(e) => {
-        e.currentTarget.style.background = isActive ? 'rgba(217, 119, 87, 0.15)' : 'rgba(255,255,255,0.04)';
+        e.currentTarget.style.background = isActive ? 'var(--surface-hover)' : 'var(--shell-item-hover)';
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.background = isActive ? 'rgba(217, 119, 87, 0.1)' : 'transparent';
-        setShowMenu(false);
+        e.currentTarget.style.background = isActive ? 'var(--shell-item-active-bg)' : 'transparent';
+        // Don't close menu on mouse leave - let the overlay handle it
       }}
       data-rail-item={id}
       style={{
@@ -1549,7 +1335,7 @@ function TaskRailItem({
         gap: 4,
         padding: '6px 8px',
         borderRadius: 10,
-        background: isActive ? 'rgba(217, 119, 87, 0.1)' : 'transparent',
+        background: isActive ? 'var(--shell-item-active-bg)' : 'transparent',
         cursor: 'pointer',
         transition: 'background 0.2s',
       }}
@@ -1567,7 +1353,7 @@ function TaskRailItem({
           borderRadius: 6,
           border: 'none',
           background: 'transparent',
-          color: isActive ? '#f0c8aa' : '#b8b0aa',
+          color: isActive ? 'var(--shell-item-active-fg)' : 'var(--shell-item-fg)',
           cursor: 'pointer',
           textAlign: 'left',
           transition: 'all 0.2s',
@@ -1577,7 +1363,7 @@ function TaskRailItem({
         {Icon && <Icon size={18} weight={isActive ? 'fill' : 'bold'} />}
         <span style={{ fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>{label}</span>
         {metaLabel && (
-          <span style={{ fontSize: 10, color: '#6e6e6e', textTransform: 'capitalize' }}>
+          <span style={{ fontSize: 10, color: 'var(--text-tertiary)', textTransform: 'capitalize' }}>
             {metaLabel}
           </span>
         )}
@@ -1595,8 +1381,8 @@ function TaskRailItem({
             height: 24,
             borderRadius: 6,
             border: 'none',
-            background: showMenu ? 'rgba(255,255,255,0.08)' : 'transparent',
-            color: '#8f8a86',
+            background: showMenu ? 'var(--shell-item-hover)' : 'transparent',
+            color: 'var(--shell-item-muted)',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -1628,10 +1414,10 @@ function TaskRailItem({
                 right: 0,
                 marginTop: 4,
                 minWidth: 160,
-                background: 'linear-gradient(180deg, rgba(37,33,31,0.98), rgba(26,23,22,0.98))',
+                background: 'var(--glass-bg-thick)',
                 borderRadius: 14,
-                border: '1px solid rgba(212,176,140,0.14)',
-                boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
+                border: '1px solid var(--border-default)',
+                boxShadow: 'var(--shadow-lg)',
                 zIndex: 9999,
                 overflow: 'hidden',
               }}
@@ -1647,7 +1433,7 @@ function TaskRailItem({
                   padding: '10px 14px',
                   border: 'none',
                   background: 'transparent',
-                  color: '#9b9b9b',
+                  color: 'var(--shell-item-fg)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -1656,7 +1442,7 @@ function TaskRailItem({
                   textAlign: 'left',
                   transition: 'background 0.2s',
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--shell-item-hover)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
                 <Pencil size={16} />
@@ -1675,7 +1461,7 @@ function TaskRailItem({
                     padding: '10px 14px',
                     border: 'none',
                     background: 'transparent',
-                    color: '#9b9b9b',
+                    color: 'var(--shell-item-fg)',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -1684,7 +1470,7 @@ function TaskRailItem({
                     textAlign: 'left',
                     transition: 'background 0.2s',
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--shell-item-hover)'}
                   onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                 >
                   <FolderOpen size={16} />
@@ -1700,10 +1486,10 @@ function TaskRailItem({
                       left: '100%',
                       marginLeft: 4,
                       minWidth: 140,
-                      background: 'linear-gradient(180deg, rgba(37,33,31,0.98), rgba(26,23,22,0.98))',
+                      background: 'var(--glass-bg-thick)',
                       borderRadius: 14,
-                      border: '1px solid rgba(212,176,140,0.14)',
-                      boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
+                      border: '1px solid var(--border-default)',
+                      boxShadow: 'var(--shadow-lg)',
                       zIndex: 10000,
                       overflow: 'hidden',
                     }}
@@ -1718,13 +1504,13 @@ function TaskRailItem({
                         padding: '8px 12px',
                         border: 'none',
                         background: 'transparent',
-                        color: '#9b9b9b',
+                        color: 'var(--shell-item-muted)',
                         cursor: 'pointer',
                         fontSize: 12,
                         textAlign: 'left',
                         transition: 'background 0.2s',
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--shell-item-hover)'}
                       onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                     >
                       (No Project)
@@ -1741,13 +1527,13 @@ function TaskRailItem({
                           padding: '8px 12px',
                           border: 'none',
                           background: 'transparent',
-                          color: '#9b9b9b',
+                          color: 'var(--shell-item-fg)',
                           cursor: 'pointer',
                           fontSize: 12,
                           textAlign: 'left',
                           transition: 'background 0.2s',
                         }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--shell-item-hover)'}
                         onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                       >
                         {proj.title}
@@ -1757,7 +1543,7 @@ function TaskRailItem({
                 )}
               </div>
 
-              <div style={{ height: 1, background: '#333', margin: '4px 0' }} />
+              <div style={{ height: 1, background: 'var(--shell-divider)', margin: '4px 0' }} />
 
               {/* Delete Option */}
               <button
@@ -1767,7 +1553,7 @@ function TaskRailItem({
                   padding: '10px 14px',
                   border: 'none',
                   background: 'transparent',
-                  color: '#ef4444',
+                  color: 'var(--status-error)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -1776,7 +1562,7 @@ function TaskRailItem({
                   textAlign: 'left',
                   transition: 'background 0.2s',
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239,68,68,0.1)'}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--shell-danger-soft-bg)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
                 <Trash size={16} />
@@ -1806,8 +1592,7 @@ function SectionDivider() {
     <div
       style={{
         height: 1,
-        background:
-          'linear-gradient(90deg, transparent, rgba(212,176,140,0.18), transparent)',
+        background: 'linear-gradient(90deg, transparent, var(--shell-divider), transparent)',
         margin: '4px 8px',
       }}
     />
@@ -1842,14 +1627,14 @@ function ConversationSurfaceHeader({
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-        <div style={{ display: 'flex', minWidth: 0, flex: 1, alignItems: 'center', gap: 8, color: '#f0c8aa' }}>
+        <div style={{ display: 'flex', minWidth: 0, flex: 1, alignItems: 'center', gap: 8, color: 'var(--shell-item-active-fg)' }}>
           <div
             style={{
               width: 24,
               height: 24,
               borderRadius: 8,
-              border: '1px solid rgba(212,176,140,0.16)',
-              background: 'rgba(217,119,87,0.12)',
+              border: '1px solid var(--shell-menu-border)',
+              background: 'var(--shell-item-active-bg)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -1858,7 +1643,7 @@ function ConversationSurfaceHeader({
             <Sparkle size={13} weight="fill" />
           </div>
           <div style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#d4b08c' }}>
+            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--accent-primary)' }}>
               Unified Sessions
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
@@ -1892,12 +1677,12 @@ function CompactMetaPill({ label }: { label: string }) {
     <span
       style={{
         borderRadius: 999,
-        border: '1px solid rgba(255,255,255,0.06)',
-        background: 'rgba(255,255,255,0.03)',
+        border: '1px solid var(--shell-divider)',
+        background: 'var(--surface-panel-muted)',
         padding: '2px 7px',
         fontSize: 10,
         fontWeight: 600,
-        color: '#b8b0aa',
+        color: 'var(--shell-item-fg)',
       }}
     >
       {label}
@@ -1930,9 +1715,9 @@ function IconWidgetButton({
         justifyContent: 'center',
         borderRadius: 9,
         border: '1px solid',
-        borderColor: isActive ? 'rgba(212,176,140,0.22)' : 'rgba(255,255,255,0.06)',
-        background: isActive ? 'rgba(217,119,87,0.12)' : 'rgba(255,255,255,0.03)',
-        color: isActive ? '#f0c8aa' : '#b08d6e',
+        borderColor: isActive ? 'var(--shell-dialog-border)' : 'var(--shell-divider)',
+        background: isActive ? 'var(--shell-item-active-bg)' : 'var(--surface-panel-muted)',
+        color: isActive ? 'var(--shell-item-active-fg)' : 'var(--accent-primary)',
         cursor: onClick ? 'pointer' : 'default',
       }}
     >
@@ -1968,11 +1753,11 @@ function ProjectsStack({
           type="button"
           onClick={onCreateProject}
           onMouseEnter={(e) => {
-            e.currentTarget.style.color = '#f0c8aa';
-            e.currentTarget.style.background = 'rgba(212,176,140,0.08)';
+            e.currentTarget.style.color = 'var(--accent-primary)';
+            e.currentTarget.style.background = 'var(--shell-item-hover)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.color = '#ececec';
+            e.currentTarget.style.color = 'var(--shell-item-fg)';
             e.currentTarget.style.background = 'transparent';
           }}
           style={{
@@ -1984,14 +1769,14 @@ function ProjectsStack({
             borderRadius: 14,
             border: 'none',
             background: 'transparent',
-            color: '#ececec',
+            color: 'var(--shell-item-fg)',
             cursor: 'pointer',
             textAlign: 'left',
             transition: 'all 0.2s',
             fontWeight: 500,
           }}
         >
-          <FolderPlus size={18} weight="bold" color="#d4b08c" />
+          <FolderPlus size={18} weight="bold" color="var(--accent-primary)" />
           <div style={{ minWidth: 0, fontSize: 13, fontWeight: 700 }}>New Project</div>
         </button>
       </div>
@@ -2043,7 +1828,7 @@ function WorkstreamSectionLabel({
               width: 14,
               height: 1,
               borderRadius: 999,
-              background: 'linear-gradient(90deg, rgba(217,119,87,0.9), rgba(176,141,110,0.2))',
+              background: 'linear-gradient(90deg, var(--accent-chat), transparent)',
             }}
           />
           <span
@@ -2052,7 +1837,7 @@ function WorkstreamSectionLabel({
               fontWeight: 800,
               textTransform: 'uppercase',
               letterSpacing: '0.08em',
-              color: '#b08d6e',
+              color: 'var(--accent-secondary)',
             }}
           >
             {title}
@@ -2061,11 +1846,11 @@ function WorkstreamSectionLabel({
             <span
               style={{
                 borderRadius: 999,
-                border: '1px solid rgba(255,255,255,0.08)',
-                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid var(--shell-divider)',
+                background: 'var(--shell-item-hover)',
                 padding: '2px 6px',
                 fontSize: 9,
-                color: '#9b9b9b',
+                color: 'var(--shell-item-muted)',
               }}
             >
               {count}
@@ -2073,7 +1858,7 @@ function WorkstreamSectionLabel({
           ) : null}
         </div>
         {caption ? (
-          <div style={{ fontSize: 11, color: '#6e6e6e' }}>{caption}</div>
+          <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{caption}</div>
         ) : null}
       </div>
       {actionLabel && onAction ? (
@@ -2083,7 +1868,7 @@ function WorkstreamSectionLabel({
           style={{
             border: 'none',
             background: 'transparent',
-            color: '#d4b08c',
+            color: 'var(--accent-primary)',
             fontSize: 11,
             fontWeight: 700,
             cursor: 'pointer',
@@ -2116,13 +1901,13 @@ function GhostRailNotice({
       onClick={onClick}
       style={{
         width: '100%',
-        border: '1px dashed rgba(212,176,140,0.16)',
-        background: 'linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015))',
+        border: '1px dashed var(--border-default)',
+        background: 'linear-gradient(180deg, var(--bg-secondary), color-mix(in srgb, var(--bg-secondary) 70%, transparent))',
         borderRadius: 14,
         padding: '9px 10px',
         textAlign: 'left',
         cursor: onClick ? 'pointer' : 'default',
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
+        boxShadow: 'inset 0 1px 0 var(--shell-divider)',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -2131,20 +1916,20 @@ function GhostRailNotice({
           width: 24,
           height: 24,
           borderRadius: 8,
-          border: '1px solid rgba(212,176,140,0.14)',
-          background: 'rgba(217,119,87,0.12)',
+          border: '1px solid var(--border-subtle)',
+          background: 'var(--shell-item-active-bg)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-            color: '#d97757',
+            color: 'var(--accent-chat)',
             flexShrink: 0,
           }}
         >
           <Icon size={14} weight="bold" />
         </div>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: '#ececec' }}>{title}</div>
-          <div style={{ marginTop: 1, fontSize: 10.5, color: '#8a8a8a', lineHeight: 1.35 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>{title}</div>
+          <div style={{ marginTop: 1, fontSize: 10.5, color: 'var(--text-tertiary)', lineHeight: 1.35 }}>
             {description}
           </div>
         </div>
@@ -2154,7 +1939,7 @@ function GhostRailNotice({
           marginTop: 6,
           fontSize: 10,
           fontWeight: 700,
-          color: '#d4b08c',
+          color: 'var(--accent-primary)',
           textTransform: 'uppercase',
           letterSpacing: '0.08em',
         }}
@@ -2175,57 +1960,147 @@ function NativeSessionRailItem({
   onClick: () => void;
 }) {
   const metaLabel = formatAgentSessionMetaLabel(session.metadata);
+  const descriptor = getAgentSessionDescriptor(session.metadata);
+  const isAgentMode = descriptor.sessionMode === 'agent';
+  const unreadCount = useNativeAgentStore((state) => state.unreadCounts[session.id] ?? 0);
+  const updateSession = useNativeAgentStore((s) => s.updateSession);
+  const deleteSession = useNativeAgentStore((s) => s.deleteSession);
+  const SessionIcon = isAgentMode ? Robot : Cpu;
+
+  const [showMenu, setShowMenu] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(session.name || '');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleSaveRename = () => {
+    const trimmed = editName.trim();
+    if (trimmed && trimmed !== session.name) {
+      void updateSession(session.id, { name: trimmed });
+    }
+    setIsEditing(false);
+  };
+
+  if (isEditing) {
+    return (
+      <div style={{
+        width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+        padding: '8px 10px', borderRadius: 14,
+        border: '1px solid var(--shell-dialog-border)',
+        background: 'var(--shell-item-active-bg)',
+      }}>
+        <SessionIcon size={16} weight="bold" color="var(--accent-primary)" />
+        <input
+          type="text"
+          value={editName}
+          onChange={(e) => setEditName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleSaveRename();
+            else if (e.key === 'Escape') { setEditName(session.name || ''); setIsEditing(false); }
+          }}
+          onBlur={handleSaveRename}
+          autoFocus
+          style={{
+            flex: 1, fontSize: 12, background: 'transparent', border: 'none',
+            outline: 'none', color: 'var(--shell-item-active-fg)', fontWeight: 600,
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
+    <>
+      {showDeleteConfirm && (
+        <DeleteConfirmModal
+          title="Delete session"
+          message={`Delete "${session.name || 'Untitled Session'}"? This cannot be undone.`}
+          onConfirm={async () => { 
+                            console.log('[ShellRail] Deleting session:', session.id);
+                            try {
+                              await deleteSession(session.id);
+                              console.log('[ShellRail] Session deleted successfully:', session.id);
+                            } catch (err) {
+                              console.error('[ShellRail] Failed to delete session:', session.id, err);
+                            }
+                            setShowDeleteConfirm(false); 
+                          }}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
+      )}
+    <div
+      style={{ position: 'relative', width: '100%' }}
       onMouseEnter={(e) => {
         if (!isActive) {
-          e.currentTarget.style.borderColor = 'rgba(212,176,140,0.12)';
-          e.currentTarget.style.color = '#d4b08c';
+          (e.currentTarget.querySelector('[data-session-btn]') as HTMLElement | null)
+            ?.style && ((e.currentTarget.querySelector('[data-session-btn]') as HTMLElement).style.borderColor = 'var(--shell-dialog-border)');
         }
-      }}
-      onMouseLeave={(e) => {
-        if (!isActive) {
-          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.04)';
-          e.currentTarget.style.color = '#b8b0aa';
-        }
-      }}
-      style={{
-        width: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-        padding: '8px 10px',
-        borderRadius: 14,
-        border: '1px solid',
-        borderColor: isActive ? 'rgba(212,176,140,0.22)' : 'rgba(255,255,255,0.04)',
-        background: isActive
-          ? 'linear-gradient(135deg, rgba(217,119,87,0.18) 0%, rgba(212,176,140,0.12) 100%)'
-          : 'transparent',
-        color: isActive ? '#f0c8aa' : '#b8b0aa',
-        cursor: 'pointer',
-        textAlign: 'left',
-        transition: 'all 0.2s',
-        fontWeight: isActive ? 700 : 500,
-        boxShadow: isActive ? '0 4px 12px rgba(217,119,87,0.15)' : 'none',
       }}
     >
-      <div
+      <button
+        data-session-btn
+        type="button"
+        onClick={onClick}
         style={{
-          width: 24,
-          height: 24,
-          borderRadius: 8,
-          background: isActive ? 'rgba(217,119,87,0.2)' : 'rgba(255,255,255,0.06)',
+          width: '100%',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          color: isActive ? '#f0c8aa' : '#b08d6e',
-          flexShrink: 0,
+          gap: 10,
+          padding: '8px 10px',
+          paddingRight: 32,
+          borderRadius: 14,
+          border: '1px solid',
+          borderColor: isActive ? 'var(--shell-dialog-border)' : 'var(--shell-divider)',
+          background: isActive
+            ? 'var(--shell-item-active-bg)'
+            : 'transparent',
+          color: isActive ? 'var(--shell-item-active-fg)' : 'var(--shell-item-fg)',
+          cursor: 'pointer',
+          textAlign: 'left',
+          transition: 'all 0.2s',
+          fontWeight: isActive ? 700 : 500,
+          boxShadow: isActive ? 'var(--shadow-sm)' : 'none',
         }}
       >
-        <Cpu size={16} weight={isActive ? 'fill' : 'bold'} />
+      <div style={{ position: 'relative', flexShrink: 0 }}>
+        <div
+          style={{
+            width: 24,
+            height: 24,
+            borderRadius: 8,
+            background: isActive
+              ? isAgentMode ? 'var(--shell-mode-cowork-soft)' : 'var(--shell-item-active-bg)'
+              : 'var(--surface-panel-muted)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: isActive
+              ? isAgentMode ? 'var(--accent-cowork)' : 'var(--shell-item-active-fg)'
+              : 'var(--accent-primary)',
+          }}
+        >
+          <SessionIcon size={16} weight={isActive ? 'fill' : 'bold'} />
+        </div>
+        {unreadCount > 0 && (
+          <div style={{
+            position: 'absolute',
+            top: -4,
+            right: -4,
+            minWidth: 14,
+            height: 14,
+            borderRadius: 999,
+            background: 'var(--accent-chat)',
+            color: 'var(--shell-danger-fg)',
+            fontSize: 8,
+            fontWeight: 700,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '0 3px',
+            lineHeight: 1,
+          }}>
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </div>
+        )}
       </div>
       <div style={{ minWidth: 0, flex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -2236,6 +2111,8 @@ function NativeSessionRailItem({
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
+              flex: 1,
+              minWidth: 0,
             }}
           >
             {session.name || 'Untitled Session'}
@@ -2244,8 +2121,8 @@ function NativeSessionRailItem({
             style={{
               flexShrink: 0,
               borderRadius: 999,
-              background: session.isActive ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.06)',
-              color: session.isActive ? '#7ee787' : '#8a8a8a',
+              background: session.isActive ? 'var(--status-success-bg)' : 'var(--surface-panel-muted)',
+              color: session.isActive ? 'var(--status-success)' : 'var(--shell-item-muted)',
               padding: '2px 6px',
               fontSize: 9,
               fontWeight: 700,
@@ -2256,16 +2133,16 @@ function NativeSessionRailItem({
             {session.isActive ? 'Live' : 'Paused'}
           </span>
         </div>
-        <div style={{ marginTop: 3, display: 'flex', alignItems: 'center', gap: 8, fontSize: 10, color: '#6e6e6e', flexWrap: 'wrap' }}>
+        <div style={{ marginTop: 3, display: 'flex', alignItems: 'center', gap: 8, fontSize: 10, color: 'var(--text-tertiary)', flexWrap: 'wrap' }}>
           {metaLabel ? (
             <>
               <span
                 style={{
                   flexShrink: 0,
                   borderRadius: 999,
-                  border: '1px solid rgba(212,176,140,0.14)',
-                  background: 'rgba(217,119,87,0.08)',
-                  color: '#d4b08c',
+                  border: '1px solid var(--border-subtle)',
+                  background: 'var(--surface-hover)',
+                  color: 'var(--accent-primary)',
                   padding: '2px 6px',
                   fontSize: 9,
                   fontWeight: 700,
@@ -2294,7 +2171,73 @@ function NativeSessionRailItem({
           <span>{formatNativeSessionTimestamp(session.lastAccessedAt || session.updatedAt)}</span>
         </div>
       </div>
-    </button>
+      </button>
+
+      {/* ⋯ context menu - container has padding to bridge gap between button and menu */}
+      <div 
+        style={{ 
+          position: 'absolute', 
+          top: 6, 
+          right: 6,
+          padding: '4px',
+          margin: '-4px',
+        }}
+      >
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); setShowMenu((v) => !v); }}
+          style={{
+            width: 22, height: 22, borderRadius: 6, border: 'none',
+            background: showMenu ? 'var(--shell-item-hover)' : 'transparent',
+            color: 'var(--shell-item-muted)', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            opacity: 0.6, transition: 'opacity 0.2s',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.6'; }}
+        >
+          <DotsThree size={16} weight="bold" />
+        </button>
+        {showMenu && (
+          <>
+            <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} onClick={() => setShowMenu(false)} />
+            <div 
+              style={{
+                position: 'absolute', top: '100%', right: 4, marginTop: 0,
+                minWidth: 160,
+                background: 'var(--glass-bg-thick)',
+                borderRadius: 12, border: '1px solid var(--border-default)',
+                boxShadow: 'var(--shadow-lg)', zIndex: 9999, padding: 4,
+              }}
+            >
+              {[
+                { icon: Pencil, label: 'Rename', color: 'var(--shell-item-fg)', onClick: () => { setEditName(session.name || ''); setIsEditing(true); setShowMenu(false); } },
+                { icon: Trash, label: 'Delete', color: 'var(--status-error)', onClick: () => { setShowDeleteConfirm(true); setShowMenu(false); } },
+              ].map(({ icon: Icon2, label, color, onClick: action }) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); action(); }}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '6px 10px', borderRadius: 8, border: 'none',
+                    background: 'transparent', color, cursor: 'pointer',
+                    fontSize: 12, fontWeight: 600, textAlign: 'left',
+                    transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = label === 'Delete' ? 'var(--shell-danger-soft-bg)' : 'var(--shell-item-hover)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <Icon2 size={14} />
+                  {label}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+    </>
   );
 }
 
@@ -2305,13 +2248,13 @@ function RailItem({ id, icon: Icon, label, isActive, onClick }: any) {
       data-rail-item={id}
       onMouseEnter={(e) => {
         if (!isActive) {
-          e.currentTarget.style.color = '#d4b08c';
-          e.currentTarget.style.background = 'rgba(212,176,140,0.08)';
+          e.currentTarget.style.color = 'var(--accent-primary)';
+          e.currentTarget.style.background = 'var(--shell-item-hover)';
         }
       }}
       onMouseLeave={(e) => {
         if (!isActive) {
-          e.currentTarget.style.color = '#b8b0aa';
+          e.currentTarget.style.color = 'var(--shell-item-fg)';
           e.currentTarget.style.background = 'transparent';
         }
       }}
@@ -2324,14 +2267,14 @@ function RailItem({ id, icon: Icon, label, isActive, onClick }: any) {
         borderRadius: 14,
         border: 'none',
         background: isActive
-          ? 'linear-gradient(135deg, rgba(217, 119, 87, 0.18) 0%, rgba(212,176,140,0.12) 100%)'
+          ? 'var(--shell-item-active-bg)'
           : 'transparent',
-        color: isActive ? '#f0c8aa' : '#b8b0aa',
+        color: isActive ? 'var(--shell-item-active-fg)' : 'var(--shell-item-fg)',
         cursor: 'pointer',
         textAlign: 'left',
         transition: 'all 0.2s',
         fontWeight: isActive ? 700 : 500,
-        boxShadow: isActive ? '0 4px 12px rgba(217,119,87,0.15)' : 'none',
+        boxShadow: isActive ? 'var(--shadow-sm)' : 'none',
       }}
     >
       {Icon && <Icon size={18} weight={isActive ? 'fill' : 'bold'} />}
@@ -2402,10 +2345,10 @@ function ProjectRailItem({
           gap: 10,
           padding: '8px 12px',
           borderRadius: 10,
-          background: isActive ? 'rgba(217, 119, 87, 0.1)' : 'transparent',
+          background: isActive ? 'var(--shell-item-active-bg)' : 'transparent',
         }}
       >
-        {Icon && <Icon size={18} weight={isActive ? 'fill' : 'bold'} color={isActive ? '#D97757' : '#9b9b9b'} />}
+        {Icon && <Icon size={18} weight={isActive ? 'fill' : 'bold'} color={isActive ? 'var(--accent-chat)' : 'var(--shell-item-muted)'} />}
         <input
           type="text"
           value={editTitle}
@@ -2419,7 +2362,7 @@ function ProjectRailItem({
             background: 'transparent',
             border: 'none',
             outline: 'none',
-            color: isActive ? '#D97757' : '#9b9b9b',
+            color: isActive ? 'var(--accent-chat)' : 'var(--shell-item-muted)',
             fontWeight: isActive ? 700 : 500,
           }}
         />
@@ -2431,7 +2374,7 @@ function ProjectRailItem({
     <div
       onMouseEnter={(e) => {
         if (!isActive) {
-          e.currentTarget.style.background = 'rgba(212,176,140,0.08)';
+          e.currentTarget.style.background = 'var(--shell-item-hover)';
         }
       }}
       onMouseLeave={(e) => {
@@ -2448,10 +2391,10 @@ function ProjectRailItem({
         borderRadius: 14,
         border: 'none',
         background: isActive
-          ? 'linear-gradient(135deg, rgba(217, 119, 87, 0.18) 0%, rgba(212,176,140,0.12) 100%)'
+          ? 'var(--shell-item-active-bg)'
           : 'transparent',
         position: 'relative',
-        boxShadow: isActive ? '0 4px 12px rgba(217,119,87,0.15)' : 'none',
+        boxShadow: isActive ? 'var(--shadow-sm)' : 'none',
         transition: 'all 0.2s',
       }}
     >
@@ -2468,7 +2411,7 @@ function ProjectRailItem({
           borderRadius: 6,
           border: 'none',
           background: 'transparent',
-          color: isActive ? '#f0c8aa' : '#b8b0aa',
+          color: isActive ? 'var(--shell-item-active-fg)' : 'var(--shell-item-fg)',
           cursor: 'pointer',
           textAlign: 'left',
           transition: 'all 0.2s',
@@ -2491,8 +2434,8 @@ function ProjectRailItem({
             height: 24,
             borderRadius: 6,
             border: 'none',
-            background: showMenu ? 'rgba(255,255,255,0.08)' : 'transparent',
-            color: '#8f8a86',
+            background: showMenu ? 'var(--shell-item-hover)' : 'transparent',
+            color: 'var(--shell-item-muted)',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -2524,10 +2467,10 @@ function ProjectRailItem({
                 right: 0,
                 marginTop: 4,
                 minWidth: 160,
-                background: 'linear-gradient(180deg, rgba(37,33,31,0.98), rgba(26,23,22,0.98))',
+                background: 'var(--shell-dialog-bg)',
                 borderRadius: 14,
-                border: '1px solid rgba(212,176,140,0.14)',
-                boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
+                border: '1px solid var(--shell-dialog-border)',
+                boxShadow: 'var(--shadow-lg)',
                 zIndex: 9999,
                 overflow: 'hidden',
               }}
@@ -2543,7 +2486,7 @@ function ProjectRailItem({
                   padding: '10px 14px',
                   border: 'none',
                   background: 'transparent',
-                  color: '#9b9b9b',
+                  color: 'var(--shell-item-muted)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -2552,14 +2495,14 @@ function ProjectRailItem({
                   textAlign: 'left',
                   transition: 'background 0.2s',
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--shell-item-hover)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
                 <Pencil size={16} />
                 Rename
               </button>
 
-              <div style={{ height: 1, background: '#333', margin: '4px 0' }} />
+              <div style={{ height: 1, background: 'var(--border-subtle)', margin: '4px 0' }} />
 
               {/* Delete Option */}
               <button
@@ -2569,7 +2512,7 @@ function ProjectRailItem({
                   padding: '10px 14px',
                   border: 'none',
                   background: 'transparent',
-                  color: '#ef4444',
+                  color: 'var(--status-error)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -2578,7 +2521,7 @@ function ProjectRailItem({
                   textAlign: 'left',
                   transition: 'background 0.2s',
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239,68,68,0.1)'}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--shell-danger-soft-bg)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
                 <Trash size={16} />
@@ -2603,413 +2546,6 @@ function ProjectRailItem({
   );
 }
 
-// Thread item with ellipsis menu for actions
-function ThreadRailItem({ 
-  id, 
-  thread,
-  icon: Icon, 
-  label, 
-  isActive, 
-  projects,
-  metaLabel,
-  onClick,
-  onRename,
-  onDelete,
-  onArchive,
-  onMoveToProject,
-}: any) {
-  const [showMenu, setShowMenu] = useState(false);
-  const [showProjects, setShowProjects] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [editTitle, setEditTitle] = useState(label);
-
-  const handleRename = () => {
-    setIsEditing(true);
-    setShowMenu(false);
-  };
-
-  const handleSaveRename = () => {
-    if (editTitle.trim() && editTitle !== label) {
-      onRename?.(editTitle.trim());
-    }
-    setIsEditing(false);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSaveRename();
-    } else if (e.key === 'Escape') {
-      setEditTitle(label);
-      setIsEditing(false);
-    }
-  };
-
-  const handleMoveToProject = (projectId: string) => {
-    onMoveToProject?.(projectId);
-    setShowProjects(false);
-    setShowMenu(false);
-  };
-
-  const handleDeleteClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowDeleteConfirm(true);
-    setShowMenu(false);
-  };
-
-  const confirmDelete = () => {
-    onDelete?.();
-    setShowDeleteConfirm(false);
-  };
-
-  const cancelDelete = () => {
-    setShowDeleteConfirm(false);
-  };
-
-  if (isEditing) {
-    return (
-      <div
-        style={{
-          width: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          padding: '8px 12px',
-          borderRadius: 10,
-          background: isActive ? 'rgba(217, 119, 87, 0.1)' : 'transparent',
-        }}
-      >
-        {Icon && <Icon size={18} weight={isActive ? 'fill' : 'bold'} color={isActive ? '#D97757' : '#9b9b9b'} />}
-        <input
-          type="text"
-          value={editTitle}
-          onChange={(e) => setEditTitle(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onBlur={handleSaveRename}
-          autoFocus
-          style={{
-            flex: 1,
-            fontSize: 13,
-            background: 'transparent',
-            border: 'none',
-            outline: 'none',
-            color: isActive ? '#D97757' : '#9b9b9b',
-            fontWeight: isActive ? 700 : 500,
-          }}
-        />
-      </div>
-    );
-  }
-
-  return (
-    <div
-      onMouseEnter={(e) => {
-        if (!isActive) {
-          e.currentTarget.style.background = 'rgba(212,176,140,0.08)';
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!isActive) {
-          e.currentTarget.style.background = 'transparent';
-        }
-      }}
-      style={{
-        width: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 4,
-        padding: '4px',
-        borderRadius: 14,
-        border: 'none',
-        background: isActive
-          ? 'linear-gradient(135deg, rgba(217, 119, 87, 0.18) 0%, rgba(212,176,140,0.12) 100%)'
-          : 'transparent',
-        position: 'relative',
-        boxShadow: isActive ? '0 4px 12px rgba(217,119,87,0.15)' : 'none',
-        transition: 'all 0.2s',
-      }}
-    >
-      <button
-        onClick={onClick}
-        data-rail-item={id}
-        style={{
-          flex: 1,
-          minWidth: 0,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          padding: '6px 8px',
-          borderRadius: 10,
-          border: 'none',
-          background: 'transparent',
-          color: isActive ? '#f0c8aa' : '#b8b0aa',
-          cursor: 'pointer',
-          textAlign: 'left',
-          transition: 'all 0.2s',
-          fontWeight: isActive ? 700 : 500,
-        }}
-      >
-        {Icon && <Icon size={18} weight={isActive ? 'fill' : 'bold'} />}
-        <span style={{ fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>{label}</span>
-        {metaLabel ? (
-          <span
-            style={{
-              flexShrink: 0,
-              borderRadius: 999,
-              border: '1px solid rgba(255,255,255,0.08)',
-              background: 'rgba(255,255,255,0.04)',
-              padding: '2px 6px',
-              fontSize: 9,
-              fontWeight: 700,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              color: '#d4b08c',
-            }}
-          >
-            {metaLabel}
-          </span>
-        ) : null}
-      </button>
-
-      {/* Ellipsis Menu Button */}
-      <div style={{ position: 'relative' }}>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowMenu(!showMenu);
-            setShowProjects(false);
-          }}
-          style={{
-            width: 24,
-            height: 24,
-            borderRadius: 6,
-            border: 'none',
-            background: showMenu ? 'rgba(255,255,255,0.08)' : 'transparent',
-            color: '#8f8a86',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            opacity: 0.6,
-            transition: 'opacity 0.2s',
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-          onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
-        >
-          <DotsThree size={18} weight="bold" />
-        </button>
-
-        {/* Dropdown Menu */}
-        {showMenu && (
-          <>
-            <div
-              style={{
-                position: 'fixed',
-                inset: 0,
-                zIndex: 9998,
-              }}
-              onClick={() => setShowMenu(false)}
-            />
-            <div
-              style={{
-                position: 'absolute',
-                top: '100%',
-                right: 0,
-                marginTop: 4,
-                minWidth: 180,
-                background: 'linear-gradient(180deg, rgba(37,33,31,0.98), rgba(26,23,22,0.98))',
-                borderRadius: 14,
-                border: '1px solid rgba(212,176,140,0.14)',
-                boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
-                zIndex: 9999,
-                overflow: 'hidden',
-              }}
-            >
-              {/* Rename Option */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleRename();
-                }}
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  border: 'none',
-                  background: 'transparent',
-                  color: '#9b9b9b',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  fontSize: 13,
-                  textAlign: 'left',
-                  transition: 'background 0.2s',
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-              >
-                <Pencil size={16} />
-                Rename
-              </button>
-
-              {/* Move to Project Submenu */}
-              <div style={{ position: 'relative' }}>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowProjects(!showProjects);
-                  }}
-                  style={{
-                    width: '100%',
-                    padding: '10px 14px',
-                    border: 'none',
-                    background: 'transparent',
-                    color: '#9b9b9b',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    fontSize: 13,
-                    textAlign: 'left',
-                    transition: 'background 0.2s',
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                >
-                  <Folder size={16} />
-                  Move to Project
-                </button>
-
-                {/* Projects Submenu */}
-                {showProjects && projects?.length > 0 && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      left: '100%',
-                      top: 0,
-                      marginLeft: 4,
-                      minWidth: 160,
-                      background: 'linear-gradient(180deg, rgba(37,33,31,0.98), rgba(26,23,22,0.98))',
-                      borderRadius: 14,
-                      border: '1px solid rgba(212,176,140,0.14)',
-                      boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
-                      zIndex: 10000,
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleMoveToProject('');
-                      }}
-                      style={{
-                        width: '100%',
-                        padding: '8px 12px',
-                        border: 'none',
-                        background: 'transparent',
-                        color: '#9b9b9b',
-                        cursor: 'pointer',
-                        fontSize: 12,
-                        textAlign: 'left',
-                        transition: 'background 0.2s',
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                    >
-                      (No Project)
-                    </button>
-                    {projects.map((proj: any) => (
-                      <button
-                        key={proj.id}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleMoveToProject(proj.id);
-                        }}
-                        style={{
-                          width: '100%',
-                          padding: '8px 12px',
-                          border: 'none',
-                          background: 'transparent',
-                          color: '#9b9b9b',
-                          cursor: 'pointer',
-                          fontSize: 12,
-                          textAlign: 'left',
-                          transition: 'background 0.2s',
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                      >
-                        {proj.title}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div style={{ height: 1, background: '#333', margin: '4px 0' }} />
-
-              {/* Archive Option */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onArchive?.();
-                  setShowMenu(false);
-                }}
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  border: 'none',
-                  background: 'transparent',
-                  color: '#9b9b9b',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  fontSize: 13,
-                  textAlign: 'left',
-                  transition: 'background 0.2s',
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-              >
-                <Archive size={16} />
-                Archive
-              </button>
-
-              {/* Delete Option */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete?.();
-                  setShowMenu(false);
-                }}
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  border: 'none',
-                  background: 'transparent',
-                  color: '#ef4444',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  fontSize: 13,
-                  textAlign: 'left',
-                  transition: 'background 0.2s',
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239,68,68,0.1)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-              >
-                <Trash size={16} />
-                Delete
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
 
 /**
  * CodeThreadsSection - Shows Code Mode workspaces and threads
@@ -3021,8 +2557,6 @@ function CodeThreadsSection({
   onOpen?: (view: string) => void;
   activeViewType?: string;
 }) {
-  const [activeTab, setActiveTab] = useState<'threads' | 'agent'>('threads');
-
   // Get code mode store data
   const sessions = useCodeModeStore((state) => state.sessions);
   const activeSessionId = useCodeModeStore((state) => state.activeSessionId);
@@ -3032,7 +2566,7 @@ function CodeThreadsSection({
   const createWorkspace = useCodeModeStore((state) => state.createWorkspace);
   const workspaces = useCodeModeStore((state) => state.workspaces);
 
-  // Get native agent sessions for "Agent Threads" tab
+  // Native agent sessions for code mode
   const nativeSessions = useStoreWithEqualityFn(useNativeAgentStore, (s) => s.sessions, shallow);
   const activeNativeSessionId = useStoreWithEqualityFn(useNativeAgentStore, (s) => s.activeSessionId, shallow);
   const setActiveNativeSession = useStoreWithEqualityFn(useNativeAgentStore, (s) => s.setActiveSession, shallow);
@@ -3055,267 +2589,211 @@ function CodeThreadsSection({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, padding: '4px 4px 4px 4px', marginBottom: 4 }}>
+      {/* Workspaces */}
+      <div style={{ padding: '4px' }}>
         <button
-          onClick={() => setActiveTab('threads')}
+          onClick={handleCreateWorkspace}
           style={{
-            flex: 1,
-            padding: '4px 6px',
-            borderRadius: '6px',
-            border: 'none',
-            background: activeTab === 'threads'
-              ? 'rgba(217,119,87,0.15)'
-              : 'transparent',
-            color: activeTab === 'threads' ? '#f0c8aa' : '#6e6e6e',
-            fontSize: 10,
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '8px 10px',
+            borderRadius: '10px',
+            border: '1px dashed var(--shell-dialog-border)',
+            background: 'transparent',
+            color: 'var(--accent-primary)',
+            fontSize: 11,
             fontWeight: 700,
             cursor: 'pointer',
             transition: 'all 0.2s',
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = 'var(--accent-primary)';
+            e.currentTarget.style.background = 'var(--shell-item-hover)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = 'var(--shell-dialog-border)';
+            e.currentTarget.style.background = 'transparent';
           }}
         >
-          Threads
-          <span style={{
-            padding: '0px 3px',
-            background: activeTab === 'threads' ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)',
-            borderRadius: '2px',
-            fontSize: '9px',
-            marginLeft: '4px'
-          }}>
-            {workspaceSessions.length}
-          </span>
-        </button>
-        <button
-          onClick={() => setActiveTab('agent')}
-          style={{
-            flex: 1,
-            padding: '4px 6px',
-            borderRadius: '6px',
-            border: 'none',
-            background: activeTab === 'agent'
-              ? 'rgba(217,119,87,0.15)'
-              : 'transparent',
-            color: activeTab === 'agent' ? '#f0c8aa' : '#6e6e6e',
-            fontSize: 10,
-            fontWeight: 700,
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-          }}
-        >
-          Agent Threads
-          <span style={{
-            padding: '0px 3px',
-            background: activeTab === 'agent' ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.05)',
-            borderRadius: '2px',
-            fontSize: '9px',
-            marginLeft: '4px'
-          }}>
-            {nativeSessions.length}
-          </span>
+          <Plus size={14} weight="bold" />
+          New Workspace
         </button>
       </div>
 
-      {activeTab === 'threads' && (
-        <>
-          {/* New Workspace Button */}
-          <div style={{ padding: '4px' }}>
-            <button
-              onClick={handleCreateWorkspace}
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '8px 10px',
-                borderRadius: '10px',
-                border: '1px dashed rgba(212,176,140,0.3)',
-                background: 'transparent',
-                color: '#b08d6e',
-                fontSize: 11,
-                fontWeight: 700,
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = '#d4b08c';
-                e.currentTarget.style.background = 'rgba(212,176,140,0.05)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(212,176,140,0.3)';
+      {workspaces.map((ws) => (
+        <div key={ws.workspace_id}>
+          <button
+            onClick={() => handleOpenWorkspace(ws.workspace_id)}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '8px 10px',
+              borderRadius: '10px',
+              border: 'none',
+              background: activeWorkspaceId === ws.workspace_id
+                ? 'var(--shell-item-active-bg)'
+                : 'transparent',
+              color: activeWorkspaceId === ws.workspace_id ? 'var(--shell-item-active-fg)' : 'var(--shell-item-fg)',
+              fontSize: 11,
+              fontWeight: activeWorkspaceId === ws.workspace_id ? 700 : 500,
+              cursor: 'pointer',
+              textAlign: 'left',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              if (activeWorkspaceId !== ws.workspace_id) {
+                e.currentTarget.style.color = 'var(--accent-primary)';
+                e.currentTarget.style.background = 'var(--shell-item-hover)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (activeWorkspaceId !== ws.workspace_id) {
+                e.currentTarget.style.color = 'var(--shell-item-fg)';
                 e.currentTarget.style.background = 'transparent';
+              }
+            }}
+          >
+            <div
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                background: activeWorkspaceId === ws.workspace_id ? 'var(--accent-primary)' : 'var(--shell-item-muted)',
+                flexShrink: 0,
               }}
-            >
-              <Plus size={14} weight="bold" />
-              New Workspace
-            </button>
-          </div>
+            />
+            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {ws.display_name}
+            </span>
+          </button>
 
-          {/* Workspace List */}
-          {workspaces.map((ws) => (
-            <div key={ws.workspace_id}>
+          {activeWorkspaceId === ws.workspace_id && workspaceSessions.length > 0 && (
+            <div style={{ padding: '4px 0 4px 22px' }}>
+              {workspaceSessions.map((session) => (
+                <button
+                  key={session.session_id}
+                  onClick={() => {
+                    setActiveSession(session.session_id);
+                    onOpen?.('code');
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '6px 8px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: activeSessionId === session.session_id
+                      ? 'var(--shell-item-active-bg)'
+                      : 'transparent',
+                    color: activeSessionId === session.session_id ? 'var(--shell-item-active-fg)' : 'var(--shell-item-muted)',
+                    fontSize: 10,
+                    fontWeight: activeSessionId === session.session_id ? 600 : 400,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    marginBottom: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (activeSessionId !== session.session_id) {
+                      e.currentTarget.style.color = 'var(--accent-primary)';
+                      e.currentTarget.style.background = 'var(--shell-item-hover)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeSessionId !== session.session_id) {
+                      e.currentTarget.style.color = 'var(--shell-item-muted)';
+                      e.currentTarget.style.background = 'transparent';
+                    }
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 4,
+                      height: 4,
+                      borderRadius: '50%',
+                      background: session.state === 'EXECUTING' ? 'var(--status-success)' : 'var(--shell-item-muted)',
+                      flexShrink: 0,
+                    }}
+                  />
+                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {session.title}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+
+      {/* Agent Sessions — always visible, no tab toggle */}
+      {nativeSessions.length > 0 && (
+        <>
+          <div style={{
+            padding: '4px 10px 2px',
+            fontSize: 9,
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+            color: 'var(--shell-item-muted)',
+          }}>
+            Agent Sessions
+          </div>
+          <div style={{ padding: '0 4px' }}>
+            {nativeSessions.map((session) => (
               <button
-                onClick={() => handleOpenWorkspace(ws.workspace_id)}
+                key={session.id}
+                onClick={() => {
+                  setActiveNativeSession(session.id);
+                  onOpen?.('code-agent-session');
+                }}
                 style={{
                   width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '8px 10px',
-                  borderRadius: '10px',
+                  padding: '6px 8px',
+                  borderRadius: '6px',
                   border: 'none',
-                  background: activeWorkspaceId === ws.workspace_id
-                    ? 'rgba(217, 119, 87, 0.15)'
+                  background: activeNativeSessionId === session.id
+                    ? 'var(--shell-item-active-bg)'
                     : 'transparent',
-                  color: activeWorkspaceId === ws.workspace_id ? '#f0c8aa' : '#b8b0aa',
-                  fontSize: 11,
-                  fontWeight: activeWorkspaceId === ws.workspace_id ? 700 : 500,
+                  color: activeNativeSessionId === session.id ? 'var(--shell-item-active-fg)' : 'var(--shell-item-muted)',
+                  fontSize: 10,
+                  fontWeight: activeNativeSessionId === session.id ? 600 : 400,
                   cursor: 'pointer',
                   textAlign: 'left',
+                  marginBottom: 2,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
                   transition: 'all 0.2s',
                 }}
                 onMouseEnter={(e) => {
-                  if (activeWorkspaceId !== ws.workspace_id) {
-                    e.currentTarget.style.color = '#d4b08c';
-                    e.currentTarget.style.background = 'rgba(212,176,140,0.05)';
+                  if (activeNativeSessionId !== session.id) {
+                    e.currentTarget.style.color = 'var(--accent-primary)';
+                    e.currentTarget.style.background = 'var(--shell-item-hover)';
                   }
                 }}
                 onMouseLeave={(e) => {
-                  if (activeWorkspaceId !== ws.workspace_id) {
-                    e.currentTarget.style.color = '#b8b0aa';
+                  if (activeNativeSessionId !== session.id) {
+                    e.currentTarget.style.color = 'var(--shell-item-muted)';
                     e.currentTarget.style.background = 'transparent';
                   }
                 }}
               >
-                <div
-                  style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: '50%',
-                    background: activeWorkspaceId === ws.workspace_id ? '#d4b08c' : '#6e6e6e',
-                    flexShrink: 0,
-                  }}
-                />
                 <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {ws.display_name}
+                  {session.name || 'Agent Session'}
                 </span>
               </button>
-
-              {/* Threads for active workspace */}
-              {activeWorkspaceId === ws.workspace_id && workspaceSessions.length > 0 && (
-                <div style={{ padding: '4px 0 4px 22px' }}>
-                  {workspaceSessions.map((session) => (
-                    <button
-                      key={session.session_id}
-                      onClick={() => {
-                        setActiveSession(session.session_id);
-                        onOpen?.('code');
-                      }}
-                      style={{
-                        width: '100%',
-                        padding: '6px 8px',
-                        borderRadius: '6px',
-                        border: 'none',
-                        background: activeSessionId === session.session_id
-                          ? 'rgba(217, 119, 87, 0.15)'
-                          : 'transparent',
-                        color: activeSessionId === session.session_id ? '#f0c8aa' : '#888',
-                        fontSize: 10,
-                        fontWeight: activeSessionId === session.session_id ? 600 : 400,
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                        marginBottom: 2,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        transition: 'all 0.2s',
-                      }}
-                      onMouseEnter={(e) => {
-                        if (activeSessionId !== session.session_id) {
-                          e.currentTarget.style.color = '#b08d6e';
-                          e.currentTarget.style.background = 'rgba(212,176,140,0.05)';
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (activeSessionId !== session.session_id) {
-                          e.currentTarget.style.color = '#888';
-                          e.currentTarget.style.background = 'transparent';
-                        }
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: 4,
-                          height: 4,
-                          borderRadius: '50%',
-                          background: session.state === 'EXECUTING' ? '#45c56b' : '#6e6e6e',
-                          flexShrink: 0,
-                        }}
-                      />
-                      <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {session.title}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
+            ))}
+          </div>
         </>
-      )}
-
-      {/* Agent Threads Tab Content */}
-      {activeTab === 'agent' && nativeSessions.length > 0 && (
-        <div style={{ padding: '4px' }}>
-          {nativeSessions.map((session) => (
-            <button
-              key={session.id}
-              onClick={() => {
-                setActiveNativeSession(session.id);
-                onOpen?.('code-agent-session');
-              }}
-              style={{
-                width: '100%',
-                padding: '6px 8px',
-                borderRadius: '6px',
-                border: 'none',
-                background: activeNativeSessionId === session.id
-                  ? 'rgba(217, 119, 87, 0.15)'
-                  : 'transparent',
-                color: activeNativeSessionId === session.id ? '#f0c8aa' : '#888',
-                fontSize: 10,
-                fontWeight: activeNativeSessionId === session.id ? 600 : 400,
-                cursor: 'pointer',
-                textAlign: 'left',
-                marginBottom: 2,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                transition: 'all 0.2s',
-              }}
-              onMouseEnter={(e) => {
-                if (activeNativeSessionId !== session.id) {
-                  e.currentTarget.style.color = '#b08d6e';
-                  e.currentTarget.style.background = 'rgba(212,176,140,0.05)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (activeNativeSessionId !== session.id) {
-                  e.currentTarget.style.color = '#888';
-                  e.currentTarget.style.background = 'transparent';
-                }
-              }}
-            >
-              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {session.name || 'Agent Session'}
-              </span>
-            </button>
-          ))}
-        </div>
       )}
     </div>
   );
 }
-
-

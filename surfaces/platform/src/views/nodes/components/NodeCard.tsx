@@ -10,19 +10,18 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  Server,
+  HardDrives,
   Cpu,
   HardDrive,
-  MemoryStick,
-  MoreVertical,
-  Trash2,
+  DotsThreeVertical,
+  Trash,
   Terminal,
-  Activity,
-  CheckCircle2,
+  Pulse as Activity,
+  CheckCircle,
   XCircle,
   Clock,
-  AlertCircle,
-} from 'lucide-react';
+  Warning,
+} from '@phosphor-icons/react';
 import type { NodeRecord, NodeStatus } from '../types';
 import { statusColors, statusLabels } from '../types';
 
@@ -34,11 +33,11 @@ interface NodeCardProps {
 }
 
 const statusIcons: Record<NodeStatus, React.ReactNode> = {
-  online: <CheckCircle2 className="h-4 w-4 text-green-500" />,
+  online: <CheckCircle className="h-4 w-4 text-green-500" />,
   offline: <XCircle className="h-4 w-4 text-gray-400" />,
   busy: <Activity className="h-4 w-4 text-yellow-500" />,
   maintenance: <Clock className="h-4 w-4 text-blue-500" />,
-  error: <AlertCircle className="h-4 w-4 text-red-500" />,
+  error: <Warning className="h-4 w-4 text-red-500" />,
 };
 
 export function NodeCard({ node, isConnected, onDelete, onTerminal }: NodeCardProps) {
@@ -77,7 +76,7 @@ export function NodeCard({ node, isConnected, onDelete, onTerminal }: NodeCardPr
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <Server className="h-8 w-8 text-muted-foreground" />
+              <HardDrives className="h-8 w-8 text-muted-foreground" />
               {/* Connection indicator */}
               <span
                 className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background ${
@@ -99,8 +98,8 @@ export function NodeCard({ node, isConnected, onDelete, onTerminal }: NodeCardPr
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <MoreVertical className="h-4 w-4" />
+                <Button variant="ghost" size="icon" size={32}>
+                  <DotsThreeVertical size={16} />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -112,7 +111,7 @@ export function NodeCard({ node, isConnected, onDelete, onTerminal }: NodeCardPr
                   onClick={() => onDelete(node.id)}
                   className="text-destructive focus:text-destructive"
                 >
-                  <Trash2 className="mr-2 h-4 w-4" />
+                  <Trash className="mr-2 h-4 w-4" />
                   Remove Node
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -128,7 +127,7 @@ export function NodeCard({ node, isConnected, onDelete, onTerminal }: NodeCardPr
             <span className="text-muted-foreground">{node.cpu_cores} cores</span>
           </div>
           <div className="flex items-center gap-2">
-            <MemoryStick className="h-4 w-4 text-muted-foreground" />
+            <HardDrive className="h-4 w-4 text-muted-foreground" />
             <span className="text-muted-foreground">{formatMemory(node.memory_gb)}</span>
           </div>
           <div className="flex items-center gap-2">

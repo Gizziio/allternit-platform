@@ -13,7 +13,10 @@ import { cjk } from "@streamdown/cjk";
 import { code } from "@streamdown/code";
 import { math } from "@streamdown/math";
 import { mermaid } from "@streamdown/mermaid";
-import { BrainIcon, ChevronDownIcon } from "lucide-react";
+import {
+  Brain as BrainIcon,
+  CaretDown as ChevronDownIcon,
+} from '@phosphor-icons/react';
 import {
   createContext,
   memo,
@@ -183,7 +186,7 @@ export const ReasoningTrigger = memo(
         )}
         {...props}
       >
-        <BrainIcon className="w-4 h-4" />
+        <BrainIcon size={16} />
         {children ?? getThinkingMessage(isStreaming, duration)}
         <ChevronDownIcon
           className={cn(

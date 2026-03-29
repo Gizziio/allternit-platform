@@ -293,7 +293,14 @@ export async function createHttpWorkspace(
 
     // ── Skills ────────────────────────────────────────────────────────
     listSkills: async (): Promise<Skill[]> => {
-      const skills = await json<any[]>('/v1/workspace/skills').catch(() => [])
+      const skillsPayload = await json<any>('/v1/workspace/skills').catch(() => [])
+      const skills = Array.isArray(skillsPayload)
+        ? skillsPayload
+        : Array.isArray(skillsPayload?.skills)
+          ? skillsPayload.skills
+          : Array.isArray(skillsPayload?.items)
+            ? skillsPayload.items
+            : []
       return skills.map((s: any) => ({
         id: s.id ?? s.name,
         name: s.name ?? s.id,

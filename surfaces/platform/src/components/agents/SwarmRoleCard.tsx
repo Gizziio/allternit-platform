@@ -9,13 +9,13 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import {
   Users,
-  Code2,
+  Code,
   ShieldCheck,
   Brain,
   Target,
   Eye,
   Check,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import { SwarmRole } from '@/lib/agents';
 
 // ============================================================================
@@ -51,7 +51,7 @@ const ROLE_CONFIG: Record<SwarmRole, {
   },
   worker: {
     label: 'Worker',
-    icon: Code2,
+    icon: Code,
     color: '#4ade80', // green-400
     bgColor: 'rgba(74, 222, 128, 0.15)',
     borderColor: 'rgba(74, 222, 128, 0.4)',

@@ -16,22 +16,22 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
-  Upload,
-  FileJson,
-  CheckCircle2,
+  UploadSimple,
+  FileCode,
+  CheckCircle,
   XCircle,
-  AlertTriangle,
+  Warning,
   Copy,
-  ExternalLink,
-  Github,
+  ArrowSquareOut,
+  GithubLogo as Github,
   FileText,
-  ChevronDown,
-  ChevronRight,
-  Sparkles,
-  RefreshCw,
-  Download,
-  Wand2,
-} from 'lucide-react';
+  CaretDown,
+  CaretRight,
+  Sparkle,
+  ArrowsClockwise,
+  DownloadSimple,
+  MagicWand,
+} from '@phosphor-icons/react';
 import {
   validatePluginManifestV1,
   validateMarketplaceManifestV1,
@@ -386,7 +386,7 @@ function DropZone({ onFileDrop, onTextDrop, isDragging, setIsDragging, compact }
         style={{ display: 'none' }}
         data-testid="file-input"
       />
-      <Upload
+      <UploadSimple
         size={compact ? 32 : 40}
         color={isDragging ? THEME.accent : THEME.textTertiary}
         style={{ marginBottom: 12 }}
@@ -462,7 +462,7 @@ function UrlInput({ onLoad, loading }: UrlInputProps) {
           gap: 6,
         }}
       >
-        {loading ? <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <ExternalLink size={14} />}
+        {loading ? <ArrowsClockwise size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <ArrowSquareOut size={14} />}
         Load
       </button>
     </form>
@@ -538,11 +538,11 @@ function ValidationResultPanel({
         data-testid="validation-status"
       >
         {valid ? (
-          <CheckCircle2 size={24} color={THEME.success} />
+          <CheckCircle size={24} color={THEME.success} />
         ) : errors.length > 0 ? (
           <XCircle size={24} color={THEME.danger} />
         ) : (
-          <AlertTriangle size={24} color={THEME.warning} />
+          <Warning size={24} color={THEME.warning} />
         )}
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: valid ? THEME.success : errors.length > 0 ? THEME.danger : THEME.warning }}>
@@ -614,7 +614,7 @@ function ValidationResultPanel({
       {warnings.length > 0 && (
         <CollapsibleSection
           title="Warnings"
-          icon={<AlertTriangle size={16} color={THEME.warning} />}
+          icon={<Warning size={16} color={THEME.warning} />}
           count={warnings.length}
           isExpanded={expandedSections.warnings}
           onToggle={() => onToggleSection('warnings')}
@@ -676,7 +676,7 @@ function ValidationResultPanel({
                   gap: 4,
                 }}
               >
-                <Sparkles size={12} />
+                <Sparkle size={12} />
                 Copy Fixed
               </button>
             )}
@@ -780,7 +780,7 @@ function CollapsibleSection({
             textAlign: 'left',
           }}
         >
-          {isExpanded ? <ChevronDown size={16} color={THEME.textSecondary} /> : <ChevronRight size={16} color={THEME.textSecondary} />}
+          {isExpanded ? <CaretDown size={16} color={THEME.textSecondary} /> : <CaretRight size={16} color={THEME.textSecondary} />}
           {icon}
           <span>{title}</span>
           {count !== undefined && (
@@ -1004,7 +1004,7 @@ export function PluginManifestValidator({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <FileJson size={20} color={THEME.accent} />
+            <FileCode size={20} color={THEME.accent} />
             <div>
               <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: THEME.textPrimary }}>
                 Plugin Manifest Validator
@@ -1057,7 +1057,7 @@ export function PluginManifestValidator({
           }}
           data-testid="tab-plugin"
         >
-          <FileJson size={16} />
+          <FileCode size={16} />
           Validate Plugin
         </button>
         <button
@@ -1082,7 +1082,7 @@ export function PluginManifestValidator({
           }}
           data-testid="tab-marketplace"
         >
-          <Upload size={16} />
+          <UploadSimple size={16} />
           Validate Marketplace
         </button>
       </div>
@@ -1147,7 +1147,7 @@ export function PluginManifestValidator({
                   title="Format JSON"
                   data-testid="format-button"
                 >
-                  <Wand2 size={12} />
+                  <MagicWand size={12} />
                   Format JSON
                 </button>
                 <button
@@ -1166,7 +1166,7 @@ export function PluginManifestValidator({
                   }}
                   data-testid="example-button"
                 >
-                  <Download size={12} />
+                  <DownloadSimple size={12} />
                   Example
                 </button>
               </div>
@@ -1210,7 +1210,7 @@ export function PluginManifestValidator({
             zIndex: 1000,
           }}
         >
-          <CheckCircle2 size={16} color={THEME.success} />
+          <CheckCircle size={16} color={THEME.success} />
           <span style={{ fontSize: 13, color: THEME.textPrimary }}>{copyFeedback}</span>
         </div>
       )}

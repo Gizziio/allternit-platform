@@ -10,18 +10,18 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { 
-  Send, 
-  Inbox, 
-  MessageSquare, 
-  CheckCircle, 
+import {
+  PaperPlaneTilt,
+  Tray,
+  Chat,
+  CheckCircle,
   XCircle,
-  ChevronLeft,
+  CaretLeft,
   Clock,
   User,
-  AlertCircle,
-  RefreshCw
-} from "lucide-react";
+  Warning,
+  ArrowsClockwise,
+} from '@phosphor-icons/react';
 import { useUnifiedStore } from "@/lib/agents/unified.store";
 import type { MailThread, MailMessage } from "@/lib/agents";
 
@@ -127,7 +127,7 @@ export function MailTab() {
               gap: 8,
             }}
           >
-            <Inbox size={18} />
+            <Tray size={18} />
             <span
               style={{
                 fontSize: 14,
@@ -163,7 +163,7 @@ export function MailTab() {
               justifyContent: "center",
             }}
           >
-            <RefreshCw size={14} color="#888" />
+            <ArrowsClockwise size={14} color="#888" />
           </button>
         </div>
 
@@ -182,7 +182,7 @@ export function MailTab() {
                 color: "#666",
               }}
             >
-              <MessageSquare size={48} style={{ marginBottom: 16, opacity: 0.3 }} />
+              <Chat size={48} style={{ marginBottom: 16, opacity: 0.3 }} />
               <p>No messages yet</p>
             </div>
           ) : (
@@ -254,7 +254,7 @@ export function MailTab() {
                   gap: 6,
                 }}
               >
-                <AlertCircle size={14} />
+                <Warning size={14} />
                 Request Review
               </button>
             </div>
@@ -382,7 +382,7 @@ export function MailTab() {
                   gap: 8,
                 }}
               >
-                <Send size={16} />
+                <PaperPlaneTilt size={16} />
                 Send
               </button>
             </div>
@@ -398,7 +398,7 @@ export function MailTab() {
               color: "#666",
             }}
           >
-            <MessageSquare size={64} style={{ marginBottom: 16, opacity: 0.3 }} />
+            <Chat size={64} style={{ marginBottom: 16, opacity: 0.3 }} />
             <p>Select a thread to view messages</p>
           </div>
         )}
@@ -583,7 +583,7 @@ function ThreadItem({
           justifyContent: "center",
         }}
       >
-        <MessageSquare size={18} color="#0a84ff" />
+        <Chat size={18} color="#0a84ff" />
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div

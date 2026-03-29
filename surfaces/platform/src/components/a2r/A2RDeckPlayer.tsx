@@ -8,18 +8,18 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import Reveal from 'reveal.js';
 import 'reveal.js/reveal.css';
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  Grid3x3, 
+import {
+  CaretLeft,
+  CaretRight,
+  SquaresFour,
   Play,
-  Download,
-  Share2,
-  MoreHorizontal,
+  DownloadSimple,
+  ShareNetwork,
+  DotsThreeOutline,
   MonitorPlay,
   Presentation,
-  Palette
-} from 'lucide-react';
+  Palette,
+} from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -242,7 +242,7 @@ export function A2RDeckPlayer({
                 showGrid && "text-[#D4956A] bg-[#D4956A]/10"
               )}
             >
-              <Grid3x3 className="w-4 h-4" />
+              <SquaresFour size={16} />
             </Button>
 
             {/* Present mode */}
@@ -253,7 +253,7 @@ export function A2RDeckPlayer({
                 onClick={toggleFullscreen}
                 className="h-7 text-[#888] hover:text-[#ECECEC]"
               >
-                <MonitorPlay className="w-4 h-4" />
+                <MonitorPlay size={16} />
               </Button>
             )}
 
@@ -264,7 +264,7 @@ export function A2RDeckPlayer({
               onClick={exportPDF}
               className="h-7 text-[#888] hover:text-[#ECECEC]"
             >
-              <Download className="w-4 h-4" />
+              <DownloadSimple size={16} />
             </Button>
 
             {/* Share */}
@@ -273,7 +273,7 @@ export function A2RDeckPlayer({
               size="sm"
               className="h-7 text-[#888] hover:text-[#ECECEC]"
             >
-              <Share2 className="w-4 h-4" />
+              <ShareNetwork size={16} />
             </Button>
 
             {/* More */}
@@ -282,7 +282,7 @@ export function A2RDeckPlayer({
               size="sm"
               className="h-7 text-[#888] hover:text-[#ECECEC]"
             >
-              <MoreHorizontal className="w-4 h-4" />
+              <DotsThreeOutline size={16} />
             </Button>
           </div>
         </div>
@@ -322,7 +322,7 @@ export function A2RDeckPlayer({
           disabled={currentIndex === 0}
           className="text-[#888] hover:text-[#ECECEC] disabled:opacity-30"
         >
-          <ChevronLeft className="w-4 h-4 mr-1" />
+          <CaretLeft className="w-4 h-4 mr-1" />
           <span className="text-xs">Previous</span>
         </Button>
 
@@ -356,7 +356,7 @@ export function A2RDeckPlayer({
             className="text-[#888] hover:text-[#ECECEC] disabled:opacity-30"
           >
             <span className="text-xs mr-1">Next</span>
-            <ChevronRight className="w-4 h-4" />
+            <CaretRight size={16} />
           </Button>
         </div>
       </div>

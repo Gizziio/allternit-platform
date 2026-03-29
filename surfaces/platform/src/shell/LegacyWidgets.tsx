@@ -32,20 +32,20 @@ function VoiceOrbWidget() {
         height: 64,
         borderRadius: "50%",
         background: state === "active"
-          ? "radial-gradient(circle at 30% 30%, rgba(64,156,255,0.9), rgba(10,132,255,0.2))"
-          : "radial-gradient(circle at 30% 30%, rgba(255,255,255,0.65), rgba(0,0,0,0.15))",
+          ? "radial-gradient(circle at 30% 30%, var(--status-info), color-mix(in srgb, var(--status-info) 18%, transparent))"
+          : "radial-gradient(circle at 30% 30%, var(--surface-floating), color-mix(in srgb, var(--surface-panel) 35%, transparent))",
         boxShadow: state === "active"
-          ? "0 0 24px rgba(10,132,255,0.6)"
-          : "0 8px 20px rgba(0,0,0,0.2)",
-        border: "1px solid rgba(255,255,255,0.35)",
+          ? "0 0 24px var(--status-info)"
+          : "var(--shadow-lg)",
+        border: "1px solid var(--shell-floating-border)",
         animation: state === "active" ? "a2r-orb-pulse 1.6s ease-in-out infinite" : "none",
       }} />
       <div style={{
         padding: "4px 10px",
         fontSize: 11,
         borderRadius: 999,
-        background: "rgba(0,0,0,0.6)",
-        color: "white",
+        background: "var(--shell-vision-label-bg)",
+        color: "var(--shell-vision-label-fg)",
         maxWidth: 220,
         textAlign: "center",
         whiteSpace: "nowrap",
@@ -80,9 +80,9 @@ function VisionWidget() {
       pointerEvents: "auto",
       padding: "10px 12px",
       borderRadius: 14,
-      background: "rgba(255,255,255,0.9)",
-      border: "1px solid rgba(0,0,0,0.12)",
-      boxShadow: "0 10px 24px rgba(0,0,0,0.12)",
+      background: "var(--shell-floating-bg)",
+      border: "1px solid var(--shell-floating-border)",
+      boxShadow: "var(--shadow-lg)",
       minWidth: 220,
     }}>
       <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.6, textTransform: "uppercase" }}>

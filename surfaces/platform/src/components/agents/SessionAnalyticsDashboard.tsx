@@ -31,22 +31,22 @@ import {
   Legend,
 } from 'recharts';
 import {
-  Activity,
-  MessageSquare,
+  Pulse as Activity,
+  Chat,
   Wrench,
-  Zap,
+  Lightning,
   Clock,
-  TrendingUp,
+  TrendUp,
   Calendar,
-  Filter,
-  Download,
-  Share2,
-  ChevronDown,
-  BarChart3,
-  PieChart as PieChartIcon,
+  Funnel,
+  DownloadSimple,
+  ShareNetwork,
+  CaretDown,
+  ChartBar,
+  ChartPie,
   Users,
   Target,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 
 import {
   SAND,
@@ -81,66 +81,95 @@ interface AnalyticsData {
 }
 
 // ============================================================================
-// Mock Data Generator
+// Real Analytics Derivation
 // ============================================================================
 
-function generateMockAnalytics(sessions: NativeSession[]): AnalyticsData {
+function computeAnalytics(sessions: NativeSession[]): AnalyticsData {
   const days = 30;
-  const messagesOverTime = Array.from({ length: days }, (_, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() - (days - i - 1));
-    return {
-      date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      count: Math.floor(Math.random() * 50) + 10,
-      tokens: Math.floor(Math.random() * 5000) + 1000,
-    };
-  });
+  const now = Date.now();
 
-  const toolUsage = [
-    { name: 'read_file', count: 145, avgDuration: 120 },
-    { name: 'write_file', count: 89, avgDuration: 200 },
-    { name: 'search_code', count: 67, avgDuration: 350 },
-    { name: 'run_tests', count: 34, avgDuration: 5000 },
-    { name: 'git_status', count: 28, avgDuration: 80 },
-    { name: 'http_request', count: 23, avgDuration: 450 },
-  ];
+  // Build per-day buckets from real session data
+  const dayBuckets = new Map<string, { count: number; tokens: number }>();
+  for (let i = 0; i < days; i++) {
+    const d = new Date(now - (days - i - 1) * 86400000);
+    const key = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    dayBuckets.set(key, { count: 0, tokens: 0 });
+  }
 
-  const hourlyDistribution = Array.from({ length: 24 }, (_, hour) => ({
-    hour,
-    messages: Math.floor(Math.random() * 20) + (hour >= 9 && hour <= 17 ? 30 : 5),
-  }));
+  // Hourly distribution buckets
+  const hourBuckets = Array.from({ length: 24 }, (_, hour) => ({ hour, messages: 0 }));
 
-  const modelDistribution = [
-    { model: 'GPT-4', usage: 45000, cost: 2.25 },
-    { model: 'Claude 3', usage: 32000, cost: 1.92 },
-    { model: 'GPT-4 Turbo', usage: 28000, cost: 1.40 },
-    { model: 'Local Models', usage: 15000, cost: 0 },
-  ];
+  // Tool usage accumulator
+  const toolMap = new Map<string, { count: number; totalDuration: number }>();
 
-  const topTopics = [
-    { topic: 'Code Review', count: 45 },
-    { topic: 'Debugging', count: 38 },
-    { topic: 'Architecture', count: 32 },
-    { topic: 'Testing', count: 28 },
-    { topic: 'Documentation', count: 24 },
-  ];
+  // Model distribution accumulator
+  const modelMap = new Map<string, { usage: number; cost: number }>();
 
-  const latencyTrends = Array.from({ length: days }, (_, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() - (days - i - 1));
-    return {
-      date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      avgLatency: Math.floor(Math.random() * 500) + 800,
-      p95Latency: Math.floor(Math.random() * 1000) + 1500,
-    };
+  // Latency per day
+  const latencyBuckets = new Map<string, { total: number; p95samples: number[]; count: number }>();
+  for (const [key] of dayBuckets) {
+    latencyBuckets.set(key, { total: 0, p95samples: [], count: 0 });
+  }
+
+  for (const session of sessions) {
+    const messages = (session as unknown as { messages?: { role: string; createdAt?: number; tokens?: number; model?: string; toolCalls?: { name: string; duration?: number }[]; latency?: number }[] }).messages ?? [];
+    for (const msg of messages) {
+      if (!msg.createdAt) continue;
+      const d = new Date(msg.createdAt);
+      const key = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const hour = d.getHours();
+
+      if (dayBuckets.has(key)) {
+        const b = dayBuckets.get(key)!;
+        b.count++;
+        b.tokens += msg.tokens ?? 0;
+      }
+
+      hourBuckets[hour].messages++;
+
+      if (msg.model) {
+        const m = modelMap.get(msg.model) ?? { usage: 0, cost: 0 };
+        m.usage += msg.tokens ?? 0;
+        modelMap.set(msg.model, m);
+      }
+
+      if (msg.latency != null && latencyBuckets.has(key)) {
+        const lb = latencyBuckets.get(key)!;
+        lb.total += msg.latency;
+        lb.p95samples.push(msg.latency);
+        lb.count++;
+      }
+
+      for (const tc of msg.toolCalls ?? []) {
+        const t = toolMap.get(tc.name) ?? { count: 0, totalDuration: 0 };
+        t.count++;
+        t.totalDuration += tc.duration ?? 0;
+        toolMap.set(tc.name, t);
+      }
+    }
+  }
+
+  const messagesOverTime = [...dayBuckets.entries()].map(([date, b]) => ({ date, ...b }));
+
+  const toolUsage = [...toolMap.entries()]
+    .map(([name, t]) => ({ name, count: t.count, avgDuration: t.count ? Math.round(t.totalDuration / t.count) : 0 }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+
+  const modelDistribution = [...modelMap.entries()].map(([model, m]) => ({ model, ...m }));
+
+  const latencyTrends = [...latencyBuckets.entries()].map(([date, lb]) => {
+    const sorted = [...lb.p95samples].sort((a, b) => a - b);
+    const p95 = sorted.length ? sorted[Math.floor(sorted.length * 0.95)] ?? sorted[sorted.length - 1] : 0;
+    return { date, avgLatency: lb.count ? Math.round(lb.total / lb.count) : 0, p95Latency: p95 };
   });
 
   return {
     messagesOverTime,
     toolUsage,
-    hourlyDistribution,
+    hourlyDistribution: hourBuckets,
     modelDistribution,
-    topTopics,
+    topTopics: [], // requires NLP tagging — not available client-side
     latencyTrends,
   };
 }
@@ -158,7 +187,7 @@ export function SessionAnalyticsDashboard({
   const [selectedView, setSelectedView] = useState<'overview' | 'tools' | 'models' | 'topics'>('overview');
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
 
-  const analytics = useMemo(() => generateMockAnalytics(sessions), [sessions]);
+  const analytics = useMemo(() => computeAnalytics(sessions), [sessions]);
 
   const totalMessages = analytics.messagesOverTime.reduce((sum, d) => sum + d.count, 0);
   const totalTokens = analytics.messagesOverTime.reduce((sum, d) => sum + d.tokens, 0);
@@ -195,7 +224,7 @@ export function SessionAnalyticsDashboard({
           value={totalMessages.toLocaleString()}
           change="+12.5%"
           trend="up"
-          icon={MessageSquare}
+          icon={Chat}
           modeColors={modeColors as typeof MODE_COLORS.chat}
         />
         <MetricCard
@@ -203,7 +232,7 @@ export function SessionAnalyticsDashboard({
           value={totalTokens.toLocaleString()}
           change="+8.3%"
           trend="up"
-          icon={Zap}
+          icon={Lightning}
           modeColors={modeColors as typeof MODE_COLORS.chat}
         />
         <MetricCard
@@ -408,7 +437,7 @@ export function SessionAnalyticsDashboard({
                     border: `1px solid ${modeColors.border}`,
                     borderRadius: RADIUS.md,
                   }}
-                  formatter={(value: number | undefined) => value !== undefined ? [`${value.toLocaleString()} tokens`, 'Usage'] : ['', 'Usage']}
+                  formatter={(value: number | undefined) => value !== undefined ? [`${value} tokens`, 'Usage'] : ['', 'Usage']}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -443,7 +472,7 @@ export function SessionAnalyticsDashboard({
         <ChartCard
           title="Response Latency"
           subtitle="Average and P95 latency over time"
-          icon={TrendingUp}
+          icon={TrendUp}
           modeColors={modeColors as typeof MODE_COLORS.chat}
           className="lg:col-span-2"
         >
@@ -552,7 +581,7 @@ function DashboardHeader({
   setTimeRange: (range: '7d' | '30d' | '90d') => void;
 }) {
   const views = [
-    { id: 'overview', label: 'Overview', icon: BarChart3 },
+    { id: 'overview', label: 'Overview', icon: ChartBar },
     { id: 'tools', label: 'Tools', icon: Wrench },
     { id: 'models', label: 'Models', icon: PieChartIcon },
     { id: 'topics', label: 'Topics', icon: Target },
@@ -622,7 +651,7 @@ function DashboardHeader({
             color: TEXT.secondary,
           }}
         >
-          <Download size={18} />
+          <DownloadSimple size={18} />
         </button>
         <button
           className="p-2 rounded-lg transition-colors"
@@ -631,7 +660,7 @@ function DashboardHeader({
             color: TEXT.secondary,
           }}
         >
-          <Share2 size={18} />
+          <ShareNetwork size={18} />
         </button>
       </div>
     </div>
@@ -682,7 +711,7 @@ function MetricCard({
           className="flex items-center gap-1 text-sm"
           style={{ color: isPositive ? '#4ade80' : '#f87171' }}
         >
-          <TrendingUp size={14} />
+          <TrendUp size={14} />
           {change}
         </div>
       </div>

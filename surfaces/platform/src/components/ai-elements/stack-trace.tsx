@@ -11,11 +11,11 @@ import {
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import {
-  AlertTriangleIcon,
-  CheckIcon,
-  ChevronDownIcon,
-  CopyIcon,
-} from "lucide-react";
+  Warning as AlertTriangleIcon,
+  Check as CheckIcon,
+  CaretDown as ChevronDownIcon,
+  Copy as CopyIcon,
+} from '@phosphor-icons/react';
 import {
   createContext,
   memo,

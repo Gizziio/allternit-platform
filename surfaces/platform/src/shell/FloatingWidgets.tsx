@@ -15,8 +15,8 @@ interface RailControlsProps {
   mode: 'chat' | 'cowork' | 'code';
   onModeChange: (mode: 'chat' | 'cowork' | 'code') => void;
   onToggleRail: () => void;
-  onNewChat: () => void;
-  onNewAgentSession: () => void;
+  onNewChat: () => void | Promise<void>;
+  onNewAgentSession: () => void | Promise<void>;
   isRailCollapsed: boolean;
   activeViewType?: string;
   onOpenView?: (view: string) => void;
@@ -35,6 +35,8 @@ export function RailControls({
   onOpenPlugins,
 }: RailControlsProps) {
   const horizontalPadding = 96;
+  const railContentInset = 8;
+  const railControlWidth = 228;
   const isBrowser = activeViewType === 'browser';
   const [showCreateMenu, setShowCreateMenu] = useState(false);
   const createMenuRef = useRef<HTMLDivElement | null>(null);
@@ -71,7 +73,7 @@ export function RailControls({
         height: 44,
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: 'flex-start',
         paddingLeft: horizontalPadding,
         paddingRight: 4,
         pointerEvents: 'auto',
@@ -85,11 +87,11 @@ export function RailControls({
           gap: 0,
           padding: '2px',
           borderRadius: isRailCollapsed ? 999 : 12,
-          background: isRailCollapsed ? 'rgba(20, 20, 20, 0.5)' : 'transparent',
-          border: isRailCollapsed ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
-          backdropFilter: isRailCollapsed ? 'blur(8px)' : 'none',
-          WebkitBackdropFilter: isRailCollapsed ? 'blur(8px)' : 'none',
-          boxShadow: isRailCollapsed ? '0 4px 12px rgba(0,0,0,0.15)' : 'none',
+          background: 'var(--shell-floating-bg)',
+          border: '1px solid var(--shell-floating-border)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+          boxShadow: isRailCollapsed ? 'var(--shadow-sm)' : 'var(--shadow-lg)',
           transition: 'all 0.3s ease-in-out'
         }}>
           <ControlButton
@@ -116,9 +118,9 @@ export function RailControls({
                   minWidth: 196,
                   padding: 6,
                   borderRadius: 16,
-                  border: '1px solid rgba(212,176,140,0.18)',
-                  background: 'linear-gradient(180deg, rgba(28,24,23,0.98), rgba(21,19,19,0.98))',
-                  boxShadow: '0 20px 40px rgba(8,6,6,0.3)',
+                  border: '1px solid var(--shell-menu-border)',
+                  background: 'var(--shell-menu-bg)',
+                  boxShadow: 'var(--shadow-xl)',
                   zIndex: 10002,
                 }}
               >
@@ -126,9 +128,9 @@ export function RailControls({
                   icon={ChatText as any}
                   label="New Chat"
                   description="Start a regular chat thread"
-                  onClick={() => {
+                  onClick={async () => {
                     setShowCreateMenu(false);
-                    onNewChat();
+                    await onNewChat();
                   }}
                 />
                 <CreateMenuButton
@@ -153,58 +155,51 @@ export function RailControls({
               <PuzzlePiece size={16} weight="bold" />
             </ControlButton>
           )}
-        </div>
 
-        {/* Right side: Browser widget - compact */}
-        <div style={{ display: 'flex', gap: 6, marginRight: 20 }}>
-          <button
-            onClick={() => onOpenView?.('browser')}
+          <div
+            aria-hidden="true"
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 2,
-              borderRadius: 6,
-              border: '1px solid #333',
-              background: 'rgba(20, 20, 20, 0.85)',
-              backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)',
-              color: isBrowser ? '#579BD9' : '#6e6e6e',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              height: 26,
-              padding: '0 4px',
-              fontSize: 10,
-              fontWeight: 600,
-              boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+              width: 1,
+              height: 16,
+              marginLeft: 6,
+              marginRight: 6,
+              background: 'var(--shell-divider)',
+              borderRadius: 999,
             }}
-            onMouseEnter={(e) => { if (!isBrowser) e.currentTarget.style.color = '#9b9b9b'; }}
-            onMouseLeave={(e) => { if (!isBrowser) e.currentTarget.style.color = '#6e6e6e'; }}
-          >
-            <Desktop size={14} weight={isBrowser ? 'fill' : 'bold'} />
-            <span>Browser</span>
-          </button>
+          />
+
+          <ConnectedViewButton
+            active={isBrowser}
+            onClick={() => onOpenView?.('browser')}
+            title="Browser"
+            icon={Desktop}
+            label="Browser"
+          />
         </div>
       </div>
 
       {/* 2. PROMINENT MODE SWITCHER */}
       <div style={{
-        padding: '4px 16px 16px',
+        paddingTop: 4,
+        paddingBottom: 10,
+        paddingLeft: railContentInset,
+        paddingRight: railContentInset,
         pointerEvents: 'auto',
         opacity: isRailCollapsed ? 0.95 : 1,
         transition: 'all 0.3s ease-in-out',
       }}>
         <div style={{
           display: 'flex',
-          background: isRailCollapsed ? 'rgba(20, 20, 20, 0.8)' : 'rgba(20, 20, 20, 0.85)',
+          width: railControlWidth,
+          background: 'var(--shell-floating-bg)',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
           padding: '3px',
-          borderRadius: 14,
-          border: '1px solid #333',
-          height: 40,
+          borderRadius: 10,
+          border: '1px solid var(--shell-floating-border)',
+          height: 28,
           gap: 2,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+          boxShadow: 'var(--shadow-sm)',
           transition: 'all 0.3s ease-in-out'
         }}>
           <ProminentModePill
@@ -219,14 +214,14 @@ export function RailControls({
             onClick={() => onModeChange('cowork')}
             icon={UsersThree}
             label="Cowork"
-            color="#9A7BAA"
+            color="var(--accent-cowork)"
           />
           <ProminentModePill
             active={mode === 'code' && !isBrowser}
             onClick={() => onModeChange('code')}
             icon={TerminalWindow}
             label="Code"
-            color="#6B9A7B"
+            color="var(--accent-code)"
           />
         </div>
       </div>
@@ -257,12 +252,12 @@ function CreateMenuButton({
         border: 'none',
         background: 'transparent',
         borderRadius: 12,
-        color: '#ececec',
+        color: 'var(--shell-item-fg)',
         cursor: 'pointer',
         textAlign: 'left',
       }}
       onMouseEnter={(event) => {
-        event.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+        event.currentTarget.style.background = 'var(--shell-item-hover)';
       }}
       onMouseLeave={(event) => {
         event.currentTarget.style.background = 'transparent';
@@ -273,12 +268,12 @@ function CreateMenuButton({
           width: 30,
           height: 30,
           borderRadius: 10,
-          border: '1px solid rgba(212,176,140,0.14)',
+          border: '1px solid var(--shell-floating-border)',
           background: 'transparent',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: '#d4b08c',
+          color: 'var(--shell-item-active-fg)',
           flexShrink: 0,
         }}
       >
@@ -286,7 +281,7 @@ function CreateMenuButton({
       </div>
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 700 }}>{label}</div>
-        <div style={{ marginTop: 2, fontSize: 11, color: '#8f8a86', lineHeight: 1.4 }}>
+        <div style={{ marginTop: 2, fontSize: 11, color: 'var(--shell-item-muted)', lineHeight: 1.4 }}>
           {description}
         </div>
       </div>
@@ -307,21 +302,68 @@ function ControlButton({ children, onClick, title }: any) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        color: '#9b9b9b',
+        color: 'var(--shell-item-muted)',
         cursor: 'pointer',
         transition: 'all 0.2s'
       }}
       title={title}
       onMouseEnter={(e) => {
-        e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
-        e.currentTarget.style.color = '#ececec';
+        e.currentTarget.style.background = 'var(--shell-item-hover)';
+        e.currentTarget.style.color = 'var(--shell-item-fg)';
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.background = 'transparent';
-        e.currentTarget.style.color = '#9b9b9b';
+        e.currentTarget.style.color = 'var(--shell-item-muted)';
       }}
     >
       {children}
+    </button>
+  );
+}
+
+function ConnectedViewButton({
+  active,
+  onClick,
+  title,
+  icon: Icon,
+  label,
+}: any) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 4,
+        height: 26,
+        padding: '0 6px',
+        border: 'none',
+        borderRadius: 8,
+        background: active ? 'var(--status-info-bg)' : 'transparent',
+        color: active ? 'var(--status-info)' : 'var(--shell-item-muted)',
+        cursor: 'pointer',
+        transition: 'all 0.2s',
+        fontSize: 10,
+        fontWeight: 600,
+        whiteSpace: 'nowrap',
+      }}
+      title={title}
+      onMouseEnter={(e) => {
+        if (!active) {
+          e.currentTarget.style.background = 'var(--shell-item-hover)';
+          e.currentTarget.style.color = 'var(--shell-item-fg)';
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!active) {
+          e.currentTarget.style.background = 'transparent';
+          e.currentTarget.style.color = 'var(--shell-item-muted)';
+        }
+      }}
+    >
+      <Icon size={14} weight={active ? 'fill' : 'bold'} />
+      <span>{label}</span>
     </button>
   );
 }
@@ -339,7 +381,7 @@ function ProminentModePill({ active, onClick, icon: Icon, label, color }: any) {
         borderRadius: 6,
         border: 'none',
         background: active ? color : 'transparent',
-        color: active ? '#ffffff' : '#6e6e6e',
+        color: active ? 'var(--ui-text-inverse)' : 'var(--shell-item-muted)',
         cursor: 'pointer',
         transition: 'all 0.2s',
         height: 'calc(100% - 4px)',

@@ -4,17 +4,17 @@ import { NodeCard } from './NodeCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Server, 
-  Plus, 
-  RefreshCw, 
-  Loader2, 
-  AlertCircle,
-  Activity,
-  CheckCircle2,
+import {
+  HardDrives,
+  Plus,
+  ArrowsClockwise,
+  CircleNotch,
+  Warning,
+  Pulse as Activity,
+  CheckCircle,
   XCircle,
   Cloud,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import type { NodeRecord } from '../types';
 import { isNodeConnected } from '../hooks/useNodes';
 
@@ -47,7 +47,7 @@ export function NodeList({
   if (loading && nodes.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <CircleNotch className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -57,11 +57,11 @@ export function NodeList({
       <Card className="border-destructive">
         <CardContent className="pt-6">
           <div className="flex items-center gap-2 text-destructive">
-            <AlertCircle className="h-5 w-5" />
+            <Warning size={20} />
             <p>Error loading nodes: {error}</p>
           </div>
           <Button onClick={onRefresh} variant="outline" className="mt-4">
-            <RefreshCw className="h-4 w-4 mr-2" />
+            <ArrowsClockwise className="h-4 w-4 mr-2" />
             Retry
           </Button>
         </CardContent>
@@ -80,9 +80,9 @@ export function NodeList({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+          {loading && <CircleNotch className="h-4 w-4 animate-spin text-muted-foreground" />}
           <Button variant="outline" size="sm" onClick={onRefresh}>
-            <RefreshCw className="h-4 w-4 mr-2" />
+            <ArrowsClockwise className="h-4 w-4 mr-2" />
             Refresh
           </Button>
           <Button size="sm" onClick={onAddNode}>
@@ -98,7 +98,7 @@ export function NodeList({
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Nodes</CardTitle>
-              <Server className="h-4 w-4 text-muted-foreground" />
+              <HardDrives className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{nodes.length}</div>
@@ -108,7 +108,7 @@ export function NodeList({
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Online</CardTitle>
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <CheckCircle className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">{onlineCount}</div>
@@ -142,7 +142,7 @@ export function NodeList({
       {nodes.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <Server className="h-12 w-12 text-muted-foreground mb-4" />
+            <HardDrives className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No nodes connected</h3>
             <p className="text-sm text-muted-foreground text-center max-w-sm mb-6">
               Add compute nodes to run agents and workloads. You can deploy new cloud instances or connect existing machines.

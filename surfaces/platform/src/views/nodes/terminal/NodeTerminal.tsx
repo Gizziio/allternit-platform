@@ -3,19 +3,20 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
-import { nodeTerminalService, type TerminalSession, type TimeoutWarning } from './terminal.service';
+import { SerializeAddon } from 'xterm-addon-serialize';
+import { nodeTerminalService, type TerminalSession, type TimeoutWarning, type TerminalSnapshotFrame } from './terminal.service';
 import { TerminalFileBrowser, type FileEntry, type FileTransfer } from './TerminalFileBrowser';
 import { Button } from '@/components/ui/button';
-import { 
-  Folder, 
-  X, 
-  Upload, 
-  Download, 
-  CheckCircle2, 
-  AlertCircle,
-  PanelLeft,
-  PanelLeftClose
-} from 'lucide-react';
+import {
+  Folder,
+  X,
+  UploadSimple,
+  DownloadSimple,
+  CheckCircle,
+  Warning,
+  Sidebar,
+  SidebarSimple as PanelLeftClose,
+} from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import 'xterm/css/xterm.css';
 
@@ -44,6 +45,9 @@ export function NodeTerminal({
   const terminalRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
+  const serializeAddonRef = useRef<SerializeAddon | null>(null);
+  const awaitingAuthoritativeReplayRef = useRef(false);
+  const snapshotIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,9 +111,18 @@ export function NodeTerminal({
     const fitAddon = new FitAddon();
     fitAddonRef.current = fitAddon;
     term.loadAddon(fitAddon);
+    const serializeAddon = new SerializeAddon();
+    serializeAddonRef.current = serializeAddon;
+    term.loadAddon(serializeAddon);
 
     // Open terminal in container
     term.open(terminalRef.current);
+
+    const restoredSnapshot = nodeTerminalService.getSnapshot(session.id);
+    if (restoredSnapshot?.snapshot) {
+      term.write(restoredSnapshot.snapshot);
+      awaitingAuthoritativeReplayRef.current = true;
+    }
 
     // Initial fit
     setTimeout(() => {
@@ -137,7 +150,18 @@ export function NodeTerminal({
 
     // Register data handlers
     nodeTerminalService.onData(session.id, (data) => {
+      if (awaitingAuthoritativeReplayRef.current) {
+        term.reset();
+        awaitingAuthoritativeReplayRef.current = false;
+      }
       term.write(data);
+    });
+
+    nodeTerminalService.onSnapshot(session.id, (frame: TerminalSnapshotFrame) => {
+      awaitingAuthoritativeReplayRef.current = false;
+      term.reset();
+      term.write(frame.snapshot);
+      nodeTerminalService.saveSnapshot(session.id, frame.snapshot, frame.cols, frame.rows);
     });
 
     nodeTerminalService.onStatusChange(session.id, (connected) => {
@@ -186,7 +210,24 @@ export function NodeTerminal({
     const connected = nodeTerminalService.isConnected(session.id);
     setIsConnected(connected);
 
+    const persistSnapshot = () => {
+      const currentTerm = termRef.current;
+      const currentSerializeAddon = serializeAddonRef.current;
+      if (!currentTerm || !currentSerializeAddon) {
+        return;
+      }
+      const snapshot = currentSerializeAddon.serialize();
+      nodeTerminalService.sendSnapshot(session.id, snapshot, currentTerm.cols, currentTerm.rows);
+    };
+
+    snapshotIntervalRef.current = setInterval(persistSnapshot, 5000);
+
     return () => {
+      persistSnapshot();
+      if (snapshotIntervalRef.current) {
+        clearInterval(snapshotIntervalRef.current);
+        snapshotIntervalRef.current = null;
+      }
       window.removeEventListener('resize', handleResize);
       term.dispose();
     };
@@ -467,9 +508,9 @@ export function NodeTerminal({
               className={cn(showFileBrowser && "bg-accent")}
             >
               {showFileBrowser ? (
-                <PanelLeftClose className="h-4 w-4" />
+                <SidebarSimple size={16} />
               ) : (
-                <PanelLeft className="h-4 w-4" />
+                <Sidebar size={16} />
               )}
             </Button>
           )}
@@ -550,7 +591,7 @@ export function NodeTerminal({
           {isDragging && (
             <div className="absolute inset-0 bg-primary/10 flex items-center justify-center pointer-events-none">
               <div className="bg-background/90 px-6 py-4 rounded-lg shadow-lg text-center">
-                <Upload className="h-8 w-8 mx-auto mb-2 text-primary" />
+                <UploadSimple className="h-8 w-8 mx-auto mb-2 text-primary" />
                 <p className="font-medium">Drop files to upload</p>
               </div>
             </div>
@@ -625,22 +666,22 @@ export function NodeTerminal({
                 >
                   <div className="flex items-center gap-2">
                     {transfer.type === 'upload' ? (
-                      <Upload className="h-4 w-4 text-muted-foreground" />
+                      <UploadSimple className="h-4 w-4 text-muted-foreground" />
                     ) : (
-                      <Download className="h-4 w-4 text-muted-foreground" />
+                      <DownloadSimple className="h-4 w-4 text-muted-foreground" />
                     )}
                     <span className="flex-1 text-sm truncate">{transfer.filename}</span>
                     {transfer.status === 'completed' && (
-                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      <CheckCircle className="h-4 w-4 text-green-500" />
                     )}
                     {transfer.status === 'error' && (
-                      <AlertCircle className="h-4 w-4 text-destructive" />
+                      <Warning className="h-4 w-4 text-destructive" />
                     )}
                     <button
                       onClick={() => setTransfers(prev => prev.filter(t => t.id !== transfer.id))}
                       className="text-muted-foreground hover:text-foreground"
                     >
-                      <X className="h-3 w-3" />
+                      <X size={12} />
                     </button>
                   </div>
                   {transfer.status === 'transferring' && (

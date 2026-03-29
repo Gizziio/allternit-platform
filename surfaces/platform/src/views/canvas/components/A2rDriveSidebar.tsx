@@ -5,27 +5,27 @@
  * Shows generated/downloaded assets (images, documents, code, audio, video).
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Image, 
-  FileText, 
-  FileCode, 
-  Video, 
-  Music, 
-  File, 
-  Grid3x3, 
+import {
+  Image,
+  FileText,
+  FileCode,
+  Video,
+  MusicNote,
+  File,
+  SquaresFour,
   List,
-  Download,
-  Trash2,
+  DownloadSimple,
+  Trash,
   Eye,
-  Edit,
-  MoreVertical,
-  Search,
-  Filter,
+  PencilSimple,
+  DotsThreeVertical,
+  MagnifyingGlass,
+  Funnel,
   Clock,
-  FolderOpen
-} from 'lucide-react';
+  FolderOpen,
+} from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -49,43 +49,6 @@ interface A2rDriveSidebarProps {
   onClose?: () => void;
 }
 
-// Mock assets for development
-const MOCK_ASSETS: Asset[] = [
-  {
-    id: 'asset-1',
-    name: 'landing-hero-1.png',
-    type: 'image',
-    url: '/assets/landing-hero-1.png',
-    thumbnailUrl: '/assets/thumbs/landing-hero-1.png',
-    size: 2048576,
-    createdAt: Date.now() - 120000, // 2 min ago
-  },
-  {
-    id: 'asset-2',
-    name: 'coffee-logo.svg',
-    type: 'image',
-    url: '/assets/coffee-logo.svg',
-    thumbnailUrl: '/assets/thumbs/coffee-logo.svg',
-    size: 45678,
-    createdAt: Date.now() - 300000, // 5 min ago
-  },
-  {
-    id: 'asset-3',
-    name: 'research-notes.md',
-    type: 'document',
-    url: '/assets/research-notes.md',
-    size: 12345,
-    createdAt: Date.now() - 600000, // 10 min ago
-  },
-  {
-    id: 'asset-4',
-    name: 'main.tsx',
-    type: 'code',
-    url: '/assets/main.tsx',
-    size: 8765,
-    createdAt: Date.now() - 900000, // 15 min ago
-  },
-];
 
 export function A2rDriveSidebar({
   sessionId,
@@ -96,7 +59,12 @@ export function A2rDriveSidebar({
   const [activeFilter, setActiveFilter] = useState<AssetType>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
-  const [assets, setAssets] = useState<Asset[]>(MOCK_ASSETS);
+  const [assets, setAssets] = useState<Asset[]>([]);
+
+  useEffect(() => {
+    const url = sessionId ? `/api/v1/drive/assets?sessionId=${sessionId}` : '/api/v1/drive/assets';
+    fetch(url).then(r => r.json()).then(setAssets).catch(() => {});
+  }, [sessionId]);
 
   // Filter assets
   const filteredAssets = useMemo(() => {
@@ -167,7 +135,7 @@ export function A2rDriveSidebar({
               viewMode === 'grid' && "text-[var(--accent-primary)]"
             )}
           >
-            <Grid3x3 className="w-4 h-4" />
+            <SquaresFour size={16} />
           </Button>
           <Button
             variant="ghost"
@@ -178,7 +146,7 @@ export function A2rDriveSidebar({
               viewMode === 'list' && "text-[var(--accent-primary)]"
             )}
           >
-            <List className="w-4 h-4" />
+            <List size={16} />
           </Button>
           {onClose && (
             <Button
@@ -187,7 +155,7 @@ export function A2rDriveSidebar({
               onClick={onClose}
               className="h-7 w-7 p-0 text-[var(--text-tertiary)]"
             >
-              <Trash2 className="w-3 h-3" />
+              <Trash size={12} />
             </Button>
           )}
         </div>
@@ -196,7 +164,7 @@ export function A2rDriveSidebar({
       {/* Search & Filter */}
       <div className="p-3 border-b border-[var(--border-subtle)] space-y-2">
         <div className="relative">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-[var(--text-tertiary)]" />
+          <MagnifyingGlass className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-[var(--text-tertiary)]" />
           <Input
             placeholder="Search assets..."
             value={searchQuery}
@@ -270,27 +238,27 @@ export function A2rDriveSidebar({
                       size="sm"
                       className="h-8 w-8 p-0 text-white"
                     >
-                      <Eye className="w-4 h-4" />
+                      <Eye size={16} />
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       className="h-8 w-8 p-0 text-white"
                     >
-                      <Edit className="w-4 h-4" />
+                      <PencilSimple size={16} />
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       className="h-8 w-8 p-0 text-white"
                     >
-                      <Download className="w-4 h-4" />
+                      <DownloadSimple size={16} />
                     </Button>
                   </div>
 
                   {/* Type badge */}
                   <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-black/60 text-white text-xs">
-                    <TypeIcon className="w-3 h-3" />
+                    <TypeIcon size={12} />
                   </div>
                 </motion.div>
               );
@@ -331,7 +299,7 @@ export function A2rDriveSidebar({
                       <span>{formatSize(asset.size)}</span>
                       <span>•</span>
                       <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
+                        <Clock size={12} />
                         {formatTimeAgo(asset.createdAt)}
                       </span>
                     </div>
@@ -344,21 +312,21 @@ export function A2rDriveSidebar({
                       size="sm"
                       className="h-7 w-7 p-0 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
                     >
-                      <Eye className="w-3 h-3" />
+                      <Eye size={12} />
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       className="h-7 w-7 p-0 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
                     >
-                      <Download className="w-3 h-3" />
+                      <DownloadSimple size={12} />
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       className="h-7 w-7 p-0 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
                     >
-                      <MoreVertical className="w-3 h-3" />
+                      <DotsThreeVertical size={12} />
                     </Button>
                   </div>
                 </motion.div>

@@ -17,7 +17,9 @@
 "use client";
 
 import React, { useMemo } from 'react';
-import { Scroll } from 'lucide-react';
+import {
+  Scroll,
+} from '@phosphor-icons/react';
 import {
   BrowserReceipt,
   RiskTier,

@@ -28,7 +28,16 @@
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { HelpCircle, Lightbulb, CheckCircle2, AlertCircle, Info, Target, Zap, Brain } from 'lucide-react';
+import {
+  Question as HelpCircle,
+  Lightbulb,
+  CheckCircle,
+  Warning,
+  Info,
+  Target,
+  Lightning,
+  Brain,
+} from '@phosphor-icons/react';
 
 // Import help components
 import {
@@ -325,7 +334,7 @@ function IdentityStepWithHelp({
         {modelSuggestions.length > 0 && (
           <div className="mt-4">
             <div className="flex items-center gap-2 mb-2">
-              <Zap size={16} style={{ color: modeColors.accent }} />
+              <Lightning size={16} style={{ color: modeColors.accent }} />
               <span className="text-sm font-medium" style={{ color: TEXT.primary }}>
                 Recommended Models
               </span>

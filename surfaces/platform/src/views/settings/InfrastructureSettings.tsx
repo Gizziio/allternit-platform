@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   HardDrives, 
   Cloud, 
@@ -260,27 +260,28 @@ export const InfrastructureSettings: React.FC = () => {
         break;
       case 'instance_update':
         const instanceUpdate = event.data as Instance;
-        setInstances(prev => 
-          prev.map(i => i.id === instanceUpdate.id ? instanceUpdate : i)
-        );
-        // Update nodes from instances
-        setNodes(prev => prev.map(node => {
-          const inst = instances.find(i => i.id === node.id);
-          if (inst) {
-            return {
-              id: inst.id,
-              hostname: inst.name,
-              status: inst.status === 'running' ? 'online' : 
-                      inst.status === 'stopped' ? 'offline' : 'error',
-              cpu_cores: inst.cpu,
-              memory_gb: Math.round(inst.ram / 1024),
-              docker_available: inst.docker_available,
-              gpu_available: inst.gpu_available,
-              last_seen: inst.last_seen,
-            };
-          }
-          return node;
-        }));
+        setInstances(prev => {
+          const newInstances = prev.map(i => i.id === instanceUpdate.id ? instanceUpdate : i);
+          // Also update nodes based on new instances
+          setNodes(prevNodes => prevNodes.map(node => {
+            const inst = newInstances.find((i: Instance) => i.id === node.id);
+            if (inst) {
+              return {
+                id: inst.id,
+                hostname: inst.name,
+                status: inst.status === 'running' ? 'online' : 
+                        inst.status === 'stopped' ? 'offline' : 'error',
+                cpu_cores: inst.cpu,
+                memory_gb: Math.round(inst.ram / 1024),
+                docker_available: inst.docker_available,
+                gpu_available: inst.gpu_available,
+                last_seen: inst.last_seen,
+              };
+            }
+            return node;
+          }));
+          return newInstances;
+        });
         break;
       case 'environment_status':
         const envUpdate = event.data as Environment;
@@ -295,7 +296,7 @@ export const InfrastructureSettings: React.FC = () => {
         );
         break;
     }
-  }, [instances]);
+  }, []); // No dependencies needed since we use functional updates
 
   // =============================================================================
   // DATA LOADING
@@ -622,13 +623,29 @@ export const InfrastructureSettings: React.FC = () => {
   // EFFECTS
   // =============================================================================
 
+  // Use a ref to track mounted state
+  const isMountedRef = React.useRef(true);
+  
   useEffect(() => {
-    // Load all data on mount
-    loadVPSConnections();
-    loadProviders();
-    loadDeployments();
-    loadEnvironments();
-    loadSSHKeys();
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    // Load all data on mount (only once)
+    const loadAllData = async () => {
+      await Promise.all([
+        loadVPSConnections(),
+        loadProviders(),
+        loadDeployments(),
+        loadEnvironments(),
+        loadSSHKeys(),
+      ]);
+    };
+    
+    loadAllData();
     
     // Setup WebSocket for real-time updates
     const ws = new InfrastructureWebSocket();
@@ -638,7 +655,8 @@ export const InfrastructureSettings: React.FC = () => {
     return () => {
       ws.disconnect();
     };
-  }, [handleWebSocketEvent]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - only run once on mount
 
   // =============================================================================
   // RENDER HELPERS

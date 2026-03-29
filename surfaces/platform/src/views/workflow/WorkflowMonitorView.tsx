@@ -1,19 +1,19 @@
 "use client";
 
 import React, { useState } from 'react';
-import { 
-  GitBranch, 
-  Play, 
-  Square, 
-  RotateCcw,
+import {
+  GitBranch,
+  Play,
+  Square,
+  ArrowCounterClockwise,
   Clock,
   CheckCircle,
   XCircle,
-  Loader2,
+  CircleNotch,
   Terminal,
-  Activity,
-  ChevronRight
-} from 'lucide-react';
+  Pulse as Activity,
+  CaretRight,
+} from '@phosphor-icons/react';
 import { GlassSurface } from '@/design/GlassSurface';
 import { StatusBadge } from '../components/StatusBadge';
 import { ProgressBar } from '../components/ProgressBar';
@@ -91,12 +91,12 @@ export function WorkflowMonitorView() {
           <div className="flex items-center gap-2">
             {execution.status === 'running' ? (
               <button className="flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors">
-                <Square className="w-4 h-4" />
+                <Square size={16} />
                 Stop
               </button>
             ) : (
               <button className="flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg bg-accent/20 text-accent hover:bg-accent/30 transition-colors">
-                <RotateCcw className="w-4 h-4" />
+                <ArrowCounterClockwise size={16} />
                 Restart
               </button>
             )}
@@ -112,7 +112,7 @@ export function WorkflowMonitorView() {
           <ProgressBar value={execution.progress} size="sm" showPercentage={false} />
           <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
-              <Clock className="w-3 h-3" />
+              <Clock size={12} />
               Elapsed: {elapsedTime()}
             </span>
             <span className="flex items-center gap-1">
@@ -120,11 +120,11 @@ export function WorkflowMonitorView() {
               {execution.nodes.filter(n => n.status === 'completed').length} completed
             </span>
             <span className="flex items-center gap-1">
-              <Loader2 className="w-3 h-3 text-blue-500" />
+              <CircleNotch className="w-3 h-3 text-blue-500" />
               {execution.nodes.filter(n => n.status === 'running').length} running
             </span>
             <span className="flex items-center gap-1">
-              <Clock className="w-3 h-3" />
+              <Clock size={12} />
               {execution.nodes.filter(n => n.status === 'pending').length} pending
             </span>
           </div>
@@ -152,14 +152,14 @@ export function WorkflowMonitorView() {
                   <div className="flex items-center justify-center mb-2">
                     {node.status === 'completed' && <CheckCircle className="w-6 h-6 text-green-500" />}
                     {node.status === 'failed' && <XCircle className="w-6 h-6 text-red-500" />}
-                    {node.status === 'running' && <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />}
+                    {node.status === 'running' && <CircleNotch className="w-6 h-6 text-blue-500 animate-spin" />}
                     {node.status === 'pending' && <Clock className="w-6 h-6 text-muted-foreground" />}
                   </div>
                   <p className="text-sm font-medium text-center">{node.name}</p>
                   <p className="text-xs text-muted-foreground text-center mt-1 capitalize">{node.status}</p>
                 </button>
                 {idx < execution.nodes.length - 1 && (
-                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                  <CaretRight className="w-5 h-5 text-muted-foreground" />
                 )}
               </React.Fragment>
             ))}

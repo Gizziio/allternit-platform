@@ -1,20 +1,20 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { 
-  Folder, 
-  File, 
-  Download, 
-  Trash2, 
-  RefreshCw, 
-  ChevronUp, 
-  ChevronRight,
-  Upload,
+import {
+  Folder,
+  File,
+  DownloadSimple,
+  Trash,
+  ArrowsClockwise,
+  CaretUp,
+  CaretRight,
+  UploadSimple,
   X,
-  MoreVertical,
+  DotsThreeVertical,
   HardDrive,
-  Home
-} from 'lucide-react';
+  House,
+} from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { 
   DropdownMenu, 
@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import { GATEWAY_BASE_URL } from '@/integration/api-client';
+import { getRuntimeGatewayBaseUrl } from '@/lib/runtime-backend-client';
 
 export interface FileEntry {
   name: string;
@@ -88,8 +88,9 @@ export function TerminalFileBrowser({
     setError(null);
 
     try {
+      const gatewayBaseUrl = await getRuntimeGatewayBaseUrl();
       const response = await fetch(
-        `${GATEWAY_BASE_URL}/api/v1/terminal/${sessionId}/files/list?path=${encodeURIComponent(path)}`
+        `${gatewayBaseUrl}/api/v1/terminal/${sessionId}/files/list?path=${encodeURIComponent(path)}`
       );
 
       if (!response.ok) {
@@ -158,8 +159,9 @@ export function TerminalFileBrowser({
     }]);
 
     try {
+      const gatewayBaseUrl = await getRuntimeGatewayBaseUrl();
       const response = await fetch(
-        `${GATEWAY_BASE_URL}/api/v1/terminal/${sessionId}/files/download?path=${encodeURIComponent(entry.path)}`
+        `${gatewayBaseUrl}/api/v1/terminal/${sessionId}/files/download?path=${encodeURIComponent(entry.path)}`
       );
 
       if (!response.ok) {
@@ -217,9 +219,10 @@ export function TerminalFileBrowser({
     try {
       const arrayBuffer = await file.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
+      const gatewayBaseUrl = await getRuntimeGatewayBaseUrl();
 
       const response = await fetch(
-        `${GATEWAY_BASE_URL}/api/v1/terminal/${sessionId}/files/upload?path=${encodeURIComponent(fullPath)}`,
+        `${gatewayBaseUrl}/api/v1/terminal/${sessionId}/files/upload?path=${encodeURIComponent(fullPath)}`,
         {
           method: 'POST',
           headers: {
@@ -305,8 +308,9 @@ export function TerminalFileBrowser({
   // Delete file/directory
   const deleteEntry = useCallback(async (entry: FileEntry) => {
     try {
+      const gatewayBaseUrl = await getRuntimeGatewayBaseUrl();
       const response = await fetch(
-        `${GATEWAY_BASE_URL}/api/v1/terminal/${sessionId}/files?path=${encodeURIComponent(entry.path)}`,
+        `${gatewayBaseUrl}/api/v1/terminal/${sessionId}/files?path=${encodeURIComponent(entry.path)}`,
         { method: 'DELETE' }
       );
 
@@ -355,14 +359,14 @@ export function TerminalFileBrowser({
             onClick={() => loadDirectory(currentPath)}
             disabled={isLoading}
           >
-            <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
+            <ArrowsClockwise className={cn("h-4 w-4", isLoading && "animate-spin")} />
           </Button>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => fileInputRef.current?.click()}
           >
-            <Upload className="h-4 w-4" />
+            <UploadSimple size={16} />
           </Button>
         </div>
       </div>
@@ -376,11 +380,11 @@ export function TerminalFileBrowser({
           disabled={currentPath === '/'}
           className="h-6 px-1"
         >
-          <ChevronUp className="h-3 w-3" />
+          <CaretUp size={12} />
         </Button>
         {breadcrumbs.map((crumb, index) => (
           <div key={crumb.path} className="flex items-center">
-            {index > 0 && <ChevronRight className="h-3 w-3 mx-1 text-muted-foreground" />}
+            {index > 0 && <CaretRight className="h-3 w-3 mx-1 text-muted-foreground" />}
             <Button
               variant="ghost"
               size="sm"
@@ -390,7 +394,7 @@ export function TerminalFileBrowser({
                 index === breadcrumbs.length - 1 && "font-medium"
               )}
             >
-              {crumb.name === 'root' ? <Home className="h-3 w-3" /> : crumb.name}
+              {crumb.name === 'root' ? <House size={12} /> : crumb.name}
             </Button>
           </div>
         ))}
@@ -479,13 +483,13 @@ export function TerminalFileBrowser({
                           className="h-7 w-7 p-0"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <MoreVertical className="h-3 w-3" />
+                          <DotsThreeVertical size={12} />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         {!entry.is_dir && (
                           <DropdownMenuItem onClick={() => downloadFile(entry)}>
-                            <Download className="h-4 w-4 mr-2" />
+                            <DownloadSimple className="h-4 w-4 mr-2" />
                             Download
                           </DropdownMenuItem>
                         )}
@@ -493,7 +497,7 @@ export function TerminalFileBrowser({
                           onClick={() => confirmDelete(entry)}
                           className="text-destructive"
                         >
-                          <Trash2 className="h-4 w-4 mr-2" />
+                          <Trash className="h-4 w-4 mr-2" />
                           Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -512,13 +516,13 @@ export function TerminalFileBrowser({
           {transfers.map((transfer) => (
             <div key={transfer.id} className="flex items-center gap-2 text-xs">
               {transfer.type === 'upload' ? (
-                <Upload className="h-3 w-3 text-muted-foreground" />
+                <UploadSimple className="h-3 w-3 text-muted-foreground" />
               ) : (
-                <Download className="h-3 w-3 text-muted-foreground" />
+                <DownloadSimple className="h-3 w-3 text-muted-foreground" />
               )}
               <span className="flex-1 truncate">{transfer.filename}</span>
               {transfer.status === 'transferring' && (
-                <Progress value={transfer.progress} className="w-20 h-1" />
+                <Progress value={transfer.progress} size={80} />
               )}
               {transfer.status === 'completed' && (
                 <span className="text-green-500">Done</span>
@@ -532,7 +536,7 @@ export function TerminalFileBrowser({
                 onClick={() => setTransfers(prev => prev.filter(t => t.id !== transfer.id))}
                 className="text-muted-foreground hover:text-foreground"
               >
-                <X className="h-3 w-3" />
+                <X size={12} />
               </button>
             </div>
           ))}

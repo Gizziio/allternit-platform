@@ -2,16 +2,15 @@
 
 import React, { useMemo, useState } from 'react';
 import {
-  RefreshCw,
+  ArrowsClockwise,
   Thermometer,
-  Activity,
+  Pulse as Activity,
   CheckCircle,
-  AlertCircle,
-  Clock3,
-  AlertTriangle,
+  Warning,
+  Clock,
   Gauge,
-  Flame,
-} from 'lucide-react';
+  Fire,
+} from '@phosphor-icons/react';
 import { GlassSurface } from '@/design/GlassSurface';
 import { usePrewarm } from '@/hooks/usePrewarm';
 import { StatCard } from '../components/StatCard';
@@ -68,7 +67,7 @@ export function PrewarmManagerView() {
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <RefreshCw className="h-8 w-8 animate-spin text-accent" />
+        <ArrowsClockwise className="h-8 w-8 animate-spin text-accent" />
       </div>
     );
   }
@@ -76,13 +75,13 @@ export function PrewarmManagerView() {
   if (error) {
     return (
       <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
-        <AlertTriangle className="mb-4 h-12 w-12 text-red-500" />
+        <Warning className="mb-4 h-12 w-12 text-red-500" />
         <p className="mb-4">Failed to load prewarm status</p>
         <button
           onClick={() => void refetch()}
           className="flex items-center gap-2 rounded-2xl bg-accent/15 px-4 py-2 text-accent transition-colors hover:bg-accent/25"
         >
-          <RefreshCw className="h-4 w-4" />
+          <ArrowsClockwise size={16} />
           Retry
         </button>
       </div>
@@ -96,7 +95,7 @@ export function PrewarmManagerView() {
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] uppercase tracking-[0.24em] text-muted-foreground">
-                <Flame className="h-3.5 w-3.5 text-amber-300" />
+                <Fire className="h-3.5 w-3.5 text-amber-300" />
                 Launch Latency Control
               </div>
               <h2 className="text-3xl font-semibold tracking-tight text-foreground">Prewarm Pool Manager</h2>
@@ -110,7 +109,7 @@ export function PrewarmManagerView() {
                 onClick={() => void refetch()}
                 className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-foreground transition hover:bg-black/30"
               >
-                <RefreshCw className="h-4 w-4" />
+                <ArrowsClockwise size={16} />
                 Refresh
               </button>
               <button
@@ -119,9 +118,9 @@ export function PrewarmManagerView() {
                 className="inline-flex items-center justify-center gap-2 rounded-2xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-sm font-medium text-amber-100 transition hover:bg-amber-300/20 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isWarming ? (
-                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <ArrowsClockwise className="h-4 w-4 animate-spin" />
                 ) : (
-                  <Thermometer className="h-4 w-4" />
+                  <Thermometer size={16} />
                 )}
                 Trigger Warmup
               </button>
@@ -134,7 +133,7 @@ export function PrewarmManagerView() {
           <StatCard icon={CheckCircle} label="Available" value={stats.total_available} />
           <StatCard icon={Activity} label="In Use" value={stats.total_in_use} />
           <StatCard
-            icon={Clock3}
+            icon={Clock}
             label="Managed Pools"
             value={stats.total_pools}
             trend={stats.total_pools > 0 ? 'up' : 'neutral'}
@@ -191,9 +190,9 @@ export function PrewarmManagerView() {
                   className="inline-flex items-center gap-2 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-4 py-3 text-sm font-medium text-emerald-100 transition hover:bg-emerald-300/20 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isSaving ? (
-                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    <ArrowsClockwise className="h-4 w-4 animate-spin" />
                   ) : (
-                    <CheckCircle className="h-4 w-4" />
+                    <CheckCircle size={16} />
                   )}
                   Apply Pool Size
                 </button>
@@ -231,7 +230,7 @@ export function PrewarmManagerView() {
                         {health === PoolHealth.Healthy ? (
                           <CheckCircle className="h-3.5 w-3.5 text-green-400" />
                         ) : health === PoolHealth.Degraded ? (
-                          <AlertCircle className="h-3.5 w-3.5 text-yellow-400" />
+                          <Warning className="h-3.5 w-3.5 text-yellow-400" />
                         ) : (
                           <Thermometer className="h-3.5 w-3.5 text-sky-400" />
                         )}
@@ -281,7 +280,7 @@ export function PrewarmManagerView() {
                   className="flex flex-col gap-2 rounded-2xl border border-white/5 bg-black/10 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="flex items-center gap-3">
-                    <Clock3 className="h-4 w-4 text-muted-foreground" />
+                    <Clock className="h-4 w-4 text-muted-foreground" />
                     <span className="font-medium text-foreground">{activity.pool_name}</span>
                     <span className="rounded-full border border-white/10 px-2 py-0.5 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
                       {activity.activity_type}

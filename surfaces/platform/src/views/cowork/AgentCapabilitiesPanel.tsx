@@ -7,16 +7,16 @@
 
 import React, { useMemo, useState } from 'react';
 import {
-  Puzzle,
+  PuzzlePiece as Puzzle,
   Terminal,
   BookOpen,
-  Plug,
-  Server,
-  Webhook,
-  ChevronRight,
-  ChevronDown,
-  Sparkles,
-} from 'lucide-react';
+  PlugsConnected,
+  HardDrives,
+  WebhooksLogo,
+  CaretRight,
+  CaretDown,
+  Sparkle,
+} from '@phosphor-icons/react';
 import type { Plugin, PluginCommand, PluginSkill, PluginConnector } from '../../plugins/plugin.types';
 import { useCapabilities } from '../../plugins/useCapabilities';
 
@@ -300,9 +300,9 @@ function PluginSection({
           {plugin.commands.length + plugin.skills.length + plugin.connectors.length}
         </span>
         {expanded ? (
-          <ChevronDown size={16} color={THEME.textTertiary} />
+          <CaretDown size={16} color={THEME.textTertiary} />
         ) : (
-          <ChevronRight size={16} color={THEME.textTertiary} />
+          <CaretRight size={16} color={THEME.textTertiary} />
         )}
       </button>
 
@@ -334,7 +334,7 @@ function PluginSection({
           {hasConnectors && (
             <CapabilityTypeSection
               type="connectors"
-              icon={<Plug size={14} />}
+              icon={<PlugsConnected size={14} />}
               label="Connectors"
               items={plugin.connectors}
               expanded={expandedTypes.has('connectors')}
@@ -393,9 +393,9 @@ function CapabilityTypeSection({
         </span>
         <span style={{ fontSize: 12, color: THEME.textTertiary }}>{items.length}</span>
         {expanded ? (
-          <ChevronDown size={14} color={THEME.textTertiary} />
+          <CaretDown size={14} color={THEME.textTertiary} />
         ) : (
-          <ChevronRight size={14} color={THEME.textTertiary} />
+          <CaretRight size={14} color={THEME.textTertiary} />
         )}
       </button>
 
@@ -559,7 +559,7 @@ function CapabilitiesOverlay({
               padding: 4,
             }}
           >
-            <ChevronRight size={20} color={THEME.textTertiary} style={{ transform: 'rotate(90deg)' }} />
+            <CaretRight size={20} color={THEME.textTertiary} style={{ transform: 'rotate(90deg)' }} />
           </button>
         </div>
 

@@ -20,12 +20,12 @@ export function FloatingOrb() {
         width: 80,
         height: 80,
         borderRadius: '50%',
-        background: 'rgba(20, 20, 30, 0.4)',
+        background: 'var(--shell-floating-bg)',
         backdropFilter: 'blur(12px) saturate(150%)',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
+        border: '1px solid var(--shell-floating-border)',
         boxShadow: isHovered 
-          ? '0 12px 40px rgba(0, 0, 0, 0.4), 0 0 20px rgba(96, 165, 250, 0.15)'
-          : '0 8px 32px rgba(0, 0, 0, 0.3)',
+          ? 'var(--shadow-xl)'
+          : 'var(--shadow-lg)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -43,7 +43,7 @@ export function FloatingOrb() {
         width: 60,
         height: 60,
         borderRadius: '50%',
-        background: 'linear-gradient(135deg, #a78bfa 0%, #60a5fa 50%, #34d399 100%)',
+        background: 'linear-gradient(135deg, var(--accent-cowork) 0%, var(--status-info) 50%, var(--accent-code) 100%)',
         opacity: 0.8,
         filter: 'blur(4px)',
       }} />
@@ -52,8 +52,8 @@ export function FloatingOrb() {
         display: 'flex',
         gap: 8,
       }}>
-        <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'white' }} />
-        <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'white' }} />
+        <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--ui-text-inverse)' }} />
+        <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--ui-text-inverse)' }} />
       </div>
     </div>
   );

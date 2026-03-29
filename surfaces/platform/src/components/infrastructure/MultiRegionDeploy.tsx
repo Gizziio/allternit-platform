@@ -15,16 +15,16 @@ import {
   MapPin,
   Check,
   X,
-  Loader2,
-  Server,
+  CircleNotch,
+  HardDrives,
   Network,
   ArrowRight,
-  AlertTriangle,
+  Warning,
   Play,
-  RotateCw,
+  ArrowClockwise,
   Shield,
   Clock,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -165,7 +165,7 @@ export function MultiRegionDeploy({
       case 'failed':
         return <X className="w-5 h-5 text-red-500" />;
       case 'provisioning':
-        return <Loader2 className="w-5 h-5 text-primary animate-spin" />;
+        return <CircleNotch className="w-5 h-5 text-primary animate-spin" />;
       default:
         return <Clock className="w-5 h-5 text-muted-foreground" />;
     }
@@ -182,7 +182,7 @@ export function MultiRegionDeploy({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="font-semibold flex items-center gap-2">
-            <Globe className="w-4 h-4" />
+            <Globe size={16} />
             Multi-Region Deployment
           </h3>
           <p className="text-xs text-muted-foreground">
@@ -233,11 +233,11 @@ export function MultiRegionDeploy({
                 </p>
                 <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1">
-                    <Network className="w-3 h-3" />
+                    <Network size={12} />
                     {region.latency}ms
                   </span>
                   <span className="flex items-center gap-1">
-                    <Shield className="w-3 h-3" />
+                    <Shield size={12} />
                     {region.features.includes('ha') ? 'HA' : 'Standard'}
                   </span>
                 </div>
@@ -314,12 +314,12 @@ export function MultiRegionDeploy({
       >
         {isDeploying ? (
           <>
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <CircleNotch className="w-4 h-4 animate-spin" />
             Deploying to {selectedRegions.size} regions...
           </>
         ) : (
           <>
-            <Play className="w-4 h-4" />
+            <Play size={16} />
             Deploy to {selectedRegions.size} Region{selectedRegions.size !== 1 ? 's' : ''}
           </>
         )}
@@ -402,7 +402,7 @@ export function MultiRegionDeploy({
             {failedCount > 0 && (
               <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30 text-sm">
                 <div className="flex items-center gap-2 text-yellow-700">
-                  <AlertTriangle className="w-4 h-4" />
+                  <Warning size={16} />
                   <span>{failedCount} region(s) failed to deploy</span>
                 </div>
               </div>
@@ -415,7 +415,7 @@ export function MultiRegionDeploy({
             </Button>
             {runningCount > 0 && (
               <Button onClick={simulateDeploymentProgress}>
-                <RotateCw className="w-4 h-4 mr-2" />
+                <ArrowClockwise className="w-4 h-4 mr-2" />
                 Test Health Checks
               </Button>
             )}

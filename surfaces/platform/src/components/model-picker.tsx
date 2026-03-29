@@ -21,7 +21,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Check, ChevronDown, Loader2, Sparkles } from "lucide-react";
+import {
+  Warning,
+  Check,
+  CaretDown,
+  CircleNotch,
+  Sparkle,
+} from '@phosphor-icons/react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 
@@ -71,6 +77,10 @@ const PROVIDER_NAMES: Record<string, string> = {
   qwen: "Qwen",
 };
 
+function resolveProviderId(profileId: string): string {
+  return PROFILE_TO_PROVIDER[profileId] || profileId;
+}
+
 export function ModelPicker({ onSelect, onCancel, defaultProfileId, trigger, open: controlledOpen, onOpenChange }: ModelPickerProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const isControlled = controlledOpen !== undefined;
@@ -107,7 +117,7 @@ export function ModelPicker({ onSelect, onCancel, defaultProfileId, trigger, ope
       if (defaultProfileId) {
         setSelectedProfileId(defaultProfileId);
         setStep("model");
-        const providerId = PROFILE_TO_PROVIDER[defaultProfileId];
+        const providerId = resolveProviderId(defaultProfileId);
         if (providerId) {
           discoverModels(providerId);
         }
@@ -119,7 +129,7 @@ export function ModelPicker({ onSelect, onCancel, defaultProfileId, trigger, ope
   useEffect(() => {
     const timeout = setTimeout(async () => {
       if (freeformInput && step === "model" && !discoveryResult?.supported) {
-        const providerId = PROFILE_TO_PROVIDER[selectedProfileId];
+        const providerId = resolveProviderId(selectedProfileId);
         if (providerId) {
           await validateModel(providerId, freeformInput);
         }
@@ -135,7 +145,7 @@ export function ModelPicker({ onSelect, onCancel, defaultProfileId, trigger, ope
     setFreeformInput("");
     setValidationAttempted(false);
     
-    const providerId = PROFILE_TO_PROVIDER[profileId];
+    const providerId = resolveProviderId(profileId);
     if (providerId) {
       await discoverModels(providerId);
     }
@@ -157,7 +167,7 @@ export function ModelPicker({ onSelect, onCancel, defaultProfileId, trigger, ope
   const handleConfirm = useCallback(() => {
     if (!selectedProfileId || !selectedModelId) return;
 
-    const providerId = PROFILE_TO_PROVIDER[selectedProfileId];
+    const providerId = resolveProviderId(selectedProfileId);
     if (!providerId) return;
 
     const modelName = discoveryResult?.models?.find(m => m.id === selectedModelId)?.name || selectedModelId;
@@ -213,7 +223,7 @@ export function ModelPicker({ onSelect, onCancel, defaultProfileId, trigger, ope
       <DialogTrigger asChild>
         {trigger || (
           <Button variant="outline" className="gap-2">
-            <Sparkles className="h-4 w-4" />
+            <Sparkle size={16} />
             Select Model
           </Button>
         )}
@@ -227,14 +237,14 @@ export function ModelPicker({ onSelect, onCancel, defaultProfileId, trigger, ope
           <DialogDescription className="text-gray-400">
             {step === "profile" 
               ? "Choose an authenticated AI runtime to use"
-              : `Select a model for ${PROVIDER_NAMES[PROFILE_TO_PROVIDER[selectedProfileId]] || "this runtime"}`
+              : `Select a model for ${PROVIDER_NAMES[resolveProviderId(selectedProfileId)] || resolveProviderId(selectedProfileId) || "this runtime"}`
             }
           </DialogDescription>
         </DialogHeader>
 
         {providersError && (
           <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
+            <Warning size={16} />
             <AlertDescription>
               Failed to load providers. Please try again.
             </AlertDescription>
@@ -245,11 +255,11 @@ export function ModelPicker({ onSelect, onCancel, defaultProfileId, trigger, ope
           <div className="space-y-4 py-4">
             {providersLoading ? (
               <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <CircleNotch className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : availableProfiles.length === 0 ? (
               <div className="text-center py-8 text-gray-400">
-                <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <Warning className="h-8 w-8 mx-auto mb-2 opacity-50" />
                 <p className="text-white">No authenticated runtimes found</p>
                 <p className="text-sm mt-1 text-gray-400">
                   Please authenticate a provider first
@@ -286,7 +296,7 @@ export function ModelPicker({ onSelect, onCancel, defaultProfileId, trigger, ope
           <div className="space-y-4 py-4">
             {discoveryLoading ? (
               <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <CircleNotch className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
             ) : discoveryResult?.supported && discoveryResult.models ? (
               // Discovery supported - show dropdown
@@ -350,7 +360,7 @@ export function ModelPicker({ onSelect, onCancel, defaultProfileId, trigger, ope
                 />
                 {validationLoading && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <CircleNotch className="h-3 w-3 animate-spin" />
                     Validating...
                   </div>
                 )}
@@ -361,12 +371,12 @@ export function ModelPicker({ onSelect, onCancel, defaultProfileId, trigger, ope
                   )}>
                     {validationResult.valid ? (
                       <div className="flex items-center gap-2">
-                        <Check className="h-4 w-4" />
+                        <Check size={16} />
                         {validationResult.model?.description || "Model ID valid"}
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <AlertCircle className="h-4 w-4" />
+                        <Warning size={16} />
                         {validationResult.message || "Invalid model ID"}
                       </div>
                     )}

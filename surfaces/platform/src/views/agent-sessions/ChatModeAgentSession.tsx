@@ -17,21 +17,21 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Send,
+  PaperPlaneTilt,
   Paperclip,
-  Sparkles,
-  Bot,
+  Sparkle,
+  Robot,
   User,
-  Loader2,
+  CircleNotch,
   Copy,
   Check,
-  RefreshCw,
-  MoreHorizontal,
+  ArrowsClockwise,
+  DotsThreeOutline,
   Plus,
   Clock,
-  MessageSquare,
-  Settings,
-} from 'lucide-react';
+  Chat,
+  GearSix,
+} from '@phosphor-icons/react';
 
 import {
   MODE_COLORS,
@@ -130,7 +130,7 @@ export function ChatModeAgentSession({
             style={{ color: TEXT.tertiary }}
             title="Session Settings"
           >
-            <Settings size={16} />
+            <GearSix size={16} />
           </button>
         </>
       }
@@ -156,7 +156,7 @@ export function ChatModeAgentSession({
                 className="w-16 h-16 rounded-2xl flex items-center justify-center"
                 style={{ background: modeColors.soft }}
               >
-                <Sparkles size={32} style={{ color: modeColors.accent }} />
+                <Sparkle size={32} style={{ color: modeColors.accent }} />
               </div>
               <div className="text-center">
                 <h3 className="text-lg font-semibold mb-2" style={{ color: TEXT.primary }}>
@@ -202,7 +202,7 @@ export function ChatModeAgentSession({
               animate={{ opacity: 1 }}
               className="flex items-center gap-2 p-4"
             >
-              <Loader2 size={16} className="animate-spin" style={{ color: modeColors.accent }} />
+              <CircleNotch size={16} className="animate-spin" style={{ color: modeColors.accent }} />
               <span className="text-sm" style={{ color: TEXT.tertiary }}>
                 Agent is thinking...
               </span>
@@ -262,7 +262,7 @@ export function ChatModeAgentSession({
               }}
               title="Send message"
             >
-              <Send size={20} />
+              <PaperPlaneTilt size={20} />
             </button>
           </div>
         </div>
@@ -303,7 +303,7 @@ function ChatMessage({
         {isUser ? (
           <User size={16} style={{ color: modeColors.accent }} />
         ) : (
-          <Bot size={16} style={{ color: accentColor }} />
+          <Robot size={16} style={{ color: accentColor }} />
         )}
       </div>
       
@@ -354,7 +354,7 @@ function ChatWorkbenchRail({ mode }: { mode: 'chat' }) {
       <WorkbenchSection title="Conversations" mode={mode}>
         <div className="space-y-1">
           <WorkbenchItem
-            icon={MessageSquare}
+            icon={Chat}
             label="Current Session"
             active
             mode={mode}
@@ -366,7 +366,7 @@ function ChatWorkbenchRail({ mode }: { mode: 'chat' }) {
             mode={mode}
           />
           <WorkbenchItem
-            icon={Bot}
+            icon={Robot}
             label="All Agents"
             mode={mode}
           />
@@ -376,7 +376,7 @@ function ChatWorkbenchRail({ mode }: { mode: 'chat' }) {
       <WorkbenchSection title="Context" mode={mode}>
         <div className="space-y-1">
           <WorkbenchItem
-            icon={Sparkles}
+            icon={Sparkle}
             label="Attached Files"
             mode={mode}
           />
@@ -402,7 +402,7 @@ function ChatCanvasPanel({ mode, canvases }: { mode: 'chat'; canvases: AgentSess
             className="w-12 h-12 rounded-xl flex items-center justify-center mb-3"
             style={{ background: modeColors.soft }}
           >
-            <Sparkles size={24} style={{ color: modeColors.accent }} />
+            <Sparkle size={24} style={{ color: modeColors.accent }} />
           </div>
           <p className="text-sm" style={{ color: TEXT.secondary }}>
             Agent outputs will appear here
@@ -421,7 +421,7 @@ function ChatCanvasPanel({ mode, canvases }: { mode: 'chat'; canvases: AgentSess
       mode={mode}
       actions={
         <button style={{ color: TEXT.tertiary }}>
-          <MoreHorizontal size={16} />
+          <DotsThreeOutline size={16} />
         </button>
       }
     >
@@ -440,7 +440,7 @@ function ChatCanvasPanel({ mode, canvases }: { mode: 'chat'; canvases: AgentSess
                 {canvas.title}
               </span>
               {canvas.isPinned && (
-                <Sparkles size={12} style={{ color: modeColors.accent }} />
+                <Sparkle size={12} style={{ color: modeColors.accent }} />
               )}
             </div>
             <pre 

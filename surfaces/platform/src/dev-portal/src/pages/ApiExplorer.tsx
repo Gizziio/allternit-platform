@@ -1,16 +1,14 @@
 import { useState } from 'react';
-import { 
-  Code2, 
-  Send, 
-  Copy, 
+import {
+  Code,
+  Copy,
   Check,
   Terminal,
   Globe,
-  Webhook,
+  WebhooksLogo,
   Shield,
-  ChevronDown,
-  Play
-} from 'lucide-react';
+  Play,
+} from '@phosphor-icons/react';
 
 const endpoints = [
   {
@@ -97,7 +95,7 @@ export default function ApiExplorer() {
                 : 'text-a2r-text-secondary hover:text-a2r-text'
             }`}
           >
-            <Globe className="w-4 h-4" />
+            <Globe size={16} />
             REST API
           </button>
           <button
@@ -108,7 +106,7 @@ export default function ApiExplorer() {
                 : 'text-a2r-text-secondary hover:text-a2r-text'
             }`}
           >
-            <Webhook className="w-4 h-4" />
+            <WebhooksLogo size={16} />
             WebSocket
           </button>
         </div>
@@ -191,7 +189,7 @@ export default function ApiExplorer() {
                   onClick={() => copyToClipboard(requestBody)}
                   className="p-1.5 text-a2r-text-muted hover:text-a2r-text hover:bg-a2r-surface-hover rounded transition-colors"
                 >
-                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  {copied ? <Check size={16} /> : <Copy size={16} />}
                 </button>
               </div>
             </div>
@@ -205,7 +203,7 @@ export default function ApiExplorer() {
             </div>
             <div className="px-4 py-3 border-t border-a2r-border bg-a2r-surface-elevated">
               <button className="flex items-center gap-2 px-4 py-2 bg-a2r-accent text-a2r-bg rounded-lg font-medium hover:bg-a2r-accent-hover transition-colors">
-                <Play className="w-4 h-4" />
+                <Play size={16} />
                 Send Request
               </button>
             </div>
@@ -215,7 +213,7 @@ export default function ApiExplorer() {
           <div className="bg-a2r-surface border border-a2r-border rounded-lg overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-a2r-border bg-a2r-surface-elevated">
               <div className="flex items-center gap-2">
-                <Code2 className="w-4 h-4 text-a2r-text-muted" />
+                <Code className="w-4 h-4 text-a2r-text-muted" />
                 <span className="text-sm font-medium text-a2r-text">Response</span>
               </div>
               <div className="flex items-center gap-2">

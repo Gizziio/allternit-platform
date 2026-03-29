@@ -143,124 +143,6 @@ interface DakStore {
 }
 
 // ============================================================================
-// PFS v1 Templates
-// ============================================================================
-
-const MOCK_TEMPLATES: PromptTemplate[] = [
-  {
-    id: "core/system",
-    name: "System Prompt",
-    category: "core",
-    description: "Base system prompt establishing agent identity and capabilities",
-    template: "You are {{role}}. Your capabilities: {{capabilities}}. Rules: {{rules}}",
-    variables: [
-      { name: "role", description: "Agent role", required: true, type: "string" },
-      { name: "capabilities", description: "Comma-separated capabilities", required: true, type: "string" },
-      { name: "rules", description: "Behavioral rules", required: false, defaultValue: "Follow best practices", type: "string" },
-    ],
-    version: "1.0.0",
-    tags: ["core", "system"],
-  },
-  {
-    id: "roles/builder",
-    name: "Builder Role",
-    category: "roles",
-    description: "Prompt for builder agents that implement features",
-    template: "You are a Builder agent. Task: {{task}}. Scope: {{scope}}. Dependencies: {{dependencies}}",
-    variables: [
-      { name: "task", description: "What to build", required: true, type: "string" },
-      { name: "scope", description: "Files/directories to modify", required: true, type: "string" },
-      { name: "dependencies", description: "Required dependencies", required: false, defaultValue: "None", type: "string" },
-    ],
-    version: "1.0.0",
-    tags: ["role", "builder"],
-  },
-  {
-    id: "roles/validator",
-    name: "Validator Role",
-    category: "roles",
-    description: "Prompt for validator agents that verify work",
-    template: "You are a Validator agent. Validate: {{artifact}}. Criteria: {{criteria}}. Standards: {{standards}}",
-    variables: [
-      { name: "artifact", description: "What to validate", required: true, type: "string" },
-      { name: "criteria", description: "Validation criteria", required: true, type: "string" },
-      { name: "standards", description: "Standards to check against", required: false, defaultValue: "Project standards", type: "string" },
-    ],
-    version: "1.0.0",
-    tags: ["role", "validator"],
-  },
-  {
-    id: "orch/dag-topo",
-    name: "DAG Topology",
-    category: "orchestration",
-    description: "Generate DAG structure from natural language",
-    template: "Create a DAG for: {{goal}}. Constraints: {{constraints}}. Max depth: {{maxDepth}}",
-    variables: [
-      { name: "goal", description: "What the DAG should accomplish", required: true, type: "string" },
-      { name: "constraints", description: "Execution constraints", required: false, type: "string" },
-      { name: "maxDepth", description: "Maximum DAG depth", required: false, defaultValue: "5", type: "number" },
-    ],
-    version: "1.0.0",
-    tags: ["orchestration", "dag"],
-  },
-  {
-    id: "plan/three-pass",
-    name: "Three-Pass Planning",
-    category: "planning",
-    description: "Structured three-pass planning approach",
-    template: "Phase 1 (Analysis): {{phase1}}\nPhase 2 (Design): {{phase2}}\nPhase 3 (Implementation): {{phase3}}",
-    variables: [
-      { name: "phase1", description: "Analysis phase tasks", required: true, type: "string" },
-      { name: "phase2", description: "Design phase tasks", required: true, type: "string" },
-      { name: "phase3", description: "Implementation phase tasks", required: true, type: "string" },
-    ],
-    version: "1.0.0",
-    tags: ["planning", "structured"],
-  },
-  {
-    id: "cleanup/artifact",
-    name: "Artifact Cleanup",
-    category: "cleanup",
-    description: "Clean up generated artifacts",
-    template: "Cleanup mode: {{mode}}. Target artifacts: {{targets}}. Preserve: {{preserve}}",
-    variables: [
-      { name: "mode", description: "Cleanup mode (aggressive/safe)", required: true, type: "string" },
-      { name: "targets", description: "What to clean", required: true, type: "string" },
-      { name: "preserve", description: "What to preserve", required: false, type: "string" },
-    ],
-    version: "1.0.0",
-    tags: ["cleanup", "maintenance"],
-  },
-  {
-    id: "control/branch",
-    name: "Conditional Branch",
-    category: "control_flow",
-    description: "Conditional execution based on context",
-    template: "Condition: {{condition}}. If true: {{thenBranch}}. If false: {{elseBranch}}",
-    variables: [
-      { name: "condition", description: "Condition to evaluate", required: true, type: "string" },
-      { name: "thenBranch", description: "Execute if true", required: true, type: "string" },
-      { name: "elseBranch", description: "Execute if false", required: false, type: "string" },
-    ],
-    version: "1.0.0",
-    tags: ["control", "conditional"],
-  },
-  {
-    id: "evidence/context",
-    name: "Context Pack Builder",
-    category: "evidence",
-    description: "Build context pack for node execution",
-    template: "Build context for node {{nodeId}} in DAG {{dagId}}. Include: WIH, receipts, dependencies.",
-    variables: [
-      { name: "nodeId", description: "Target node ID", required: true, type: "string" },
-      { name: "dagId", description: "DAG ID", required: true, type: "string" },
-    ],
-    version: "1.0.0",
-    tags: ["evidence", "context"],
-  },
-];
-
-// ============================================================================
 // Store Implementation
 // ============================================================================
 
@@ -294,7 +176,7 @@ export const useDakStore = create<DakStore>((set, get) => ({
   snapshots: [],
   snapshotStats: undefined,
   
-  templates: MOCK_TEMPLATES,
+  templates: [],
   selectedTemplateId: null,
   templateVariables: {},
   

@@ -22,22 +22,22 @@ import React, { useState, useCallback, useEffect } from 'react';
 import Link from 'next/link';
 import {
   X,
-  Settings,
+  GearSix,
   Cloud,
   Key,
   Shield,
-  Puzzle,
+  PuzzlePiece as Puzzle,
   Cpu,
-  Wifi,
+  WifiHigh,
   Lock,
   Terminal,
   ArrowUpRight,
   CheckCircle,
-  AlertCircle,
+  Warning,
   Plus,
-  Trash2,
-  Boxes,
-} from 'lucide-react';
+  Trash,
+  Stack,
+} from '@phosphor-icons/react';
 import { GlassSurface } from '@/design/GlassSurface';
 import {
   getPolicyStore,
@@ -288,13 +288,13 @@ export function ControlCenter({
           style={{
             background: 'var(--glass-bg-thick)',
             border: '1px solid var(--border-subtle)',
-            boxShadow: '0 24px 80px rgba(0,0,0,0.4)',
+            boxShadow: 'var(--shadow-xl)',
           }}
         >
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-border">
             <div className="flex items-center gap-3">
-              <Settings className="w-5 h-5 text-muted-foreground" />
+              <GearSix className="w-5 h-5 text-muted-foreground" />
               <h2 className="text-lg font-semibold">Control Center</h2>
               <span className="text-xs text-muted-foreground px-2 py-0.5 rounded bg-secondary">
                 Platform Wiring
@@ -304,7 +304,7 @@ export function ControlCenter({
               onClick={onClose}
               className="p-2 rounded-lg hover:bg-secondary transition-colors"
             >
-              <X className="w-5 h-5" />
+              <X size={20} />
             </button>
           </div>
 
@@ -391,9 +391,9 @@ interface SectionNavProps {
 
 function SectionNav({ activeSection, onSectionChange, isDevMode }: SectionNavProps) {
   const sections = [
-    { id: 'browser-pairing', label: 'Browser Pairing', icon: Wifi },
+    { id: 'browser-pairing', label: 'Browser Pairing', icon: WifiHigh },
     { id: 'policies', label: 'Policies', icon: Shield },
-    { id: 'runtime', label: 'Runtime Environment', icon: Boxes },
+    { id: 'runtime', label: 'Runtime Environment', icon: Stack },
     { id: 'compute', label: 'Compute & Runtimes', icon: Cpu },
     { id: 'secrets', label: 'Secrets & Credentials', icon: Lock },
     { id: 'ssh', label: 'SSH Connections', icon: Terminal },
@@ -422,7 +422,7 @@ function SectionNav({ activeSection, onSectionChange, isDevMode }: SectionNavPro
               }
             `}
           >
-            <Icon className="w-4 h-4" />
+            <Icon size={16} />
             <span>{section.label}</span>
           </button>
         );
@@ -486,7 +486,7 @@ function BrowserPairingSection({
             onClick={() => setIsPairing(true)}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-accent/20 text-accent hover:bg-accent/30 transition-colors"
           >
-            <Plus className="w-4 h-4" />
+            <Plus size={16} />
             <span>Pair New Extension</span>
           </button>
         ) : (
@@ -527,7 +527,7 @@ function BrowserPairingSection({
         <h4 className="text-sm font-medium mb-3">Paired Endpoints</h4>
         {pairedEndpoints.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            <Wifi className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            <WifiHigh className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm">No paired endpoints</p>
             <p className="text-xs mt-1">Pair an extension to get started</p>
           </div>
@@ -558,7 +558,7 @@ function BrowserPairingSection({
                   onClick={() => onUnpairEndpoint?.(endpoint.id)}
                   className="p-2 rounded-lg hover:bg-red-500/20 text-red-500 transition-colors"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash size={16} />
                 </button>
               </div>
             ))}
@@ -569,7 +569,7 @@ function BrowserPairingSection({
       {/* Info */}
       <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/30">
         <div className="flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-blue-500 mt-0.5" />
+          <Warning className="w-5 h-5 text-blue-500 mt-0.5" />
           <div className="text-sm">
             <p className="font-medium text-blue-500 mb-1">Extension Setup</p>
             <p className="text-muted-foreground">
@@ -685,7 +685,7 @@ function PolicySection({
                   onClick={() => onRemoveAllowedHost?.(host)}
                   className="p-0.5 rounded hover:bg-red-500/20 text-red-500 transition-colors"
                 >
-                  <X className="w-3 h-3" />
+                  <X size={12} />
                 </button>
               </div>
             ))}
@@ -696,7 +696,7 @@ function PolicySection({
       {/* Info */}
       <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
         <div className="flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-yellow-500 mt-0.5" />
+          <Warning className="w-5 h-5 text-yellow-500 mt-0.5" />
           <div className="text-sm">
             <p className="font-medium text-yellow-500 mb-1">Default Deny Policy</p>
             <p className="text-muted-foreground">
@@ -765,7 +765,7 @@ function DevToolsSection({
       {/* Info */}
       <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/30">
         <div className="flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-blue-500 mt-0.5" />
+          <Warning className="w-5 h-5 text-blue-500 mt-0.5" />
           <div className="text-sm">
             <p className="font-medium text-blue-500 mb-1">Dev Mode Only</p>
             <p className="text-muted-foreground">
@@ -808,7 +808,7 @@ function RuntimeEnvironmentSection({ onOpenView }: RuntimeEnvironmentSectionProp
 
       <div className="rounded-2xl border border-blue-500/30 bg-blue-500/10 p-4">
         <div className="flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-blue-500 mt-0.5" />
+          <Warning className="w-5 h-5 text-blue-500 mt-0.5" />
           <div className="text-sm">
             <p className="font-medium text-blue-500 mb-1">Agent Mode Placement</p>
             <p className="text-muted-foreground">
@@ -852,7 +852,7 @@ function PlaceholderSection({
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-accent/20 text-accent hover:bg-accent/30 transition-colors text-sm"
         >
           <span>Open Cloud Deploy</span>
-          <ArrowUpRight className="w-4 h-4" />
+          <ArrowUpRight size={16} />
         </a>
       </div>
     </div>

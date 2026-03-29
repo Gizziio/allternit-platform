@@ -7,10 +7,17 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  Key, RefreshCw, Unlock, Clock, AlertTriangle, CheckCircle,
-  Plus, Filter, Search
-} from "lucide-react";
+import {
+  Key,
+  ArrowsClockwise,
+  LockOpen,
+  Clock,
+  Warning,
+  CheckCircle,
+  Plus,
+  Funnel,
+  MagnifyingGlass,
+} from '@phosphor-icons/react';
 import type { ManagedLease } from "../dak.types";
 
 export function LeaseMonitorPanel() {
@@ -50,7 +57,7 @@ export function LeaseMonitorPanel() {
           <StatCard 
             title="Expiring Soon" 
             value={expiringLeases.length} 
-            icon={AlertTriangle} 
+            icon={Warning} 
             color="yellow" 
           />
           <StatCard 
@@ -62,7 +69,7 @@ export function LeaseMonitorPanel() {
           <StatCard 
             title="Total Renewals" 
             value={leases.reduce((sum, l) => sum + l.renewalCount, 0)} 
-            icon={RefreshCw} 
+            icon={ArrowsClockwise} 
             color="blue" 
           />
         </div>
@@ -71,7 +78,7 @@ export function LeaseMonitorPanel() {
       {/* Filter */}
       <div className="p-4 border-b flex items-center gap-4">
         <div className="flex-1 relative">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <MagnifyingGlass className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Filter by agent ID..."
             value={filterAgentId}
@@ -80,7 +87,7 @@ export function LeaseMonitorPanel() {
           />
         </div>
         <Button variant="outline" onClick={fetchLeases}>
-          <RefreshCw className="w-4 h-4 mr-2" /> Refresh
+          <ArrowsClockwise className="w-4 h-4 mr-2" /> Refresh
         </Button>
       </div>
       
@@ -160,7 +167,7 @@ function StatCard({ title, value, icon: Icon, color }: { title: string; value: n
           <p className="text-2xl font-bold">{value}</p>
         </div>
         <div className={`p-2 rounded-lg ${colorClasses[color]}`}>
-          <Icon className="w-5 h-5" />
+          <Icon size={20} />
         </div>
       </div>
     </div>
@@ -189,9 +196,9 @@ function LeaseListItem({
   
   const statusConfig = {
     active: { icon: Key, color: "text-green-500", badge: "default" },
-    expiring: { icon: AlertTriangle, color: "text-yellow-500", badge: "secondary" },
+    expiring: { icon: Warning, color: "text-yellow-500", badge: "secondary" },
     expired: { icon: Clock, color: "text-red-500", badge: "destructive" },
-    released: { icon: Unlock, color: "text-gray-500", badge: "outline" },
+    released: { icon: LockOpen, color: "text-gray-500", badge: "outline" },
   };
   
   const config = statusConfig[lease.status];
@@ -238,10 +245,10 @@ function LeaseListItem({
       {!isExpired && lease.status !== "released" && (
         <div className="mt-2 flex gap-2">
           <Button size="sm" variant="outline" className="flex-1" onClick={(e) => { e.stopPropagation(); onRenew(); }}>
-            <RefreshCw className="w-3 h-3 mr-1" /> Renew
+            <ArrowsClockwise className="w-3 h-3 mr-1" /> Renew
           </Button>
           <Button size="sm" variant="outline" className="flex-1" onClick={(e) => { e.stopPropagation(); onRelease(); }}>
-            <Unlock className="w-3 h-3 mr-1" /> Release
+            <LockOpen className="w-3 h-3 mr-1" /> Release
           </Button>
         </div>
       )}
@@ -343,10 +350,10 @@ function LeaseDetails({ lease, onRenew, onRelease }: { lease: ManagedLease; onRe
       {lease.status === "active" && (
         <div className="flex gap-2 pt-4 border-t">
           <Button className="flex-1" onClick={onRenew}>
-            <RefreshCw className="w-4 h-4 mr-2" /> Renew
+            <ArrowsClockwise className="w-4 h-4 mr-2" /> Renew
           </Button>
           <Button variant="outline" className="flex-1" onClick={onRelease}>
-            <Unlock className="w-4 h-4 mr-2" /> Release
+            <LockOpen className="w-4 h-4 mr-2" /> Release
           </Button>
         </div>
       )}

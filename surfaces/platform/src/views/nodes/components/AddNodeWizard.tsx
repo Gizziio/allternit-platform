@@ -15,7 +15,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useNodeToken } from '../hooks/useNodes';
-import { Copy, Check, Server, Terminal, Loader2, RefreshCw } from 'lucide-react';
+import {
+  Copy,
+  Check,
+  HardDrives,
+  Terminal,
+  CircleNotch,
+  ArrowsClockwise,
+} from '@phosphor-icons/react';
 
 interface AddNodeWizardProps {
   open: boolean;
@@ -59,7 +66,7 @@ export function AddNodeWizard({ open, onClose }: AddNodeWizardProps) {
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Server className="h-5 w-5" />
+            <HardDrives size={20} />
             Add New Node
           </DialogTitle>
           <DialogDescription>
@@ -98,12 +105,12 @@ export function AddNodeWizard({ open, onClose }: AddNodeWizardProps) {
               >
                 {loading ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <CircleNotch className="h-4 w-4 animate-spin" />
                     Generating...
                   </>
                 ) : (
                   <>
-                    <RefreshCw className="h-4 w-4" />
+                    <ArrowsClockwise size={16} />
                     Generate Install Token
                   </>
                 )}
@@ -131,12 +138,12 @@ export function AddNodeWizard({ open, onClose }: AddNodeWizardProps) {
                   >
                     {copiedToken ? (
                       <>
-                        <Check className="h-3 w-3" />
+                        <Check size={12} />
                         Copied
                       </>
                     ) : (
                       <>
-                        <Copy className="h-3 w-3" />
+                        <Copy size={12} />
                         Copy
                       </>
                     )}
@@ -150,7 +157,7 @@ export function AddNodeWizard({ open, onClose }: AddNodeWizardProps) {
 
             <div className="space-y-2">
               <Label className="text-sm font-medium flex items-center gap-2">
-                <Terminal className="h-4 w-4" />
+                <Terminal size={16} />
                 Installation Command
               </Label>
               <div className="relative">
@@ -165,12 +172,12 @@ export function AddNodeWizard({ open, onClose }: AddNodeWizardProps) {
                 >
                   {copiedCommand ? (
                     <>
-                      <Check className="h-3 w-3" />
+                      <Check size={12} />
                       Copied
                     </>
                   ) : (
                     <>
-                      <Copy className="h-3 w-3" />
+                      <Copy size={12} />
                       Copy
                     </>
                   )}
@@ -193,7 +200,7 @@ export function AddNodeWizard({ open, onClose }: AddNodeWizardProps) {
           {tokenData ? (
             <>
               <Button variant="outline" onClick={handleGenerate} disabled={loading}>
-                <RefreshCw className="h-4 w-4 mr-2" />
+                <ArrowsClockwise className="h-4 w-4 mr-2" />
                 Generate New Token
               </Button>
               <Button onClick={handleClose}>Done</Button>

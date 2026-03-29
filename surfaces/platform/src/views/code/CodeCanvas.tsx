@@ -1,14 +1,16 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   CaretDown,
   Code as CodeIcon,
   FolderSimple,
   Sparkle,
   TerminalWindow,
+  Bug,
+  Stack,
+  Lightning,
 } from '@phosphor-icons/react';
-import { Bug, Layers, Sparkles, Zap } from 'lucide-react';
 import {
   Conversation,
   ConversationContent,
@@ -41,8 +43,8 @@ import {
   useEmbeddedAgentSessionStore,
   useNativeAgentStore,
 } from '@/lib/agents';
-import { useAgentSurfaceModeStore } from '@/stores/agent-surface-mode.store';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ACIComputerUseBar } from '@/capsules/browser/ACIComputerUseSidecar';
 
 const CONTENT_WIDTH = 760;
 const CODE_MODEL_NAMES: Record<string, string> = {
@@ -101,7 +103,7 @@ const CODE_ACTION_GROUPS: ActionGroup[] = [
     id: 'refactor',
     label: 'Refactor',
     accent: '#D97757',
-    icon: Layers,
+    icon: Stack,
     templates: [
       {
         label: 'Split component',
@@ -147,7 +149,7 @@ const CODE_ACTION_GROUPS: ActionGroup[] = [
     id: 'optimize',
     label: 'Optimize',
     accent: '#D4A15A',
-    icon: Zap,
+    icon: Lightning,
     templates: [
       {
         label: 'Render pass',
@@ -170,7 +172,7 @@ const CODE_ACTION_GROUPS: ActionGroup[] = [
     id: 'explore',
     label: 'Explore',
     accent: '#579BD9',
-    icon: Sparkles,
+    icon: Sparkle,
     templates: [
       {
         label: 'Implementation plan',
@@ -244,8 +246,8 @@ const codeOverlayLabelStyle: React.CSSProperties = {
 export function CodeCanvas({ isPreviewCollapsed: _isPreviewCollapsed }: any) {
   const openDrawer = useDrawerStore((state) => state.openDrawer);
   const setConsoleTab = useDrawerStore((state) => state.setConsoleTab);
-  const codeAgentModeEnabled = useAgentSurfaceModeStore((state) => state.enabledBySurface.code);
   const embeddedAgentSession = useEmbeddedAgentSession('code');
+  const codeAgentModeEnabled = embeddedAgentSession.isEmbedded && embeddedAgentSession.descriptor.sessionMode === 'agent';
   const clearEmbeddedAgentSession = useEmbeddedAgentSessionStore(
     (state) => state.clearSurfaceSession,
   );
@@ -490,17 +492,26 @@ function CodeSessionSurface({
 }: CodeSessionSurfaceProps) {
   const { agentModeEnabled, selectedAgentId, selectedAgent } =
     useSurfaceAgentSelection('code');
-  const agentModePulse = useAgentSurfaceModeStore((state) => state.pulseBySurface.code);
+  const [agentModePulse, setAgentModePulse] = useState(0);
+  const prevAgentModeEnabledRef = useRef(agentModeEnabled);
+  if (prevAgentModeEnabledRef.current !== agentModeEnabled) {
+    prevAgentModeEnabledRef.current = agentModeEnabled;
+    if (agentModeEnabled) setAgentModePulse((p) => p + 1);
+  }
   const setActiveNativeSession = useNativeAgentStore(
     (state) => state.setActiveSession,
   );
+  const createNativeSession = useNativeAgentStore((state) => state.createSession);
+  const setSurfaceSession = useNativeAgentStore((state) => state.setSurfaceSession);
   const sendNativeMessageStream = useNativeAgentStore(
     (state) => state.sendMessageStream,
   );
   const abortNativeGeneration = useNativeAgentStore(
     (state) => state.abortGeneration,
   );
-  const nativeStreaming = useNativeAgentStore((state) => state.streaming);
+  const nativeStreaming = useNativeAgentStore((state) => ({
+    isStreaming: state.streamingBySession[embeddedAgentSession.sessionId ?? '']?.isStreaming ?? false,
+  }));
   const embeddedNativeMessages = useNativeAgentStore((state) =>
     embeddedAgentSession.sessionId
       ? state.messages[embeddedAgentSession.sessionId] || []
@@ -571,17 +582,43 @@ function CodeSessionSurface({
       return;
     }
 
+    // If a session is already embedded, route through it
+    if (isEmbeddedAgentSession && embeddedAgentSession.sessionId) {
+      setActiveNativeSession(embeddedAgentSession.sessionId);
+      await sendNativeMessageStream(embeddedAgentSession.sessionId, draft);
+      return;
+    }
+
+    // Agent mode ON, agent selected, no session yet — create a real gizzi session
+    if (agentModeEnabled && selectedAgentId) {
+      try {
+        const session = await createNativeSession(
+          draft.slice(0, 64) || 'Code Agent Session',
+          undefined,
+          {
+            originSurface: 'code',
+            sessionMode: 'agent',
+            agentId: selectedAgent?.id,
+            agentName: selectedAgent?.name,
+            runtimeModel: selectedAgent?.model,
+            agentFeatures: { workspace: true, tools: true, automation: true },
+          },
+        );
+        setSurfaceSession('code', session.id);
+        setActiveNativeSession(session.id);
+        await sendNativeMessageStream(session.id, draft);
+        return;
+      } catch (err) {
+        console.error('[CodeCanvas] Failed to create code agent session:', err);
+        return;
+      }
+    }
+
     try {
       useRunnerStore.setState({ draft });
       useRunnerStore.getState().submit();
     } catch (error) {
       console.warn('[CodeCanvas] runner submit failed', error);
-    }
-
-    if (isEmbeddedAgentSession && embeddedAgentSession.sessionId) {
-      setActiveNativeSession(embeddedAgentSession.sessionId);
-      await sendNativeMessageStream(embeddedAgentSession.sessionId, draft);
-      return;
     }
 
     const chatId = activeSession?.session_id ?? activeSessionId;
@@ -602,6 +639,7 @@ function CodeSessionSurface({
     activeSession?.session_id,
     activeSessionId,
     agentModeEnabled,
+    createNativeSession,
     embeddedAgentSession.sessionId,
     effectiveModelId,
     isEmbeddedAgentSession,
@@ -611,6 +649,7 @@ function CodeSessionSurface({
     selectedAgent,
     selectedAgentId,
     setActiveNativeSession,
+    setSurfaceSession,
     submitMessage,
     effectiveWorkspaceReady,
   ]);
@@ -811,7 +850,7 @@ function LaunchpadStage({
   const [brandingAttention, setBrandingAttention] = useState<GizziAttention | null>(null);
 
   return (
-    <div style={{ padding: '120px 24px 60px' }}>
+    <div style={{ padding: '120px 24px 60px', minHeight: '100%', boxSizing: 'border-box' }}>
       {agentContextStrip ? (
         <div style={{ width: '100%', textAlign: 'left', marginBottom: 18 }}>
           {agentContextStrip}
@@ -826,18 +865,7 @@ function LaunchpadStage({
       />
 
       <div style={{ width: '100%', marginTop: 28 }}>
-        <div
-          onMouseEnter={() => setBrandingAttention({ state: 'locked-on', target: { x: 0, y: 0.2 } })}
-          onMouseLeave={() => setBrandingAttention(null)}
-        >
-          <CodeActionPills
-            activeAction={activeAction}
-            align="center"
-            onPreviewTemplate={onPreviewTemplate}
-            onSelectTemplate={onSelectTemplate}
-            onToggleAction={onToggleAction}
-          />
-        </div>
+        {/* CodeActionPills removed per annotation - pills no longer necessary */}
         <div data-testid="code-shared-composer" style={{ marginTop: 14 }}>
           <ChatComposer
             key={`code-launchpad-composer-${composerVersion}`}
@@ -1022,6 +1050,7 @@ function ConversationStage({
           </div>
 
           <div data-testid="code-shared-composer" style={{ marginTop: 8 }}>
+            <ACIComputerUseBar suppressInBrowserMode />
             <ChatComposer
               key={`code-conversation-composer-${composerVersion}`}
               onSend={onSend}
@@ -1190,7 +1219,7 @@ function ComposerUtilityBar({
           style={utilityControlStyle}
         >
           <TerminalWindow size={14} />
-          Console
+          Terminal
         </button>
       </div>
 
@@ -1314,7 +1343,7 @@ function CompactUtilityBar({
         </PopoverContent>
       </Popover>
 
-      {/* Console button */}
+      {/* Terminal button (opens terminal in console drawer) */}
       <button
         type="button"
         data-testid="code-console-button"
@@ -1334,7 +1363,7 @@ function CompactUtilityBar({
         }}
       >
         <TerminalWindow size={14} />
-        Console
+        Terminal
       </button>
     </div>
   );

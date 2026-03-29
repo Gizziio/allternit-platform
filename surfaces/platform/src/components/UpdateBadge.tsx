@@ -5,7 +5,9 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Package } from 'lucide-react';
+import {
+  Package,
+} from '@phosphor-icons/react';
 
 // ============================================================================
 // Theme

@@ -5,20 +5,20 @@
  */
 
 import React from 'react';
-import { 
-  Columns, 
-  Rows, 
-  Maximize2, 
-  Minimize2,
+import {
+  Columns,
+  Rows,
+  ArrowsOut,
+  ArrowsIn,
   MonitorPlay,
-  Download,
-  Share2,
-  MoreHorizontal,
-  Undo2,
-  Redo2,
-  ZoomIn,
-  ZoomOut
-} from 'lucide-react';
+  DownloadSimple,
+  ShareNetwork,
+  DotsThreeOutline,
+  ArrowCounterClockwise,
+  ArrowClockwise,
+  MagnifyingGlassPlus,
+  MagnifyingGlassMinus,
+} from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -59,9 +59,9 @@ export function CanvasToolbar({
           title={layoutMode === 'horizontal' ? 'Switch to vertical layout' : 'Switch to horizontal layout'}
         >
           {layoutMode === 'horizontal' ? (
-            <Rows className="w-4 h-4" />
+            <Rows size={16} />
           ) : (
-            <Columns className="w-4 h-4" />
+            <Columns size={16} />
           )}
         </Button>
         
@@ -75,7 +75,7 @@ export function CanvasToolbar({
           )}
           title={showChat ? 'Hide chat' : 'Show chat'}
         >
-          <Columns className="w-4 h-4" />
+          <Columns size={16} />
           <span className="ml-2 text-xs">{showChat ? 'Hide Chat' : 'Show Chat'}</span>
         </Button>
 
@@ -89,7 +89,7 @@ export function CanvasToolbar({
           )}
           title="Toggle asset drive"
         >
-          <MonitorPlay className="w-4 h-4" />
+          <MonitorPlay size={16} />
           <span className="ml-2 text-xs">Drive</span>
         </Button>
       </div>
@@ -116,7 +116,7 @@ export function CanvasToolbar({
           className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
           title="Undo"
         >
-          <Undo2 className="w-4 h-4" />
+          <ArrowCounterClockwise size={16} />
         </Button>
         
         <Button
@@ -125,7 +125,7 @@ export function CanvasToolbar({
           className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
           title="Redo"
         >
-          <Redo2 className="w-4 h-4" />
+          <ArrowClockwise size={16} />
         </Button>
 
         <div className="w-px h-4 bg-[var(--border-subtle)]" />
@@ -136,7 +136,7 @@ export function CanvasToolbar({
           className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
           title="Zoom out"
         >
-          <ZoomOut className="w-4 h-4" />
+          <MagnifyingGlassMinus size={16} />
         </Button>
 
         <Button
@@ -145,7 +145,7 @@ export function CanvasToolbar({
           className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
           title="Zoom in"
         >
-          <ZoomIn className="w-4 h-4" />
+          <MagnifyingGlassPlus size={16} />
         </Button>
 
         <div className="w-px h-4 bg-[var(--border-subtle)]" />
@@ -156,7 +156,7 @@ export function CanvasToolbar({
           className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
           title="Download"
         >
-          <Download className="w-4 h-4" />
+          <DownloadSimple size={16} />
         </Button>
 
         <Button
@@ -165,7 +165,7 @@ export function CanvasToolbar({
           className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
           title="Share"
         >
-          <Share2 className="w-4 h-4" />
+          <ShareNetwork size={16} />
         </Button>
 
         <Button
@@ -179,9 +179,9 @@ export function CanvasToolbar({
           title={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
         >
           {fullscreen ? (
-            <Minimize2 className="w-4 h-4" />
+            <ArrowsIn size={16} />
           ) : (
-            <Maximize2 className="w-4 h-4" />
+            <ArrowsOut size={16} />
           )}
         </Button>
 
@@ -190,7 +190,7 @@ export function CanvasToolbar({
           size="sm"
           className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
         >
-          <MoreHorizontal className="w-4 h-4" />
+          <DotsThreeOutline size={16} />
         </Button>
       </div>
     </div>

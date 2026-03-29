@@ -7,28 +7,28 @@
  */
 
 import React, { useState, useCallback } from "react";
-import { 
-  Wrench, 
-  Check, 
-  X, 
-  ChevronDown, 
-  ChevronUp, 
-  Loader2, 
+import {
+  Wrench,
+  Check,
+  X,
+  CaretDown,
+  CaretUp,
+  CircleNotch,
   Clock,
   Copy,
-  RotateCcw,
+  ArrowCounterClockwise,
   Terminal,
   FileText,
   Globe,
   Database,
-  Search,
-  Settings,
-  AlertCircle,
-  CheckCircle2,
+  MagnifyingGlass,
+  GearSix,
+  Warning,
+  CheckCircle,
   XCircle,
-  Maximize2,
-  Minimize2
-} from "lucide-react";
+  ArrowsOut,
+  ArrowsIn,
+} from '@phosphor-icons/react';
 import type { ToolCall } from "@/lib/agents";
 
 interface ToolCallVisualizationProps {
@@ -79,19 +79,19 @@ const TOOL_METADATA: Record<string, ToolMeta> = {
     description: "Executes shell commands",
   },
   search_code: {
-    icon: <Search size={14} />,
+    icon: <MagnifyingGlass size={14} />,
     label: "Search Code",
     category: "Code",
     description: "Searches codebase",
   },
   list_directory: {
-    icon: <Settings size={14} />,
+    icon: <GearSix size={14} />,
     label: "List Directory",
     category: "File System",
     description: "Lists directory contents",
   },
   ask_user: {
-    icon: <Settings size={14} />,
+    icon: <GearSix size={14} />,
     label: "Ask User",
     category: "Interactive",
     description: "Requests user input",
@@ -150,7 +150,7 @@ export function ToolCallVisualization({
             alignSelf: "flex-end",
           }}
         >
-          {expandedAll ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
+          {expandedAll ? <ArrowsIn size={12} /> : <ArrowsOut size={12} />}
           {expandedAll ? "Collapse All" : "Expand All"}
         </button>
       )}
@@ -249,10 +249,10 @@ function SingleToolCallView({
           }}
         >
           {isLoading ? (
-            <Loader2 size={14} style={{ color: accentColor, animation: "spin 1s linear infinite" }} />
+            <CircleNotch size={14} style={{ color: accentColor, animation: "spin 1s linear infinite" }} />
           ) : hasResult ? (
             isSuccess ? (
-              <CheckCircle2 size={14} style={{ color: "#79C47C" }} />
+              <CheckCircle size={14} style={{ color: "#79C47C" }} />
             ) : (
               <XCircle size={14} style={{ color: "#ef4444" }} />
             )
@@ -299,7 +299,7 @@ function SingleToolCallView({
           <div style={{ fontSize: 10, color: "#a8998c", marginTop: 2 }}>
             {isLoading ? (
               <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <Loader2 size={10} style={{ animation: "spin 1s linear infinite" }} />
+                <CircleNotch size={10} style={{ animation: "spin 1s linear infinite" }} />
                 Executing...
               </span>
             ) : hasResult ? (
@@ -371,12 +371,12 @@ function SingleToolCallView({
               }}
               title="Retry"
             >
-              <RotateCcw size={12} />
+              <ArrowCounterClockwise size={12} />
             </button>
           )}
 
           <div style={{ color: accentColor, fontSize: 12, marginLeft: 4 }}>
-            {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            {isExpanded ? <CaretUp size={16} /> : <CaretDown size={16} />}
           </div>
         </div>
       </button>
@@ -462,7 +462,7 @@ function SectionHeader({
         </span>
       )}
       {isError && (
-        <AlertCircle size={12} style={{ color: "#ef4444" }} />
+        <Warning size={12} style={{ color: "#ef4444" }} />
       )}
     </div>
   );
@@ -565,7 +565,7 @@ function ResultViewer({ result }: { result: unknown }) {
         }}
       >
         {result ? (
-          <CheckCircle2 size={16} style={{ color: "#79C47C" }} />
+          <CheckCircle size={16} style={{ color: "#79C47C" }} />
         ) : (
           <XCircle size={16} style={{ color: "#ef4444" }} />
         )}
@@ -664,7 +664,7 @@ function ResultViewer({ result }: { result: unknown }) {
               }}
             >
               {item.type === "directory" ? (
-                <Settings size={12} style={{ color: "#a8998c" }} />
+                <GearSix size={12} style={{ color: "#a8998c" }} />
               ) : (
                 <FileText size={12} style={{ color: "#d1c3b4" }} />
               )}

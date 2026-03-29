@@ -5,6 +5,8 @@
  */
 
 import React, { useState, useMemo } from 'react';
+import { InputModal } from '@/components/InputModal';
+import { ConfirmModal } from '@/components/ConfirmModal';
 import { 
   BaseProjectView, 
   ProjectItemCard,
@@ -14,7 +16,14 @@ import {
 } from '../BaseProjectView';
 import { useCodeModeStore } from './CodeModeStore';
 import { ChatComposer } from '../chat/ChatComposer';
-import { Terminal, Pencil, Archive, Trash2, FileCode, Bot } from 'lucide-react';
+import {
+  Terminal,
+  PencilSimple,
+  Archive,
+  Trash,
+  FileCode,
+  Robot,
+} from '@phosphor-icons/react';
 import { useNav } from '@/nav/useNav';
 
 interface CodeProjectViewProps {
@@ -41,6 +50,8 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
   // Modal states
   const [showAddFile, setShowAddFile] = useState(false);
   const [showAddInstruction, setShowAddInstruction] = useState(false);
+  const [showRenameModal, setShowRenameModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [instructionText, setInstructionText] = useState('');
   const [workspaceInstructions, setWorkspaceInstructions] = useState<string[]>([]);
   const [workspaceFiles, setWorkspaceFiles] = useState<Array<{id: string; name: string; size: number}>>([]);
@@ -92,20 +103,11 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
   };
 
   const handleRename = () => {
-    const newTitle = prompt('Rename workspace:', workspace?.display_name);
-    if (newTitle && currentWorkspaceId) {
-      renameWorkspace(currentWorkspaceId, newTitle.trim());
-    }
+    setShowRenameModal(true);
   };
 
   const handleDelete = () => {
-    if (confirm(`Delete "${workspace?.display_name}"? All threads will be unassigned.`)) {
-      if (currentWorkspaceId) {
-        deleteWorkspace(currentWorkspaceId);
-        setActiveWorkspace('');
-        dispatch({ type: 'OPEN_VIEW', viewType: 'code' });
-      }
-    }
+    setShowDeleteModal(true);
   };
 
   const handleAddInstruction = () => {
@@ -116,11 +118,8 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
     setShowAddInstruction(false);
   };
 
-  const handleAddFile = () => {
-    const name = prompt('File name:');
-    if (name) {
-      setWorkspaceFiles([...workspaceFiles, { id: Date.now().toString(), name, size: 1024 }]);
-    }
+  const handleAddFile = (name: string) => {
+    setWorkspaceFiles([...workspaceFiles, { id: Date.now().toString(), name, size: 1024 }]);
     setShowAddFile(false);
   };
 
@@ -155,7 +154,7 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
           textAlign: 'left',
         }}
       >
-        <Pencil size={16} />
+        <PencilSimple size={16} />
         Edit details
       </button>
       <button
@@ -192,7 +191,7 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
           textAlign: 'left',
         }}
       >
-        <Trash2 size={16} />
+        <Trash size={16} />
         Delete
       </button>
     </ProjectMenuButton>
@@ -282,7 +281,7 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
                 title={session.title}
                 subtitle={formatDate(session.updated_at)}
                 onClick={() => handleSessionSelect(session.session_id)}
-                icon={activeTab === 'agent-threads' ? <Bot size={18} /> : <Terminal size={18} />}
+                icon={activeTab === 'agent-threads' ? <Robot size={18} /> : <Terminal size={18} />}
               />
             ))}
           </div>
@@ -301,13 +300,47 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
         )}
       </BaseProjectView>
 
+      {/* Rename Modal */}
+      <InputModal
+        isOpen={showRenameModal}
+        title="Rename Workspace"
+        placeholder="Workspace name"
+        defaultValue={workspace.display_name}
+        confirmLabel="Rename"
+        onConfirm={(name) => {
+          if (currentWorkspaceId) renameWorkspace(currentWorkspaceId, name);
+          setShowRenameModal(false);
+        }}
+        onCancel={() => setShowRenameModal(false)}
+      />
+
+      {/* Delete Confirm Modal */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        title="Delete Workspace"
+        message={`Delete "${workspace.display_name}"? All threads will be unassigned.`}
+        confirmLabel="Delete"
+        destructive
+        onConfirm={() => {
+          if (currentWorkspaceId) {
+            deleteWorkspace(currentWorkspaceId);
+            setActiveWorkspace('');
+            dispatch({ type: 'OPEN_VIEW', viewType: 'code' });
+          }
+          setShowDeleteModal(false);
+        }}
+        onCancel={() => setShowDeleteModal(false)}
+      />
+
       {/* Add File Modal */}
-      {showAddFile && (
-        <AddFileModal
-          onClose={() => setShowAddFile(false)}
-          onUpload={handleAddFile}
-        />
-      )}
+      <InputModal
+        isOpen={showAddFile}
+        title="Add File"
+        placeholder="File name"
+        confirmLabel="Add"
+        onConfirm={handleAddFile}
+        onCancel={() => setShowAddFile(false)}
+      />
 
       {/* Add Instruction Modal */}
       {showAddInstruction && (

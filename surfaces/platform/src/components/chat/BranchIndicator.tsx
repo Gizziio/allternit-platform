@@ -40,7 +40,7 @@ export function BranchIndicator({
         border: '1px solid rgba(255,255,255,0.06)',
       }}
     >
-      <GitBranch size={12} style={{ color: THEME.accent }} />
+      <GitBranch size={12} style={{ color: THEME.accent }} aria-hidden="true" />
       
       <span
         style={{
@@ -82,8 +82,9 @@ export function BranchIndicator({
           onMouseLeave={(e) => {
             e.currentTarget.style.background = 'transparent';
           }}
+          aria-label="Previous alternative"
         >
-          <ChevronLeft size={14} />
+          <ChevronLeft size={14} aria-hidden="true" />
         </button>
 
         <span
@@ -124,8 +125,9 @@ export function BranchIndicator({
           onMouseLeave={(e) => {
             e.currentTarget.style.background = 'transparent';
           }}
+          aria-label="Next alternative"
         >
-          <ChevronRight size={14} />
+          <ChevronRight size={14} aria-hidden="true" />
         </button>
       </div>
     </div>

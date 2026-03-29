@@ -10,14 +10,14 @@ import { useModelDiscovery, api } from '@/integration/api-client';
 import { PROVIDER_REGISTRY, getProviderMeta } from '@/lib/providers/provider-registry';
 import {
   Check,
-  ExternalLink,
+  ArrowSquareOut,
   Shield,
   Key,
-  AlertCircle,
-  ChevronRight,
+  Warning,
+  CaretRight,
   Info,
-  Loader2
-} from 'lucide-react';
+  CircleNotch,
+} from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -121,7 +121,7 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
 
       {/* Action hint */}
       <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <ChevronRight className="w-4 h-4 text-white/40" />
+        <CaretRight className="w-4 h-4 text-white/40" />
       </div>
     </button>
   );
@@ -178,7 +178,7 @@ export const ProviderGallery: React.FC = () => {
 
       {providersLoading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-4">
-          <Loader2 className="w-8 h-8 text-white/20 animate-spin" />
+          <CircleNotch className="w-8 h-8 text-white/20 animate-spin" />
           <p className="text-white/40 text-sm">Loading providers...</p>
         </div>
       ) : (
@@ -247,14 +247,14 @@ export const ProviderGallery: React.FC = () => {
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 outline-none focus:border-white/20 focus:bg-white/[0.07] transition-all"
                   />
                   <p className="text-[11px] text-white/30 flex items-center gap-1.5 mt-1.5 px-1">
-                    <Shield className="w-3 h-3" />
+                    <Shield size={12} />
                     Your key is stored locally and never sent to our servers.
                   </p>
                 </div>
 
                 {error && (
                   <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 flex items-start gap-3">
-                    <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
+                    <Warning className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
                     <p className="text-xs text-red-400/90 leading-normal">{error}</p>
                   </div>
                 )}
@@ -279,7 +279,7 @@ export const ProviderGallery: React.FC = () => {
                 >
                   {isConnecting ? (
                     <div className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <CircleNotch className="w-4 h-4 animate-spin" />
                       Connecting...
                     </div>
                   ) : "Connect Account"}

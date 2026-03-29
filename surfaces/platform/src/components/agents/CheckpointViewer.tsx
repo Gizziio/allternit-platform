@@ -8,21 +8,21 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Save,
-  RotateCcw,
+  FloppyDisk,
+  ArrowCounterClockwise,
   Clock,
   Database,
-  ChevronRight,
-  ChevronDown,
-  Trash2,
-  Download,
-  Upload,
-  CheckCircle2,
-  AlertCircle,
+  CaretRight,
+  CaretDown,
+  Trash,
+  DownloadSimple,
+  UploadSimple,
+  CheckCircle,
+  Warning,
   Play,
   Pause,
   StopCircle,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import type { ExecutionTraceEvent } from '@/lib/agents';
 
 // ============================================================================
@@ -103,9 +103,9 @@ function CheckpointTimelineItem({
       >
         <button className="p-1 hover:bg-white/5 rounded transition-colors">
           {isExpanded ? (
-            <ChevronDown size={14} className="text-white/40" />
+            <CaretDown size={14} className="text-white/40" />
           ) : (
-            <ChevronRight size={14} className="text-white/40" />
+            <CaretRight size={14} className="text-white/40" />
           )}
         </button>
 
@@ -115,7 +115,7 @@ function CheckpointTimelineItem({
           style={{ background: reasonConfig.bg }}
         >
           {checkpoint.metadata.reason === 'error' ? (
-            <AlertCircle size={16} style={{ color: reasonConfig.color }} />
+            <Warning size={16} style={{ color: reasonConfig.color }} />
           ) : (
             <Database size={16} style={{ color: reasonConfig.color }} />
           )}
@@ -158,21 +158,21 @@ function CheckpointTimelineItem({
             className="p-1.5 hover:bg-white/5 rounded transition-colors text-white/40 hover:text-white/70"
             title="Restore checkpoint"
           >
-            <RotateCcw size={14} />
+            <ArrowCounterClockwise size={14} />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onExport(); }}
             className="p-1.5 hover:bg-white/5 rounded transition-colors text-white/40 hover:text-white/70"
             title="Export checkpoint"
           >
-            <Download size={14} />
+            <DownloadSimple size={14} />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
             className="p-1.5 hover:bg-white/5 rounded transition-colors text-white/40 hover:text-red-400"
             title="Delete checkpoint"
           >
-            <Trash2 size={14} />
+            <Trash size={14} />
           </button>
         </div>
       </div>
@@ -242,15 +242,15 @@ function ExecutionTraceViewer({
 
   const eventTypeConfig: Record<string, { icon: any; color: string; label: string }> = {
     'step-start': { icon: Play, color: '#60a5fa', label: 'Step Start' },
-    'step-complete': { icon: CheckCircle2, color: '#4ade80', label: 'Complete' },
-    'step-error': { icon: AlertCircle, color: '#ef4444', label: 'Error' },
+    'step-complete': { icon: CheckCircle, color: '#4ade80', label: 'Complete' },
+    'step-error': { icon: Warning, color: '#ef4444', label: 'Error' },
     'tool-call': { icon: Database, color: '#fb923c', label: 'Tool Call' },
-    'tool-result': { icon: CheckCircle2, color: '#4ade80', label: 'Result' },
+    'tool-result': { icon: CheckCircle, color: '#4ade80', label: 'Result' },
     'llm-call': { icon: Database, color: '#a78bfa', label: 'LLM Call' },
-    'llm-response': { icon: CheckCircle2, color: '#a78bfa', label: 'Response' },
+    'llm-response': { icon: CheckCircle, color: '#a78bfa', label: 'Response' },
     'subagent-spawn': { icon: Play, color: '#2dd4bf', label: 'Spawn Agent' },
-    'subagent-complete': { icon: CheckCircle2, color: '#2dd4bf', label: 'Agent Done' },
-    'checkpoint': { icon: Save, color: '#f472b6', label: 'Checkpoint' },
+    'subagent-complete': { icon: CheckCircle, color: '#2dd4bf', label: 'Agent Done' },
+    'checkpoint': { icon: FloppyDisk, color: '#f472b6', label: 'Checkpoint' },
     'decision': { icon: Clock, color: '#fb923c', label: 'Decision' },
   };
 
@@ -299,9 +299,9 @@ function ExecutionTraceViewer({
             >
               <button className="p-1 hover:bg-white/5 rounded transition-colors">
                 {isExpanded ? (
-                  <ChevronDown size={14} className="text-white/40" />
+                  <CaretDown size={14} className="text-white/40" />
                 ) : (
-                  <ChevronRight size={14} className="text-white/40" />
+                  <CaretRight size={14} className="text-white/40" />
                 )}
               </button>
 
@@ -441,7 +441,7 @@ export function CheckpointViewer({
               disabled={!isRunning}
               className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-white/70"
             >
-              <Save size={14} />
+              <FloppyDisk size={14} />
               <span className="text-xs font-medium">Save Checkpoint</span>
             </button>
           </div>

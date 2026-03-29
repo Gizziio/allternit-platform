@@ -195,18 +195,25 @@ function ToastItem({
   );
 }
 
-// Add keyframe animation
-const style = document.createElement('style');
-style.textContent = `
-  @keyframes toast-slide-in {
-    from {
-      opacity: 0;
-      transform: translateX(100%);
-    }
-    to {
-      opacity: 1;
-      transform: translateX(0);
-    }
+// Add keyframe animation - safely for SSR/Electron
+if (typeof document !== 'undefined') {
+  // Check if style already exists to avoid duplicates
+  const existingStyle = document.getElementById('toast-animations');
+  if (!existingStyle) {
+    const style = document.createElement('style');
+    style.id = 'toast-animations';
+    style.textContent = `
+      @keyframes toast-slide-in {
+        from {
+          opacity: 0;
+          transform: translateX(100%);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+    `;
+    document.head.appendChild(style);
   }
-`;
-document.head.appendChild(style);
+}

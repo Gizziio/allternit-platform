@@ -8,11 +8,20 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  Globe, LayoutGrid, Puzzle, Terminal, RefreshCw, 
-  Play, Square, Camera, FileText, MousePointer,
-  Loader2, AlertCircle
-} from 'lucide-react';
+import {
+  Globe,
+  SquaresFour,
+  PuzzlePiece as Puzzle,
+  Terminal,
+  ArrowsClockwise,
+  Play,
+  Square,
+  Camera,
+  FileText,
+  Cursor,
+  CircleNotch,
+  Warning,
+} from '@phosphor-icons/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { GlassCard } from '../../design/GlassCard';
@@ -68,7 +77,7 @@ function AutomatedWebView({ url, targetId, onNavigate }: AutomatedWebViewProps) 
   if (loading) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-[var(--bg-secondary)]">
-        <Loader2 className="w-8 h-8 animate-spin text-[var(--accent-chat)]" />
+        <CircleNotch className="w-8 h-8 animate-spin text-[var(--accent-chat)]" />
       </div>
     );
   }
@@ -77,7 +86,7 @@ function AutomatedWebView({ url, targetId, onNavigate }: AutomatedWebViewProps) 
     return (
       <div className="w-full h-full flex items-center justify-center bg-[var(--bg-secondary)] p-8">
         <div className="text-center">
-          <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-500" />
+          <Warning className="w-12 h-12 mx-auto mb-4 text-red-500" />
           <h3 className="text-lg font-semibold mb-2">Browser Automation Error</h3>
           <p className="text-sm text-[var(--text-secondary)] mb-4">{error}</p>
           <p className="text-xs text-[var(--text-tertiary)]">
@@ -110,7 +119,7 @@ function AutomatedWebView({ url, targetId, onNavigate }: AutomatedWebViewProps) 
           className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--glass-bg-elevated)] 
                      hover:bg-[var(--glass-bg-hover)] text-sm"
         >
-          <RefreshCw className="w-4 h-4" />
+          <ArrowsClockwise size={16} />
           Refresh
         </button>
         <button
@@ -121,7 +130,7 @@ function AutomatedWebView({ url, targetId, onNavigate }: AutomatedWebViewProps) 
           className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--glass-bg-elevated)] 
                      hover:bg-[var(--glass-bg-hover)] text-sm"
         >
-          <Camera className="w-4 h-4" />
+          <Camera size={16} />
           Screenshot
         </button>
       </div>
@@ -179,7 +188,7 @@ function BrowserControlPanel() {
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500/20 text-green-400
                        hover:bg-green-500/30 transition-colors"
           >
-            <Play className="w-4 h-4" />
+            <Play size={16} />
             Start Browser
           </button>
         ) : (
@@ -188,7 +197,7 @@ function BrowserControlPanel() {
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/20 text-red-400
                        hover:bg-red-500/30 transition-colors"
           >
-            <Square className="w-4 h-4" />
+            <Square size={16} />
             Stop Browser
           </button>
         )}
@@ -199,7 +208,7 @@ function BrowserControlPanel() {
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--glass-bg-elevated)]
                      hover:bg-[var(--glass-bg-hover)] transition-colors disabled:opacity-50"
         >
-          <Camera className="w-4 h-4" />
+          <Camera size={16} />
           Snapshot
         </button>
 
@@ -212,7 +221,7 @@ function BrowserControlPanel() {
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--glass-bg-elevated)]
                      hover:bg-[var(--glass-bg-hover)] transition-colors disabled:opacity-50"
         >
-          <FileText className="w-4 h-4" />
+          <FileText size={16} />
           PDF
         </button>
       </div>
@@ -234,7 +243,7 @@ function BrowserControlPanel() {
                 onClick={() => closeTab(tab.targetId)}
                 className="p-1.5 rounded hover:bg-red-500/20 hover:text-red-400 transition-colors"
               >
-                <Square className="w-3 h-3" />
+                <Square size={12} />
               </button>
             </div>
           ))}
@@ -285,7 +294,7 @@ function CanvasHostPanel() {
     <GlassCard className="p-4 mb-4">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold flex items-center gap-2">
-          <LayoutGrid className="w-5 h-5 text-purple-400" />
+          <SquaresFour className="w-5 h-5 text-purple-400" />
           Canvas Host
         </h3>
       </div>
@@ -305,7 +314,7 @@ function CanvasHostPanel() {
               onClick={() => window.open(iframeUrl, '_blank')}
               className="px-3 py-2 rounded-lg bg-[var(--glass-bg-elevated)] hover:bg-[var(--glass-bg-hover)]"
             >
-              <Globe className="w-4 h-4" />
+              <Globe size={16} />
             </button>
           </div>
         </div>
@@ -327,7 +336,7 @@ function CanvasHostPanel() {
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500/20 text-purple-400
                        hover:bg-purple-500/30 transition-colors"
           >
-            <LayoutGrid className="w-4 h-4" />
+            <SquaresFour size={16} />
             Push A2UI
           </button>
           <button
@@ -338,7 +347,7 @@ function CanvasHostPanel() {
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--glass-bg-elevated)]
                        hover:bg-[var(--glass-bg-hover)] transition-colors"
           >
-            <Play className="w-4 h-4" />
+            <Play size={16} />
             Present
           </button>
         </div>
@@ -426,7 +435,7 @@ function A2UIPanel() {
     <GlassCard className="p-4">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold flex items-center gap-2">
-          <LayoutGrid className="w-5 h-5 text-purple-400" />
+          <SquaresFour className="w-5 h-5 text-purple-400" />
           A2UI Renderer
         </h3>
       </div>
@@ -462,7 +471,7 @@ export function BrowserCapsuleIntegrated() {
               : 'bg-[var(--glass-bg-elevated)] hover:bg-[var(--glass-bg-hover)]'
           )}
         >
-          <Globe className="w-4 h-4" />
+          <Globe size={16} />
           Browser
         </button>
         <button
@@ -474,7 +483,7 @@ export function BrowserCapsuleIntegrated() {
               : 'bg-[var(--glass-bg-elevated)] hover:bg-[var(--glass-bg-hover)]'
           )}
         >
-          <LayoutGrid className="w-4 h-4" />
+          <SquaresFour size={16} />
           Canvas
         </button>
         <button
@@ -486,7 +495,7 @@ export function BrowserCapsuleIntegrated() {
               : 'bg-[var(--glass-bg-elevated)] hover:bg-[var(--glass-bg-hover)]'
           )}
         >
-          <Terminal className="w-4 h-4" />
+          <Terminal size={16} />
           A2UI
         </button>
       </div>

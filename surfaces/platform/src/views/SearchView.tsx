@@ -1,7 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Search, Clock, FileText, Code2, BookOpen, X } from 'lucide-react';
+import {
+  MagnifyingGlass,
+  Clock,
+  FileText,
+  Code,
+  BookOpen,
+  X,
+} from '@phosphor-icons/react';
 import { GlassSurface } from '@/design/GlassSurface';
 
 interface SearchResult {
@@ -25,17 +32,8 @@ interface SearchSuggestion {
 
 type FilterType = 'All' | 'History' | 'Files' | 'Code' | 'Documents';
 
-const mockRecentSearches: RecentSearch[] = [
-  { id: '1', query: 'component structure' },
-  { id: '2', query: 'auth flow' },
-  { id: '3', query: 'database schema' },
-];
-
-const mockSearchSuggestions: SearchSuggestion[] = [
-  { id: '1', label: 'recent conversations' },
-  { id: '2', label: 'agent runs' },
-  { id: '3', label: 'cowork tasks' },
-];
+const recentSearches: RecentSearch[] = [];
+const searchSuggestions: SearchSuggestion[] = [];
 
 const getCategoryIcon = (category: FilterType) => {
   switch (category) {
@@ -44,41 +42,14 @@ const getCategoryIcon = (category: FilterType) => {
     case 'Files':
       return <FileText size={16} />;
     case 'Code':
-      return <Code2 size={16} />;
+      return <Code size={16} />;
     case 'Documents':
       return <BookOpen size={16} />;
     default:
-      return <Search size={16} />;
+      return <MagnifyingGlass size={16} />;
   }
 };
 
-const generateMockResults = (query: string): SearchResult[] => {
-  const categories: FilterType[] = ['History', 'Files', 'Code', 'Documents'];
-  const results: SearchResult[] = [];
-
-  categories.forEach((category) => {
-    const count = Math.floor(Math.random() * 2) + 2;
-    for (let i = 0; i < count; i++) {
-      results.push({
-        id: `${category}-${i}`,
-        title: `${category} result: ${query} ${i + 1}`,
-        subtitle:
-          category === 'Code'
-            ? `src/components/${query.replace(/\s+/g, '-')}.tsx`
-            : category === 'Files'
-              ? `/documents/${query.replace(/\s+/g, '-')}.md`
-              : category === 'Documents'
-                ? `/docs/${query.replace(/\s+/g, '-')}.pdf`
-                : `Conversation about ${query}`,
-        category: category as 'Code',
-        timestamp: `${Math.floor(Math.random() * 23) + 1}m ago`,
-        icon: getCategoryIcon(category),
-      });
-    }
-  });
-
-  return results;
-};
 
 export function SearchView() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -91,7 +62,8 @@ export function SearchView() {
   useEffect(() => {
     if (searchQuery.length >= 2) {
       setIsSearching(true);
-      setSearchResults(generateMockResults(searchQuery));
+      // TODO: wire to real search API endpoint
+      setSearchResults([]);
     } else {
       setIsSearching(false);
       setSearchResults([]);
@@ -158,7 +130,7 @@ export function SearchView() {
             }}
           >
             <div className="flex items-center px-4 py-3">
-              <Search size={20} style={{ color: `var(--text-secondary)` }} />
+              <MagnifyingGlass size={20} style={{ color: `var(--text-secondary)` }} />
               <input
                 type="text"
                 value={searchQuery}
@@ -233,7 +205,7 @@ export function SearchView() {
                   Recent Searches
                 </h2>
                 <div className="space-y-2">
-                  {mockRecentSearches.map((search) => (
+                  {recentSearches.map((search) => (
                     <button
                       key={search.id}
                       onClick={() => handleRecentSearchClick(search.query)}
@@ -270,7 +242,7 @@ export function SearchView() {
                   Search Suggestions
                 </h2>
                 <div className="flex flex-wrap gap-2">
-                  {mockSearchSuggestions.map((suggestion) => (
+                  {searchSuggestions.map((suggestion) => (
                     <button
                       key={suggestion.id}
                       onClick={() => handleSuggestionClick(suggestion.label)}
@@ -364,7 +336,7 @@ export function SearchView() {
                     color: `var(--text-secondary)`,
                   }}
                 >
-                  <Search size={32} className="mx-auto mb-3 opacity-50" />
+                  <MagnifyingGlass size={32} className="mx-auto mb-3 opacity-50" />
                   <p>No results found for "{searchQuery}"</p>
                 </div>
               )}

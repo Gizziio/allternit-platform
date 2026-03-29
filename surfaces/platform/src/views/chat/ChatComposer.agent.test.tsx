@@ -3,6 +3,13 @@ import { act, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAgentSurfaceModeStore } from '@/stores/agent-surface-mode.store';
 
+const embeddedSessionState = vi.hoisted(() => ({
+  isEmbedded: false,
+  sessionId: null as string | null,
+  session: null,
+  descriptor: { sessionMode: 'regular' as 'agent' | 'regular', agentId: null as string | null },
+}));
+
 const agentStoreState = vi.hoisted(() => {
   const fetchAgents = vi.fn(() => Promise.resolve());
   const createAgent = vi.fn(() => Promise.resolve({
@@ -49,6 +56,18 @@ vi.mock('@/integration/api-client', () => ({
 
 vi.mock('@/lib/agents', () => ({
   useAgentStore: (selector: (state: any) => unknown) => selector(agentStoreState),
+  useEmbeddedAgentSession: () => embeddedSessionState,
+  useEmbeddedAgentSessionStore: Object.assign(
+    (selector?: (state: any) => unknown) => {
+      const state = {
+        sessionIdBySurface: { chat: null, cowork: null, code: null, browser: null },
+        setSurfaceSession: vi.fn(),
+        clearSurfaceSession: vi.fn(),
+      };
+      return selector ? selector(state) : state;
+    },
+    { getState: () => ({ setSurfaceSession: vi.fn(), clearSurfaceSession: vi.fn() }) },
+  ),
   discoverOpenClawAgents: vi.fn(() => Promise.resolve({ agents: [], total: 0, unregistered: 0 })),
   buildOpenClawImportInput: vi.fn(() => ({
     name: 'Imported Agent',
@@ -58,6 +77,7 @@ vi.mock('@/lib/agents', () => ({
     config: {},
   })),
   getOpenClawWorkspacePathFromAgent: vi.fn(() => null),
+  resolveOpenClawRegistration: vi.fn(() => null),
 }));
 
 vi.mock('./AgentModeGizzi', () => ({
@@ -83,19 +103,11 @@ import { ChatComposer } from './ChatComposer';
 
 describe('ChatComposer agent mascot rail', () => {
   beforeEach(() => {
+    embeddedSessionState.isEmbedded = false;
+    embeddedSessionState.sessionId = null;
+    embeddedSessionState.session = null;
+    embeddedSessionState.descriptor = { sessionMode: 'regular', agentId: null };
     useAgentSurfaceModeStore.setState({
-      enabledBySurface: {
-        chat: false,
-        cowork: false,
-        code: false,
-        browser: false,
-      },
-      pulseBySurface: {
-        chat: 0,
-        cowork: 0,
-        code: 0,
-        browser: 0,
-      },
       selectedAgentIdBySurface: {
         chat: null,
         cowork: null,
@@ -140,19 +152,10 @@ describe('ChatComposer agent mascot rail', () => {
     expect(screen.queryByTestId('mock-agent-mode-gizzi')).not.toBeInTheDocument();
 
     await act(async () => {
+      embeddedSessionState.isEmbedded = true;
+      embeddedSessionState.sessionId = 'session-chat-1';
+      embeddedSessionState.descriptor = { sessionMode: 'agent', agentId: 'agent-1' };
       useAgentSurfaceModeStore.setState({
-        enabledBySurface: {
-          chat: true,
-          cowork: false,
-          code: false,
-          browser: false,
-        },
-        pulseBySurface: {
-          chat: 1,
-          cowork: 0,
-          code: 0,
-          browser: 0,
-        },
         selectedAgentIdBySurface: {
           chat: 'agent-1',
           cowork: null,
@@ -182,19 +185,10 @@ describe('ChatComposer agent mascot rail', () => {
 
   it('does not mount the rail mascot for code mode', async () => {
     await act(async () => {
+      embeddedSessionState.isEmbedded = true;
+      embeddedSessionState.sessionId = 'session-code-1';
+      embeddedSessionState.descriptor = { sessionMode: 'agent', agentId: 'agent-1' };
       useAgentSurfaceModeStore.setState({
-        enabledBySurface: {
-          chat: false,
-          cowork: false,
-          code: true,
-          browser: false,
-        },
-        pulseBySurface: {
-          chat: 0,
-          cowork: 0,
-          code: 1,
-          browser: 0,
-        },
         selectedAgentIdBySurface: {
           chat: null,
           cowork: null,
@@ -223,19 +217,10 @@ describe('ChatComposer agent mascot rail', () => {
 
   it('does not mount the rail mascot for browser mode', async () => {
     await act(async () => {
+      embeddedSessionState.isEmbedded = true;
+      embeddedSessionState.sessionId = 'session-browser-1';
+      embeddedSessionState.descriptor = { sessionMode: 'agent', agentId: 'agent-1' };
       useAgentSurfaceModeStore.setState({
-        enabledBySurface: {
-          chat: false,
-          cowork: false,
-          code: false,
-          browser: true,
-        },
-        pulseBySurface: {
-          chat: 0,
-          cowork: 0,
-          code: 0,
-          browser: 1,
-        },
         selectedAgentIdBySurface: {
           chat: null,
           cowork: null,

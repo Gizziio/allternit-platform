@@ -1,7 +1,12 @@
 "use client";
 
 import React, { Component, ErrorInfo, ReactNode } from "react";
-import { AlertCircle, RefreshCw, Home, ChevronRight } from "lucide-react";
+import {
+  Warning,
+  ArrowsClockwise,
+  House,
+  CaretRight,
+} from '@phosphor-icons/react';
 import { cn } from "@/lib/utils";
 
 // ============================================================================
@@ -136,7 +141,7 @@ function ErrorFallback({
     >
       {/* Icon */}
       <div className="w-12 h-12 rounded-full bg-[var(--status-error)]/20 flex items-center justify-center mb-4">
-        <AlertCircle className="w-6 h-6 text-[var(--status-error)]" />
+        <Warning className="w-6 h-6 text-[var(--status-error)]" />
       </div>
 
       {/* Title */}
@@ -182,7 +187,7 @@ function ErrorFallback({
               "focus:outline-none focus:ring-2 focus:ring-[var(--status-error)]/50"
             )}
           >
-            <RefreshCw className="w-4 h-4" />
+            <ArrowsClockwise size={16} />
             Try Again
           </button>
         )}
@@ -199,7 +204,7 @@ function ErrorFallback({
             "focus:outline-none focus:ring-2 focus:ring-[var(--accent-chat)]/50"
           )}
         >
-          <Home className="w-4 h-4" />
+          <House size={16} />
           Reload Page
         </button>
       </div>
@@ -211,7 +216,7 @@ function ErrorFallback({
             onClick={() => setShowStack(!showStack)}
             className="flex items-center gap-1 text-xs text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
           >
-            <ChevronRight className={cn("w-3 h-3 transition-transform", showStack && "rotate-90")} />
+            <CaretRight className={cn("w-3 h-3 transition-transform", showStack && "rotate-90")} />
             {showStack ? "Hide" : "Show"} Component Stack
           </button>
           
@@ -279,7 +284,7 @@ export function ShellRailErrorBoundary({ children }: { children: ReactNode }) {
           }}
         >
           <div className="text-center">
-            <AlertCircle className="w-8 h-8 text-[var(--text-tertiary)] mx-auto mb-2" />
+            <Warning className="w-8 h-8 text-[var(--text-tertiary)] mx-auto mb-2" />
             <p className="text-sm text-[var(--text-secondary)]">Navigation unavailable</p>
           </div>
         </div>

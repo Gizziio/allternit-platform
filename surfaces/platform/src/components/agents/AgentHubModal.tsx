@@ -9,21 +9,21 @@
 
 import React, { useState, useMemo } from 'react';
 import {
-  Bot,
-  Search,
+  Robot,
+  MagnifyingGlass,
   X,
-  ChevronRight,
-  Sparkles,
+  CaretRight,
+  Sparkle,
   Code,
   Palette,
   Megaphone,
-  ClipboardList,
+  ClipboardText,
   TestTube,
   Headphones,
-  Boxes,
+  Stack,
   Target,
   Check,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 
 import { SAND, MODE_COLORS, GLASS, TEXT } from '@/design/a2r.tokens';
 import type { SpecialistTemplate, AgentCategory } from '@/lib/agents/agent-templates.specialist';
@@ -45,11 +45,11 @@ export interface AgentHubModalProps {
 // ============================================================================
 
 const CATEGORIES: { id: AgentCategory | 'all'; label: string; icon: React.ReactNode; count: number }[] = [
-  { id: 'all', label: 'All', icon: <Boxes size={16} />, count: SPECIALIST_TEMPLATES.length },
+  { id: 'all', label: 'All', icon: <Stack size={16} />, count: SPECIALIST_TEMPLATES.length },
   { id: 'engineering', label: 'Engineering', icon: <Code size={16} />, count: getTemplatesByCategory('engineering').length },
   { id: 'design', label: 'Design', icon: <Palette size={16} />, count: getTemplatesByCategory('design').length },
   { id: 'marketing', label: 'Marketing', icon: <Megaphone size={16} />, count: getTemplatesByCategory('marketing').length },
-  { id: 'product', label: 'Product', icon: <ClipboardList size={16} />, count: getTemplatesByCategory('product').length },
+  { id: 'product', label: 'Product', icon: <ClipboardText size={16} />, count: getTemplatesByCategory('product').length },
   { id: 'testing', label: 'Testing', icon: <TestTube size={16} />, count: getTemplatesByCategory('testing').length },
   { id: 'support', label: 'Support', icon: <Headphones size={16} />, count: getTemplatesByCategory('support').length },
   { id: 'specialized', label: 'Specialized', icon: <Target size={16} />, count: getTemplatesByCategory('specialized').length },
@@ -129,7 +129,7 @@ export function AgentHubModal({
               className="p-2 rounded-lg"
               style={{ background: theme.soft }}
             >
-              <Bot size={24} style={{ color: theme.accent }} />
+              <Robot size={24} style={{ color: theme.accent }} />
             </div>
             <div>
               <h2 className="text-xl font-semibold" style={{ color: TEXT.primary }}>
@@ -219,7 +219,7 @@ export function AgentHubModal({
           <div className="flex-1 p-6 overflow-y-auto">
             {filteredTemplates.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center">
-                <Bot size={48} style={{ color: TEXT.tertiary }} />
+                <Robot size={48} style={{ color: TEXT.tertiary }} />
                 <p className="mt-4 text-lg font-medium" style={{ color: TEXT.primary }}>
                   No templates found
                 </p>
@@ -253,7 +253,7 @@ export function AgentHubModal({
                   className="p-3 rounded-xl"
                   style={{ background: theme.soft }}
                 >
-                  <Sparkles size={24} style={{ color: theme.accent }} />
+                  <Sparkle size={24} style={{ color: theme.accent }} />
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold" style={{ color: TEXT.primary }}>
@@ -383,7 +383,7 @@ function TemplateCard({ template, isSelected, onSelect, accentColor }: TemplateC
           className="p-2 rounded-lg"
           style={{ background: `rgba(${hexToRgb(accentColor)}, 0.15)` }}
         >
-          <Bot size={20} style={{ color: accentColor }} />
+          <Robot size={20} style={{ color: accentColor }} />
         </div>
         <div className="flex-1">
           <h3 className="font-semibold" style={{ color: TEXT.primary }}>
@@ -427,7 +427,7 @@ function TemplateCard({ template, isSelected, onSelect, accentColor }: TemplateC
       {/* Preview Link */}
       <div className="flex items-center gap-1 mt-3 text-xs" style={{ color: accentColor }}>
         <span>Preview details</span>
-        <ChevronRight size={14} />
+        <CaretRight size={14} />
       </div>
     </div>
   );

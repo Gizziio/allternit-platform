@@ -5,7 +5,10 @@
  */
 
 import type { TextUIPart, ToolUIPart, DynamicToolUIPart, FileUIPart as AIFileUIPart, SourceDocumentUIPart } from "ai";
-import type { ReasoningTrace } from "./rust-stream-adapter";
+import type {
+  McpAppUIPart as BaseMcpAppUIPart,
+  ReasoningTrace,
+} from "./rust-stream-adapter";
 
 // Re-export base types
 export type {
@@ -233,6 +236,8 @@ export interface WebPreviewUIPart {
   title?: string;
 }
 
+export type McpAppUIPart = BaseMcpAppUIPart;
+
 /**
  * Canvas part - Visual canvas
  */
@@ -398,6 +403,7 @@ export type ExtendedUIPart =
   | AudioUIPart
   | FileOperationUIPart
   | ArtifactUIPart
+  | McpAppUIPart
   | CitationUIPart
   | ConfirmationUIPart
   | QueueUIPart
@@ -430,6 +436,7 @@ export type ExtendedRustEventType =
   | "content_block_delta"
   | "tool_result"
   | "tool_error"
+  | "mcp_app"
   | "source"
   | "finish"
   // Extended events

@@ -93,8 +93,7 @@ export function createWebTab(url: string, title?: string): WebTab {
 export function createA2UITab(
   payload: A2UIPayload,
   title: string = 'A2UI App',
-  source?: string,
-  isMockData?: boolean
+  source?: string
 ): A2UITab {
   return {
     id: `tab-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -103,7 +102,6 @@ export function createA2UITab(
     contentType: 'a2ui',
     payload,
     source,
-    isMockData,
   };
 }
 
@@ -149,6 +147,13 @@ export interface RecentVisit {
 }
 
 const MAX_RECENT_VISITS = 12;
+export const BROWSER_CHAT_PANE_MIN_WIDTH = 320;
+export const BROWSER_CHAT_PANE_MAX_WIDTH = 520;
+export const BROWSER_CHAT_PANE_DEFAULT_WIDTH = 392;
+
+function clampChatPaneWidth(width: number) {
+  return Math.max(BROWSER_CHAT_PANE_MIN_WIDTH, Math.min(BROWSER_CHAT_PANE_MAX_WIDTH, Math.round(width)));
+}
 
 interface BrowserStore {
   // State
@@ -157,6 +162,7 @@ interface BrowserStore {
   consoleOpen: boolean;
   consoleHeight: number;
   chatPaneOpen: boolean;
+  chatPaneWidth: number;
   recentVisits: RecentVisit[];
   // Per-tab navigation history: tabId -> array of URLs
   tabHistory: Record<string, string[]>;
@@ -167,7 +173,7 @@ interface BrowserStore {
   // Tab Management
   addTab: (input: string, title?: string) => string;
   addCustomTab: (tab: BrowserTab) => string;
-  addA2UITab: (payload: A2UIPayload, title?: string, source?: string, isMockData?: boolean) => string;
+  addA2UITab: (payload: A2UIPayload, title?: string, source?: string) => string;
   addMiniappTab: (manifest: MiniappManifest, capsuleId: string, entryPoint?: string) => string;
   addComponentTab: (componentId: string, title?: string, props?: Record<string, unknown>) => string;
   addChromeStreamTab: (sessionId: string, signalingUrl: string, iceServers?: RTCIceServer[], resolution?: string) => string;
@@ -189,6 +195,7 @@ interface BrowserStore {
 
   // Chat Pane
   toggleChatPane: () => void;
+  setChatPaneWidth: (width: number) => void;
 
   // Bulk Operations
   closeAllTabs: () => void;
@@ -220,7 +227,8 @@ export const useBrowserStore = create<BrowserStore>()(
       activeTabId: initialTab.id,
       consoleOpen: false,
       consoleHeight: 200,
-      chatPaneOpen: false,
+      chatPaneOpen: true,
+      chatPaneWidth: BROWSER_CHAT_PANE_DEFAULT_WIDTH,
       recentVisits: [],
       tabHistory: { [initialTab.id]: ['https://www.google.com'] },
       tabHistoryIndex: { [initialTab.id]: 0 },
@@ -249,8 +257,8 @@ export const useBrowserStore = create<BrowserStore>()(
         return tab.id;
       },
 
-      addA2UITab: (payload: A2UIPayload, title?: string, source?: string, isMockData?: boolean) => {
-        const newTab = createA2UITab(payload, title, source, isMockData);
+      addA2UITab: (payload: A2UIPayload, title?: string, source?: string) => {
+        const newTab = createA2UITab(payload, title, source);
         set((state) => ({
           tabs: [...state.tabs.map((t) => ({ ...t, isActive: false })), newTab],
           activeTabId: newTab.id,
@@ -403,6 +411,10 @@ export const useBrowserStore = create<BrowserStore>()(
         set((state) => ({ chatPaneOpen: !state.chatPaneOpen }));
       },
 
+      setChatPaneWidth: (width: number) => {
+        set({ chatPaneWidth: clampChatPaneWidth(width) });
+      },
+
       // Bulk Operations
       closeAllTabs: () => {
         set({ tabs: [], activeTabId: null });
@@ -438,8 +450,7 @@ export const useBrowserStore = create<BrowserStore>()(
             newTab = createA2UITab(
               (tab as A2UITab).payload,
               tab.title,
-              (tab as A2UITab).source,
-              (tab as A2UITab).isMockData
+              (tab as A2UITab).source
             );
             break;
           case 'miniapp':

@@ -5,16 +5,16 @@ import { cn } from '@/lib/utils';
 import { useSidebar, useResponsiveLayout } from './useLayout';
 import { GlassSurface } from '@/design/GlassSurface';
 import {
-  Menu,
-  Search,
+  List,
+  MagnifyingGlass,
   Bell,
-  Settings,
-  ChevronRight,
+  GearSix,
+  CaretRight,
   Command,
   User,
-  LogOut,
-  type LucideIcon,
-} from 'lucide-react';
+  SignOut,
+} from '@phosphor-icons/react';
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 // =============================================================================
 // Types
@@ -28,7 +28,7 @@ export interface BreadcrumbItem {
 
 export interface TopBarAction {
   id: string;
-  icon: LucideIcon;
+  icon: PhosphorIcon;
   label: string;
   onClick: () => void;
   badge?: number;
@@ -102,7 +102,7 @@ export function TopBar({
             className="p-2 rounded-md hover:bg-accent transition-colors"
             aria-label="Toggle sidebar"
           >
-            <Menu className="w-5 h-5" />
+            <List size={20} />
           </button>
         )}
         
@@ -186,7 +186,7 @@ function Breadcrumbs({ items }: BreadcrumbsProps) {
         return (
           <React.Fragment key={index}>
             {index > 0 && (
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              <CaretRight className="w-4 h-4 text-muted-foreground" />
             )}
             {item.href ? (
               <a href={item.href} className="no-underline">
@@ -225,7 +225,7 @@ function TopBarActionButton({ action }: TopBarActionButtonProps) {
       aria-label={action.label}
       title={action.label}
     >
-      <Icon className="w-5 h-5" />
+      <Icon size={20} />
       {action.badge !== undefined && action.badge > 0 && (
         <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" />
       )}
@@ -279,10 +279,10 @@ function GlobalSearch({ isOpen, onOpenChange }: GlobalSearchProps) {
           'text-muted-foreground text-sm'
         )}
       >
-        <Search className="w-4 h-4" />
+        <MagnifyingGlass size={16} />
         <span className="hidden sm:inline">Search...</span>
         <kbd className="hidden md:inline-flex items-center gap-1 px-1.5 py-0.5 text-xs bg-background rounded border">
-          <Command className="w-3 h-3" />
+          <Command size={12} />
           <span>K</span>
         </kbd>
       </button>
@@ -302,7 +302,7 @@ function GlobalSearch({ isOpen, onOpenChange }: GlobalSearchProps) {
         <div className="bg-background border border-border rounded-lg shadow-2xl overflow-hidden">
           {/* Search Input */}
           <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
-            <Search className="w-5 h-5 text-muted-foreground" />
+            <MagnifyingGlass className="w-5 h-5 text-muted-foreground" />
             <input
               ref={inputRef}
               type="text"
@@ -320,7 +320,7 @@ function GlobalSearch({ isOpen, onOpenChange }: GlobalSearchProps) {
           <div className="max-h-96 overflow-y-auto py-2">
             {query ? (
               <div className="px-4 py-8 text-center text-muted-foreground">
-                <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <MagnifyingGlass className="w-8 h-8 mx-auto mb-2 opacity-50" />
                 <p>Searching for &quot;{query}&quot;...</p>
               </div>
             ) : (
@@ -334,7 +334,7 @@ function GlobalSearch({ isOpen, onOpenChange }: GlobalSearchProps) {
                   shortcut="⌘⇧P"
                 />
                 <SearchResultItem
-                  icon={Settings}
+                  icon={GearSix}
                   label="Settings"
                   shortcut="⌘,"
                 />
@@ -355,7 +355,7 @@ function GlobalSearch({ isOpen, onOpenChange }: GlobalSearchProps) {
 }
 
 interface SearchResultItemProps {
-  icon: LucideIcon;
+  icon: PhosphorIcon;
   label: string;
   description?: string;
   shortcut?: string;
@@ -424,7 +424,7 @@ function NotificationBell({ isOpen, onOpenChange }: NotificationBellProps) {
         )}
         aria-label="Notifications"
       >
-        <Bell className="w-5 h-5" />
+        <Bell size={20} />
         {unreadCount > 0 && (
           <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 text-xs font-medium bg-primary text-primary-foreground rounded-full flex items-center justify-center">
             {unreadCount > 9 ? '9+' : unreadCount}
@@ -556,10 +556,10 @@ function ProfileMenu({ isOpen, onOpenChange }: ProfileMenuProps) {
           </div>
           <div className="py-1">
             <ProfileMenuItem icon={User} label="Profile" />
-            <ProfileMenuItem icon={Settings} label="Settings" shortcut="⌘," />
+            <ProfileMenuItem icon={GearSix} label="Settings" shortcut="⌘," />
           </div>
           <div className="border-t border-border py-1">
-            <ProfileMenuItem icon={LogOut} label="Log out" />
+            <ProfileMenuItem icon={SignOut} label="Log out" />
           </div>
         </div>
       )}
@@ -568,7 +568,7 @@ function ProfileMenu({ isOpen, onOpenChange }: ProfileMenuProps) {
 }
 
 interface ProfileMenuItemProps {
-  icon: LucideIcon;
+  icon: PhosphorIcon;
   label: string;
   shortcut?: string;
   onClick?: () => void;

@@ -16,7 +16,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { ChevronDownIcon } from "lucide-react";
+import {
+  CaretDown as ChevronDownIcon,
+} from '@phosphor-icons/react';
 import {
   createContext,
   useCallback,

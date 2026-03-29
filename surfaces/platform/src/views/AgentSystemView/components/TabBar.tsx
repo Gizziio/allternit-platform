@@ -3,7 +3,14 @@
  */
 
 import React from "react";
-import { GitBranch, ClipboardList, Activity, Mail, Settings2, History } from "lucide-react";
+import {
+  GitBranch,
+  ClipboardText,
+  Pulse as Activity,
+  EnvelopeSimple,
+  GearSix,
+  ClockCounterClockwise,
+} from '@phosphor-icons/react';
 import { useUnifiedStore, type MainTab } from "@/lib/agents/unified.store";
 
 interface TabBarProps {
@@ -23,11 +30,11 @@ export function TabBar({ activeTab, onTabChange }: TabBarProps) {
 
   const tabs: TabConfig[] = [
     { id: "plan", label: "Plan", icon: GitBranch },
-    { id: "work", label: "Work", icon: ClipboardList },
+    { id: "work", label: "Work", icon: ClipboardText },
     { id: "status", label: "Status", icon: Activity },
-    { id: "mail", label: "Mail", icon: Mail, badge: mailUnreadCount > 0 ? mailUnreadCount : undefined },
-    { id: "tools", label: "Tools", icon: Settings2 },
-    { id: "audit", label: "Audit", icon: History },
+    { id: "mail", label: "Mail", icon: EnvelopeSimple, badge: mailUnreadCount > 0 ? mailUnreadCount : undefined },
+    { id: "tools", label: "Tools", icon: GearSix },
+    { id: "audit", label: "Audit", icon: ClockCounterClockwise },
   ];
 
   return (

@@ -2,7 +2,9 @@
 
 import * as React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
-import { X } from "lucide-react"
+import {
+  X,
+} from '@phosphor-icons/react';
 
 import { cn } from "@/lib/utils"
 
@@ -51,7 +53,7 @@ const DialogContent = React.forwardRef<
       {children}
       {!hideCloseButton && (
         <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 text-gray-400 transition-opacity hover:opacity-100 hover:text-white focus:outline-none">
-          <X className="h-4 w-4" />
+          <X size={16} />
           <span className="sr-only">Close</span>
         </DialogPrimitive.Close>
       )}

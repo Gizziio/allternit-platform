@@ -6,7 +6,10 @@
  */
 
 import React, { useState } from 'react';
-import { X, Plus } from 'lucide-react';
+import {
+  X,
+  Plus,
+} from '@phosphor-icons/react';
 import { useCapabilities } from '../../plugins/useCapabilities';
 import {
   buildMarketplaceManifestForPlugin,

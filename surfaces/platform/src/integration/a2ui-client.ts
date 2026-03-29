@@ -247,8 +247,6 @@ class A2UIApiClient {
     payload: A2UIPayload;
     sessionId: string;
     meta?: {
-      isMockData: boolean;
-      fallbackReason?: string;
       agentId?: string | null;
     };
   }> {

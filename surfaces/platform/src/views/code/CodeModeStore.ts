@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 export type CodeSessionMode = 'SAFE' | 'DEFAULT' | 'AUTO' | 'PLAN';
 export type CodeSessionState =
@@ -87,8 +88,10 @@ export function createInitialCodeModeState(): CodeModeStateShape {
   };
 }
 
-export const useCodeModeStore = create<CodeModeState>((set, get) => ({
-  ...createInitialCodeModeState(),
+export const useCodeModeStore = create<CodeModeState>()(
+  persist(
+    (set, get) => ({
+      ...createInitialCodeModeState(),
 
   setActiveWorkspace: (workspaceId) =>
     set((state) => {
@@ -129,7 +132,7 @@ export const useCodeModeStore = create<CodeModeState>((set, get) => ({
     const newWorkspace: CodeWorkspaceRecord = {
       workspace_id,
       display_name: displayName,
-      root_path: '/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech',
+      root_path: '',
       repo_status: {
         branch: 'main',
         dirty: false,
@@ -221,7 +224,17 @@ export const useCodeModeStore = create<CodeModeState>((set, get) => ({
         activeSessionId: nextActiveSessionId,
       };
     }),
-}));
+  }),
+  {
+    name: 'a2r-code-storage-v1',
+    partialize: (state) => ({
+      workspaces: state.workspaces,
+      sessions: state.sessions,
+      activeWorkspaceId: state.activeWorkspaceId,
+      activeSessionId: state.activeSessionId,
+    }),
+  },
+));
 
 export function getActiveWorkspace(state: CodeModeStateShape): CodeWorkspaceRecord | undefined {
   return state.workspaces.find((workspace) => workspace.workspace_id === state.activeWorkspaceId);

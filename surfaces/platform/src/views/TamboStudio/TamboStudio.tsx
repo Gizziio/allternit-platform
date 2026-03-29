@@ -27,13 +27,13 @@ import {
   Palette,
   Code,
   Eye,
-  Download,
+  DownloadSimple,
   Plus,
   Trash,
-  Save,
+  FloppyDisk,
   Copy,
-  Check
-} from 'lucide-react';
+  Check,
+} from '@phosphor-icons/react';
 
 // Types
 interface ComponentSpec {
@@ -231,7 +231,7 @@ export function TamboStudio() {
         <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Palette className="h-5 w-5" />
+              <Palette size={20} />
               Components
             </CardTitle>
           </CardHeader>
@@ -268,7 +268,7 @@ export function TamboStudio() {
                       size="sm"
                       onClick={() => removeComponent(idx)}
                     >
-                      <Trash className="h-3 w-3" />
+                      <Trash size={12} />
                     </Button>
                   </div>
                 ))}
@@ -339,7 +339,7 @@ export function TamboStudio() {
         <Card className="lg:col-span-1">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Code className="h-5 w-5" />
+              <Code size={20} />
               Generated Code
             </CardTitle>
           </CardHeader>
@@ -361,7 +361,7 @@ export function TamboStudio() {
                     )}
                   </Button>
                   <Button variant="outline" size="sm" onClick={downloadCode}>
-                    <Download className="h-3 w-3 mr-1" />
+                    <DownloadSimple className="h-3 w-3 mr-1" />
                     Download
                   </Button>
                 </div>
@@ -385,7 +385,7 @@ export function TamboStudio() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Eye className="h-5 w-5" />
+            <Eye size={20} />
             Preview
           </CardTitle>
         </CardHeader>

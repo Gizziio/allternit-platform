@@ -1,5 +1,11 @@
 import type { FileUIPart, ModelMessage, Tool } from "ai";
 import type { ModelId } from "@/lib/ai/app-models";
+import {
+  buildMcpAppRenderPayload,
+  canModelAccessTool,
+  getMcpAppResourceUri,
+  isMcpAppTool,
+} from "@/lib/ai/mcp/apps";
 import { getOrCreateMcpClient, type MCPClient } from "@/lib/ai/mcp/mcp-client";
 import { createToolId } from "@/lib/ai/mcp-name-id";
 import { agentBrowserTool } from "@/lib/ai/tools/agent-browser-tool";
@@ -10,6 +16,8 @@ import { createTextDocumentTool } from "@/lib/ai/tools/documents/create-text-doc
 import { editCodeDocumentTool } from "@/lib/ai/tools/documents/edit-code-document";
 import { editSheetDocumentTool } from "@/lib/ai/tools/documents/edit-sheet-document";
 import { editTextDocumentTool } from "@/lib/ai/tools/documents/edit-text-document";
+import { generateA2UITool } from "@/lib/ai/tools/generate-a2ui";
+import { generateWebArtifactTool } from "@/lib/ai/tools/generate-web-artifact";
 import { generateImageTool } from "@/lib/ai/tools/generate-image";
 import { getWeather } from "@/lib/ai/tools/get-weather";
 import { readDocument } from "@/lib/ai/tools/read-document";
@@ -25,6 +33,92 @@ import { deepResearch } from "./deep-research/deep-research";
 import type { ToolSession } from "./types";
 
 const log = createModuleLogger("tools:mcp");
+
+type RawMcpTool = Awaited<ReturnType<MCPClient["listTools"]>>["tools"][number];
+type ToolExecutionContext = {
+  toolCallId?: string;
+} & Record<string, unknown>;
+type ExecutableTool = Tool & {
+  execute?: (
+    input: unknown,
+    options: ToolExecutionContext,
+  ) => Promise<unknown> | unknown;
+  _meta?: Record<string, unknown>;
+  title?: string;
+  description?: string;
+};
+
+function wrapMcpAppTool({
+  connectorId,
+  connectorName,
+  dataStream,
+  mcpClient,
+  rawTool,
+  tool,
+  toolId,
+}: {
+  connectorId: string;
+  connectorName: string;
+  dataStream: StreamWriter;
+  mcpClient: MCPClient;
+  rawTool: RawMcpTool;
+  tool: Tool;
+  toolId: string;
+}): Tool {
+  const executableTool = tool as ExecutableTool;
+  const resourceUri = getMcpAppResourceUri(rawTool);
+
+  if (!executableTool.execute || !resourceUri) {
+    return tool;
+  }
+
+  return {
+    ...executableTool,
+    async execute(input, options) {
+      const result = await executableTool.execute?.(input, options);
+      const toolCallId =
+        typeof options?.toolCallId === "string" ? options.toolCallId : undefined;
+
+      if (!toolCallId) {
+        return result;
+      }
+
+      try {
+        const resource = await mcpClient.readResource(resourceUri);
+        const renderPayload = buildMcpAppRenderPayload({
+          toolCallId,
+          toolName: toolId,
+          connectorId,
+          connectorName,
+          tool: rawTool,
+          resource,
+          toolInput: input,
+          toolResult: result,
+        });
+
+        if (renderPayload) {
+          dataStream.write({
+            type: "mcp_app",
+            ...renderPayload,
+          });
+        }
+      } catch (error) {
+        log.warn(
+          {
+            connectorId,
+            connectorName,
+            toolId,
+            resourceUri,
+            error,
+          },
+          "Failed to resolve MCP App resource after tool execution"
+        );
+      }
+
+      return result;
+    },
+  } as Tool;
+}
 
 export function getTools({
   dataStream,
@@ -105,6 +199,8 @@ export function getTools({
     ...(config.integrations.agentBrowser
       ? { agentBrowser: agentBrowserTool }
       : {}),
+    generateA2UI: generateA2UITool({ costAccumulator }),
+    generateWebArtifact: generateWebArtifactTool({ costAccumulator }),
   };
 }
 
@@ -115,8 +211,10 @@ export function getTools({
  */
 export async function getMcpTools({
   connectors,
+  dataStream,
 }: {
   connectors: McpConnector[];
+  dataStream: StreamWriter;
 }): Promise<{
   tools: Record<string, Tool>;
   cleanup: () => Promise<void>;
@@ -179,18 +277,52 @@ export async function getMcpTools({
       }
 
       clients.push(mcpClient);
-      const tools = await mcpClient.tools();
+      const [tools, rawToolsResult] = await Promise.all([
+        mcpClient.tools(),
+        mcpClient.listTools(),
+      ]);
+      const rawToolsByName = new Map(
+        rawToolsResult.tools.map((tool) => [tool.name, tool] as const)
+      );
+      let modelVisibleToolCount = 0;
+      let hiddenAppToolCount = 0;
 
       // Namespace tool names with connector nameId to avoid collisions
       // Format: {namespace}.{toolName} or global.{namespace}.{toolName}
       const isGlobal = connector.userId === null;
       for (const [toolName, tool] of Object.entries(tools)) {
+        const rawTool = rawToolsByName.get(toolName);
+        const toolDefinition = rawTool ?? tool;
+
+        if (!canModelAccessTool(toolDefinition)) {
+          hiddenAppToolCount += 1;
+          continue;
+        }
+
         const toolId = createToolId(connector.nameId, toolName, isGlobal);
-        allTools[toolId] = tool as Tool;
+        allTools[toolId] =
+          rawTool && isMcpAppTool(rawTool)
+            ? wrapMcpAppTool({
+                connectorId: connector.id,
+                connectorName: connector.name,
+                dataStream,
+                mcpClient,
+                rawTool,
+                tool: tool as Tool,
+                toolId,
+              })
+            : (tool as Tool);
+        modelVisibleToolCount += 1;
       }
 
       log.info(
-        { connector: connector.name, toolCount: Object.keys(tools).length },
+        {
+          connector: connector.name,
+          toolCount: Object.keys(tools).length,
+          modelVisibleToolCount,
+          hiddenAppToolCount,
+          mcpAppToolCount: Object.values(tools).filter(isMcpAppTool).length,
+        },
         "MCP client connected"
       );
     } catch (error) {

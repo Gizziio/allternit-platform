@@ -7,10 +7,20 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  Database, Search, Trash2, RefreshCw, HardDrive, Activity,
-  Clock, Hash, Play, CheckCircle, XCircle, Percent
-} from "lucide-react";
+import {
+  Database,
+  MagnifyingGlass,
+  Trash,
+  ArrowsClockwise,
+  HardDrive,
+  Pulse as Activity,
+  Clock,
+  Hash,
+  Play,
+  CheckCircle,
+  XCircle,
+  Percent,
+} from '@phosphor-icons/react';
 import type { ToolSnapshot, SnapshotStats } from "../dak.types";
 
 export function SnapshotManagerPanel() {
@@ -78,7 +88,7 @@ export function SnapshotManagerPanel() {
       {/* Actions */}
       <div className="p-4 border-b flex items-center gap-4">
         <div className="flex-1 relative">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <MagnifyingGlass className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search snapshots by tool name or ID..."
             value={searchQuery}
@@ -87,13 +97,13 @@ export function SnapshotManagerPanel() {
           />
         </div>
         <Button variant="outline" onClick={fetchSnapshots}>
-          <RefreshCw className="w-4 h-4 mr-2" /> Refresh
+          <ArrowsClockwise className="w-4 h-4 mr-2" /> Refresh
         </Button>
         <Button 
           variant={confirmClear ? "destructive" : "outline"} 
           onClick={handleClearAll}
         >
-          <Trash2 className="w-4 h-4 mr-2" />
+          <Trash className="w-4 h-4 mr-2" />
           {confirmClear ? "Confirm Clear All" : "Clear All"}
         </Button>
       </div>
@@ -104,7 +114,7 @@ export function SnapshotManagerPanel() {
           <CardHeader>
             <CardTitle className="text-base flex items-center justify-between">
               <span className="flex items-center gap-2">
-                <Database className="w-4 h-4" /> Tool Snapshots
+                <Database size={16} /> Tool Snapshots
               </span>
               <Badge variant="secondary">{filteredSnapshots.length}</Badge>
             </CardTitle>
@@ -227,7 +237,7 @@ function SnapshotListItem({
             
             <div className="flex justify-end gap-2 pt-2">
               <Button size="sm" variant="destructive" onClick={onDelete}>
-                <Trash2 className="w-4 h-4 mr-2" /> Delete
+                <Trash className="w-4 h-4 mr-2" /> Delete
               </Button>
             </div>
           </div>

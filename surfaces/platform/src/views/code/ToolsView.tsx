@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { getAllToolDefinitions } from '@/lib/agents/tools';
 
 interface Tool {
   id: string;
@@ -17,77 +18,30 @@ export function ToolsView() {
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>('all');
 
-  useEffect(() => {
-    const fetchTools = async () => {
-      try {
-        // In a real implementation, this would call the actual tool registry
-        // For now, using mock data to demonstrate the UI
-        const mockTools: Tool[] = [
-          {
-            id: 'tool-001',
-            name: 'read_file',
-            description: 'Reads content from a file',
-            category: 'filesystem',
-            status: 'enabled',
-            riskLevel: 'low',
-            lastUsed: '2026-02-03T10:15:22Z',
-            usageCount: 42
-          },
-          {
-            id: 'tool-002',
-            name: 'write_file',
-            description: 'Writes content to a file',
-            category: 'filesystem',
-            status: 'enabled',
-            riskLevel: 'medium',
-            lastUsed: '2026-02-03T09:42:11Z',
-            usageCount: 31
-          },
-          {
-            id: 'tool-003',
-            name: 'execute_command',
-            description: 'Executes a shell command',
-            category: 'execution',
-            status: 'restricted',
-            riskLevel: 'high',
-            lastUsed: '2026-02-02T15:30:45Z',
-            usageCount: 17
-          },
-          {
-            id: 'tool-004',
-            name: 'web_search',
-            description: 'Performs a web search',
-            category: 'network',
-            status: 'enabled',
-            riskLevel: 'low',
-            lastUsed: '2026-02-03T11:20:33Z',
-            usageCount: 89
-          },
-          {
-            id: 'tool-005',
-            name: 'browser_control',
-            description: 'Controls the embedded browser',
-            category: 'browser',
-            status: 'enabled',
-            riskLevel: 'medium',
-            lastUsed: '2026-02-03T10:55:18Z',
-            usageCount: 23
-          }
-        ];
-        
-        setTools(mockTools);
-        setError(null);
-      } catch (err: any) {
-        console.error('Error fetching tools:', err);
-        setError('Failed to load tools from registry');
-        setTools([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTools();
+  const loadTools = useCallback(() => {
+    try {
+      const defs = getAllToolDefinitions();
+      const mapped: Tool[] = defs.map((def) => ({
+        id: def.name,
+        name: def.name,
+        description: String(def.description).split('\n')[0],
+        category: def.name.split('_')[0],
+        status: 'enabled' as const,
+        riskLevel: 'low' as const,
+      }));
+      setTools(mapped);
+      setError(null);
+    } catch (err: any) {
+      setError('Failed to load tools from registry');
+      setTools([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadTools();
+  }, [loadTools]);
 
   const filteredTools = filter === 'all' 
     ? tools 
@@ -143,76 +97,8 @@ export function ToolsView() {
               cursor: 'pointer'
             }}
             onClick={() => {
-              // Refresh the tools list
-              const refreshTools = async () => {
-                try {
-                  setLoading(true);
-                  // In a real implementation, this would call the actual tool registry
-                  // For now, using mock data to demonstrate the UI
-                  const mockTools: Tool[] = [
-                    {
-                      id: 'tool-001',
-                      name: 'read_file',
-                      description: 'Reads content from a file',
-                      category: 'filesystem',
-                      status: 'enabled',
-                      riskLevel: 'low',
-                      lastUsed: '2026-02-03T10:15:22Z',
-                      usageCount: 42
-                    },
-                    {
-                      id: 'tool-002',
-                      name: 'write_file',
-                      description: 'Writes content to a file',
-                      category: 'filesystem',
-                      status: 'enabled',
-                      riskLevel: 'medium',
-                      lastUsed: '2026-02-03T09:42:11Z',
-                      usageCount: 31
-                    },
-                    {
-                      id: 'tool-003',
-                      name: 'execute_command',
-                      description: 'Executes a shell command',
-                      category: 'execution',
-                      status: 'restricted',
-                      riskLevel: 'high',
-                      lastUsed: '2026-02-02T15:30:45Z',
-                      usageCount: 17
-                    },
-                    {
-                      id: 'tool-004',
-                      name: 'web_search',
-                      description: 'Performs a web search',
-                      category: 'network',
-                      status: 'enabled',
-                      riskLevel: 'low',
-                      lastUsed: '2026-02-03T11:20:33Z',
-                      usageCount: 89
-                    },
-                    {
-                      id: 'tool-005',
-                      name: 'browser_control',
-                      description: 'Controls the embedded browser',
-                      category: 'browser',
-                      status: 'enabled',
-                      riskLevel: 'medium',
-                      lastUsed: '2026-02-03T10:55:18Z',
-                      usageCount: 23
-                    }
-                  ];
-                  
-                  setTools(mockTools);
-                  setError(null);
-                } catch (err: any) {
-                  console.error('Error refreshing tools:', err);
-                  setError('Failed to refresh tools from registry');
-                } finally {
-                  setLoading(false);
-                }
-              };
-              
-              refreshTools();
+              setLoading(true);
+              loadTools();
             }}
           >
             Refresh

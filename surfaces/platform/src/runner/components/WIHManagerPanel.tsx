@@ -8,11 +8,22 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  ClipboardList, Play, CheckCircle, Clock, AlertTriangle, 
-  User, Lock, Unlock, Archive, RefreshCw, Plus, Filter,
-  ArrowRight, FileText
-} from "lucide-react";
+import {
+  ClipboardText,
+  Play,
+  CheckCircle,
+  Clock,
+  Warning,
+  User,
+  Lock,
+  LockOpen,
+  Archive,
+  ArrowsClockwise,
+  Plus,
+  Funnel,
+  ArrowRight,
+  FileText,
+} from '@phosphor-icons/react';
 import type { WihInfo } from "../dak.types";
 
 export function WIHManagerPanel() {
@@ -79,7 +90,7 @@ export function WIHManagerPanel() {
             className="w-40"
           />
           <Button variant="outline" size="icon" onClick={() => fetchWihs(filterDagId || undefined)}>
-            <RefreshCw className="w-4 h-4" />
+            <ArrowsClockwise size={16} />
           </Button>
         </div>
       </div>
@@ -118,7 +129,7 @@ export function WIHManagerPanel() {
                 <ScrollArea className="h-[400px]">
                   <div className="space-y-2">
                     {openWihs.length === 0 ? (
-                      <EmptyState icon={ClipboardList} message="No open work items" />
+                      <EmptyState icon={ClipboardText} message="No open work items" />
                     ) : (
                       openWihs.map((wih) => (
                         <WIHListItem
@@ -308,7 +319,7 @@ function WIHActiveItem({
           <CheckCircle className="w-3 h-3 mr-1" /> Complete
         </Button>
         <Button size="sm" variant="destructive" className="flex-1" onClick={onFail}>
-          <AlertTriangle className="w-3 h-3 mr-1" /> Fail
+          <Warning className="w-3 h-3 mr-1" /> Fail
         </Button>
       </div>
     </Card>

@@ -114,16 +114,16 @@ import React from 'react';
 import {
   FileText,
   Folder,
-  Edit3,
-  Trash2,
+  PencilSimple,
+  Trash,
   Copy,
-  ClipboardPaste,
+  ClipboardText as ClipboardPaste,
   Plus,
   FolderPlus,
   Power,
-  ExternalLink,
+  ArrowSquareOut,
   FolderOpen,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 
 const THEME = {
   bg: '#1c1917',
@@ -174,10 +174,10 @@ export function ContextMenu({ state, menuRef, actions, onClose }: ContextMenuPro
       {/* File-specific actions */}
       {targetType === 'file' && (
         <>
-          <MenuItem icon={ExternalLink} onClick={() => handleAction(actions.onOpen)}>
+          <MenuItem icon={ArrowSquareOut} onClick={() => handleAction(actions.onOpen)}>
             Open
           </MenuItem>
-          <MenuItem icon={Edit3} onClick={() => handleAction(actions.onEdit)}>
+          <MenuItem icon={PencilSimple} onClick={() => handleAction(actions.onEdit)}>
             Edit
           </MenuItem>
           <MenuItem icon={Copy} onClick={() => handleAction(actions.onCopy)}>
@@ -187,7 +187,7 @@ export function ContextMenu({ state, menuRef, actions, onClose }: ContextMenuPro
           <MenuItem icon={FileText} onClick={() => handleAction(actions.onRename)}>
             Rename
           </MenuItem>
-          <MenuItem icon={Trash2} danger onClick={() => handleAction(actions.onDelete)}>
+          <MenuItem icon={Trash} danger onClick={() => handleAction(actions.onDelete)}>
             Delete
           </MenuItem>
         </>
@@ -210,7 +210,7 @@ export function ContextMenu({ state, menuRef, actions, onClose }: ContextMenuPro
           <MenuItem icon={Folder} onClick={() => handleAction(actions.onRename)}>
             Rename
           </MenuItem>
-          <MenuItem icon={Trash2} danger onClick={() => handleAction(actions.onDelete)}>
+          <MenuItem icon={Trash} danger onClick={() => handleAction(actions.onDelete)}>
             Delete
           </MenuItem>
         </>
@@ -219,7 +219,7 @@ export function ContextMenu({ state, menuRef, actions, onClose }: ContextMenuPro
       {/* Capability-specific actions */}
       {targetType === 'capability' && (
         <>
-          <MenuItem icon={Edit3} onClick={() => handleAction(actions.onEdit)}>
+          <MenuItem icon={PencilSimple} onClick={() => handleAction(actions.onEdit)}>
             Edit
           </MenuItem>
           <MenuItem icon={Power} onClick={() => handleAction(actions.onToggleEnabled)}>
@@ -229,7 +229,7 @@ export function ContextMenu({ state, menuRef, actions, onClose }: ContextMenuPro
             Duplicate
           </MenuItem>
           <Divider />
-          <MenuItem icon={Trash2} danger onClick={() => handleAction(actions.onDelete)}>
+          <MenuItem icon={Trash} danger onClick={() => handleAction(actions.onDelete)}>
             Delete
           </MenuItem>
         </>

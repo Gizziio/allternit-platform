@@ -1,5 +1,9 @@
 import React from 'react';
-import { BarChart2, TrendingUp, TrendingDown } from 'lucide-react';
+import {
+  ChartBar,
+  TrendUp,
+  TrendDown,
+} from '@phosphor-icons/react';
 import GlassSurface from '@/design/GlassSurface';
 
 interface StatCard {
@@ -106,9 +110,9 @@ const InsightsView: React.FC = () => {
                     }}
                   >
                     {stat.trend.direction === 'up' ? (
-                      <TrendingUp size={14} />
+                      <TrendUp size={14} />
                     ) : (
-                      <TrendingDown size={14} />
+                      <TrendDown size={14} />
                     )}
                     {stat.trend.percentage}%
                   </div>

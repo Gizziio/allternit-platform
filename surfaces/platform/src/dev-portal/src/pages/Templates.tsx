@@ -1,17 +1,14 @@
 import { useState } from 'react';
-import { 
-  LayoutTemplate, 
-  Search, 
-  Filter,
+import {
+  Browsers,
+  MagnifyingGlass,
+  Funnel,
   Star,
-  Download,
-  ExternalLink,
-  GitBranch,
+  DownloadSimple,
   Clock,
   CheckCircle,
-  Copy,
-  Terminal
-} from 'lucide-react';
+  Terminal,
+} from '@phosphor-icons/react';
 
 const categories = [
   { id: 'all', label: 'All Templates', count: 24 },
@@ -143,7 +140,7 @@ const languageColors: Record<string, string> = {
 export default function Templates() {
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [_selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
 
   const filteredTemplates = templates.filter((template) => {
     const matchesCategory = activeCategory === 'all' || template.category === activeCategory;
@@ -167,7 +164,7 @@ export default function Templates() {
       {/* Search and Filter */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-a2r-text-muted" />
+          <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-a2r-text-muted" />
           <input
             type="text"
             placeholder="Search templates..."
@@ -177,7 +174,7 @@ export default function Templates() {
           />
         </div>
         <button className="flex items-center gap-2 px-4 py-2 bg-a2r-surface border border-a2r-border rounded-lg text-sm text-a2r-text hover:bg-a2r-surface-hover transition-colors">
-          <Filter className="w-4 h-4" />
+          <Funnel size={16} />
           Filter
         </button>
       </div>
@@ -213,12 +210,12 @@ export default function Templates() {
             {/* Header */}
             <div className="flex items-start justify-between mb-3">
               <div className="w-10 h-10 rounded-lg bg-a2r-accent/10 flex items-center justify-center">
-                <LayoutTemplate className="w-5 h-5 text-a2r-accent" />
+                <Browsers className="w-5 h-5 text-a2r-accent" />
               </div>
               <div className="flex items-center gap-1">
                 {template.verified && (
                   <div className="p-1 rounded text-emerald-400" title="Verified">
-                    <CheckCircle className="w-4 h-4" />
+                    <CheckCircle size={16} />
                   </div>
                 )}
                 <span className={`text-xs font-medium px-2 py-1 rounded ${languageColors[template.language]}`}>
@@ -255,7 +252,7 @@ export default function Templates() {
                   {template.stars}
                 </span>
                 <span className="flex items-center gap-1">
-                  <Download className="w-3.5 h-3.5" />
+                  <DownloadSimple className="w-3.5 h-3.5" />
                   {template.downloads}
                 </span>
               </div>
@@ -285,7 +282,7 @@ export default function Templates() {
               a2r template create
             </code>
             <button className="flex items-center gap-2 px-4 py-2 bg-a2r-accent text-a2r-bg rounded-lg font-medium hover:bg-a2r-accent-hover transition-colors whitespace-nowrap">
-              <Terminal className="w-4 h-4" />
+              <Terminal size={16} />
               Learn More
             </button>
           </div>

@@ -13,42 +13,41 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { 
-  GitBranch, 
-  Activity, 
+import {
+  GitBranch,
+  Pulse as Activity,
   Plus,
   Play,
   Pause,
   Square,
-  CheckCircle2,
+  CheckCircle,
   X,
-  ChevronLeft,
-  ChevronRight,
-  Maximize2,
-  Minimize2,
+  CaretLeft,
+  CaretRight,
+  ArrowsOut,
+  ArrowsIn,
   Terminal,
-  Bot,
-  MoreHorizontal,
-  LayoutGrid,
-  LayoutList,
-  Search,
-  Filter,
-  RefreshCw,
-  AlertTriangle,
-  ShieldAlert,
-  Zap,
+  Robot,
+  DotsThreeOutline,
+  SquaresFour,
+  ListDashes,
+  MagnifyingGlass,
+  Funnel,
+  ArrowsClockwise,
+  Warning,
+  ShieldWarning,
+  Lightning,
   Clock,
   Cpu,
-  MemoryStick,
   HardDrive,
-  Download,
-  Trash2,
+  DownloadSimple,
+  Trash,
   Copy,
-  Pin,
-  PinOff,
-  Sparkles,
-  Layers
-} from "lucide-react";
+  PushPin as Pin,
+  PushPinSlash as PinOff,
+  Sparkle,
+  Stack,
+} from '@phosphor-icons/react';
 import { useNativeAgentStore, type NativeSession, type NativeMessage } from "@/lib/agents";
 import { swarmApi, type SwarmHealth, type CircuitBreakerStatus, type QuarantinedAgentStatus } from "@/lib/swarm/swarm.api";
 import { Button } from "@/components/ui/button";
@@ -139,211 +138,20 @@ export function SwarmMonitor() {
   const setActiveNativeSession = useNativeAgentStore((s) => s.setActiveSession);
   const getSession = useNativeAgentStore((s) => s.getSession);
 
-  // ─── Initialize Mock Data ───
+  // ─── Load threads from backend ───
   useEffect(() => {
-    const now = Date.now();
-    const mockThreads = new Map<string, SwarmThread>();
-    
-    mockThreads.set('T1', {
-      id: 'T1', goal: 'Search codebase for auth patterns', status: 'running', tactic: 'search',
-      children: ['T2', 'T3'], progress: 78,
-      output: [
-        '[14:32:01] $ swarm thread --tactic=search --goal="Search codebase for auth patterns"',
-        '[14:32:02] Searching for pattern: "auth"',
-        '[14:32:03] Found 12 files matching pattern',
-        '[14:32:05] Analyzing src/auth/handler.ts...',
-        '[14:32:08] Analyzing src/middleware/jwt.ts...',
-        '[14:32:12] Found 3 JWT implementations',
-        '[14:32:15] Checking middleware integration...'
-      ],
-      createdAt: now - 3600000,
-      updatedAt: now - 120000,
-      tokenCount: 4523,
-      elapsedSeconds: 3600,
-    });
-    
-    mockThreads.set('T2', {
-      id: 'T2', goal: 'Analyze JWT implementation', status: 'running', parentId: 'T1', tactic: 'analyze',
-      children: [], progress: 45,
-      output: [
-        '[14:35:22] $ analyze --type=jwt',
-        '[14:35:23] Found 3 implementations',
-        '[14:35:25] Checking security best practices...',
-        '[14:35:30] Validating token expiration handling...'
-      ],
-      createdAt: now - 1800000,
-      updatedAt: now - 60000,
-      tokenCount: 2134,
-      elapsedSeconds: 1800,
-    });
-    
-    mockThreads.set('T3', {
-      id: 'T3', goal: 'Review middleware chain', status: 'paused', parentId: 'T1', tactic: 'review',
-      children: [], progress: 23,
-      output: [
-        '[14:40:01] $ review --files=middleware/',
-        '[14:40:02] Loading middleware files...',
-        '[14:40:05] ⏸ Paused by user - waiting for input'
-      ],
-      createdAt: now - 900000,
-      updatedAt: now - 300000,
-      tokenCount: 892,
-      elapsedSeconds: 600,
-    });
-    
-    mockThreads.set('T4', {
-      id: 'T4', goal: 'Refactor API endpoints', status: 'running', tactic: 'refactor',
-      children: ['T5'], progress: 67,
-      output: [
-        '[14:25:00] $ refactor --endpoints',
-        '[14:25:05] Consolidating duplicate code...',
-        '[14:25:15] Extracting shared utilities...',
-        '[14:25:30] Updating type definitions...'
-      ],
-      createdAt: now - 7200000,
-      updatedAt: now - 180000,
-      tokenCount: 6789,
-      elapsedSeconds: 7200,
-    });
-    
-    mockThreads.set('T5', {
-      id: 'T5', goal: 'Update test coverage', status: 'compacting', parentId: 'T4', tactic: 'test',
-      children: [], progress: 95,
-      output: [
-        '[14:50:00] $ test --update',
-        '[14:50:05] Running test suite...',
-        '[14:50:45] 234 tests passed',
-        '[14:50:46] ⟳ Compressing context into episode...'
-      ],
-      createdAt: now - 2400000,
-      updatedAt: now - 30000,
-      tokenCount: 3456,
-      elapsedSeconds: 2400,
-    });
-    
-    mockThreads.set('T6', {
-      id: 'T6', goal: 'Deploy to staging environment', status: 'completed', tactic: 'deploy',
-      children: [], progress: 100,
-      output: [
-        '[13:00:00] $ deploy --env=staging',
-        '[13:00:05] Building Docker image...',
-        '[13:02:30] Pushing to registry...',
-        '[13:03:15] Deploying to Kubernetes...',
-        '[13:04:00] ✓ Deployment successful',
-        '[13:04:01] ✓ Health checks passed'
-      ],
-      episode: { 
-        id: 'E1', 
-        summary: 'Deployed to staging with zero downtime', 
-        decisions: 3, 
-        artifacts: 2, 
-        compression: 85,
-        createdAt: now - 7200000
-      },
-      createdAt: now - 10800000,
-      updatedAt: now - 7200000,
-      tokenCount: 1234,
-      elapsedSeconds: 240,
-    });
-    
-    mockThreads.set('T7', {
-      id: 'T7', goal: 'Run linter on changed files', status: 'running', tactic: 'lint',
-      children: [], progress: 56,
-      output: [
-        '[15:00:00] $ lint --fix',
-        '[15:00:01] Checking 45 files...',
-        '[15:00:15] Found 12 warnings, 0 errors',
-        '[15:00:16] Auto-fixing issues...'
-      ],
-      createdAt: now - 600000,
-      updatedAt: now - 90000,
-      tokenCount: 567,
-      elapsedSeconds: 600,
-    });
-    
-    mockThreads.set('T8', {
-      id: 'T8', goal: 'Build production assets', status: 'failed', tactic: 'build',
-      children: [], progress: 34,
-      output: [
-        '[14:55:00] $ build --production',
-        '[14:55:05] Bundling with Vite...',
-        '[14:55:30] ✗ Build failed: Out of memory',
-        '[14:55:31] ✗ Error: JavaScript heap out of memory'
-      ],
-      createdAt: now - 1200000,
-      updatedAt: now - 600000,
-      tokenCount: 0,
-      elapsedSeconds: 30,
-    });
-
-    // Add some child threads to test the tree
-    mockThreads.set('T9', {
-      id: 'T9', goal: 'Optimize database queries', status: 'running', parentId: 'T4', tactic: 'optimize',
-      children: [], progress: 12,
-      output: ['[15:10:00] $ optimize --queries', '[15:10:05] Analyzing query patterns...'],
-      createdAt: now - 300000,
-      updatedAt: now,
-      tokenCount: 234,
-      elapsedSeconds: 300,
-    });
-
-    setThreads(mockThreads);
-    
-    setSwarmState(prev => ({
-      ...prev,
-      health: {
-        status: 'healthy',
-        active_agents: 6,
-        total_agents: 8,
-        circuit_breakers_open: 1,
-        quarantined_agents: 0,
-        message_queue_size: 12,
-        avg_response_time_ms: 245,
-      },
-      circuitBreakers: [
-        { agent_id: 'agent-build-01', state: 'open', failure_count: 5, success_count: 0, last_failure_at: new Date().toISOString() }
-      ],
-      quarantined: [],
-    }));
-  }, []);
-
-  // ─── Simulate Progress Updates ───
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setThreads(prev => {
-        const next = new Map(prev);
-        let changed = false;
-        
-        next.forEach((thread, id) => {
-          if (thread.status === 'running' && thread.progress < 100) {
-            // Simulate progress
-            const increment = Math.random() * 2;
-            const newProgress = Math.min(100, thread.progress + increment);
-            
-            // Add occasional output lines
-            if (Math.random() > 0.7 && thread.output.length < 20) {
-              const timestamp = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-              const messages = [
-                'Processing...',
-                'Analyzing context...',
-                'Checking dependencies...',
-                'Optimizing output...',
-                'Verifying results...'
-              ];
-              thread.output.push(`[${timestamp}] ${messages[Math.floor(Math.random() * messages.length)]}`);
-            }
-            
-            thread.progress = newProgress;
-            thread.elapsedSeconds = (thread.elapsedSeconds || 0) + 1;
-            changed = true;
-          }
-        });
-        
-        return changed ? next : prev;
-      });
-    }, PROGRESS_SIMULATION_INTERVAL);
-
-    return () => clearInterval(interval);
+    fetch('/api/v1/swarm/threads')
+      .then(r => r.json())
+      .then((data: SwarmThread[]) => {
+        const map = new Map<string, SwarmThread>();
+        data.forEach(t => map.set(t.id, t));
+        setThreads(map);
+      })
+      .catch(() => {});
+    fetch('/api/v1/swarm/health')
+      .then(r => r.json())
+      .then((health) => setSwarmState(prev => ({ ...prev, ...health })))
+      .catch(() => {});
   }, []);
 
   // ─── Health Polling ───
@@ -584,7 +392,7 @@ export function SwarmMonitor() {
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-8 w-8"
+              size={32}
               onClick={() => setSidebarExpanded(!sidebarExpanded)}
             >
               <GitBranch className="h-4 w-4 text-amber-500" />
@@ -607,7 +415,7 @@ export function SwarmMonitor() {
           {/* Search */}
           <div className="hidden md:flex items-center gap-2 shrink-0">
             <div className="relative">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
+              <MagnifyingGlass className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
               <Input
                 placeholder="Search threads..."
                 value={searchQuery}
@@ -628,7 +436,7 @@ export function SwarmMonitor() {
                     className="shrink-0 h-10 w-10 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border border-amber-500/30"
                     size="icon"
                   >
-                    <Plus className="h-4 w-4" />
+                    <Plus size={16} />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>New Thread</TooltipContent>
@@ -687,7 +495,7 @@ export function SwarmMonitor() {
                   className={`h-8 w-8 ${hasIssues ? 'text-red-500 animate-pulse' : 'text-emerald-500'}`}
                   onClick={() => setShowHealthPanel(!showHealthPanel)}
                 >
-                  <Activity className="h-4 w-4" />
+                  <Activity size={16} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Swarm Health</TooltipContent>
@@ -702,7 +510,7 @@ export function SwarmMonitor() {
                   className={`h-8 w-8 ${isRefreshing ? 'animate-spin' : ''}`}
                   onClick={refreshHealth}
                 >
-                  <RefreshCw className="h-4 w-4" />
+                  <ArrowsClockwise size={16} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Refresh</TooltipContent>
@@ -713,18 +521,18 @@ export function SwarmMonitor() {
               <Button
                 variant={viewMode === 'compact' ? 'secondary' : 'ghost'}
                 size="icon"
-                className="h-7 w-7"
+                size={28}
                 onClick={() => setViewMode('compact')}
               >
-                <LayoutList className="h-3.5 w-3.5" />
+                <ListDashes className="h-3.5 w-3.5" />
               </Button>
               <Button
                 variant={viewMode === 'expanded' ? 'secondary' : 'ghost'}
                 size="icon"
-                className="h-7 w-7"
+                size={28}
                 onClick={() => setViewMode('expanded')}
               >
-                <LayoutGrid className="h-3.5 w-3.5" />
+                <SquaresFour className="h-3.5 w-3.5" />
               </Button>
             </div>
           </div>
@@ -751,10 +559,10 @@ export function SwarmMonitor() {
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="h-6 w-6"
+                    size={24}
                     onClick={() => setStatusFilter(statusFilter ? null : 'running')}
                   >
-                    <Filter className={`h-3 w-3 ${statusFilter ? 'text-amber-500' : 'text-slate-600'}`} />
+                    <Funnel className={`h-3 w-3 ${statusFilter ? 'text-amber-500' : 'text-slate-600'}`} />
                   </Button>
                 </div>
               </div>
@@ -808,7 +616,7 @@ export function SwarmMonitor() {
             ) : (
               <div className="h-full flex items-center justify-center text-slate-600">
                 <div className="text-center">
-                  <Bot className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <Robot className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>Select a thread from the strip above</p>
                 </div>
               </div>
@@ -905,7 +713,7 @@ function CompactSessionCard({
           {thread.status === 'failed' && (
             <div className="px-2 pb-1">
               <span className="text-[9px] text-red-500 flex items-center gap-1">
-                <AlertTriangle className="h-2.5 w-2.5" /> Failed
+                <Warning className="h-2.5 w-2.5" /> Failed
               </span>
             </div>
           )}
@@ -932,7 +740,7 @@ function CompactSessionCard({
         {(thread.status === 'running' || thread.status === 'paused') && (
           <>
             <DropdownMenuItem onClick={onCollect} className="text-xs">
-              <Sparkles className="h-3.5 w-3.5 mr-2" /> Collect to Episode
+              <Sparkle className="h-3.5 w-3.5 mr-2" /> Collect to Episode
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-slate-700" />
             <DropdownMenuItem onClick={onStop} className="text-xs text-red-500">
@@ -977,7 +785,7 @@ function TreeItem({
             onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
             className="text-slate-600 hover:text-slate-400"
           >
-            {expanded ? <ChevronLeft className="h-3 w-3 -rotate-90" /> : <ChevronLeft className="h-3 w-3" />}
+            {expanded ? <CaretLeft className="h-3 w-3 -rotate-90" /> : <CaretLeft size={12} />}
           </button>
         ) : (
           <span className="w-3" />
@@ -1050,7 +858,7 @@ function SessionContent({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" className="text-amber-500 h-8 w-8" onClick={onPause}>
-                  <Pause className="h-4 w-4" />
+                  <Pause size={16} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Pause</TooltipContent>
@@ -1061,7 +869,7 @@ function SessionContent({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" className="text-emerald-500 h-8 w-8" onClick={onResume}>
-                  <Play className="h-4 w-4" />
+                  <Play size={16} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Resume</TooltipContent>
@@ -1072,7 +880,7 @@ function SessionContent({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" className="text-purple-500 h-8 w-8" onClick={onCollect}>
-                  <Sparkles className="h-4 w-4" />
+                  <Sparkle size={16} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Collect Episode</TooltipContent>
@@ -1082,7 +890,7 @@ function SessionContent({
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="ghost" size="icon" className={`h-8 w-8 ${thread.pinned ? 'text-amber-500' : 'text-slate-500'}`} onClick={onPin}>
-                {thread.pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+                {thread.pinned ? <PinOff size={16} /> : <Pin size={16} />}
               </Button>
             </TooltipTrigger>
             <TooltipContent>{thread.pinned ? 'Unpin' : 'Pin'}</TooltipContent>
@@ -1092,7 +900,7 @@ function SessionContent({
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" className="text-red-500 h-8 w-8" onClick={onStop}>
-                  <Square className="h-4 w-4" />
+                  <Square size={16} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Stop</TooltipContent>
@@ -1102,7 +910,7 @@ function SessionContent({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500">
-                <MoreHorizontal className="h-4 w-4" />
+                <DotsThreeOutline size={16} />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-slate-900 border-slate-700">
@@ -1111,7 +919,7 @@ function SessionContent({
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-slate-700" />
               <DropdownMenuItem onClick={onDelete} className="text-xs text-red-500">
-                <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete Thread
+                <Trash className="h-3.5 w-3.5 mr-2" /> Delete Thread
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -1122,16 +930,16 @@ function SessionContent({
       <div className="flex items-center gap-4 mb-3 text-xs text-slate-500">
         {thread.tokenCount && (
           <span className="flex items-center gap-1">
-            <Zap className="h-3 w-3" /> {(thread.tokenCount / 1000).toFixed(1)}k tokens
+            <Lightning size={12} /> {(thread.tokenCount / 1000).toFixed(1)}k tokens
           </span>
         )}
         {thread.elapsedSeconds && (
           <span className="flex items-center gap-1">
-            <Clock className="h-3 w-3" /> {formatDuration(thread.elapsedSeconds)}
+            <Clock size={12} /> {formatDuration(thread.elapsedSeconds)}
           </span>
         )}
         <span className="flex items-center gap-1">
-          <Layers className="h-3 w-3" /> {thread.children.length} children
+          <Stack size={12} /> {thread.children.length} children
         </span>
       </div>
 
@@ -1200,8 +1008,8 @@ function HealthPanel({
           <Activity className="h-4 w-4 text-emerald-500" />
           Swarm Health
         </h3>
-        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose}>
-          <X className="h-4 w-4" />
+        <Button variant="ghost" size="icon" size={24} onClick={onClose}>
+          <X size={16} />
         </Button>
       </div>
       
@@ -1234,7 +1042,7 @@ function HealthPanel({
       {circuitBreakers.length > 0 && (
         <div className="mb-3">
           <h4 className="text-xs font-semibold text-red-500 flex items-center gap-1 mb-2">
-            <AlertTriangle className="h-3 w-3" /> Circuit Breakers Open
+            <Warning size={12} /> Circuit Breakers Open
           </h4>
           <div className="space-y-1">
             {circuitBreakers.map(cb => (
@@ -1250,7 +1058,7 @@ function HealthPanel({
       {quarantined.length > 0 && (
         <div>
           <h4 className="text-xs font-semibold text-amber-500 flex items-center gap-1 mb-2">
-            <ShieldAlert className="h-3 w-3" /> Quarantined Agents
+            <ShieldWarning size={12} /> Quarantined Agents
           </h4>
           <div className="space-y-1">
             {quarantined.map(q => (
@@ -1276,7 +1084,7 @@ function EpisodeBar({ episode, thread }: { episode: Episode; thread: SwarmThread
         className="h-12 flex items-center px-4 gap-4 cursor-pointer hover:bg-white/5"
         onClick={() => setExpanded(!expanded)}
       >
-        <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+        <CheckCircle className="h-4 w-4 text-emerald-500" />
         <span className="text-sm text-slate-300">Episode {episode.id}</span>
         <span className="text-xs text-slate-500 truncate flex-1">{episode.summary}</span>
         

@@ -6,14 +6,13 @@ import { useSidebar, useResponsiveLayout } from './useLayout';
 import { tokens } from '@/design/tokens';
 import { GlassSurface } from '@/design/GlassSurface';
 import {
-  ChevronLeft,
-  ChevronRight,
-  Menu,
+  CaretLeft,
+  CaretRight,
+  List,
   X,
-  ChevronDown,
-  ChevronRightIcon,
-  type LucideIcon,
-} from 'lucide-react';
+  CaretDown,
+} from '@phosphor-icons/react';
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 // =============================================================================
 // Types
@@ -21,7 +20,7 @@ import {
 
 export interface SidebarItem {
   id: string;
-  icon: LucideIcon | string;
+  icon: PhosphorIcon | string;
   label: string;
   href?: string;
   onClick?: () => void;
@@ -310,9 +309,9 @@ export function Sidebar({
           aria-label={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
         >
           {isOpen ? (
-            <ChevronLeft className="w-4 h-4" />
+            <CaretLeft size={16} />
           ) : (
-            <ChevronRight className="w-4 h-4" />
+            <CaretRight size={16} />
           )}
         </button>
       )}
@@ -409,7 +408,7 @@ function SidebarNavItem({
 
           {/* Expand chevron */}
           {hasChildren && (
-            <ChevronDown className={cn(
+            <CaretDown className={cn(
               'w-4 h-4 transition-transform duration-200',
               isExpanded && 'rotate-180'
             )} />
@@ -537,7 +536,7 @@ function MobileSidebar({
         className="fixed top-4 left-4 z-50 p-2 rounded-md bg-background/80 backdrop-blur-sm border border-border shadow-md"
         aria-label="Toggle menu"
       >
-        <Menu className="w-5 h-5" />
+        <List size={20} />
       </button>
 
       {/* Overlay */}
@@ -574,7 +573,7 @@ function MobileSidebar({
             className="p-2 rounded-md hover:bg-accent"
             aria-label="Close menu"
           >
-            <X className="w-5 h-5" />
+            <X size={20} />
           </button>
         </div>
 
@@ -671,7 +670,7 @@ function MobileNavItem({
           </span>
         )}
         {hasChildren && (
-          <ChevronDown className={cn(
+          <CaretDown className={cn(
             'w-4 h-4 transition-transform duration-200',
             isExpanded && 'rotate-180'
           )} />

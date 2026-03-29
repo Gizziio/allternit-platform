@@ -2,17 +2,17 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { 
-  Wifi, 
-  WifiOff, 
-  Loader2, 
-  CheckCircle2, 
-  AlertCircle,
-  CloudOff,
-  RefreshCw,
-  GitBranch,
-  type LucideIcon,
-} from 'lucide-react';
+import {
+  WifiHigh,
+  WifiSlash,
+  CircleNotch,
+  CheckCircle,
+  Warning,
+  CloudSlash,
+  ArrowsClockwise,
+  TreeStructure as GitBranch,
+} from '@phosphor-icons/react';
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 
 // =============================================================================
 // Types
@@ -23,7 +23,7 @@ export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
 
 export interface BottomBarAction {
   id: string;
-  icon: LucideIcon;
+  icon: PhosphorIcon;
   label: string;
   onClick: () => void;
   active?: boolean;
@@ -124,17 +124,17 @@ interface ConnectionStatusIndicatorProps {
 function ConnectionStatusIndicator({ status }: ConnectionStatusIndicatorProps) {
   const config = {
     connected: {
-      icon: Wifi,
+      icon: WifiHigh,
       label: 'Connected',
       className: 'text-green-500',
     },
     connecting: {
-      icon: Loader2,
+      icon: CircleNotch,
       label: 'Connecting...',
       className: 'text-amber-500 animate-spin',
     },
     disconnected: {
-      icon: WifiOff,
+      icon: WifiSlash,
       label: 'Disconnected',
       className: 'text-red-500',
     },
@@ -164,22 +164,22 @@ interface SyncStatusIndicatorProps {
 function SyncStatusIndicator({ status }: SyncStatusIndicatorProps) {
   const config = {
     synced: {
-      icon: CheckCircle2,
+      icon: CheckCircle,
       label: 'Synced',
       className: 'text-green-500',
     },
     syncing: {
-      icon: RefreshCw,
+      icon: ArrowsClockwise,
       label: 'Syncing...',
       className: 'text-blue-500 animate-spin',
     },
     offline: {
-      icon: CloudOff,
+      icon: CloudSlash,
       label: 'Offline',
       className: 'text-muted-foreground',
     },
     error: {
-      icon: AlertCircle,
+      icon: Warning,
       label: 'Sync Error',
       className: 'text-red-500',
     },
@@ -275,7 +275,7 @@ interface VersionDisplayProps {
 function VersionDisplay({ version }: VersionDisplayProps) {
   return (
     <div className="flex items-center gap-1.5 text-muted-foreground">
-      <GitBranch className="w-3 h-3" />
+      <GitBranch size={12} />
       <span>v{version}</span>
     </div>
   );

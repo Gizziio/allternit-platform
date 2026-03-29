@@ -1,5 +1,9 @@
 import React from 'react';
-import { Sparkles, Bot, Zap } from 'lucide-react';
+import {
+  Sparkle,
+  Robot,
+  Lightning,
+} from '@phosphor-icons/react';
 
 interface A2RLogoProps {
   size?: 'sm' | 'md' | 'lg';
@@ -60,7 +64,7 @@ export function A2RLogo({ size = 'md', variant = 'horizontal', showText = true }
       />
       
       {/* Inner core - Sparkles icon */}
-      <Sparkles 
+      <Sparkle 
         size={config.icon * 0.5} 
         style={{ color: brandColors.primary }}
         fill="currentColor"

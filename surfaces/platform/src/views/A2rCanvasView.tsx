@@ -14,16 +14,16 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Maximize2, 
-  Minimize2, 
-  Columns, 
-  Rows, 
+import {
+  ArrowsOut,
+  ArrowsIn,
+  Columns,
+  Rows,
   MonitorPlay,
-  Sparkles,
-  ChevronLeft,
-  ChevronRight
-} from 'lucide-react';
+  Sparkle,
+  CaretLeft,
+  CaretRight,
+} from '@phosphor-icons/react';
 import { GlassSurface } from '@/design/GlassSurface';
 import { Button } from '@/components/ui/button';
 import { CanvasRouter } from './canvas/CanvasRouter';
@@ -200,7 +200,7 @@ export function A2rCanvasView({
               onClick={() => setFullscreenCanvas(false)}
               className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
             >
-              <ChevronLeft className="w-4 h-4 mr-2" />
+              <CaretLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
             <span className="text-sm font-medium text-[var(--text-primary)]">
@@ -217,7 +217,7 @@ export function A2rCanvasView({
                 showDrive && "text-[var(--accent-primary)]"
               )}
             >
-              <MonitorPlay className="w-4 h-4" />
+              <MonitorPlay size={16} />
             </Button>
           </div>
         </div>
@@ -373,7 +373,7 @@ function EmptyCanvasState({ sourceView }: { sourceView: string }) {
   return (
     <div className="h-full flex flex-col items-center justify-center text-[var(--text-tertiary)]">
       <div className="max-w-md text-center space-y-4">
-        <Sparkles className="w-12 h-12 mx-auto opacity-50" />
+        <Sparkle className="w-12 h-12 mx-auto opacity-50" />
         <h3 className="text-lg font-medium text-[var(--text-primary)]">
           Canvas Ready
         </h3>

@@ -9,7 +9,11 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { AlertCircle, ExternalLink, RefreshCw } from 'lucide-react';
+import {
+  Warning,
+  ArrowSquareOut,
+  ArrowsClockwise,
+} from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -88,7 +92,7 @@ export function OpenClawControlUI() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-red-500" />
+              <Warning className="h-5 w-5 text-red-500" />
               OpenClaw Not Available
             </CardTitle>
             <CardDescription>
@@ -112,7 +116,7 @@ export function OpenClawControlUI() {
             </div>
             
             <Button onClick={() => window.location.reload()} variant="outline">
-              <RefreshCw className="mr-2 h-4 w-4" />
+              <ArrowsClockwise className="mr-2 h-4 w-4" />
               Retry Connection
             </Button>
           </CardContent>
@@ -136,11 +140,11 @@ export function OpenClawControlUI() {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={handleRefresh}>
-            <RefreshCw className="mr-2 h-4 w-4" />
+            <ArrowsClockwise className="mr-2 h-4 w-4" />
             Refresh
           </Button>
           <Button variant="outline" size="sm" onClick={handleOpenExternal}>
-            <ExternalLink className="mr-2 h-4 w-4" />
+            <ArrowSquareOut className="mr-2 h-4 w-4" />
             Open in New Tab
           </Button>
         </div>
@@ -151,7 +155,7 @@ export function OpenClawControlUI() {
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-background/50">
             <div className="flex flex-col items-center gap-2">
-              <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
+              <ArrowsClockwise className="h-8 w-8 animate-spin text-muted-foreground" />
               <p className="text-sm text-muted-foreground">Loading OpenClaw Control UI...</p>
             </div>
           </div>

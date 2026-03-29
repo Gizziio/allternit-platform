@@ -220,6 +220,28 @@ export {
   useEmbeddedAgentSession,
   useEmbeddedAgentSessionStore,
 } from "./embedded-agent-session.store";
+
+export type {
+  AssistantBlockKind,
+  StreamEvent,
+  ToolLifecycleState,
+  RunStatus,
+  TimelineCitation,
+  TextTimelineBlock,
+  ReasoningTimelineBlock,
+  ToolTimelineBlock,
+  ArtifactTimelineBlock,
+  CitationTimelineBlock,
+  AssistantTimelineBlock,
+  AssistantTurn,
+  ConversationTimelineState,
+  ProviderStreamAdapter,
+} from "./timeline-stream";
+
+export {
+  createConversationTimelineState,
+  reduceStreamEvent,
+} from "./timeline-stream";
 export { mapNativeMessagesToStreamMessages } from "./embedded-agent-chat";
 export { AgentContextStrip } from "@/components/agents/AgentContextStrip";
 export { ToolCallVisualization, useToolCallAccent } from "@/components/agents/ToolCallVisualization";
@@ -426,6 +448,8 @@ export type {
   StreamEvent,
   StreamingState,
   RuntimeExecutionModeStatus,
+  PendingPermissionRequest,
+  PendingQuestionRequest,
 } from "./native-agent.store";
 
 export {
@@ -433,15 +457,15 @@ export {
   selectActiveSession,
   selectActiveMessages,
   selectSessionCanvases,
-  selectIsStreaming,
-  selectStreamingError,
+  selectIsSessionStreaming,
+  selectSessionStreamingError,
   selectSessionSyncState,
   selectExecutionModeState,
   isLocalDraftSession,
   useActiveSession,
   useActiveMessages,
   useSessionCanvases,
-  useStreamingState,
+  useSessionStreamingState,
   useSessionSyncState,
   useExecutionModeState,
 } from "./native-agent.store";

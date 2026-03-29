@@ -86,14 +86,14 @@ export function VisionGlass() {
           width: 40, height: 40,
           marginLeft: -20, marginTop: -20,
           borderRadius: "50%",
-          border: "2px solid #ff3b30",
-          boxShadow: "0 0 20px #ff3b30",
+          border: "2px solid var(--shell-vision-target)",
+          boxShadow: "0 0 20px var(--shell-vision-target)",
           animation: "a2r-pulse 1.5s infinite"
         }}>
           {action.label && (
             <div style={{
               position: "absolute", top: 45, left: "50%", transform: "translateX(-50%)",
-              background: "rgba(0,0,0,0.8)", color: "white", padding: "4px 8px",
+              background: "var(--shell-vision-label-bg)", color: "var(--shell-vision-label-fg)", padding: "4px 8px",
               borderRadius: 6, fontSize: 10, whiteSpace: "nowrap"
             }}>
               {action.label}

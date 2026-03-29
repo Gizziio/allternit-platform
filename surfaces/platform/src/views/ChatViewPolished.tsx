@@ -18,7 +18,11 @@ import { ErrorBoundary, ChatViewErrorBoundary } from "@/components/error-boundar
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { MessageSquare, AlertCircle, WifiOff } from "lucide-react";
+import {
+  Chat,
+  Warning,
+  WifiSlash,
+} from '@phosphor-icons/react';
 
 // Lazy load the main ChatView for code splitting
 const ChatViewLazy = lazy(() => import("./ChatView"));
@@ -83,7 +87,7 @@ function ChatViewError({ error, onReset }: { error?: Error; onReset?: () => void
         className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
         style={{ background: 'var(--status-error-bg)' }}
       >
-        <AlertCircle className="w-8 h-8 text-[var(--status-error)]" />
+        <Warning className="w-8 h-8 text-[var(--status-error)]" />
       </div>
       
       <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-2">
@@ -141,7 +145,7 @@ function NoConnectionState() {
         className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
         style={{ background: 'var(--status-warning-bg)' }}
       >
-        <WifiOff className="w-8 h-8 text-[var(--status-warning)]" />
+        <WifiSlash className="w-8 h-8 text-[var(--status-warning)]" />
       </div>
       
       <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-2">
@@ -180,7 +184,7 @@ function EmptyChatState({ onStart }: { onStart?: () => void }) {
           boxShadow: 'var(--shadow-md)'
         }}
       >
-        <MessageSquare className="w-10 h-10 text-white" />
+        <Chat className="w-10 h-10 text-white" />
       </div>
       
       {/* Title */}

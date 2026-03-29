@@ -8,7 +8,7 @@
  * All modes share the same rendering surface.
  */
 
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import type { ExtendedUIPart } from '@/lib/ai/rust-stream-adapter-extended';
 import { parseStructuredContent } from '@/lib/ai/rust-stream-adapter-extended';
@@ -18,17 +18,28 @@ import { ThoughtTrace, coerceThoughtSteps, parseThoughtSteps } from './thought-t
 import { injectWebPreviewParts } from './browser-preview-utils';
 import { GlassPill, FilePill, TerminalPill } from './glass-pill';
 import { ArtifactCard } from './artifact-panel';
+import { McpAppFrame } from './McpAppFrame';
 import type { SelectedArtifact, ArtifactKind } from './artifact-panel';
 
 // Core AI Elements
 import { Markdown } from './markdown';
 import { Shimmer } from './shimmer';
-import { Reasoning, ReasoningTrigger, ReasoningContent } from './reasoning';
 import { Tool, ToolContent, ToolHeader, ToolInput } from './tool';
 import { Sources, Source } from './sources';
 import { CodeBlock } from './code-block';
 import { Persona } from './persona';
-import { AlertCircle, CheckCircle, XCircle, Clock, Check, X, Globe, Link2, ExternalLink } from 'lucide-react';
+import {
+  Warning,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Check,
+  X,
+  Globe,
+  Link,
+  ArrowSquareOut,
+  CaretRight,
+} from '@phosphor-icons/react';
 
 interface UnifiedMessageRendererProps {
   parts: ExtendedUIPart[];
@@ -69,6 +80,9 @@ export function UnifiedMessageRenderer({
     return isStreaming ? <Shimmer className="h-4 w-3/4" /> : null;
   }
 
+  // Collect source-document parts for the footer strip (P4)
+  const sourceParts = parsedParts.filter(p => p.type === 'source-document') as Array<Extract<ExtendedUIPart, { type: 'source-document' }>>;
+
   return (
     <div className={cn("space-y-4", className)}>
       {parsedParts.map((part, idx) => (
@@ -81,6 +95,10 @@ export function UnifiedMessageRenderer({
           selectedArtifactTitle={selectedArtifactTitle}
         />
       ))}
+      {/* Sources footer — compact citation strip when web results are present */}
+      {!isStreaming && sourceParts.length > 0 && (
+        <SourcesFooter sources={sourceParts} />
+      )}
     </div>
   );
 }
@@ -123,7 +141,7 @@ function SourceDocumentCard({ part }: { part: Extract<ExtendedUIPart, { type: 's
             </div>
           )}
         </div>
-        {sourceUrl && <ExternalLink className="mt-1 h-4 w-4 flex-shrink-0 text-sky-200/70" />}
+        {sourceUrl && <ArrowSquareOut className="mt-1 h-4 w-4 flex-shrink-0 text-sky-200/70" />}
       </div>
     </div>
   );
@@ -177,7 +195,7 @@ function BrowserPreviewCard({ part }: { part: Extract<ExtendedUIPart, { type: 'w
             onClick={() => openUrlInBrowserPanel(part.url, part.title ?? host ?? part.url)}
             className="inline-flex items-center gap-2 rounded-full border border-[#D4B08C]/24 bg-[#D4B08C]/10 px-3.5 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#F7D9BA] transition-colors hover:bg-[#D4B08C]/16"
           >
-            <ExternalLink className="h-3.5 w-3.5" />
+            <ArrowSquareOut className="h-3.5 w-3.5" />
             Open Browser Panel
           </button>
         </div>
@@ -186,6 +204,77 @@ function BrowserPreviewCard({ part }: { part: Extract<ExtendedUIPart, { type: 'w
             Continue the web search in the shared browser panel to inspect pages, follow links, and compare sources without losing the transcript.
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// Sources Footer — P4
+// Compact numbered strip shown below the response when web sources are present.
+// ============================================================================
+
+function SourcesFooter({ sources }: { sources: Array<Extract<ExtendedUIPart, { type: 'source-document' }>> }) {
+  if (sources.length === 0) return null;
+  return (
+    <div style={{
+      marginTop: '12px',
+      paddingTop: '10px',
+      borderTop: '1px solid rgba(255,255,255,0.06)',
+    }}>
+      <div style={{
+        fontSize: '10px',
+        fontWeight: 700,
+        letterSpacing: '0.08em',
+        textTransform: 'uppercase',
+        color: 'rgba(255,255,255,0.22)',
+        marginBottom: '8px',
+      }}>
+        Sources
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        {sources.map((src, i) => {
+          const url = 'url' in src && typeof src.url === 'string' ? src.url : undefined;
+          let host = '';
+          try { if (url) host = new URL(url).hostname.replace(/^www\./, ''); } catch { host = url ?? ''; }
+          return (
+            <div key={src.sourceId ?? i} style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+              <span style={{
+                fontSize: '10px',
+                fontWeight: 700,
+                color: 'rgba(255,255,255,0.2)',
+                flexShrink: 0,
+                minWidth: '16px',
+                fontVariantNumeric: 'tabular-nums',
+              }}>
+                {i + 1}.
+              </span>
+              {url ? (
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    fontSize: '12px',
+                    color: 'rgba(212,176,140,0.65)',
+                    textDecoration: 'none',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    flex: 1,
+                  }}
+                  title={url}
+                >
+                  {src.title ? `${src.title} — ${host}` : host}
+                </a>
+              ) : (
+                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.38)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {src.title ?? 'Source'}
+                </span>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -400,6 +489,161 @@ function renderToolResult(result: unknown): React.ReactNode {
   return <span>{String(result)}</span>;
 }
 
+// ============================================================================
+// Thought Process Header — P1
+// Collapsible "Thought process >" header replacing raw italic reasoning block.
+// Auto-opens while streaming, auto-collapses 1s after streaming ends.
+// ============================================================================
+
+function ThoughtProcessHeader({ text, isStreaming }: { text: string; isStreaming?: boolean }) {
+  const [isOpen, setIsOpen] = useState(!!isStreaming);
+  const [hasAutoClosed, setHasAutoClosed] = useState(false);
+
+  useEffect(() => {
+    if (isStreaming && !isOpen) setIsOpen(true);
+  }, [isStreaming, isOpen]);
+
+  useEffect(() => {
+    if (!isStreaming && isOpen && !hasAutoClosed) {
+      const t = setTimeout(() => {
+        setIsOpen(false);
+        setHasAutoClosed(true);
+      }, 1000);
+      return () => clearTimeout(t);
+    }
+  }, [isStreaming, isOpen, hasAutoClosed]);
+
+  // Extract a readable summary from the first meaningful line of reasoning text
+  const summary = useMemo(() => {
+    if (!text) return 'Thought process';
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 15 && !l.startsWith('<') && !l.startsWith('{'));
+    const first = lines[0] ?? '';
+    return first.length > 80 ? first.slice(0, 80) + '…' : first || 'Thought process';
+  }, [text]);
+
+  return (
+    <div style={{ margin: '4px 0 10px' }}>
+      <button
+        onClick={() => setIsOpen(v => !v)}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '5px',
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          padding: '0',
+        }}
+      >
+        <CaretRight
+          size={10}
+          style={{
+            color: 'rgba(236,236,236,0.28)',
+            transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)',
+            transition: 'transform 0.18s ease',
+            flexShrink: 0,
+          }}
+        />
+        <span style={{
+          fontSize: '12px',
+          color: 'rgba(236,236,236,0.3)',
+          fontStyle: 'italic',
+          letterSpacing: '0.01em',
+        }}>
+          {summary}
+        </span>
+      </button>
+
+      {isOpen && text && (
+        <div style={{
+          marginTop: '6px',
+          paddingLeft: '14px',
+          borderLeft: '1px solid rgba(212,176,140,0.14)',
+          color: 'rgba(236,236,236,0.22)',
+          fontSize: '12px',
+          lineHeight: '1.6',
+          fontStyle: 'italic',
+          maxHeight: '180px',
+          overflowY: 'auto',
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-word',
+        }}>
+          {text}{isStreaming ? ' █' : ''}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// Humanize tool calls — P2
+// Converts raw toolName + input → readable title + result metadata string.
+// ============================================================================
+
+function humanizeToolCall(
+  toolName: string,
+  input: unknown,
+  state: string,
+  result: unknown,
+): { title: string; meta: string | null } {
+  const name = (toolName ?? '').toLowerCase().replace(/[_\-\s]/g, '');
+  const inp = (input && typeof input === 'object') ? input as Record<string, unknown> : {};
+
+  const query   = String(inp.query   ?? inp.search ?? inp.q          ?? '');
+  const path    = String(inp.path    ?? inp.filename ?? inp.file ?? inp.name ?? '');
+  const url     = String(inp.url     ?? inp.link    ?? inp.uri       ?? '');
+  const command = String(inp.command ?? inp.cmd     ?? inp.code      ?? '');
+  const content = String(inp.content ?? inp.text    ?? inp.new_content ?? inp.new_string ?? '');
+
+  // Result metadata: count or char length
+  let meta: string | null = null;
+  if (state === 'output-available' && result !== null && result !== undefined) {
+    if (Array.isArray(result)) {
+      meta = `${result.length} result${result.length === 1 ? '' : 's'}`;
+    } else if (typeof result === 'object') {
+      const obj = result as Record<string, unknown>;
+      if (Array.isArray(obj.results)) meta = `${(obj.results as unknown[]).length} results`;
+      else if (typeof obj.content === 'string' && (obj.content as string).length > 50) meta = `${(obj.content as string).length} chars`;
+    } else if (typeof result === 'string' && result.length > 80) {
+      meta = `${result.length} chars`;
+    }
+  }
+  // During execution: char count from input content if writing something
+  if ((state === 'input-streaming' || state === 'input-available') && !meta && content.length > 0) {
+    meta = `~${content.length} chars`;
+  }
+
+  const fname = path ? path.split('/').pop() ?? path : '';
+
+  let title = toolName; // raw fallback
+
+  if (name.includes('websearch') || name.includes('browsersearch') || name.includes('googlesearch') || name === 'search') {
+    title = query ? `Searched web for "${query.slice(0, 55)}"` : 'Searched the web';
+  } else if (name.includes('todowrite') || name.includes('todoupdate') || name.includes('todoread')) {
+    title = state === 'output-available' ? 'Updated todo list' : 'Updating todo list';
+  } else if (name.includes('bash') || name.includes('runcode') || name.includes('executecode') || name.includes('computer')) {
+    title = command ? `Ran: ${command.slice(0, 50)}` : 'Ran code';
+  } else if (name.includes('strreplace') || name.includes('editfile') || name === 'edit') {
+    title = fname ? `Edited ${fname}` : 'Edited file';
+  } else if (name.includes('writefile') || name === 'write' || name.includes('createfile')) {
+    title = fname ? `Writing ${fname}` : 'Writing file';
+  } else if (name.includes('readfile') || name === 'read') {
+    title = fname ? `Read ${fname}` : 'Read file';
+  } else if (name.includes('fetchurl') || name.includes('browseurl') || name.includes('fetchweb') || (name.includes('fetch') && url)) {
+    let host = '';
+    try { host = new URL(url).hostname; } catch { host = url.slice(0, 40); }
+    title = host ? `Fetching ${host}` : 'Fetching page';
+  } else if (name.includes('glob') || name.includes('findfiles')) {
+    title = 'Finding files';
+  } else if (name.includes('grep') || name.includes('searchcode')) {
+    title = query ? `Searching code for "${query.slice(0, 40)}"` : 'Searching code';
+  }
+
+  return { title, meta };
+}
+
+// ============================================================================
+
 interface PartRendererProps {
   part: ExtendedUIPart;
   isLast: boolean;
@@ -413,7 +657,7 @@ function PartRenderer({ part, isLast, isStreaming, onSelectArtifact, selectedArt
     // ==================== TEXT (Main Response - Largest) ====================
     case 'text':
       return (
-        <div className="text-[15px] leading-[1.7] text-foreground my-3 relative">
+        <div className="text-[16px] leading-[1.75] text-foreground my-3 relative">
           {/* isStreaming && isLast → Markdown renders cursor inside the last <p> inline with text */}
           <Markdown isStreaming={isStreaming && isLast}>{part.text}</Markdown>
         </div>
@@ -422,6 +666,7 @@ function PartRenderer({ part, isLast, isStreaming, onSelectArtifact, selectedArt
     // ==================== REASONING (Thought Trace - Smaller, Structured) ====================
     case 'reasoning':
       {
+      const isReasoningStreaming = isStreaming && isLast;
       const structuredSteps = coerceThoughtSteps(
         (part as typeof part & { trace?: { steps?: unknown } }).trace?.steps,
       );
@@ -432,22 +677,19 @@ function PartRenderer({ part, isLast, isStreaming, onSelectArtifact, selectedArt
           <div className="my-2">
             <ThoughtTrace
               steps={steps}
-              isStreaming={isStreaming && isLast}
+              isStreaming={isReasoningStreaming}
               isComplete={!isStreaming}
             />
           </div>
         );
       }
-      
-      // Fallback for unparseable thinking
+
+      // Raw reasoning — collapsible "Thought process >" header
       return (
-        <div className="my-2 rounded-xl border border-white/6 bg-white/[0.025] px-3 py-2 text-xs text-white/62">
-          <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/40">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#D4B08C]" />
-            Reasoning
-          </div>
-          <div className="mt-1 leading-5">{part.text}</div>
-        </div>
+        <ThoughtProcessHeader
+          text={part.text || ''}
+          isStreaming={isReasoningStreaming}
+        />
       );
       }
 
@@ -493,13 +735,12 @@ function PartRenderer({ part, isLast, isStreaming, onSelectArtifact, selectedArt
       const toolState = part.state === "input-streaming" || part.state === "input-available" ? "running" :
                         part.state === "output-error" ? "error" : "completed";
 
-      // Human-readable status label next to the tool name
-      const toolStatus =
-        part.state === "input-streaming"  ? "Calling…" :
-        part.state === "input-available"  ? "Executing…" :
-        part.state === "output-available" ? "Done" :
-        part.state === "output-error"     ? "Failed" :
-        "Pending";
+      const { title: humanTitle, meta } = humanizeToolCall(
+        part.toolName ?? '',
+        'input' in part ? part.input : undefined,
+        part.state,
+        'result' in part ? (part as any).result : undefined,
+      );
 
       // Whether to show expandable content
       const hasOutput = (part.state === "output-available" && "result" in part) ||
@@ -509,8 +750,8 @@ function PartRenderer({ part, isLast, isStreaming, onSelectArtifact, selectedArt
         <GlassPill
           type="tool"
           state={toolState}
-          title={part.toolName}
-          description={toolStatus}
+          title={humanTitle}
+          description={meta ?? undefined}
           collapsible={hasOutput}
           defaultCollapsed={part.state === "output-available"}
         >
@@ -535,7 +776,7 @@ function PartRenderer({ part, isLast, isStreaming, onSelectArtifact, selectedArt
               color: "rgba(248,113,113,0.8)",
               lineHeight: "1.5",
             }}>
-              <AlertCircle style={{ width: 12, height: 12, flexShrink: 0, marginTop: 2 }} />
+              <Warning style={{ width: 12, height: 12, flexShrink: 0, marginTop: 2 }} />
               <span style={{ wordBreak: "break-word" }}>{String(part.error)}</span>
             </div>
           )}
@@ -549,54 +790,33 @@ function PartRenderer({ part, isLast, isStreaming, onSelectArtifact, selectedArt
 
     // ==================== ERRORS ====================
     case 'error': {
-      // Detect rate limit errors for special UI
-      const isRateLimit = part.message?.toLowerCase().includes('rate limit') || 
-                          part.message?.includes('429');
-      const isAuthError = part.message?.toLowerCase().includes('authentication') ||
-                          part.message?.toLowerCase().includes('unauthorized') ||
-                          part.message?.includes('401') ||
-                          part.message?.includes('403');
-      const isServerError = part.message?.toLowerCase().includes('server error') ||
-                            part.message?.toLowerCase().includes('502') ||
-                            part.message?.toLowerCase().includes('503') ||
-                            part.message?.toLowerCase().includes('504');
-      
-      const errorTitle = isRateLimit ? 'Rate Limit Exceeded' :
-                         isAuthError ? 'Authentication Error' :
-                         isServerError ? 'Service Unavailable' :
-                         'Error';
-      
-      const errorColor = isRateLimit ? 'text-amber-400' :
-                         isAuthError ? 'text-orange-400' :
-                         'text-destructive';
-      
-      const borderColor = isRateLimit ? 'border-amber-400/30' :
-                          isAuthError ? 'border-orange-400/30' :
-                          'border-destructive/50';
-      
-      const bgColor = isRateLimit ? 'bg-amber-400/10' :
-                      isAuthError ? 'bg-orange-400/10' :
-                      'bg-destructive/10';
-      
       return (
-        <div className={cn("rounded-lg border p-4", borderColor, bgColor)}>
-          <div className={cn("flex items-center gap-2 font-medium mb-2", errorColor)}>
-            <AlertCircle className="w-5 h-5" />
-            {errorTitle}{part.kind && ` (${part.kind})`}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '4px',
+          padding: '2px 0',
+        }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontSize: '13px',
+            color: 'rgba(248, 113, 113, 0.85)',
+          }}>
+            <span style={{ fontSize: '13px', lineHeight: 1 }}>⚠</span>
+            <span>{part.message || 'Something went wrong'}</span>
           </div>
-          <p className="text-sm mb-2 text-foreground/80">{part.message}</p>
-          {isRateLimit && (
-            <p className="text-xs text-amber-400/70 mt-2">
-              💡 Tip: Wait a few seconds and try sending your message again.
-            </p>
-          )}
-          {isAuthError && (
-            <p className="text-xs text-orange-400/70 mt-2">
-              💡 Tip: Check your API key settings or sign out and back in.
-            </p>
-          )}
           {part.stackTrace && (
-            <pre className="text-xs bg-black/50 p-3 rounded overflow-x-auto text-muted-foreground mt-2">
+            <pre style={{
+              fontSize: '11px',
+              color: 'rgba(255,255,255,0.3)',
+              background: 'rgba(0,0,0,0.3)',
+              padding: '8px 10px',
+              borderRadius: '6px',
+              overflowX: 'auto',
+              marginTop: '4px',
+            }}>
               {part.stackTrace}
             </pre>
           )}
@@ -713,6 +933,10 @@ function PartRenderer({ part, isLast, isStreaming, onSelectArtifact, selectedArt
       );
     }
 
+    // ==================== MCP APP ====================
+    case 'mcp-app':
+      return <McpAppFrame part={part} />;
+
     // ==================== CITATION ====================
     case 'citation':
       return (
@@ -721,7 +945,7 @@ function PartRenderer({ part, isLast, isStreaming, onSelectArtifact, selectedArt
           className="flex w-full max-w-full items-start gap-3 rounded-2xl border border-sky-400/16 bg-sky-500/[0.06] px-4 py-3 text-left transition-colors hover:bg-sky-500/[0.1]"
         >
           <span className="mt-0.5 inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-sky-300/20 bg-sky-500/10">
-            <Link2 className="h-4 w-4 text-sky-200" />
+            <Link className="h-4 w-4 text-sky-200" />
           </span>
           <span className="min-w-0 flex-1">
             <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -1054,7 +1278,7 @@ function FileChangeCard({
         )}
       </div>
 
-      <AlertCircle size={12} style={{ color: "rgba(255,255,255,0.2)", flexShrink: 0, display: "none" }} />
+      <Warning size={12} style={{ color: "rgba(255,255,255,0.2)", flexShrink: 0, display: "none" }} />
     </button>
   );
 }

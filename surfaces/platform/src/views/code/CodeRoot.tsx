@@ -5,11 +5,10 @@ import { CodePreviewPane } from './CodePreviewPane';
 import { useCodeModeStore } from './CodeModeStore';
 import { useEmbeddedAgentSession } from '@/lib/agents';
 import { AgentModeBackdrop } from '../chat/agentModeSurfaceTheme';
-import { useAgentSurfaceModeStore } from '@/stores/agent-surface-mode.store';
 
 const BASE_ROOT_INSET = 12;
 const BROWSER_PILL_FALLBACK_TOP = 14;
-const TOGGLE_VERTICAL_NUDGE = 6;
+const TOGGLE_VERTICAL_NUDGE = -94; // Moved to y=3 position per annotation
 
 const PREVIEW_DEFAULT_WIDTH = 380;
 const PREVIEW_MIN_WIDTH = 260;
@@ -69,9 +68,7 @@ export function CodeRoot() {
   const dragRef = useRef<{ startX: number; startW: number } | null>(null);
   const canvasTopInset = topInset;
   const embeddedAgentSession = useEmbeddedAgentSession('code');
-  const codeAgentModeEnabled = useAgentSurfaceModeStore(
-    (state) => state.enabledBySurface.code,
-  );
+  const codeAgentModeEnabled = embeddedAgentSession.isEmbedded && embeddedAgentSession.descriptor.sessionMode === 'agent';
   const { activeWorkspaceId } = useCodeModeStore();
 
   useEffect(() => {
@@ -145,8 +142,11 @@ export function CodeRoot() {
       data-testid="code-root"
       style={{
         height: '100%',
+        minHeight: '100%',
         position: 'relative',
         isolation: 'isolate',
+        display: 'flex',
+        flexDirection: 'column',
         background: embeddedAgentSession.isEmbedded
           ? 'radial-gradient(circle at top right, rgba(121,196,124,0.08), transparent 34%), linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(0,0,0,0) 18%)'
           : 'transparent',
@@ -158,11 +158,11 @@ export function CodeRoot() {
         dataTestId="agent-mode-code-backdrop"
       />
 
-      {/* Preview toggle button */}
+      {/* Preview toggle button - positioned at y=3 per annotation */}
       <div
         style={{
           position: 'absolute',
-          top: toggleTop,
+          top: 3,
           right: 18,
           zIndex: 4,
           pointerEvents: 'none',
@@ -195,13 +195,16 @@ export function CodeRoot() {
       </div>
 
       {/* Main layout: canvas fills space, preview pane on right */}
-      <div style={{ display: 'flex', height: '100%', gap: 0, overflow: 'auto' }}>
+      <div style={{ display: 'flex', flex: 1, minHeight: 0, gap: 0, overflow: 'hidden' }}>
         {/* Canvas — fills remaining space, no pane styling */}
         <div
           data-testid="code-pane-canvas"
           style={{
             flex: 1,
             minWidth: 0,
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
           }}
         >
           <CodeCanvas isPreviewCollapsed={isPreviewCollapsed} />
