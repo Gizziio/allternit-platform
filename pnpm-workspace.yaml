@@ -4,6 +4,7 @@ packages:
   - '!cmd/cli'
   - 'domains/*/*'
   - 'packages/@a2r/types/visual-state'
+  - 'packages/@a2r/types/a2r-types'
   - 'services/*/*'
   - 'services/runtime/adapter/a2r-runtime'
   - 'surfaces/*/*'
