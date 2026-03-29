@@ -1,0 +1,10 @@
+node_modules
+.next
+dist
+dist-electron
+.next.stale*
+test-results
+*.log
+dev.log
+data/*.db
+data/*.sqlite
