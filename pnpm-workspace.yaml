@@ -1,10 +1,18 @@
 packages:
   # New functional structure (Phase 1-6)
   - 'cmd/*'
+  - '!cmd/cli'
   - 'domains/*/*'
+  - 'packages/@a2r/types/visual-state'
   - 'services/*/*'
+  - 'services/runtime/adapter/a2r-runtime'
   - 'surfaces/*/*'
+  - 'surfaces/platform/adapters-ts/a2r-avatar-adapters'
+  - 'surfaces/page-agent/packages/*'
+  - '!surfaces/page-agent/packages/extension'
+  - '!surfaces/page-agent/packages/website'
   - 'platform/*/*'
+  - 'packages/@a2r/*'
   
   # Legacy structure (still active during migration)
   - packages/*
