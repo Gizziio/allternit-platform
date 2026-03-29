@@ -2,6 +2,9 @@ packages:
   # New functional structure (Phase 1-6)
   - 'cmd/*'
   - '!cmd/cli'
+  - '!domains/agent/gizziclaw'
+  - '!domains/mcp/connectors'
+  - '!platform/plugins'
   - 'domains/*/*'
   - 'packages/@a2r/types/visual-state'
   - 'packages/@a2r/types/a2r-types'
