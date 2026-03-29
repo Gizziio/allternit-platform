@@ -1,9 +1,9 @@
 {
-  "name": "@a2r/platform",
+  "name": "allternit-platform",
   "version": "1.0.0",
   "description": "A2rchitect Platform Kit - Shell UI Kernel (pure library)",
   "type": "module",
-  "main": "./src/index.ts",
+  "main": "electron/main.cjs",
   "types": "./src/index.ts",
   "exports": {
     ".": {
@@ -12,7 +12,12 @@
     }
   },
   "scripts": {
+    "dev": "next dev -p 3013",
+    "build": "next build",
+    "start": "next start -p 3013",
     "typecheck": "tsc --noEmit",
+    "audit:theme:shell": "node scripts/audit-shell-theme.mjs",
+    "typecheck:refactor-slice": "tsc --project tsconfig.refactor-slice.json --noEmit",
     "typecheck:v2": "tsc --project tsconfig.v2.json --noEmit",
     "db:generate": "drizzle-kit generate --config drizzle.config.sqlite.ts",
     "db:migrate": "drizzle-kit migrate --config drizzle.config.sqlite.ts",
@@ -30,7 +35,73 @@
     "test:storybook": "test-storybook",
     "test:a11y": "test-storybook --a11y",
     "chromatic": "chromatic --project-token=$CHROMATIC_PROJECT_TOKEN",
-    "evidence:ui": "bash ../../scripts/ui-evidence-lane.sh"
+    "evidence:ui": "bash ../../scripts/ui-evidence-lane.sh",
+    "build:electron": "npm run build && node electron/prepare-next-standalone.cjs && electron-builder --mac",
+    "electron:dev": "electron electron/main.cjs"
+  },
+  "build": {
+    "appId": "com.a2r.platform",
+    "productName": "A2R Platform",
+    "copyright": "Copyright © 2024 A2R Technologies",
+    "npmRebuild": false,
+    "directories": {
+      "output": "dist-app"
+    },
+    "files": [
+      "electron/**/*",
+      "node_modules/**/*",
+      "package.json",
+      "!a2r-platform"
+    ],
+    "extraResources": [
+      {
+        "from": ".next/standalone",
+        "to": "standalone",
+        "filter": [
+          "**/*",
+          "!**/node_modules/.bun/**"
+        ]
+      },
+      {
+        "from": ".next/static",
+        "to": "standalone/surfaces/platform/.next/static"
+      },
+      {
+        "from": "public",
+        "to": "standalone/surfaces/platform/public"
+      },
+      {
+        "from": ".next/standalone/server",
+        "to": "server"
+      },
+      {
+        "from": "../../services/gateway/http/dist-bundle",
+        "to": "standalone/services/gateway/dist"
+      },
+      {
+        "from": "../../cmd/gizzi-code/dist/gizzi-code-darwin-arm64",
+        "to": "standalone/bin/gizzi-code"
+      },
+      {
+        "from": "../../cmd/a2r-api/target/debug/a2r-api",
+        "to": "standalone/bin/a2r-api"
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "electron/icon.icns",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ],
+      "identity": null,
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false
+    }
   },
   "dependencies": {
     "@a2r/avatar-adapters": "workspace:*",
@@ -83,10 +154,13 @@
     "@blocknote/core": "^0.47.1",
     "@blocknote/mantine": "^0.47.1",
     "@blocknote/react": "^0.47.1",
+    "@clerk/nextjs": "^6.39.0",
     "@json-render/core": "^0.3.0",
     "@json-render/react": "^0.2.0",
     "@mendable/firecrawl-js": "^4.12.0",
+    "@modelcontextprotocol/ext-apps": "^1.3.1",
     "@modelcontextprotocol/sdk": "^1.26.0",
+    "@modelcontextprotocol/server-pdf": "^1.3.1",
     "@phosphor-icons/react": "^2.1.10",
     "@radix-ui/react-checkbox": "^1.3.3",
     "@reduxjs/toolkit": "^2.2.7",
@@ -151,6 +225,7 @@
     "uuid": "^9.0.0",
     "xterm": "^5.3.0",
     "xterm-addon-fit": "^0.8.0",
+    "xterm-addon-serialize": "0.11.0",
     "zod": "^3.25.76",
     "zustand": "^4.4.0"
   },
@@ -207,6 +282,7 @@
     "@types/react-syntax-highlighter": "^15.5.13",
     "@types/testing-library__react": "^10.2.0",
     "@types/uuid": "^9.0.8",
+    "agentation": "^3.0.1",
     "clsx": "^2.1.1",
     "drizzle-kit": "^0.30.0",
     "framer-motion": "^12.29.2",
