@@ -11,6 +11,7 @@ packages:
   - 'services/*/*'
   - 'services/runtime/adapter/a2r-runtime'
   - 'surfaces/*'
+  - '!surfaces/a2r-extension'
   - 'surfaces/*/*'
   - 'surfaces/platform/adapters-ts/a2r-avatar-adapters'
   - 'surfaces/page-agent/packages/*'
