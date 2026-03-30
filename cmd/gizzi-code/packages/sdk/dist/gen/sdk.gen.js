@@ -799,6 +799,7 @@ var createClient = (config = {}) => {
 var client = createClient(createConfig());
 
 // packages/sdk/dist/gen/sdk.gen.ts
+var sessionListGlobal = (options) => (options?.client ?? client).get({ url: "/session/global", ...options });
 var sessionList = (options) => (options?.client ?? client).get({ url: "/session/list", ...options });
 var sessionCreate = (options) => (options.client ?? client).post({
   url: "/session",
@@ -911,6 +912,7 @@ var mcpAdd = (options) => (options.client ?? client).post({
     ...options.headers
   }
 });
+var mcpResources = (options) => (options?.client ?? client).get({ url: "/mcp/resources", ...options });
 var mcpRemove = (options) => (options.client ?? client).delete({ url: "/mcp/{name}", ...options });
 var cronStatus = (options) => (options?.client ?? client).get({ url: "/cron/status", ...options });
 var cronList = (options) => (options?.client ?? client).get({ url: "/cron/jobs", ...options });
@@ -965,6 +967,14 @@ var fileSymbols = (options) => (options?.client ?? client).get({ url: "/file/sym
 var fileTree = (options) => (options?.client ?? client).get({ url: "/file/tree", ...options });
 var fileRead = (options) => (options?.client ?? client).get({ url: "/file/read", ...options });
 var fileInfo = (options) => (options?.client ?? client).get({ url: "/file/info", ...options });
+var assetUpload = (options) => (options?.client ?? client).post({ url: "/assets/upload", ...options });
+var assetList = (options) => (options?.client ?? client).get({ url: "/assets", ...options });
+var assetDelete = (options) => (options.client ?? client).delete({ url: "/assets/{id}", ...options });
+var assetGet = (options) => (options.client ?? client).get({ url: "/assets/{id}", ...options });
+var filesList = (options) => (options?.client ?? client).get({ url: "/files", ...options });
+var filesUpload = (options) => (options?.client ?? client).post({ url: "/files", ...options });
+var filesDelete = (options) => (options.client ?? client).delete({ url: "/files/{id}", ...options });
+var filesGet = (options) => (options.client ?? client).get({ url: "/files/{id}", ...options });
 var userGet = (options) => (options?.client ?? client).get({ url: "/user", ...options });
 var userRefresh = (options) => (options?.client ?? client).post({ url: "/user/refresh", ...options });
 var userOnboard = (options) => (options.client ?? client).post({
@@ -990,10 +1000,85 @@ var ptyGet = (options) => (options.client ?? client).get({ url: "/pty/{ptyID}", 
 var instanceSync = (options) => (options?.client ?? client).get({ url: "/instance/sync", ...options });
 var instanceDispose = (options) => (options?.client ?? client).post({ url: "/instance/dispose", ...options });
 var instanceWorkspace = (options) => (options?.client ?? client).get({ url: "/instance/workspace", ...options });
+var instanceVersion = (options) => (options?.client ?? client).get({ url: "/instance/version", ...options });
+var instanceHealth = (options) => (options?.client ?? client).get({ url: "/instance/health", ...options });
+var tuiAppendPrompt = (options) => (options.client ?? client).post({
+  url: "/instance/tui/append-prompt",
+  ...options,
+  headers: {
+    "Content-Type": "application/json",
+    ...options.headers
+  }
+});
+var tuiOpenHelp = (options) => (options?.client ?? client).post({ url: "/instance/tui/open-help", ...options });
+var tuiOpenSessions = (options) => (options?.client ?? client).post({ url: "/instance/tui/open-sessions", ...options });
+var tuiOpenThemes = (options) => (options?.client ?? client).post({ url: "/instance/tui/open-themes", ...options });
+var tuiOpenModels = (options) => (options?.client ?? client).post({ url: "/instance/tui/open-models", ...options });
+var tuiSubmitPrompt = (options) => (options?.client ?? client).post({ url: "/instance/tui/submit-prompt", ...options });
+var tuiClearPrompt = (options) => (options?.client ?? client).post({ url: "/instance/tui/clear-prompt", ...options });
+var tuiExecuteCommand = (options) => (options.client ?? client).post({
+  url: "/instance/tui/execute-command",
+  ...options,
+  headers: {
+    "Content-Type": "application/json",
+    ...options.headers
+  }
+});
+var tuiShowToast = (options) => (options.client ?? client).post({
+  url: "/instance/tui/show-toast",
+  ...options,
+  headers: {
+    "Content-Type": "application/json",
+    ...options.headers
+  }
+});
+var tuiPublish = (options) => (options.client ?? client).post({
+  url: "/instance/tui/publish",
+  ...options,
+  headers: {
+    "Content-Type": "application/json",
+    ...options.headers
+  }
+});
+var tuiSelectSession = (options) => (options.client ?? client).post({
+  url: "/instance/tui/select-session",
+  ...options,
+  headers: {
+    "Content-Type": "application/json",
+    ...options.headers
+  }
+});
+var tuiControlNext = (options) => (options?.client ?? client).get({ url: "/instance/tui/control/next", ...options });
+var tuiControlResponse = (options) => (options.client ?? client).post({
+  url: "/instance/tui/control/response",
+  ...options,
+  headers: {
+    "Content-Type": "application/json",
+    ...options.headers
+  }
+});
 var pathGet = (options) => (options?.client ?? client).get({ url: "/path", ...options });
 var vcsGet = (options) => (options?.client ?? client).get({ url: "/vcs", ...options });
+var vcsWorktreeRemove = (options) => (options.client ?? client).delete({
+  url: "/vcs/worktree",
+  ...options,
+  headers: {
+    "Content-Type": "application/json",
+    ...options.headers
+  }
+});
+var vcsWorktreeCreate = (options) => (options.client ?? client).post({
+  url: "/vcs/worktree",
+  ...options,
+  headers: {
+    "Content-Type": "application/json",
+    ...options.headers
+  }
+});
 var lspStatus = (options) => (options?.client ?? client).get({ url: "/lsp", ...options });
 var formatterStatus = (options) => (options?.client ?? client).get({ url: "/formatter", ...options });
+var skillToolIds = (options) => (options?.client ?? client).get({ url: "/skill/tool-ids", ...options });
+var skillTools = (options) => (options?.client ?? client).get({ url: "/skill/tools", ...options });
 var appSkills = (options) => (options?.client ?? client).get({ url: "/skill", ...options });
 var skillAdd = (options) => (options.client ?? client).post({
   url: "/skill/add",
@@ -1013,7 +1098,40 @@ var skillEval = (options) => (options.client ?? client).post({
 });
 var skillEvalsList = (options) => (options.client ?? client).get({ url: "/skill/{name}/evals", ...options });
 var skillEvalsGet = (options) => (options.client ?? client).get({ url: "/skill/{name}/evals/{id}", ...options });
+var skillRegistry = (options) => (options?.client ?? client).get({ url: "/skill/registry", ...options });
+var skillPublish = (options) => (options.client ?? client).post({
+  url: "/skill/publish",
+  ...options,
+  headers: {
+    "Content-Type": "application/json",
+    ...options.headers
+  }
+});
+var skillInstall = (options) => (options.client ?? client).post({
+  url: "/skill/{id}/install",
+  ...options,
+  headers: {
+    "Content-Type": "application/json",
+    ...options.headers
+  }
+});
 var getV1MemorySearch = (options) => (options?.client ?? client).get({ url: "/memory/search", ...options });
+var putV1MemoryL2ByType = (options) => (options.client ?? client).put({
+  url: "/memory/l2/{type}",
+  ...options,
+  headers: {
+    "Content-Type": "application/json",
+    ...options.headers
+  }
+});
+var putV1MemoryL1BySessionId = (options) => (options.client ?? client).put({
+  url: "/memory/l1/{sessionID}",
+  ...options,
+  headers: {
+    "Content-Type": "application/json",
+    ...options.headers
+  }
+});
 var putV1MemoryByFilename = (options) => (options.client ?? client).put({
   url: "/memory/{filename}",
   ...options,
@@ -1022,6 +1140,60 @@ var putV1MemoryByFilename = (options) => (options.client ?? client).put({
     ...options.headers
   }
 });
+var tokensCount = (options) => (options.client ?? client).post({
+  url: "/tokens/count",
+  ...options,
+  headers: {
+    "Content-Type": "application/json",
+    ...options.headers
+  }
+});
+var engineExecute = (options) => (options.client ?? client).post({
+  url: "/engine/execute",
+  ...options,
+  headers: {
+    "Content-Type": "application/json",
+    ...options.headers
+  }
+});
+var engineWatch = (options) => (options.client ?? client).sse.get({ url: "/engine/watch/{runId}", ...options });
+var engineReceipts = (options) => (options.client ?? client).get({ url: "/engine/receipts/{runId}", ...options });
+var engineSnapshot = (options) => (options.client ?? client).get({ url: "/engine/snapshot/{runId}", ...options });
+var engineRunGet = (options) => (options.client ?? client).get({ url: "/engine/runs/{runId}", ...options });
+var engineRunEvents = (options) => (options.client ?? client).get({ url: "/engine/runs/{runId}/events", ...options });
+var engineRunApproval = (options) => (options.client ?? client).post({
+  url: "/engine/runs/{runId}/approval",
+  ...options,
+  headers: {
+    "Content-Type": "application/json",
+    ...options.headers
+  }
+});
+var engineRunCancel = (options) => (options.client ?? client).post({
+  url: "/engine/runs/{runId}/cancel",
+  ...options,
+  headers: {
+    "Content-Type": "application/json",
+    ...options.headers
+  }
+});
+var engineRunPause = (options) => (options.client ?? client).post({
+  url: "/engine/runs/{runId}/pause",
+  ...options,
+  headers: {
+    "Content-Type": "application/json",
+    ...options.headers
+  }
+});
+var engineRunResume = (options) => (options.client ?? client).post({
+  url: "/engine/runs/{runId}/resume",
+  ...options,
+  headers: {
+    "Content-Type": "application/json",
+    ...options.headers
+  }
+});
+var engineHealth = (options) => (options?.client ?? client).get({ url: "/engine/health", ...options });
 var sandboxGet = (options) => (options.client ?? client).get({ url: "/sandbox/{sessionID}", ...options });
 var sandboxEnable = (options) => (options.client ?? client).post({
   url: "/sandbox/{sessionID}/enable",
@@ -1123,90 +1295,74 @@ var terminalClerkStart = (options) => (options.client ?? client).post({
 var terminalClerkPoll = (options) => (options.client ?? client).get({ url: "/auth/terminal/clerk/poll/{sessionID}", ...options });
 var terminalClerkClaim = (options) => (options.client ?? client).post({ url: "/auth/terminal/clerk/claim/{sessionID}", ...options });
 var terminalClerkCallback = (options) => (options.client ?? client).post({ url: "/auth/terminal/clerk/callback/{sessionID}", ...options });
-var globalHealth = (options) => (options?.client ?? client).get({ url: "/global/health", ...options });
-var globalEvent = (options) => (options?.client ?? client).sse.get({ url: "/global/event", ...options });
-var globalVersion = (options) => (options?.client ?? client).get({ url: "/global/version", ...options });
+var projectListRoot = (options) => (options?.client ?? client).get({ url: "/project", ...options });
+var projectInit = (options) => (options.client ?? client).post({
+  url: "/project/init",
+  ...options,
+  headers: {
+    "Content-Type": "application/json",
+    ...options.headers
+  }
+});
 var projectList = (options) => (options?.client ?? client).get({ url: "/project/list", ...options });
+var projectSessionList = (options) => (options.client ?? client).get({ url: "/project/{projectID}/session", ...options });
+var projectSessionCreate = (options) => (options.client ?? client).post({
+  url: "/project/{projectID}/session",
+  ...options,
+  headers: {
+    "Content-Type": "application/json",
+    ...options.headers
+  }
+});
+var projectSessionDelete = (options) => (options.client ?? client).delete({ url: "/project/{projectID}/session/{sessionID}", ...options });
+var projectSessionGet = (options) => (options.client ?? client).get({ url: "/project/{projectID}/session/{sessionID}", ...options });
+var projectSessionInitialize = (options) => (options.client ?? client).post({
+  url: "/project/{projectID}/session/{sessionID}/init",
+  ...options,
+  headers: {
+    "Content-Type": "application/json",
+    ...options.headers
+  }
+});
+var projectSessionAbort = (options) => (options.client ?? client).post({ url: "/project/{projectID}/session/{sessionID}/abort", ...options });
+var projectSessionUnshare = (options) => (options.client ?? client).delete({ url: "/project/{projectID}/session/{sessionID}/share", ...options });
+var projectSessionShare = (options) => (options.client ?? client).post({ url: "/project/{projectID}/session/{sessionID}/share", ...options });
+var projectSessionCompact = (options) => (options.client ?? client).post({ url: "/project/{projectID}/session/{sessionID}/compact", ...options });
+var projectSessionMessages = (options) => (options.client ?? client).get({ url: "/project/{projectID}/session/{sessionID}/message", ...options });
+var projectSessionMessageCreate = (options) => (options.client ?? client).post({
+  url: "/project/{projectID}/session/{sessionID}/message",
+  ...options,
+  headers: {
+    "Content-Type": "application/json",
+    ...options.headers
+  }
+});
+var projectSessionMessageGet = (options) => (options.client ?? client).get({ url: "/project/{projectID}/session/{sessionID}/message/{messageID}", ...options });
+var projectSessionRevert = (options) => (options.client ?? client).post({
+  url: "/project/{projectID}/session/{sessionID}/revert",
+  ...options,
+  headers: {
+    "Content-Type": "application/json",
+    ...options.headers
+  }
+});
+var projectSessionUnrevert = (options) => (options.client ?? client).post({ url: "/project/{projectID}/session/{sessionID}/unrevert", ...options });
+var projectSessionPermissionReply = (options) => (options.client ?? client).post({
+  url: "/project/{projectID}/session/{sessionID}/permission/{permissionID}",
+  ...options,
+  headers: {
+    "Content-Type": "application/json",
+    ...options.headers
+  }
+});
+var projectSessionFileFind = (options) => (options.client ?? client).get({ url: "/project/{projectID}/session/{sessionID}/find/file", ...options });
+var projectSessionFileStatus = (options) => (options.client ?? client).get({ url: "/project/{projectID}/session/{sessionID}/file/status", ...options });
+var projectSessionFileRead = (options) => (options.client ?? client).get({ url: "/project/{projectID}/session/{sessionID}/file", ...options });
+var projectAgentList = (options) => (options.client ?? client).get({ url: "/project/{projectID}/agent", ...options });
+var projectFindFile = (options) => (options.client ?? client).get({ url: "/project/{projectID}/find/file", ...options });
 var projectGet = (options) => (options.client ?? client).get({ url: "/project/{projectID}", ...options });
 var projectUpdate = (options) => (options.client ?? client).patch({
   url: "/project/{projectID}",
-  ...options,
-  headers: {
-    "Content-Type": "application/json",
-    ...options.headers
-  }
-});
-var toolIds = (options) => (options?.client ?? client).get({ url: "/experimental/tool/ids", ...options });
-var toolList = (options) => (options?.client ?? client).get({ url: "/experimental/tool", ...options });
-var worktreeRemove = (options) => (options.client ?? client).delete({
-  url: "/experimental/worktree",
-  ...options,
-  headers: {
-    "Content-Type": "application/json",
-    ...options.headers
-  }
-});
-var worktreeCreate = (options) => (options.client ?? client).post({
-  url: "/experimental/worktree",
-  ...options,
-  headers: {
-    "Content-Type": "application/json",
-    ...options.headers
-  }
-});
-var worktreeReset = (options) => (options?.client ?? client).post({ url: "/experimental/worktree/reset", ...options });
-var sessionListGlobal = (options) => (options?.client ?? client).get({ url: "/experimental/session/global", ...options });
-var mcpListResources = (options) => (options?.client ?? client).get({ url: "/experimental/mcp/resources", ...options });
-var experimentalResourceList = (options) => (options?.client ?? client).get({ url: "/experimental/resource/list", ...options });
-var tuiAppendPrompt = (options) => (options.client ?? client).post({
-  url: "/tui/append-prompt",
-  ...options,
-  headers: {
-    "Content-Type": "application/json",
-    ...options.headers
-  }
-});
-var tuiOpenHelp = (options) => (options?.client ?? client).post({ url: "/tui/open-help", ...options });
-var tuiOpenSessions = (options) => (options?.client ?? client).post({ url: "/tui/open-sessions", ...options });
-var tuiOpenThemes = (options) => (options?.client ?? client).post({ url: "/tui/open-themes", ...options });
-var tuiOpenModels = (options) => (options?.client ?? client).post({ url: "/tui/open-models", ...options });
-var tuiSubmitPrompt = (options) => (options?.client ?? client).post({ url: "/tui/submit-prompt", ...options });
-var tuiClearPrompt = (options) => (options?.client ?? client).post({ url: "/tui/clear-prompt", ...options });
-var tuiExecuteCommand = (options) => (options.client ?? client).post({
-  url: "/tui/execute-command",
-  ...options,
-  headers: {
-    "Content-Type": "application/json",
-    ...options.headers
-  }
-});
-var tuiShowToast = (options) => (options.client ?? client).post({
-  url: "/tui/show-toast",
-  ...options,
-  headers: {
-    "Content-Type": "application/json",
-    ...options.headers
-  }
-});
-var tuiPublish = (options) => (options.client ?? client).post({
-  url: "/tui/publish",
-  ...options,
-  headers: {
-    "Content-Type": "application/json",
-    ...options.headers
-  }
-});
-var tuiSelectSession = (options) => (options.client ?? client).post({
-  url: "/tui/select-session",
-  ...options,
-  headers: {
-    "Content-Type": "application/json",
-    ...options.headers
-  }
-});
-var tuiControlNext = (options) => (options?.client ?? client).get({ url: "/tui/control/next", ...options });
-var tuiControlResponse = (options) => (options.client ?? client).post({
-  url: "/tui/control/response",
   ...options,
   headers: {
     "Content-Type": "application/json",
@@ -1258,10 +1414,10 @@ var workspaceActivate = (options) => (options.client ?? client).post({
   }
 });
 var workspaceSkills = (options) => (options?.client ?? client).get({ url: "/workspace/skills", ...options });
+var globalHealth = (options) => (options?.client ?? client).get({ url: "/global/health", ...options });
+var globalEvent = (options) => (options?.client ?? client).sse.get({ url: "/global/event", ...options });
+var globalVersion = (options) => (options?.client ?? client).get({ url: "/global/version", ...options });
 export {
-  worktreeReset,
-  worktreeRemove,
-  worktreeCreate,
   workspaceSkills,
   workspaceMemoryPost,
   workspaceMemoryGet,
@@ -1277,6 +1433,8 @@ export {
   vmSessionEnable,
   vmSessionDisable,
   vmSessionDestroy,
+  vcsWorktreeRemove,
+  vcsWorktreeCreate,
   vcsGet,
   userRefresh,
   userOnboard,
@@ -1295,12 +1453,16 @@ export {
   tuiControlNext,
   tuiClearPrompt,
   tuiAppendPrompt,
-  toolList,
-  toolIds,
+  tokensCount,
   terminalClerkStart,
   terminalClerkPoll,
   terminalClerkClaim,
   terminalClerkCallback,
+  skillTools,
+  skillToolIds,
+  skillRegistry,
+  skillPublish,
+  skillInstall,
   skillEvalsList,
   skillEvalsGet,
   skillEval,
@@ -1334,6 +1496,8 @@ export {
   questionReply,
   questionReject,
   questionList,
+  putV1MemoryL2ByType,
+  putV1MemoryL1BySessionId,
   putV1MemoryByFilename,
   ptyList,
   ptyKill,
@@ -1344,35 +1508,73 @@ export {
   providerList,
   providerAuth,
   projectUpdate,
+  projectSessionUnshare,
+  projectSessionUnrevert,
+  projectSessionShare,
+  projectSessionRevert,
+  projectSessionPermissionReply,
+  projectSessionMessages,
+  projectSessionMessageGet,
+  projectSessionMessageCreate,
+  projectSessionList,
+  projectSessionInitialize,
+  projectSessionGet,
+  projectSessionFileStatus,
+  projectSessionFileRead,
+  projectSessionFileFind,
+  projectSessionDelete,
+  projectSessionCreate,
+  projectSessionCompact,
+  projectSessionAbort,
+  projectListRoot,
   projectList,
+  projectInit,
   projectGet,
+  projectFindFile,
+  projectAgentList,
   postV1PluginRemove,
   postV1PluginInstall,
   permissionReply,
   permissionList,
   pathGet,
   mcpStatus,
+  mcpResources,
   mcpRemove,
-  mcpListResources,
   mcpList,
   mcpAdd,
   lspStatus,
   instanceWorkspace,
+  instanceVersion,
   instanceSync,
+  instanceHealth,
   instanceDispose,
   globalVersion,
   globalHealth,
   globalEvent,
   getV1MemorySearch,
   formatterStatus,
+  filesUpload,
+  filesList,
+  filesGet,
+  filesDelete,
   fileTree,
   fileSymbols,
   fileSearch,
   fileRead,
   fileInfo,
   fileGlob,
-  experimentalResourceList,
   eventSubscribe,
+  engineWatch,
+  engineSnapshot,
+  engineRunResume,
+  engineRunPause,
+  engineRunGet,
+  engineRunEvents,
+  engineRunCancel,
+  engineRunApproval,
+  engineReceipts,
+  engineHealth,
+  engineExecute,
   cronWake,
   cronUpdate,
   cronStatus,
@@ -1393,6 +1595,10 @@ export {
   commandList,
   authSet,
   authRemove,
+  assetUpload,
+  assetList,
+  assetGet,
+  assetDelete,
   arsContextaProviders,
   arsContextaInsights,
   arsContextaHealth,

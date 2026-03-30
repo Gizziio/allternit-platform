@@ -24,3 +24,5 @@ _archive/
 coverage/
 build/
 out/
+.vercel
+!cmd/gizzi-code/packages/sdk/dist/

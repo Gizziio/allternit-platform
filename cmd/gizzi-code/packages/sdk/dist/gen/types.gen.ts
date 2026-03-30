@@ -4,6 +4,20 @@ export type ClientOptions = {
     baseUrl: `${string}://${string}` | (string & {});
 };
 
+export type SessionListGlobalData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/session/global';
+};
+
+export type SessionListGlobalResponses = {
+    /**
+     * Global sessions
+     */
+    200: unknown;
+};
+
 export type SessionListData = {
     body?: never;
     path?: never;
@@ -966,6 +980,20 @@ export type McpAddResponses = {
     200: unknown;
 };
 
+export type McpResourcesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/mcp/resources';
+};
+
+export type McpResourcesResponses = {
+    /**
+     * MCP resources
+     */
+    200: unknown;
+};
+
 export type McpRemoveData = {
     body?: never;
     path: {
@@ -1637,6 +1665,265 @@ export type FileInfoResponses = {
     200: unknown;
 };
 
+export type AssetUploadData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/assets/upload';
+};
+
+export type AssetUploadErrors = {
+    /**
+     * Bad request
+     */
+    400: {
+        data: unknown;
+        errors: Array<{
+            [key: string]: unknown;
+        }>;
+        success: false;
+    };
+};
+
+export type AssetUploadError = AssetUploadErrors[keyof AssetUploadErrors];
+
+export type AssetUploadResponses = {
+    /**
+     * Uploaded asset metadata
+     */
+    200: {
+        id: string;
+        filename: string;
+        size: number;
+        media_type: string;
+        created_at: number;
+        storage_uri: string;
+    };
+};
+
+export type AssetUploadResponse = AssetUploadResponses[keyof AssetUploadResponses];
+
+export type AssetListData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/assets';
+};
+
+export type AssetListResponses = {
+    /**
+     * Asset list
+     */
+    200: Array<{
+        id: string;
+        filename: string;
+        size: number;
+        media_type: string;
+        created_at: number;
+        storage_uri: string;
+    }>;
+};
+
+export type AssetListResponse = AssetListResponses[keyof AssetListResponses];
+
+export type AssetDeleteData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/assets/{id}';
+};
+
+export type AssetDeleteErrors = {
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type AssetDeleteError = AssetDeleteErrors[keyof AssetDeleteErrors];
+
+export type AssetDeleteResponses = {
+    /**
+     * Deletion result
+     */
+    200: {
+        deleted: boolean;
+    };
+};
+
+export type AssetDeleteResponse = AssetDeleteResponses[keyof AssetDeleteResponses];
+
+export type AssetGetData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/assets/{id}';
+};
+
+export type AssetGetErrors = {
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type AssetGetError = AssetGetErrors[keyof AssetGetErrors];
+
+export type AssetGetResponses = {
+    /**
+     * Asset metadata
+     */
+    200: {
+        id: string;
+        filename: string;
+        size: number;
+        media_type: string;
+        created_at: number;
+        storage_uri: string;
+    };
+};
+
+export type AssetGetResponse = AssetGetResponses[keyof AssetGetResponses];
+
+export type FilesListData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/files';
+};
+
+export type FilesListResponses = {
+    /**
+     * File metadata list
+     */
+    200: Array<{
+        id: string;
+        filename: string;
+        created_at: number;
+        size: number;
+        media_type: string;
+        storage_uri: string;
+        content_hash: string;
+    }>;
+};
+
+export type FilesListResponse = FilesListResponses[keyof FilesListResponses];
+
+export type FilesUploadData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/files';
+};
+
+export type FilesUploadErrors = {
+    /**
+     * Bad request
+     */
+    400: {
+        data: unknown;
+        errors: Array<{
+            [key: string]: unknown;
+        }>;
+        success: false;
+    };
+};
+
+export type FilesUploadError = FilesUploadErrors[keyof FilesUploadErrors];
+
+export type FilesUploadResponses = {
+    /**
+     * Uploaded file metadata
+     */
+    200: {
+        id: string;
+        filename: string;
+        created_at: number;
+        size: number;
+        media_type: string;
+        storage_uri: string;
+        content_hash: string;
+    };
+};
+
+export type FilesUploadResponse = FilesUploadResponses[keyof FilesUploadResponses];
+
+export type FilesDeleteData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/files/{id}';
+};
+
+export type FilesDeleteErrors = {
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type FilesDeleteError = FilesDeleteErrors[keyof FilesDeleteErrors];
+
+export type FilesDeleteResponses = {
+    /**
+     * Deletion result
+     */
+    200: {
+        ok: boolean;
+    };
+};
+
+export type FilesDeleteResponse = FilesDeleteResponses[keyof FilesDeleteResponses];
+
+export type FilesGetData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/files/{id}';
+};
+
+export type FilesGetErrors = {
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type FilesGetError = FilesGetErrors[keyof FilesGetErrors];
+
+export type FilesGetResponses = {
+    /**
+     * File metadata
+     */
+    200: {
+        id: string;
+        filename: string;
+        created_at: number;
+        size: number;
+        media_type: string;
+        storage_uri: string;
+        content_hash: string;
+    };
+};
+
+export type FilesGetResponse = FilesGetResponses[keyof FilesGetResponses];
+
 export type UserGetData = {
     body?: never;
     path?: never;
@@ -1865,6 +2152,291 @@ export type InstanceWorkspaceResponses = {
     200: unknown;
 };
 
+export type InstanceVersionData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/instance/version';
+};
+
+export type InstanceVersionResponses = {
+    /**
+     * Version info
+     */
+    200: {
+        version: string;
+    };
+};
+
+export type InstanceVersionResponse = InstanceVersionResponses[keyof InstanceVersionResponses];
+
+export type InstanceHealthData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/instance/health';
+};
+
+export type InstanceHealthResponses = {
+    /**
+     * Health info
+     */
+    200: {
+        healthy: boolean;
+        version: string;
+    };
+};
+
+export type InstanceHealthResponse = InstanceHealthResponses[keyof InstanceHealthResponses];
+
+export type TuiAppendPromptData = {
+    body: unknown;
+    path?: never;
+    query?: never;
+    url: '/instance/tui/append-prompt';
+};
+
+export type TuiAppendPromptErrors = {
+    /**
+     * Bad request
+     */
+    400: {
+        data: unknown;
+        errors: Array<{
+            [key: string]: unknown;
+        }>;
+        success: false;
+    };
+};
+
+export type TuiAppendPromptError = TuiAppendPromptErrors[keyof TuiAppendPromptErrors];
+
+export type TuiAppendPromptResponses = {
+    /**
+     * Prompt processed successfully
+     */
+    200: unknown;
+};
+
+export type TuiOpenHelpData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/instance/tui/open-help';
+};
+
+export type TuiOpenHelpResponses = {
+    /**
+     * Help dialog opened successfully
+     */
+    200: unknown;
+};
+
+export type TuiOpenSessionsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/instance/tui/open-sessions';
+};
+
+export type TuiOpenSessionsResponses = {
+    /**
+     * Session dialog opened successfully
+     */
+    200: unknown;
+};
+
+export type TuiOpenThemesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/instance/tui/open-themes';
+};
+
+export type TuiOpenThemesResponses = {
+    /**
+     * Theme dialog opened successfully
+     */
+    200: unknown;
+};
+
+export type TuiOpenModelsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/instance/tui/open-models';
+};
+
+export type TuiOpenModelsResponses = {
+    /**
+     * Model dialog opened successfully
+     */
+    200: unknown;
+};
+
+export type TuiSubmitPromptData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/instance/tui/submit-prompt';
+};
+
+export type TuiSubmitPromptResponses = {
+    /**
+     * Prompt submitted successfully
+     */
+    200: unknown;
+};
+
+export type TuiClearPromptData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/instance/tui/clear-prompt';
+};
+
+export type TuiClearPromptResponses = {
+    /**
+     * Prompt cleared successfully
+     */
+    200: unknown;
+};
+
+export type TuiExecuteCommandData = {
+    body: unknown;
+    path?: never;
+    query?: never;
+    url: '/instance/tui/execute-command';
+};
+
+export type TuiExecuteCommandErrors = {
+    /**
+     * Bad request
+     */
+    400: {
+        data: unknown;
+        errors: Array<{
+            [key: string]: unknown;
+        }>;
+        success: false;
+    };
+};
+
+export type TuiExecuteCommandError = TuiExecuteCommandErrors[keyof TuiExecuteCommandErrors];
+
+export type TuiExecuteCommandResponses = {
+    /**
+     * Command executed successfully
+     */
+    200: unknown;
+};
+
+export type TuiShowToastData = {
+    body: unknown;
+    path?: never;
+    query?: never;
+    url: '/instance/tui/show-toast';
+};
+
+export type TuiShowToastResponses = {
+    /**
+     * Toast notification shown successfully
+     */
+    200: unknown;
+};
+
+export type TuiPublishData = {
+    body: unknown;
+    path?: never;
+    query?: never;
+    url: '/instance/tui/publish';
+};
+
+export type TuiPublishErrors = {
+    /**
+     * Bad request
+     */
+    400: {
+        data: unknown;
+        errors: Array<{
+            [key: string]: unknown;
+        }>;
+        success: false;
+    };
+};
+
+export type TuiPublishError = TuiPublishErrors[keyof TuiPublishErrors];
+
+export type TuiPublishResponses = {
+    /**
+     * Event published successfully
+     */
+    200: unknown;
+};
+
+export type TuiSelectSessionData = {
+    body: unknown;
+    path?: never;
+    query?: never;
+    url: '/instance/tui/select-session';
+};
+
+export type TuiSelectSessionErrors = {
+    /**
+     * Bad request
+     */
+    400: {
+        data: unknown;
+        errors: Array<{
+            [key: string]: unknown;
+        }>;
+        success: false;
+    };
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type TuiSelectSessionError = TuiSelectSessionErrors[keyof TuiSelectSessionErrors];
+
+export type TuiSelectSessionResponses = {
+    /**
+     * Session selected successfully
+     */
+    200: unknown;
+};
+
+export type TuiControlNextData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/instance/tui/control/next';
+};
+
+export type TuiControlNextResponses = {
+    /**
+     * Next TUI request
+     */
+    200: unknown;
+};
+
+export type TuiControlResponseData = {
+    body: unknown;
+    path?: never;
+    query?: never;
+    url: '/instance/tui/control/response';
+};
+
+export type TuiControlResponseResponses = {
+    /**
+     * Response submitted successfully
+     */
+    200: unknown;
+};
+
 export type PathGetData = {
     body?: never;
     path?: never;
@@ -1877,11 +2449,13 @@ export type PathGetResponses = {
      * Path
      */
     200: {
-        home: string;
-        state: string;
-        config: string;
-        worktree: string;
-        directory: string;
+        data: {
+            home: string;
+            state: string;
+            config: string;
+            worktree: string;
+            directory: string;
+        };
     };
 };
 
@@ -1904,6 +2478,36 @@ export type VcsGetResponses = {
 };
 
 export type VcsGetResponse = VcsGetResponses[keyof VcsGetResponses];
+
+export type VcsWorktreeRemoveData = {
+    body: unknown;
+    path?: never;
+    query?: never;
+    url: '/vcs/worktree';
+};
+
+export type VcsWorktreeRemoveResponses = {
+    /**
+     * Worktree removed
+     */
+    200: boolean;
+};
+
+export type VcsWorktreeRemoveResponse = VcsWorktreeRemoveResponses[keyof VcsWorktreeRemoveResponses];
+
+export type VcsWorktreeCreateData = {
+    body: unknown;
+    path?: never;
+    query?: never;
+    url: '/vcs/worktree';
+};
+
+export type VcsWorktreeCreateResponses = {
+    /**
+     * Worktree created
+     */
+    200: unknown;
+};
 
 export type LspStatusData = {
     body?: never;
@@ -1945,6 +2549,39 @@ export type FormatterStatusResponses = {
 };
 
 export type FormatterStatusResponse = FormatterStatusResponses[keyof FormatterStatusResponses];
+
+export type SkillToolIdsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/skill/tool-ids';
+};
+
+export type SkillToolIdsResponses = {
+    /**
+     * Tool IDs
+     */
+    200: Array<string>;
+};
+
+export type SkillToolIdsResponse = SkillToolIdsResponses[keyof SkillToolIdsResponses];
+
+export type SkillToolsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        provider?: string;
+        model?: string;
+    };
+    url: '/skill/tools';
+};
+
+export type SkillToolsResponses = {
+    /**
+     * Tools
+     */
+    200: unknown;
+};
 
 export type AppSkillsData = {
     body?: never;
@@ -2094,6 +2731,124 @@ export type SkillEvalsGetResponses = {
     200: unknown;
 };
 
+export type SkillRegistryData = {
+    body?: never;
+    path?: never;
+    query?: {
+        page?: number;
+        page_size?: number;
+    };
+    url: '/skill/registry';
+};
+
+export type SkillRegistryResponses = {
+    /**
+     * Public skill registry
+     */
+    200: {
+        skills: Array<{
+            id: string;
+            name: string;
+            version: string;
+            description: string;
+            tags: Array<string>;
+            author: string;
+            risk_tier: string;
+            downloads: number;
+            package_url?: string;
+            status?: string;
+        }>;
+        total: number;
+        page: number;
+        page_size: number;
+    };
+};
+
+export type SkillRegistryResponse = SkillRegistryResponses[keyof SkillRegistryResponses];
+
+export type SkillPublishData = {
+    body: {
+        manifest: {
+            [key: string]: unknown;
+        };
+        package_url: string;
+        signature: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/skill/publish';
+};
+
+export type SkillPublishErrors = {
+    /**
+     * Bad request
+     */
+    400: {
+        data: unknown;
+        errors: Array<{
+            [key: string]: unknown;
+        }>;
+        success: false;
+    };
+};
+
+export type SkillPublishError = SkillPublishErrors[keyof SkillPublishErrors];
+
+export type SkillPublishResponses = {
+    /**
+     * Published skill summary
+     */
+    200: {
+        id: string;
+        name: string;
+        version: string;
+        description: string;
+        tags: Array<string>;
+        author: string;
+        risk_tier: string;
+        downloads: number;
+        package_url?: string;
+        status?: string;
+    };
+};
+
+export type SkillPublishResponse = SkillPublishResponses[keyof SkillPublishResponses];
+
+export type SkillInstallData = {
+    body: {
+        version?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/skill/{id}/install';
+};
+
+export type SkillInstallErrors = {
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type SkillInstallError = SkillInstallErrors[keyof SkillInstallErrors];
+
+export type SkillInstallResponses = {
+    /**
+     * Install receipt
+     */
+    200: {
+        installed: boolean;
+        id: string;
+        version: string;
+    };
+};
+
+export type SkillInstallResponse = SkillInstallResponses[keyof SkillInstallResponses];
+
 export type GetV1MemorySearchData = {
     body?: never;
     path?: never;
@@ -2104,6 +2859,36 @@ export type GetV1MemorySearchData = {
 };
 
 export type GetV1MemorySearchResponses = {
+    200: unknown;
+};
+
+export type PutV1MemoryL2ByTypeData = {
+    body: {
+        content: string;
+    };
+    path: {
+        type: string;
+    };
+    query?: never;
+    url: '/memory/l2/{type}';
+};
+
+export type PutV1MemoryL2ByTypeResponses = {
+    200: unknown;
+};
+
+export type PutV1MemoryL1BySessionIdData = {
+    body: {
+        content: string;
+    };
+    path: {
+        sessionID: string;
+    };
+    query?: never;
+    url: '/memory/l1/{sessionID}';
+};
+
+export type PutV1MemoryL1BySessionIdResponses = {
     200: unknown;
 };
 
@@ -2124,6 +2909,533 @@ export type PutV1MemoryByFilenameData = {
 export type PutV1MemoryByFilenameResponses = {
     200: unknown;
 };
+
+export type TokensCountData = {
+    body: {
+        model?: string;
+        system?: string;
+        messages: Array<unknown>;
+        tools?: Array<unknown>;
+    };
+    path?: never;
+    query?: never;
+    url: '/tokens/count';
+};
+
+export type TokensCountResponses = {
+    /**
+     * Estimated token counts
+     */
+    200: {
+        input_tokens: number;
+        cache_read_tokens?: number;
+        cache_write_tokens?: number;
+    };
+};
+
+export type TokensCountResponse = TokensCountResponses[keyof TokensCountResponses];
+
+export type EngineExecuteData = {
+    body: {
+        mode: string;
+        task: string;
+        target_scope?: string;
+        metadata?: {
+            [key: string]: unknown;
+        };
+    };
+    path?: never;
+    query?: never;
+    url: '/engine/execute';
+};
+
+export type EngineExecuteErrors = {
+    /**
+     * Bad request
+     */
+    400: {
+        data: unknown;
+        errors: Array<{
+            [key: string]: unknown;
+        }>;
+        success: false;
+    };
+};
+
+export type EngineExecuteError = EngineExecuteErrors[keyof EngineExecuteErrors];
+
+export type EngineExecuteResponses = {
+    /**
+     * Accepted run
+     */
+    200: {
+        run_id: string;
+        status: string;
+    };
+};
+
+export type EngineExecuteResponse = EngineExecuteResponses[keyof EngineExecuteResponses];
+
+export type EngineWatchData = {
+    body?: never;
+    path: {
+        runId: string;
+    };
+    query?: never;
+    url: '/engine/watch/{runId}';
+};
+
+export type EngineWatchErrors = {
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type EngineWatchError = EngineWatchErrors[keyof EngineWatchErrors];
+
+export type EngineWatchResponses = {
+    /**
+     * SSE event stream
+     */
+    200: {
+        run_id: string;
+        status: string;
+        completed: boolean;
+        next_index: number;
+        events: Array<{
+            event_type: string;
+            timestamp: string;
+            data?: {
+                [key: string]: unknown;
+            };
+        }>;
+    };
+};
+
+export type EngineWatchResponse = EngineWatchResponses[keyof EngineWatchResponses];
+
+export type EngineReceiptsData = {
+    body?: never;
+    path: {
+        runId: string;
+    };
+    query?: never;
+    url: '/engine/receipts/{runId}';
+};
+
+export type EngineReceiptsErrors = {
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type EngineReceiptsError = EngineReceiptsErrors[keyof EngineReceiptsErrors];
+
+export type EngineReceiptsResponses = {
+    /**
+     * Run receipts
+     */
+    200: unknown;
+};
+
+export type EngineSnapshotData = {
+    body?: never;
+    path: {
+        runId: string;
+    };
+    query?: never;
+    url: '/engine/snapshot/{runId}';
+};
+
+export type EngineSnapshotErrors = {
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type EngineSnapshotError = EngineSnapshotErrors[keyof EngineSnapshotErrors];
+
+export type EngineSnapshotResponses = {
+    /**
+     * Run snapshot
+     */
+    200: {
+        run_id: string;
+        session_id: string;
+        mode: string;
+        task: string;
+        target_scope?: string;
+        status: 'pending' | 'running' | 'needs_approval' | 'paused' | 'completed' | 'failed' | 'cancelled';
+        created_at: string;
+        updated_at: string;
+        completed_at?: string;
+        summary?: string;
+        receipts?: Array<unknown>;
+        artifacts?: Array<unknown>;
+        result?: unknown;
+        error?: {
+            [key: string]: unknown;
+        };
+        events?: Array<{
+            event_type: string;
+            timestamp: string;
+            data?: {
+                [key: string]: unknown;
+            };
+        }>;
+    };
+};
+
+export type EngineSnapshotResponse = EngineSnapshotResponses[keyof EngineSnapshotResponses];
+
+export type EngineRunGetData = {
+    body?: never;
+    path: {
+        runId: string;
+    };
+    query?: never;
+    url: '/engine/runs/{runId}';
+};
+
+export type EngineRunGetErrors = {
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type EngineRunGetError = EngineRunGetErrors[keyof EngineRunGetErrors];
+
+export type EngineRunGetResponses = {
+    /**
+     * Run snapshot
+     */
+    200: {
+        run_id: string;
+        session_id: string;
+        mode: string;
+        task: string;
+        target_scope?: string;
+        status: 'pending' | 'running' | 'needs_approval' | 'paused' | 'completed' | 'failed' | 'cancelled';
+        created_at: string;
+        updated_at: string;
+        completed_at?: string;
+        summary?: string;
+        receipts?: Array<unknown>;
+        artifacts?: Array<unknown>;
+        result?: unknown;
+        error?: {
+            [key: string]: unknown;
+        };
+        events?: Array<{
+            event_type: string;
+            timestamp: string;
+            data?: {
+                [key: string]: unknown;
+            };
+        }>;
+    };
+};
+
+export type EngineRunGetResponse = EngineRunGetResponses[keyof EngineRunGetResponses];
+
+export type EngineRunEventsData = {
+    body?: never;
+    path: {
+        runId: string;
+    };
+    query?: {
+        next_index?: number;
+    };
+    url: '/engine/runs/{runId}/events';
+};
+
+export type EngineRunEventsErrors = {
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type EngineRunEventsError = EngineRunEventsErrors[keyof EngineRunEventsErrors];
+
+export type EngineRunEventsResponses = {
+    /**
+     * Run event batch
+     */
+    200: {
+        run_id: string;
+        status: string;
+        completed: boolean;
+        next_index: number;
+        events: Array<{
+            event_type: string;
+            timestamp: string;
+            data?: {
+                [key: string]: unknown;
+            };
+        }>;
+    };
+};
+
+export type EngineRunEventsResponse = EngineRunEventsResponses[keyof EngineRunEventsResponses];
+
+export type EngineRunApprovalData = {
+    body: {
+        decision: 'approve' | 'deny';
+        approver_id?: string;
+        comment?: string;
+    };
+    path: {
+        runId: string;
+    };
+    query?: never;
+    url: '/engine/runs/{runId}/approval';
+};
+
+export type EngineRunApprovalErrors = {
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type EngineRunApprovalError = EngineRunApprovalErrors[keyof EngineRunApprovalErrors];
+
+export type EngineRunApprovalResponses = {
+    /**
+     * Updated run snapshot
+     */
+    200: {
+        run_id: string;
+        session_id: string;
+        mode: string;
+        task: string;
+        target_scope?: string;
+        status: 'pending' | 'running' | 'needs_approval' | 'paused' | 'completed' | 'failed' | 'cancelled';
+        created_at: string;
+        updated_at: string;
+        completed_at?: string;
+        summary?: string;
+        receipts?: Array<unknown>;
+        artifacts?: Array<unknown>;
+        result?: unknown;
+        error?: {
+            [key: string]: unknown;
+        };
+        events?: Array<{
+            event_type: string;
+            timestamp: string;
+            data?: {
+                [key: string]: unknown;
+            };
+        }>;
+    };
+};
+
+export type EngineRunApprovalResponse = EngineRunApprovalResponses[keyof EngineRunApprovalResponses];
+
+export type EngineRunCancelData = {
+    body: {
+        approver_id?: string;
+        comment?: string;
+    };
+    path: {
+        runId: string;
+    };
+    query?: never;
+    url: '/engine/runs/{runId}/cancel';
+};
+
+export type EngineRunCancelErrors = {
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type EngineRunCancelError = EngineRunCancelErrors[keyof EngineRunCancelErrors];
+
+export type EngineRunCancelResponses = {
+    /**
+     * Updated run snapshot
+     */
+    200: {
+        run_id: string;
+        session_id: string;
+        mode: string;
+        task: string;
+        target_scope?: string;
+        status: 'pending' | 'running' | 'needs_approval' | 'paused' | 'completed' | 'failed' | 'cancelled';
+        created_at: string;
+        updated_at: string;
+        completed_at?: string;
+        summary?: string;
+        receipts?: Array<unknown>;
+        artifacts?: Array<unknown>;
+        result?: unknown;
+        error?: {
+            [key: string]: unknown;
+        };
+        events?: Array<{
+            event_type: string;
+            timestamp: string;
+            data?: {
+                [key: string]: unknown;
+            };
+        }>;
+    };
+};
+
+export type EngineRunCancelResponse = EngineRunCancelResponses[keyof EngineRunCancelResponses];
+
+export type EngineRunPauseData = {
+    body: {
+        approver_id?: string;
+        comment?: string;
+    };
+    path: {
+        runId: string;
+    };
+    query?: never;
+    url: '/engine/runs/{runId}/pause';
+};
+
+export type EngineRunPauseErrors = {
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type EngineRunPauseError = EngineRunPauseErrors[keyof EngineRunPauseErrors];
+
+export type EngineRunPauseResponses = {
+    /**
+     * Updated run snapshot
+     */
+    200: {
+        run_id: string;
+        session_id: string;
+        mode: string;
+        task: string;
+        target_scope?: string;
+        status: 'pending' | 'running' | 'needs_approval' | 'paused' | 'completed' | 'failed' | 'cancelled';
+        created_at: string;
+        updated_at: string;
+        completed_at?: string;
+        summary?: string;
+        receipts?: Array<unknown>;
+        artifacts?: Array<unknown>;
+        result?: unknown;
+        error?: {
+            [key: string]: unknown;
+        };
+        events?: Array<{
+            event_type: string;
+            timestamp: string;
+            data?: {
+                [key: string]: unknown;
+            };
+        }>;
+    };
+};
+
+export type EngineRunPauseResponse = EngineRunPauseResponses[keyof EngineRunPauseResponses];
+
+export type EngineRunResumeData = {
+    body: {
+        approver_id?: string;
+        comment?: string;
+    };
+    path: {
+        runId: string;
+    };
+    query?: never;
+    url: '/engine/runs/{runId}/resume';
+};
+
+export type EngineRunResumeErrors = {
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type EngineRunResumeError = EngineRunResumeErrors[keyof EngineRunResumeErrors];
+
+export type EngineRunResumeResponses = {
+    /**
+     * Updated run snapshot
+     */
+    200: {
+        run_id: string;
+        session_id: string;
+        mode: string;
+        task: string;
+        target_scope?: string;
+        status: 'pending' | 'running' | 'needs_approval' | 'paused' | 'completed' | 'failed' | 'cancelled';
+        created_at: string;
+        updated_at: string;
+        completed_at?: string;
+        summary?: string;
+        receipts?: Array<unknown>;
+        artifacts?: Array<unknown>;
+        result?: unknown;
+        error?: {
+            [key: string]: unknown;
+        };
+        events?: Array<{
+            event_type: string;
+            timestamp: string;
+            data?: {
+                [key: string]: unknown;
+            };
+        }>;
+    };
+};
+
+export type EngineRunResumeResponse = EngineRunResumeResponses[keyof EngineRunResumeResponses];
+
+export type EngineHealthData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/engine/health';
+};
+
+export type EngineHealthResponses = {
+    /**
+     * Engine health
+     */
+    200: {
+        status: string;
+        type: string;
+    };
+};
+
+export type EngineHealthResponse = EngineHealthResponses[keyof EngineHealthResponses];
 
 export type SandboxGetData = {
     body?: never;
@@ -2925,6 +4237,13 @@ export type EventSubscribeResponses = {
             };
         };
     } | {
+        type: 'tool.arg_delta';
+        properties: {
+            tool_call_id: string;
+            delta: string;
+            done: boolean;
+        };
+    } | {
         type: 'session.compacted';
         properties: {
             sessionID: string;
@@ -2932,8 +4251,9 @@ export type EventSubscribeResponses = {
     } | {
         type: 'memory.updated';
         properties: {
-            filepath: string;
-            action: 'save' | 'delete';
+            filename: string;
+            name: string;
+            type: string;
         };
     } | {
         type: 'file.edited';
@@ -3118,6 +4438,7 @@ export type EventSubscribeResponses = {
                     diff?: string;
                 };
                 agentID?: string;
+                surface?: 'chat' | 'cowork' | 'code' | 'browser';
             };
         };
     } | {
@@ -3165,6 +4486,7 @@ export type EventSubscribeResponses = {
                     diff?: string;
                 };
                 agentID?: string;
+                surface?: 'chat' | 'cowork' | 'code' | 'browser';
             };
         };
     } | {
@@ -3212,6 +4534,7 @@ export type EventSubscribeResponses = {
                     diff?: string;
                 };
                 agentID?: string;
+                surface?: 'chat' | 'cowork' | 'code' | 'browser';
             };
         };
     } | {
@@ -3298,6 +4621,36 @@ export type EventSubscribeResponses = {
         type: 'worktree.failed';
         properties: {
             message: string;
+        };
+    } | {
+        type: 'memory.l2.updated';
+        properties: {
+            type: string;
+            label: string;
+        };
+    } | {
+        type: 'memory.l1.updated';
+        properties: {
+            sessionID: string;
+        };
+    } | {
+        type: 'memory.deleted';
+        properties: {
+            filename: string;
+        };
+    } | {
+        type: 'verification.completed';
+        properties: {
+            sessionId: string;
+            passed: boolean;
+            confidence: string;
+            mode: string;
+        };
+    } | {
+        type: 'verification.confirmed';
+        properties: {
+            id: string;
+            correct: boolean;
         };
     };
 };
@@ -3644,6 +4997,922 @@ export type TerminalClerkCallbackResponses = {
 };
 
 export type TerminalClerkCallbackResponse = TerminalClerkCallbackResponses[keyof TerminalClerkCallbackResponses];
+
+export type ProjectListRootData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/project';
+};
+
+export type ProjectListRootResponses = {
+    /**
+     * List of projects
+     */
+    200: unknown;
+};
+
+export type ProjectInitData = {
+    body: unknown;
+    path?: never;
+    query?: never;
+    url: '/project/init';
+};
+
+export type ProjectInitErrors = {
+    /**
+     * Bad request
+     */
+    400: {
+        data: unknown;
+        errors: Array<{
+            [key: string]: unknown;
+        }>;
+        success: false;
+    };
+};
+
+export type ProjectInitError = ProjectInitErrors[keyof ProjectInitErrors];
+
+export type ProjectInitResponses = {
+    /**
+     * Initialized project
+     */
+    200: unknown;
+};
+
+export type ProjectListData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/project/list';
+};
+
+export type ProjectListResponses = {
+    /**
+     * List of projects
+     */
+    200: unknown;
+};
+
+export type ProjectSessionListData = {
+    body?: never;
+    path: {
+        projectID: string;
+    };
+    query?: never;
+    url: '/project/{projectID}/session';
+};
+
+export type ProjectSessionListErrors = {
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type ProjectSessionListError = ProjectSessionListErrors[keyof ProjectSessionListErrors];
+
+export type ProjectSessionListResponses = {
+    /**
+     * List of sessions
+     */
+    200: unknown;
+};
+
+export type ProjectSessionCreateData = {
+    body: unknown;
+    path: {
+        projectID: string;
+    };
+    query?: never;
+    url: '/project/{projectID}/session';
+};
+
+export type ProjectSessionCreateErrors = {
+    /**
+     * Bad request
+     */
+    400: {
+        data: unknown;
+        errors: Array<{
+            [key: string]: unknown;
+        }>;
+        success: false;
+    };
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type ProjectSessionCreateError = ProjectSessionCreateErrors[keyof ProjectSessionCreateErrors];
+
+export type ProjectSessionCreateResponses = {
+    /**
+     * Created session
+     */
+    200: unknown;
+};
+
+export type ProjectSessionDeleteData = {
+    body?: never;
+    path: {
+        projectID: string;
+        sessionID: string;
+    };
+    query?: never;
+    url: '/project/{projectID}/session/{sessionID}';
+};
+
+export type ProjectSessionDeleteErrors = {
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type ProjectSessionDeleteError = ProjectSessionDeleteErrors[keyof ProjectSessionDeleteErrors];
+
+export type ProjectSessionDeleteResponses = {
+    /**
+     * Session deleted
+     */
+    200: unknown;
+};
+
+export type ProjectSessionGetData = {
+    body?: never;
+    path: {
+        projectID: string;
+        sessionID: string;
+    };
+    query?: never;
+    url: '/project/{projectID}/session/{sessionID}';
+};
+
+export type ProjectSessionGetErrors = {
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type ProjectSessionGetError = ProjectSessionGetErrors[keyof ProjectSessionGetErrors];
+
+export type ProjectSessionGetResponses = {
+    /**
+     * Session details
+     */
+    200: unknown;
+};
+
+export type ProjectSessionInitializeData = {
+    body: unknown;
+    path: {
+        projectID: string;
+        sessionID: string;
+    };
+    query?: never;
+    url: '/project/{projectID}/session/{sessionID}/init';
+};
+
+export type ProjectSessionInitializeErrors = {
+    /**
+     * Bad request
+     */
+    400: {
+        data: unknown;
+        errors: Array<{
+            [key: string]: unknown;
+        }>;
+        success: false;
+    };
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type ProjectSessionInitializeError = ProjectSessionInitializeErrors[keyof ProjectSessionInitializeErrors];
+
+export type ProjectSessionInitializeResponses = {
+    /**
+     * Session initialized
+     */
+    200: unknown;
+};
+
+export type ProjectSessionAbortData = {
+    body?: never;
+    path: {
+        projectID: string;
+        sessionID: string;
+    };
+    query?: never;
+    url: '/project/{projectID}/session/{sessionID}/abort';
+};
+
+export type ProjectSessionAbortErrors = {
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type ProjectSessionAbortError = ProjectSessionAbortErrors[keyof ProjectSessionAbortErrors];
+
+export type ProjectSessionAbortResponses = {
+    /**
+     * Session aborted
+     */
+    200: unknown;
+};
+
+export type ProjectSessionUnshareData = {
+    body?: never;
+    path: {
+        projectID: string;
+        sessionID: string;
+    };
+    query?: never;
+    url: '/project/{projectID}/session/{sessionID}/share';
+};
+
+export type ProjectSessionUnshareErrors = {
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type ProjectSessionUnshareError = ProjectSessionUnshareErrors[keyof ProjectSessionUnshareErrors];
+
+export type ProjectSessionUnshareResponses = {
+    /**
+     * Session unshared
+     */
+    200: unknown;
+};
+
+export type ProjectSessionShareData = {
+    body?: never;
+    path: {
+        projectID: string;
+        sessionID: string;
+    };
+    query?: never;
+    url: '/project/{projectID}/session/{sessionID}/share';
+};
+
+export type ProjectSessionShareErrors = {
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type ProjectSessionShareError = ProjectSessionShareErrors[keyof ProjectSessionShareErrors];
+
+export type ProjectSessionShareResponses = {
+    /**
+     * Session shared
+     */
+    200: unknown;
+};
+
+export type ProjectSessionCompactData = {
+    body?: never;
+    path: {
+        projectID: string;
+        sessionID: string;
+    };
+    query?: never;
+    url: '/project/{projectID}/session/{sessionID}/compact';
+};
+
+export type ProjectSessionCompactErrors = {
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type ProjectSessionCompactError = ProjectSessionCompactErrors[keyof ProjectSessionCompactErrors];
+
+export type ProjectSessionCompactResponses = {
+    /**
+     * Session compacted
+     */
+    200: unknown;
+};
+
+export type ProjectSessionMessagesData = {
+    body?: never;
+    path: {
+        projectID: string;
+        sessionID: string;
+    };
+    query?: never;
+    url: '/project/{projectID}/session/{sessionID}/message';
+};
+
+export type ProjectSessionMessagesErrors = {
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type ProjectSessionMessagesError = ProjectSessionMessagesErrors[keyof ProjectSessionMessagesErrors];
+
+export type ProjectSessionMessagesResponses = {
+    /**
+     * List of messages
+     */
+    200: unknown;
+};
+
+export type ProjectSessionMessageCreateData = {
+    body: unknown;
+    path: {
+        projectID: string;
+        sessionID: string;
+    };
+    query?: never;
+    url: '/project/{projectID}/session/{sessionID}/message';
+};
+
+export type ProjectSessionMessageCreateErrors = {
+    /**
+     * Bad request
+     */
+    400: {
+        data: unknown;
+        errors: Array<{
+            [key: string]: unknown;
+        }>;
+        success: false;
+    };
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type ProjectSessionMessageCreateError = ProjectSessionMessageCreateErrors[keyof ProjectSessionMessageCreateErrors];
+
+export type ProjectSessionMessageCreateResponses = {
+    /**
+     * Message sent
+     */
+    200: unknown;
+};
+
+export type ProjectSessionMessageGetData = {
+    body?: never;
+    path: {
+        projectID: string;
+        sessionID: string;
+        messageID: string;
+    };
+    query?: never;
+    url: '/project/{projectID}/session/{sessionID}/message/{messageID}';
+};
+
+export type ProjectSessionMessageGetErrors = {
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type ProjectSessionMessageGetError = ProjectSessionMessageGetErrors[keyof ProjectSessionMessageGetErrors];
+
+export type ProjectSessionMessageGetResponses = {
+    /**
+     * Message with parts
+     */
+    200: unknown;
+};
+
+export type ProjectSessionRevertData = {
+    body: unknown;
+    path: {
+        projectID: string;
+        sessionID: string;
+    };
+    query?: never;
+    url: '/project/{projectID}/session/{sessionID}/revert';
+};
+
+export type ProjectSessionRevertErrors = {
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type ProjectSessionRevertError = ProjectSessionRevertErrors[keyof ProjectSessionRevertErrors];
+
+export type ProjectSessionRevertResponses = {
+    /**
+     * Session reverted
+     */
+    200: unknown;
+};
+
+export type ProjectSessionUnrevertData = {
+    body?: never;
+    path: {
+        projectID: string;
+        sessionID: string;
+    };
+    query?: never;
+    url: '/project/{projectID}/session/{sessionID}/unrevert';
+};
+
+export type ProjectSessionUnrevertErrors = {
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type ProjectSessionUnrevertError = ProjectSessionUnrevertErrors[keyof ProjectSessionUnrevertErrors];
+
+export type ProjectSessionUnrevertResponses = {
+    /**
+     * Session unreverted
+     */
+    200: unknown;
+};
+
+export type ProjectSessionPermissionReplyData = {
+    body: unknown;
+    path: {
+        projectID: string;
+        sessionID: string;
+        permissionID: string;
+    };
+    query?: never;
+    url: '/project/{projectID}/session/{sessionID}/permission/{permissionID}';
+};
+
+export type ProjectSessionPermissionReplyErrors = {
+    /**
+     * Bad request
+     */
+    400: {
+        data: unknown;
+        errors: Array<{
+            [key: string]: unknown;
+        }>;
+        success: false;
+    };
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type ProjectSessionPermissionReplyError = ProjectSessionPermissionReplyErrors[keyof ProjectSessionPermissionReplyErrors];
+
+export type ProjectSessionPermissionReplyResponses = {
+    /**
+     * Permission processed
+     */
+    200: unknown;
+};
+
+export type ProjectSessionFileFindData = {
+    body?: never;
+    path: {
+        projectID: string;
+        sessionID: string;
+    };
+    query?: never;
+    url: '/project/{projectID}/session/{sessionID}/find/file';
+};
+
+export type ProjectSessionFileFindErrors = {
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type ProjectSessionFileFindError = ProjectSessionFileFindErrors[keyof ProjectSessionFileFindErrors];
+
+export type ProjectSessionFileFindResponses = {
+    /**
+     * Matching file paths
+     */
+    200: unknown;
+};
+
+export type ProjectSessionFileStatusData = {
+    body?: never;
+    path: {
+        projectID: string;
+        sessionID: string;
+    };
+    query?: never;
+    url: '/project/{projectID}/session/{sessionID}/file/status';
+};
+
+export type ProjectSessionFileStatusErrors = {
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type ProjectSessionFileStatusError = ProjectSessionFileStatusErrors[keyof ProjectSessionFileStatusErrors];
+
+export type ProjectSessionFileStatusResponses = {
+    /**
+     * Changed files
+     */
+    200: unknown;
+};
+
+export type ProjectSessionFileReadData = {
+    body?: never;
+    path: {
+        projectID: string;
+        sessionID: string;
+    };
+    query?: never;
+    url: '/project/{projectID}/session/{sessionID}/file';
+};
+
+export type ProjectSessionFileReadErrors = {
+    /**
+     * Bad request
+     */
+    400: {
+        data: unknown;
+        errors: Array<{
+            [key: string]: unknown;
+        }>;
+        success: false;
+    };
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type ProjectSessionFileReadError = ProjectSessionFileReadErrors[keyof ProjectSessionFileReadErrors];
+
+export type ProjectSessionFileReadResponses = {
+    /**
+     * File content
+     */
+    200: unknown;
+};
+
+export type ProjectAgentListData = {
+    body?: never;
+    path: {
+        projectID: string;
+    };
+    query?: never;
+    url: '/project/{projectID}/agent';
+};
+
+export type ProjectAgentListErrors = {
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type ProjectAgentListError = ProjectAgentListErrors[keyof ProjectAgentListErrors];
+
+export type ProjectAgentListResponses = {
+    /**
+     * List of agents
+     */
+    200: unknown;
+};
+
+export type ProjectFindFileData = {
+    body?: never;
+    path: {
+        projectID: string;
+    };
+    query?: never;
+    url: '/project/{projectID}/find/file';
+};
+
+export type ProjectFindFileErrors = {
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type ProjectFindFileError = ProjectFindFileErrors[keyof ProjectFindFileErrors];
+
+export type ProjectFindFileResponses = {
+    /**
+     * Matching files
+     */
+    200: unknown;
+};
+
+export type ProjectGetData = {
+    body?: never;
+    path: {
+        projectID: string;
+    };
+    query?: never;
+    url: '/project/{projectID}';
+};
+
+export type ProjectGetErrors = {
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type ProjectGetError = ProjectGetErrors[keyof ProjectGetErrors];
+
+export type ProjectGetResponses = {
+    /**
+     * Project details
+     */
+    200: unknown;
+};
+
+export type ProjectUpdateData = {
+    body: unknown;
+    path: {
+        projectID: string;
+    };
+    query?: never;
+    url: '/project/{projectID}';
+};
+
+export type ProjectUpdateErrors = {
+    /**
+     * Bad request
+     */
+    400: {
+        data: unknown;
+        errors: Array<{
+            [key: string]: unknown;
+        }>;
+        success: false;
+    };
+    /**
+     * Not found
+     */
+    404: {
+        message: string;
+    };
+};
+
+export type ProjectUpdateError = ProjectUpdateErrors[keyof ProjectUpdateErrors];
+
+export type ProjectUpdateResponses = {
+    /**
+     * Updated project details
+     */
+    200: unknown;
+};
+
+export type WorkspaceGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/workspace';
+};
+
+export type WorkspaceGetResponses = {
+    /**
+     * Workspace summary or null
+     */
+    200: unknown;
+};
+
+export type WorkspaceInitData = {
+    body: {
+        name?: string;
+        emoji?: string;
+        vibe?: string;
+        format?: 'layered' | 'flat';
+    };
+    path?: never;
+    query?: never;
+    url: '/workspace/init';
+};
+
+export type WorkspaceInitResponses = {
+    /**
+     * Workspace initialized
+     */
+    200: unknown;
+};
+
+export type WorkspaceImportData = {
+    body: {
+        force?: boolean;
+    };
+    path?: never;
+    query?: never;
+    url: '/workspace/import';
+};
+
+export type WorkspaceImportErrors = {
+    /**
+     * OpenClaw not found
+     */
+    400: unknown;
+};
+
+export type WorkspaceImportResponses = {
+    /**
+     * Import result
+     */
+    200: unknown;
+};
+
+export type WorkspaceIdentityGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/workspace/identity';
+};
+
+export type WorkspaceIdentityGetResponses = {
+    /**
+     * Identity files or null
+     */
+    200: unknown;
+};
+
+export type WorkspaceIdentityPutData = {
+    body: {
+        file: 'SOUL.md' | 'IDENTITY.md' | 'USER.md' | 'MEMORY.md' | 'AGENTS.md' | 'VOICE.md' | 'POLICY.md' | 'BRAIN.md' | 'PLAYBOOK.md';
+        content: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/workspace/identity';
+};
+
+export type WorkspaceIdentityPutErrors = {
+    /**
+     * No workspace found
+     */
+    400: unknown;
+};
+
+export type WorkspaceIdentityPutResponses = {
+    /**
+     * File written
+     */
+    200: unknown;
+};
+
+export type WorkspaceLayersData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/workspace/layers';
+};
+
+export type WorkspaceLayersResponses = {
+    /**
+     * Layer status or null
+     */
+    200: unknown;
+};
+
+export type WorkspaceMemoryGetData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/workspace/memory';
+};
+
+export type WorkspaceMemoryGetResponses = {
+    /**
+     * Memory content
+     */
+    200: unknown;
+};
+
+export type WorkspaceMemoryPostData = {
+    body: {
+        content: string;
+        type?: 'observation' | 'decision' | 'lesson' | 'preference' | 'fact' | 'note';
+        tags?: Array<string>;
+    };
+    path?: never;
+    query?: never;
+    url: '/workspace/memory';
+};
+
+export type WorkspaceMemoryPostErrors = {
+    /**
+     * No workspace
+     */
+    400: unknown;
+};
+
+export type WorkspaceMemoryPostResponses = {
+    /**
+     * Entry written
+     */
+    200: unknown;
+};
+
+export type WorkspaceActivateData = {
+    body: {
+        identity?: string;
+        soul?: string;
+        user?: string;
+        memory?: string;
+        agents?: string;
+        voice?: string;
+        policy?: string;
+        name?: string;
+        emoji?: string;
+        vibe?: string;
+        agentID?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/workspace/activate';
+};
+
+export type WorkspaceActivateResponses = {
+    /**
+     * Activated
+     */
+    200: unknown;
+};
+
+export type WorkspaceSkillsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/workspace/skills';
+};
+
+export type WorkspaceSkillsResponses = {
+    /**
+     * Skills list
+     */
+    200: unknown;
+};
 
 export type GlobalHealthData = {
     body?: never;
@@ -4220,6 +6489,13 @@ export type GlobalEventResponses = {
                 };
             };
         } | {
+            type: 'tool.arg_delta';
+            properties: {
+                tool_call_id: string;
+                delta: string;
+                done: boolean;
+            };
+        } | {
             type: 'session.compacted';
             properties: {
                 sessionID: string;
@@ -4227,8 +6503,9 @@ export type GlobalEventResponses = {
         } | {
             type: 'memory.updated';
             properties: {
-                filepath: string;
-                action: 'save' | 'delete';
+                filename: string;
+                name: string;
+                type: string;
             };
         } | {
             type: 'file.edited';
@@ -4413,6 +6690,7 @@ export type GlobalEventResponses = {
                         diff?: string;
                     };
                     agentID?: string;
+                    surface?: 'chat' | 'cowork' | 'code' | 'browser';
                 };
             };
         } | {
@@ -4460,6 +6738,7 @@ export type GlobalEventResponses = {
                         diff?: string;
                     };
                     agentID?: string;
+                    surface?: 'chat' | 'cowork' | 'code' | 'browser';
                 };
             };
         } | {
@@ -4507,6 +6786,7 @@ export type GlobalEventResponses = {
                         diff?: string;
                     };
                     agentID?: string;
+                    surface?: 'chat' | 'cowork' | 'code' | 'browser';
                 };
             };
         } | {
@@ -4594,6 +6874,36 @@ export type GlobalEventResponses = {
             properties: {
                 message: string;
             };
+        } | {
+            type: 'memory.l2.updated';
+            properties: {
+                type: string;
+                label: string;
+            };
+        } | {
+            type: 'memory.l1.updated';
+            properties: {
+                sessionID: string;
+            };
+        } | {
+            type: 'memory.deleted';
+            properties: {
+                filename: string;
+            };
+        } | {
+            type: 'verification.completed';
+            properties: {
+                sessionId: string;
+                passed: boolean;
+                confidence: string;
+                mode: string;
+            };
+        } | {
+            type: 'verification.confirmed';
+            properties: {
+                id: string;
+                correct: boolean;
+            };
         };
     };
 };
@@ -4610,712 +6920,6 @@ export type GlobalVersionData = {
 export type GlobalVersionResponses = {
     /**
      * Version information
-     */
-    200: unknown;
-};
-
-export type ProjectListData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/project/list';
-};
-
-export type ProjectListResponses = {
-    /**
-     * List of projects
-     */
-    200: unknown;
-};
-
-export type ProjectGetData = {
-    body?: never;
-    path: {
-        projectID: string;
-    };
-    query?: never;
-    url: '/project/{projectID}';
-};
-
-export type ProjectGetErrors = {
-    /**
-     * Not found
-     */
-    404: {
-        message: string;
-    };
-};
-
-export type ProjectGetError = ProjectGetErrors[keyof ProjectGetErrors];
-
-export type ProjectGetResponses = {
-    /**
-     * Project details
-     */
-    200: unknown;
-};
-
-export type ProjectUpdateData = {
-    body: unknown;
-    path: {
-        projectID: string;
-    };
-    query?: never;
-    url: '/project/{projectID}';
-};
-
-export type ProjectUpdateErrors = {
-    /**
-     * Bad request
-     */
-    400: {
-        data: unknown;
-        errors: Array<{
-            [key: string]: unknown;
-        }>;
-        success: false;
-    };
-    /**
-     * Not found
-     */
-    404: {
-        message: string;
-    };
-};
-
-export type ProjectUpdateError = ProjectUpdateErrors[keyof ProjectUpdateErrors];
-
-export type ProjectUpdateResponses = {
-    /**
-     * Updated project details
-     */
-    200: unknown;
-};
-
-export type ToolIdsData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/experimental/tool/ids';
-};
-
-export type ToolIdsErrors = {
-    /**
-     * Bad request
-     */
-    400: {
-        data: unknown;
-        errors: Array<{
-            [key: string]: unknown;
-        }>;
-        success: false;
-    };
-};
-
-export type ToolIdsError = ToolIdsErrors[keyof ToolIdsErrors];
-
-export type ToolIdsResponses = {
-    /**
-     * Tool IDs
-     */
-    200: unknown;
-};
-
-export type ToolListData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/experimental/tool';
-};
-
-export type ToolListErrors = {
-    /**
-     * Bad request
-     */
-    400: {
-        data: unknown;
-        errors: Array<{
-            [key: string]: unknown;
-        }>;
-        success: false;
-    };
-};
-
-export type ToolListError = ToolListErrors[keyof ToolListErrors];
-
-export type ToolListResponses = {
-    /**
-     * Tools
-     */
-    200: Array<{
-        id: string;
-        description: string;
-        parameters: unknown;
-    }>;
-};
-
-export type ToolListResponse = ToolListResponses[keyof ToolListResponses];
-
-export type WorktreeRemoveData = {
-    body: unknown;
-    path?: never;
-    query?: never;
-    url: '/experimental/worktree';
-};
-
-export type WorktreeRemoveErrors = {
-    /**
-     * Bad request
-     */
-    400: {
-        data: unknown;
-        errors: Array<{
-            [key: string]: unknown;
-        }>;
-        success: false;
-    };
-};
-
-export type WorktreeRemoveError = WorktreeRemoveErrors[keyof WorktreeRemoveErrors];
-
-export type WorktreeRemoveResponses = {
-    /**
-     * Worktree removed
-     */
-    200: unknown;
-};
-
-export type WorktreeCreateData = {
-    body: unknown;
-    path?: never;
-    query?: never;
-    url: '/experimental/worktree';
-};
-
-export type WorktreeCreateErrors = {
-    /**
-     * Bad request
-     */
-    400: {
-        data: unknown;
-        errors: Array<{
-            [key: string]: unknown;
-        }>;
-        success: false;
-    };
-};
-
-export type WorktreeCreateError = WorktreeCreateErrors[keyof WorktreeCreateErrors];
-
-export type WorktreeCreateResponses = {
-    /**
-     * Worktree created
-     */
-    200: unknown;
-};
-
-export type WorktreeResetData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/experimental/worktree/reset';
-};
-
-export type WorktreeResetErrors = {
-    /**
-     * Bad request
-     */
-    400: {
-        data: unknown;
-        errors: Array<{
-            [key: string]: unknown;
-        }>;
-        success: false;
-    };
-};
-
-export type WorktreeResetError = WorktreeResetErrors[keyof WorktreeResetErrors];
-
-export type WorktreeResetResponses = {
-    /**
-     * Worktree reset
-     */
-    200: unknown;
-};
-
-export type SessionListGlobalData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/experimental/session/global';
-};
-
-export type SessionListGlobalResponses = {
-    /**
-     * Global sessions
-     */
-    200: unknown;
-};
-
-export type McpListResourcesData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/experimental/mcp/resources';
-};
-
-export type McpListResourcesResponses = {
-    /**
-     * MCP resources
-     */
-    200: unknown;
-};
-
-export type ExperimentalResourceListData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/experimental/resource/list';
-};
-
-export type ExperimentalResourceListResponses = {
-    /**
-     * Experimental resources
-     */
-    200: unknown;
-};
-
-export type TuiAppendPromptData = {
-    body: unknown;
-    path?: never;
-    query?: never;
-    url: '/tui/append-prompt';
-};
-
-export type TuiAppendPromptErrors = {
-    /**
-     * Bad request
-     */
-    400: {
-        data: unknown;
-        errors: Array<{
-            [key: string]: unknown;
-        }>;
-        success: false;
-    };
-};
-
-export type TuiAppendPromptError = TuiAppendPromptErrors[keyof TuiAppendPromptErrors];
-
-export type TuiAppendPromptResponses = {
-    /**
-     * Prompt processed successfully
-     */
-    200: unknown;
-};
-
-export type TuiOpenHelpData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/tui/open-help';
-};
-
-export type TuiOpenHelpResponses = {
-    /**
-     * Help dialog opened successfully
-     */
-    200: unknown;
-};
-
-export type TuiOpenSessionsData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/tui/open-sessions';
-};
-
-export type TuiOpenSessionsResponses = {
-    /**
-     * Session dialog opened successfully
-     */
-    200: unknown;
-};
-
-export type TuiOpenThemesData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/tui/open-themes';
-};
-
-export type TuiOpenThemesResponses = {
-    /**
-     * Theme dialog opened successfully
-     */
-    200: unknown;
-};
-
-export type TuiOpenModelsData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/tui/open-models';
-};
-
-export type TuiOpenModelsResponses = {
-    /**
-     * Model dialog opened successfully
-     */
-    200: unknown;
-};
-
-export type TuiSubmitPromptData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/tui/submit-prompt';
-};
-
-export type TuiSubmitPromptResponses = {
-    /**
-     * Prompt submitted successfully
-     */
-    200: unknown;
-};
-
-export type TuiClearPromptData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/tui/clear-prompt';
-};
-
-export type TuiClearPromptResponses = {
-    /**
-     * Prompt cleared successfully
-     */
-    200: unknown;
-};
-
-export type TuiExecuteCommandData = {
-    body: unknown;
-    path?: never;
-    query?: never;
-    url: '/tui/execute-command';
-};
-
-export type TuiExecuteCommandErrors = {
-    /**
-     * Bad request
-     */
-    400: {
-        data: unknown;
-        errors: Array<{
-            [key: string]: unknown;
-        }>;
-        success: false;
-    };
-};
-
-export type TuiExecuteCommandError = TuiExecuteCommandErrors[keyof TuiExecuteCommandErrors];
-
-export type TuiExecuteCommandResponses = {
-    /**
-     * Command executed successfully
-     */
-    200: unknown;
-};
-
-export type TuiShowToastData = {
-    body: unknown;
-    path?: never;
-    query?: never;
-    url: '/tui/show-toast';
-};
-
-export type TuiShowToastResponses = {
-    /**
-     * Toast notification shown successfully
-     */
-    200: unknown;
-};
-
-export type TuiPublishData = {
-    body: unknown;
-    path?: never;
-    query?: never;
-    url: '/tui/publish';
-};
-
-export type TuiPublishErrors = {
-    /**
-     * Bad request
-     */
-    400: {
-        data: unknown;
-        errors: Array<{
-            [key: string]: unknown;
-        }>;
-        success: false;
-    };
-};
-
-export type TuiPublishError = TuiPublishErrors[keyof TuiPublishErrors];
-
-export type TuiPublishResponses = {
-    /**
-     * Event published successfully
-     */
-    200: unknown;
-};
-
-export type TuiSelectSessionData = {
-    body: unknown;
-    path?: never;
-    query?: never;
-    url: '/tui/select-session';
-};
-
-export type TuiSelectSessionErrors = {
-    /**
-     * Bad request
-     */
-    400: {
-        data: unknown;
-        errors: Array<{
-            [key: string]: unknown;
-        }>;
-        success: false;
-    };
-    /**
-     * Not found
-     */
-    404: {
-        message: string;
-    };
-};
-
-export type TuiSelectSessionError = TuiSelectSessionErrors[keyof TuiSelectSessionErrors];
-
-export type TuiSelectSessionResponses = {
-    /**
-     * Session selected successfully
-     */
-    200: unknown;
-};
-
-export type TuiControlNextData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/tui/control/next';
-};
-
-export type TuiControlNextResponses = {
-    /**
-     * Next TUI request
-     */
-    200: unknown;
-};
-
-export type TuiControlResponseData = {
-    body: unknown;
-    path?: never;
-    query?: never;
-    url: '/tui/control/response';
-};
-
-export type TuiControlResponseResponses = {
-    /**
-     * Response submitted successfully
-     */
-    200: unknown;
-};
-
-export type WorkspaceGetData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/workspace';
-};
-
-export type WorkspaceGetResponses = {
-    /**
-     * Workspace summary or null
-     */
-    200: unknown;
-};
-
-export type WorkspaceInitData = {
-    body: {
-        name?: string;
-        emoji?: string;
-        vibe?: string;
-        format?: 'layered' | 'flat';
-    };
-    path?: never;
-    query?: never;
-    url: '/workspace/init';
-};
-
-export type WorkspaceInitResponses = {
-    /**
-     * Workspace initialized
-     */
-    200: unknown;
-};
-
-export type WorkspaceImportData = {
-    body: {
-        force?: boolean;
-    };
-    path?: never;
-    query?: never;
-    url: '/workspace/import';
-};
-
-export type WorkspaceImportErrors = {
-    /**
-     * OpenClaw not found
-     */
-    400: unknown;
-};
-
-export type WorkspaceImportResponses = {
-    /**
-     * Import result
-     */
-    200: unknown;
-};
-
-export type WorkspaceIdentityGetData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/workspace/identity';
-};
-
-export type WorkspaceIdentityGetResponses = {
-    /**
-     * Identity files or null
-     */
-    200: unknown;
-};
-
-export type WorkspaceIdentityPutData = {
-    body: {
-        file: 'SOUL.md' | 'IDENTITY.md' | 'USER.md' | 'MEMORY.md' | 'AGENTS.md' | 'VOICE.md' | 'POLICY.md' | 'BRAIN.md' | 'PLAYBOOK.md';
-        content: string;
-    };
-    path?: never;
-    query?: never;
-    url: '/workspace/identity';
-};
-
-export type WorkspaceIdentityPutErrors = {
-    /**
-     * No workspace found
-     */
-    400: unknown;
-};
-
-export type WorkspaceIdentityPutResponses = {
-    /**
-     * File written
-     */
-    200: unknown;
-};
-
-export type WorkspaceLayersData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/workspace/layers';
-};
-
-export type WorkspaceLayersResponses = {
-    /**
-     * Layer status or null
-     */
-    200: unknown;
-};
-
-export type WorkspaceMemoryGetData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/workspace/memory';
-};
-
-export type WorkspaceMemoryGetResponses = {
-    /**
-     * Memory content
-     */
-    200: unknown;
-};
-
-export type WorkspaceMemoryPostData = {
-    body: {
-        content: string;
-        type?: 'observation' | 'decision' | 'lesson' | 'preference' | 'fact' | 'note';
-        tags?: Array<string>;
-    };
-    path?: never;
-    query?: never;
-    url: '/workspace/memory';
-};
-
-export type WorkspaceMemoryPostErrors = {
-    /**
-     * No workspace
-     */
-    400: unknown;
-};
-
-export type WorkspaceMemoryPostResponses = {
-    /**
-     * Entry written
-     */
-    200: unknown;
-};
-
-export type WorkspaceActivateData = {
-    body: {
-        identity?: string;
-        soul?: string;
-        user?: string;
-        memory?: string;
-        agents?: string;
-        voice?: string;
-        policy?: string;
-        name?: string;
-        emoji?: string;
-        vibe?: string;
-        agentID?: string;
-    };
-    path?: never;
-    query?: never;
-    url: '/workspace/activate';
-};
-
-export type WorkspaceActivateResponses = {
-    /**
-     * Activated
-     */
-    200: unknown;
-};
-
-export type WorkspaceSkillsData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/workspace/skills';
-};
-
-export type WorkspaceSkillsResponses = {
-    /**
-     * Skills list
      */
     200: unknown;
 };

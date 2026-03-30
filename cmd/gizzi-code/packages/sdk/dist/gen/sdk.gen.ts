@@ -3,7 +3,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { AgentCreateData, AgentCreateErrors, AgentCreateResponses, AgentGetData, AgentGetErrors, AgentGetResponses, AgentListData, AgentListResponses, AgentUpdateData, AgentUpdateErrors, AgentUpdateResponses, AppSkillsData, AppSkillsResponses, ArsContextaEnrichData, ArsContextaEnrichErrors, ArsContextaEnrichResponses, ArsContextaEntitiesData, ArsContextaEntitiesErrors, ArsContextaEntitiesResponses, ArsContextaHealthData, ArsContextaHealthResponses, ArsContextaInsightsData, ArsContextaInsightsErrors, ArsContextaInsightsResponses, ArsContextaProvidersData, ArsContextaProvidersResponses, AuthRemoveData, AuthRemoveErrors, AuthRemoveResponses, AuthSetData, AuthSetErrors, AuthSetResponses, CommandListData, CommandListResponses, ConfigGetData, ConfigGetResponses, ConfigProvidersData, ConfigProvidersResponses, ConfigUpdateData, ConfigUpdateErrors, ConfigUpdateResponses, CronAllRunsData, CronAllRunsResponses, CronCleanupSessionData, CronCleanupSessionResponses, CronCreateData, CronCreateErrors, CronCreateResponses, CronDeleteData, CronDeleteErrors, CronDeleteResponses, CronGetData, CronGetErrors, CronGetResponses, CronGetRunData, CronGetRunErrors, CronGetRunResponses, CronListData, CronListResponses, CronPauseData, CronPauseErrors, CronPauseResponses, CronResumeData, CronResumeErrors, CronResumeResponses, CronRunData, CronRunErrors, CronRunResponses, CronRunsData, CronRunsResponses, CronStatusData, CronStatusResponses, CronUpdateData, CronUpdateErrors, CronUpdateResponses, CronWakeData, CronWakeResponses, EventSubscribeData, EventSubscribeResponses, ExperimentalResourceListData, ExperimentalResourceListResponses, FileGlobData, FileGlobErrors, FileGlobResponses, FileInfoData, FileInfoErrors, FileInfoResponses, FileReadData, FileReadErrors, FileReadResponses, FileSearchData, FileSearchErrors, FileSearchResponses, FileSymbolsData, FileSymbolsErrors, FileSymbolsResponses, FileTreeData, FileTreeResponses, FormatterStatusData, FormatterStatusResponses, GetV1MemorySearchData, GetV1MemorySearchResponses, GlobalEventData, GlobalEventResponses, GlobalHealthData, GlobalHealthResponses, GlobalVersionData, GlobalVersionResponses, InstanceDisposeData, InstanceDisposeResponses, InstanceSyncData, InstanceSyncResponses, InstanceWorkspaceData, InstanceWorkspaceResponses, LspStatusData, LspStatusResponses, McpAddData, McpAddErrors, McpAddResponses, McpListData, McpListResourcesData, McpListResourcesResponses, McpListResponses, McpRemoveData, McpRemoveErrors, McpRemoveResponses, McpStatusData, McpStatusResponses, PathGetData, PathGetResponses, PermissionListData, PermissionListResponses, PermissionReplyData, PermissionReplyErrors, PermissionReplyResponses, PostV1PluginInstallData, PostV1PluginInstallResponses, PostV1PluginRemoveData, PostV1PluginRemoveResponses, ProjectGetData, ProjectGetErrors, ProjectGetResponses, ProjectListData, ProjectListResponses, ProjectUpdateData, ProjectUpdateErrors, ProjectUpdateResponses, ProviderAuthData, ProviderAuthResponses, ProviderListData, ProviderListResponses, ProviderOauthAuthorizeData, ProviderOauthAuthorizeErrors, ProviderOauthAuthorizeResponses, ProviderOauthVerifyData, ProviderOauthVerifyErrors, ProviderOauthVerifyResponses, PtyCreateData, PtyCreateErrors, PtyCreateResponses, PtyGetData, PtyGetErrors, PtyGetResponses, PtyKillData, PtyKillErrors, PtyKillResponses, PtyListData, PtyListResponses, PutV1MemoryByFilenameData, PutV1MemoryByFilenameResponses, QuestionListData, QuestionListResponses, QuestionRejectData, QuestionRejectErrors, QuestionRejectResponses, QuestionReplyData, QuestionReplyErrors, QuestionReplyResponses, SandboxDisableData, SandboxDisableResponses, SandboxEnableData, SandboxEnableErrors, SandboxEnableResponses, SandboxGetData, SandboxGetResponses, SandboxPolicyData, SandboxPolicyErrors, SandboxPolicyResponses, SandboxToggleData, SandboxToggleResponses, SessionAbortData, SessionAbortErrors, SessionAbortResponses, SessionAllStatusData, SessionAllStatusResponses, SessionChildrenData, SessionChildrenErrors, SessionChildrenResponses, SessionClearData, SessionClearErrors, SessionClearResponses, SessionCommandData, SessionCommandErrors, SessionCommandResponses, SessionCreateData, SessionCreateErrors, SessionCreateResponses, SessionDeleteData, SessionDeleteErrors, SessionDeleteResponses, SessionDiffData, SessionDiffErrors, SessionDiffResponses, SessionForkData, SessionForkErrors, SessionForkResponses, SessionGetData, SessionGetErrors, SessionGetResponses, SessionInitializeData, SessionInitializeErrors, SessionInitializeResponses, SessionListData, SessionListGlobalData, SessionListGlobalResponses, SessionListResponses, SessionMessagesData, SessionMessagesErrors, SessionMessagesResponses, SessionPromptData, SessionPromptErrors, SessionPromptResponses, SessionRevertData, SessionRevertErrors, SessionRevertResponses, SessionShareData, SessionShareErrors, SessionShareResponses, SessionSummarizeData, SessionSummarizeErrors, SessionSummarizeResponses, SessionTodoData, SessionTodoErrors, SessionTodoResponses, SessionUnrevertData, SessionUnrevertErrors, SessionUnrevertResponses, SessionUpdateData, SessionUpdateErrors, SessionUpdateResponses, SkillAddData, SkillAddErrors, SkillAddResponses, SkillEvalData, SkillEvalErrors, SkillEvalResponses, SkillEvalsGetData, SkillEvalsGetErrors, SkillEvalsGetResponses, SkillEvalsListData, SkillEvalsListResponses, TerminalClerkCallbackData, TerminalClerkCallbackResponses, TerminalClerkClaimData, TerminalClerkClaimErrors, TerminalClerkClaimResponses, TerminalClerkPollData, TerminalClerkPollErrors, TerminalClerkPollResponses, TerminalClerkStartData, TerminalClerkStartErrors, TerminalClerkStartResponses, ToolIdsData, ToolIdsErrors, ToolIdsResponses, ToolListData, ToolListErrors, ToolListResponses, TuiAppendPromptData, TuiAppendPromptErrors, TuiAppendPromptResponses, TuiClearPromptData, TuiClearPromptResponses, TuiControlNextData, TuiControlNextResponses, TuiControlResponseData, TuiControlResponseResponses, TuiExecuteCommandData, TuiExecuteCommandErrors, TuiExecuteCommandResponses, TuiOpenHelpData, TuiOpenHelpResponses, TuiOpenModelsData, TuiOpenModelsResponses, TuiOpenSessionsData, TuiOpenSessionsResponses, TuiOpenThemesData, TuiOpenThemesResponses, TuiPublishData, TuiPublishErrors, TuiPublishResponses, TuiSelectSessionData, TuiSelectSessionErrors, TuiSelectSessionResponses, TuiShowToastData, TuiShowToastResponses, TuiSubmitPromptData, TuiSubmitPromptResponses, UserClearData, UserClearResponses, UserGetData, UserGetResponses, UserOnboardData, UserOnboardErrors, UserOnboardResponses, UserRefreshData, UserRefreshResponses, VcsGetData, VcsGetResponses, VmSessionDestroyData, VmSessionDestroyResponses, VmSessionDisableData, VmSessionDisableResponses, VmSessionEnableData, VmSessionEnableErrors, VmSessionEnableResponses, VmSessionGetData, VmSessionGetResponses, VmSessionToggleData, VmSessionToggleResponses, WorkspaceActivateData, WorkspaceActivateResponses, WorkspaceGetData, WorkspaceGetResponses, WorkspaceIdentityGetData, WorkspaceIdentityGetResponses, WorkspaceIdentityPutData, WorkspaceIdentityPutErrors, WorkspaceIdentityPutResponses, WorkspaceImportData, WorkspaceImportErrors, WorkspaceImportResponses, WorkspaceInitData, WorkspaceInitResponses, WorkspaceLayersData, WorkspaceLayersResponses, WorkspaceMemoryGetData, WorkspaceMemoryGetResponses, WorkspaceMemoryPostData, WorkspaceMemoryPostErrors, WorkspaceMemoryPostResponses, WorkspaceSkillsData, WorkspaceSkillsResponses, WorktreeCreateData, WorktreeCreateErrors, WorktreeCreateResponses, WorktreeRemoveData, WorktreeRemoveErrors, WorktreeRemoveResponses, WorktreeResetData, WorktreeResetErrors, WorktreeResetResponses } from './types.gen';
+import type { AgentCreateData, AgentCreateErrors, AgentCreateResponses, AgentGetData, AgentGetErrors, AgentGetResponses, AgentListData, AgentListResponses, AgentUpdateData, AgentUpdateErrors, AgentUpdateResponses, AppSkillsData, AppSkillsResponses, ArsContextaEnrichData, ArsContextaEnrichErrors, ArsContextaEnrichResponses, ArsContextaEntitiesData, ArsContextaEntitiesErrors, ArsContextaEntitiesResponses, ArsContextaHealthData, ArsContextaHealthResponses, ArsContextaInsightsData, ArsContextaInsightsErrors, ArsContextaInsightsResponses, ArsContextaProvidersData, ArsContextaProvidersResponses, AssetDeleteData, AssetDeleteErrors, AssetDeleteResponses, AssetGetData, AssetGetErrors, AssetGetResponses, AssetListData, AssetListResponses, AssetUploadData, AssetUploadErrors, AssetUploadResponses, AuthRemoveData, AuthRemoveErrors, AuthRemoveResponses, AuthSetData, AuthSetErrors, AuthSetResponses, CommandListData, CommandListResponses, ConfigGetData, ConfigGetResponses, ConfigProvidersData, ConfigProvidersResponses, ConfigUpdateData, ConfigUpdateErrors, ConfigUpdateResponses, CronAllRunsData, CronAllRunsResponses, CronCleanupSessionData, CronCleanupSessionResponses, CronCreateData, CronCreateErrors, CronCreateResponses, CronDeleteData, CronDeleteErrors, CronDeleteResponses, CronGetData, CronGetErrors, CronGetResponses, CronGetRunData, CronGetRunErrors, CronGetRunResponses, CronListData, CronListResponses, CronPauseData, CronPauseErrors, CronPauseResponses, CronResumeData, CronResumeErrors, CronResumeResponses, CronRunData, CronRunErrors, CronRunResponses, CronRunsData, CronRunsResponses, CronStatusData, CronStatusResponses, CronUpdateData, CronUpdateErrors, CronUpdateResponses, CronWakeData, CronWakeResponses, EngineExecuteData, EngineExecuteErrors, EngineExecuteResponses, EngineHealthData, EngineHealthResponses, EngineReceiptsData, EngineReceiptsErrors, EngineReceiptsResponses, EngineRunApprovalData, EngineRunApprovalErrors, EngineRunApprovalResponses, EngineRunCancelData, EngineRunCancelErrors, EngineRunCancelResponses, EngineRunEventsData, EngineRunEventsErrors, EngineRunEventsResponses, EngineRunGetData, EngineRunGetErrors, EngineRunGetResponses, EngineRunPauseData, EngineRunPauseErrors, EngineRunPauseResponses, EngineRunResumeData, EngineRunResumeErrors, EngineRunResumeResponses, EngineSnapshotData, EngineSnapshotErrors, EngineSnapshotResponses, EngineWatchData, EngineWatchErrors, EngineWatchResponses, EventSubscribeData, EventSubscribeResponses, FileGlobData, FileGlobErrors, FileGlobResponses, FileInfoData, FileInfoErrors, FileInfoResponses, FileReadData, FileReadErrors, FileReadResponses, FilesDeleteData, FilesDeleteErrors, FilesDeleteResponses, FileSearchData, FileSearchErrors, FileSearchResponses, FilesGetData, FilesGetErrors, FilesGetResponses, FilesListData, FilesListResponses, FilesUploadData, FilesUploadErrors, FilesUploadResponses, FileSymbolsData, FileSymbolsErrors, FileSymbolsResponses, FileTreeData, FileTreeResponses, FormatterStatusData, FormatterStatusResponses, GetV1MemorySearchData, GetV1MemorySearchResponses, GlobalEventData, GlobalEventResponses, GlobalHealthData, GlobalHealthResponses, GlobalVersionData, GlobalVersionResponses, InstanceDisposeData, InstanceDisposeResponses, InstanceHealthData, InstanceHealthResponses, InstanceSyncData, InstanceSyncResponses, InstanceVersionData, InstanceVersionResponses, InstanceWorkspaceData, InstanceWorkspaceResponses, LspStatusData, LspStatusResponses, McpAddData, McpAddErrors, McpAddResponses, McpListData, McpListResponses, McpRemoveData, McpRemoveErrors, McpRemoveResponses, McpResourcesData, McpResourcesResponses, McpStatusData, McpStatusResponses, PathGetData, PathGetResponses, PermissionListData, PermissionListResponses, PermissionReplyData, PermissionReplyErrors, PermissionReplyResponses, PostV1PluginInstallData, PostV1PluginInstallResponses, PostV1PluginRemoveData, PostV1PluginRemoveResponses, ProjectAgentListData, ProjectAgentListErrors, ProjectAgentListResponses, ProjectFindFileData, ProjectFindFileErrors, ProjectFindFileResponses, ProjectGetData, ProjectGetErrors, ProjectGetResponses, ProjectInitData, ProjectInitErrors, ProjectInitResponses, ProjectListData, ProjectListResponses, ProjectListRootData, ProjectListRootResponses, ProjectSessionAbortData, ProjectSessionAbortErrors, ProjectSessionAbortResponses, ProjectSessionCompactData, ProjectSessionCompactErrors, ProjectSessionCompactResponses, ProjectSessionCreateData, ProjectSessionCreateErrors, ProjectSessionCreateResponses, ProjectSessionDeleteData, ProjectSessionDeleteErrors, ProjectSessionDeleteResponses, ProjectSessionFileFindData, ProjectSessionFileFindErrors, ProjectSessionFileFindResponses, ProjectSessionFileReadData, ProjectSessionFileReadErrors, ProjectSessionFileReadResponses, ProjectSessionFileStatusData, ProjectSessionFileStatusErrors, ProjectSessionFileStatusResponses, ProjectSessionGetData, ProjectSessionGetErrors, ProjectSessionGetResponses, ProjectSessionInitializeData, ProjectSessionInitializeErrors, ProjectSessionInitializeResponses, ProjectSessionListData, ProjectSessionListErrors, ProjectSessionListResponses, ProjectSessionMessageCreateData, ProjectSessionMessageCreateErrors, ProjectSessionMessageCreateResponses, ProjectSessionMessageGetData, ProjectSessionMessageGetErrors, ProjectSessionMessageGetResponses, ProjectSessionMessagesData, ProjectSessionMessagesErrors, ProjectSessionMessagesResponses, ProjectSessionPermissionReplyData, ProjectSessionPermissionReplyErrors, ProjectSessionPermissionReplyResponses, ProjectSessionRevertData, ProjectSessionRevertErrors, ProjectSessionRevertResponses, ProjectSessionShareData, ProjectSessionShareErrors, ProjectSessionShareResponses, ProjectSessionUnrevertData, ProjectSessionUnrevertErrors, ProjectSessionUnrevertResponses, ProjectSessionUnshareData, ProjectSessionUnshareErrors, ProjectSessionUnshareResponses, ProjectUpdateData, ProjectUpdateErrors, ProjectUpdateResponses, ProviderAuthData, ProviderAuthResponses, ProviderListData, ProviderListResponses, ProviderOauthAuthorizeData, ProviderOauthAuthorizeErrors, ProviderOauthAuthorizeResponses, ProviderOauthVerifyData, ProviderOauthVerifyErrors, ProviderOauthVerifyResponses, PtyCreateData, PtyCreateErrors, PtyCreateResponses, PtyGetData, PtyGetErrors, PtyGetResponses, PtyKillData, PtyKillErrors, PtyKillResponses, PtyListData, PtyListResponses, PutV1MemoryByFilenameData, PutV1MemoryByFilenameResponses, PutV1MemoryL1BySessionIdData, PutV1MemoryL1BySessionIdResponses, PutV1MemoryL2ByTypeData, PutV1MemoryL2ByTypeResponses, QuestionListData, QuestionListResponses, QuestionRejectData, QuestionRejectErrors, QuestionRejectResponses, QuestionReplyData, QuestionReplyErrors, QuestionReplyResponses, SandboxDisableData, SandboxDisableResponses, SandboxEnableData, SandboxEnableErrors, SandboxEnableResponses, SandboxGetData, SandboxGetResponses, SandboxPolicyData, SandboxPolicyErrors, SandboxPolicyResponses, SandboxToggleData, SandboxToggleResponses, SessionAbortData, SessionAbortErrors, SessionAbortResponses, SessionAllStatusData, SessionAllStatusResponses, SessionChildrenData, SessionChildrenErrors, SessionChildrenResponses, SessionClearData, SessionClearErrors, SessionClearResponses, SessionCommandData, SessionCommandErrors, SessionCommandResponses, SessionCreateData, SessionCreateErrors, SessionCreateResponses, SessionDeleteData, SessionDeleteErrors, SessionDeleteResponses, SessionDiffData, SessionDiffErrors, SessionDiffResponses, SessionForkData, SessionForkErrors, SessionForkResponses, SessionGetData, SessionGetErrors, SessionGetResponses, SessionInitializeData, SessionInitializeErrors, SessionInitializeResponses, SessionListData, SessionListGlobalData, SessionListGlobalResponses, SessionListResponses, SessionMessagesData, SessionMessagesErrors, SessionMessagesResponses, SessionPromptData, SessionPromptErrors, SessionPromptResponses, SessionRevertData, SessionRevertErrors, SessionRevertResponses, SessionShareData, SessionShareErrors, SessionShareResponses, SessionSummarizeData, SessionSummarizeErrors, SessionSummarizeResponses, SessionTodoData, SessionTodoErrors, SessionTodoResponses, SessionUnrevertData, SessionUnrevertErrors, SessionUnrevertResponses, SessionUpdateData, SessionUpdateErrors, SessionUpdateResponses, SkillAddData, SkillAddErrors, SkillAddResponses, SkillEvalData, SkillEvalErrors, SkillEvalResponses, SkillEvalsGetData, SkillEvalsGetErrors, SkillEvalsGetResponses, SkillEvalsListData, SkillEvalsListResponses, SkillInstallData, SkillInstallErrors, SkillInstallResponses, SkillPublishData, SkillPublishErrors, SkillPublishResponses, SkillRegistryData, SkillRegistryResponses, SkillToolIdsData, SkillToolIdsResponses, SkillToolsData, SkillToolsResponses, TerminalClerkCallbackData, TerminalClerkCallbackResponses, TerminalClerkClaimData, TerminalClerkClaimErrors, TerminalClerkClaimResponses, TerminalClerkPollData, TerminalClerkPollErrors, TerminalClerkPollResponses, TerminalClerkStartData, TerminalClerkStartErrors, TerminalClerkStartResponses, TokensCountData, TokensCountResponses, TuiAppendPromptData, TuiAppendPromptErrors, TuiAppendPromptResponses, TuiClearPromptData, TuiClearPromptResponses, TuiControlNextData, TuiControlNextResponses, TuiControlResponseData, TuiControlResponseResponses, TuiExecuteCommandData, TuiExecuteCommandErrors, TuiExecuteCommandResponses, TuiOpenHelpData, TuiOpenHelpResponses, TuiOpenModelsData, TuiOpenModelsResponses, TuiOpenSessionsData, TuiOpenSessionsResponses, TuiOpenThemesData, TuiOpenThemesResponses, TuiPublishData, TuiPublishErrors, TuiPublishResponses, TuiSelectSessionData, TuiSelectSessionErrors, TuiSelectSessionResponses, TuiShowToastData, TuiShowToastResponses, TuiSubmitPromptData, TuiSubmitPromptResponses, UserClearData, UserClearResponses, UserGetData, UserGetResponses, UserOnboardData, UserOnboardErrors, UserOnboardResponses, UserRefreshData, UserRefreshResponses, VcsGetData, VcsGetResponses, VcsWorktreeCreateData, VcsWorktreeCreateResponses, VcsWorktreeRemoveData, VcsWorktreeRemoveResponses, VmSessionDestroyData, VmSessionDestroyResponses, VmSessionDisableData, VmSessionDisableResponses, VmSessionEnableData, VmSessionEnableErrors, VmSessionEnableResponses, VmSessionGetData, VmSessionGetResponses, VmSessionToggleData, VmSessionToggleResponses, WorkspaceActivateData, WorkspaceActivateResponses, WorkspaceGetData, WorkspaceGetResponses, WorkspaceIdentityGetData, WorkspaceIdentityGetResponses, WorkspaceIdentityPutData, WorkspaceIdentityPutErrors, WorkspaceIdentityPutResponses, WorkspaceImportData, WorkspaceImportErrors, WorkspaceImportResponses, WorkspaceInitData, WorkspaceInitResponses, WorkspaceLayersData, WorkspaceLayersResponses, WorkspaceMemoryGetData, WorkspaceMemoryGetResponses, WorkspaceMemoryPostData, WorkspaceMemoryPostErrors, WorkspaceMemoryPostResponses, WorkspaceSkillsData, WorkspaceSkillsResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -18,6 +18,13 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
      */
     meta?: Record<string, unknown>;
 };
+
+/**
+ * List global sessions
+ *
+ * Retrieve a list of all sessions across all projects.
+ */
+export const sessionListGlobal = <ThrowOnError extends boolean = false>(options?: Options<SessionListGlobalData, ThrowOnError>) => (options?.client ?? client).get<SessionListGlobalResponses, unknown, ThrowOnError>({ url: '/session/global', ...options });
 
 /**
  * List sessions
@@ -342,6 +349,13 @@ export const mcpAdd = <ThrowOnError extends boolean = false>(options: Options<Mc
 });
 
 /**
+ * List MCP resources
+ *
+ * Retrieve a list of all available resources across all registered MCP servers.
+ */
+export const mcpResources = <ThrowOnError extends boolean = false>(options?: Options<McpResourcesData, ThrowOnError>) => (options?.client ?? client).get<McpResourcesResponses, unknown, ThrowOnError>({ url: '/mcp/resources', ...options });
+
+/**
  * Remove MCP server
  *
  * Remove a configured MCP server by its name.
@@ -552,6 +566,62 @@ export const fileRead = <ThrowOnError extends boolean = false>(options?: Options
 export const fileInfo = <ThrowOnError extends boolean = false>(options?: Options<FileInfoData, ThrowOnError>) => (options?.client ?? client).get<FileInfoResponses, FileInfoErrors, ThrowOnError>({ url: '/file/info', ...options });
 
 /**
+ * Upload asset
+ *
+ * Upload a binary or text asset and receive an asset ID.
+ */
+export const assetUpload = <ThrowOnError extends boolean = false>(options?: Options<AssetUploadData, ThrowOnError>) => (options?.client ?? client).post<AssetUploadResponses, AssetUploadErrors, ThrowOnError>({ url: '/assets/upload', ...options });
+
+/**
+ * List assets
+ *
+ * List uploaded assets for the current workspace.
+ */
+export const assetList = <ThrowOnError extends boolean = false>(options?: Options<AssetListData, ThrowOnError>) => (options?.client ?? client).get<AssetListResponses, unknown, ThrowOnError>({ url: '/assets', ...options });
+
+/**
+ * Delete asset
+ *
+ * Delete an uploaded asset.
+ */
+export const assetDelete = <ThrowOnError extends boolean = false>(options: Options<AssetDeleteData, ThrowOnError>) => (options.client ?? client).delete<AssetDeleteResponses, AssetDeleteErrors, ThrowOnError>({ url: '/assets/{id}', ...options });
+
+/**
+ * Get asset metadata
+ *
+ * Get metadata for a previously uploaded asset.
+ */
+export const assetGet = <ThrowOnError extends boolean = false>(options: Options<AssetGetData, ThrowOnError>) => (options.client ?? client).get<AssetGetResponses, AssetGetErrors, ThrowOnError>({ url: '/assets/{id}', ...options });
+
+/**
+ * List files
+ *
+ * Legacy compatibility alias for the canonical asset listing API.
+ */
+export const filesList = <ThrowOnError extends boolean = false>(options?: Options<FilesListData, ThrowOnError>) => (options?.client ?? client).get<FilesListResponses, unknown, ThrowOnError>({ url: '/files', ...options });
+
+/**
+ * Upload file
+ *
+ * Legacy compatibility alias for the canonical asset upload API.
+ */
+export const filesUpload = <ThrowOnError extends boolean = false>(options?: Options<FilesUploadData, ThrowOnError>) => (options?.client ?? client).post<FilesUploadResponses, FilesUploadErrors, ThrowOnError>({ url: '/files', ...options });
+
+/**
+ * Delete file
+ *
+ * Legacy compatibility alias for the canonical asset delete API.
+ */
+export const filesDelete = <ThrowOnError extends boolean = false>(options: Options<FilesDeleteData, ThrowOnError>) => (options.client ?? client).delete<FilesDeleteResponses, FilesDeleteErrors, ThrowOnError>({ url: '/files/{id}', ...options });
+
+/**
+ * Get file metadata
+ *
+ * Legacy compatibility alias for the canonical asset metadata API.
+ */
+export const filesGet = <ThrowOnError extends boolean = false>(options: Options<FilesGetData, ThrowOnError>) => (options.client ?? client).get<FilesGetResponses, FilesGetErrors, ThrowOnError>({ url: '/files/{id}', ...options });
+
+/**
  * Get current user
  *
  * Get the currently authenticated user's information.
@@ -643,6 +713,153 @@ export const instanceDispose = <ThrowOnError extends boolean = false>(options?: 
 export const instanceWorkspace = <ThrowOnError extends boolean = false>(options?: Options<InstanceWorkspaceData, ThrowOnError>) => (options?.client ?? client).get<InstanceWorkspaceResponses, unknown, ThrowOnError>({ url: '/instance/workspace', ...options });
 
 /**
+ * Get version
+ *
+ * Get the current version of the gizzi-code server.
+ */
+export const instanceVersion = <ThrowOnError extends boolean = false>(options?: Options<InstanceVersionData, ThrowOnError>) => (options?.client ?? client).get<InstanceVersionResponses, unknown, ThrowOnError>({ url: '/instance/version', ...options });
+
+/**
+ * Health check
+ *
+ * Returns healthy status and server version.
+ */
+export const instanceHealth = <ThrowOnError extends boolean = false>(options?: Options<InstanceHealthData, ThrowOnError>) => (options?.client ?? client).get<InstanceHealthResponses, unknown, ThrowOnError>({ url: '/instance/health', ...options });
+
+/**
+ * Append TUI prompt
+ *
+ * Append prompt to the TUI
+ */
+export const tuiAppendPrompt = <ThrowOnError extends boolean = false>(options: Options<TuiAppendPromptData, ThrowOnError>) => (options.client ?? client).post<TuiAppendPromptResponses, TuiAppendPromptErrors, ThrowOnError>({
+    url: '/instance/tui/append-prompt',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Open help dialog
+ *
+ * Open the help dialog in the TUI to display user assistance information.
+ */
+export const tuiOpenHelp = <ThrowOnError extends boolean = false>(options?: Options<TuiOpenHelpData, ThrowOnError>) => (options?.client ?? client).post<TuiOpenHelpResponses, unknown, ThrowOnError>({ url: '/instance/tui/open-help', ...options });
+
+/**
+ * Open sessions dialog
+ *
+ * Open the session dialog
+ */
+export const tuiOpenSessions = <ThrowOnError extends boolean = false>(options?: Options<TuiOpenSessionsData, ThrowOnError>) => (options?.client ?? client).post<TuiOpenSessionsResponses, unknown, ThrowOnError>({ url: '/instance/tui/open-sessions', ...options });
+
+/**
+ * Open themes dialog
+ *
+ * Open the theme dialog
+ */
+export const tuiOpenThemes = <ThrowOnError extends boolean = false>(options?: Options<TuiOpenThemesData, ThrowOnError>) => (options?.client ?? client).post<TuiOpenThemesResponses, unknown, ThrowOnError>({ url: '/instance/tui/open-themes', ...options });
+
+/**
+ * Open models dialog
+ *
+ * Open the model dialog
+ */
+export const tuiOpenModels = <ThrowOnError extends boolean = false>(options?: Options<TuiOpenModelsData, ThrowOnError>) => (options?.client ?? client).post<TuiOpenModelsResponses, unknown, ThrowOnError>({ url: '/instance/tui/open-models', ...options });
+
+/**
+ * Submit TUI prompt
+ *
+ * Submit the prompt
+ */
+export const tuiSubmitPrompt = <ThrowOnError extends boolean = false>(options?: Options<TuiSubmitPromptData, ThrowOnError>) => (options?.client ?? client).post<TuiSubmitPromptResponses, unknown, ThrowOnError>({ url: '/instance/tui/submit-prompt', ...options });
+
+/**
+ * Clear TUI prompt
+ *
+ * Clear the prompt
+ */
+export const tuiClearPrompt = <ThrowOnError extends boolean = false>(options?: Options<TuiClearPromptData, ThrowOnError>) => (options?.client ?? client).post<TuiClearPromptResponses, unknown, ThrowOnError>({ url: '/instance/tui/clear-prompt', ...options });
+
+/**
+ * Execute TUI command
+ *
+ * Execute a TUI command (e.g. agent_cycle)
+ */
+export const tuiExecuteCommand = <ThrowOnError extends boolean = false>(options: Options<TuiExecuteCommandData, ThrowOnError>) => (options.client ?? client).post<TuiExecuteCommandResponses, TuiExecuteCommandErrors, ThrowOnError>({
+    url: '/instance/tui/execute-command',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Show TUI toast
+ *
+ * Show a toast notification in the TUI
+ */
+export const tuiShowToast = <ThrowOnError extends boolean = false>(options: Options<TuiShowToastData, ThrowOnError>) => (options.client ?? client).post<TuiShowToastResponses, unknown, ThrowOnError>({
+    url: '/instance/tui/show-toast',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Publish TUI event
+ *
+ * Publish a TUI event
+ */
+export const tuiPublish = <ThrowOnError extends boolean = false>(options: Options<TuiPublishData, ThrowOnError>) => (options.client ?? client).post<TuiPublishResponses, TuiPublishErrors, ThrowOnError>({
+    url: '/instance/tui/publish',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Select session
+ *
+ * Navigate the TUI to display the specified session.
+ */
+export const tuiSelectSession = <ThrowOnError extends boolean = false>(options: Options<TuiSelectSessionData, ThrowOnError>) => (options.client ?? client).post<TuiSelectSessionResponses, TuiSelectSessionErrors, ThrowOnError>({
+    url: '/instance/tui/select-session',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get next TUI request
+ *
+ * Retrieve the next TUI (Terminal User Interface) request from the queue for processing.
+ */
+export const tuiControlNext = <ThrowOnError extends boolean = false>(options?: Options<TuiControlNextData, ThrowOnError>) => (options?.client ?? client).get<TuiControlNextResponses, unknown, ThrowOnError>({ url: '/instance/tui/control/next', ...options });
+
+/**
+ * Submit TUI response
+ *
+ * Submit a response to the TUI request queue to complete a pending request.
+ */
+export const tuiControlResponse = <ThrowOnError extends boolean = false>(options: Options<TuiControlResponseData, ThrowOnError>) => (options.client ?? client).post<TuiControlResponseResponses, unknown, ThrowOnError>({
+    url: '/instance/tui/control/response',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
  * Get paths
  *
  * Retrieve the current working directory and related path information for the GIZZI instance.
@@ -657,6 +874,34 @@ export const pathGet = <ThrowOnError extends boolean = false>(options?: Options<
 export const vcsGet = <ThrowOnError extends boolean = false>(options?: Options<VcsGetData, ThrowOnError>) => (options?.client ?? client).get<VcsGetResponses, unknown, ThrowOnError>({ url: '/vcs', ...options });
 
 /**
+ * Remove worktree
+ *
+ * Remove an existing git worktree by its name.
+ */
+export const vcsWorktreeRemove = <ThrowOnError extends boolean = false>(options: Options<VcsWorktreeRemoveData, ThrowOnError>) => (options.client ?? client).delete<VcsWorktreeRemoveResponses, unknown, ThrowOnError>({
+    url: '/vcs/worktree',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Create worktree
+ *
+ * Create a new git worktree for the current project and run any configured startup scripts.
+ */
+export const vcsWorktreeCreate = <ThrowOnError extends boolean = false>(options: Options<VcsWorktreeCreateData, ThrowOnError>) => (options.client ?? client).post<VcsWorktreeCreateResponses, unknown, ThrowOnError>({
+    url: '/vcs/worktree',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
  * Get LSP status
  *
  * Get LSP server status
@@ -669,6 +914,20 @@ export const lspStatus = <ThrowOnError extends boolean = false>(options?: Option
  * Get formatter status
  */
 export const formatterStatus = <ThrowOnError extends boolean = false>(options?: Options<FormatterStatusData, ThrowOnError>) => (options?.client ?? client).get<FormatterStatusResponses, unknown, ThrowOnError>({ url: '/formatter', ...options });
+
+/**
+ * List tool IDs
+ *
+ * Get a list of all available tool IDs, including built-in and dynamically registered tools.
+ */
+export const skillToolIds = <ThrowOnError extends boolean = false>(options?: Options<SkillToolIdsData, ThrowOnError>) => (options?.client ?? client).get<SkillToolIdsResponses, unknown, ThrowOnError>({ url: '/skill/tool-ids', ...options });
+
+/**
+ * List tools
+ *
+ * Get available tools with their JSON schema parameters for a given provider/model.
+ */
+export const skillTools = <ThrowOnError extends boolean = false>(options?: Options<SkillToolsData, ThrowOnError>) => (options?.client ?? client).get<SkillToolsResponses, unknown, ThrowOnError>({ url: '/skill/tools', ...options });
 
 /**
  * List skills
@@ -719,7 +978,60 @@ export const skillEvalsList = <ThrowOnError extends boolean = false>(options: Op
  */
 export const skillEvalsGet = <ThrowOnError extends boolean = false>(options: Options<SkillEvalsGetData, ThrowOnError>) => (options.client ?? client).get<SkillEvalsGetResponses, SkillEvalsGetErrors, ThrowOnError>({ url: '/skill/{name}/evals/{id}', ...options });
 
+/**
+ * List public skill registry entries
+ *
+ * Return paginated public skill registry entries.
+ */
+export const skillRegistry = <ThrowOnError extends boolean = false>(options?: Options<SkillRegistryData, ThrowOnError>) => (options?.client ?? client).get<SkillRegistryResponses, unknown, ThrowOnError>({ url: '/skill/registry', ...options });
+
+/**
+ * Publish skill
+ *
+ * Publish a skill manifest into the registry.
+ */
+export const skillPublish = <ThrowOnError extends boolean = false>(options: Options<SkillPublishData, ThrowOnError>) => (options.client ?? client).post<SkillPublishResponses, SkillPublishErrors, ThrowOnError>({
+    url: '/skill/publish',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Install skill from registry
+ *
+ * Install a published skill into the current workspace namespace.
+ */
+export const skillInstall = <ThrowOnError extends boolean = false>(options: Options<SkillInstallData, ThrowOnError>) => (options.client ?? client).post<SkillInstallResponses, SkillInstallErrors, ThrowOnError>({
+    url: '/skill/{id}/install',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
 export const getV1MemorySearch = <ThrowOnError extends boolean = false>(options?: Options<GetV1MemorySearchData, ThrowOnError>) => (options?.client ?? client).get<GetV1MemorySearchResponses, unknown, ThrowOnError>({ url: '/memory/search', ...options });
+
+export const putV1MemoryL2ByType = <ThrowOnError extends boolean = false>(options: Options<PutV1MemoryL2ByTypeData, ThrowOnError>) => (options.client ?? client).put<PutV1MemoryL2ByTypeResponses, unknown, ThrowOnError>({
+    url: '/memory/l2/{type}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const putV1MemoryL1BySessionId = <ThrowOnError extends boolean = false>(options: Options<PutV1MemoryL1BySessionIdData, ThrowOnError>) => (options.client ?? client).put<PutV1MemoryL1BySessionIdResponses, unknown, ThrowOnError>({
+    url: '/memory/l1/{sessionID}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
 export const putV1MemoryByFilename = <ThrowOnError extends boolean = false>(options: Options<PutV1MemoryByFilenameData, ThrowOnError>) => (options.client ?? client).put<PutV1MemoryByFilenameResponses, unknown, ThrowOnError>({
     url: '/memory/{filename}',
@@ -729,6 +1041,132 @@ export const putV1MemoryByFilename = <ThrowOnError extends boolean = false>(opti
         ...options.headers
     }
 });
+
+/**
+ * Count prompt tokens
+ *
+ * Estimate prompt token usage for messages, system prompt, and tool definitions.
+ */
+export const tokensCount = <ThrowOnError extends boolean = false>(options: Options<TokensCountData, ThrowOnError>) => (options.client ?? client).post<TokensCountResponses, unknown, ThrowOnError>({
+    url: '/tokens/count',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Execute managed computer-use run
+ *
+ * Create and start a computer-use run on the managed gizzi-code server surface.
+ */
+export const engineExecute = <ThrowOnError extends boolean = false>(options: Options<EngineExecuteData, ThrowOnError>) => (options.client ?? client).post<EngineExecuteResponses, EngineExecuteErrors, ThrowOnError>({
+    url: '/engine/execute',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Watch computer-use run
+ *
+ * Stream event batches for a managed computer-use run via SSE.
+ */
+export const engineWatch = <ThrowOnError extends boolean = false>(options: Options<EngineWatchData, ThrowOnError>) => (options.client ?? client).sse.get<EngineWatchResponses, EngineWatchErrors, ThrowOnError>({ url: '/engine/watch/{runId}', ...options });
+
+/**
+ * Get computer-use receipts
+ *
+ * Return the stored receipts for a managed computer-use run.
+ */
+export const engineReceipts = <ThrowOnError extends boolean = false>(options: Options<EngineReceiptsData, ThrowOnError>) => (options.client ?? client).get<EngineReceiptsResponses, EngineReceiptsErrors, ThrowOnError>({ url: '/engine/receipts/{runId}', ...options });
+
+/**
+ * Get computer-use snapshot
+ *
+ * Return the latest snapshot for a managed computer-use run.
+ */
+export const engineSnapshot = <ThrowOnError extends boolean = false>(options: Options<EngineSnapshotData, ThrowOnError>) => (options.client ?? client).get<EngineSnapshotResponses, EngineSnapshotErrors, ThrowOnError>({ url: '/engine/snapshot/{runId}', ...options });
+
+/**
+ * Get computer-use run
+ *
+ * Compatibility alias for the latest managed computer-use run snapshot.
+ */
+export const engineRunGet = <ThrowOnError extends boolean = false>(options: Options<EngineRunGetData, ThrowOnError>) => (options.client ?? client).get<EngineRunGetResponses, EngineRunGetErrors, ThrowOnError>({ url: '/engine/runs/{runId}', ...options });
+
+/**
+ * Get computer-use run events
+ *
+ * Return a paginated event batch for a managed computer-use run.
+ */
+export const engineRunEvents = <ThrowOnError extends boolean = false>(options: Options<EngineRunEventsData, ThrowOnError>) => (options.client ?? client).get<EngineRunEventsResponses, EngineRunEventsErrors, ThrowOnError>({ url: '/engine/runs/{runId}/events', ...options });
+
+/**
+ * Approve or deny computer-use run
+ *
+ * Apply an approval decision to a managed computer-use run.
+ */
+export const engineRunApproval = <ThrowOnError extends boolean = false>(options: Options<EngineRunApprovalData, ThrowOnError>) => (options.client ?? client).post<EngineRunApprovalResponses, EngineRunApprovalErrors, ThrowOnError>({
+    url: '/engine/runs/{runId}/approval',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Cancel computer-use run
+ *
+ * Cancel a managed computer-use run in the server-owned run registry.
+ */
+export const engineRunCancel = <ThrowOnError extends boolean = false>(options: Options<EngineRunCancelData, ThrowOnError>) => (options.client ?? client).post<EngineRunCancelResponses, EngineRunCancelErrors, ThrowOnError>({
+    url: '/engine/runs/{runId}/cancel',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Pause computer-use run
+ *
+ * Pause a managed computer-use run through the operator-native engine control surface.
+ */
+export const engineRunPause = <ThrowOnError extends boolean = false>(options: Options<EngineRunPauseData, ThrowOnError>) => (options.client ?? client).post<EngineRunPauseResponses, EngineRunPauseErrors, ThrowOnError>({
+    url: '/engine/runs/{runId}/pause',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Resume computer-use run
+ *
+ * Resume a paused managed computer-use run through the operator-native engine control surface.
+ */
+export const engineRunResume = <ThrowOnError extends boolean = false>(options: Options<EngineRunResumeData, ThrowOnError>) => (options.client ?? client).post<EngineRunResumeResponses, EngineRunResumeErrors, ThrowOnError>({
+    url: '/engine/runs/{runId}/resume',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Computer-use engine health
+ *
+ * Report whether the managed computer-use surface can reach the operator.
+ */
+export const engineHealth = <ThrowOnError extends boolean = false>(options?: Options<EngineHealthData, ThrowOnError>) => (options?.client ?? client).get<EngineHealthResponses, unknown, ThrowOnError>({ url: '/engine/health', ...options });
 
 /**
  * Get sandbox state
@@ -966,25 +1404,25 @@ export const terminalClerkClaim = <ThrowOnError extends boolean = false>(options
 export const terminalClerkCallback = <ThrowOnError extends boolean = false>(options: Options<TerminalClerkCallbackData, ThrowOnError>) => (options.client ?? client).post<TerminalClerkCallbackResponses, unknown, ThrowOnError>({ url: '/auth/terminal/clerk/callback/{sessionID}', ...options });
 
 /**
- * Get health
+ * List projects
  *
- * Get health information about the GIZZI server.
+ * Retrieve a list of all projects managed by the A2R instance.
  */
-export const globalHealth = <ThrowOnError extends boolean = false>(options?: Options<GlobalHealthData, ThrowOnError>) => (options?.client ?? client).get<GlobalHealthResponses, unknown, ThrowOnError>({ url: '/global/health', ...options });
+export const projectListRoot = <ThrowOnError extends boolean = false>(options?: Options<ProjectListRootData, ThrowOnError>) => (options?.client ?? client).get<ProjectListRootResponses, unknown, ThrowOnError>({ url: '/project', ...options });
 
 /**
- * Get global events
+ * Initialize project
  *
- * Subscribe to global events from the GIZZI system using server-sent events.
+ * Initialize a project from a filesystem directory.
  */
-export const globalEvent = <ThrowOnError extends boolean = false>(options?: Options<GlobalEventData, ThrowOnError>) => (options?.client ?? client).sse.get<GlobalEventResponses, unknown, ThrowOnError>({ url: '/global/event', ...options });
-
-/**
- * Get version
- *
- * Get the current version of the GIZZI system.
- */
-export const globalVersion = <ThrowOnError extends boolean = false>(options?: Options<GlobalVersionData, ThrowOnError>) => (options?.client ?? client).get<GlobalVersionResponses, unknown, ThrowOnError>({ url: '/global/version', ...options });
+export const projectInit = <ThrowOnError extends boolean = false>(options: Options<ProjectInitData, ThrowOnError>) => (options.client ?? client).post<ProjectInitResponses, ProjectInitErrors, ThrowOnError>({
+    url: '/project/init',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
 /**
  * List projects
@@ -992,6 +1430,181 @@ export const globalVersion = <ThrowOnError extends boolean = false>(options?: Op
  * Retrieve a list of all projects managed by the A2R instance.
  */
 export const projectList = <ThrowOnError extends boolean = false>(options?: Options<ProjectListData, ThrowOnError>) => (options?.client ?? client).get<ProjectListResponses, unknown, ThrowOnError>({ url: '/project/list', ...options });
+
+/**
+ * List project sessions
+ *
+ * List all sessions belonging to a specific project.
+ */
+export const projectSessionList = <ThrowOnError extends boolean = false>(options: Options<ProjectSessionListData, ThrowOnError>) => (options.client ?? client).get<ProjectSessionListResponses, ProjectSessionListErrors, ThrowOnError>({ url: '/project/{projectID}/session', ...options });
+
+/**
+ * Create project session
+ *
+ * Create a new session within a specific project.
+ */
+export const projectSessionCreate = <ThrowOnError extends boolean = false>(options: Options<ProjectSessionCreateData, ThrowOnError>) => (options.client ?? client).post<ProjectSessionCreateResponses, ProjectSessionCreateErrors, ThrowOnError>({
+    url: '/project/{projectID}/session',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete project session
+ *
+ * Delete a session and all its messages.
+ */
+export const projectSessionDelete = <ThrowOnError extends boolean = false>(options: Options<ProjectSessionDeleteData, ThrowOnError>) => (options.client ?? client).delete<ProjectSessionDeleteResponses, ProjectSessionDeleteErrors, ThrowOnError>({ url: '/project/{projectID}/session/{sessionID}', ...options });
+
+/**
+ * Get project session
+ *
+ * Retrieve a specific session belonging to a project.
+ */
+export const projectSessionGet = <ThrowOnError extends boolean = false>(options: Options<ProjectSessionGetData, ThrowOnError>) => (options.client ?? client).get<ProjectSessionGetResponses, ProjectSessionGetErrors, ThrowOnError>({ url: '/project/{projectID}/session/{sessionID}', ...options });
+
+/**
+ * Initialize project session
+ *
+ * Initialize a session with a starting message or context.
+ */
+export const projectSessionInitialize = <ThrowOnError extends boolean = false>(options: Options<ProjectSessionInitializeData, ThrowOnError>) => (options.client ?? client).post<ProjectSessionInitializeResponses, ProjectSessionInitializeErrors, ThrowOnError>({
+    url: '/project/{projectID}/session/{sessionID}/init',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Abort project session
+ *
+ * Abort the currently running agent loop for a session.
+ */
+export const projectSessionAbort = <ThrowOnError extends boolean = false>(options: Options<ProjectSessionAbortData, ThrowOnError>) => (options.client ?? client).post<ProjectSessionAbortResponses, ProjectSessionAbortErrors, ThrowOnError>({ url: '/project/{projectID}/session/{sessionID}/abort', ...options });
+
+/**
+ * Unshare project session
+ *
+ * Remove public sharing from a session.
+ */
+export const projectSessionUnshare = <ThrowOnError extends boolean = false>(options: Options<ProjectSessionUnshareData, ThrowOnError>) => (options.client ?? client).delete<ProjectSessionUnshareResponses, ProjectSessionUnshareErrors, ThrowOnError>({ url: '/project/{projectID}/session/{sessionID}/share', ...options });
+
+/**
+ * Share project session
+ *
+ * Share a session publicly.
+ */
+export const projectSessionShare = <ThrowOnError extends boolean = false>(options: Options<ProjectSessionShareData, ThrowOnError>) => (options.client ?? client).post<ProjectSessionShareResponses, ProjectSessionShareErrors, ThrowOnError>({ url: '/project/{projectID}/session/{sessionID}/share', ...options });
+
+/**
+ * Compact project session
+ *
+ * Prune compactable tool outputs from session history.
+ */
+export const projectSessionCompact = <ThrowOnError extends boolean = false>(options: Options<ProjectSessionCompactData, ThrowOnError>) => (options.client ?? client).post<ProjectSessionCompactResponses, ProjectSessionCompactErrors, ThrowOnError>({ url: '/project/{projectID}/session/{sessionID}/compact', ...options });
+
+/**
+ * List session messages
+ *
+ * Retrieve all messages belonging to a specific session.
+ */
+export const projectSessionMessages = <ThrowOnError extends boolean = false>(options: Options<ProjectSessionMessagesData, ThrowOnError>) => (options.client ?? client).get<ProjectSessionMessagesResponses, ProjectSessionMessagesErrors, ThrowOnError>({ url: '/project/{projectID}/session/{sessionID}/message', ...options });
+
+/**
+ * Send message to session
+ *
+ * Send a prompt message to a session and trigger the agent loop.
+ */
+export const projectSessionMessageCreate = <ThrowOnError extends boolean = false>(options: Options<ProjectSessionMessageCreateData, ThrowOnError>) => (options.client ?? client).post<ProjectSessionMessageCreateResponses, ProjectSessionMessageCreateErrors, ThrowOnError>({
+    url: '/project/{projectID}/session/{sessionID}/message',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get session message
+ *
+ * Retrieve a specific message and its parts.
+ */
+export const projectSessionMessageGet = <ThrowOnError extends boolean = false>(options: Options<ProjectSessionMessageGetData, ThrowOnError>) => (options.client ?? client).get<ProjectSessionMessageGetResponses, ProjectSessionMessageGetErrors, ThrowOnError>({ url: '/project/{projectID}/session/{sessionID}/message/{messageID}', ...options });
+
+/**
+ * Revert session
+ *
+ * Revert file changes made during a session.
+ */
+export const projectSessionRevert = <ThrowOnError extends boolean = false>(options: Options<ProjectSessionRevertData, ThrowOnError>) => (options.client ?? client).post<ProjectSessionRevertResponses, ProjectSessionRevertErrors, ThrowOnError>({
+    url: '/project/{projectID}/session/{sessionID}/revert',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Unrevert session
+ *
+ * Undo a revert, restoring the session changes.
+ */
+export const projectSessionUnrevert = <ThrowOnError extends boolean = false>(options: Options<ProjectSessionUnrevertData, ThrowOnError>) => (options.client ?? client).post<ProjectSessionUnrevertResponses, ProjectSessionUnrevertErrors, ThrowOnError>({ url: '/project/{projectID}/session/{sessionID}/unrevert', ...options });
+
+/**
+ * Reply to permission request
+ *
+ * Approve or deny a pending permission request for a session.
+ */
+export const projectSessionPermissionReply = <ThrowOnError extends boolean = false>(options: Options<ProjectSessionPermissionReplyData, ThrowOnError>) => (options.client ?? client).post<ProjectSessionPermissionReplyResponses, ProjectSessionPermissionReplyErrors, ThrowOnError>({
+    url: '/project/{projectID}/session/{sessionID}/permission/{permissionID}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Find files in session
+ *
+ * Search for files by name pattern within the session workspace.
+ */
+export const projectSessionFileFind = <ThrowOnError extends boolean = false>(options: Options<ProjectSessionFileFindData, ThrowOnError>) => (options.client ?? client).get<ProjectSessionFileFindResponses, ProjectSessionFileFindErrors, ThrowOnError>({ url: '/project/{projectID}/session/{sessionID}/find/file', ...options });
+
+/**
+ * Get session file status
+ *
+ * Get the diff status of files changed during a session.
+ */
+export const projectSessionFileStatus = <ThrowOnError extends boolean = false>(options: Options<ProjectSessionFileStatusData, ThrowOnError>) => (options.client ?? client).get<ProjectSessionFileStatusResponses, ProjectSessionFileStatusErrors, ThrowOnError>({ url: '/project/{projectID}/session/{sessionID}/file/status', ...options });
+
+/**
+ * Read file in session
+ *
+ * Read the content of a specific file in the session context.
+ */
+export const projectSessionFileRead = <ThrowOnError extends boolean = false>(options: Options<ProjectSessionFileReadData, ThrowOnError>) => (options.client ?? client).get<ProjectSessionFileReadResponses, ProjectSessionFileReadErrors, ThrowOnError>({ url: '/project/{projectID}/session/{sessionID}/file', ...options });
+
+/**
+ * List agents for project
+ *
+ * List agents available in a project directory, optionally overriding the directory via query param.
+ */
+export const projectAgentList = <ThrowOnError extends boolean = false>(options: Options<ProjectAgentListData, ThrowOnError>) => (options.client ?? client).get<ProjectAgentListResponses, ProjectAgentListErrors, ThrowOnError>({ url: '/project/{projectID}/agent', ...options });
+
+/**
+ * Find files in project
+ *
+ * Search for files by name pattern within a project directory, optionally overriding via query param.
+ */
+export const projectFindFile = <ThrowOnError extends boolean = false>(options: Options<ProjectFindFileData, ThrowOnError>) => (options.client ?? client).get<ProjectFindFileResponses, ProjectFindFileErrors, ThrowOnError>({ url: '/project/{projectID}/find/file', ...options });
 
 /**
  * Get project details
@@ -1007,209 +1620,6 @@ export const projectGet = <ThrowOnError extends boolean = false>(options: Option
  */
 export const projectUpdate = <ThrowOnError extends boolean = false>(options: Options<ProjectUpdateData, ThrowOnError>) => (options.client ?? client).patch<ProjectUpdateResponses, ProjectUpdateErrors, ThrowOnError>({
     url: '/project/{projectID}',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * List tool IDs
- *
- * Get a list of all available tool IDs, including both built-in tools and dynamically registered tools.
- */
-export const toolIds = <ThrowOnError extends boolean = false>(options?: Options<ToolIdsData, ThrowOnError>) => (options?.client ?? client).get<ToolIdsResponses, ToolIdsErrors, ThrowOnError>({ url: '/experimental/tool/ids', ...options });
-
-/**
- * List tools
- *
- * Get a list of available tools with their JSON schema parameters for a specific provider and model combination.
- */
-export const toolList = <ThrowOnError extends boolean = false>(options?: Options<ToolListData, ThrowOnError>) => (options?.client ?? client).get<ToolListResponses, ToolListErrors, ThrowOnError>({ url: '/experimental/tool', ...options });
-
-/**
- * Remove worktree
- *
- * Remove an existing git worktree by its name.
- */
-export const worktreeRemove = <ThrowOnError extends boolean = false>(options: Options<WorktreeRemoveData, ThrowOnError>) => (options.client ?? client).delete<WorktreeRemoveResponses, WorktreeRemoveErrors, ThrowOnError>({
-    url: '/experimental/worktree',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Create worktree
- *
- * Create a new git worktree for the current project and run any configured startup scripts.
- */
-export const worktreeCreate = <ThrowOnError extends boolean = false>(options: Options<WorktreeCreateData, ThrowOnError>) => (options.client ?? client).post<WorktreeCreateResponses, WorktreeCreateErrors, ThrowOnError>({
-    url: '/experimental/worktree',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Reset worktree
- *
- * Reset the current git worktree to its initial state.
- */
-export const worktreeReset = <ThrowOnError extends boolean = false>(options?: Options<WorktreeResetData, ThrowOnError>) => (options?.client ?? client).post<WorktreeResetResponses, WorktreeResetErrors, ThrowOnError>({ url: '/experimental/worktree/reset', ...options });
-
-/**
- * List global sessions
- *
- * Retrieve a list of all sessions across all projects.
- */
-export const sessionListGlobal = <ThrowOnError extends boolean = false>(options?: Options<SessionListGlobalData, ThrowOnError>) => (options?.client ?? client).get<SessionListGlobalResponses, unknown, ThrowOnError>({ url: '/experimental/session/global', ...options });
-
-/**
- * List MCP resources
- *
- * Retrieve a list of all available resources across all registered MCP servers.
- */
-export const mcpListResources = <ThrowOnError extends boolean = false>(options?: Options<McpListResourcesData, ThrowOnError>) => (options?.client ?? client).get<McpListResourcesResponses, unknown, ThrowOnError>({ url: '/experimental/mcp/resources', ...options });
-
-/**
- * List experimental resources
- *
- * Retrieve a list of experimental resources (alias for MCP resources).
- */
-export const experimentalResourceList = <ThrowOnError extends boolean = false>(options?: Options<ExperimentalResourceListData, ThrowOnError>) => (options?.client ?? client).get<ExperimentalResourceListResponses, unknown, ThrowOnError>({ url: '/experimental/resource/list', ...options });
-
-/**
- * Append TUI prompt
- *
- * Append prompt to the TUI
- */
-export const tuiAppendPrompt = <ThrowOnError extends boolean = false>(options: Options<TuiAppendPromptData, ThrowOnError>) => (options.client ?? client).post<TuiAppendPromptResponses, TuiAppendPromptErrors, ThrowOnError>({
-    url: '/tui/append-prompt',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Open help dialog
- *
- * Open the help dialog in the TUI to display user assistance information.
- */
-export const tuiOpenHelp = <ThrowOnError extends boolean = false>(options?: Options<TuiOpenHelpData, ThrowOnError>) => (options?.client ?? client).post<TuiOpenHelpResponses, unknown, ThrowOnError>({ url: '/tui/open-help', ...options });
-
-/**
- * Open sessions dialog
- *
- * Open the session dialog
- */
-export const tuiOpenSessions = <ThrowOnError extends boolean = false>(options?: Options<TuiOpenSessionsData, ThrowOnError>) => (options?.client ?? client).post<TuiOpenSessionsResponses, unknown, ThrowOnError>({ url: '/tui/open-sessions', ...options });
-
-/**
- * Open themes dialog
- *
- * Open the theme dialog
- */
-export const tuiOpenThemes = <ThrowOnError extends boolean = false>(options?: Options<TuiOpenThemesData, ThrowOnError>) => (options?.client ?? client).post<TuiOpenThemesResponses, unknown, ThrowOnError>({ url: '/tui/open-themes', ...options });
-
-/**
- * Open models dialog
- *
- * Open the model dialog
- */
-export const tuiOpenModels = <ThrowOnError extends boolean = false>(options?: Options<TuiOpenModelsData, ThrowOnError>) => (options?.client ?? client).post<TuiOpenModelsResponses, unknown, ThrowOnError>({ url: '/tui/open-models', ...options });
-
-/**
- * Submit TUI prompt
- *
- * Submit the prompt
- */
-export const tuiSubmitPrompt = <ThrowOnError extends boolean = false>(options?: Options<TuiSubmitPromptData, ThrowOnError>) => (options?.client ?? client).post<TuiSubmitPromptResponses, unknown, ThrowOnError>({ url: '/tui/submit-prompt', ...options });
-
-/**
- * Clear TUI prompt
- *
- * Clear the prompt
- */
-export const tuiClearPrompt = <ThrowOnError extends boolean = false>(options?: Options<TuiClearPromptData, ThrowOnError>) => (options?.client ?? client).post<TuiClearPromptResponses, unknown, ThrowOnError>({ url: '/tui/clear-prompt', ...options });
-
-/**
- * Execute TUI command
- *
- * Execute a TUI command (e.g. agent_cycle)
- */
-export const tuiExecuteCommand = <ThrowOnError extends boolean = false>(options: Options<TuiExecuteCommandData, ThrowOnError>) => (options.client ?? client).post<TuiExecuteCommandResponses, TuiExecuteCommandErrors, ThrowOnError>({
-    url: '/tui/execute-command',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Show TUI toast
- *
- * Show a toast notification in the TUI
- */
-export const tuiShowToast = <ThrowOnError extends boolean = false>(options: Options<TuiShowToastData, ThrowOnError>) => (options.client ?? client).post<TuiShowToastResponses, unknown, ThrowOnError>({
-    url: '/tui/show-toast',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Publish TUI event
- *
- * Publish a TUI event
- */
-export const tuiPublish = <ThrowOnError extends boolean = false>(options: Options<TuiPublishData, ThrowOnError>) => (options.client ?? client).post<TuiPublishResponses, TuiPublishErrors, ThrowOnError>({
-    url: '/tui/publish',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Select session
- *
- * Navigate the TUI to display the specified session.
- */
-export const tuiSelectSession = <ThrowOnError extends boolean = false>(options: Options<TuiSelectSessionData, ThrowOnError>) => (options.client ?? client).post<TuiSelectSessionResponses, TuiSelectSessionErrors, ThrowOnError>({
-    url: '/tui/select-session',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Get next TUI request
- *
- * Retrieve the next TUI (Terminal User Interface) request from the queue for processing.
- */
-export const tuiControlNext = <ThrowOnError extends boolean = false>(options?: Options<TuiControlNextData, ThrowOnError>) => (options?.client ?? client).get<TuiControlNextResponses, unknown, ThrowOnError>({ url: '/tui/control/next', ...options });
-
-/**
- * Submit TUI response
- *
- * Submit a response to the TUI request queue to complete a pending request.
- */
-export const tuiControlResponse = <ThrowOnError extends boolean = false>(options: Options<TuiControlResponseData, ThrowOnError>) => (options.client ?? client).post<TuiControlResponseResponses, unknown, ThrowOnError>({
-    url: '/tui/control/response',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -1321,3 +1731,24 @@ export const workspaceActivate = <ThrowOnError extends boolean = false>(options:
  * Return all skills available in the active workspace, including those in L4-SKILLS/ for layered workspaces.
  */
 export const workspaceSkills = <ThrowOnError extends boolean = false>(options?: Options<WorkspaceSkillsData, ThrowOnError>) => (options?.client ?? client).get<WorkspaceSkillsResponses, unknown, ThrowOnError>({ url: '/workspace/skills', ...options });
+
+/**
+ * Get health
+ *
+ * Get health information about the GIZZI server.
+ */
+export const globalHealth = <ThrowOnError extends boolean = false>(options?: Options<GlobalHealthData, ThrowOnError>) => (options?.client ?? client).get<GlobalHealthResponses, unknown, ThrowOnError>({ url: '/global/health', ...options });
+
+/**
+ * Get global events
+ *
+ * Subscribe to global events from the GIZZI system using server-sent events.
+ */
+export const globalEvent = <ThrowOnError extends boolean = false>(options?: Options<GlobalEventData, ThrowOnError>) => (options?.client ?? client).sse.get<GlobalEventResponses, unknown, ThrowOnError>({ url: '/global/event', ...options });
+
+/**
+ * Get version
+ *
+ * Get the current version of the GIZZI system.
+ */
+export const globalVersion = <ThrowOnError extends boolean = false>(options?: Options<GlobalVersionData, ThrowOnError>) => (options?.client ?? client).get<GlobalVersionResponses, unknown, ThrowOnError>({ url: '/global/version', ...options });
