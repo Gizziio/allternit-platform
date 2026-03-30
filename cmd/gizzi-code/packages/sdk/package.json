@@ -6,16 +6,24 @@
   "license": "MIT",
   "exports": {
     ".": {
-      "import": "./dist/gen/index.js",
-      "types": "./dist/gen/index.d.ts"
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
     },
     "./client": {
       "import": "./dist/gen/client.js",
       "types": "./dist/gen/client.d.ts"
     },
     "./server": {
-      "import": "./dist/gen/index.js",
-      "types": "./dist/gen/index.d.ts"
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./tools": {
+      "import": "./dist/tools.js",
+      "types": "./dist/tools.d.ts"
+    },
+    "./computer-use": {
+      "import": "./dist/computer-use.js",
+      "types": "./dist/computer-use.d.ts"
     }
   },
   "files": ["dist"]
