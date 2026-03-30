@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { NodeSSH } from 'node-ssh';
+import type { NodeSSH } from 'node-ssh';
 import { getAuth } from '@/lib/server-auth';
 import { gatherSSHSystemInfo } from '@/lib/ssh-system-info';
 
@@ -46,6 +46,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Dynamically import NodeSSH to avoid bundling issues
+    const { NodeSSH } = await import('node-ssh');
 
     // Attempt connection
     const ssh = new NodeSSH();

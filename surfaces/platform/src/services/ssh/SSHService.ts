@@ -5,7 +5,7 @@
  * It provides methods for connecting, executing commands, and managing sessions.
  */
 
-import { NodeSSH } from 'node-ssh';
+import type { NodeSSH } from 'node-ssh';
 import { gatherSSHSystemInfo } from '@/lib/ssh-system-info';
 
 export interface SSHConnectionConfig {
@@ -26,12 +26,25 @@ export interface SSHSession {
 
 class SSHService {
   private sessions: Map<string, SSHSession> = new Map();
+  private NodeSSHClass: typeof NodeSSH | null = null;
+
+  /**
+   * Lazy load NodeSSH to avoid bundling issues
+   */
+  private async getNodeSSH(): Promise<typeof NodeSSH> {
+    if (!this.NodeSSHClass) {
+      const { NodeSSH } = await import('node-ssh');
+      this.NodeSSHClass = NodeSSH;
+    }
+    return this.NodeSSHClass;
+  }
 
   /**
    * Create a new SSH connection
    */
   async connect(sessionId: string, config: SSHConnectionConfig): Promise<void> {
-    const ssh = new NodeSSH();
+    const NodeSSHClass = await this.getNodeSSH();
+    const ssh = new NodeSSHClass();
 
     const connectConfig: any = {
       host: config.host,

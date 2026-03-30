@@ -6,7 +6,7 @@
  * Docker is optional for advanced containerized workloads only.
  */
 
-import { NodeSSH } from 'node-ssh';
+import type { NodeSSH } from 'node-ssh';
 import { createHash } from 'crypto';
 import { gatherSSHSystemInfo } from '@/lib/ssh-system-info';
 
@@ -49,6 +49,18 @@ class BackendInstallerService {
   private readonly runtimeAuthUser = 'gizzi';
   private readonly runtimePort = 4096;
   private activeInstallations = new Map<string, { ssh: NodeSSH; abort: boolean }>();
+  private NodeSSHClass: typeof NodeSSH | null = null;
+
+  /**
+   * Lazy load NodeSSH to avoid bundling issues
+   */
+  private async getNodeSSH(): Promise<typeof NodeSSH> {
+    if (!this.NodeSSHClass) {
+      const { NodeSSH } = await import('node-ssh');
+      this.NodeSSHClass = NodeSSH;
+    }
+    return this.NodeSSHClass;
+  }
 
   getBackendVersion(): string {
     return this.BACKEND_VERSION;
@@ -64,7 +76,8 @@ class BackendInstallerService {
     privateKey?: string;
     password?: string;
   }): Promise<{ success: boolean; error?: string; systemInfo?: SystemInfo }> {
-    const ssh = new NodeSSH();
+    const NodeSSHClass = await this.getNodeSSH();
+    const ssh = new NodeSSHClass();
     
     try {
       const connectConfig: any = {
@@ -128,7 +141,8 @@ class BackendInstallerService {
     },
     onProgress: ProgressCallback
   ): Promise<{ success: boolean; error?: string; apiUrl?: string; gatewayAuthHeader?: string }> {
-    const ssh = new NodeSSH();
+    const NodeSSHClass = await this.getNodeSSH();
+    const ssh = new NodeSSHClass();
     this.activeInstallations.set(installationId, { ssh, abort: false });
 
     try {
@@ -231,7 +245,7 @@ class BackendInstallerService {
   }
 
   private quoteShell(command: string): string {
-    return `'${command.replace(/'/g, `'\"'\"'`)}'`;
+    return `'${command.replace(/'/g, `'"'"'`)}'`;
   }
 
   private async execShell(ssh: NodeSSH, command: string) {

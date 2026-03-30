@@ -12,7 +12,7 @@ import express from 'express';
 import { createServer } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import cors from 'cors';
-import { NodeSSH } from 'node-ssh';
+import type { NodeSSH } from 'node-ssh';
 import { randomBytes } from 'crypto';
 
 const VERSION = '1.0.0';
@@ -170,6 +170,7 @@ app.post('/api/v1/backend-install/test', async (req, res) => {
   
   console.log(`[SSH Test] Testing connection to ${body.host}:${body.port || 22}`);
   
+  const { NodeSSH } = await import('node-ssh');
   const ssh = new NodeSSH();
   
   try {

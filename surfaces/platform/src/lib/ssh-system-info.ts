@@ -1,4 +1,4 @@
-import { NodeSSH } from 'node-ssh';
+import type { NodeSSH } from 'node-ssh';
 
 export interface SSHSystemInfo {
   os: string;

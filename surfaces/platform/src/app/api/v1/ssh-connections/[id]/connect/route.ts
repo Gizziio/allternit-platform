@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { NodeSSH } from 'node-ssh';
+import type { NodeSSH } from 'node-ssh';
 import { prisma } from '@/lib/db';
 import { decrypt } from '@/lib/crypto';
 import { getAuth } from '@/lib/server-auth';
@@ -74,6 +74,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Attempt connection
+    const { NodeSSH } = await import('node-ssh');
     const ssh = new NodeSSH();
     await ssh.connect(connectConfig);
 

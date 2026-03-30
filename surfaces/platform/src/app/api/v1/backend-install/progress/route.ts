@@ -12,7 +12,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { NodeSSH } from 'node-ssh';
+import type { NodeSSH } from 'node-ssh';
 import { prisma } from '@/lib/db';
 import { decrypt, encrypt } from '@/lib/crypto';
 import { getAuth } from '@/lib/server-auth';
@@ -159,6 +159,7 @@ export async function POST(request: NextRequest) {
     const connection = await saveLegacyConnection(userId, body);
     connectionId = connection.id;
 
+    const { NodeSSH } = await import('node-ssh');
     const ssh = new NodeSSH();
     const privateKey = body.private_key?.trim() || undefined;
     const password = body.password || undefined;
