@@ -1,6 +1,6 @@
 {
   "installCommand": "pnpm install --no-frozen-lockfile",
-  "buildCommand": "prisma generate && next build",
+  "buildCommand": "DATABASE_URL=postgresql://dummy:dummy@localhost:5432/dummy prisma generate && next build",
   "framework": "nextjs",
   "outputDirectory": ".next"
 }
