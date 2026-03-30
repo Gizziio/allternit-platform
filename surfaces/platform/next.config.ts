@@ -1,13 +1,36 @@
+import fs from 'fs';
 import type { NextConfig } from 'next';
 import path from 'path';
+import webpack from 'webpack';
+
+const workspaceRoot = path.join(__dirname, '../../');
+const clerkPackageInstalled = [
+  path.join(__dirname, 'node_modules/@clerk/nextjs/package.json'),
+  path.join(workspaceRoot, 'node_modules/@clerk/nextjs/package.json'),
+].some((packagePath) => fs.existsSync(packagePath));
+
+const useClerkFallback =
+  process.env.A2R_PLATFORM_DISABLE_CLERK === '1' ||
+  process.env.NEXT_PUBLIC_A2R_PLATFORM_DISABLE_CLERK === '1' ||
+  !clerkPackageInstalled;
 
 const nextConfig: NextConfig = {
+  experimental: {
+    externalDir: true,
+  },
+
   webpack: (config, { isServer }) => {
     // Handle .js imports resolving to .ts files (ESM pattern in monorepo)
     config.resolve.extensionAlias = {
       '.js': ['.ts', '.js'],
       '.mjs': ['.mts', '.mjs'],
     };
+    
+    // Exclude native node addons from webpack bundling
+    config.externals = config.externals || [];
+    if (Array.isArray(config.externals)) {
+      config.externals.push('ssh2', 'cpu-features', 'node-ssh');
+    }
     
     // FIXME: These fallbacks are needed because MCP client code imports server-only
     // modules (postgres, net, tls, etc.) into client components. 
@@ -90,16 +113,56 @@ const nextConfig: NextConfig = {
     config.resolve.alias = {
       ...config.resolve.alias,
       '@a2r/runtime': path.resolve(__dirname, '../../3-adapters/runtime-adapters/a2r-runtime/dist'),
+      '@a2r/visual-state$': path.resolve(__dirname, 'adapters-ts/a2r-visual-state/src/index.ts'),
+      '@a2r/visual-state/types$': path.resolve(__dirname, 'adapters-ts/a2r-visual-state/src/types/index.ts'),
+      '@a2r/visual-state/inference$': path.resolve(__dirname, 'adapters-ts/a2r-visual-state/src/inference/index.ts'),
+      '@a2r/avatar-adapters$': path.resolve(__dirname, 'adapters-ts/a2r-avatar-adapters/src/index.ts'),
+      'react$': path.resolve(__dirname, 'node_modules/react'),
+      'react-dom$': path.resolve(__dirname, 'node_modules/react-dom'),
+      'react/jsx-runtime$': path.resolve(__dirname, 'node_modules/react/jsx-runtime.js'),
     };
-    
+
+    if (useClerkFallback) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        '@clerk/nextjs$': path.resolve(__dirname, 'src/stubs/clerk/nextjs.tsx'),
+        '@clerk/nextjs/server$': path.resolve(__dirname, 'src/stubs/clerk/nextjs-server.ts'),
+      };
+    }
+
+    // Shim Vite's import.meta.env for Next.js compatibility
+    const isDev = process.env.NODE_ENV !== 'production';
+    config.plugins.push(new webpack.DefinePlugin({
+      'import.meta.env.DEV': JSON.stringify(isDev),
+      'import.meta.env.PROD': JSON.stringify(!isDev),
+      'import.meta.env.MODE': JSON.stringify(isDev ? 'development' : 'production'),
+      'import.meta.env.VITE_API_BASE_URL': JSON.stringify(process.env.NEXT_PUBLIC_API_BASE_URL || null),
+      'import.meta.env.VITE_A2R_BASE_URL': JSON.stringify(process.env.NEXT_PUBLIC_A2R_BASE_URL || null),
+      'import.meta.env.VITE_A2R_GATEWAY_URL': JSON.stringify(process.env.NEXT_PUBLIC_A2R_GATEWAY_URL || null),
+      'import.meta.env.VITE_ENABLE_SESSION_BRIDGE': JSON.stringify(process.env.NEXT_PUBLIC_ENABLE_SESSION_BRIDGE || null),
+      'import.meta.env.VITE_SESSION_BRIDGE_DEBUG': JSON.stringify(process.env.NEXT_PUBLIC_SESSION_BRIDGE_DEBUG || null),
+      'import.meta.env.VITE_LOG_VALIDATION_ERRORS': JSON.stringify(process.env.NEXT_PUBLIC_LOG_VALIDATION_ERRORS || null),
+      'import.meta.env.VITE_META_SWARM_API_URL': JSON.stringify(process.env.NEXT_PUBLIC_META_SWARM_API_URL || null),
+      'import.meta.env.VITE_META_SWARM_HTTP_URL': JSON.stringify(process.env.NEXT_PUBLIC_META_SWARM_HTTP_URL || null),
+    }));
+
     return config;
   },
   
+  // Exclude native node addons (.node binaries) from webpack — ssh2/cpu-features ship
+  // compiled C++ binaries that webpack can't parse; keep them as server-side externals.
+  serverExternalPackages: ['ssh2', 'cpu-features', 'node-ssh'],
+
   transpilePackages: [
     '@a2r/runtime',
     '@a2r/kernel',
   ],
   
+  output: 'standalone',
+  
+  // Fix standalone output path in monorepo
+  outputFileTracingRoot: path.join(__dirname, '../../'),
+
   typescript: {
     ignoreBuildErrors: true,
   },

@@ -1,6 +1,6 @@
 {
   "installCommand": "pnpm install --no-frozen-lockfile",
-  "buildCommand": "next build",
+  "buildCommand": "prisma generate && next build",
   "framework": "nextjs",
   "outputDirectory": ".next"
 }
