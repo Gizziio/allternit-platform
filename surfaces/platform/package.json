@@ -12,7 +12,7 @@
     }
   },
   "scripts": {
-    "postinstall": "prisma generate || true",
+    "postinstall": "test -f prisma/schema.prisma && prisma generate --schema=./prisma/schema.prisma || true",
     "dev": "next dev -p 3013",
     "build": "next build",
     "start": "next start -p 3013",
