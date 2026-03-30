@@ -5,7 +5,7 @@
  * Handles connection pooling and prevents multiple instances in development.
  */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../generated/prisma';
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
