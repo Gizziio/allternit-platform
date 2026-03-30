@@ -1,0 +1,112 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// User Model (assuming Clerk integration)
+// ============================================================================
+
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  sshConnections      SshConnection[]
+  remoteBackendTargets RemoteBackendTarget[]
+  backendPreference   UserBackendPreference?
+
+  @@map("users")
+}
+
+// ============================================================================
+// SSH Connection Model
+// ============================================================================
+
+model SshConnection {
+  id                  String    @id @default(cuid())
+  userId              String
+  name                String
+  host                String
+  port                Int       @default(22)
+  username            String
+  authType            String    @map("auth_type") // 'key' or 'password'
+  encryptedPrivateKey String?   @map("encrypted_private_key")
+  encryptedPassword   String?   @map("encrypted_password")
+  status              String    @default("disconnected") // 'connected', 'disconnected', 'connecting', 'error'
+  os                  String?
+  architecture        String?
+  dockerInstalled     Boolean?  @map("docker_installed")
+  a2rInstalled        Boolean?  @map("a2r_installed")
+  a2rVersion          String?   @map("a2r_version")
+  lastConnectedAt     DateTime? @map("last_connected_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  backendTarget RemoteBackendTarget?
+
+  @@index([userId])
+  @@index([status])
+  @@map("ssh_connections")
+}
+
+model RemoteBackendTarget {
+  id                  String   @id @default(cuid())
+  userId              String
+  sshConnectionId     String   @unique @map("ssh_connection_id")
+  name                String
+  status              String   @default("disconnected")
+  installState        String   @default("unknown") @map("install_state")
+  backendUrl          String?  @map("backend_url")
+  gatewayUrl          String?  @map("gateway_url")
+  gatewayWsUrl        String?  @map("gateway_ws_url")
+  encryptedGatewayToken String? @map("encrypted_gateway_token")
+  installedVersion    String?  @map("installed_version")
+  supportedClientRange String? @map("supported_client_range")
+  lastVerifiedAt      DateTime? @map("last_verified_at")
+  lastHeartbeatAt     DateTime? @map("last_heartbeat_at")
+  lastError           String?  @map("last_error")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  user           User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sshConnection  SshConnection           @relation(fields: [sshConnectionId], references: [id], onDelete: Cascade)
+  activeForUsers UserBackendPreference[] @relation("ActiveRemoteBackendTarget")
+
+  @@index([userId])
+  @@index([status])
+  @@map("remote_backend_targets")
+}
+
+model UserBackendPreference {
+  id                        String   @id @default(cuid())
+  userId                    String   @unique
+  orgId                     String?  @map("org_id")
+  mode                      String   @default("local")
+  fallbackMode              String   @default("local") @map("fallback_mode")
+  executionMode             String   @default("auto") @map("execution_mode")
+  executionModeUpdatedAt    DateTime @default(now()) @map("execution_mode_updated_at")
+  activeRemoteBackendTargetId String? @map("active_remote_backend_target_id")
+  createdAt                 DateTime @default(now()) @map("created_at")
+  updatedAt                 DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeRemoteBackendTarget RemoteBackendTarget? @relation("ActiveRemoteBackendTarget", fields: [activeRemoteBackendTargetId], references: [id], onDelete: SetNull)
+
+  @@index([activeRemoteBackendTargetId])
+  @@map("user_backend_preferences")
+}
