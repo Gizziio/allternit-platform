@@ -1,3 +1,4 @@
 {
-  "installCommand": "pnpm install --no-frozen-lockfile"
+  "installCommand": "pnpm install --no-frozen-lockfile",
+  "buildCommand": "prisma generate && next build"
 }
