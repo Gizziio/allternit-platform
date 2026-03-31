@@ -8,7 +8,7 @@
 import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { A2RDocumentEditor } from '@/components/a2r/A2RDocumentEditor';
-import type { ArtifactUIPart } from '@/lib/ai/rust-stream-adapter';
+import type { ArtifactUIPart } from '@/lib/ai/ui-parts.types';
 
 interface DocumentRendererProps {
   artifact: ArtifactUIPart;

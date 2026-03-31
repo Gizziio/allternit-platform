@@ -39,7 +39,7 @@ export const auth = {
 export async function getSession(): Promise<Session | null> {
   // In browser, check localStorage for demo/session
   if (typeof window !== 'undefined') {
-    const stored = localStorage.getItem('a2r_session');
+    const stored = localStorage.getItem('allternit_session');
     if (stored) {
       try {
         return JSON.parse(stored) as Session;

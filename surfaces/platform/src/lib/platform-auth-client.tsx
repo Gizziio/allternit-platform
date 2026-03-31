@@ -3,7 +3,7 @@
 import { ClerkProvider, SignIn, SignUp, useAuth, useUser, useClerk } from "@clerk/nextjs"
 import type { ReactNode } from "react"
 
-const authDisabled = process.env.NEXT_PUBLIC_A2R_PLATFORM_DISABLE_CLERK === "1"
+const authDisabled = process.env.NEXT_PUBLIC_ALLTERNIT_PLATFORM_DISABLE_CLERK === "1"
 
 export function isPlatformAuthDisabled() {
   return authDisabled

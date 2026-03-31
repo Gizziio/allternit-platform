@@ -6,8 +6,8 @@ import {
 } from "@/lib/runtime-backend";
 
 const GATEWAY_BASE_URL =
-  process.env.VITE_A2R_GATEWAY_URL?.replace(/\/api\/v1\/?$/, "").replace(/\/+$/, "") ??
-  process.env.NEXT_PUBLIC_A2R_GATEWAY_URL?.replace(/\/api\/v1\/?$/, "").replace(/\/+$/, "") ??
+  process.env.VITE_ALLTERNIT_GATEWAY_URL?.replace(/\/api\/v1\/?$/, "").replace(/\/+$/, "") ??
+  process.env.NEXT_PUBLIC_ALLTERNIT_GATEWAY_URL?.replace(/\/api\/v1\/?$/, "").replace(/\/+$/, "") ??
   "http://127.0.0.1:8013";
 
 type ProxyCandidate = {

@@ -208,7 +208,7 @@ cd 4-gateway/a2r-gateway
 python -m uvicorn main:app --port 8013
 
 # 3. Start UI
-cd 5-ui/a2r-platform
+cd 5-ui/allternit-platform
 npm run dev
 
 # 4. Open browser to http://localhost:5177

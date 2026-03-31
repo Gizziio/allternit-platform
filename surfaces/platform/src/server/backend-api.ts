@@ -19,12 +19,12 @@ const VERSION = '1.0.0';
 const DEFAULT_PORT = 4096;
 const RUNTIME_SERVICE_USER = 'gizzi';
 const RUNTIME_AUTH_USER = 'gizzi';
-const GITHUB_REPO = process.env.A2R_GITHUB_REPO || 'Gizziio/a2rchitech';
+const GITHUB_REPO = process.env.ALLTERNIT_GITHUB_REPO || 'Gizziio/allternit';
 const INSTALLER_URLS = [
-  process.env.A2R_INSTALLER_URL,
-  'https://install.a2r.io',
-  'https://raw.githubusercontent.com/Gizziio/a2rchitech/main/surfaces/platform/install.sh',
-  'https://github.com/Gizziio/a2rchitech/raw/main/surfaces/platform/install.sh',
+  process.env.ALLTERNIT_INSTALLER_URL,
+  'https://install.allternit.com',
+  'https://raw.githubusercontent.com/Gizziio/allternit/main/surfaces/platform/install.sh',
+  'https://github.com/Gizziio/allternit/raw/main/surfaces/platform/install.sh',
 ].filter((value): value is string => Boolean(value && value.trim()));
 
 // Parse arguments
@@ -119,15 +119,15 @@ function buildRemoteInstallerCommand(runtimePassword: string, arch: 'amd64' | 'a
   return `set -euo pipefail
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
 export VERSION=${quoteShell(VERSION)}
-export A2R_VERSION=${quoteShell(VERSION)}
-export A2R_SERVICE_USER=${quoteShell(RUNTIME_SERVICE_USER)}
-export A2R_GIZZI_SERVER_USERNAME=${quoteShell(RUNTIME_AUTH_USER)}
-export A2R_GIZZI_SERVER_PASSWORD=${quoteShell(runtimePassword)}
-export A2R_RUNTIME_PORT='4096'
-export A2R_TARGET_ARCH=${quoteShell(arch)}
-export A2R_GITHUB_REPO=${quoteShell(GITHUB_REPO)}
-export A2R_GITHUB_REF=${quoteShell(process.env.A2R_GITHUB_REF || `v${VERSION}`)}
-export A2R_BINARY_BASE_URL=${quoteShell(process.env.A2R_BINARY_BASE_URL || '')}
+export ALLTERNIT_VERSION=${quoteShell(VERSION)}
+export ALLTERNIT_SERVICE_USER=${quoteShell(RUNTIME_SERVICE_USER)}
+export ALLTERNIT_GIZZI_SERVER_USERNAME=${quoteShell(RUNTIME_AUTH_USER)}
+export ALLTERNIT_GIZZI_SERVER_PASSWORD=${quoteShell(runtimePassword)}
+export ALLTERNIT_RUNTIME_PORT='4096'
+export ALLTERNIT_TARGET_ARCH=${quoteShell(arch)}
+export ALLTERNIT_GITHUB_REPO=${quoteShell(GITHUB_REPO)}
+export ALLTERNIT_GITHUB_REF=${quoteShell(process.env.ALLTERNIT_GITHUB_REF || `v${VERSION}`)}
+export ALLTERNIT_BINARY_BASE_URL=${quoteShell(process.env.ALLTERNIT_BINARY_BASE_URL || '')}
 for url in ${INSTALLER_URLS.map((value) => quoteShell(value)).join(' ')}; do
   [ -n "$url" ] || continue
   if command -v curl >/dev/null 2>&1; then

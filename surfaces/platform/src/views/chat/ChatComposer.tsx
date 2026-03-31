@@ -54,6 +54,8 @@ import type { RuntimeExecutionMode } from '@/lib/agents/native-agent-api';
 
 import {
   buildOpenClawImportInput,
+  useActiveSessionContextSnapshot,
+  useNativeAgentStore,
   discoverOpenClawAgents,
   getOpenClawWorkspacePathFromAgent,
   getRegisteredOpenClawAgentId,
@@ -62,10 +64,6 @@ import {
   type Agent,
   type OpenClawDiscoveredAgent,
 } from '@/lib/agents';
-import {
-  useEmbeddedAgentSession,
-  useEmbeddedAgentSessionStore,
-} from '@/lib/agents/embedded-agent-session.store';
 import { AgentModeGizzi } from './AgentModeGizzi';
 import { getAgentModeSurfaceTheme } from './agentModeSurfaceTheme';
 import { useRecordingStore } from '@/stores/recording.store';
@@ -546,8 +544,14 @@ export function ChatComposer({
   const [isLoadingOpenClawCandidates, setIsLoadingOpenClawCandidates] = useState(false);
   const [openClawError, setOpenClawError] = useState<string | null>(null);
   const [importingOpenClawAgentId, setImportingOpenClawAgentId] = useState<string | null>(null);
-  const { isEmbedded: hasEmbeddedSession } = useEmbeddedAgentSession(agentModeSurface ?? 'chat');
-  const clearSurfaceSession = useEmbeddedAgentSessionStore((s) => s.clearSurfaceSession);
+  const activeSessionId = useNativeAgentStore((s) => s.activeSessionId);
+  const appendOptimisticEvent = useNativeAgentStore((s) => s.appendOptimisticEvent);
+  const activeSessionContext = useActiveSessionContextSnapshot();
+  const activeSession = activeSessionContext.session;
+  const hasEmbeddedSession = useMemo(
+    () => Boolean(activeSession && activeSessionContext.descriptor.sessionMode === 'agent'),
+    [activeSession, activeSessionContext.descriptor.sessionMode],
+  );
   const [locallyEnabled, setLocallyEnabled] = useState(false);
   const agentModeEnabled = hasEmbeddedSession || locallyEnabled;
   const [agentModePulse, setAgentModePulse] = useState(0);
@@ -636,9 +640,24 @@ export function ChatComposer({
   const isBrowserSurface = agentModeSurface === 'browser';
 
   const toggleAgentMode = () => {
+    const nextEnabled = !agentModeEnabled;
+    if (activeSessionId && agentModeSurface) {
+      appendOptimisticEvent(activeSessionId, {
+        id: `evt_agent_mode_${Date.now()}`,
+        sessionId: activeSessionId,
+        actor: 'ui',
+        surface: agentModeSurface,
+        type: 'agent.mode.changed',
+        payload: {
+          enabled: nextEnabled,
+          scope: 'surface',
+        },
+        createdAt: new Date().toISOString(),
+        seq: 0,
+      });
+    }
     if (agentModeEnabled) {
       setLocallyEnabled(false);
-      if (agentModeSurface && hasEmbeddedSession) clearSurfaceSession(agentModeSurface);
     } else {
       setLocallyEnabled(true);
     }
@@ -1382,11 +1401,11 @@ export function ChatComposer({
                 // Map top pill to agent mode and select corresponding mode
                 if (agentModeSurface) {
                   const modeMapping: Record<string, AgentModeId> = {
-                    'code': 'code',
-                    'create': 'assets',
+                    'code': 'web',
+                    'create': 'slides',
                     'write': 'slides',
                     'learn': 'research',
-                    'a2r': 'agents',
+                    'a2r': 'flow',
                   };
                   const targetMode = modeMapping[cat.id];
                   if (targetMode) {
@@ -2783,11 +2802,9 @@ const MODE_COLORS: Record<string, { accent: string; soft: string; glow: string; 
   research: { accent: '#3b82f6', soft: 'rgba(59,130,246,0.15)', glow: 'rgba(59,130,246,0.4)', label: 'Research' },
   data: { accent: '#10b981', soft: 'rgba(16,185,129,0.15)', glow: 'rgba(16,185,129,0.4)', label: 'Data' },
   slides: { accent: '#f59e0b', soft: 'rgba(245,158,11,0.15)', glow: 'rgba(245,158,11,0.4)', label: 'Slides' },
-  code: { accent: '#8b5cf6', soft: 'rgba(139,92,246,0.15)', glow: 'rgba(139,92,246,0.4)', label: 'Code' },
-  assets: { accent: '#ec4899', soft: 'rgba(236,72,153,0.15)', glow: 'rgba(236,72,153,0.4)', label: 'Assets' },
-  agents: { accent: '#ef4444', soft: 'rgba(239,68,68,0.15)', glow: 'rgba(239,68,68,0.4)', label: 'Agents' },
   flow: { accent: '#06b6d4', soft: 'rgba(6,182,212,0.15)', glow: 'rgba(6,182,212,0.4)', label: 'Flow' },
-  web: { accent: '#6366f1', soft: 'rgba(99,102,241,0.15)', glow: 'rgba(99,102,241,0.4)', label: 'Web' },
+  web: { accent: '#6366f1', soft: 'rgba(99,102,241,0.15)', glow: 'rgba(99,102,241,0.4)', label: 'Websites' },
+  'computer-use': { accent: '#a855f7', soft: 'rgba(168,85,247,0.15)', glow: 'rgba(168,85,247,0.4)', label: 'Computer Use' },
 };
 
 function AgentModeButton({
@@ -2852,7 +2869,7 @@ function AgentModeButton({
 }
 
 // ============================================================================
-// Mode Dock - 8 Mode Tabs (Research, Data, Slides, Code, Assets, Agents, Flow, Web)
+// Mode Dock - Mode Tabs (Research, Data, Slides, Flow, Websites, Computer Use)
 // ============================================================================
 
 interface ModeDockProps {
@@ -2865,11 +2882,9 @@ const MODES = [
   { id: 'research', label: 'Research', color: '#3b82f6', icon: '🔬' },
   { id: 'data', label: 'Data', color: '#10b981', icon: '📊' },
   { id: 'slides', label: 'Slides', color: '#f59e0b', icon: '📑' },
-  { id: 'code', label: 'Code', color: '#8b5cf6', icon: '💻' },
-  { id: 'assets', label: 'Assets', color: '#ec4899', icon: '🎨' },
-  { id: 'agents', label: 'Agents', color: '#ef4444', icon: '🤖' },
   { id: 'flow', label: 'Flow', color: '#06b6d4', icon: '🌊' },
-  { id: 'web', label: 'Web', color: '#6366f1', icon: '🌐' },
+  { id: 'web', label: 'Websites', color: '#6366f1', icon: '🌐' },
+  { id: 'computer-use', label: 'Computer Use', color: '#a855f7', icon: '🖥️' },
 ] as const;
 
 // ============================================================================
@@ -3021,30 +3036,20 @@ const MODE_TEMPLATES: Record<string, Array<{ title: string; description: string;
     { title: 'Quarterly Review', description: 'Business performance slides', prompt: 'Design a quarterly business review presentation covering: [metrics/achievements/challenges]' },
     { title: 'Product Launch', description: 'Go-to-market deck', prompt: 'Create a product launch presentation for [product]. Include positioning, features, target audience, and go-to-market strategy.' },
   ],
-  code: [
-    { title: 'Feature Implementation', description: 'Build new functionality', prompt: 'Help me implement [feature] in [language/framework]. Include code structure, key components, and best practices.' },
-    { title: 'Code Review', description: 'Review and improve code', prompt: 'Review this code for [language] and suggest improvements: [paste code]' },
-    { title: 'Architecture Design', description: 'System architecture planning', prompt: 'Design the architecture for [system/app]. Include components, data flow, and technology recommendations.' },
-  ],
-  assets: [
-    { title: 'Brand Guidelines', description: 'Design system and style guide', prompt: 'Create brand guidelines for [company/product]. Include color palette, typography, logo usage, and visual style.' },
-    { title: 'Icon Set', description: 'Custom icon design', prompt: 'Design a custom icon set for [purpose]. Include style specifications and usage guidelines.' },
-    { title: 'Marketing Assets', description: 'Social media and web graphics', prompt: 'Create marketing asset concepts for [campaign/product]. Include social media posts, banners, and email headers.' },
-  ],
-  agents: [
-    { title: 'Agent Configuration', description: 'Set up custom agents', prompt: 'Help me configure an agent for [purpose]. Include system prompt, capabilities, and tool integration.' },
-    { title: 'Multi-Agent Flow', description: 'Orchestrate agent teams', prompt: 'Design a multi-agent workflow for [task]. Define agent roles, handoffs, and coordination patterns.' },
-    { title: 'Agent Testing', description: 'Validate agent behavior', prompt: 'Create test cases and evaluation criteria for [agent/system]. Include edge cases and success metrics.' },
-  ],
   flow: [
     { title: 'Workflow Design', description: 'Process automation', prompt: 'Design a workflow for [process]. Include steps, decision points, and automation opportunities.' },
     { title: 'Integration Flow', description: 'Connect systems', prompt: 'Create an integration flow between [system A] and [system B]. Include data mapping and error handling.' },
     { title: 'Approval Process', description: 'Review and sign-off flows', prompt: 'Design an approval workflow for [process]. Include roles, escalation rules, and notification logic.' },
   ],
   web: [
-    { title: 'Landing Page', description: 'High-conversion web page', prompt: 'Design a landing page for [product/service]. Include structure, copy suggestions, and conversion optimization tips.' },
-    { title: 'Web App UI', description: 'Application interface design', prompt: 'Create a UI design for [web app]. Include wireframes, component hierarchy, and responsive considerations.' },
-    { title: 'E-commerce Site', description: 'Online store design', prompt: 'Design an e-commerce experience for [product/category]. Include product pages, checkout flow, and trust signals.' },
+    { title: 'Landing Page', description: 'Build a complete landing page', prompt: 'Build a modern landing page for [product/company]. Include hero, features, testimonials, and CTA sections. Output full HTML/CSS/JS.' },
+    { title: 'Interactive App', description: 'Single-page web application', prompt: 'Build a single-page [type] app (e.g. calculator, todo list, form). Output self-contained HTML/CSS/JS that runs in a preview panel.' },
+    { title: 'Portfolio Site', description: 'Personal or project showcase', prompt: 'Create a portfolio website for [name/project]. Include a bio, project gallery, and contact section. Output full HTML/CSS/JS.' },
+  ],
+  'computer-use': [
+    { title: 'Browse & Extract', description: 'Navigate a site and pull structured data', prompt: 'Go to [URL] and extract [data/information]. Organise the results into a structured format.' },
+    { title: 'Automate a Task', description: 'Complete a multi-step web workflow', prompt: 'Automate the following web task for me: [describe the task, e.g. fill in a form, submit a report, scrape a table].' },
+    { title: 'Research a Topic', description: 'Open-ended web research via real browsing', prompt: 'Use the browser to research [topic]. Visit multiple sources, cross-reference facts, and summarise your findings.' },
   ],
 };
 
@@ -3053,11 +3058,9 @@ const MODE_TABS = [
   { id: 'research', label: 'Research', color: '#3b82f6' },
   { id: 'data', label: 'Data', color: '#10b981' },
   { id: 'slides', label: 'Slides', color: '#f59e0b' },
-  { id: 'code', label: 'Code', color: '#8b5cf6' },
-  { id: 'assets', label: 'Assets', color: '#ec4899' },
-  { id: 'agents', label: 'Agents', color: '#ef4444' },
   { id: 'flow', label: 'Flow', color: '#06b6d4' },
-  { id: 'web', label: 'Web', color: '#6366f1' },
+  { id: 'web', label: 'Websites', color: '#6366f1' },
+  { id: 'computer-use', label: 'Computer Use', color: '#a855f7' },
 ] as const;
 
 function ModeDock({ selectedMode, onSelectMode, agentModeSurface }: ModeDockProps) {

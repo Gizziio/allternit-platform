@@ -40,80 +40,24 @@
     "build:electron": "npm run build && node electron/prepare-next-standalone.cjs && electron-builder --mac",
     "electron:dev": "electron electron/main.cjs"
   },
-  "build": {
-    "appId": "com.a2r.platform",
-    "productName": "A2R Platform",
-    "copyright": "Copyright © 2024 A2R Technologies",
-    "npmRebuild": false,
-    "directories": {
-      "output": "dist-app"
-    },
-    "files": [
-      "electron/**/*",
-      "node_modules/**/*",
-      "package.json",
-      "!a2r-platform"
-    ],
-    "extraResources": [
-      {
-        "from": ".next/standalone",
-        "to": "standalone",
-        "filter": [
-          "**/*",
-          "!**/node_modules/.bun/**"
-        ]
-      },
-      {
-        "from": ".next/static",
-        "to": "standalone/surfaces/platform/.next/static"
-      },
-      {
-        "from": "public",
-        "to": "standalone/surfaces/platform/public"
-      },
-      {
-        "from": ".next/standalone/server",
-        "to": "server"
-      },
-      {
-        "from": "../../services/gateway/http/dist-bundle",
-        "to": "standalone/services/gateway/dist"
-      },
-      {
-        "from": "../../cmd/gizzi-code/dist/gizzi-code-darwin-arm64",
-        "to": "standalone/bin/gizzi-code"
-      },
-      {
-        "from": "../../cmd/a2r-api/target/debug/a2r-api",
-        "to": "standalone/bin/a2r-api"
-      }
-    ],
-    "mac": {
-      "category": "public.app-category.productivity",
-      "icon": "electron/icon.icns",
-      "target": [
-        {
-          "target": "dmg",
-          "arch": [
-            "arm64"
-          ]
-        }
-      ],
-      "identity": null,
-      "hardenedRuntime": false,
-      "gatekeeperAssess": false
-    }
-  },
   "dependencies": {
-    "@a2r/avatar-adapters": "workspace:*",
-    "@a2r/governor": "workspace:*",
-    "@a2r/mcp-apps-adapter": "workspace:*",
-    "@a2r/provider-adapters": "workspace:*",
-    "@a2r/replies-contract": "workspace:*",
-    "@a2r/replies-reducer": "workspace:*",
-    "@a2r/runtime": "workspace:*",
-    "@a2r/sdk": "workspace:*",
-    "@a2r/visual-state": "workspace:*",
+    "@allternit/avatar-adapters": "workspace:*",
+    "@allternit/browser-tools": "workspace:*",
+    "@allternit/executor-core": "workspace:*",
+    "@allternit/executor-superconductor": "workspace:*",
+    "@allternit/form-surfaces": "workspace:*",
+    "@allternit/governor": "workspace:*",
+    "@allternit/ix": "workspace:*",
+    "@allternit/mcp-apps-adapter": "workspace:*",
+    "@allternit/parallel-run": "workspace:*",
+    "@allternit/provider-adapters": "workspace:*",
+    "@allternit/replies-contract": "workspace:*",
+    "@allternit/replies-reducer": "workspace:*",
+    "@allternit/runtime": "workspace:*",
+    "@allternit/sdk": "workspace:*",
+    "@allternit/visual-state": "workspace:*",
+    "@allternit/viz": "workspace:*",
+    "@allternit/workflow-engine": "workspace:*",
     "@ai-sdk-tools/store": "^1.2.0",
     "@ai-sdk/alibaba": "^1.0.1",
     "@ai-sdk/amazon-bedrock": "^4.0.51",

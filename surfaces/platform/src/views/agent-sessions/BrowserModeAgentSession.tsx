@@ -36,7 +36,7 @@ import { AgentSessionLayout } from './AgentSessionLayout';
 import type { BrowserModeAgentSessionProps } from './types';
 
 export function BrowserModeAgentSession({
-  initialUrl = 'https://a2rchitech.com',
+  initialUrl = 'https://allternit.com',
   onClose,
 }: BrowserModeAgentSessionProps) {
   const mode = 'browser';

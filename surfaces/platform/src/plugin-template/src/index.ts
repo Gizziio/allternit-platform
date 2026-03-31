@@ -18,7 +18,7 @@
 // ============================================================================
 
 // A2R Platform SDK (when available)
-// import { A2RPlugin, Panel, Command, Storage } from '@a2r/platform';
+// import { A2RPlugin, Panel, Command, Storage } from '@allternit/platform';
 
 // Or use the global A2R object provided by the platform
 // declare const A2R: {
@@ -452,6 +452,6 @@ export interface IMyPluginEvents {
  * 
  * - Documentation: https://docs.a2r.dev/plugins
  * - API Reference: https://docs.a2r.dev/plugins/api-reference
- * - Examples: https://github.com/a2rchitech/a2r-plugin-examples
+ * - Examples: https://github.com/allternit/a2r-plugin-examples
  * - Community: https://discord.gg/a2r
  */

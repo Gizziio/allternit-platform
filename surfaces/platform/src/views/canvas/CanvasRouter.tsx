@@ -14,7 +14,7 @@ import { ImageRenderer } from './renderers/ImageRenderer';
 import { VideoRenderer } from './renderers/VideoRenderer';
 import { AudioRenderer } from './renderers/AudioRenderer';
 import { MermaidRenderer } from './renderers/MermaidRenderer';
-import type { ArtifactUIPart } from '@/lib/ai/rust-stream-adapter';
+import type { ArtifactUIPart } from '@/lib/ai/ui-parts.types';
 import { cn } from '@/lib/utils';
 
 export type RendererType = 

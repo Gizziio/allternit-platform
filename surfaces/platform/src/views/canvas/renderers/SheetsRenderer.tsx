@@ -8,7 +8,7 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { A2RDataGrid } from '@/components/a2r/A2RDataGrid';
-import type { ArtifactUIPart } from '@/lib/ai/rust-stream-adapter';
+import type { ArtifactUIPart } from '@/lib/ai/ui-parts.types';
 
 interface SheetsRendererProps {
   artifact: ArtifactUIPart;

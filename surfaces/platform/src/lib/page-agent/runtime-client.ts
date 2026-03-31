@@ -1,7 +1,7 @@
 import { isElectronShell } from '@/lib/platform';
 
 const ELECTRON_PAGE_AGENT_BASE =
-  process.env.NEXT_PUBLIC_A2R_THIN_CLIENT_URL ?? 'http://127.0.0.1:3014';
+  process.env.NEXT_PUBLIC_ALLTERNIT_THIN_CLIENT_URL ?? 'http://127.0.0.1:3014';
 
 function withBase(path: string): string {
   return `${ELECTRON_PAGE_AGENT_BASE}${path}`;

@@ -23,10 +23,6 @@ vi.mock('@/lib/agents/native-agent.store', () => ({
       const state = {
         sessions: [],
         activeSessionId: null,
-        sessionIdBySurface: { chat: null, cowork: null, code: null, browser: null },
-        setSurfaceSession: vi.fn(),
-        clearSurfaceSession: vi.fn(),
-        clearAllSurfaceSessions: vi.fn(),
         createSession,
         deleteSession,
         updateSession,
@@ -38,10 +34,6 @@ vi.mock('@/lib/agents/native-agent.store', () => ({
       getState: () => ({
         sessions: [],
         activeSessionId: null,
-        sessionIdBySurface: { chat: null, cowork: null, code: null, browser: null },
-        setSurfaceSession: vi.fn(),
-        clearSurfaceSession: vi.fn(),
-        clearAllSurfaceSessions: vi.fn(),
         createSession,
         deleteSession,
         updateSession,

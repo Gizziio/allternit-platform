@@ -67,10 +67,10 @@
     "typescript": "^5.2.0"
   },
   "peerDependencies": {
-    "@a2r/platform": "^2.0.0"
+    "@allternit/platform": "^2.0.0"
   },
   "peerDependenciesMeta": {
-    "@a2r/platform": {
+    "@allternit/platform": {
       "optional": true
     }
   },

@@ -1,11 +1,11 @@
 /**
  * Voice Service Adapter
  * 
- * Adapts the existing VoiceService to use A2R_BASE_URL.
+ * Adapts the existing VoiceService to use ALLTERNIT_BASE_URL.
  * This allows incremental migration without breaking existing code.
  */
 
-import { A2R_BASE_URL, get, post, type A2RResponse } from '../index';
+import { ALLTERNIT_BASE_URL, get, post, type A2RResponse } from '../index';
 
 // Re-export types from original service
 export interface TTSRequest {
@@ -57,8 +57,8 @@ class VoiceServiceAdapter {
   private healthCheckInterval = 30000;
 
   constructor() {
-    // Use A2R_BASE_URL with /v1/voice prefix
-    this.baseUrl = `${A2R_BASE_URL}/v1/voice`;
+    // Use ALLTERNIT_BASE_URL with /v1/voice prefix
+    this.baseUrl = `${ALLTERNIT_BASE_URL}/v1/voice`;
     
     // Initial health check
     this.checkHealth({ quiet: true }).catch(() => {});
@@ -77,7 +77,7 @@ class VoiceServiceAdapter {
 
     try {
       // Health check through gateway
-      const response = await fetch(`${A2R_BASE_URL}/health`, {
+      const response = await fetch(`${ALLTERNIT_BASE_URL}/health`, {
         signal: AbortSignal.timeout(3000),
       });
       
@@ -153,7 +153,7 @@ class VoiceServiceAdapter {
 
       const audioUrl = response.data.audio_url.startsWith('http')
         ? response.data.audio_url
-        : `${A2R_BASE_URL}${response.data.audio_url}`;
+        : `${ALLTERNIT_BASE_URL}${response.data.audio_url}`;
 
       if (autoPlay) {
         await this.playAudio(audioUrl);
@@ -189,7 +189,7 @@ class VoiceServiceAdapter {
 
       const audioUrl = response.data.audio_url.startsWith('http')
         ? response.data.audio_url
-        : `${A2R_BASE_URL}${response.data.audio_url}`;
+        : `${ALLTERNIT_BASE_URL}${response.data.audio_url}`;
 
       await this.playAudio(audioUrl);
 

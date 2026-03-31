@@ -39,7 +39,7 @@ const DEFAULT_LANGUAGE: LanguageCode = 'en';
 /**
  * Storage key for language preference
  */
-const LANGUAGE_STORAGE_KEY = 'a2r_i18n_language';
+const LANGUAGE_STORAGE_KEY = 'allternit_i18n_language';
 
 /**
  * Create the i18n context

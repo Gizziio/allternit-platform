@@ -12,5 +12,5 @@ try {
   // Directory may already exist
 }
 
-const sqlite = new Database(join(dataDir, "a2rchitech.db"));
+const sqlite = new Database(join(dataDir, "allternit.db"));
 export const db = drizzle(sqlite, { schema });

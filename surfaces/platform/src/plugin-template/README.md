@@ -2,7 +2,7 @@
 
 > A production-ready template for creating plugins for the A2R (Agent-to-Resource) Platform.
 
-[![Use this template](https://img.shields.io/badge/Use%20this%20template-2ea44f?style=for-the-badge&logo=github)](https://github.com/new?template_name=a2r-plugin-template&template_owner=a2rchitech)
+[![Use this template](https://img.shields.io/badge/Use%20this%20template-2ea44f?style=for-the-badge&logo=github)](https://github.com/new?template_name=a2r-plugin-template&template_owner=allternit)
 [![Validate](https://img.shields.io/github/actions/workflow/status/YOUR_USERNAME/YOUR_REPO/validate.yml?style=for-the-badge&logo=github&label=Validation)](https://github.com/YOUR_USERNAME/YOUR_REPO/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
@@ -12,7 +12,7 @@
 
 ### Option 1: Use GitHub Template (Recommended)
 
-1. Click the **"Use this template"** button above (or [click here](https://github.com/new?template_name=a2r-plugin-template&template_owner=a2rchitech))
+1. Click the **"Use this template"** button above (or [click here](https://github.com/new?template_name=a2r-plugin-template&template_owner=allternit))
 2. Choose a name for your repository (e.g., `my-a2r-plugin`)
 3. Select **"Create a new repository"**
 4. Clone your new repository locally
@@ -21,7 +21,7 @@
 
 ```bash
 # Clone the template
-git clone https://github.com/a2rchitech/a2r-plugin-template.git my-plugin
+git clone https://github.com/allternit/a2r-plugin-template.git my-plugin
 cd my-plugin
 rm -rf .git
 git init
@@ -72,7 +72,7 @@ See [plugin.json documentation](#pluginjson-reference) for all available fields.
 Replace the stub in `src/index.ts` (or `src/index.js`) with your plugin code:
 
 ```typescript
-import { A2RPlugin } from '@a2r/platform';
+import { A2RPlugin } from '@allternit/platform';
 
 export default class MyPlugin extends A2RPlugin {
   async onActivate() {
@@ -175,7 +175,7 @@ my-a2r-plugin/
   "icon": "assets/icon.svg",
   "permissions": ["storage", "network", "clipboard"],
   "dependencies": {
-    "@a2r/core": "^2.0.0"
+    "@allternit/core": "^2.0.0"
   },
   "settings": {
     "theme": {
@@ -203,7 +203,7 @@ my-a2r-plugin/
 ### Prerequisites
 
 - Node.js 18+ or Bun 1.0+
-- A2R Platform CLI (optional): `npm install -g @a2r/cli`
+- A2R Platform CLI (optional): `npm install -g @allternit/cli`
 
 ### Test Commands
 
@@ -361,7 +361,7 @@ a2r plugin install my-plugin
 
 ## Usage
 \`\`\`javascript
-import { myPlugin } from '@a2r/plugin-my-plugin';
+import { myPlugin } from '@allternit/plugin-my-plugin';
 
 myPlugin.doSomething();
 \`\`\`
@@ -393,7 +393,7 @@ This template is [MIT](LICENSE) licensed.
 ## 💬 Support
 
 - 📖 [A2R Platform Documentation](https://docs.a2r.dev)
-- 🐛 [Report Issues](https://github.com/a2rchitech/a2r-plugin-template/issues)
+- 🐛 [Report Issues](https://github.com/allternit/a2r-plugin-template/issues)
 - 💬 [Discord Community](https://discord.gg/a2r)
 
 ---

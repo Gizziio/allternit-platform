@@ -97,7 +97,7 @@ export function VoiceProvider({ children }: VoiceProviderProps) {
   const [settings, setSettings] = useState(() => {
     if (typeof window === 'undefined') return DEFAULT_SETTINGS;
     
-    const saved = localStorage.getItem('a2r_voice_settings');
+    const saved = localStorage.getItem('allternit_voice_settings');
     if (saved) {
       try {
         return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) };
@@ -139,7 +139,7 @@ export function VoiceProvider({ children }: VoiceProviderProps) {
 
   // Persist settings
   useEffect(() => {
-    localStorage.setItem('a2r_voice_settings', JSON.stringify(settings));
+    localStorage.setItem('allternit_voice_settings', JSON.stringify(settings));
   }, [settings]);
 
   // Subscribe to voice service events

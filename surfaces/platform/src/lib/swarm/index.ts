@@ -5,7 +5,7 @@
  * 
  * Quick Start:
  * ```typescript
- * import { useMetaSwarm, detectSwarmTrigger } from '@a2r/platform/swarm';
+ * import { useMetaSwarm, detectSwarmTrigger } from '@allternit/platform/swarm';
  * 
  * // In your component:
  * const { submitTask, isConnected } = useMetaSwarm();

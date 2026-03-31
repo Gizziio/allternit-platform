@@ -8,7 +8,7 @@
  * - Streaming generation (SSE)
  */
 
-import { A2R_BASE_URL } from '../index.js';
+import { ALLTERNIT_BASE_URL } from '../index.js';
 
 // =============================================================================
 // Types
@@ -122,7 +122,7 @@ export interface GenerationConfig {
 export class TamboClient {
   private baseUrl: string;
 
-  constructor(baseUrl: string = A2R_BASE_URL) {
+  constructor(baseUrl: string = ALLTERNIT_BASE_URL) {
     this.baseUrl = baseUrl.replace(/\/$/, '');
   }
 

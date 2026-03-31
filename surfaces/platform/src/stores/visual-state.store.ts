@@ -7,9 +7,9 @@
 
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import type { VisualState, TelemetryEvent, IntensityLevel } from '@a2r/visual-state/types';
-import { Mood } from '@a2r/visual-state/types';
-import { getMoodDisplayName } from '@a2r/visual-state/types';
+import type { VisualState, TelemetryEvent, IntensityLevel } from '@allternit/visual-state/types';
+import { Mood } from '@allternit/visual-state/types';
+import { getMoodDisplayName } from '@allternit/visual-state/types';
 
 // ============================================================================
 // Store State

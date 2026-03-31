@@ -543,8 +543,8 @@ async function resolveFromLocal(
 
 async function getFileSystemAPI() {
   // Try to get the file system API from the global runtime
-  if (typeof window !== 'undefined' && (window as unknown as Record<string, unknown>).__A2R_FS__) {
-    return (window as unknown as Record<string, unknown>).__A2R_FS__ as {
+  if (typeof window !== 'undefined' && (window as unknown as Record<string, unknown>).__ALLTERNIT_FS__) {
+    return (window as unknown as Record<string, unknown>).__ALLTERNIT_FS__ as {
       readFile: (path: string) => Promise<string>;
       readDir: (path: string) => Promise<Array<{ name: string; isDirectory: boolean; isSymbolicLink: boolean }>>;
       exists: (path: string) => Promise<boolean>;

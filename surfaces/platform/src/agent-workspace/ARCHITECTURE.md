@@ -19,7 +19,7 @@ You have **TWO DEPLOYMENT TARGETS** for the same workspace API - like having a m
 │    └─────┬─────┘                       └──────┬──────┘       │
 │          │                                     │              │
 │    ┌─────▼─────┐                       ┌──────▼──────┐       │
-│    │In-Memory  │                       │a2rchitech-  │       │
+│    │In-Memory  │                       │allternit-  │       │
 │    │Storage    │                       │api Server   │       │
 │    │(Browser)  │                       │(External)   │       │
 │    └───────────┘                       └─────────────┘       │
@@ -49,7 +49,7 @@ You have **TWO DEPLOYMENT TARGETS** for the same workspace API - like having a m
 
 ### HTTP Backend  
 **Use when:**
-- Connected to TUI/a2rchitech-api server
+- Connected to TUI/allternit-api server
 - Team collaboration needed
 - Data persistence required
 - Multi-device sync
@@ -101,7 +101,7 @@ const workspace = await createWorkspace(path, {
 
 ### Scenario 1: User in Electron App (HTTP)
 ```
-User → Shell UI → HTTP Backend → a2rchitech-api → SQLite DB
+User → Shell UI → HTTP Backend → allternit-api → SQLite DB
 ```
 - Data persists across sessions
 - Multiple users can access same workspace

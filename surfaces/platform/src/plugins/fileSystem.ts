@@ -26,13 +26,13 @@ import { resolveMarketplacePluginPackage } from './marketplaceInstaller';
 import { validatePluginManifestV1 } from './pluginStandards';
 
 // Base directories to scan
-const A2R_DIR = '.a2r';
-const SKILLS_DIR = `${A2R_DIR}/skills`;
-const COMMANDS_DIR = `${A2R_DIR}/commands`;
-const PLUGINS_DIR = `${A2R_DIR}/plugins`;
-const MCPS_DIR = `${A2R_DIR}/mcps`;
-const WEBHOOKS_DIR = `${A2R_DIR}/webhooks`;
-const CONNECTORS_DIR = `${A2R_DIR}/connectors`;
+const ALLTERNIT_DIR = '.a2r';
+const SKILLS_DIR = `${ALLTERNIT_DIR}/skills`;
+const COMMANDS_DIR = `${ALLTERNIT_DIR}/commands`;
+const PLUGINS_DIR = `${ALLTERNIT_DIR}/plugins`;
+const MCPS_DIR = `${ALLTERNIT_DIR}/mcps`;
+const WEBHOOKS_DIR = `${ALLTERNIT_DIR}/webhooks`;
+const CONNECTORS_DIR = `${ALLTERNIT_DIR}/connectors`;
 
 const SKILL_DIR_CANDIDATES = [SKILLS_DIR, '.agents/skills', '.codex/skills'];
 const COMMAND_DIR_CANDIDATES = [COMMANDS_DIR, '.agents/commands', '.codex/commands'];
@@ -47,7 +47,7 @@ const COMMAND_CONFIG_FILE_CANDIDATES = [
   '.claude/settings.json',
 ];
 const INTERNAL_COMMAND_SOURCE_FILE_CANDIDATES = [
-  'Desktop/a2rchitech-workspace/a2rchitech/cmd/gizzi-code/src/cli/ui/tui/routes/session/index.tsx',
+  'Desktop/allternit-workspace/allternit/cmd/gizzi-code/src/cli/ui/tui/routes/session/index.tsx',
   'cmd/gizzi-code/src/cli/ui/tui/routes/session/index.tsx',
   '../cmd/gizzi-code/src/cli/ui/tui/routes/session/index.tsx',
   '../../cmd/gizzi-code/src/cli/ui/tui/routes/session/index.tsx',
@@ -74,9 +74,9 @@ const WEBHOOK_CONFIG_FILE_CANDIDATES = [
 ];
 const CONNECTOR_DIR_CANDIDATES = [CONNECTORS_DIR, '.agents/connectors', '.codex/connectors'];
 const INTERNAL_CLI_PACKAGE_FILE_CANDIDATES = [
-  'Desktop/a2rchitech-workspace/a2rchitech/package.json',
-  'Desktop/a2rchitech-workspace/a2rchitech/cmd/gizzi-code/package.json',
-  'Desktop/a2rchitech-workspace/a2rchitech/7-apps/ts/cli/package.json',
+  'Desktop/allternit-workspace/allternit/package.json',
+  'Desktop/allternit-workspace/allternit/cmd/gizzi-code/package.json',
+  'Desktop/allternit-workspace/allternit/7-apps/ts/cli/package.json',
   'package.json',
   '../package.json',
   '../../package.json',
@@ -88,8 +88,8 @@ const INTERNAL_CLI_PACKAGE_FILE_CANDIDATES = [
   '../../7-apps/ts/cli/package.json',
 ];
 const INTERNAL_EXECUTABLE_DIR_CANDIDATES = [
-  'Desktop/a2rchitech-workspace/a2rchitech/bin',
-  'Desktop/a2rchitech-workspace/a2rchitech/dev/scripts',
+  'Desktop/allternit-workspace/allternit/bin',
+  'Desktop/allternit-workspace/allternit/dev/scripts',
   'bin',
   'dev/scripts',
   '../bin',
@@ -98,13 +98,13 @@ const INTERNAL_EXECUTABLE_DIR_CANDIDATES = [
   '../../dev/scripts',
 ];
 const INTERNAL_GIZZI_COMMAND_DIR_CANDIDATES = [
-  'Desktop/a2rchitech-workspace/a2rchitech/cmd/gizzi-code/src/cli/commands',
+  'Desktop/allternit-workspace/allternit/cmd/gizzi-code/src/cli/commands',
   'cmd/gizzi-code/src/cli/commands',
   '../cmd/gizzi-code/src/cli/commands',
   '../../cmd/gizzi-code/src/cli/commands',
 ];
-const INTERNAL_A2R_CLI_SWITCH_FILE_CANDIDATES = [
-  'Desktop/a2rchitech-workspace/a2rchitech/cmd/gizzi-code/src/cli/a2r.ts',
+const INTERNAL_ALLTERNIT_CLI_SWITCH_FILE_CANDIDATES = [
+  'Desktop/allternit-workspace/allternit/cmd/gizzi-code/src/cli/a2r.ts',
   'cmd/gizzi-code/src/cli/a2r.ts',
   '../cmd/gizzi-code/src/cli/a2r.ts',
   '../../cmd/gizzi-code/src/cli/a2r.ts',
@@ -174,7 +174,7 @@ export class ApiFileSystem implements FileSystemAPI {
         }
       }
 
-      const injectedGateway = (window as any).__A2R_GATEWAY_URL__;
+      const injectedGateway = (window as any).__ALLTERNIT_GATEWAY_URL__;
       if (typeof injectedGateway === 'string' && injectedGateway.trim()) {
         candidates.add(this.normalizeBaseUrl(injectedGateway.trim()));
       }
@@ -1336,7 +1336,7 @@ export class CapabilityScanner {
       }
     }
 
-    const a2rSwitchFiles = await this.resolveCandidateFiles(INTERNAL_A2R_CLI_SWITCH_FILE_CANDIDATES);
+    const a2rSwitchFiles = await this.resolveCandidateFiles(INTERNAL_ALLTERNIT_CLI_SWITCH_FILE_CANDIDATES);
     for (const switchFile of a2rSwitchFiles) {
       try {
         const content = await this.fs.readFile(switchFile);

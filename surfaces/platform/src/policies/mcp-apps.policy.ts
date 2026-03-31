@@ -4,7 +4,7 @@
  * Defines default permissions and capability validation for Interactive Capsules.
  */
 
-import { CapsulePermission } from '@a2r/mcp-apps-adapter';
+import { CapsulePermission } from '@allternit/mcp-apps-adapter';
 
 export type PermissionType = 
   | 'tool:invoke'

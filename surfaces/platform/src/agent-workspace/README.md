@@ -6,7 +6,7 @@ This module provides the integration layer between the A2R Shell UI and the Agen
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│  SHELL UI (6-ui/a2r-platform)                                       │
+│  SHELL UI (6-ui/allternit-platform)                                       │
 ├─────────────────────────────────────────────────────────────────────┤
 │  Agent Workspace Integration                                        │
 │  ├── wasm-wrapper.ts       - WASM bindings (in-browser)             │
@@ -26,7 +26,7 @@ This module provides the integration layer between the A2R Shell UI and the Agen
 ## Installation
 
 ```bash
-# The agent-workspace is part of a2r-platform
+# The agent-workspace is part of allternit-platform
 # No additional installation needed
 ```
 
@@ -119,7 +119,7 @@ const api = await createWorkspaceAuto('/path/to/workspace');
 ## Building WASM
 
 ```bash
-cd /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/0-substrate/a2r-agent-workspace
+cd /Users/macbook/Desktop/allternit-workspace/allternit/0-substrate/a2r-agent-workspace
 
 # Install wasm-pack
 cargo install wasm-pack

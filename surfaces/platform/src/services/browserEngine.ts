@@ -58,8 +58,8 @@ export class BrowserEngine {
     };
   }
 
-  /** Create a new browser session */
-  async createSession(config?: Partial<BrowserViewConfig>): Promise<string> {
+  /** Create a new browser runtime session */
+  async createRuntimeSession(config?: Partial<BrowserViewConfig>): Promise<string> {
     this.config = { ...this.config, ...config };
     
     const response = await fetch(`${this.options.apiBaseUrl}/browser/session`, {
@@ -214,8 +214,8 @@ export class BrowserEngine {
     return { ...this.state };
   }
 
-  /** Get session ID */
-  getSessionId(): string | null {
+  /** Get browser runtime session ID */
+  getRuntimeSessionId(): string | null {
     return this.sessionId;
   }
 

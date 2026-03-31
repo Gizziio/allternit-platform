@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
-import { createA2RClient } from "@a2r/sdk";
+import { createA2RClient } from "@allternit/sdk";
 
 export interface PermissionRequest {
   id: string;

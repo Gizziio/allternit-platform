@@ -3,7 +3,7 @@
 import type { RuntimeBackendResponse } from "@/api/infrastructure/runtime-backend";
 
 const DEFAULT_GATEWAY_BASE_URL = normalizeBaseUrl(
-  process.env.NEXT_PUBLIC_A2R_GATEWAY_URL ||
+  process.env.NEXT_PUBLIC_ALLTERNIT_GATEWAY_URL ||
     process.env.NEXT_PUBLIC_GATEWAY_URL ||
     "http://127.0.0.1:8013",
 );
@@ -56,7 +56,7 @@ function readStoredSnapshot(): ClientRuntimeBackendSnapshot | null {
   if (!isBrowser()) return null;
 
   const win = window as unknown as Window & Record<string, unknown>;
-  const windowSnapshot = win.__A2R_RUNTIME_BACKEND__;
+  const windowSnapshot = win.__ALLTERNIT_RUNTIME_BACKEND__;
   if (windowSnapshot && typeof windowSnapshot === "object") {
     return windowSnapshot as ClientRuntimeBackendSnapshot;
   }
@@ -74,10 +74,10 @@ function persistSnapshot(snapshot: ClientRuntimeBackendSnapshot): ClientRuntimeB
   if (!isBrowser()) return snapshot;
 
   const win = window as unknown as Window & Record<string, unknown>;
-  win.__A2R_RUNTIME_BACKEND__ = snapshot;
-  win.__A2R_GATEWAY_URL__ = snapshot.resolved_gateway_url;
-  win.__A2R_GATEWAY_URL = snapshot.resolved_gateway_url;
-  win.__A2R_API_URL = `${snapshot.resolved_gateway_url}/api/v1`;
+  win.__ALLTERNIT_RUNTIME_BACKEND__ = snapshot;
+  win.__ALLTERNIT_GATEWAY_URL__ = snapshot.resolved_gateway_url;
+  win.__ALLTERNIT_GATEWAY_URL = snapshot.resolved_gateway_url;
+  win.__ALLTERNIT_API_URL = `${snapshot.resolved_gateway_url}/api/v1`;
 
   try {
     window.localStorage.setItem(SNAPSHOT_STORAGE_KEY, JSON.stringify(snapshot));

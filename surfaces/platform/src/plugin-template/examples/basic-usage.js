@@ -10,7 +10,7 @@
 // ============================================================================
 
 // Import the plugin (when using in an external script)
-// const { getPlugin } = require('@a2r/platform');
+// const { getPlugin } = require('@allternit/platform');
 // const plugin = getPlugin('{{PLUGIN_ID}}');
 
 // Or in the A2R Platform environment, the plugin is available globally
@@ -133,7 +133,7 @@ function eventHandlingExample() {
   console.log('\n--- Event Handling Example ---\n');
 
   // Import events API
-  // const { events } = require('@a2r/platform');
+  // const { events } = require('@allternit/platform');
 
   // Listen for plugin events
   // const disposable = events.on('{{PLUGIN_ID}}:action-completed', (data) => {

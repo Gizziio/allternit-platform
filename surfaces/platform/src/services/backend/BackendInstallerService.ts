@@ -226,19 +226,19 @@ class BackendInstallerService {
   }
 
   private getGithubRepo(): string {
-    return process.env.A2R_GITHUB_REPO?.trim() || 'Gizziio/a2rchitech';
+    return process.env.ALLTERNIT_GITHUB_REPO?.trim() || 'Gizziio/allternit';
   }
 
   private getGithubRef(version: string): string {
-    return process.env.A2R_GITHUB_REF?.trim() || `v${version}`;
+    return process.env.ALLTERNIT_GITHUB_REF?.trim() || `v${version}`;
   }
 
   private getInstallerUrls(): string[] {
     const urls = [
-      process.env.A2R_INSTALLER_URL?.trim(),
-      'https://install.a2r.io',
-      'https://raw.githubusercontent.com/Gizziio/a2rchitech/main/surfaces/platform/install.sh',
-      'https://github.com/Gizziio/a2rchitech/raw/main/surfaces/platform/install.sh',
+      process.env.ALLTERNIT_INSTALLER_URL?.trim(),
+      'https://install.allternit.com',
+      'https://raw.githubusercontent.com/Gizziio/allternit/main/surfaces/platform/install.sh',
+      'https://github.com/Gizziio/allternit/raw/main/surfaces/platform/install.sh',
     ];
 
     return urls.filter((value): value is string => Boolean(value));
@@ -302,15 +302,15 @@ class BackendInstallerService {
     const bootstrapCommand = `set -euo pipefail
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
 export VERSION=${this.quoteShell(this.BACKEND_VERSION)}
-export A2R_VERSION=${this.quoteShell(this.BACKEND_VERSION)}
-export A2R_SERVICE_USER=${this.quoteShell(this.runtimeServiceUser)}
-export A2R_GIZZI_SERVER_USERNAME=${this.quoteShell(this.runtimeAuthUser)}
-export A2R_GIZZI_SERVER_PASSWORD=${this.quoteShell(runtimePassword)}
-export A2R_RUNTIME_PORT=${this.quoteShell(String(this.runtimePort))}
-export A2R_GITHUB_REPO=${this.quoteShell(this.getGithubRepo())}
-export A2R_GITHUB_REF=${this.quoteShell(this.getGithubRef(this.BACKEND_VERSION))}
-export A2R_TARGET_ARCH=${this.quoteShell(arch)}
-export A2R_BINARY_BASE_URL=${this.quoteShell(process.env.A2R_BINARY_BASE_URL?.trim() || '')}
+export ALLTERNIT_VERSION=${this.quoteShell(this.BACKEND_VERSION)}
+export ALLTERNIT_SERVICE_USER=${this.quoteShell(this.runtimeServiceUser)}
+export ALLTERNIT_GIZZI_SERVER_USERNAME=${this.quoteShell(this.runtimeAuthUser)}
+export ALLTERNIT_GIZZI_SERVER_PASSWORD=${this.quoteShell(runtimePassword)}
+export ALLTERNIT_RUNTIME_PORT=${this.quoteShell(String(this.runtimePort))}
+export ALLTERNIT_GITHUB_REPO=${this.quoteShell(this.getGithubRepo())}
+export ALLTERNIT_GITHUB_REF=${this.quoteShell(this.getGithubRef(this.BACKEND_VERSION))}
+export ALLTERNIT_TARGET_ARCH=${this.quoteShell(arch)}
+export ALLTERNIT_BINARY_BASE_URL=${this.quoteShell(process.env.ALLTERNIT_BINARY_BASE_URL?.trim() || '')}
 for url in ${this.getInstallerUrls().map((value) => this.quoteShell(value)).join(' ')}; do
   [ -n "$url" ] || continue
   if command -v curl >/dev/null 2>&1; then

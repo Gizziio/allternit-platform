@@ -462,10 +462,10 @@ export const kernelSession = pgTable(
 
 export type KernelSession = InferSelectModel<typeof kernelSession>;
 
-export const schema = { 
-  user, 
-  session, 
-  account, 
+export const schema = {
+  user,
+  session,
+  account,
   verification,
   userCredit,
   userModelPreference,

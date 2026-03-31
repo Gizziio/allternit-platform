@@ -11,6 +11,12 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import {
+  buildAgentSessionMetadata,
+  createCanonicalSession,
+  getChatSessions,
+  getAgentSessionDescriptor,
+} from '@/lib/agents';
 import { useNativeAgentStore, type NativeSession } from '@/lib/agents/native-agent.store';
 import * as kernelProjects from '../../integration/kernel/projects';
 
@@ -51,14 +57,13 @@ export interface ChatProject {
 // ---------------------------------------------------------------------------
 
 function mapSession(s: NativeSession): ChatThread {
-  const meta = s.metadata ?? {};
-  const rawMode = meta.sessionMode as string | undefined;
+  const descriptor = getAgentSessionDescriptor(s.metadata);
   return {
     id: s.id,
     title: s.name ?? 'Untitled',
     // AgentSessionMode uses "regular" where ChatThreadMode uses "llm"
-    mode: rawMode === 'agent' ? 'agent' : 'llm',
-    agentId: meta.agentId as string | undefined,
+    mode: descriptor.sessionMode === 'agent' ? 'agent' : 'llm',
+    agentId: descriptor.agentId,
     updatedAt: new Date(s.updatedAt).getTime(),
   };
 }
@@ -123,7 +128,7 @@ export const useChatStore = create<ChatState>()(
 
       // Thread ops
       createThread: async (title, projectId, mode = 'llm', agentId = null) => {
-        const session = await useNativeAgentStore.getState().createSession(
+        const session = await createCanonicalSession(
           title,
           undefined,
           {
@@ -150,11 +155,11 @@ export const useChatStore = create<ChatState>()(
           .getState()
           .sessions.find((s) => s.id === id);
         void useNativeAgentStore.getState().updateSession(id, {
-          metadata: {
-            ...(session?.metadata ?? {}),
+          metadata: buildAgentSessionMetadata({
+            metadata: session?.metadata ?? {},
             sessionMode: mode === 'agent' ? 'agent' : 'regular',
             agentId: agentId ?? undefined,
-          },
+          }),
         });
       },
 
@@ -227,6 +232,15 @@ export const useChatStore = create<ChatState>()(
             }
             return { ...p, threadIds: withoutThread };
           });
+          const session = useNativeAgentStore
+            .getState()
+            .sessions.find((s) => s.id === threadId);
+          void useNativeAgentStore.getState().updateSession(threadId, {
+            metadata: buildAgentSessionMetadata({
+              metadata: session?.metadata ?? {},
+              projectId: projectId ?? undefined,
+            }),
+          });
           return { projects };
         }),
 
@@ -259,10 +273,7 @@ export const useChatStore = create<ChatState>()(
         })),
 
       _syncFromNative: (sessions, activeSessionId) => {
-        const chatSessions = sessions.filter((s) => {
-          const surface = (s.metadata as any)?.surface;
-          return !surface || surface === 'chat';
-        });
+        const chatSessions = getChatSessions(sessions);
         set({ threads: chatSessions.map(mapSession), activeThreadId: activeSessionId });
       },
     }),

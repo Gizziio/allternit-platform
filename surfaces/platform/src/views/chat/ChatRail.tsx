@@ -1,5 +1,10 @@
 import React, { useCallback, useRef, useState, useMemo } from 'react';
 import { useChatStore } from './ChatStore';
+import {
+  getAgentSessionDescriptor,
+  getChatSessionsForProject,
+  getRootChatSessions,
+} from '@/lib/agents';
 import { useNativeAgentStore, type NativeSession } from '@/lib/agents/native-agent.store';
 import { RailRowMenu } from '../../shell/rail/RailRowMenu';
 import { InlineRename, type InlineRenameHandle } from '@/components/InlineRename';
@@ -99,28 +104,22 @@ export function ChatRail() {
   // Sessions that belong to a specific project
   const sessionsByProject = useCallback(
     (projectId: string): NativeSession[] => {
-      const project = projects.find((p) => p.id === projectId);
-      if (!project || project.threadIds.length === 0) return [];
-      return sessions.filter((s) => project.threadIds.includes(s.id));
+      return getChatSessionsForProject(sessions, projectId).sort(
+        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+      );
     },
-    [projects, sessions],
+    [sessions],
   );
 
   // Root sessions (not in any project), filtered by search
-  const projectSessionIds = useMemo(
-    () => new Set(projects.flatMap((p) => p.threadIds)),
-    [projects],
-  );
-
   const filteredRootSessions = useMemo(() => {
-    const root = sessions
-      .filter((s) => !projectSessionIds.has(s.id))
+    const root = getRootChatSessions(sessions)
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
     if (!searchQuery.trim()) return root;
     const q = searchQuery.toLowerCase();
     return root.filter((s) => (s.name ?? '').toLowerCase().includes(q));
-  }, [sessions, projectSessionIds, searchQuery]);
+  }, [sessions, searchQuery]);
 
   const timeGroups = useMemo(
     () => groupSessionsByTime(filteredRootSessions, (s) => s.updatedAt),
@@ -384,8 +383,7 @@ export function ChatRail() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {group.items.map((session) => {
                   const isAgent =
-                    (session.metadata as Record<string, unknown> | undefined)?.sessionMode ===
-                    'agent';
+                    getAgentSessionDescriptor(session.metadata).sessionMode === 'agent';
                   return (
                     <ChatRailItem
                       key={session.id}

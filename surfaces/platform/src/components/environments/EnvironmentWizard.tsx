@@ -113,7 +113,7 @@ interface TemplateVariable {
 
 const defaultTemplates: EnvironmentTemplate[] = [
   {
-    id: 'a2r-platform-dev',
+    id: 'allternit-platform-dev',
     name: 'A2R Platform Dev',
     type: 'devcontainer',
     description: 'Complete A2R platform development environment with all services pre-configured',
@@ -251,7 +251,7 @@ const defaultTemplates: EnvironmentTemplate[] = [
 
 // Template variables definition (would normally come from template.json)
 const templateVariables: Record<string, TemplateVariable[]> = {
-  'a2r-platform-dev': [
+  'allternit-platform-dev': [
     { name: 'PROJECT_NAME', type: 'string', label: 'Project Name', default: 'a2r-project', required: true },
     { name: 'ENABLE_GPU', type: 'boolean', label: 'Enable GPU Support', default: false },
     { name: 'DATABASE', type: 'select', label: 'Database', default: 'postgres', options: [
@@ -310,7 +310,7 @@ const templateVariables: Record<string, TemplateVariable[]> = {
 };
 
 // A2R official template IDs
-const a2rOfficialIds = ['a2r-platform-dev', 'a2r-agent-workspace'];
+const a2rOfficialIds = ['allternit-platform-dev', 'a2r-agent-workspace'];
 
 // Cloud providers
 const cloudProviders = [

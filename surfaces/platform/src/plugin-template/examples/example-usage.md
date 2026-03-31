@@ -558,7 +558,7 @@ To run these examples:
 3. **Run in a Script**:
    ```typescript
    // Save as example.ts
-   import { a2r } from '@a2r/platform';
+   import { a2r } from '@allternit/platform';
    
    // Copy example code here
    

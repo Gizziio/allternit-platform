@@ -15,7 +15,7 @@ const clerkHandler = clerkMiddleware(async (auth, req) => {
 })
 
 export default function middleware(...args: Parameters<typeof clerkHandler>) {
-  if (process.env.A2R_PLATFORM_DISABLE_CLERK === "1") {
+  if (process.env.ALLTERNIT_PLATFORM_DISABLE_CLERK === "1") {
     return NextResponse.next()
   }
   return clerkHandler(...args)

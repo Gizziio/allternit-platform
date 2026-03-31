@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { AppMode } from '../shell/ShellHeader';
 
-const MODE_STORAGE_KEY = 'a2r-platform-mode';
+const MODE_STORAGE_KEY = 'allternit-platform-mode';
 
 interface ModeContextType {
   mode: AppMode;

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { SidecarState, UUID } from '../core/contracts';
+import { useNativeAgentStore } from '@/lib/agents/native-agent.store';
 
 interface SidecarActions {
   setOpen: (isOpen: boolean) => void;
@@ -15,6 +16,26 @@ interface SidecarActions {
   
   // ChangeSet actions
   setActiveChangeSet: (changeSetId: UUID | null) => void;
+}
+
+function emitSidecarEvent(
+  type: 'ui.panel.toggled' | 'ui.view.changed',
+  payload: Record<string, unknown>,
+) {
+  const nativeStore = useNativeAgentStore.getState();
+  if (!nativeStore.activeSessionId) {
+    return;
+  }
+
+  nativeStore.appendOptimisticEvent(nativeStore.activeSessionId, {
+    id: `evt_sidecar_${type}_${Date.now()}`,
+    sessionId: nativeStore.activeSessionId,
+    actor: 'ui',
+    type,
+    payload,
+    createdAt: new Date().toISOString(),
+    seq: 0,
+  });
 }
 
 export const useSidecarStore = create<SidecarState & SidecarActions>((set) => ({
@@ -51,9 +72,28 @@ export const useSidecarStore = create<SidecarState & SidecarActions>((set) => ({
   history: [],
   toggleShortcut: 'Cmd+Shift+A',
   
-  setOpen: (isOpen) => set({ isOpen }),
-  toggle: () => set((state) => ({ isOpen: !state.isOpen })),
-  setActivePanel: (panel) => set({ activePanel: panel }),
+  setOpen: (isOpen) => {
+    emitSidecarEvent('ui.panel.toggled', {
+      panel: 'sidecar',
+      isOpen,
+    });
+    set({ isOpen });
+  },
+  toggle: () => set((state) => {
+    const nextIsOpen = !state.isOpen;
+    emitSidecarEvent('ui.panel.toggled', {
+      panel: 'sidecar',
+      isOpen: nextIsOpen,
+    });
+    return { isOpen: nextIsOpen };
+  }),
+  setActivePanel: (panel) => {
+    emitSidecarEvent('ui.view.changed', {
+      panel: 'sidecar',
+      view: panel,
+    });
+    set({ activePanel: panel });
+  },
   setWidth: (width) => set({ width: Math.max(260, Math.min(700, width)) }),
   setResizing: (isResizing) => set({ isResizing }),
   

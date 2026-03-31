@@ -58,7 +58,7 @@ export class ProviderAuthService {
     // Add auth token interceptor
     this.client.interceptors.request.use(
       (config) => {
-        const token = localStorage.getItem('A2R_KERNEL_AUTH_TOKEN') || 
+        const token = localStorage.getItem('ALLTERNIT_KERNEL_AUTH_TOKEN') || 
                      localStorage.getItem('authToken');
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;

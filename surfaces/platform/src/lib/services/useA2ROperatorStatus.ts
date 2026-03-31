@@ -8,7 +8,7 @@ import { createModuleLogger } from '@/lib/logger';
 
 const log = createModuleLogger('services/a2r-operator-status');
 
-const A2R_OPERATOR_URL = process.env.A2R_OPERATOR_URL || 'http://127.0.0.1:3000';
+const ALLTERNIT_OPERATOR_URL = process.env.ALLTERNIT_OPERATOR_URL || 'http://127.0.0.1:3000';
 
 export type A2RServiceStatus = 'online' | 'offline' | 'checking' | 'error';
 
@@ -32,7 +32,7 @@ export interface A2ROperatorStatus {
 
 const initialStatus: A2ROperatorStatus = {
   status: 'checking',
-  url: A2R_OPERATOR_URL,
+  url: ALLTERNIT_OPERATOR_URL,
   capabilities: {
     browserUse: false,
     playwright: false,
@@ -50,7 +50,7 @@ const initialStatus: A2ROperatorStatus = {
 async function checkA2ROperatorHealth(): Promise<Partial<A2ROperatorStatus>> {
   try {
     // Check main health endpoint
-    const healthRes = await fetch(`${A2R_OPERATOR_URL}/health`, {
+    const healthRes = await fetch(`${ALLTERNIT_OPERATOR_URL}/health`, {
       method: 'GET',
       headers: { 'Accept': 'application/json' },
     });
@@ -73,7 +73,7 @@ async function checkA2ROperatorHealth(): Promise<Partial<A2ROperatorStatus>> {
     };
 
     try {
-      const browserHealthRes = await fetch(`${A2R_OPERATOR_URL}/v1/browser/health`, {
+      const browserHealthRes = await fetch(`${ALLTERNIT_OPERATOR_URL}/v1/browser/health`, {
         method: 'GET',
         headers: { 'Accept': 'application/json' },
       });

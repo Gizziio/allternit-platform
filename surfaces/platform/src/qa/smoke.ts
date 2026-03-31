@@ -15,7 +15,7 @@ import { useRunnerStore } from '../runner/runner.store';
 import { useDrawerStore } from '../drawers/drawer.store';
 
 export function smokeReport() {
-  console.log("[a2r-platform] smokeReport OK");
+  console.log("[allternit-platform] smokeReport OK");
 }
 
 /**

@@ -3,11 +3,10 @@ import { act, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAgentSurfaceModeStore } from '@/stores/agent-surface-mode.store';
 
-const embeddedSessionState = vi.hoisted(() => ({
-  isEmbedded: false,
-  sessionId: null as string | null,
-  session: null,
-  descriptor: { sessionMode: 'regular' as 'agent' | 'regular', agentId: null as string | null },
+const nativeAgentState = vi.hoisted(() => ({
+  activeSessionId: null as string | null,
+  sessions: [] as Array<Record<string, unknown>>,
+  appendOptimisticEvent: vi.fn(),
 }));
 
 const agentStoreState = vi.hoisted(() => {
@@ -56,18 +55,8 @@ vi.mock('@/integration/api-client', () => ({
 
 vi.mock('@/lib/agents', () => ({
   useAgentStore: (selector: (state: any) => unknown) => selector(agentStoreState),
-  useEmbeddedAgentSession: () => embeddedSessionState,
-  useEmbeddedAgentSessionStore: Object.assign(
-    (selector?: (state: any) => unknown) => {
-      const state = {
-        sessionIdBySurface: { chat: null, cowork: null, code: null, browser: null },
-        setSurfaceSession: vi.fn(),
-        clearSurfaceSession: vi.fn(),
-      };
-      return selector ? selector(state) : state;
-    },
-    { getState: () => ({ setSurfaceSession: vi.fn(), clearSurfaceSession: vi.fn() }) },
-  ),
+  useNativeAgentStore: (selector?: (state: typeof nativeAgentState) => unknown) =>
+    selector ? selector(nativeAgentState) : nativeAgentState,
   discoverOpenClawAgents: vi.fn(() => Promise.resolve({ agents: [], total: 0, unregistered: 0 })),
   buildOpenClawImportInput: vi.fn(() => ({
     name: 'Imported Agent',
@@ -103,10 +92,8 @@ import { ChatComposer } from './ChatComposer';
 
 describe('ChatComposer agent mascot rail', () => {
   beforeEach(() => {
-    embeddedSessionState.isEmbedded = false;
-    embeddedSessionState.sessionId = null;
-    embeddedSessionState.session = null;
-    embeddedSessionState.descriptor = { sessionMode: 'regular', agentId: null };
+    nativeAgentState.activeSessionId = null;
+    nativeAgentState.sessions = [];
     useAgentSurfaceModeStore.setState({
       selectedAgentIdBySurface: {
         chat: null,

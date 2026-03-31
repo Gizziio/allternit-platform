@@ -16,7 +16,7 @@ import {
   Code,
 } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
-import type { ArtifactUIPart } from '@/lib/ai/rust-stream-adapter';
+import type { ArtifactUIPart } from '@/lib/ai/ui-parts.types';
 import { cn } from '@/lib/utils';
 
 interface MermaidRendererProps {

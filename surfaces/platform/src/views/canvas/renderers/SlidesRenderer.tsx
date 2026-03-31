@@ -8,7 +8,7 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { A2RDeckPlayer } from '@/components/a2r/A2RDeckPlayer';
-import type { ArtifactUIPart } from '@/lib/ai/rust-stream-adapter';
+import type { ArtifactUIPart } from '@/lib/ai/ui-parts.types';
 
 interface SlidesRendererProps {
   artifact: ArtifactUIPart;

@@ -1,4 +1,4 @@
-# 6-ui/a2r-platform/src/ Folder Analysis
+# 6-ui/allternit-platform/src/ Folder Analysis
 
 **Generated:** 2026-02-24  
 **Purpose:** Understanding what each folder actually does

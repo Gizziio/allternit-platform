@@ -962,7 +962,7 @@ export function AgentModeGizzi({
                     >
                       <span style={{ color: theme.accent }}>Gizzi</span>
                       <span style={{ opacity: 0.4 }}>/</span>
-                      <span>A:// agent</span>
+                      <span>A://TERNIT agent</span>
                     </div>
                     <div
                       data-testid="agent-mode-gizzi-thought"

@@ -46,7 +46,7 @@ const lastHydratedAtByAuthUserId = new Map<string, number>();
 function shouldSyncWithClerk(authUserId: string): boolean {
   return (
     authUserId !== "local-user" &&
-    process.env.A2R_PLATFORM_DISABLE_CLERK !== "1"
+    process.env.ALLTERNIT_PLATFORM_DISABLE_CLERK !== "1"
   );
 }
 

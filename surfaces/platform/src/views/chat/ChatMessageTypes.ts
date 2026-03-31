@@ -5,7 +5,7 @@
 // ============================================================================
 
 import type { A2UIPayload } from "@/capsules/a2ui/a2ui.types";
-import type { UIPart } from "@/lib/ai/rust-stream-adapter";
+import type { UIPart } from "@/lib/ai/ui-parts.types";
 
 // ============================================================================
 // Base Types (from existing ChatStore)

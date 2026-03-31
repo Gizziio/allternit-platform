@@ -18,14 +18,14 @@ import {
 } from './pluginStandards';
 
 // Base directories
-const A2R_DIR = '.a2r';
-const SKILLS_DIR = `${A2R_DIR}/skills`;
-const COMMANDS_DIR = `${A2R_DIR}/commands`;
-const PLUGINS_DIR = `${A2R_DIR}/plugins`;
-const MCPS_DIR = `${A2R_DIR}/mcps`;
-const WEBHOOKS_DIR = `${A2R_DIR}/webhooks`;
-const CONNECTORS_DIR = `${A2R_DIR}/connectors`;
-const CLI_TOOLS_DIR = `${A2R_DIR}/cli-tools`;
+const ALLTERNIT_DIR = '.a2r';
+const SKILLS_DIR = `${ALLTERNIT_DIR}/skills`;
+const COMMANDS_DIR = `${ALLTERNIT_DIR}/commands`;
+const PLUGINS_DIR = `${ALLTERNIT_DIR}/plugins`;
+const MCPS_DIR = `${ALLTERNIT_DIR}/mcps`;
+const WEBHOOKS_DIR = `${ALLTERNIT_DIR}/webhooks`;
+const CONNECTORS_DIR = `${ALLTERNIT_DIR}/connectors`;
+const CLI_TOOLS_DIR = `${ALLTERNIT_DIR}/cli-tools`;
 
 const SKILL_DIR_CANDIDATES = [SKILLS_DIR, '.agents/skills', '.codex/skills'];
 const COMMAND_DIR_CANDIDATES = [COMMANDS_DIR, '.agents/commands', '.codex/commands'];

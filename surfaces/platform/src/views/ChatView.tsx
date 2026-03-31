@@ -34,24 +34,16 @@ export { ChatComposer as NewChatInput }; // EXPORT FOR LEGACY IMPORTS
 
 import { MatrixLogo } from "@/components/ai-elements/MatrixLogo";
 import { GizziMascot, type GizziAttention, type GizziEmotion } from "@/components/ai-elements/GizziMascot";
-import { StreamingChatComposer } from "@/components/chat/StreamingChatComposer";
 import { ArtifactSidePanel, type SelectedArtifact } from "@/components/ai-elements/artifact-panel";
-import {
-  useRustStreamAdapter,
-  type ChatMessage as StreamChatMessage,
-} from "@/lib/ai/rust-stream-adapter";
 import { getSession } from "@/lib/auth-browser";
 import {
-  mapNativeMessagesToStreamMessages,
   useAgentStore,
-  useEmbeddedAgentSession,
-  useEmbeddedAgentSessionStore,
   useNativeAgentStore,
+  useConversationReplies,
+  useUserMessages,
 } from "@/lib/agents";
-import {
-  buildAgentConversationContext,
-  useSurfaceAgentSelection,
-} from "@/lib/agents/surface-agent-context";
+import { useSurfaceAgentSelection } from "@/lib/agents/surface-agent-context";
+import { getAgentSessionDescriptor } from "@/lib/agents/session-metadata";
 import { motion, AnimatePresence } from "framer-motion";
 import type { AgentModeSurface } from "@/stores/agent-surface-mode.store";
 import { AgentModeBackdrop } from "./chat/agentModeSurfaceTheme";
@@ -146,12 +138,13 @@ export function ChatView({
   const agentSurface: AgentModeSurface = mode === 'cowork' ? 'cowork' : mode === 'code' ? 'code' : 'chat';
   const { agentModeEnabled, selectedAgentId, selectedAgent } =
     useSurfaceAgentSelection(agentSurface);
-  const embeddedAgentSession = useEmbeddedAgentSession(agentSurface);
-  const clearEmbeddedAgentSession = useEmbeddedAgentSessionStore(
-    (state) => state.clearSurfaceSession,
-  );
+  const activeNativeSessionId = useNativeAgentStore((state) => state.activeSessionId);
+  const nativeSessions = useNativeAgentStore((state) => state.sessions);
   const setActiveNativeSession = useNativeAgentStore(
     (state) => state.setActiveSession,
+  );
+  const appendOptimisticEvent = useNativeAgentStore(
+    (state) => state.appendOptimisticEvent,
   );
   const fetchNativeMessages = useNativeAgentStore((state) => state.fetchMessages);
   const fetchNativeCanvases = useNativeAgentStore(
@@ -162,6 +155,23 @@ export function ChatView({
   );
   const abortNativeGeneration = useNativeAgentStore(
     (state) => state.abortGeneration,
+  );
+  const activeNativeSession = useMemo(
+    () => (activeNativeSessionId ? nativeSessions.find((session) => session.id === activeNativeSessionId) ?? null : null),
+    [activeNativeSessionId, nativeSessions],
+  );
+  const activeNativeDescriptor = useMemo(
+    () => getAgentSessionDescriptor(activeNativeSession?.metadata),
+    [activeNativeSession?.metadata],
+  );
+  const embeddedAgentSession = useMemo(
+    () => ({
+      sessionId: activeNativeSessionId,
+      session: activeNativeSession,
+      descriptor: activeNativeDescriptor,
+      isEmbedded: Boolean(activeNativeSessionId && activeNativeSession),
+    }),
+    [activeNativeDescriptor, activeNativeSession, activeNativeSessionId],
   );
   const nativeStreaming = useNativeAgentStore((state) => ({
     isStreaming: state.streamingBySession[embeddedAgentSession.sessionId ?? '']?.isStreaming ?? false,
@@ -189,15 +199,11 @@ export function ChatView({
   const { executionMode } = useRuntimeExecutionMode();
   const brainMode = executionMode?.mode === 'plan' ? 'plan' : 'build';
 
-  const {
-    messages,
-    isLoading,
-    submitMessage,
-    regenerate,
-    stop,
-  } = useRustStreamAdapter({
-    onError: (error) => console.error("Chat error:", error),
-  });
+  const chatReplyState = useConversationReplies(chatId ?? undefined);
+  const chatUserMessages = useUserMessages(chatId ?? undefined);
+  const chatStreaming = useNativeAgentStore((state) =>
+    chatId ? (state.streamingBySession[chatId]?.isStreaming ?? false) : false,
+  );
 
   useEffect(() => {
     if (!embeddedAgentSession.sessionId || !embeddedAgentSession.isEmbedded) {
@@ -228,24 +234,35 @@ export function ChatView({
     );
   }, []);
   const handleCloseArtifact = useCallback(() => setSelectedArtifact(null), []);
-  const agentsById = useMemo(
-    () => new Map(agents.map((agent) => [agent.id, agent])),
-    [agents],
-  );
-  const embeddedStreamMessages = useMemo(
-    () => mapNativeMessagesToStreamMessages(nativeMessages),
-    [nativeMessages],
-  );
-  const activeMessages: StreamChatMessage[] = embeddedAgentSession.isEmbedded
-    ? embeddedStreamMessages
-    : messages;
+
   const isAgentSessionEmbedded = embeddedAgentSession.isEmbedded;
   // Only show the agent-mode backdrop for actual agent sessions, not plain LLM sessions
   // that happen to be embedded (e.g. regular chat after the first message).
   const effectiveAgentModeEnabled = agentModeEnabled;
   const activeIsLoading = isAgentSessionEmbedded
     ? nativeStreaming.isStreaming
-    : isLoading;
+    : chatStreaming;
+  const dismissEmbeddedAgentSession = useCallback(() => {
+    if (embeddedAgentSession.sessionId) {
+      appendOptimisticEvent(embeddedAgentSession.sessionId, {
+        id: `evt_agent_mode_dismiss_${Date.now()}`,
+        sessionId: embeddedAgentSession.sessionId,
+        actor: 'ui',
+        surface: agentSurface,
+        type: 'agent.mode.changed',
+        payload: {
+          enabled: false,
+          scope: 'surface',
+          reason: 'dismissed',
+        },
+        createdAt: new Date().toISOString(),
+        seq: 0,
+      });
+    }
+    if (embeddedAgentSession.sessionId && embeddedAgentSession.sessionId === activeNativeSessionId) {
+      setActiveNativeSession(null);
+    }
+  }, [activeNativeSessionId, agentSurface, appendOptimisticEvent, embeddedAgentSession.sessionId, setActiveNativeSession]);
 
   // Detect user scroll to toggle autoscroll
   const handleScroll = useCallback(() => {
@@ -271,7 +288,7 @@ export function ChatView({
     if (shouldAutoScroll) {
       scrollToBottom('auto');
     }
-  }, [activeIsLoading, activeMessages, shouldAutoScroll, scrollToBottom]);
+  }, [activeIsLoading, nativeMessages, activeMessages, shouldAutoScroll, scrollToBottom]);
 
   const [greeting, setGreeting] = useState({
     title: "A2R & Coffee",
@@ -306,35 +323,19 @@ export function ChatView({
         });
         return;
       }
-      const initialAgentContext = buildAgentConversationContext({
-        agentModeEnabled,
-        agentId: selectedAgentId,
-        agent: selectedAgent,
-        chatId,
-      });
-      submitMessage({
-        chatId,
-        message: initialMessage,
-        modelId: selectedModel,
-        runtimeModelId,
-        ...initialAgentContext,
-      }).then(() => {
+      useNativeAgentStore.getState().setActiveSession(chatId);
+      sendNativeMessageStream(chatId, initialMessage).then(() => {
         onInitialMessageSent?.();
       });
     }
   }, [
-    agentModeEnabled,
     chatId,
     embeddedAgentSession.sessionId,
     initialMessage,
     isAgentSessionEmbedded,
     onInitialMessageSent,
-    runtimeModelId,
     sendNativeMessageStream,
-    selectedAgent,
-    selectedAgentId,
-    selectedModel,
-    submitMessage,
+    setActiveNativeSession,
   ]);
 
   useEffect(() => {
@@ -415,8 +416,6 @@ export function ChatView({
     const activeThread = threads.find((thread) => thread.id === activeThreadId);
     const isEphemeralThread =
       !isPersisted || chatId.startsWith("temp-") || chatId === "welcome";
-    const activeThreadAgent =
-      activeThread?.agentId ? agentsById.get(activeThread.agentId) ?? null : null;
     const wantsAgentConversation = agentModeEnabled;
 
     if (wantsAgentConversation && !selectedAgentId) {
@@ -449,10 +448,7 @@ export function ChatView({
       try {
         const newId = await createThread(text.slice(0, 40), undefined, "llm");
         if (newId) {
-          // Wire the new session as the embedded chat session so future messages
-          // route via sendNativeMessageStream (store-level), which survives the
-          // ChatView remount triggered by the activeThreadId/effectiveChatId change.
-          useNativeAgentStore.getState().setSurfaceSession('chat', newId);
+          useNativeAgentStore.getState().setActiveSession(newId);
           await sendNativeMessageStream(newId, text.trim());
           return;
         }
@@ -462,50 +458,19 @@ export function ChatView({
       return;
     }
 
-    const continueActiveAgentThread =
-      !shouldSpawnAgentThread && !shouldSpawnLlmThread && activeThread?.mode === "agent";
-    const effectiveAgentMode = shouldSpawnAgentThread || continueActiveAgentThread;
-    const effectiveAgentId = shouldSpawnAgentThread
-      ? selectedAgentId
-      : continueActiveAgentThread
-        ? activeThread.agentId
-        : null;
-    const agentContext = buildAgentConversationContext({
-      agentModeEnabled: effectiveAgentMode,
-      agentId: effectiveAgentId,
-      agent: shouldSpawnAgentThread
-        ? selectedAgent
-        : continueActiveAgentThread
-          ? activeThreadAgent
-          : null,
-      chatId: effectiveChatId,
-    });
-
-    await submitMessage({
-      chatId: effectiveChatId,
-      message: text,
-      modelId: selectedModel,
-      runtimeModelId,
-      mode: brainMode,  // Pass current execution mode
-      ...agentContext,
-    });
+    useNativeAgentStore.getState().setActiveSession(effectiveChatId);
+    await sendNativeMessageStream(effectiveChatId, text.trim());
   }, [
     activeThreadId,
     agentModeEnabled,
-    agentsById,
     chatId,
     createThread,
     embeddedAgentSession.sessionId,
     isAgentSessionEmbedded,
     isPersisted,
-    brainMode,  // Add mode to dependencies
-    runtimeModelId,
     sendNativeMessageStream,
-    selectedAgent,
     selectedAgentId,
-    selectedModel,
     setActiveNativeSession,
-    submitMessage,
     threads,
   ]);
 
@@ -552,49 +517,28 @@ export function ChatView({
   }, [wihs]);
 
   const handleRegenerate = useCallback(() => {
-    const lastUserMsg = [...activeMessages].reverse().find((m) => m.role === "user");
-
     if (isAgentSessionEmbedded && embeddedAgentSession.sessionId) {
-      if (lastUserMsg && typeof lastUserMsg.content === "string") {
+      const lastUserMsg = [...nativeMessages].reverse().find((m) => m.role === "user");
+      if (lastUserMsg) {
         setActiveNativeSession(embeddedAgentSession.sessionId);
-        void sendNativeMessageStream(
-          embeddedAgentSession.sessionId,
-          lastUserMsg.content,
-        );
+        void sendNativeMessageStream(embeddedAgentSession.sessionId, lastUserMsg.content);
       }
       return;
     }
 
-    const activeThread = threads.find((thread) => thread.id === activeThreadId);
-    const activeThreadAgent =
-      activeThread?.agentId ? agentsById.get(activeThread.agentId) ?? null : null;
-    if (lastUserMsg && typeof lastUserMsg.content === "string") {
-      const agentContext = buildAgentConversationContext({
-        agentModeEnabled: activeThread?.mode === "agent",
-        agentId: activeThread?.agentId,
-        agent: activeThreadAgent,
-        chatId,
-      });
-      regenerate(lastUserMsg.content, {
-        chatId: chatId ?? "",
-        modelId: selectedModel,
-        runtimeModelId,
-        ...agentContext,
-      });
+    const lastUserMsg = [...chatUserMessages].reverse().find((m) => m.role === "user");
+    if (lastUserMsg && typeof lastUserMsg.content === "string" && chatId) {
+      useNativeAgentStore.getState().setActiveSession(chatId);
+      void sendNativeMessageStream(chatId, lastUserMsg.content);
     }
   }, [
-    activeThreadId,
-    activeMessages,
-    agentsById,
+    chatUserMessages,
     chatId,
     embeddedAgentSession.sessionId,
     isAgentSessionEmbedded,
-    regenerate,
-    runtimeModelId,
+    nativeMessages,
     sendNativeMessageStream,
-    selectedModel,
     setActiveNativeSession,
-    threads,
   ]);
 
   const handleStop = useCallback(() => {
@@ -603,17 +547,19 @@ export function ChatView({
       return;
     }
 
-    stop();
+    if (chatId) void abortNativeGeneration(chatId);
   }, [
     abortNativeGeneration,
+    chatId,
     embeddedAgentSession.sessionId,
     isAgentSessionEmbedded,
-    stop,
   ]);
 
   if (!chatId && !isAgentSessionEmbedded) return null;
 
-  const isChatEmpty = activeMessages.length === 0;
+  const isChatEmpty = isAgentSessionEmbedded
+    ? nativeMessages.length === 0
+    : chatUserMessages.length === 0;
   const useMonolithLogo = mode === 'chat';
 
   // Don't hide entirely in cowork mode - we need the input bar visible
@@ -621,9 +567,7 @@ export function ChatView({
 
   const showTopActions = mode === 'chat';
   const embeddedAgentDescriptor = embeddedAgentSession.descriptor;
-  // Only show the agent context strip for actual agent sessions (sessionMode === 'agent').
-  // LLM/regular sessions use setSurfaceSession too (for message routing), but should
-  // not render the agent workspace panel.
+  // Only show the agent context strip for actual agent sessions.
   const isActualAgentSession = isAgentSessionEmbedded && embeddedAgentSession.descriptor.sessionMode === 'agent';
   const embeddedAgentStrip = isActualAgentSession ? (
     <AgentContextStrip
@@ -632,22 +576,22 @@ export function ChatView({
       sessionDescription={embeddedAgentSession.session?.description}
       agentName={embeddedAgentDescriptor.agentName || selectedAgent?.name || undefined}
       statusLabel={
-        embeddedAgentSession.session?.metadata?.a2r_local_draft === true
+        embeddedAgentSession.session?.metadata?.allternit_local_draft === true
           ? "Local Draft"
           : embeddedAgentSession.session?.isActive
             ? "Live"
             : "Paused"
       }
       messageCount={
-        embeddedAgentSession.session?.messageCount ?? activeMessages.length
+        embeddedAgentSession.session?.messageCount ?? nativeMessages.length
       }
       workspaceScope={embeddedAgentDescriptor.workspaceScope}
       canvasCount={embeddedCanvasIds.length}
       tags={embeddedAgentSession.session?.tags}
-      localDraft={embeddedAgentSession.session?.metadata?.a2r_local_draft === true}
+      localDraft={embeddedAgentSession.session?.metadata?.allternit_local_draft === true}
       toolsEnabled={embeddedAgentDescriptor.agentFeatures?.tools === true}
       automationEnabled={embeddedAgentDescriptor.agentFeatures?.automation === true}
-      onDismiss={() => clearEmbeddedAgentSession(agentSurface)}
+      onDismiss={dismissEmbeddedAgentSession}
     />
   ) : null;
 
@@ -868,26 +812,18 @@ export function ChatView({
             position: 'relative'
           }}>
             {embeddedAgentStrip}
-            {mode === 'cowork' ? (
-              // Cowork mode: messages + inline work blocks
-              <CoworkTranscript 
-                messages={activeMessages}
-                isLoading={activeIsLoading}
+            {isAgentSessionEmbedded ? (
+              // Embedded agent session: read from canonical ConversationReplyState
+              <CoworkTranscript
+                conversationId={embeddedAgentSession.sessionId ?? ""}
                 onRegenerate={handleRegenerate}
               />
             ) : (
-              // Normal chat mode
-              activeMessages.map((msg, idx) => (
-                <StreamingChatComposer
-                  key={msg.id}
-                  message={msg}
-                  isLoading={activeIsLoading && idx === activeMessages.length - 1}
-                  isLast={idx === activeMessages.length - 1}
-                  onRegenerate={handleRegenerate}
-                  onSelectArtifact={handleSelectArtifact}
-                  selectedArtifactTitle={selectedArtifact?.title}
-                />
-              ))
+              // Non-embedded: canonical ConversationReplyState
+              <CoworkTranscript
+                conversationId={chatId ?? ""}
+                onRegenerate={handleRegenerate}
+              />
             )}
             
             {/* Jump to present button */}

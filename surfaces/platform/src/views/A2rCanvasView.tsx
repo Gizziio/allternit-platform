@@ -32,7 +32,7 @@ import { CreativeCockpit } from './canvas/components/CreativeCockpit';
 import { A2rDriveSidebar } from './canvas/components/A2rDriveSidebar';
 import { useCanvasStream } from './canvas/hooks/useCanvasStream';
 import { useCanvasLayout } from './canvas/hooks/useCanvasLayout';
-import type { ArtifactKind } from '@/lib/ai/rust-stream-adapter';
+import type { ArtifactKind } from '@/lib/ai/ui-parts.types';
 import type { RendererType } from './canvas/CanvasRouter';
 import { cn } from '@/lib/utils';
 

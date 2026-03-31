@@ -16,12 +16,14 @@ import { motion, AnimatePresence } from "framer-motion";
 
 // Store
 import {
+  createCanonicalSession,
   useNativeAgentStore,
   useActiveSession,
   useActiveMessages,
   useSessionStreamingState,
   useSessionSyncState,
   useSessionCanvases,
+  useConversationReplies,
   isLocalDraftSession,
   type NativeMessage,
   type NativeSession,
@@ -30,6 +32,7 @@ import {
   type ToolCall,
   type Canvas,
 } from "@/lib/agents";
+import type { Reply, TextReplyItem } from "@/lib/agents/replies-stream";
 import { useWorkspace } from "@/agent-workspace/useWorkspace";
 import { MilestoneProgress } from "@/components/A2RNative/MilestoneProgress";
 import {
@@ -146,7 +149,6 @@ export function NativeAgentView({
   const {
     sessions,
     activeSessionId,
-    createSession,
     updateSession = async () => {},
     deleteSession,
     setActiveSession,
@@ -213,14 +215,14 @@ export function NativeAgentView({
 
     if (!hasAutoCreatedWelcomeSession.current) {
       hasAutoCreatedWelcomeSession.current = true;
-      void createSession("Welcome Session");
+      void createCanonicalSession("Welcome Session");
     }
-  }, [activeSessionId, createSession, hasFetchedSessions, initialSessionId, isLoadingSessions, sessions, setActiveSession, bootstrapStrategy]);
+  }, [activeSessionId, hasFetchedSessions, initialSessionId, isLoadingSessions, sessions, setActiveSession, bootstrapStrategy]);
 
   const handleNewSession = useCallback(async () => {
-    const newSession = await createSession();
+    const newSession = await createCanonicalSession();
     if (newSession?.id) setActiveSession(newSession.id);
-  }, [createSession, setActiveSession]);
+  }, [setActiveSession]);
 
   const handleDeleteSession = useCallback(async (sessionId: string) => {
     if (confirm("Delete this session?")) await deleteSession(sessionId);
@@ -463,11 +465,24 @@ function SessionWorkbenchRail({
 
 function ChatPanel({ sessionId }: { sessionId: string | null }) {
   const messages = useActiveMessages();
-  const { isStreaming, buffer: streamBuffer } = useSessionStreamingState(sessionId ?? '');
+  const { isStreaming } = useSessionStreamingState(sessionId ?? '');
+  const replyState = useConversationReplies(sessionId ?? undefined);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [inputValue, setInputValue] = useState("");
 
   const { sendMessageStream, abortGeneration } = useNativeAgentStore();
+
+  // Derive the currently-streaming reply for the live tail render.
+  const lastReplyId = replyState?.orderedReplyIds[replyState.orderedReplyIds.length - 1];
+  const streamingReply = lastReplyId ? replyState?.replies[lastReplyId] : null;
+  const activeStreamingReply = streamingReply?.status === "streaming" ? streamingReply : null;
+
+  // Use accumulated text length as scroll trigger instead of the raw buffer string.
+  const streamingTextLength = activeStreamingReply
+    ? activeStreamingReply.items
+        .filter((i): i is TextReplyItem => i.kind === "text")
+        .reduce((n, i) => n + i.text.length, 0)
+    : 0;
 
   const scrollToBottom = useCallback(() => {
     if (scrollRef.current) {
@@ -477,7 +492,7 @@ function ChatPanel({ sessionId }: { sessionId: string | null }) {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, streamBuffer, scrollToBottom]);
+  }, [messages, streamingTextLength, scrollToBottom]);
 
   const handleSubmit = useCallback(async () => {
     if (!sessionId || !inputValue.trim() || isStreaming) return;
@@ -504,16 +519,8 @@ function ChatPanel({ sessionId }: { sessionId: string | null }) {
             <ChatMessage key={msg.id} message={msg} />
           ))}
 
-          {isStreaming && streamBuffer && (
-            <ChatMessage
-              message={{
-                id: "streaming",
-                role: "assistant",
-                content: streamBuffer,
-                timestamp: new Date().toISOString()
-              }}
-              isStreaming={true}
-            />
+          {activeStreamingReply && (
+            <StreamingReplyTail reply={activeStreamingReply} />
           )}
         </div>
       </ScrollArea>
@@ -532,6 +539,50 @@ function ChatPanel({ sessionId }: { sessionId: string | null }) {
         </div>
       </div>
     </div>
+  );
+}
+
+// Renders the live streaming reply tail from canonical ConversationReplyState.
+// Replaces the old streamBuffer synthetic ChatMessage.
+function StreamingReplyTail({ reply }: { reply: Reply }) {
+  const textItems = reply.items.filter((i): i is TextReplyItem => i.kind === "text");
+  const liveText = textItems.map((i) => i.text).join("");
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex gap-4 items-start"
+    >
+      <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 mt-1 bg-accent-primary text-black">
+        <Robot size={16} />
+      </div>
+      <div className="flex flex-col gap-2 max-w-[85%] items-start">
+        <div className="px-4 py-3 rounded-3xl text-sm leading-relaxed bg-white/[0.03] border border-white/5 text-white/90">
+          {liveText || (
+            <span className="inline-block h-4 w-24 rounded bg-white/10 animate-pulse align-middle" />
+          )}
+          <span className="inline-block w-1 h-4 ml-1 bg-accent-primary animate-pulse align-middle" />
+        </div>
+        {reply.items.some((i) => i.kind === "tool_call") && (
+          <div className="space-y-1 w-full text-xs text-white/40 px-2">
+            {reply.items
+              .filter((i) => i.kind === "tool_call")
+              .map((i) => (
+                <div key={i.id} className="flex items-center gap-1.5">
+                  <Wrench size={10} />
+                  <span>{(i as import("@/lib/agents/replies-stream").ToolCallReplyItem).toolName}</span>
+                  <span className="opacity-50">
+                    {{queued: "queued", running: "running…", done: "done", error: "error"}[
+                      (i as import("@/lib/agents/replies-stream").ToolCallReplyItem).state
+                    ]}
+                  </span>
+                </div>
+              ))}
+          </div>
+        )}
+      </div>
+    </motion.div>
   );
 }
 
@@ -714,4 +765,3 @@ function ErrorBanner() {
 }
 
 export default NativeAgentView;
-

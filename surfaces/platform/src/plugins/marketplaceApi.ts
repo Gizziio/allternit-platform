@@ -88,7 +88,7 @@ export interface CuratedMarketplaceSource {
 // Configuration
 // ============================================================================
 
-const A2R_MARKETPLACE_API = 'https://api.a2r.dev/v1/marketplace';
+const ALLTERNIT_MARKETPLACE_API = 'https://api.a2r.dev/v1/marketplace';
 const GITHUB_API = 'https://api.github.com';
 
 // Search queries for finding A2R plugins on GitHub
@@ -388,7 +388,7 @@ export async function searchMarketplace(
     params.set('per_page', String(perPage));
     params.set('sort', sortBy);
 
-    const response = await fetchWithTimeout(`${A2R_MARKETPLACE_API}/search?${params.toString()}`, {
+    const response = await fetchWithTimeout(`${ALLTERNIT_MARKETPLACE_API}/search?${params.toString()}`, {
       headers: {
         Accept: 'application/json',
       },

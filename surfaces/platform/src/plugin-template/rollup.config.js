@@ -46,7 +46,7 @@ export default [
       }),
     ],
     external: [
-      '@a2r/platform',
+      '@allternit/platform',
       ...Object.keys(pkg.peerDependencies || {}),
     ],
   },

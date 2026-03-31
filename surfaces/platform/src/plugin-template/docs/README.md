@@ -133,7 +133,7 @@ You can also configure the plugin by editing the `settings.json` file:
 
 ```javascript
 // Import the plugin API
-import { getPlugin } from '@a2r/platform';
+import { getPlugin } from '@allternit/platform';
 
 // Get the plugin instance
 const plugin = getPlugin('{{PLUGIN_ID}}');
@@ -303,7 +303,7 @@ interface IMyPluginEvents {
 You can listen to plugin events using the A2R events API:
 
 ```javascript
-import { events } from '@a2r/platform';
+import { events } from '@allternit/platform';
 
 // Listen for action completed events
 const disposable = events.on('{{PLUGIN_ID}}:action-completed', (data) => {

@@ -8,11 +8,11 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import type { InteractiveCapsule, CapsuleEvent } from '@a2r/mcp-apps-adapter';
+import type { InteractiveCapsule, CapsuleEvent } from '@allternit/mcp-apps-adapter';
 import { GlassSurface } from '@/design/GlassSurface';
 import { ErrorBoundary } from '@/components/error-boundary';
 
-// TODO: Import from @a2rchitech/shell-ui once package is added to dependencies
+// TODO: Import from @allternit/shell-ui once package is added to dependencies
 // import { CapsuleManager as ShellCapsuleManager } from '../../../7-apps/shell/web/src/components/CapsuleManager';
 // import { CapsuleRenderer as ShellCapsuleRenderer } from '../../../7-apps/shell/web/src/components/CapsuleRenderer';
 

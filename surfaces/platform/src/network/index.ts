@@ -2,9 +2,9 @@
  * A2R Network Adapter
  * 
  * Single source of truth for all API communications.
- * All UI networking goes through A2R_BASE_URL.
+ * All UI networking goes through ALLTERNIT_BASE_URL.
  * 
- * @module @a2rchitech/network-adapter
+ * @module @allternit/network-adapter
  */
 
 // =============================================================================
@@ -13,17 +13,17 @@
 
 /**
  * Resolve the A2R base URL from environment or window injection
- * Priority: window.__A2R_BASE_URL__ > VITE_A2R_BASE_URL > default
+ * Priority: window.__ALLTERNIT_BASE_URL__ > VITE_ALLTERNIT_BASE_URL > default
  */
 const resolveBaseURL = (): string => {
   // Check for window injection (for Electron/runtime injection)
   const injectedUrl = typeof window !== 'undefined'
-    ? (window as unknown as { __A2R_BASE_URL__?: string }).__A2R_BASE_URL__
+    ? (window as unknown as { __ALLTERNIT_BASE_URL__?: string }).__ALLTERNIT_BASE_URL__
     : undefined;
 
   // Check for Vite environment variable
   const envUrl = typeof import.meta !== 'undefined' && import.meta.env
-    ? (import.meta.env as any).VITE_A2R_BASE_URL
+    ? (import.meta.env as any).VITE_ALLTERNIT_BASE_URL
     : undefined;
 
   // Default fallback
@@ -40,14 +40,14 @@ const resolveBaseURL = (): string => {
  * The single source of truth for all API requests.
  * All UI code should use this constant instead of hardcoded URLs.
  */
-export const A2R_BASE_URL = resolveBaseURL();
+export const ALLTERNIT_BASE_URL = resolveBaseURL();
 
 /**
  * API version prefix
  */
 export const API_VERSION = '/v1';
 
-console.log(`[A2R Network] Using base URL: ${A2R_BASE_URL}`);
+console.log(`[A2R Network] Using base URL: ${ALLTERNIT_BASE_URL}`);
 
 // =============================================================================
 // Types
@@ -197,11 +197,11 @@ const getAuthToken = (): string | null => {
   if (typeof window === 'undefined') return null;
   
   // Try localStorage first
-  const token = localStorage.getItem('a2r_auth_token');
+  const token = localStorage.getItem('allternit_auth_token');
   if (token) return token;
   
   // Try cookie (if available)
-  const match = document.cookie.match(/a2r_token=([^;]+)/);
+  const match = document.cookie.match(/allternit_token=([^;]+)/);
   if (match) return match[1];
   
   return null;
@@ -225,7 +225,7 @@ export async function a2rFetch<T = unknown>(
   // Build URL
   const url = path.startsWith('http')
     ? path
-    : `${A2R_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
+    : `${ALLTERNIT_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
 
   // Prepare headers
   const requestHeaders: HeadersInit = {
@@ -359,7 +359,7 @@ export function createSSEConnection(): SSEConnection {
   const connect = () => {
     state = 'connecting';
     
-    const url = `${A2R_BASE_URL}/v1/events-http`;
+    const url = `${ALLTERNIT_BASE_URL}/v1/events-http`;
     
     try {
       eventSource = new EventSource(url);
@@ -634,7 +634,7 @@ export async function getDiscovery(): Promise<{
 // =============================================================================
 
 export default {
-  A2R_BASE_URL,
+  ALLTERNIT_BASE_URL,
   API_VERSION,
   fetch: a2rFetch,
   get,
