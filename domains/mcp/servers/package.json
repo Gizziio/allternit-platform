@@ -1,5 +1,5 @@
 {
-  "name": "@a2r/mcp-apps-adapter",
+  "name": "@allternit/mcp-apps-adapter",
   "version": "0.1.0",
   "description": "MCP Apps / Interactive Capsules protocol and runtime",
   "type": "module",

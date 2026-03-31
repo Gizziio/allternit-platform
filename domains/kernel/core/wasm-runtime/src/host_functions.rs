@@ -1,6 +1,6 @@
 //! Host function implementations for WASM tools.
 
-use crate::bindings::a2rchitech::tool_abi::{host, types};
+use crate::bindings::allternit::tool_abi::{host, types};
 use crate::bindings::ToolComponent;
 use crate::capabilities::Capability;
 use crate::host::{LogLevel, ToolHostState};

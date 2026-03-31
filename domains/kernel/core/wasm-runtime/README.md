@@ -55,7 +55,7 @@ All capability checks are logged to the history ledger for audit purposes:
 ## Usage
 
 ```rust
-use a2r_wasm_runtime::{WasmRuntime, WasmRuntimeConfig, CapabilityGrant, Capability, ExecutionContext};
+use allternit_wasm_runtime::{WasmRuntime, WasmRuntimeConfig, CapabilityGrant, Capability, ExecutionContext};
 
 // Create a runtime instance
 let runtime = WasmRuntime::new(WasmRuntimeConfig::default())?;

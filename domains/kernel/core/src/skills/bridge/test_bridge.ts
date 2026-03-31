@@ -2,7 +2,7 @@
  * Test script to verify the SkillRegistryBridge works with the Rust binary
  */
 
-import { SkillRegistryBridge } from './skill_registry_bridge';
+import { SkillRegistryBridge } from './skill_registry_bridge.js';
 
 async function testBridge() {
   console.log('Testing SkillRegistryBridge...');
@@ -18,7 +18,7 @@ async function testBridge() {
     console.log(`Found ${skills.length} skills:`);
     
     // Print first 5 skills as sample
-    skills.slice(0, 5).forEach((skill, index) => {
+    skills.slice(0, 5).forEach((skill: any, index: number) => {
       console.log(`${index + 1}. ${skill.id} - ${skill.description} (available: ${skill.available})`);
     });
     

@@ -5,7 +5,11 @@
  * adaptive learning, and cross-domain knowledge synthesis.
  */
 
-import { AgentTurn, OrchestrationContext } from './types.js';
+// Local stubs — types.ts not yet implemented
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AgentTurn = Record<string, any>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type OrchestrationContext = Record<string, any>;
 
 export interface ReasoningStep {
   id: string;

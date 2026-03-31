@@ -35,16 +35,16 @@ uuid.workspace = true
 chrono.workspace = true
 url = "2"
 reqwest = { version = "0.11", features = ["blocking"] }
-a2rchitech-history = { workspace = true }
+allternit-history = { workspace = true }
 
 # Internal crates
 a2r-capsule = { workspace = true }
-a2rchitech-policy = { workspace = true }
+allternit-policy = { workspace = true }
 
 [dev-dependencies]
 tempfile.workspace = true
 sqlx.workspace = true
 semver.workspace = true
 wit-parser = "0.220"
-a2rchitech-history = { workspace = true }
-a2rchitech-messaging = { workspace = true }
+allternit-history = { workspace = true }
+allternit-messaging = { workspace = true }

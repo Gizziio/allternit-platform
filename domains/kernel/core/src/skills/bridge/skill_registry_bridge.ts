@@ -75,7 +75,7 @@ export class SkillRegistryBridge {
       if (error instanceof Error && 'stderr' in error) {
         console.error('Stderr:', (error as any).stderr?.toString());
       }
-      throw new Error(`Failed to execute skill registry bridge: ${error.message}`);
+      throw new Error(`Failed to execute skill registry bridge: ${(error as Error).message}`);
     }
   }
 

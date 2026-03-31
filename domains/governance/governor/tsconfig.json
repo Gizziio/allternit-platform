@@ -20,8 +20,8 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@a2r/governor": ["./src/index.ts"],
-      "@a2r/governor/*": ["./src/*/index.ts"]
+      "@allternit/governor": ["./src/index.ts"],
+      "@allternit/governor/*": ["./src/*/index.ts"]
     }
   },
   "include": [

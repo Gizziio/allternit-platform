@@ -4,4 +4,4 @@
  * Main export for the skills module in A2R engine
  */
 
-export * from './bridge';
+export * from './bridge/index.js';

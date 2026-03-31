@@ -1,5 +1,5 @@
 {
-  "name": "@a2r/engine",
+  "name": "@allternit/engine",
   "version": "1.0.0",
   "description": "A2Rchitech Execution Engine",
   "type": "module",
@@ -21,7 +21,7 @@
     "openai": "^6.27.0"
   },
   "peerDependencies": {
-    "@a2r/governor": "workspace:*"
+    "@allternit/governor": "workspace:*"
   },
   "devDependencies": {
     "@types/express": "^5.0.6"

@@ -11,7 +11,7 @@
  *   createCapsule, 
  *   validateToolUISurface,
  *   MCPMessageType 
- * } from '@a2r/mcp-apps';
+ * } from '@allternit/mcp-apps';
  * 
  * // Create a new capsule
  * const capsule = createCapsule({

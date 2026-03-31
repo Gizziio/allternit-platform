@@ -8,7 +8,8 @@
  * - REQUIRE_APPROVAL: Halt for explicit approval
  */
 
-import { PolicyConstraints } from '../types';
+// Type stub — PolicyConstraints not yet implemented
+type PolicyConstraints = Record<string, unknown>;
 
 export type PolicyDecisionType = 'ALLOW' | 'BLOCK' | 'TRANSFORM' | 'REQUIRE_APPROVAL';
 
@@ -162,7 +163,7 @@ export class PolicyEngine {
       name: 'validator-readonly',
       priority: 85,
       condition: (req) => {
-        if (req.role !== 'validator' || req.role === 'operator') return false;
+        if (req.role !== 'validator') return false;
         const writeTools = ['Write', 'Edit', 'Bash'];
         return writeTools.includes(req.tool);
       },
@@ -175,7 +176,7 @@ export class PolicyEngine {
       name: 'reviewer-readonly',
       priority: 85,
       condition: (req) => {
-        if (req.role !== 'reviewer' || req.role === 'operator') return false;
+        if (req.role !== 'reviewer') return false;
         const writeTools = ['Write', 'Edit', 'Bash'];
         return writeTools.includes(req.tool);
       },
@@ -188,7 +189,7 @@ export class PolicyEngine {
       name: 'security-readonly',
       priority: 85,
       condition: (req) => {
-        if (req.role !== 'security' || req.role === 'operator') return false;
+        if (req.role !== 'security') return false;
         const forbiddenTools = ['Write', 'Edit'];
         return forbiddenTools.includes(req.tool);
       },

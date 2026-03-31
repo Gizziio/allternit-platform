@@ -1,21 +1,21 @@
-use a2r_capsule::bundle::{CapsuleBundler, ManifestBuilder};
-use a2r_capsule::manifest::{
+use allternit_capsule::bundle::{CapsuleBundler, ManifestBuilder};
+use allternit_capsule::manifest::{
     Capabilities as CapsuleCapabilities, IdempotencyBehavior, SafetyTier as CapsuleSafetyTier,
     ToolABISpec,
 };
-use a2r_capsule::signing::SigningKey;
-use a2r_capsule::{CapsuleStore, CapsuleStoreConfig};
-use a2r_policy::{
+use allternit_capsule::signing::SigningKey;
+use allternit_capsule::{CapsuleStore, CapsuleStoreConfig};
+use allternit_policy::{
     CapsuleLoadRequest, Identity, IdentityType, PolicyEffect, PolicyEngine, PolicyRule,
     WasmCapability, WasmCapabilityGrant,
 };
-use a2r_wasm_runtime::host::ExecutionContext;
-use a2r_wasm_runtime::instance::ToolInput;
-use a2r_wasm_runtime::{
+use allternit_wasm_runtime::host::ExecutionContext;
+use allternit_wasm_runtime::instance::ToolInput;
+use allternit_wasm_runtime::{
     Capability, CapabilityGrant, WasmRuntime, WasmRuntimeConfig, WasmRuntimeError,
 };
-use a2rchitech_history::HistoryLedger;
-use a2rchitech_messaging::MessagingSystem;
+use allternit_history::HistoryLedger;
+use allternit_messaging::MessagingSystem;
 use anyhow::Result;
 use semver::Version;
 use sqlx::AnyPool;
@@ -57,7 +57,7 @@ async fn policy_capsule_execution_flow() -> Result<()> {
         .await?;
 
     let component_bytes = build_dummy_component()?;
-    let capsule_id = "com.a2rchitech.test.echo";
+    let capsule_id = "com.allternit.test.echo";
     let version = Version::parse("0.1.0")?;
 
     let bundle = build_capsule_bundle(
@@ -194,7 +194,7 @@ fn build_capsule_bundle(
     capsule_id: &str,
     version: Version,
     component_bytes: &[u8],
-) -> Result<a2r_capsule::bundle::CapsuleBundle> {
+) -> Result<allternit_capsule::bundle::CapsuleBundle> {
     let wasm_path = dir.join("component.wasm");
     std::fs::write(&wasm_path, component_bytes)?;
 

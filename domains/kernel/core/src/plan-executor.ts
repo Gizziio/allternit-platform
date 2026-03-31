@@ -10,7 +10,7 @@ import {
   OperatorExecuteRequest,
   OperatorEvent,
   OperatorReceipt 
-} from './types/operator';
+} from './types/operator.js';
 
 export interface PlanStep {
   id: string;

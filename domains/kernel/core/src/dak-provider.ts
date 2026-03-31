@@ -27,7 +27,7 @@ export class DeterministicExecutionProvider {
     this.config = {
       useRalphLoop: true,
       maxFixCycles: 3,
-      workDir: process.env.A2R_WORK_DIR || './.a2r/work',
+      workDir: process.env.ALLTERNIT_WORK_DIR || './.a2r/work',
       ...config
     };
 
@@ -35,7 +35,8 @@ export class DeterministicExecutionProvider {
     this.workerManager = createWorkerManager();
     this.planManager = createPlanManager(this.config.workDir);
     this.ralphLoop = createRalphLoop(this.workerManager, this.planManager, {
-      maxFixCycles: this.config.maxFixCycles
+      maxFixCycles: this.config.maxFixCycles,
+      enableParallelValidation: false,
     });
   }
 

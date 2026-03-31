@@ -18,15 +18,15 @@ export interface OperatorTaskRequest {
 
 export class OperatorOrchestrator {
   private executionProvider: DeterministicExecutionProvider;
-  private openai: OpenAI;
+  private openai!: OpenAI;
 
   constructor() {
     this.executionProvider = new DeterministicExecutionProvider();
-    const apiKey = process.env.A2R_VISION_INFERENCE_KEY || process.env.OPENAI_API_KEY;
+    const apiKey = process.env.ALLTERNIT_VISION_INFERENCE_KEY || process.env.OPENAI_API_KEY;
     if (apiKey) {
       this.openai = new OpenAI({
         apiKey,
-        baseURL: process.env.A2R_VISION_INFERENCE_BASE
+        baseURL: process.env.ALLTERNIT_VISION_INFERENCE_BASE
       });
     }
   }
@@ -94,9 +94,9 @@ export class OperatorOrchestrator {
    * Real Screenshot: Calls the Python Operator Surface
    */
   private async captureScreenshot(sessionId: string): Promise<string> {
-    const operatorUrl = process.env.A2R_OPERATOR_URL || 'http://127.0.0.1:3010';
+    const operatorUrl = process.env.ALLTERNIT_OPERATOR_URL || 'http://127.0.0.1:3010';
     const response = await fetch(`${operatorUrl}/v1/vision/screenshot`, {
-      headers: { 'Authorization': `Bearer ${process.env.A2R_OPERATOR_API_KEY}` }
+      headers: { 'Authorization': `Bearer ${process.env.ALLTERNIT_OPERATOR_API_KEY}` }
     });
     
     if (!response.ok) throw new Error('Failed to capture screenshot from Operator service');
@@ -109,7 +109,7 @@ export class OperatorOrchestrator {
    */
   private async performVlmInference(intent: string, screenshotB64: string): Promise<string> {
     const response = await this.openai.chat.completions.create({
-      model: process.env.A2R_VISION_MODEL_NAME || "gpt-4o",
+      model: process.env.ALLTERNIT_VISION_MODEL_NAME || "gpt-4o",
       messages: [
         {
           role: "user",

@@ -1,4 +1,4 @@
-use a2r_substrate::ProcessResult;
+use allternit_substrate::ProcessResult;
 use anyhow::Result;
 use std::process::{Command, Stdio};
 use std::time::Duration;

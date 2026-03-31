@@ -11,5 +11,5 @@ cargo run --bin schema-generator
 
 Or use the test in the kernel-contracts crate:
 ```bash
-cargo test --package a2rchitech-kernel-contracts --test schema_tests
+cargo test --package allternit-kernel-contracts --test schema_tests
 ```

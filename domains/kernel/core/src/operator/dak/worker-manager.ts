@@ -8,18 +8,17 @@
  */
 
 import { EventEmitter } from 'events';
-import {
-  RunId,
-  WihId,
-  DagId,
-  NodeId,
-  Role,
-  ContextPack,
-  PolicyBundleId,
-  CorrelationId,
-  IterationId,
-} from '../types';
-import type { PolicyBundle } from '../policy/bundle-builder';
+// Type stubs — domain type modules not yet implemented
+type RunId = string;
+type WihId = string;
+type DagId = string;
+type NodeId = string;
+type Role = string;
+type ContextPack = Record<string, unknown>;
+type PolicyBundleId = string;
+type CorrelationId = string;
+type IterationId = string;
+type PolicyBundle = Record<string, unknown>;
 
 export interface WorkerConfig {
   role: Role;
@@ -400,8 +399,8 @@ export class WorkerManager extends EventEmitter {
     return {
       worker,
       permissions: this.calculateEffectivePermissions(worker.config),
-      allowedTools: worker.config.policyBundle.constraints.allowed_tools,
-      writeScope: worker.config.policyBundle.constraints.write_scope.allowed_globs,
+      allowedTools: (worker.config.policyBundle as any).constraints.allowed_tools,
+      writeScope: (worker.config.policyBundle as any).constraints.write_scope.allowed_globs,
     };
   }
 
@@ -459,8 +458,8 @@ export class WorkerManager extends EventEmitter {
   private calculateEffectivePermissions(config: WorkerConfig): string[] {
     // Start with child (worker) permissions
     const childPermissions = new Set([
-      ...config.policyBundle.constraints.allowed_tools,
-      ...config.policyBundle.constraints.write_scope.allowed_globs,
+      ...(config.policyBundle as any).constraints.allowed_tools,
+      ...(config.policyBundle as any).constraints.write_scope.allowed_globs,
     ]);
 
     // If no parent, child permissions are effective

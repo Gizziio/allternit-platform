@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://a2r.io/schemas/capsule.json",
+  "$id": "https://allternit.com/schemas/capsule.json",
   "title": "Interactive Capsule",
   "description": "Schema for MCP Apps Interactive Capsules",
   "type": "object",

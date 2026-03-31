@@ -1,7 +1,7 @@
 //! Basic tests for the WASM runtime functionality.
 
-use a2r_wasm_runtime::host::ExecutionContext;
-use a2r_wasm_runtime::{CapabilityGrant, SandboxConfig, WasmRuntime, WasmRuntimeConfig};
+use allternit_wasm_runtime::host::ExecutionContext;
+use allternit_wasm_runtime::{CapabilityGrant, SandboxConfig, WasmRuntime, WasmRuntimeConfig};
 use std::sync::Arc;
 use uuid::Uuid;
 

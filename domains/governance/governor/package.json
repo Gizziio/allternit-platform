@@ -1,5 +1,5 @@
 {
-  "name": "@a2r/governor",
+  "name": "@allternit/governor",
   "version": "1.0.0",
   "description": "A2R Governor - Work-In-Hand management and routing for runtime integration",
   "type": "module",

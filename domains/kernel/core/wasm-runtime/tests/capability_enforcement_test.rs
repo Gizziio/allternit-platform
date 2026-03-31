@@ -1,16 +1,16 @@
 //! Capability enforcement tests for WASM runtime.
 
-use a2r_capsule::signing::SigningKey;
-use a2r_capsule::{
+use allternit_capsule::signing::SigningKey;
+use allternit_capsule::{
     CapsuleBundle, CapsuleBundler, CapsuleCapabilities, CapsuleStore, CapsuleStoreConfig,
     IdempotencyBehavior, ManifestBuilder, SafetyTier, ToolABISpec,
 };
-use a2r_policy::{
+use allternit_policy::{
     Capability, CapabilityGrant, Identity, IdentityType, PolicyEffect, PolicyEngine, PolicyRule,
 };
-use a2r_wasm_runtime::{ExecutionContext, WasmRuntime, WasmRuntimeConfig};
-use a2rchitech_history::HistoryLedger;
-use a2rchitech_messaging::MessagingSystem;
+use allternit_wasm_runtime::{ExecutionContext, WasmRuntime, WasmRuntimeConfig};
+use allternit_history::HistoryLedger;
+use allternit_messaging::MessagingSystem;
 use sqlx::AnyPool;
 use std::sync::Arc;
 use tempfile::TempDir;
@@ -259,7 +259,7 @@ fn create_test_capsule() -> Result<CapsuleBundle, Box<dyn std::error::Error>> {
 
     // Build manifest
     let manifest = ManifestBuilder::new(
-        "com.a2rchitech.test.capability",
+        "com.allternit.test.capability",
         Version::parse("1.0.0")?,
         "Test Capability Capsule",
         "Test capsule for capability enforcement validation",

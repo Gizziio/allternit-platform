@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allternit.local/spec/contracts/WorkerRegistry.schema.json",
+  "title": "A2rchitech Worker Registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "workers"],
+  "properties": {
+    "version": { "type": "string" },
+    "workers": {
+      "type": "array",
+      "items": { "$ref": "https://allternit.local/spec/contracts/WorkerDefinition.schema.json" }
+    }
+  }
+}

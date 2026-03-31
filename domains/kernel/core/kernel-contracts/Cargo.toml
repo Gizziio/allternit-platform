@@ -1,5 +1,5 @@
 [package]
-name = "a2rchitech-kernel-contracts"
+name = "allternit-kernel-contracts"
 version = "0.1.0"
 edition = "2021"
 description = "A2rchitech kernel contracts - frozen specifications for AG2 compliance"

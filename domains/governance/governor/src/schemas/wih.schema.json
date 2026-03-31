@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://a2rchitect.dev/schemas/wih.json",
+  "$id": "https://allternit.dev/schemas/wih.json",
   "title": "Work-In-Hand (WIH) Schema",
   "description": "Schema for A2R Kernel work items governing task execution and dependency tracking",
   "type": "object",

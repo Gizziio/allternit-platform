@@ -93,7 +93,7 @@ export class IntegrityService {
    * REAL: Syncs receipt to the Rails control plane
    */
   private static async syncToRails(receipt: OperatorReceipt): Promise<void> {
-    const railsUrl = process.env.A2R_RAILS_URL || 'http://127.0.0.1:3000';
+    const railsUrl = process.env.ALLTERNIT_RAILS_URL || 'http://127.0.0.1:3000';
     try {
       const resp = await fetch(`${railsUrl}/api/v1/receipts`, {
         method: 'POST',

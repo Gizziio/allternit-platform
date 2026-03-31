@@ -12,19 +12,18 @@
  */
 
 import { EventEmitter } from 'events';
-import { WorkerManager, Worker, WorkerConfig, WorkerResult } from '../workers/manager';
-import { PlanManager } from '../plan/manager';
-import {
-  RunId,
-  WihId,
-  DagId,
-  NodeId,
-  IterationId,
-  ContextPack,
-  PolicyBundleId,
-  ReceiptId,
-} from '../types';
-import type { PolicyBundle } from '../policy/bundle-builder';
+import { WorkerManager, Worker, WorkerConfig, WorkerResult } from './worker-manager.js';
+import { PlanManager } from './plan-manager.js';
+// Type stubs — domain type modules not yet implemented
+type RunId = string;
+type WihId = string;
+type DagId = string;
+type NodeId = string;
+type IterationId = string;
+type ContextPack = Record<string, unknown>;
+type PolicyBundleId = string;
+type ReceiptId = string;
+type PolicyBundle = Record<string, unknown>;
 
 export interface RalphLoopConfig {
   maxFixCycles: number;
@@ -280,10 +279,10 @@ export class RalphLoop extends EventEmitter {
   ): Promise<WorkerResult> {
     // Create builder-specific policy bundle
     const builderPolicy: PolicyBundle = {
-      ...policyBundle,
+      ...(policyBundle as any),
       role: 'builder',
       constraints: {
-        ...policyBundle.constraints,
+        ...(policyBundle as any).constraints,
         require_validator: true,
       },
     };
@@ -338,13 +337,13 @@ export class RalphLoop extends EventEmitter {
   ): Promise<WorkerResult> {
     // Create validator-specific policy bundle (read-only)
     const validatorPolicy: PolicyBundle = {
-      ...policyBundle,
+      ...(policyBundle as any),
       role: 'validator',
       constraints: {
-        ...policyBundle.constraints,
+        ...(policyBundle as any).constraints,
         allowed_tools: ['Read', 'Glob', 'Grep', 'Search', 'Test'], // No Write/Edit
         write_scope: {
-          ...policyBundle.constraints.write_scope,
+          ...(policyBundle as any).constraints.write_scope,
           allowed_globs: [], // Read-only
         },
       },

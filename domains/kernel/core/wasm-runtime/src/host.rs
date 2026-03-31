@@ -2,7 +2,7 @@
 
 use crate::capabilities::{CapabilityGrant, CapabilitySet};
 use crate::sandbox::SandboxMetrics;
-use a2rchitech_history::HistoryLedger;
+use allternit_history::HistoryLedger;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};

@@ -1,4 +1,4 @@
-use a2rchitech_kernel_contracts::*;
+use allternit_kernel_contracts::*;
 use schemars::schema_for;
 use serde_json;
 

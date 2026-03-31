@@ -7,7 +7,7 @@ use crate::instance::WasmToolInstance;
 use crate::manifest::CapsuleManifest;
 use crate::sandbox::SandboxConfig;
 
-use a2rchitech_history::HistoryLedger;
+use allternit_history::HistoryLedger;
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;

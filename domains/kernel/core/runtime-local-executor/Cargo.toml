@@ -1,5 +1,5 @@
 [package]
-name = "a2rchitech-runtime-local"
+name = "allternit-runtime-local"
 version = "0.1.0"
 edition = "2021"
 
@@ -12,5 +12,5 @@ anyhow = { workspace = true }
 thiserror = { workspace = true }
 async-trait = { workspace = true }
 wasmtime = { workspace = true }
-a2rchitech-sdk-core = { workspace = true }
-a2rchitech-sdk-functions = { workspace = true }
+allternit-sdk-core = { workspace = true }
+allternit-sdk-functions = { workspace = true }

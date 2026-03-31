@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://a2r.io/schemas/surface.json",
+  "$id": "https://allternit.com/schemas/surface.json",
   "title": "Tool UI Surface",
   "description": "Schema for tool-generated UI surfaces",
   "type": "object",

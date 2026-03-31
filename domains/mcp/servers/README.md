@@ -39,7 +39,7 @@ import {
   CreateCapsuleRequest,
   ToolUISurface,
   MCPMessageType 
-} from '@a2r/mcp-apps';
+} from '@allternit/mcp-apps';
 
 // Define a UI surface
 const surface: ToolUISurface = {

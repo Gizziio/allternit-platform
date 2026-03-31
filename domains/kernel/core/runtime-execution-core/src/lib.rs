@@ -1,8 +1,8 @@
 pub mod execution;
 pub use execution::ExecutionEngine;
 // Existing modules
-use a2rchitech_history::HistoryLedger;
-use a2rchitech_messaging::{EventEnvelope, MessagingSystem, TaskEnvelope};
+use allternit_history::HistoryLedger;
+use allternit_messaging::{EventEnvelope, MessagingSystem, TaskEnvelope};
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 use std::collections::HashMap;
@@ -62,9 +62,9 @@ pub enum RuntimeError {
     #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
     #[error("History error: {0}")]
-    History(#[from] a2rchitech_history::HistoryError),
+    History(#[from] allternit_history::HistoryError),
     #[error("Messaging error: {0}")]
-    Messaging(#[from] a2rchitech_messaging::MessagingError),
+    Messaging(#[from] allternit_messaging::MessagingError),
     #[error("Session not found: {0}")]
     SessionNotFound(String),
     #[error("Task not found: {0}")]
@@ -582,7 +582,7 @@ impl RuntimeCore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use a2rchitech_messaging::MessagingSystem;
+    use allternit_messaging::MessagingSystem;
     use sqlx::SqlitePool;
     use std::time::Duration;
     use tempfile::NamedTempFile;
@@ -595,7 +595,7 @@ mod tests {
         let pool = SqlitePool::connect(&db_url).await.unwrap();
         let temp_path = format!("/tmp/test_runtime_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_path).unwrap(),
         ));
         let messaging_system = Arc::new(
             MessagingSystem::new_with_storage(history_ledger.clone(), pool.clone())
@@ -656,7 +656,7 @@ mod tests {
         let pool = SqlitePool::connect(&db_url).await.unwrap();
         let temp_path = format!("/tmp/test_artifact_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_path).unwrap(),
         ));
         let messaging_system = Arc::new(
             MessagingSystem::new_with_storage(history_ledger.clone(), pool.clone())
@@ -703,7 +703,7 @@ mod tests {
         let pool = SqlitePool::connect(&db_url).await.unwrap();
         let temp_path = format!("/tmp/test_checkpoint_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_path).unwrap(),
         ));
         let messaging_system = Arc::new(
             MessagingSystem::new_with_storage(history_ledger.clone(), pool.clone())

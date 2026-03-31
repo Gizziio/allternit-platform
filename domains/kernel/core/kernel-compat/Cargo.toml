@@ -1,5 +1,5 @@
 [package]
-name = "a2rchitech-kernel-compat"
+name = "allternit-kernel-compat"
 version = "0.1.0"
 edition = "2021"
 description = "A2rchitech kernel compatibility and ABI checking system"
@@ -12,19 +12,19 @@ uuid = { workspace = true }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }
-a2rchitech-history = { workspace = true }
-a2rchitech-messaging = { workspace = true }
-a2rchitech-policy = { workspace = true }
-a2rchitech-tools-gateway = { workspace = true }
-a2rchitech-context-router = { workspace = true }
-a2rchitech-memory = { workspace = true }
-a2rchitech-providers = { workspace = true }
-a2rchitech-runtime-core = { workspace = true }
-a2rchitech-skills = { workspace = true }
-a2rchitech-workflows = { workspace = true }
-a2rchitech-embodiment = { workspace = true }
-a2rchitech-packaging = { workspace = true }
-a2rchitech-evals = { workspace = true }
+allternit-history = { workspace = true }
+allternit-messaging = { workspace = true }
+allternit-policy = { workspace = true }
+allternit-tools-gateway = { workspace = true }
+allternit-context-router = { workspace = true }
+allternit-memory = { workspace = true }
+allternit-providers = { workspace = true }
+allternit-runtime-core = { workspace = true }
+allternit-skills = { workspace = true }
+allternit-workflows = { workspace = true }
+allternit-embodiment = { workspace = true }
+allternit-packaging = { workspace = true }
+allternit-evals = { workspace = true }
 async-trait = { workspace = true }
 sqlx = { workspace = true }
 tempfile = { workspace = true }

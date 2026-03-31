@@ -12,7 +12,7 @@ use wasmtime::component::Component;
 use wasmtime::Store;
 
 // Import the generated bindings
-use crate::bindings::a2rchitech::tool_abi::types::{
+use crate::bindings::allternit::tool_abi::types::{
     ToolError as WasmToolError, ToolInput as WasmToolInput, ValidationResult,
 };
 use crate::bindings::ToolComponent;
@@ -97,7 +97,7 @@ impl WasmToolInstance {
         // Call tool's execute function via WIT bindings
         let result = self
             .bindings
-            .a2rchitech_tool_abi_tool()
+            .allternit_tool_abi_tool()
             .call_execute(&mut self.store, &wasm_input)
             .map_err(|e| {
                 error!("Tool execution failed: {:?}", e);
@@ -142,7 +142,7 @@ impl WasmToolInstance {
         // Call validate function via WIT bindings
         let result = self
             .bindings
-            .a2rchitech_tool_abi_tool()
+            .allternit_tool_abi_tool()
             .call_validate(&mut self.store, parameters)
             .map_err(|e| {
                 error!("Validation call failed: {:?}", e);
@@ -168,7 +168,7 @@ impl WasmToolInstance {
         // Call describe function via WIT bindings
         let metadata = self
             .bindings
-            .a2rchitech_tool_abi_tool()
+            .allternit_tool_abi_tool()
             .call_describe(&mut self.store)
             .map_err(|e| {
                 error!("Describe call failed: {:?}", e);
