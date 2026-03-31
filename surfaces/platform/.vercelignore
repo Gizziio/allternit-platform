@@ -8,3 +8,19 @@ test-results
 dev.log
 data/*.db
 data/*.sqlite
+# Large build artifacts not needed for Next.js deploy
+bundled-backend
+backend
+docs
+output
+electron
+desktop
+e2e
+tests
+canvas-monitor
+# Large generated dirs in src
+src/dev-portal
+vitest.config.ts.timestamp-*
+
+# Next.js build output (rebuilt on Vercel)
+out

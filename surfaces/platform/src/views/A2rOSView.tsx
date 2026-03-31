@@ -14,8 +14,8 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { A2rOSProvider } from '../a2r-os';
-import { A2rConsole, A2rConsoleToggle } from '../a2r-os/components/A2rConsole';
+import { A2rOSProvider } from '../allternit-os';
+import { A2rConsole, A2rConsoleToggle } from '../allternit-os/components/A2rConsole';
 import {
   Cpu,
   FileText,

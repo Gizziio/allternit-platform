@@ -1,0 +1,6 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "cd surfaces/platform && next build",
+  "installCommand": "pnpm install --no-frozen-lockfile",
+  "outputDirectory": "surfaces/platform/out"
+}

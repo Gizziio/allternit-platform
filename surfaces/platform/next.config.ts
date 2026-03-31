@@ -10,8 +10,8 @@ const clerkPackageInstalled = [
 ].some((packagePath) => fs.existsSync(packagePath));
 
 const useClerkFallback =
-  process.env.A2R_PLATFORM_DISABLE_CLERK === '1' ||
-  process.env.NEXT_PUBLIC_A2R_PLATFORM_DISABLE_CLERK === '1' ||
+  process.env.ALLTERNIT_PLATFORM_DISABLE_CLERK === '1' ||
+  process.env.NEXT_PUBLIC_ALLTERNIT_PLATFORM_DISABLE_CLERK === '1' ||
   !clerkPackageInstalled;
 
 const nextConfig: NextConfig = {
@@ -112,11 +112,11 @@ const nextConfig: NextConfig = {
     // Add aliases for monorepo packages
     config.resolve.alias = {
       ...config.resolve.alias,
-      '@a2r/runtime': path.resolve(__dirname, '../../3-adapters/runtime-adapters/a2r-runtime/dist'),
-      '@a2r/visual-state$': path.resolve(__dirname, 'adapters-ts/a2r-visual-state/src/index.ts'),
-      '@a2r/visual-state/types$': path.resolve(__dirname, 'adapters-ts/a2r-visual-state/src/types/index.ts'),
-      '@a2r/visual-state/inference$': path.resolve(__dirname, 'adapters-ts/a2r-visual-state/src/inference/index.ts'),
-      '@a2r/avatar-adapters$': path.resolve(__dirname, 'adapters-ts/a2r-avatar-adapters/src/index.ts'),
+      '@allternit/runtime': path.resolve(__dirname, '../../3-adapters/runtime-adapters/allternit-runtime/dist'),
+      '@allternit/visual-state$': path.resolve(__dirname, '../../packages/@allternit/visual-state/src/index.ts'),
+      '@allternit/visual-state/types$': path.resolve(__dirname, '../../packages/@allternit/visual-state/src/types/index.ts'),
+      '@allternit/visual-state/inference$': path.resolve(__dirname, '../../packages/@allternit/visual-state/src/inference/index.ts'),
+      '@allternit/avatar-adapters$': path.resolve(__dirname, '../../packages/@allternit/avatar-adapters/src/index.ts'),
       'react$': path.resolve(__dirname, 'node_modules/react'),
       'react-dom$': path.resolve(__dirname, 'node_modules/react-dom'),
       'react/jsx-runtime$': path.resolve(__dirname, 'node_modules/react/jsx-runtime.js'),
@@ -137,8 +137,8 @@ const nextConfig: NextConfig = {
       'import.meta.env.PROD': JSON.stringify(!isDev),
       'import.meta.env.MODE': JSON.stringify(isDev ? 'development' : 'production'),
       'import.meta.env.VITE_API_BASE_URL': JSON.stringify(process.env.NEXT_PUBLIC_API_BASE_URL || null),
-      'import.meta.env.VITE_A2R_BASE_URL': JSON.stringify(process.env.NEXT_PUBLIC_A2R_BASE_URL || null),
-      'import.meta.env.VITE_A2R_GATEWAY_URL': JSON.stringify(process.env.NEXT_PUBLIC_A2R_GATEWAY_URL || null),
+      'import.meta.env.VITE_ALLTERNIT_BASE_URL': JSON.stringify(process.env.NEXT_PUBLIC_ALLTERNIT_BASE_URL || null),
+      'import.meta.env.VITE_ALLTERNIT_GATEWAY_URL': JSON.stringify(process.env.NEXT_PUBLIC_ALLTERNIT_GATEWAY_URL || null),
       'import.meta.env.VITE_ENABLE_SESSION_BRIDGE': JSON.stringify(process.env.NEXT_PUBLIC_ENABLE_SESSION_BRIDGE || null),
       'import.meta.env.VITE_SESSION_BRIDGE_DEBUG': JSON.stringify(process.env.NEXT_PUBLIC_SESSION_BRIDGE_DEBUG || null),
       'import.meta.env.VITE_LOG_VALIDATION_ERRORS': JSON.stringify(process.env.NEXT_PUBLIC_LOG_VALIDATION_ERRORS || null),
@@ -154,12 +154,14 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ['ssh2', 'cpu-features', 'node-ssh'],
 
   transpilePackages: [
-    '@a2r/runtime',
-    '@a2r/kernel',
+    '@allternit/runtime',
+    '@allternit/kernel',
   ],
   
-  output: 'standalone',
-  
+  // Output to 'out/' to match Vercel project setting outputDirectory: "out"
+  // Note: this is NOT a static export — it's a full Next.js SSR build in a custom distDir
+  distDir: 'out',
+
   // Fix standalone output path in monorepo
   outputFileTracingRoot: path.join(__dirname, '../../'),
 

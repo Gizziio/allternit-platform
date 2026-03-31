@@ -3,9 +3,9 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 
 import type { ExtensionSidepanelComposerProps } from "../../../../shared/extension-sidepanel/ExtensionSidepanelShell.types";
-import { useMention, MENTION_OPTIONS, type MentionOption } from "../../../../a2r-extension/src/html-to-figma/ui/MentionAutocomplete";
-import { CaptureCard } from "../../../../a2r-extension/src/html-to-figma/ui/CaptureCard";
-import type { CaptureResult } from "../../../../a2r-extension/src/html-to-figma/types";
+import { useMention, MENTION_OPTIONS, type MentionOption } from "../../../../allternit-extension/src/html-to-figma/ui/MentionAutocomplete";
+import { CaptureCard } from "../../../../allternit-extension/src/html-to-figma/ui/CaptureCard";
+import type { CaptureResult } from "../../../../allternit-extension/src/html-to-figma/types";
 
 interface CaptureEntry {
   id: string;
