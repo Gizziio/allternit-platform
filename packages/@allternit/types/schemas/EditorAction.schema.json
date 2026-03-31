@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allternit.local/spec/contracts/EditorAction.schema.json",
+  "title": "Editor Action — External Editor Bridge Contract",
+  "description": "Defines the contract for opening files in external editors from Code Mode UI and diff views.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "action",
+    "workspace_id",
+    "path"
+  ],
+  "properties": {
+    "action": {
+      "type": "string",
+      "enum": ["open", "open_diff"],
+      "description": "open = open file at line; open_diff = open diff view in editor"
+    },
+    "workspace_id": {
+      "type": "string",
+      "pattern": "^ws_"
+    },
+    "session_id": {
+      "type": ["string", "null"],
+      "pattern": "^sess_",
+      "description": "If provided, opens file in session worktree/sandbox path"
+    },
+    "path": {
+      "type": "string",
+      "description": "Relative file path from workspace root"
+    },
+    "line": {
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "description": "Line number to navigate to"
+    },
+    "column": {
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "description": "Column number to navigate to"
+    },
+    "editor": {
+      "type": "string",
+      "enum": ["vscode", "jetbrains", "auto"],
+      "default": "auto",
+      "description": "Target editor. Auto detects running editor."
+    },
+    "mechanism": {
+      "type": "string",
+      "enum": ["cli", "uri_scheme"],
+      "default": "cli",
+      "description": "How to invoke the editor. cli = 'code -g file:line:col'; uri_scheme = vscode://..."
+    }
+  }
+}

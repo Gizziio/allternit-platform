@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allternit.local/spec/contracts/AgentExecutionRequest.schema.json",
+  "title": "Agent Execution Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "request_id",
+    "created_at",
+    "run_id",
+    "graph_id",
+    "node_id",
+    "wih_id",
+    "agent_profile_id",
+    "write_scope"
+  ],
+  "properties": {
+    "request_id": { "type": "string" },
+    "created_at": { "type": "string" },
+    "run_id": { "type": "string" },
+    "graph_id": { "type": "string" },
+    "node_id": { "type": "string" },
+    "wih_id": { "type": "string" },
+    "agent_profile_id": { "type": "string" },
+    "write_scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["root", "allowed_globs"],
+      "properties": {
+        "root": { "type": "string", "const": "/.a2r/" },
+        "allowed_globs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1
+        }
+      }
+    },
+    "input": {},
+    "trace_id": { "type": "string" },
+    "idempotency_key": { "type": "string" },
+    "mode": {
+      "type": "string",
+      "enum": ["install", "resume", "execute"]
+    }
+  }
+}

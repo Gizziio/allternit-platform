@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allternit.local/spec/contracts/CapsuleBridgeEvent.schema.json",
+  "title": "Capsule Bridge Event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id",
+    "direction",
+    "kind",
+    "wih",
+    "payload",
+    "ts"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string"
+    },
+    "direction": {
+      "type": "string",
+      "enum": [
+        "ui_to_host",
+        "host_to_ui"
+      ]
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "set_state",
+        "request_tool",
+        "tool_result",
+        "request_approval",
+        "approval_result",
+        "log",
+        "artifact_created",
+        "browser_action"
+      ]
+    },
+    "wih": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "graph_id",
+        "task_id",
+        "run_id"
+      ],
+      "properties": {
+        "graph_id": {
+          "type": "string"
+        },
+        "task_id": {
+          "type": "string"
+        },
+        "run_id": {
+          "type": "string"
+        }
+      }
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "ts": {
+      "type": "string"
+    }
+  }
+}

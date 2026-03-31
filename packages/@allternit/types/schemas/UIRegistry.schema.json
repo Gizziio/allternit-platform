@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allternit.local/spec/contracts/UIRegistry.schema.json",
+  "title": "UI Registry Schema",
+  "description": "Schema for UI action registry in the A2R system",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Version of the registry schema"
+    },
+    "ui_actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "action_id": {
+            "type": "string",
+            "description": "Unique identifier for the UI action"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name for the UI action"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of the UI action"
+          },
+          "gateway_route": {
+            "type": "string",
+            "description": "Gateway route that handles this UI action (format: METHOD:/path)"
+          },
+          "allowed_methods": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"]
+            },
+            "description": "HTTP methods allowed for this action"
+          },
+          "requires_auth": {
+            "type": "boolean",
+            "description": "Whether this action requires authentication"
+          },
+          "rate_limit": {
+            "type": "object",
+            "properties": {
+              "requests_per_minute": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": ["requests_per_minute"]
+          }
+        },
+        "required": ["action_id", "name", "description", "gateway_route", "allowed_methods", "requires_auth"]
+      }
+    }
+  },
+  "required": ["version", "ui_actions"]
+}

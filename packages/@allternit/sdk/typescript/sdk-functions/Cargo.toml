@@ -1,0 +1,11 @@
+[package]
+name = "allternit-sdk-functions"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+tracing = { workspace = true }
+allternit-sdk-core = { workspace = true }

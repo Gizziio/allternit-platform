@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allternit.local/spec/contracts/MemoryCandidate.schema.json",
+  "title": "Memory Candidate Contract",
+  "description": "Schema for memory candidate artifacts in the A2R system",
+  "type": "object",
+  "properties": {
+    "candidate_version": {
+      "type": "string",
+      "description": "Version of the candidate schema"
+    },
+    "candidate_id": {
+      "type": "string",
+      "description": "Unique identifier for the memory candidate"
+    },
+    "proposal_timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the candidate was proposed"
+    },
+    "proposer_id": {
+      "type": "string",
+      "description": "Identifier of the entity proposing the memory change"
+    },
+    "memory_layer": {
+      "type": "string",
+      "description": "Target memory layer for the candidate"
+    },
+    "content_hash": {
+      "type": "string",
+      "description": "Cryptographic hash of the candidate content"
+    },
+    "content_preview": {
+      "type": "string",
+      "maxLength": 1024,
+      "description": "Preview of the candidate content (truncated if necessary)"
+    },
+    "justification": {
+      "type": "string",
+      "description": "Justification for the proposed memory change"
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of other candidates this one depends on"
+    },
+    "retention_policy_ref": {
+      "type": "string",
+      "description": "Reference to the retention policy governing this candidate"
+    },
+    "approval_threshold": {
+      "type": "object",
+      "properties": {
+        "quorum_count": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of approvals required"
+        },
+        "approver_types": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Types of approvers required"
+        }
+      },
+      "required": ["quorum_count", "approver_types"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["PROPOSED", "UNDER_REVIEW", "APPROVED", "REJECTED", "ACTIVATED", "ROLLED_BACK"],
+      "description": "Current status of the candidate"
+    },
+    "activation_conditions": {
+      "type": "object",
+      "description": "Conditions that must be met for activation",
+      "properties": {
+        "min_approvals": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_deferrals": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "expiration_date": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  },
+  "required": [
+    "candidate_version",
+    "candidate_id",
+    "proposal_timestamp",
+    "proposer_id",
+    "memory_layer",
+    "content_hash",
+    "content_preview",
+    "justification",
+    "retention_policy_ref",
+    "approval_threshold",
+    "status"
+  ]
+}

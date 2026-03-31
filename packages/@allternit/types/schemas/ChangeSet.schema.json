@@ -1,0 +1,226 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allternit.local/spec/contracts/ChangeSet.schema.json",
+  "title": "ChangeSet — Patch Bundle Contract",
+  "description": "A proposed set of file changes (diffs) with verification and apply metadata. Core primitive of Code Mode diff-first editing.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "changeset_id",
+    "workspace_id",
+    "session_id",
+    "created_at",
+    "base",
+    "summary",
+    "diffs",
+    "apply"
+  ],
+  "properties": {
+    "changeset_id": {
+      "type": "string",
+      "pattern": "^cs_",
+      "description": "Unique identifier for this changeset"
+    },
+    "workspace_id": {
+      "type": "string",
+      "pattern": "^ws_",
+      "description": "Workspace this changeset belongs to"
+    },
+    "session_id": {
+      "type": "string",
+      "pattern": "^sess_",
+      "description": "Session that produced this changeset"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 1,
+      "description": "Revision number. Incremented when user requests modifications via comment-on-diff."
+    },
+    "parent_changeset_id": {
+      "type": ["string", "null"],
+      "description": "If this is a revision, reference to the parent changeset"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["proposed", "approved", "rejected", "applied", "reverted", "revision_requested"],
+      "default": "proposed"
+    },
+    "base": {
+      "type": "object",
+      "required": ["file_hashes"],
+      "properties": {
+        "git": {
+          "type": "object",
+          "properties": {
+            "commit": { "type": "string", "minLength": 7 },
+            "branch": { "type": "string" },
+            "dirty": { "type": "boolean" }
+          },
+          "required": ["commit", "branch"]
+        },
+        "file_hashes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^sha256:"
+          },
+          "description": "Map of file path → sha256 hash at time of changeset creation"
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["intent"],
+      "properties": {
+        "intent": {
+          "type": "string",
+          "description": "Human-readable description of what this changeset does"
+        },
+        "risk": {
+          "type": "string",
+          "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+        },
+        "estimated_files_touched": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "diffs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/FileDiff"
+      }
+    },
+    "actions_required": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/RequiredAction"
+      },
+      "description": "Shell commands or actions needed alongside the patch"
+    },
+    "apply": {
+      "type": "object",
+      "required": ["atomic", "strategy"],
+      "properties": {
+        "atomic": {
+          "type": "boolean",
+          "description": "If true, all diffs apply together or none do"
+        },
+        "strategy": {
+          "type": "string",
+          "enum": ["patch_then_verify", "patch_only", "dry_run"]
+        },
+        "verify_steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RequiredAction"
+          }
+        }
+      }
+    },
+    "approval_token": {
+      "type": ["string", "null"],
+      "description": "Rails-issued token authorizing apply. Null until approved."
+    },
+    "apply_receipt_id": {
+      "type": ["string", "null"],
+      "description": "Reference to the receipt emitted on apply"
+    }
+  },
+  "$defs": {
+    "FileDiff": {
+      "type": "object",
+      "required": ["path", "change_type", "hunks"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Relative file path from workspace root"
+        },
+        "change_type": {
+          "type": "string",
+          "enum": ["create", "modify", "delete", "rename"]
+        },
+        "rename_from": {
+          "type": "string",
+          "description": "Original path if change_type is rename"
+        },
+        "before_hash": {
+          "type": ["string", "null"],
+          "pattern": "^sha256:",
+          "description": "Hash of file before patch. Null for create."
+        },
+        "after_hash": {
+          "type": ["string", "null"],
+          "pattern": "^sha256:",
+          "description": "Hash of file after patch. Null for delete."
+        },
+        "unified_diff": {
+          "type": "string",
+          "description": "Full unified diff text for this file"
+        },
+        "hunks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Hunk"
+          }
+        }
+      }
+    },
+    "Hunk": {
+      "type": "object",
+      "required": ["start_old", "len_old", "start_new", "len_new", "lines"],
+      "properties": {
+        "start_old": { "type": "integer", "minimum": 0 },
+        "len_old": { "type": "integer", "minimum": 0 },
+        "start_new": { "type": "integer", "minimum": 0 },
+        "len_new": { "type": "integer", "minimum": 0 },
+        "context": {
+          "type": "string",
+          "description": "Human-readable description of what this hunk changes"
+        },
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["op", "text"],
+            "properties": {
+              "op": {
+                "type": "string",
+                "enum": [" ", "+", "-"],
+                "description": "Context, addition, or deletion"
+              },
+              "text": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "RequiredAction": {
+      "type": "object",
+      "required": ["type", "risk_tier"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["shell", "git", "deps", "network"]
+        },
+        "command": { "type": "string" },
+        "cwd": { "type": "string", "default": "." },
+        "risk_tier": {
+          "type": "string",
+          "enum": ["READ", "WRITE", "EXECUTE", "NETWORK", "DESTRUCTIVE"]
+        },
+        "reason": {
+          "type": "string",
+          "description": "Why this action is needed"
+        }
+      }
+    }
+  }
+}

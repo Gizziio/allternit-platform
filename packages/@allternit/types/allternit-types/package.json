@@ -1,0 +1,20 @@
+{
+  "name": "@allternit/types",
+  "version": "1.0.0",
+  "description": "Shared platform type entrypoint for A2R workspace packages",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0"
+  }
+}

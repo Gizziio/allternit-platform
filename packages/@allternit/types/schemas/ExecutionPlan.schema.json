@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allternit.local/spec/contracts/ExecutionPlan.schema.json",
+  "title": "Execution Plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["plan_id", "graph_id", "nodes"],
+  "properties": {
+    "plan_id": { "type": "string" },
+    "graph_id": { "type": "string" },
+    "created_at": { "type": "string" },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["task_id", "blocked_by"],
+        "properties": {
+          "task_id": { "type": "string" },
+          "blocked_by": {
+            "type": "array",
+            "items": { "type": "string" },
+            "default": []
+          }
+        }
+      }
+    }
+  }
+}

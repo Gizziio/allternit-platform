@@ -1,0 +1,14 @@
+{
+  "name": "@allternit/parallel-run",
+  "version": "1.0.0",
+  "description": "Parallel execution logic for A2Rchitech",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
+  }
+}

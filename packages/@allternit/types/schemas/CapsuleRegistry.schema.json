@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allternit.local/spec/contracts/CapsuleRegistry.schema.json",
+  "title": "Capsule Registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "registry_version",
+    "capsules"
+  ],
+  "properties": {
+    "registry_version": {
+      "type": "string",
+      "pattern": "^v\\d+\\.\\d+$"
+    },
+    "capsules": {
+      "type": "array",
+      "items": {
+        "$ref": "CapsuleDefinition.schema.json"
+      }
+    }
+  }
+}

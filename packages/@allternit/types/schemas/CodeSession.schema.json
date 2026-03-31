@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allternit.local/spec/contracts/CodeSession.schema.json",
+  "title": "Code Session — Session Registry Contract",
+  "description": "An isolated coding session in Code Mode. Each session has its own worktree/sandbox, mode, policy profile, and state.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "session_id",
+    "workspace_id",
+    "isolation",
+    "mode",
+    "state",
+    "policy_profile_id",
+    "created_at"
+  ],
+  "properties": {
+    "session_id": {
+      "type": "string",
+      "pattern": "^sess_",
+      "description": "Unique session identifier"
+    },
+    "workspace_id": {
+      "type": "string",
+      "pattern": "^ws_",
+      "description": "Workspace this session operates on"
+    },
+    "isolation": {
+      "type": "string",
+      "enum": ["worktree", "sandbox"],
+      "description": "Isolation strategy"
+    },
+    "branch": {
+      "type": "string",
+      "description": "Git branch name (for worktree isolation)"
+    },
+    "worktree_path": {
+      "type": "string",
+      "description": "Path to worktree or sandbox directory relative to workspace root"
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["SAFE", "DEFAULT", "AUTO", "PLAN"]
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "IDLE",
+        "PLANNING",
+        "PLAN_READY",
+        "EXECUTING",
+        "AWAITING_APPROVAL",
+        "CHANGESET_READY",
+        "APPLYING",
+        "VERIFYING",
+        "DONE",
+        "FAILED",
+        "TERMINATED"
+      ]
+    },
+    "policy_profile_id": {
+      "type": "string",
+      "pattern": "^pol_",
+      "description": "Policy profile governing this session"
+    },
+    "wih_id": {
+      "type": ["string", "null"],
+      "description": "WIH associated with this session"
+    },
+    "run_id": {
+      "type": ["string", "null"],
+      "description": "Execution run ID for receipt tracking"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "terminated_at": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "context_pack_path": {
+      "type": ["string", "null"],
+      "description": "Path to context pack JSON for this session"
+    },
+    "active_plan_id": {
+      "type": ["string", "null"],
+      "description": "Currently active plan artifact ID"
+    },
+    "changesets": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "List of changeset IDs produced in this session"
+    },
+    "events": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Event IDs (resolve to CodeEvent via gateway). See /spec/Contracts/CodeEvent.schema.json"
+    },
+    "last_event_at": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "Timestamp of most recent event. Used for session list sorting."
+    },
+    "last_error": {
+      "type": ["string", "null"],
+      "description": "Last error message/stack summary. Null if no errors."
+    },
+    "pending_approvals_count": {
+      "type": "integer",
+      "minimum": 0,
+      "default": 0,
+      "description": "Number of pending approval prompts (actions + changesets). Drives UI badge."
+    },
+    "files_touched": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "List of file paths modified in this session (derived from changesets + receipts)"
+    },
+    "preview_sessions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Active preview session IDs. See /spec/Contracts/PreviewSession.schema.json"
+    }
+  }
+}

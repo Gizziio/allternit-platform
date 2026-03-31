@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allternit.local/spec/contracts/PolicyProfile.schema.json",
+  "title": "Policy Profile — Permission Gating Contract",
+  "description": "Defines allow/ask/deny rules for tool invocations in Code Mode sessions.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "profile_id",
+    "name",
+    "rules"
+  ],
+  "properties": {
+    "profile_id": {
+      "type": "string",
+      "pattern": "^pol_",
+      "description": "Unique policy profile identifier"
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable profile name"
+    },
+    "description": {
+      "type": "string"
+    },
+    "base_mode": {
+      "type": "string",
+      "enum": ["SAFE", "DEFAULT", "AUTO", "PLAN"],
+      "description": "Mode this profile corresponds to"
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/PolicyRule"
+      }
+    },
+    "overrides": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/PolicyRule"
+      },
+      "description": "Session-level overrides applied on top of base rules"
+    }
+  },
+  "$defs": {
+    "PolicyRule": {
+      "type": "object",
+      "required": ["tool_pattern", "decision"],
+      "properties": {
+        "tool_pattern": {
+          "type": "string",
+          "description": "Tool ID or glob pattern (e.g. 'fs.write', 'shell.*', '*')"
+        },
+        "path_pattern": {
+          "type": ["string", "null"],
+          "description": "File path glob to scope rule (e.g. 'src/**', '*.config.*')"
+        },
+        "command_pattern": {
+          "type": ["string", "null"],
+          "description": "Command regex to scope rule (e.g. '^pnpm test', '^rm ')"
+        },
+        "risk_tier": {
+          "type": ["string", "null"],
+          "enum": ["READ", "WRITE", "EXECUTE", "NETWORK", "DESTRUCTIVE", null],
+          "description": "Risk tier to match"
+        },
+        "decision": {
+          "type": "string",
+          "enum": ["ALLOW", "ASK", "DENY"]
+        },
+        "reason": {
+          "type": "string",
+          "description": "Why this rule exists"
+        },
+        "priority": {
+          "type": "integer",
+          "default": 0,
+          "description": "Higher priority rules evaluated first. Overrides > base rules."
+        }
+      }
+    }
+  }
+}

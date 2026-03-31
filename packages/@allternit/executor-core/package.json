@@ -1,0 +1,14 @@
+{
+  "name": "@allternit/executor-core",
+  "version": "1.0.0",
+  "description": "Executor core logic for A2Rchitech",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
+  }
+}

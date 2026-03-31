@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allternit.local/spec/contracts/MemoryRetentionPolicy.schema.json",
+  "title": "Memory Retention Policy",
+  "description": "Schema for memory retention policies in the A2R system",
+  "type": "object",
+  "properties": {
+    "policy_version": {
+      "type": "string",
+      "description": "Version of the policy schema"
+    },
+    "policy_id": {
+      "type": "string",
+      "description": "Unique identifier for the retention policy"
+    },
+    "policy_name": {
+      "type": "string",
+      "description": "Human-readable name for the policy"
+    },
+    "memory_layer": {
+      "type": "string",
+      "description": "Memory layer this policy applies to"
+    },
+    "retention_period_days": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of days to retain memory (0 = indefinite)"
+    },
+    "review_frequency_days": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "How often to review memory for retention compliance"
+    },
+    "auto_archive_threshold_days": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Days after which inactive memory gets archived"
+    },
+    "archive_location": {
+      "type": "string",
+      "description": "Location where archived memory is stored"
+    },
+    "purge_policy": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether automatic purging is enabled"
+        },
+        "grace_period_days": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Grace period before purging"
+        },
+        "notification_before_purge_days": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Days before purge to send notification"
+        }
+      },
+      "required": ["enabled"]
+    },
+    "approval_requirements": {
+      "type": "object",
+      "properties": {
+        "for_retention_change": {
+          "type": "object",
+          "properties": {
+            "quorum_count": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "approver_types": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": ["quorum_count", "approver_types"]
+        },
+        "for_manual_purge": {
+          "type": "object",
+          "properties": {
+            "quorum_count": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "approver_types": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": ["quorum_count", "approver_types"]
+        }
+      }
+    },
+    "monitoring": {
+      "type": "object",
+      "properties": {
+        "metrics_enabled": {
+          "type": "boolean"
+        },
+        "alerts_enabled": {
+          "type": "boolean"
+        },
+        "alert_recipients": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "policy_version",
+    "policy_id",
+    "policy_name",
+    "memory_layer",
+    "retention_period_days",
+    "review_frequency_days",
+    "auto_archive_threshold_days",
+    "archive_location",
+    "purge_policy",
+    "approval_requirements",
+    "monitoring"
+  ]
+}

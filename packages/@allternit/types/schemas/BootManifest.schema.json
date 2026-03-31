@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allternit.local/spec/contracts/BootManifest.schema.json",
+  "title": "Deterministic Boot Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "b0_version",
+    "loaded_files",
+    "hashes",
+    "timestamp"
+  ],
+  "properties": {
+    "b0_version": {
+      "type": "string",
+      "pattern": "^v\\d+\\.\\d+$"
+    },
+    "timestamp": {
+      "type": "string"
+    },
+    "loaded_files": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "hashes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "env": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}

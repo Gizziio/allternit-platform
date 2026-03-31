@@ -1,0 +1,16 @@
+[package]
+name = "capsule_spec"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true }
+a2ui-types = { path = "../../../types/typescript/a2ui_types" }
+chrono = { workspace = true }
+allternit-kernel-contracts = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }

@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allternit.local/spec/contracts/UIReceipt.schema.json",
+  "title": "UI Receipt",
+  "description": "Schema for UI action receipts in the A2R system",
+  "type": "object",
+  "properties": {
+    "receipt_version": {
+      "type": "string",
+      "description": "Version of the receipt schema"
+    },
+    "receipt_type": {
+      "type": "string",
+      "const": "ui_action_receipt",
+      "description": "Type of receipt"
+    },
+    "run_id": {
+      "type": "string",
+      "description": "ID of the run that generated this receipt"
+    },
+    "task_id": {
+      "type": "string",
+      "description": "ID of the task that initiated the UI action"
+    },
+    "wih_id": {
+      "type": "string",
+      "description": "ID of the WIH associated with this action"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of the UI action"
+    },
+    "action_id": {
+      "type": "string",
+      "description": "ID of the UI action that generated this receipt"
+    },
+    "route_invoked": {
+      "type": "string",
+      "description": "Route that was invoked by the UI action"
+    },
+    "invoker_id": {
+      "type": "string",
+      "description": "ID of the entity that invoked the action"
+    },
+    "session_id": {
+      "type": "string",
+      "description": "Session ID of the UI action"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "User ID of the UI action"
+    },
+    "request_payload_hash": {
+      "type": "string",
+      "description": "Hash of the request payload"
+    },
+    "response_payload_hash": {
+      "type": "string",
+      "description": "Hash of the response payload"
+    },
+    "gateway_response_code": {
+      "type": "integer",
+      "description": "HTTP response code from the gateway"
+    },
+    "execution_time_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Execution time in milliseconds"
+    },
+    "success": {
+      "type": "boolean",
+      "description": "Whether the action was successful"
+    },
+    "error_message": {
+      "type": "string",
+      "description": "Error message if the action failed"
+    }
+  },
+  "required": [
+    "receipt_version",
+    "receipt_type",
+    "run_id",
+    "task_id",
+    "wih_id",
+    "timestamp",
+    "action_id",
+    "route_invoked",
+    "invoker_id",
+    "session_id",
+    "user_id",
+    "request_payload_hash",
+    "response_payload_hash",
+    "gateway_response_code",
+    "execution_time_ms",
+    "success"
+  ]
+}

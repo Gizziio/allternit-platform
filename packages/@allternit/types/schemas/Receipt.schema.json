@@ -1,0 +1,271 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://allternit.local/spec/contracts/Receipt.schema.json",
+  "title": "A2R Receipt Schema",
+  "description": "Receipt proofs for tool and workflow execution",
+  "type": "object",
+  "required": [
+    "receipt_id",
+    "created_at",
+    "run_id",
+    "workflow_id",
+    "node_id",
+    "wih_id",
+    "tool_id",
+    "tool_def_hash",
+    "policy_decision_hash",
+    "pretool_event_hash",
+    "input_hashes",
+    "output_hashes",
+    "artifact_manifest",
+    "write_scope_proof",
+    "execution",
+    "idempotency_key",
+    "retry_count",
+    "trace_id",
+    "environment_hash"
+  ],
+  "properties": {
+    "receipt_id": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string",
+      "description": "ISO-8601 timestamp"
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "workflow_id": {
+      "type": "string"
+    },
+    "node_id": {
+      "type": "string"
+    },
+    "wih_id": {
+      "type": "string"
+    },
+    "tool_id": {
+      "type": "string"
+    },
+    "tool_def_hash": {
+      "type": "string"
+    },
+    "policy_decision_hash": {
+      "type": "string"
+    },
+    "pretool_event_hash": {
+      "type": "string"
+    },
+    "input_hashes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "output_hashes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "artifact_manifest": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "hash",
+          "size",
+          "media_type"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "hash": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer"
+          },
+          "media_type": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "write_scope_proof": {
+      "type": "object",
+      "required": [
+        "declared",
+        "actual"
+      ],
+      "properties": {
+        "declared": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "actual": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "required": [
+        "exit_code",
+        "stderr_hash",
+        "stdout_hash",
+        "duration_ms"
+      ],
+      "properties": {
+        "exit_code": {
+          "type": "integer"
+        },
+        "stderr_hash": {
+          "type": "string"
+        },
+        "stdout_hash": {
+          "type": "string"
+        },
+        "duration_ms": {
+          "type": "integer"
+        }
+      }
+    },
+    "idempotency_key": {
+      "type": "string"
+    },
+    "retry_count": {
+      "type": "integer"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "environment_hash": {
+      "type": "string"
+    },
+    "code_mode": {
+      "type": "object",
+      "description": "Optional Code Mode evidence envelope for session/change/approval receipts.",
+      "additionalProperties": false,
+      "properties": {
+        "session_id": {
+          "type": "string"
+        },
+        "event_id": {
+          "type": "string"
+        },
+        "plan_id": {
+          "type": "string"
+        },
+        "changeset_id": {
+          "type": "string"
+        },
+        "approval_token": {
+          "type": "string"
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "SAFE",
+            "DEFAULT",
+            "AUTO",
+            "PLAN"
+          ]
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "IDLE",
+            "PLANNING",
+            "PLAN_READY",
+            "EXECUTING",
+            "AWAITING_APPROVAL",
+            "CHANGESET_READY",
+            "APPLYING",
+            "VERIFYING",
+            "DONE",
+            "FAILED",
+            "TERMINATED"
+          ]
+        },
+        "patch_hash": {
+          "type": "string"
+        },
+        "touched_files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "before_hashes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "after_hashes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "workspace": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "branch": {
+              "type": "string"
+            },
+            "dirty": {
+              "type": "boolean"
+            },
+            "ahead": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "behind": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "command_outputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "command",
+              "exit_code"
+            ],
+            "properties": {
+              "command": {
+                "type": "string"
+              },
+              "exit_code": {
+                "type": "integer"
+              },
+              "stdout_hash": {
+                "type": "string"
+              },
+              "stderr_hash": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "rollback_snapshot_id": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

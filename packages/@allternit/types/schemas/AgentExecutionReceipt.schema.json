@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allternit.local/spec/contracts/AgentExecutionReceipt.schema.json",
+  "title": "Agent Execution Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "receipt_id",
+    "created_at",
+    "run_id",
+    "graph_id",
+    "agent_profile_id",
+    "status",
+    "run_state_path",
+    "receipts_dir",
+    "artifacts_dir"
+  ],
+  "properties": {
+    "receipt_id": { "type": "string" },
+    "created_at": { "type": "string" },
+    "run_id": { "type": "string" },
+    "graph_id": { "type": "string" },
+    "agent_profile_id": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["INSTALLED", "RESUMED", "RUNNING", "COMPLETE", "FAILED"]
+    },
+    "run_state_path": { "type": "string" },
+    "receipts_dir": { "type": "string" },
+    "artifacts_dir": { "type": "string" },
+    "node_receipts": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "tool_receipts": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "subprocess_receipts": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": []
+    },
+    "execution_hash": { "type": "string" }
+  }
+}
