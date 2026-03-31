@@ -12,6 +12,7 @@ packages:
   - 'services/runtime/adapter/allternit-runtime'
   - 'surfaces/*'
   - '!surfaces/allternit-extension'
+  - '!surfaces/a2r-extension'
   - 'surfaces/*/*'
   - 'surfaces/platform/adapters-ts/allternit-avatar-adapters'
   - 'surfaces/page-agent/packages/*'
