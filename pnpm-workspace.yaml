@@ -6,19 +6,19 @@ packages:
   - '!domains/mcp/connectors'
   - '!platform/plugins'
   - 'domains/*/*'
-  - 'packages/@a2r/types/visual-state'
-  - 'packages/@a2r/types/a2r-types'
+  - 'packages/@allternit/types/visual-state'
+  - 'packages/@allternit/types/allternit-types'
   - 'services/*/*'
-  - 'services/runtime/adapter/a2r-runtime'
+  - 'services/runtime/adapter/allternit-runtime'
   - 'surfaces/*'
-  - '!surfaces/a2r-extension'
+  - '!surfaces/allternit-extension'
   - 'surfaces/*/*'
-  - 'surfaces/platform/adapters-ts/a2r-avatar-adapters'
+  - 'surfaces/platform/adapters-ts/allternit-avatar-adapters'
   - 'surfaces/page-agent/packages/*'
   - '!surfaces/page-agent/packages/extension'
   - '!surfaces/page-agent/packages/website'
   - 'platform/*/*'
-  - 'packages/@a2r/*'
+  - 'packages/@allternit/*'
   
   # Legacy structure (still active during migration)
   - packages/*
@@ -31,7 +31,7 @@ packages:
   - 3-adapters/*
   - 3-adapters/*/*
   - 3-adapters/*/*/*
-  - 3-adapters/a2r-bridges/*
+  - 3-adapters/allternit-bridges/*
   - 2-governance/*
   - 2-governance/*/*
   - 2-governance/*/*/*
