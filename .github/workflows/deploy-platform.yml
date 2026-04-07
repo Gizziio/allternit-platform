@@ -106,17 +106,27 @@ jobs:
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
         
-      # NOTE: The Vercel project likely has Root Directory set to "surfaces/platform"
-      # When running from repo root with --cwd, vercel commands should work correctly.
-      # If there are path issues, the Root Directory setting in Vercel dashboard
-      # needs to be changed to "./" (root) or removed.
+      # IMPORTANT: Vercel Project Configuration
+      # 
+      # The Vercel project (prj_veXmWY1vWUn6N9aBWA4gTRyeSmrx) should have:
+      # - Root Directory: "surfaces/platform" (set in Vercel dashboard)
+      # - Framework Preset: Next.js
+      # - Build Command: next build
+      # - Output Directory: .next
+      #
+      # If you see path duplication errors like:
+      #   "ENOENT: surfaces/platform/surfaces/platform/.next/routes-manifest.json"
+      # This means the Root Directory setting conflicts with the working-directory in CI.
+      #
+      # SOLUTION: Either:
+      # 1. Change Vercel project Root Directory to "./" (repo root) and keep CI as-is, OR
+      # 2. Keep Vercel Root Directory as "surfaces/platform" and remove working-directory from CI
       
       - name: Pull Vercel Environment Information
-        # Run from repo root, CLI will use the project settings
+        working-directory: surfaces/platform
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
         
       - name: Build with Vercel
-        # Build from the platform directory
         working-directory: surfaces/platform
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
         env:
@@ -126,6 +136,5 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         
       - name: Deploy to Vercel
-        # Deploy from the platform directory where .vercel/output was created
         working-directory: surfaces/platform
         run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
