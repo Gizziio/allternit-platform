@@ -48,12 +48,10 @@ jobs:
         run: npm install --global vercel@latest
         
       - name: Pull Vercel Environment Information
-        working-directory: surfaces/platform
-        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }} --cwd surfaces/platform
         
       - name: Build Project
-        working-directory: surfaces/platform
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }} --cwd surfaces/platform
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
@@ -61,5 +59,4 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         
       - name: Deploy to Vercel
-        working-directory: surfaces/platform
-        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }} --cwd surfaces/platform
