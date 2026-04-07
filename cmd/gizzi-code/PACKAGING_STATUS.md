@@ -162,13 +162,27 @@ gizzi-code/
 | `docs.allternit.com` | Full documentation |
 | `github.com/Gizziio/gizzi-code` | Source code |
 
-## 🎨 Brand Colors
+## 🎨 Brand Colors (from Gizzi Mascot)
 
 ```css
---brand-blue: #0066FF;     /* Primary */
---brand-cyan: #00D4FF;     /* Accent */
---bg-primary: #0a0a0f;     /* Dark background */
+--gizzi-orange: #d97757;   /* Primary - mascot head */
+--gizzi-beige: #d4b08c;    /* Secondary - face */
+--gizzi-brown: #8f6f56;    /* Tertiary - body */
+--gizzi-dark: #111318;     /* Eyes/background */
+--bg-primary: #0a0a0f;     /* Dark theme bg */
 --bg-secondary: #12121a;   /* Card background */
+```
+
+### Mascot Display
+```
+      ▄▄       <- Orange (#d97757)
+   ▄▄▄  ▄▄▄    <- Beige (#d4b08c)
+ ▄██████████▄  <- Beige
+ █  ●    ●  █  <- Beige with dark eyes
+ █  A : / / █  <- Beige
+  ▀████████▀   <- Beige
+   █ █  █ █    <- Brown (#8f6f56)
+   ▀ ▀  ▀ ▀     <- Brown
 ```
 
 ## 📸 Preview

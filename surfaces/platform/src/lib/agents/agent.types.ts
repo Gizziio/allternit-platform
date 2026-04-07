@@ -765,5 +765,3 @@ export const SETUP_CAPABILITY_PRESETS: Record<string, string[]> = {};
 export const CREATE_FLOW_STEPS: Array<{ id: string; title: string }> = [];
 export const BAN_CATEGORY_OPTIONS: Array<{ id: string; label: string; description: string }> = [];
 
-// Re-export Activity icon from phosphor-icons
-export { Pulse as Activity } from '@phosphor-icons/react';

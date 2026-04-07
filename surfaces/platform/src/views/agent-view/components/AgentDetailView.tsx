@@ -7,7 +7,7 @@ import {
   GearSix, 
   Trash, 
   Sparkle, 
-  Activity, 
+  Pulse as Activity, 
   CaretRight, 
   SpeakerHigh,
   CircleNotch,
