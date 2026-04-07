@@ -1,0 +1,43 @@
+import { defineConfig } from 'vitest/config';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(__dirname, '..');
+
+export default defineConfig({
+  resolve: {
+    alias: {
+      '@allternit/runtime': path.resolve(repoRoot, 'services/runtime-adapters/allternit-runtime/dist/index.js'),
+      '@allternit/governor': path.resolve(repoRoot, 'domains/governance/governance-workflows/a2r-governor/dist/index.js'),
+      '@allternit/lawlayer': path.resolve(repoRoot, 'domains/governance/legal-compliance/a2r-lawlayer/dist/index.js'),
+      '@allternit/shell': path.resolve(repoRoot, 'cmd/_legacy/shell/src/index.ts'),
+    },
+  },
+  test: {
+    globals: true,
+    environment: 'node',
+    include: [
+      'integration/**/*.test.ts',
+      'e2e/**/*.test.ts',
+    ],
+    exclude: [
+      'node_modules',
+      'dist',
+      'upstream',
+    ],
+    testTimeout: 30000,
+    hookTimeout: 10000,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html', 'json'],
+      exclude: [
+        'node_modules/',
+        'dist/',
+        'upstream/',
+        'tests/',
+        '**/*.config.ts',
+      ],
+    },
+  },
+});

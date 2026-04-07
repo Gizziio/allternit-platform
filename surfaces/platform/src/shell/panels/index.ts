@@ -4,7 +4,7 @@
  * A resizable, draggable panel system for the IDE-like workspace.
  * Built on top of react-resizable-panels with glass styling and animation support.
  *
- * @module @a2r/platform/shell/panels
+ * @module @allternit/platform/shell/panels
  */
 
 // Core panel components

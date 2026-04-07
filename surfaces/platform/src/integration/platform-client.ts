@@ -6,8 +6,8 @@
  * - Gateway-level events
  * - Control-plane APIs
  *
- * IMPORTANT: This is distinct from @a2r/sdk which handles the Gizzi runtime API.
- * Do not use this client for Gizzi runtime session operations - use @a2r/sdk instead.
+ * IMPORTANT: This is distinct from @allternit/sdk which handles the Gizzi runtime API.
+ * Do not use this client for Gizzi runtime session operations - use @allternit/sdk instead.
  *
  * @module platform-client
  * @version 1.0.0

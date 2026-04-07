@@ -1,0 +1,48 @@
+// @ts-nocheck
+import { describe, expect, test } from "bun:test"
+import { Server } from "../../src/runtime/server/server"
+import { tmpdir } from "../fixture/fixture"
+
+describe("runtime API versioning", () => {
+  test("Server.openapi() exposes only canonical /v1 paths", async () => {
+    const spec = await Server.openapi()
+    const paths = Object.keys((spec as any).paths ?? {})
+
+    expect(paths.length).toBeGreaterThan(0)
+    expect(paths.every((path) => path.startsWith("/v1/"))).toBe(true)
+    expect(paths).toContain("/v1/session")
+    expect(paths).toContain("/v1/path")
+    expect(paths).not.toContain("/session")
+    expect(paths).not.toContain("/path")
+  })
+
+  test("/doc returns the canonical versioned spec", async () => {
+    const response = await Server.App().request("/doc")
+    expect(response.status).toBe(200)
+
+    const spec = await response.json()
+    const paths = Object.keys(spec.paths ?? {})
+
+    expect(paths.length).toBeGreaterThan(0)
+    expect(paths.every((path) => path.startsWith("/v1/"))).toBe(true)
+    expect(spec.paths["/v1/path"].get.responses["200"].content["application/json"].schema.properties).toHaveProperty("data")
+  })
+
+  test("legacy aliases remain available during the /v1 migration", async () => {
+    await using tmp = await tmpdir()
+    const app = Server.App()
+    const directory = encodeURIComponent(tmp.path)
+
+    const canonical = await app.request(`/v1/path?directory=${directory}`)
+    const legacy = await app.request(`/path?directory=${directory}`)
+
+    expect(canonical.status).toBe(200)
+    expect(legacy.status).toBe(200)
+
+    const canonicalBody = await canonical.json()
+    const legacyBody = await legacy.json()
+
+    expect(canonicalBody.data).toEqual(legacyBody)
+    expect(canonicalBody.data.directory).toBe(tmp.path)
+  })
+})

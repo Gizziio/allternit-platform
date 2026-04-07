@@ -1,0 +1,5 @@
+#!/bin/bash
+# Wrapper script to run Ink TUI with bun (avoids React bundling issues)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR/.."
+exec bun run src/cli/ui/ink-app/app.tsx

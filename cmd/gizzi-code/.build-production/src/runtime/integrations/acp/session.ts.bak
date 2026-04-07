@@ -1,0 +1,97 @@
+import { RequestError, type McpServer } from "@agentclientprotocol/sdk"
+import type { ACPSessionState } from "@/runtime/integrations/acp/types"
+import { Log } from "@/shared/util/log"
+import type { A2RClientLike } from "@/runtime/integrations/acp/types"
+import { Session } from "@/runtime/session"
+
+const log = Log.create({ service: "acp-session-manager" })
+
+export class ACPSessionManager {
+  private sessions = new Map<string, ACPSessionState>()
+  private sdk: A2RClientLike
+
+  constructor(sdk: A2RClientLike) {
+    this.sdk = sdk
+  }
+
+  tryGet(sessionId: string): ACPSessionState | undefined {
+    return this.sessions.get(sessionId)
+  }
+
+  async create(cwd: string, mcpServers: McpServer[], model?: ACPSessionState["model"]): Promise<ACPSessionState> {
+    const session = await Session.createNext({ directory: cwd })
+
+    const state: ACPSessionState = {
+      id: session.id,
+      cwd,
+      mcpServers,
+      createdAt: new Date(),
+      model,
+    }
+    log.info("creating_session", { state })
+
+    this.sessions.set(session.id, state)
+    return state
+  }
+
+  async load(
+    sessionId: string,
+    cwd: string,
+    mcpServers: McpServer[],
+    model?: ACPSessionState["model"],
+  ): Promise<ACPSessionState> {
+    const session = await Session.get(sessionId)
+
+    const state: ACPSessionState = {
+      id: sessionId,
+      cwd,
+      mcpServers,
+      createdAt: new Date(session.time.created),
+      model,
+    }
+    log.info("loading_session", { state })
+
+    this.sessions.set(sessionId, state)
+    return state
+  }
+
+  get(sessionId: string): ACPSessionState {
+    const session = this.sessions.get(sessionId)
+    if (!session) {
+      log.error("session not found", { sessionId })
+      throw RequestError.invalidParams(JSON.stringify({ error: `Session not found: ${sessionId}` }))
+    }
+    return session
+  }
+
+  getModel(sessionId: string) {
+    const session = this.get(sessionId)
+    return session.model
+  }
+
+  setModel(sessionId: string, model: ACPSessionState["model"]) {
+    const session = this.get(sessionId)
+    session.model = model
+    this.sessions.set(sessionId, session)
+    return session
+  }
+
+  getVariant(sessionId: string) {
+    const session = this.get(sessionId)
+    return session.variant
+  }
+
+  setVariant(sessionId: string, variant?: string) {
+    const session = this.get(sessionId)
+    session.variant = variant
+    this.sessions.set(sessionId, session)
+    return session
+  }
+
+  setMode(sessionId: string, modeId: string) {
+    const session = this.get(sessionId)
+    session.modeId = modeId
+    this.sessions.set(sessionId, session)
+    return session
+  }
+}

@@ -1,0 +1,108 @@
+import { cmd } from "@/cli/commands/cmd"
+import { UI } from "@/cli/ui"
+
+// Default keybindings
+const KEYBINDINGS = {
+  "Session": {
+    "Ctrl+N": "New session",
+    "Ctrl+O": "Open session list",
+    "Ctrl+W": "Close current session",
+    "Ctrl+Shift+T": "Reopen closed session",
+  },
+  "Navigation": {
+    "↑ / Ctrl+P": "Previous item",
+    "↓ / Ctrl+N": "Next item",
+    "Enter": "Select item",
+    "Escape": "Cancel / Close",
+    "Tab": "Expand directory / Autocomplete",
+  },
+  "Commands": {
+    "Ctrl+Shift+P": "Open command palette",
+    "/": "Show slash commands",
+    "@": "Mention file/agent",
+    "!": "Run shell command",
+  },
+  "Input": {
+    "Shift+Enter": "New line (in textarea)",
+    "Ctrl+A": "Select all",
+    "Ctrl+C": "Copy",
+    "Ctrl+V": "Paste",
+    "Ctrl+Z": "Undo",
+    "Ctrl+Shift+Z": "Redo",
+  },
+  "Agent": {
+    "Ctrl+.": "Stop agent",
+    "Ctrl+R": "Retry last message",
+    "Ctrl+Shift+C": "Copy last response",
+  },
+  "View": {
+    "Ctrl+L": "Clear screen",
+    "Ctrl++/Ctrl+-": "Zoom in/out",
+    "Ctrl+0": "Reset zoom",
+  },
+}
+
+const SHORTCUTS_FILE = ".gizzi/keybindings.json"
+
+export const KeybindingsCommand = cmd({
+  command: "keybindings",
+  aliases: ["keys", "shortcuts"],
+  describe: "show keyboard shortcuts",
+  builder: (yargs) =>
+    yargs
+      .option("category", {
+        type: "string",
+        choices: Object.keys(KEYBINDINGS),
+        describe: "show only specific category",
+      })
+      .option("search", {
+        type: "string",
+        alias: "s",
+        describe: "search for shortcut",
+      })
+      .option("json", {
+        type: "boolean",
+        describe: "output as JSON",
+      }),
+  handler: async (args) => {
+    if (args.json) {
+      UI.println(JSON.stringify(KEYBINDINGS, null, 2))
+      return
+    }
+
+    UI.empty()
+    UI.println(UI.Style.TEXT_INFO_BOLD + "Keyboard Shortcuts" + UI.Style.TEXT_NORMAL)
+
+    const searchTerm = args.search?.toLowerCase()
+
+    for (const [category, bindings] of Object.entries(KEYBINDINGS)) {
+      // Filter by category
+      if (args.category && args.category !== category) continue
+
+      const entries = Object.entries(bindings)
+
+      // Filter by search
+      const filtered = searchTerm
+        ? entries.filter(([key, desc]) =>
+            key.toLowerCase().includes(searchTerm) ||
+            desc.toLowerCase().includes(searchTerm)
+          )
+        : entries
+
+      if (filtered.length === 0) continue
+
+      UI.empty()
+      UI.println(UI.Style.TEXT_BOLD + category + UI.Style.TEXT_NORMAL)
+      UI.println(UI.Style.TEXT_DIM + "─".repeat(40) + UI.Style.TEXT_NORMAL)
+
+      for (const [key, description] of filtered) {
+        const keyFormatted = key.padEnd(20)
+        UI.println(`  ${UI.Style.TEXT_INFO}${keyFormatted}${UI.Style.TEXT_NORMAL} ${description}`)
+      }
+    }
+
+    UI.empty()
+    UI.println(UI.Style.TEXT_DIM + "Tip: Use /terminal-setup to install iTerm2/VS Code keybindings" + UI.Style.TEXT_NORMAL)
+    UI.empty()
+  },
+})

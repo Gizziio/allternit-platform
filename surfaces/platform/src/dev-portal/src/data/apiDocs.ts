@@ -25,7 +25,7 @@ export const apiNamespaces: APINamespace[] = [
           {
             title: 'Basic Registration',
             language: 'typescript',
-            code: `import { a2r } from '@a2r/sdk';
+            code: `import { a2r } from '@allternit/sdk';
 import manifest from './plugin.json';
 
 const context = await a2r.register(manifest);

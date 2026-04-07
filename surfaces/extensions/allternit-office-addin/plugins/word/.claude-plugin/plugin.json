@@ -1,0 +1,47 @@
+{
+  "name": "allternit-word",
+  "version": "1.0.0",
+  "displayName": "Allternit for Word",
+  "description": "Document drafting, editing, redlining, style application and structured content. Generates and executes Office.js code directly in the document.",
+  "author": { "name": "Allternit" },
+  "host": "word",
+  "requiredOfficeApi": "WordApi 1.4",
+  "systemPrompt": "system-prompt.md",
+  "skills": [
+    "skills/body-text.md",
+    "skills/paragraph-operations.md",
+    "skills/selection-range.md",
+    "skills/table-operations.md",
+    "skills/tracked-changes.md",
+    "skills/content-controls.md",
+    "skills/document-properties.md",
+    "skills/formatting.md"
+  ],
+  "commands": [
+    { "name": "word:rewrite",   "description": "Rewrite the selected text",                           "file": "commands/word-rewrite.md" },
+    { "name": "word:improve",   "description": "Improve grammar, clarity, and tone of selection",     "file": "commands/word-improve.md" },
+    { "name": "word:summarize", "description": "Summarize the document or selected section",          "file": "commands/word-summarize.md" },
+    { "name": "word:table",     "description": "Insert a formatted table with provided data",         "file": "commands/word-table.md" },
+    { "name": "word:redline",   "description": "Suggest changes using tracked changes/redlining",     "file": "commands/word-redline.md" },
+    { "name": "word:template",  "description": "Fill content controls in a document template",        "file": "commands/word-template.md" },
+    { "name": "word:structure", "description": "Apply heading hierarchy and document structure",      "file": "commands/word-structure.md" }
+  ],
+  "cookbooks": [
+    { "name": "Contract Review",  "file": "cookbooks/contract-review.md" },
+    { "name": "Report Writing",   "file": "cookbooks/report-writing.md" },
+    { "name": "Document Cleanup", "file": "cookbooks/document-cleanup.md" },
+    { "name": "Template Filling", "file": "cookbooks/template-filling.md" }
+  ],
+  "tools": "tools/tool-definitions.ts",
+  "executionPattern": "code-generation",
+  "errorRecovery": {
+    "maxRetries": 3,
+    "feedErrorToAgent": true,
+    "redlinePreferred": true,
+    "complexityLimits": {
+      "maxLinesPerStep": 30,
+      "maxInsertOperationsPerStep": 5,
+      "forbiddenOps": ["body.clear()"]
+    }
+  }
+}

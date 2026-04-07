@@ -5,8 +5,8 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import type { VisualState, TelemetryEvent } from '@a2r/visual-state/types';
-import { MoodInferrer, getMoodInferrer } from '@a2r/visual-state/inference';
+import type { VisualState, TelemetryEvent } from '@allternit/visual-state/types';
+import { MoodInferrer, getMoodInferrer } from '@allternit/visual-state/inference';
 
 export interface UseVisualStateReturn {
   /** Current visual state */

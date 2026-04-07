@@ -1,0 +1,118 @@
+import { setProp as _$setProp } from "@opentui/solid";
+import { effect as _$effect } from "@opentui/solid";
+import { createTextNode as _$createTextNode } from "@opentui/solid";
+import { insertNode as _$insertNode } from "@opentui/solid";
+import { createElement as _$createElement } from "@opentui/solid";
+import { createComponent as _$createComponent } from "@opentui/solid";
+import { createMemo, Show } from "solid-js";
+import { useDialog } from "@/cli/ui/tui/ui/dialog";
+import { DialogSelect } from "@/cli/ui/tui/ui/dialog-select";
+import { useSync } from "@/cli/ui/tui/context/sync";
+import { useTheme } from "@/cli/ui/tui/context/theme";
+import { useGIZZITheme } from "@/cli/ui/components/gizzi";
+import { useBookmarks } from "@/cli/ui/tui/hooks/useBookmarks";
+export function DialogBookmarks(props) {
+  const dialog = useDialog();
+  const sync = useSync();
+  const {
+    theme
+  } = useTheme();
+  const tone = useGIZZITheme();
+  const bookmarks = useBookmarks(props.sessionID);
+  const messages = createMemo(() => sync.data.message[props.sessionID] ?? []);
+  const bookmarkedMessages = createMemo(() => {
+    const msgList = messages();
+    const bookmarkedIDs = bookmarks.getBookmarkedMessageIDs();
+    return bookmarkedIDs.map(id => msgList.find(m => m.id === id)).filter(m => m !== undefined).sort((a, b) => a.id.localeCompare(b.id));
+  });
+  const options = createMemo(() => {
+    const msgs = bookmarkedMessages();
+    return msgs.map(message => {
+      const isUser = message.role === "user";
+      const preview = isUser ? getUserPreview(message) : getAssistantPreview(message, sync.data.part[message.id] ?? []);
+      return {
+        value: message.id,
+        title: isUser ? "You" : "Assistant",
+        description: preview,
+        onSelect: () => {
+          dialog.clear();
+          // The parent component should handle scrolling to this message
+          // We can emit an event or use a callback
+        }
+      };
+    });
+  });
+  function getUserPreview(message) {
+    // Get first line of user message
+    const text = message.text ?? "";
+    return text.split("\n")[0].slice(0, 60) || "(no text)";
+  }
+  function getAssistantPreview(message, parts) {
+    // Get first text part
+    const textPart = parts.find(p => p.type === "text" && p.text?.trim());
+    if (textPart) {
+      return textPart.text.split("\n")[0].slice(0, 60);
+    }
+    return "(assistant response)";
+  }
+  return _$createComponent(Show, {
+    get when() {
+      return bookmarks.count() > 0;
+    },
+    get fallback() {
+      return (() => {
+        var _el$ = _$createElement("box"),
+          _el$2 = _$createElement("text"),
+          _el$4 = _$createElement("text"),
+          _el$5 = _$createTextNode(`Press `),
+          _el$6 = _$createElement("span"),
+          _el$8 = _$createTextNode(` to bookmark a message.`);
+        _$insertNode(_el$, _el$2);
+        _$insertNode(_el$, _el$4);
+        _$insertNode(_el$2, _$createTextNode(`No bookmarks yet.`));
+        _$insertNode(_el$4, _el$5);
+        _$insertNode(_el$4, _el$6);
+        _$insertNode(_el$4, _el$8);
+        _$insertNode(_el$6, _$createTextNode(`m`));
+        _$effect(_p$ => {
+          var _v$ = tone().space.lg,
+            _v$2 = theme.textMuted,
+            _v$3 = theme.textMuted,
+            _v$4 = {
+              fg: theme.text
+            };
+          _v$ !== _p$.e && (_p$.e = _$setProp(_el$, "padding", _v$, _p$.e));
+          _v$2 !== _p$.t && (_p$.t = _$setProp(_el$2, "fg", _v$2, _p$.t));
+          _v$3 !== _p$.a && (_p$.a = _$setProp(_el$4, "fg", _v$3, _p$.a));
+          _v$4 !== _p$.o && (_p$.o = _$setProp(_el$6, "style", _v$4, _p$.o));
+          return _p$;
+        }, {
+          e: undefined,
+          t: undefined,
+          a: undefined,
+          o: undefined
+        });
+        return _el$;
+      })();
+    },
+    get children() {
+      return _$createComponent(DialogSelect, {
+        title: "Bookmarked Messages",
+        get options() {
+          return options();
+        },
+        onSelect: option => {
+          // Navigate to message
+          const msgElement = document.getElementById(`message-${option.value}`);
+          if (msgElement) {
+            msgElement.scrollIntoView({
+              behavior: "smooth",
+              block: "center"
+            });
+          }
+          dialog.clear();
+        }
+      });
+    }
+  });
+}

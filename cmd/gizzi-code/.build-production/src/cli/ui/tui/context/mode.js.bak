@@ -1,0 +1,94 @@
+import { mergeProps as _$mergeProps } from "@opentui/solid";
+import { createComponent as _$createComponent } from "@opentui/solid";
+/**
+ * Mode Context - Global mode state management
+ * 
+ * Provides:
+ * - Current mode (code | cowork)
+ * - Mode switching
+ * - Mode persistence via KV store
+ * - Mode-aware utilities
+ */
+
+import { createContext, useContext, createMemo, createEffect, createSignal, onMount } from "solid-js";
+import { useKV } from "@/cli/ui/tui/context/kv";
+const MODE_STORAGE_KEY = "gizzi-mode";
+// Create context with default values
+const ModeContext = createContext({
+  mode: "code",
+  setMode: () => {},
+  isCode: true,
+  isCowork: false,
+  toggle: () => {}
+});
+
+// Provider component
+export function ModeProvider(props) {
+  const kv = useKV();
+
+  // Initialize mode from KV store
+  const [mode, setModeState] = createSignal("code");
+
+  // Load saved mode on mount
+  onMount(() => {
+    if (kv.ready) {
+      const saved = kv.get(MODE_STORAGE_KEY, "code");
+      if (saved && ["code", "cowork"].includes(saved)) {
+        setModeState(saved);
+      }
+    }
+  });
+
+  // Save mode when it changes AND persist to KV
+  createEffect(() => {
+    const currentMode = mode();
+    console.log("[ModeContext] Mode changed to:", currentMode);
+    if (kv.ready) {
+      console.log("[ModeContext] Saving to KV store");
+      kv.set(MODE_STORAGE_KEY, currentMode);
+    }
+  });
+  const value = createMemo(() => ({
+    mode: mode(),
+    setMode: newMode => {
+      console.log("[ModeContext] setMode called with:", newMode);
+      setModeState(newMode);
+    },
+    isCode: mode() === "code",
+    isCowork: mode() === "cowork",
+    toggle: () => {
+      const newMode = mode() === "code" ? "cowork" : "code";
+      console.log("[ModeContext] toggle called, new mode:", newMode);
+      setModeState(newMode);
+    }
+  }));
+  return _$createComponent(ModeContext.Provider, {
+    get value() {
+      return value();
+    },
+    get children() {
+      return props.children;
+    }
+  });
+}
+
+// Hook for consuming mode context
+export function useMode() {
+  const context = useContext(ModeContext);
+  if (!context) {
+    throw new Error("useMode must be used within ModeProvider");
+  }
+  return context;
+}
+
+// HOC for mode-aware components
+export function withMode(Component) {
+  return function WithMode(props) {
+    const mode = useMode();
+    return _$createComponent(Component, _$mergeProps(props, {
+      get mode() {
+        return mode.mode;
+      }
+    }));
+  };
+}

@@ -1,0 +1,39 @@
+{
+  "id": "rust-systems",
+  "name": "Rust Systems Programming",
+  "description": "High-performance Rust development with cargo-watch, clippy, rustfmt, cross-compilation, and debugging tools. Perfect for systems, networking, and CLI projects.",
+  "version": "1.0.0",
+  "author": "A2R",
+  "type": "devcontainer",
+  "category": "systems",
+  "language": "rust",
+  "features": [
+    "Rust 1.75+ with cargo",
+    "cargo-watch for hot reload",
+    "clippy linting + rustfmt",
+    "cargo-expand for macros",
+    "cargo-audit for security",
+    "cross-compilation targets",
+    "LLDB debugging",
+    "tokio async runtime",
+    "axum/Actix web frameworks",
+    "sqlx for database",
+    "Tokio console profiling"
+  ],
+  "ports": [8080, 3000],
+  "variables": [
+    {
+      "name": "RUST_VERSION",
+      "description": "Rust toolchain version",
+      "type": "select",
+      "options": ["stable", "beta", "nightly"],
+      "default": "stable"
+    },
+    {
+      "name": "ENABLE_WASM",
+      "description": "Add WebAssembly target (wasm32-unknown-unknown)",
+      "type": "boolean",
+      "default": "false"
+    }
+  ]
+}

@@ -4,7 +4,7 @@
  * Comprehensive animation system using Framer Motion.
  * All animations respect prefers-reduced-motion and use GPU-accelerated properties.
  * 
- * @module @a2r/platform/design/animation
+ * @module @allternit/platform/design/animation
  */
 
 // Core animation components

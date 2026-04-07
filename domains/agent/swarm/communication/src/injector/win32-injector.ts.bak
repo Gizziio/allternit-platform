@@ -1,0 +1,166 @@
+/**
+ * Win32 Console Injector
+ * 
+ * Injects keystrokes into Windows console windows.
+ * Uses Win32 API via node-ffi or similar.
+ */
+
+import type {
+  TerminalInjector,
+  TerminalSession,
+  InjectionResult,
+  InjectorConfig,
+} from './injector-types.js';
+
+/**
+ * Win32 console injector
+ * 
+ * Note: This is a stub implementation. Full Win32 injection requires
+ * native bindings (node-ffi-napi or similar) to access Windows API.
+ */
+export class Win32Injector implements TerminalInjector {
+  private sessions: Map<string, TerminalSession>;
+
+  constructor(_config: InjectorConfig = { timeout: 5000, maxRetries: 3, retryDelay: 100 }) {
+    this.sessions = new Map();
+  }
+
+  /**
+   * Inject keystrokes into a Windows console
+   */
+  async inject(sessionId: string, command: string): Promise<InjectionResult> {
+    const timestamp = new Date().toISOString();
+
+    try {
+      // Check if session exists
+      const session = this.sessions.get(sessionId);
+      if (!session) {
+        return {
+          success: false,
+          error: `Session not found: ${sessionId}`,
+          command,
+          sessionId,
+          timestamp,
+        };
+      }
+
+      // In production, this would use Win32 API:
+      // 1. Find console window by title or PID
+      // 2. Get console input handle
+      // 3. Write input events using WriteConsoleInput
+      // 4. Simulate Enter key press
+
+      // For now, simulate successful injection
+      console.log(`[Win32Injector] Would inject: ${command} into session ${sessionId}`);
+
+      return {
+        success: true,
+        command,
+        sessionId,
+        timestamp,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        command,
+        sessionId,
+        timestamp,
+      };
+    }
+  }
+
+  /**
+   * Check if session exists
+   */
+  async sessionExists(sessionId: string): Promise<boolean> {
+    return this.sessions.has(sessionId);
+  }
+
+  /**
+   * List active sessions
+   */
+  async listSessions(): Promise<TerminalSession[]> {
+    return Array.from(this.sessions.values());
+  }
+
+  /**
+   * Create a new session (conhost or Windows Terminal)
+   */
+  async createSession(name: string, _command?: string): Promise<TerminalSession> {
+    // In production, this would:
+    // 1. Spawn conhost.exe or wt.exe
+    // 2. Capture the window handle
+    // 3. Store session info
+
+    const session: TerminalSession = {
+      id: name,
+      name,
+      platform: 'win32',
+      active: true,
+      lastActivity: new Date().toISOString(),
+      pid: Math.floor(Math.random() * 10000), // Simulated PID
+    };
+
+    this.sessions.set(name, session);
+
+    return session;
+  }
+
+  /**
+   * Kill a session
+   */
+  async killSession(sessionId: string): Promise<void> {
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      throw new Error(`Session not found: ${sessionId}`);
+    }
+
+    // In production, would kill process by PID
+    this.sessions.delete(sessionId);
+  }
+
+  /**
+   * Capture session output
+   */
+  async captureOutput(sessionId: string, _lines?: number): Promise<string> {
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      throw new Error(`Session not found: ${sessionId}`);
+    }
+
+    // In production, would use ReadConsoleOutput
+    return `[Simulated output from session ${sessionId}]`;
+  }
+}
+
+/**
+ * Create Win32 injector
+ */
+export function createWin32Injector(config?: Partial<InjectorConfig>): Win32Injector {
+  return new Win32Injector({
+    timeout: 5000,
+    maxRetries: 3,
+    retryDelay: 100,
+    ...config,
+  });
+}
+
+/**
+ * Check if running on Windows
+ */
+export function isWindows(): boolean {
+  return process.platform === 'win32';
+}
+
+/**
+ * Get appropriate injector for current platform
+ */
+export function getWin32OrTmuxInjector(config?: InjectorConfig): TerminalInjector {
+  if (isWindows()) {
+    return createWin32Injector(config);
+  }
+  // For Unix, would import and return TmuxInjector
+  // This is a circular dependency workaround
+  throw new Error('Use TmuxInjector directly for Unix platforms');
+}

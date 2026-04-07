@@ -4,7 +4,7 @@
  * Comprehensive type-safe icon definitions for the A2rchitect platform.
  * All icons are typed (no string fall-through) to ensure consistency.
  * 
- * @module @a2r/platform/icons/types
+ * @module @allternit/platform/icons/types
  */
 
 // ============================================================================

@@ -1,0 +1,4 @@
+import { memo as _$memo } from "@opentui/solid";
+export function GIZZIThemeProvider(props) {
+  return _$memo(() => props.children);
+}

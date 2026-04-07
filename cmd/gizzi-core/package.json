@@ -1,0 +1,31 @@
+{
+  "name": "@allternit/gizzi-core",
+  "version": "1.0.0",
+  "description": "GIZZI primitives - production ready modules",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": "./src/index.ts",
+    "./brand": "./src/brand/index.ts",
+    "./bus": "./src/bus/index.ts",
+    "./workspace": "./src/workspace/index.ts",
+    "./continuity": "./src/continuity/index.ts",
+    "./verification": "./src/verification/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "build": "bun build ./src/index.ts --outdir ./dist --target bun"
+  },
+  "devDependencies": {
+    "@types/bun": "*",
+    "@types/node": "*",
+    "react-devtools-core": "^7.0.1",
+    "typescript": "*"
+  },
+  "dependencies": {
+    "ink": "^6.8.0",
+    "react": "^19.2.4",
+    "zod": "^3.23.0"
+  }
+}

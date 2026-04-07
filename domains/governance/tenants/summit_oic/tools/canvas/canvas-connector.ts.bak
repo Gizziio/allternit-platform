@@ -1,0 +1,73 @@
+/**
+ * Canvas API Connector stub for tools/canvas
+ */
+
+export interface CanvasConfig {
+  baseUrl: string;
+  token: string;
+  [key: string]: unknown;
+}
+
+export interface CanvasModule {
+  id: number;
+  name: string;
+  [key: string]: unknown;
+}
+
+export interface CanvasPage {
+  id: number;
+  title: string;
+  url?: string;
+  body?: string;
+  [key: string]: unknown;
+}
+
+export interface CanvasAssignment {
+  id: number;
+  name: string;
+  due_at?: string;
+  points_possible?: number;
+  html_url?: string;
+  [key: string]: unknown;
+}
+
+export interface CreateModuleRequest {
+  name: string;
+  position?: number;
+  [key: string]: unknown;
+}
+
+export interface CreatePageRequest {
+  title: string;
+  body?: string;
+  [key: string]: unknown;
+}
+
+export interface CreateAssignmentRequest {
+  name: string;
+  pointsPossible?: number;
+  dueAt?: string;
+  [key: string]: unknown;
+}
+
+export interface CanvasExecutionResult {
+  success: boolean;
+  error?: string;
+  responseData?: Record<string, any>;
+  objectUrl?: string;
+}
+
+export class CanvasConnector {
+  constructor(_config?: CanvasConfig) {}
+  isConfigured(): boolean { return false; }
+  getBaseUrl(): string { return ''; }
+  async createAssignment(_data: unknown): Promise<CanvasExecutionResult> {
+    return { success: false, error: 'Not implemented' };
+  }
+  async listModules(_courseId: string): Promise<CanvasModule[]> { return []; }
+  async listAssignments(_courseId: string): Promise<CanvasAssignment[]> { return []; }
+}
+
+export function createCanvasConnector(_config?: Partial<CanvasConfig>): CanvasConnector {
+  return new CanvasConnector();
+}

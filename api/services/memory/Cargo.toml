@@ -1,0 +1,26 @@
+[package]
+name = "allternit-simple-memory"
+version = "0.1.0"
+edition = "2021"
+description = "Simple memory service for the A2rchitech platform"
+license = "MIT"
+
+[dependencies]
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+allternit-memory = { workspace = true }
+allternit-sdk-core = { workspace = true }
+allternit-sdk-functions = { workspace = true }
+allternit-sdk-policy = { workspace = true }
+allternit-sdk-transport = { workspace = true }
+axum = { version = "0.7", features = ["macros"] }
+tower = { version = "0.5", features = ["util"] }
+tower-http = { workspace = true }
+uuid = { workspace = true, features = ["v4", "serde"] }
+sqlx = { workspace = true }
+allternit-memory-provider = { path = "../../domains/kernel/data/allternit-memory-provider", features = [] }
+async-trait = { workspace = true }

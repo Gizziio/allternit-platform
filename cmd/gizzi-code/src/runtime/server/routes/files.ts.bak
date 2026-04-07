@@ -1,0 +1,122 @@
+import { Hono } from "hono"
+import { describeRoute, resolver } from "hono-openapi"
+import z from "zod/v4"
+import { FilesService } from "@/runtime/files/files-service"
+import { errors } from "@/runtime/server/error"
+
+const FileObjectSchema = z.object({
+  id: z.string(),
+  filename: z.string(),
+  created_at: z.number(),
+  size: z.number(),
+  media_type: z.string(),
+  storage_uri: z.string(),
+  content_hash: z.string(),
+})
+
+export function FilesRoutes() {
+  return new Hono()
+    .post(
+      "/",
+      describeRoute({
+        summary: "Upload file",
+        description: "Legacy compatibility alias for the canonical asset upload API.",
+        operationId: "files.upload",
+        responses: {
+          200: {
+            description: "Uploaded file metadata",
+            content: {
+              "application/json": {
+                schema: resolver(FileObjectSchema),
+              },
+            },
+          },
+          ...errors(400),
+        },
+      }),
+      async (c) => {
+        const form = await c.req.formData()
+        const file = form.get("file")
+        if (!(file instanceof File)) {
+          return c.json({ error: "Expected multipart form field named 'file'" }, 400)
+        }
+        const filenameOverride = form.get("filename")
+        const bytes = new Uint8Array(await file.arrayBuffer())
+        const record = await FilesService.save({
+          bytes,
+          filename: typeof filenameOverride === "string" && filenameOverride.trim() ? filenameOverride : file.name,
+          mediaType: file.type || undefined,
+        })
+        return c.json(record)
+      },
+    )
+    .get(
+      "/",
+      describeRoute({
+        summary: "List files",
+        description: "Legacy compatibility alias for the canonical asset listing API.",
+        operationId: "files.list",
+        responses: {
+          200: {
+            description: "File metadata list",
+            content: {
+              "application/json": {
+                schema: resolver(FileObjectSchema.array()),
+              },
+            },
+          },
+        },
+      }),
+      async (c) => c.json(await FilesService.list()),
+    )
+    .get(
+      "/:id",
+      describeRoute({
+        summary: "Get file metadata",
+        description: "Legacy compatibility alias for the canonical asset metadata API.",
+        operationId: "files.get",
+        responses: {
+          200: {
+            description: "File metadata",
+            content: {
+              "application/json": {
+                schema: resolver(FileObjectSchema),
+              },
+            },
+          },
+          ...errors(404),
+        },
+      }),
+      async (c) => {
+        const id = c.req.param("id")
+        const file = await FilesService.get(id)
+        if (!file) return c.json({ error: `File not found: ${id}` }, 404)
+        return c.json(file)
+      },
+    )
+    .delete(
+      "/:id",
+      describeRoute({
+        summary: "Delete file",
+        description: "Legacy compatibility alias for the canonical asset delete API.",
+        operationId: "files.delete",
+        responses: {
+          200: {
+            description: "Deletion result",
+            content: {
+              "application/json": {
+                schema: resolver(z.object({ ok: z.boolean() })),
+              },
+            },
+          },
+          ...errors(404),
+        },
+      }),
+      async (c) => {
+        const id = c.req.param("id")
+        const ok = await FilesService.remove(id)
+        if (!ok) return c.json({ error: `File not found: ${id}` }, 404)
+        return c.json({ ok })
+      },
+    )
+}

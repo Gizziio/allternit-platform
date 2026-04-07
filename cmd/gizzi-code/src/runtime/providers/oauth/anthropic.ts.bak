@@ -1,0 +1,105 @@
+import { generatePKCE } from "./pkce"
+
+const CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
+const AUTHORIZE_URL = "https://claude.ai/oauth/authorize"
+const TOKEN_URL = "https://console.allternit.io/v1/oauth/token"
+const REDIRECT_URI = "https://console.allternit.io/oauth/code/callback"
+const SCOPES = "org:create_api_key user:profile user:inference"
+
+export const anthropicOAuth = {
+  label: "Sign in with Anthropic (Claude Pro/Max)",
+  description: "Use your Claude.ai subscription",
+
+  async authorize(_inputs: Record<string, string>) {
+    const { verifier, challenge } = await generatePKCE()
+
+    const params = new URLSearchParams({
+      code: "true",
+      client_id: CLIENT_ID,
+      response_type: "code",
+      redirect_uri: REDIRECT_URI,
+      scope: SCOPES,
+      code_challenge: challenge,
+      code_challenge_method: "S256",
+      state: verifier,
+    })
+
+    const url = `${AUTHORIZE_URL}?${params}`
+
+    return {
+      url,
+      method: "code" as const,
+      instructions: "Open the URL in your browser, authorize, then paste the code from the redirect URL.",
+      _verifier: verifier,
+      async callback(input: string) {
+        // Parse code#state or full redirect URL
+        let code: string
+        let state: string | undefined
+
+        try {
+          const u = new URL(input.trim())
+          code = u.searchParams.get("code") ?? input.trim()
+          state = u.searchParams.get("state") ?? undefined
+        } catch {
+          const parts = input.trim().split("#")
+          code = parts[0]
+          state = parts[1]
+        }
+
+        const tokenRes = await fetch(TOKEN_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            grant_type: "authorization_code",
+            client_id: CLIENT_ID,
+            code,
+            state: state ?? verifier,
+            redirect_uri: REDIRECT_URI,
+            code_verifier: verifier,
+          }),
+        })
+
+        if (!tokenRes.ok) {
+          const err = await tokenRes.text()
+          return { type: "failed" as const, error: err }
+        }
+
+        const data = (await tokenRes.json()) as {
+          access_token: string
+          refresh_token: string
+          expires_in: number
+        }
+        const expires = Date.now() + data.expires_in * 1000 - 5 * 60 * 1000
+
+        return {
+          type: "success" as const,
+          provider: "anthropic",
+          refresh: data.refresh_token,
+          access: data.access_token,
+          expires,
+        }
+      },
+    }
+  },
+}
+
+export async function refreshAnthropicToken(
+  refreshToken: string,
+): Promise<{ access: string; refresh: string; expires: number }> {
+  const res = await fetch(TOKEN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      grant_type: "refresh_token",
+      client_id: CLIENT_ID,
+      refresh_token: refreshToken,
+    }),
+  })
+  if (!res.ok) throw new Error(`Anthropic token refresh failed: ${await res.text()}`)
+  const data = (await res.json()) as { access_token: string; refresh_token: string; expires_in: number }
+  return {
+    access: data.access_token,
+    refresh: data.refresh_token,
+    expires: Date.now() + data.expires_in * 1000 - 5 * 60 * 1000,
+  }
+}

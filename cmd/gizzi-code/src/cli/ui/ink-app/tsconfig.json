@@ -1,0 +1,24 @@
+{
+  "extends": "../../../../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "~/*": [
+        "./*"
+      ],
+      "@/*": [
+        "./*"
+      ],
+      "src/*": [
+        "./*"
+      ],
+      "@modelcontextprotocol/sdk/*": [
+        "./vendor/@modelcontextprotocol/sdk/dist/esm/*"
+      ]
+    }
+  },
+  "include": [
+    "./**/*.ts",
+    "./**/*.tsx"
+  ]
+}

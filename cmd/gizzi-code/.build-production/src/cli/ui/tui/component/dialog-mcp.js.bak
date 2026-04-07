@@ -1,0 +1,130 @@
+import { createComponent as _$createComponent } from "@opentui/solid";
+import { setProp as _$setProp } from "@opentui/solid";
+import { effect as _$effect } from "@opentui/solid";
+import { insert as _$insert } from "@opentui/solid";
+import { createTextNode as _$createTextNode } from "@opentui/solid";
+import { insertNode as _$insertNode } from "@opentui/solid";
+import { createElement as _$createElement } from "@opentui/solid";
+import { createMemo, createSignal } from "solid-js";
+import { reconcile } from "solid-js/store";
+import { useLocal } from "@/cli/ui/tui/context/local";
+import { useSync } from "@/cli/ui/tui/context/sync";
+import { map, pipe, entries, sortBy } from "remeda";
+import { DialogSelect } from "@/cli/ui/tui/ui/dialog-select";
+import { useTheme } from "@/cli/ui/tui/context/theme";
+import { Keybind } from "@/shared/util/keybind";
+import { TextAttributes } from "@opentui/core";
+import { useSDK } from "@/cli/ui/tui/context/sdk";
+import { GIZZICopy } from "@/shared/brand";
+import { Log } from "@/shared/util/log";
+const log = Log.create({
+  service: "tui.dialog-mcp"
+});
+
+// Local type definition (replaces @allternit/sdk/v2)
+
+function Status(props) {
+  const {
+    theme
+  } = useTheme();
+  if (props.loading) {
+    return (() => {
+      var _el$ = _$createElement("span"),
+        _el$2 = _$createTextNode(`⋯ `);
+      _$insertNode(_el$, _el$2);
+      _$insert(_el$, () => GIZZICopy.dialogs.loading, null);
+      _$effect(_$p => _$setProp(_el$, "style", {
+        fg: theme.textMuted
+      }, _$p));
+      return _el$;
+    })();
+  }
+  if (props.enabled) {
+    return (() => {
+      var _el$3 = _$createElement("span"),
+        _el$4 = _$createTextNode(`✓ `);
+      _$insertNode(_el$3, _el$4);
+      _$insert(_el$3, () => GIZZICopy.dialogs.enabled, null);
+      _$effect(_$p => _$setProp(_el$3, "style", {
+        fg: theme.success,
+        attributes: TextAttributes.BOLD
+      }, _$p));
+      return _el$3;
+    })();
+  }
+  return (() => {
+    var _el$5 = _$createElement("span"),
+      _el$6 = _$createTextNode(`○ `);
+    _$insertNode(_el$5, _el$6);
+    _$insert(_el$5, () => GIZZICopy.dialogs.disabled, null);
+    _$effect(_$p => _$setProp(_el$5, "style", {
+      fg: theme.textMuted
+    }, _$p));
+    return _el$5;
+  })();
+}
+export function DialogMcp() {
+  const local = useLocal();
+  const sync = useSync();
+  const sdk = useSDK();
+  const [, setRef] = createSignal();
+  const [loading, setLoading] = createSignal(null);
+  const options = createMemo(() => {
+    // Track sync data and loading state to trigger re-render when they change
+    const mcpData = sync.data.mcp;
+    const loadingMcp = loading();
+    return pipe(mcpData ?? {}, entries(), sortBy(([name]) => name), map(([name, status]) => ({
+      value: name,
+      title: name,
+      description: status.status === "failed" ? GIZZICopy.dialogs.failed : status.status,
+      footer: _$createComponent(Status, {
+        get enabled() {
+          return local.mcp.isEnabled(name);
+        },
+        loading: loadingMcp === name
+      }),
+      category: undefined
+    })));
+  });
+  const keybinds = createMemo(() => [{
+    keybind: Keybind.parse("space")[0],
+    title: GIZZICopy.dialogs.toggle,
+    onTrigger: async option => {
+      // Prevent toggling while an operation is already in progress
+      if (loading() !== null) return;
+      setLoading(option.value);
+      try {
+        await local.mcp.toggle(option.value);
+        // Refresh MCP status from server
+        const result = await sdk.client.mcp.status();
+        const mcp = sdk.data(result);
+        if (mcp) {
+          sync.set("mcp", reconcile(mcp));
+        } else {
+          log.debug("Failed to refresh MCP status: no data returned");
+        }
+      } catch (error) {
+        log.debug("Failed to toggle MCP", {
+          error
+        });
+      } finally {
+        setLoading(null);
+      }
+    }
+  }]);
+  return _$createComponent(DialogSelect, {
+    ref: setRef,
+    get title() {
+      return GIZZICopy.dialogs.mcpsTitle;
+    },
+    get options() {
+      return options();
+    },
+    get keybind() {
+      return keybinds();
+    },
+    onSelect: () => {
+      // Don't close on select, only on escape
+    }
+  });
+}

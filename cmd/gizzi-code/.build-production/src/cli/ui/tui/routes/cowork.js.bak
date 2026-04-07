@@ -1,0 +1,813 @@
+import { memo as _$memo } from "@opentui/solid";
+import { effect as _$effect } from "@opentui/solid";
+import { insert as _$insert } from "@opentui/solid";
+import { createTextNode as _$createTextNode } from "@opentui/solid";
+import { insertNode as _$insertNode } from "@opentui/solid";
+import { setProp as _$setProp } from "@opentui/solid";
+import { createElement as _$createElement } from "@opentui/solid";
+import { createComponent as _$createComponent } from "@opentui/solid";
+/**
+ * Cowork Mode - Collaborative workspace view
+ * 
+ * Uses the same session system as Code mode but with a focused
+ * "work visualization" layout showing tool calls as inline blocks.
+ */
+
+import { createMemo, createSignal, Show, For, onMount } from "solid-js";
+import { useTheme } from "@/cli/ui/tui/context/theme";
+import { GIZZIFrame, GIZZIMascot } from "@/cli/ui/components/gizzi";
+import { RGBA, TextAttributes } from "@opentui/core";
+import { useTerminalDimensions, useKeyboard, useRenderer } from "@opentui/solid";
+import { useSync } from "@/cli/ui/tui/context/sync";
+import { useSDK } from "@/cli/ui/tui/context/sdk";
+import { useRoute } from "@/cli/ui/tui/context/route";
+import { useExit } from "@/cli/ui/tui/context/exit";
+import { useToast } from "@/cli/ui/tui/ui/toast";
+import { useDialog } from "@/cli/ui/tui/ui/dialog";
+import { useLocal } from "@/cli/ui/tui/context/local";
+import { DialogCronList } from "@/cli/ui/tui/component/dialog-cron-list";
+import { Log } from "@/shared/util/log";
+import { Prompt } from "@/cli/ui/tui/component/prompt";
+import { SessionMount } from "@/cli/ui/tui/component/session-mount";
+export function Cowork() {
+  const {
+    theme
+  } = useTheme();
+  const dimensions = useTerminalDimensions();
+  const sync = useSync();
+  const sdk = useSDK();
+  const route = useRoute();
+  const exit = useExit();
+  const renderer = useRenderer();
+  const toast = useToast();
+  const dialog = useDialog();
+  const local = useLocal();
+
+  // Cowork brand colors - Purple accent for differentiation
+  const coworkPurple = RGBA.fromInts(167, 139, 250); // Primary accent
+  const coworkPurpleDim = RGBA.fromInts(167, 139, 250, 80); // Borders
+  const coworkPurpleBg = RGBA.fromInts(167, 139, 250, 20); // Backgrounds
+  const gold = RGBA.fromInts(212, 176, 140); // Gizzi gold (secondary)
+  const goldDim = RGBA.fromInts(212, 176, 140, 100);
+  const success = RGBA.fromInts(134, 239, 172);
+  const error = RGBA.fromInts(252, 165, 165);
+  const warn = RGBA.fromInts(250, 204, 21);
+  const obsidian = RGBA.fromInts(15, 17, 21);
+  const obsidianLight = RGBA.fromInts(26, 29, 38);
+
+  // UI State
+  const [sidebarCollapsed, setSidebarCollapsed] = createSignal(false);
+  const [activeSessionId, setActiveSessionId] = createSignal(null);
+
+  // Get data from sync
+  const sessions = createMemo(() => sync.data?.session || []);
+  const cronJobs = createMemo(() => sync.data?.cron_jobs || []);
+
+  // Find active session
+  const session = createMemo(() => {
+    const id = activeSessionId();
+    if (id) return sessions().find(s => s.id === id);
+    return sessions().find(s => s.active) || sessions()[0];
+  });
+  const sessionId = createMemo(() => session()?.id);
+
+  // Get messages and parts
+  const messages = createMemo(() => {
+    const id = sessionId();
+    if (!id) return [];
+    return sync.data?.message?.[id] || [];
+  });
+  const parts = createMemo(() => sync.data?.part || {});
+  const todos = createMemo(() => {
+    const id = sessionId();
+    if (!id) return [];
+    return sync.data?.todo?.[id] || [];
+  });
+
+  // Transform into work blocks
+  const workBlocks = createMemo(() => {
+    const msgs = messages();
+    const msgParts = parts();
+    const blocks = [];
+    for (const msg of msgs) {
+      const msgPartsList = msgParts[msg.id] || [];
+      if (msg.role === "user") {
+        const text = msgPartsList.filter(p => p.type === "text").map(p => p.text).join("");
+        blocks.push({
+          type: "message",
+          actor: "user",
+          content: text || "...",
+          timestamp: msg.time?.created
+        });
+      } else {
+        for (const part of msgPartsList) {
+          if (part.type === "tool") {
+            blocks.push({
+              type: "tool",
+              tool: part.tool || "unknown",
+              args: part.args || {},
+              result: part.result,
+              error: part.error,
+              timestamp: msg.time?.created
+            });
+          } else if (part.type === "text") {
+            const text = part.text || "";
+            if (!text.trim()) continue;
+            const lastBlock = blocks[blocks.length - 1];
+            if (lastBlock?.type === "message" && lastBlock.actor === "agent") {
+              lastBlock.content += "\n" + text;
+            } else {
+              blocks.push({
+                type: "message",
+                actor: "agent",
+                content: text,
+                timestamp: msg.time?.created
+              });
+            }
+          }
+        }
+      }
+    }
+    return blocks;
+  });
+
+  // Derived data
+  const filesTouched = createMemo(() => {
+    const todoList = todos();
+    const files = [];
+    for (const todo of todoList) {
+      if (todo?.status === "completed" && todo?.title) {
+        const match = todo.title.match(/(?:write|edit|modify|create)\s+(?:to\s+)?[`']?([^`'\n]+)[`']?/i);
+        if (match) {
+          files.push({
+            path: match[1].trim(),
+            status: "modified"
+          });
+        }
+      }
+    }
+    return files;
+  });
+  const currentStep = createMemo(() => {
+    const id = sessionId();
+    if (!id) return "Ready";
+    const status = sync.data?.session_status?.[id];
+    if (!status) return "Ready";
+    if (status.type === "thinking") return "Thinking...";
+    if (status.type === "executing") return "Running tools...";
+    if (status.type === "responding") return "Generating response...";
+    return status.type || "Ready";
+  });
+  const sidebarVisible = createMemo(() => dimensions().width >= 100 && !sidebarCollapsed() && session());
+  const mascotState = createMemo(() => {
+    const id = sessionId();
+    if (!id) return "idle";
+    const status = sync.data?.session_status?.[id]?.type;
+    if (status === "thinking") return "thinking";
+    if (status === "executing") return "executing";
+    if (status === "responding") return "responding";
+    return "focused";
+  });
+
+  // Keyboard
+  useKeyboard(evt => {
+    if (evt.ctrl && evt.name === "c") {
+      if (!renderer.getSelection()) {
+        evt.preventDefault();
+        evt.stopPropagation();
+        exit();
+      }
+    }
+  });
+
+  // Create session on mount if none
+  onMount(async () => {
+    if (sessions().length === 0) {
+      try {
+        const result = await sdk.client.session.create({
+          body: {
+            title: "Cowork Session"
+          }
+        });
+        const session = sdk.data(result);
+        if (session?.id) setActiveSessionId(session.id);
+      } catch (err) {
+        Log.Default.error("Failed to create session", {
+          error: err
+        });
+      }
+    }
+  });
+  async function createNewSession() {
+    try {
+      const result = await sdk.client.session.create({
+        body: {
+          title: `Cowork ${new Date().toLocaleTimeString()}`
+        }
+      });
+      const session = sdk.data(result);
+      if (session?.id) {
+        setActiveSessionId(session.id);
+        toast.show({
+          variant: "success",
+          message: "New session created"
+        });
+      }
+    } catch (err) {
+      toast.show({
+        variant: "error",
+        message: "Failed to create session"
+      });
+    }
+  }
+  function openCronDialog() {
+    dialog.replace(() => _$createComponent(DialogCronList, {}));
+  }
+
+  // Tool icon and color - Cowork style with purple accents
+  function getToolStyle(tool) {
+    const styles = {
+      bash: {
+        icon: "$",
+        color: coworkPurple
+      },
+      // Purple for commands
+      write: {
+        icon: "✎",
+        color: RGBA.fromInts(96, 165, 250)
+      },
+      read: {
+        icon: "",
+        color: warn
+      },
+      edit: {
+        icon: "✏",
+        color: gold
+      },
+      // Gold for edits
+      todo: {
+        icon: "☐",
+        color: success
+      },
+      grep: {
+        icon: "",
+        color: RGBA.fromInts(156, 163, 175)
+      },
+      ls: {
+        icon: "D",
+        color: RGBA.fromInts(156, 163, 175)
+      }
+    };
+    return styles[tool] || {
+      icon: "⚙",
+      color: coworkPurpleDim
+    };
+  }
+  return _$createComponent(GIZZIFrame, {
+    isHeightConstrained: false,
+    get children() {
+      var _el$ = _$createElement("box"),
+        _el$2 = _$createElement("box"),
+        _el$3 = _$createElement("box"),
+        _el$4 = _$createElement("text"),
+        _el$6 = _$createElement("text"),
+        _el$1 = _$createElement("box"),
+        _el$10 = _$createElement("box"),
+        _el$11 = _$createElement("text"),
+        _el$12 = _$createTextNode(`C `),
+        _el$13 = _$createElement("box"),
+        _el$14 = _$createElement("text"),
+        _el$18 = _$createElement("box"),
+        _el$19 = _$createElement("box"),
+        _el$20 = _$createElement("box"),
+        _el$57 = _$createElement("box"),
+        _el$58 = _$createElement("box");
+      _$insertNode(_el$, _el$2);
+      _$insertNode(_el$, _el$18);
+      _$insertNode(_el$, _el$57);
+      _$setProp(_el$, "flexDirection", "column");
+      _$setProp(_el$, "flexGrow", 1);
+      _$setProp(_el$, "backgroundColor", obsidian);
+      _$insertNode(_el$2, _el$3);
+      _$insertNode(_el$2, _el$1);
+      _$setProp(_el$2, "flexDirection", "row");
+      _$setProp(_el$2, "padding", 1);
+      _$setProp(_el$2, "border", ["bottom"]);
+      _$setProp(_el$2, "borderColor", coworkPurpleDim);
+      _$setProp(_el$2, "backgroundColor", obsidian);
+      _$setProp(_el$2, "justifyContent", "space-between");
+      _$setProp(_el$2, "alignItems", "center");
+      _$insertNode(_el$3, _el$4);
+      _$insertNode(_el$3, _el$6);
+      _$setProp(_el$3, "flexDirection", "row");
+      _$setProp(_el$3, "gap", 2);
+      _$setProp(_el$3, "alignItems", "center");
+      _$insertNode(_el$4, _$createTextNode(`◆ COWORK`));
+      _$setProp(_el$4, "fg", coworkPurple);
+      _$insertNode(_el$6, _$createTextNode(`|`));
+      _$insert(_el$3, _$createComponent(Show, {
+        get when() {
+          return session();
+        },
+        get children() {
+          var _el$8 = _$createElement("text");
+          _$insert(_el$8, () => session()?.title);
+          _$effect(_$p => _$setProp(_el$8, "fg", theme.text, _$p));
+          return _el$8;
+        }
+      }), null);
+      _$insert(_el$3, _$createComponent(Show, {
+        get when() {
+          return !session();
+        },
+        get children() {
+          var _el$9 = _$createElement("text");
+          _$insertNode(_el$9, _$createTextNode(`No session`));
+          _$effect(_$p => _$setProp(_el$9, "fg", theme.textMuted, _$p));
+          return _el$9;
+        }
+      }), null);
+      _$insertNode(_el$1, _el$10);
+      _$insertNode(_el$1, _el$13);
+      _$setProp(_el$1, "flexDirection", "row");
+      _$setProp(_el$1, "gap", 1);
+      _$setProp(_el$1, "alignItems", "center");
+      _$insertNode(_el$10, _el$11);
+      _$setProp(_el$10, "padding", 1);
+      _$setProp(_el$10, "borderStyle", "single");
+      _$setProp(_el$10, "onMouseUp", openCronDialog);
+      _$insertNode(_el$11, _el$12);
+      _$insert(_el$11, () => String(cronJobs().length), null);
+      _$insertNode(_el$13, _el$14);
+      _$setProp(_el$13, "padding", 1);
+      _$setProp(_el$13, "borderStyle", "single");
+      _$setProp(_el$13, "onMouseUp", createNewSession);
+      _$insertNode(_el$14, _$createTextNode(`+ New`));
+      _$insert(_el$1, _$createComponent(Show, {
+        get when() {
+          return session();
+        },
+        get children() {
+          var _el$16 = _$createElement("box"),
+            _el$17 = _$createElement("text");
+          _$insertNode(_el$16, _el$17);
+          _$setProp(_el$16, "padding", 1);
+          _$setProp(_el$16, "borderStyle", "single");
+          _$setProp(_el$16, "onMouseUp", () => setSidebarCollapsed(p => !p));
+          _$insert(_el$17, () => sidebarCollapsed() ? "▶" : "◀");
+          _$effect(_p$ => {
+            var _v$ = theme.border,
+              _v$2 = theme.textMuted;
+            _v$ !== _p$.e && (_p$.e = _$setProp(_el$16, "borderColor", _v$, _p$.e));
+            _v$2 !== _p$.t && (_p$.t = _$setProp(_el$17, "fg", _v$2, _p$.t));
+            return _p$;
+          }, {
+            e: undefined,
+            t: undefined
+          });
+          return _el$16;
+        }
+      }), null);
+      _$insert(_el$, _$createComponent(Show, {
+        get when() {
+          return session();
+        },
+        get children() {
+          return _$createComponent(SessionMount, {
+            isHeightConstrained: false,
+            get sessionStatus() {
+              return mascotState();
+            }
+          });
+        }
+      }), _el$18);
+      _$insertNode(_el$18, _el$19);
+      _$setProp(_el$18, "flexDirection", "row");
+      _$setProp(_el$18, "flexGrow", 1);
+      _$setProp(_el$18, "overflow", "hidden");
+      _$insertNode(_el$19, _el$20);
+      _$setProp(_el$19, "flexGrow", 1);
+      _$setProp(_el$19, "flexDirection", "column");
+      _$setProp(_el$19, "overflow", "hidden");
+      _$setProp(_el$20, "flexGrow", 1);
+      _$setProp(_el$20, "flexDirection", "column");
+      _$setProp(_el$20, "padding", 1);
+      _$setProp(_el$20, "overflow", "scroll");
+      _$setProp(_el$20, "gap", 1);
+      _$insert(_el$20, _$createComponent(Show, {
+        get when() {
+          return !session();
+        },
+        get children() {
+          var _el$21 = _$createElement("box"),
+            _el$22 = _$createElement("text");
+          _$insertNode(_el$21, _el$22);
+          _$setProp(_el$21, "flexGrow", 1);
+          _$setProp(_el$21, "justifyContent", "center");
+          _$setProp(_el$21, "alignItems", "center");
+          _$insertNode(_el$22, _$createTextNode(`Creating session...`));
+          _$effect(_$p => _$setProp(_el$22, "fg", theme.textMuted, _$p));
+          return _el$21;
+        }
+      }), null);
+      _$insert(_el$20, _$createComponent(Show, {
+        get when() {
+          return _$memo(() => !!session())() && workBlocks().length === 0;
+        },
+        get children() {
+          var _el$24 = _$createElement("box"),
+            _el$25 = _$createElement("text");
+          _$insertNode(_el$24, _el$25);
+          _$setProp(_el$24, "flexGrow", 1);
+          _$setProp(_el$24, "justifyContent", "center");
+          _$setProp(_el$24, "alignItems", "center");
+          _$setProp(_el$24, "flexDirection", "column");
+          _$setProp(_el$24, "gap", 2);
+          _$insert(_el$24, _$createComponent(GIZZIMascot, {
+            state: "idle",
+            compact: true,
+            color: coworkPurple
+          }), _el$25);
+          _$insertNode(_el$25, _$createTextNode(`Type a message to start collaborating`));
+          _$effect(_$p => _$setProp(_el$25, "fg", theme.textMuted, _$p));
+          return _el$24;
+        }
+      }), null);
+      _$insert(_el$20, _$createComponent(For, {
+        get each() {
+          return workBlocks();
+        },
+        children: block => {
+          if (block.type === "message") {
+            return (() => {
+              var _el$69 = _$createElement("box"),
+                _el$70 = _$createElement("box"),
+                _el$71 = _$createElement("text"),
+                _el$72 = _$createElement("box"),
+                _el$73 = _$createElement("text");
+              _$insertNode(_el$69, _el$70);
+              _$insertNode(_el$69, _el$72);
+              _$setProp(_el$69, "flexDirection", "column");
+              _$setProp(_el$69, "marginBottom", 1);
+              _$insertNode(_el$70, _el$71);
+              _$setProp(_el$70, "flexDirection", "row");
+              _$setProp(_el$70, "gap", 1);
+              _$insert(_el$71, () => block.actor === "user" ? "You" : "Gizzi");
+              _$insertNode(_el$72, _el$73);
+              _$setProp(_el$72, "paddingLeft", 2);
+              _$insert(_el$73, () => block.content);
+              _$effect(_p$ => {
+                var _v$17 = block.actor === "user" ? gold : theme.text,
+                  _v$18 = TextAttributes.BOLD,
+                  _v$19 = theme.text;
+                _v$17 !== _p$.e && (_p$.e = _$setProp(_el$71, "fg", _v$17, _p$.e));
+                _v$18 !== _p$.t && (_p$.t = _$setProp(_el$71, "attributes", _v$18, _p$.t));
+                _v$19 !== _p$.a && (_p$.a = _$setProp(_el$73, "fg", _v$19, _p$.a));
+                return _p$;
+              }, {
+                e: undefined,
+                t: undefined,
+                a: undefined
+              });
+              return _el$69;
+            })();
+          }
+          if (block.type === "tool") {
+            const style = getToolStyle(block.tool);
+            return (() => {
+              var _el$74 = _$createElement("box"),
+                _el$75 = _$createElement("box"),
+                _el$76 = _$createElement("text"),
+                _el$77 = _$createElement("text");
+              _$insertNode(_el$74, _el$75);
+              _$setProp(_el$74, "flexDirection", "column");
+              _$setProp(_el$74, "padding", 1);
+              _$setProp(_el$74, "border", ["left"]);
+              _$insertNode(_el$75, _el$76);
+              _$insertNode(_el$75, _el$77);
+              _$setProp(_el$75, "flexDirection", "row");
+              _$setProp(_el$75, "gap", 1);
+              _$setProp(_el$75, "alignItems", "center");
+              _$insert(_el$76, () => style.icon);
+              _$insert(_el$77, () => block.tool.toUpperCase());
+              _$insert(_el$75, _$createComponent(Show, {
+                get when() {
+                  return block.args?.path || block.args?.command;
+                },
+                get children() {
+                  var _el$78 = _$createElement("text");
+                  _$insert(_el$78, () => block.args?.path || block.args?.command?.slice(0, 40));
+                  _$effect(_$p => _$setProp(_el$78, "fg", theme.textMuted, _$p));
+                  return _el$78;
+                }
+              }), null);
+              _$insert(_el$74, _$createComponent(Show, {
+                get when() {
+                  return block.error;
+                },
+                get children() {
+                  var _el$79 = _$createElement("text");
+                  _$setProp(_el$79, "fg", error);
+                  _$insert(_el$79, () => block.error);
+                  return _el$79;
+                }
+              }), null);
+              _$effect(_p$ => {
+                var _v$20 = block.error ? error : style.color,
+                  _v$21 = RGBA.fromInts(0, 0, 0, 20),
+                  _v$22 = style.color,
+                  _v$23 = style.color,
+                  _v$24 = TextAttributes.BOLD;
+                _v$20 !== _p$.e && (_p$.e = _$setProp(_el$74, "borderColor", _v$20, _p$.e));
+                _v$21 !== _p$.t && (_p$.t = _$setProp(_el$74, "backgroundColor", _v$21, _p$.t));
+                _v$22 !== _p$.a && (_p$.a = _$setProp(_el$76, "fg", _v$22, _p$.a));
+                _v$23 !== _p$.o && (_p$.o = _$setProp(_el$77, "fg", _v$23, _p$.o));
+                _v$24 !== _p$.i && (_p$.i = _$setProp(_el$77, "attributes", _v$24, _p$.i));
+                return _p$;
+              }, {
+                e: undefined,
+                t: undefined,
+                a: undefined,
+                o: undefined,
+                i: undefined
+              });
+              return _el$74;
+            })();
+          }
+          return null;
+        }
+      }), null);
+      _$insert(_el$19, _$createComponent(Show, {
+        get when() {
+          return session();
+        },
+        get children() {
+          var _el$27 = _$createElement("box");
+          _$setProp(_el$27, "border", ["top"]);
+          _$setProp(_el$27, "borderColor", coworkPurpleDim);
+          _$insert(_el$27, _$createComponent(Prompt, {
+            get sessionID() {
+              return sessionId();
+            },
+            visible: true,
+            showPlaceholder: true
+          }));
+          return _el$27;
+        }
+      }), null);
+      _$insert(_el$18, _$createComponent(Show, {
+        get when() {
+          return sidebarVisible();
+        },
+        get children() {
+          var _el$28 = _$createElement("box"),
+            _el$29 = _$createElement("box"),
+            _el$30 = _$createElement("text"),
+            _el$32 = _$createElement("box"),
+            _el$33 = _$createElement("text"),
+            _el$34 = _$createElement("text"),
+            _el$36 = _$createElement("text"),
+            _el$37 = _$createElement("text"),
+            _el$39 = _$createElement("text"),
+            _el$40 = _$createElement("box"),
+            _el$41 = _$createElement("text"),
+            _el$45 = _$createElement("box"),
+            _el$46 = _$createElement("text"),
+            _el$50 = _$createElement("box"),
+            _el$51 = _$createElement("text"),
+            _el$53 = _$createElement("text"),
+            _el$54 = _$createTextNode(`D `),
+            _el$55 = _$createElement("text"),
+            _el$56 = _$createTextNode(`A `);
+          _$insertNode(_el$28, _el$29);
+          _$insertNode(_el$28, _el$40);
+          _$insertNode(_el$28, _el$45);
+          _$insertNode(_el$28, _el$50);
+          _$setProp(_el$28, "flexDirection", "column");
+          _$setProp(_el$28, "width", 38);
+          _$setProp(_el$28, "minWidth", 35);
+          _$setProp(_el$28, "border", ["left"]);
+          _$setProp(_el$28, "borderColor", coworkPurpleDim);
+          _$setProp(_el$28, "backgroundColor", obsidianLight);
+          _$setProp(_el$28, "padding", 1);
+          _$setProp(_el$28, "gap", 2);
+          _$insertNode(_el$29, _el$30);
+          _$insertNode(_el$29, _el$32);
+          _$insertNode(_el$29, _el$39);
+          _$setProp(_el$29, "flexDirection", "column");
+          _$setProp(_el$29, "gap", 1);
+          _$insertNode(_el$30, _$createTextNode(`PROGRESS`));
+          _$setProp(_el$30, "fg", coworkPurple);
+          _$insertNode(_el$32, _el$33);
+          _$insertNode(_el$32, _el$34);
+          _$insertNode(_el$32, _el$36);
+          _$insertNode(_el$32, _el$37);
+          _$setProp(_el$32, "flexDirection", "row");
+          _$setProp(_el$32, "gap", 1);
+          _$setProp(_el$33, "fg", success);
+          _$insert(_el$33, () => String(todos().filter(t => t.status === "completed").length));
+          _$insertNode(_el$34, _$createTextNode(`/`));
+          _$insert(_el$36, () => String(todos().length));
+          _$insertNode(_el$37, _$createTextNode(`tasks`));
+          _$insert(_el$39, currentStep);
+          _$insertNode(_el$40, _el$41);
+          _$setProp(_el$40, "flexDirection", "column");
+          _$setProp(_el$40, "gap", 1);
+          _$insertNode(_el$41, _$createTextNode(`FILES`));
+          _$setProp(_el$41, "fg", coworkPurple);
+          _$insert(_el$40, _$createComponent(Show, {
+            get when() {
+              return filesTouched().length === 0;
+            },
+            get children() {
+              var _el$43 = _$createElement("text");
+              _$insertNode(_el$43, _$createTextNode(`No files modified`));
+              _$effect(_$p => _$setProp(_el$43, "fg", theme.textMuted, _$p));
+              return _el$43;
+            }
+          }), null);
+          _$insert(_el$40, _$createComponent(For, {
+            get each() {
+              return filesTouched();
+            },
+            children: file => (() => {
+              var _el$80 = _$createElement("box"),
+                _el$81 = _$createElement("text"),
+                _el$83 = _$createElement("text");
+              _$insertNode(_el$80, _el$81);
+              _$insertNode(_el$80, _el$83);
+              _$setProp(_el$80, "flexDirection", "row");
+              _$setProp(_el$80, "gap", 1);
+              _$insertNode(_el$81, _$createTextNode(`~`));
+              _$setProp(_el$81, "fg", success);
+              _$insert(_el$83, () => file.path);
+              _$effect(_$p => _$setProp(_el$83, "fg", theme.text, _$p));
+              return _el$80;
+            })()
+          }), null);
+          _$insertNode(_el$45, _el$46);
+          _$setProp(_el$45, "flexDirection", "column");
+          _$setProp(_el$45, "gap", 1);
+          _$insertNode(_el$46, _$createTextNode(`SCHEDULES`));
+          _$setProp(_el$46, "fg", coworkPurple);
+          _$insert(_el$45, _$createComponent(Show, {
+            get when() {
+              return cronJobs().length === 0;
+            },
+            get children() {
+              var _el$48 = _$createElement("text");
+              _$insertNode(_el$48, _$createTextNode(`No jobs scheduled`));
+              _$effect(_$p => _$setProp(_el$48, "fg", theme.textMuted, _$p));
+              return _el$48;
+            }
+          }), null);
+          _$insert(_el$45, _$createComponent(For, {
+            get each() {
+              return cronJobs().slice(0, 5);
+            },
+            children: job => (() => {
+              var _el$84 = _$createElement("box"),
+                _el$85 = _$createElement("text"),
+                _el$86 = _$createTextNode(` `);
+              _$insertNode(_el$84, _el$85);
+              _$setProp(_el$84, "flexDirection", "column");
+              _$insertNode(_el$85, _el$86);
+              _$insert(_el$85, () => job.status === "active" ? "●" : "○", _el$86);
+              _$insert(_el$85, () => job.name, null);
+              _$effect(_$p => _$setProp(_el$85, "fg", job.status === "active" ? success : theme.textMuted, _$p));
+              return _el$84;
+            })()
+          }), null);
+          _$insertNode(_el$50, _el$51);
+          _$insertNode(_el$50, _el$53);
+          _$insertNode(_el$50, _el$55);
+          _$setProp(_el$50, "flexDirection", "column");
+          _$setProp(_el$50, "gap", 1);
+          _$insertNode(_el$51, _$createTextNode(`CONTEXT`));
+          _$setProp(_el$51, "fg", coworkPurple);
+          _$insertNode(_el$53, _el$54);
+          _$insert(_el$53, () => (sync.data?.path?.directory || process.cwd()).slice(-25), null);
+          _$insertNode(_el$55, _el$56);
+          _$insert(_el$55, () => session()?.agent?.name || local.agent.current()?.name || "default", null);
+          _$effect(_p$ => {
+            var _v$3 = TextAttributes.BOLD,
+              _v$4 = theme.textMuted,
+              _v$5 = theme.text,
+              _v$6 = theme.textMuted,
+              _v$7 = theme.textMuted,
+              _v$8 = TextAttributes.BOLD,
+              _v$9 = TextAttributes.BOLD,
+              _v$0 = TextAttributes.BOLD,
+              _v$1 = theme.textMuted,
+              _v$10 = theme.textMuted;
+            _v$3 !== _p$.e && (_p$.e = _$setProp(_el$30, "attributes", _v$3, _p$.e));
+            _v$4 !== _p$.t && (_p$.t = _$setProp(_el$34, "fg", _v$4, _p$.t));
+            _v$5 !== _p$.a && (_p$.a = _$setProp(_el$36, "fg", _v$5, _p$.a));
+            _v$6 !== _p$.o && (_p$.o = _$setProp(_el$37, "fg", _v$6, _p$.o));
+            _v$7 !== _p$.i && (_p$.i = _$setProp(_el$39, "fg", _v$7, _p$.i));
+            _v$8 !== _p$.n && (_p$.n = _$setProp(_el$41, "attributes", _v$8, _p$.n));
+            _v$9 !== _p$.s && (_p$.s = _$setProp(_el$46, "attributes", _v$9, _p$.s));
+            _v$0 !== _p$.h && (_p$.h = _$setProp(_el$51, "attributes", _v$0, _p$.h));
+            _v$1 !== _p$.r && (_p$.r = _$setProp(_el$53, "fg", _v$1, _p$.r));
+            _v$10 !== _p$.d && (_p$.d = _$setProp(_el$55, "fg", _v$10, _p$.d));
+            return _p$;
+          }, {
+            e: undefined,
+            t: undefined,
+            a: undefined,
+            o: undefined,
+            i: undefined,
+            n: undefined,
+            s: undefined,
+            h: undefined,
+            r: undefined,
+            d: undefined
+          });
+          return _el$28;
+        }
+      }), null);
+      _$insertNode(_el$57, _el$58);
+      _$setProp(_el$57, "flexDirection", "row");
+      _$setProp(_el$57, "padding", 1);
+      _$setProp(_el$57, "border", ["top"]);
+      _$setProp(_el$57, "borderColor", coworkPurpleDim);
+      _$setProp(_el$57, "backgroundColor", obsidian);
+      _$setProp(_el$57, "justifyContent", "space-between");
+      _$setProp(_el$58, "flexDirection", "row");
+      _$setProp(_el$58, "gap", 2);
+      _$insert(_el$58, _$createComponent(Show, {
+        get when() {
+          return session();
+        },
+        get children() {
+          return [(() => {
+            var _el$59 = _$createElement("text");
+            _$insertNode(_el$59, _$createTextNode(`●`));
+            _$setProp(_el$59, "fg", success);
+            return _el$59;
+          })(), (() => {
+            var _el$61 = _$createElement("text"),
+              _el$62 = _$createTextNode(` messages · `),
+              _el$63 = _$createTextNode(` tasks · `),
+              _el$64 = _$createTextNode(` files`);
+            _$insertNode(_el$61, _el$62);
+            _$insertNode(_el$61, _el$63);
+            _$insertNode(_el$61, _el$64);
+            _$insert(_el$61, () => String(messages().length), _el$62);
+            _$insert(_el$61, () => String(todos().length), _el$63);
+            _$insert(_el$61, () => String(filesTouched().length), _el$64);
+            _$effect(_$p => _$setProp(_el$61, "fg", theme.textMuted, _$p));
+            return _el$61;
+          })()];
+        }
+      }), null);
+      _$insert(_el$58, _$createComponent(Show, {
+        get when() {
+          return _$memo(() => !!!session())() && !sidebarVisible();
+        },
+        get children() {
+          var _el$65 = _$createElement("text");
+          _$insertNode(_el$65, _$createTextNode(`Press Ctrl+C to exit`));
+          _$effect(_$p => _$setProp(_el$65, "fg", theme.textMuted, _$p));
+          return _el$65;
+        }
+      }), null);
+      _$insert(_el$57, _$createComponent(Show, {
+        get when() {
+          return session();
+        },
+        get children() {
+          var _el$67 = _$createElement("text"),
+            _el$68 = _$createTextNode(` scheduled`);
+          _$insertNode(_el$67, _el$68);
+          _$insert(_el$67, () => String(cronJobs().length), _el$68);
+          _$effect(_$p => _$setProp(_el$67, "fg", theme.textMuted, _$p));
+          return _el$67;
+        }
+      }), null);
+      _$effect(_p$ => {
+        var _v$11 = TextAttributes.BOLD,
+          _v$12 = theme.textMuted,
+          _v$13 = cronJobs().length > 0 ? coworkPurpleDim : theme.border,
+          _v$14 = cronJobs().length > 0 ? coworkPurple : theme.textMuted,
+          _v$15 = theme.border,
+          _v$16 = theme.textMuted;
+        _v$11 !== _p$.e && (_p$.e = _$setProp(_el$4, "attributes", _v$11, _p$.e));
+        _v$12 !== _p$.t && (_p$.t = _$setProp(_el$6, "fg", _v$12, _p$.t));
+        _v$13 !== _p$.a && (_p$.a = _$setProp(_el$10, "borderColor", _v$13, _p$.a));
+        _v$14 !== _p$.o && (_p$.o = _$setProp(_el$11, "fg", _v$14, _p$.o));
+        _v$15 !== _p$.i && (_p$.i = _$setProp(_el$13, "borderColor", _v$15, _p$.i));
+        _v$16 !== _p$.n && (_p$.n = _$setProp(_el$14, "fg", _v$16, _p$.n));
+        return _p$;
+      }, {
+        e: undefined,
+        t: undefined,
+        a: undefined,
+        o: undefined,
+        i: undefined,
+        n: undefined
+      });
+      return _el$;
+    }
+  });
+}

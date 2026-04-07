@@ -1,0 +1,530 @@
+
+/**
+ * Verification CLI Commands
+ * 
+ * Provides CLI access to Meta's Agentic Code Reasoning semi-formal verification.
+ * 
+ * QUICK START:
+ * 
+ * Verify current changes:
+ * ```
+ * npx gizzi verification verify
+ * ```
+ * 
+ * Verify with specific mode:
+ * ```
+ * npx gizzi verification verify --mode semi-formal --description "Fix auth bug"
+ * ```
+ * 
+ * Run tests:
+ * ```
+ * npx gizzi verification verify --mode empirical --test-file src/auth.test.ts
+ * ```
+ * 
+ * Query history:
+ * ```
+ * npx gizzi verification history --limit 20
+ * ```
+ * 
+ * Show certificate:
+ * ```
+ * npx gizzi verification show <certificate-id>
+ * ```
+ * 
+ * View statistics:
+ * ```
+ * npx gizzi verification stats
+ * ```
+ * 
+ * COMMANDS:
+ * - verify: Run verification with configurable mode and confidence
+ * - history: Query past verification results with filters
+ * - show: Display a specific verification certificate by ID
+ * - stats: Show aggregate verification statistics
+ * - confirm: Provide ground truth feedback (correct/incorrect)
+ * 
+ * VERIFICATION MODES:
+ * - adaptive (default): Try semi-formal first, fallback if uncertain
+ * - semi-formal: Structured reasoning certificates (fast, no sandbox)
+ * - empirical: Test execution (slower but definitive)
+ * - both: Run both methods for maximum confidence
+ * 
+ * Based on: "Agentic Code Reasoning" (Meta, 2026) - arXiv:2603.01896
+ * Accuracy improvement: 78% → 88-93%
+ */
+
+import type { Argv } from "yargs"
+import { cmd } from "@/cli/commands/cmd"
+import { bootstrap } from "@/cli/bootstrap/bootstrap"
+import { Log } from "@/runtime/util/log"
+import { Instance } from "@/runtime/context/project/instance"
+import { 
+  VerificationOrchestrator,
+  type VerificationStrategy,
+} from "@/runtime/loop/verification/verification"
+import { 
+  VerificationStore, 
+  type VerificationQuery,
+  type StoredVerification,
+} from "@/runtime/loop/verification/store"
+import { formatCertificate } from "@/runtime/loop/semi-formal-verifier"
+import * as fs from "fs/promises"
+import * as path from "path"
+
+const log = Log.create({ service: "cli.verification" })
+
+// ============================================================================
+// Main Verify Command
+// ============================================================================
+
+export const VerificationVerifyCommand = cmd({
+  command: "verification verify",
+  describe: "verify code changes using semi-formal reasoning",
+  builder: (yargs: Argv) => {
+    return yargs
+      .option("mode", {
+        describe: "verification mode",
+        type: "string",
+        choices: ["semi-formal", "empirical", "both", "adaptive"] as const,
+        default: "adaptive",
+      })
+      .option("description", {
+        describe: "description of what is being verified",
+        type: "string",
+        default: "Verify code changes",
+      })
+      .option("confidence", {
+        describe: "minimum confidence required",
+        type: "string",
+        choices: ["high", "medium", "low"] as const,
+        default: "medium",
+      })
+      .option("patch", {
+        describe: "path to patch file to verify",
+        type: "string",
+      })
+      .option("test-file", {
+        describe: "test files to run (can be specified multiple times)",
+        type: "string",
+        array: true,
+      })
+      .option("output", {
+        describe: "output format",
+        type: "string",
+        choices: ["text", "json"] as const,
+        default: "text",
+      })
+      .example("$0 verification verify", "Run adaptive verification on current changes")
+      .example("$0 verification verify --mode semi-formal --description \"Fix auth bug\"", "Run semi-formal verification")
+      .example("$0 verification verify --mode empirical --test-file src/auth.test.ts", "Run empirical verification")
+  },
+  handler: async (args) => {
+    await bootstrap(process.cwd(), async () => {
+      const sessionId = `cli_${Date.now()}`
+      
+      log.info("Starting verification", { 
+        mode: args.mode, 
+        sessionId,
+        description: args.description,
+      })
+
+      // Load patch if provided
+      let patches: Array<{ path: string; content: string }> | undefined
+      if (args.patch) {
+        const patchContent = await fs.readFile(args.patch, "utf-8")
+        patches = [{
+          path: args.patch,
+          content: patchContent,
+        }]
+      }
+
+      // Build strategy
+      const strategy: VerificationStrategy = {
+        mode: args.mode as VerificationStrategy["mode"],
+        fallbackOnUncertainty: args.mode === "adaptive",
+        context: {
+          description: args.description,
+          patches,
+          testFiles: args.testFile,
+        },
+      }
+
+      // Create orchestrator and run verification
+      const orchestrator = new VerificationOrchestrator(sessionId, strategy)
+      
+      // Create minimal plan/receipts for CLI context
+      const plan = { steps: [] }
+      const receipts: any[] = []
+
+      const startTime = Date.now()
+      const result = await orchestrator.verify(plan as any, receipts as any)
+      const duration = Date.now() - startTime
+
+      // Check confidence requirement
+      const confidenceOrder = { high: 3, medium: 2, low: 1 }
+      const requiredConfidence = confidenceOrder[args.confidence as keyof typeof confidenceOrder]
+      const actualConfidence = confidenceOrder[result.confidence]
+      const confidenceMet = actualConfidence >= requiredConfidence
+
+      // Output results
+      if (args.output === "json") {
+        process.stdout.write(JSON.stringify({
+          passed: result.passed && confidenceMet,
+          confidence: result.confidence,
+          confidenceMet,
+          methodsUsed: result.methodsUsed,
+          consensus: result.consensus,
+          reason: result.reason,
+          nextAction: result.nextAction,
+          duration,
+          hasCertificate: !!result.certificate,
+        }, null, 2) + "\n")
+      } else {
+        // Text output
+        const lines: string[] = []
+        lines.push("")
+        lines.push("━".repeat(60))
+        lines.push("VERIFICATION RESULT")
+        lines.push("━".repeat(60))
+        lines.push("")
+        
+        const status = result.passed && confidenceMet ? "✓ PASSED" : "✗ FAILED"
+        const statusColor = result.passed && confidenceMet ? "\x1b[32m" : "\x1b[31m"
+        const reset = "\x1b[0m"
+        
+        lines.push(`${statusColor}${status}${reset}`)
+        lines.push(`Confidence: ${result.confidence} (required: ${args.confidence})`)
+        lines.push(`Methods Used: ${result.methodsUsed.join(", ")}`)
+        lines.push(`Consensus: ${result.consensus ? "Yes" : "DISAGREEMENT"}`)
+        lines.push(`Duration: ${duration}ms`)
+        lines.push("")
+        lines.push(`Reason: ${result.reason}`)
+        
+        if (result.certificate) {
+          lines.push("")
+          lines.push("Certificate Summary:")
+          lines.push(`  Premises: ${result.certificate.premises.length}`)
+          lines.push(`  Execution Traces: ${result.certificate.executionTraces.length}`)
+          lines.push(`  Conclusion: ${result.certificate.conclusion.answer}`)
+          
+          if (result.certificate.counterexample) {
+            lines.push(`  Counterexample: ${result.certificate.counterexample.testName}`)
+          }
+        }
+        
+        lines.push("")
+        lines.push(`Next Action: ${result.nextAction}`)
+        lines.push("━".repeat(60))
+        
+        process.stdout.write(lines.join("\n") + "\n")
+      }
+
+      // Exit with error code if verification failed
+      if (!result.passed || !confidenceMet) {
+        process.exitCode = 1
+      }
+    })
+  },
+})
+
+// ============================================================================
+// History Command
+// ============================================================================
+
+export const VerificationHistoryCommand = cmd({
+  command: "verification history",
+  describe: "query verification history",
+  builder: (yargs: Argv) => {
+    return yargs
+      .option("session", {
+        describe: "filter by session ID",
+        type: "string",
+      })
+      .option("type", {
+        describe: "filter by verification type",
+        type: "string",
+        choices: ["patch_equivalence", "fault_localization", "code_qa", "general"] as const,
+      })
+      .option("passed", {
+        describe: "filter by pass/fail status",
+        type: "boolean",
+      })
+      .option("confidence", {
+        describe: "filter by confidence level",
+        type: "string",
+        choices: ["high", "medium", "low"] as const,
+      })
+      .option("limit", {
+        describe: "maximum number of results",
+        type: "number",
+        default: 20,
+      })
+      .option("output", {
+        describe: "output format",
+        type: "string",
+        choices: ["table", "json"] as const,
+        default: "table",
+      })
+  },
+  handler: async (args) => {
+    await bootstrap(process.cwd(), async () => {
+      const store = VerificationStore.getInstance()
+      
+      const query: VerificationQuery = {
+        sessionId: args.session,
+        type: args.type as StoredVerification["type"],
+        passed: args.passed,
+        confidence: args.confidence as VerificationQuery["confidence"],
+        limit: args.limit,
+      }
+
+      const results = await store.query(query)
+
+      if (args.output === "json") {
+        process.stdout.write(JSON.stringify(results, null, 2) + "\n")
+      } else {
+        if (results.length === 0) {
+          process.stdout.write("No verification results found.\n")
+          return
+        }
+
+        process.stdout.write("\n")
+        process.stdout.write("┌".padEnd(81, "─") + "┐\n")
+        process.stdout.write("│" + "VERIFICATION HISTORY".padStart(45).padEnd(80) + "│\n")
+        process.stdout.write("├".padEnd(81, "─") + "┤\n")
+        process.stdout.write(`│ ${"ID".padEnd(20)} ${"Type".padEnd(15)} ${"Status".padEnd(8)} ${"Confidence".padEnd(12)} ${"Date".padEnd(20)} │\n`)
+        process.stdout.write("├".padEnd(81, "─") + "┤\n")
+
+        for (const v of results) {
+          const id = v.id.slice(0, 18).padEnd(20)
+          const type = v.type.padEnd(15)
+          const status = (v.result.passed ? "✓ PASS" : "✗ FAIL").padEnd(8)
+          const conf = v.result.confidence.padEnd(12)
+          const date = new Date(v.timestamp).toLocaleString().padEnd(20)
+          process.stdout.write(`│ ${id} ${type} ${status} ${conf} ${date} │\n`)
+        }
+
+        process.stdout.write("└".padEnd(81, "─") + "┘\n")
+        process.stdout.write(`\nShowing ${results.length} result(s)\n`)
+      }
+    })
+  },
+})
+
+// ============================================================================
+// Show Command
+// ============================================================================
+
+export const VerificationShowCommand = cmd({
+  command: "verification show <id>",
+  describe: "display a specific verification certificate",
+  builder: (yargs: Argv) => {
+    return yargs
+      .positional("id", {
+        describe: "verification ID",
+        type: "string",
+      })
+      .option("output", {
+        describe: "output format",
+        type: "string",
+        choices: ["text", "json", "certificate"] as const,
+        default: "text",
+      })
+      .demandOption("id")
+  },
+  handler: async (args) => {
+    await bootstrap(process.cwd(), async () => {
+      const store = VerificationStore.getInstance()
+      const verification = await store.get(args.id)
+
+      if (!verification) {
+        process.stderr.write(`Verification ${args.id} not found\n`)
+        process.exitCode = 1
+        return
+      }
+
+      if (args.output === "json") {
+        process.stdout.write(JSON.stringify(verification, null, 2) + "\n")
+      } else if (args.output === "certificate") {
+        if (verification.certificate) {
+          process.stdout.write(formatCertificate(verification.certificate) + "\n")
+        } else {
+          process.stdout.write("No certificate available for this verification\n")
+        }
+      } else {
+        // Text output
+        const lines: string[] = []
+        lines.push("")
+        lines.push("━".repeat(60))
+        lines.push("VERIFICATION DETAILS")
+        lines.push("━".repeat(60))
+        lines.push("")
+        lines.push(`ID: ${verification.id}`)
+        lines.push(`Session: ${verification.sessionId}`)
+        lines.push(`Timestamp: ${new Date(verification.timestamp).toLocaleString()}`)
+        lines.push(`Type: ${verification.type}`)
+        lines.push("")
+        lines.push(`Result: ${verification.result.passed ? "✓ PASSED" : "✗ FAILED"}`)
+        lines.push(`Confidence: ${verification.result.confidence}`)
+        lines.push(`Methods: ${verification.result.methodsUsed.join(", ")}`)
+        
+        if (verification.confirmed) {
+          lines.push("")
+          lines.push(`Confirmed: ${verification.confirmed.correct ? "✓ CORRECT" : "✗ INCORRECT"}`)
+          lines.push(`Confirmed By: ${verification.confirmed.confirmedBy || "unknown"}`)
+          lines.push(`Confirmed At: ${new Date(verification.confirmed.confirmedAt).toLocaleString()}`)
+        }
+
+        if (verification.certificate) {
+          lines.push("")
+          lines.push("Certificate Summary:")
+          lines.push(`  Task: ${verification.certificate.task.description}`)
+          lines.push(`  Type: ${verification.certificate.task.type}`)
+          lines.push(`  Premises: ${verification.certificate.premises.length}`)
+          lines.push(`  Execution Traces: ${verification.certificate.executionTraces.length}`)
+          lines.push(`  Conclusion: ${verification.certificate.conclusion.answer}`)
+          
+          if (verification.certificate.counterexample) {
+            lines.push(`  Counterexample: ${verification.certificate.counterexample.testName}`)
+          }
+        }
+
+        if (verification.tags?.length) {
+          lines.push("")
+          lines.push(`Tags: ${verification.tags.join(", ")}`)
+        }
+
+        lines.push("")
+        lines.push("━".repeat(60))
+        
+        process.stdout.write(lines.join("\n") + "\n")
+      }
+    })
+  },
+})
+
+// ============================================================================
+// Stats Command
+// ============================================================================
+
+export const VerificationStatsCommand = cmd({
+  command: "verification stats",
+  describe: "show verification statistics",
+  builder: (yargs: Argv) => {
+    return yargs
+      .option("output", {
+        describe: "output format",
+        type: "string",
+        choices: ["text", "json"] as const,
+        default: "text",
+      })
+  },
+  handler: async (args) => {
+    await bootstrap(process.cwd(), async () => {
+      const store = VerificationStore.getInstance()
+      const stats = await store.getStats()
+
+      if (args.output === "json") {
+        process.stdout.write(JSON.stringify(stats, null, 2) + "\n")
+      } else {
+        const width = 56
+
+        function renderRow(label: string, value: string): string {
+          const availableWidth = width - 1
+          const paddingNeeded = availableWidth - label.length - value.length
+          const padding = Math.max(0, paddingNeeded)
+          return `│${label}${" ".repeat(padding)}${value} │`
+        }
+
+        process.stdout.write("\n")
+        process.stdout.write("┌" + "─".repeat(width) + "┐\n")
+        process.stdout.write("│" + "VERIFICATION STATISTICS".padStart(35).padEnd(width) + "│\n")
+        process.stdout.write("├" + "─".repeat(width) + "┤\n")
+        process.stdout.write(renderRow("Total Verifications", stats.total.toString()) + "\n")
+        process.stdout.write(renderRow("Passed", stats.passed.toString()) + "\n")
+        process.stdout.write(renderRow("Failed", stats.failed.toString()) + "\n")
+        process.stdout.write("├" + "─".repeat(width) + "┤\n")
+        process.stdout.write(renderRow("High Confidence", stats.byConfidence.high.toString()) + "\n")
+        process.stdout.write(renderRow("Medium Confidence", stats.byConfidence.medium.toString()) + "\n")
+        process.stdout.write(renderRow("Low Confidence", stats.byConfidence.low.toString()) + "\n")
+        process.stdout.write("├" + "─".repeat(width) + "┤\n")
+        process.stdout.write(renderRow("Confirmed Correct", stats.confirmedCorrect.toString()) + "\n")
+        process.stdout.write(renderRow("Confirmed Incorrect", stats.confirmedIncorrect.toString()) + "\n")
+        process.stdout.write(renderRow("Unconfirmed", stats.unconfirmed.toString()) + "\n")
+        
+        if (Object.keys(stats.byType).length > 0) {
+          process.stdout.write("├" + "─".repeat(width) + "┤\n")
+          process.stdout.write("│" + "BY TYPE".padStart(32).padEnd(width) + "│\n")
+          process.stdout.write("├" + "─".repeat(width) + "┤\n")
+          for (const [type, count] of Object.entries(stats.byType)) {
+            process.stdout.write(renderRow(`  ${type}`, count.toString()) + "\n")
+          }
+        }
+        
+        process.stdout.write("└" + "─".repeat(width) + "┘\n")
+        process.stdout.write("\n")
+      }
+    })
+  },
+})
+
+// ============================================================================
+// Confirm Command
+// ============================================================================
+
+export const VerificationConfirmCommand = cmd({
+  command: "verification confirm <id>",
+  describe: "confirm whether a verification result was correct (ground truth)",
+  builder: (yargs: Argv) => {
+    return yargs
+      .positional("id", {
+        describe: "verification ID",
+        type: "string",
+      })
+      .option("correct", {
+        describe: "whether the verification was correct",
+        type: "boolean",
+        demandOption: true,
+      })
+      .option("by", {
+        describe: "who is confirming",
+        type: "string",
+        default: "cli",
+      })
+      .demandOption("id")
+  },
+  handler: async (args) => {
+    await bootstrap(process.cwd(), async () => {
+      const store = VerificationStore.getInstance()
+      
+      try {
+        await store.confirm(args.id, args.correct, args.by)
+        process.stdout.write(`✓ Verification ${args.id} marked as ${args.correct ? "CORRECT" : "INCORRECT"}\n`)
+      } catch (error) {
+        process.stderr.write(`Failed to confirm verification: ${error instanceof Error ? error.message : String(error)}\n`)
+        process.exitCode = 1
+      }
+    })
+  },
+})
+
+// ============================================================================
+// Main Verification Command (for subcommands)
+// ============================================================================
+
+export const VerificationCommand = cmd({
+  command: "verification <command>",
+  describe: "semi-formal code verification commands",
+  builder: (yargs: Argv) => {
+    return yargs
+      .command(VerificationVerifyCommand)
+      .command(VerificationHistoryCommand)
+      .command(VerificationShowCommand)
+      .command(VerificationStatsCommand)
+      .command(VerificationConfirmCommand)
+      .demandCommand(1, "Please specify a verification subcommand")
+  },
+  handler: () => {
+    // This is a parent command, subcommands handle the actual logic
+  },
+})

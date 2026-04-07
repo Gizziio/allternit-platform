@@ -1,0 +1,11 @@
+/**
+ * Assignment Builder stub for tools/canvas — re-exports from skills/canvas
+ */
+export {
+  AssignmentBuilderSkill,
+  createAssignmentBuilderSkill,
+  type TeacherPreferences,
+  type CreateAssignmentRequest,
+  type AssignmentBuilderResult,
+  type RubricCriterion,
+} from '../../skills/canvas/assignment_builder';

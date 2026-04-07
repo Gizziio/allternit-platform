@@ -1,0 +1,552 @@
+/**
+ * Merged Message Types
+ * 
+ * Combines Gizzi's Part-based system with Claude's ContentBlock richness.
+ * 
+ * Philosophy:
+ * - Use Gizzi's database-friendly structure (PartBase with IDs)
+ * - Add Claude's content types (thinking, redacted_thinking, image)
+ * - Maintain Zod validation for runtime safety
+ * - Provide adapters for both Claude and Gizzi APIs
+ */
+
+import z from "zod/v4"
+import { BusEvent } from "@/shared/bus/bus-event"
+
+// ============================================================================
+// Base Types (from Gizzi)
+// ============================================================================
+
+export const PartBase = z.object({
+  id: z.string(),
+  sessionID: z.string(),
+  messageID: z.string(),
+})
+
+export const MessageRole = z.enum(["user", "assistant", "system"])
+export type MessageRole = z.infer<typeof MessageRole>
+
+// ============================================================================
+// Content Types (merged from both systems)
+// ============================================================================
+
+// Text - Both systems have this
+export const TextPart = PartBase.extend({
+  type: z.literal("text"),
+  text: z.string(),
+  synthetic: z.boolean().optional(),
+  ignored: z.boolean().optional(),
+  time: z
+    .object({
+      start: z.number(),
+      end: z.number().optional(),
+    })
+    .optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
+})
+export type TextPart = z.infer<typeof TextPart>
+
+// Reasoning - Both systems have this
+export const ReasoningPart = PartBase.extend({
+  type: z.literal("reasoning"),
+  text: z.string(),
+  signature: z.string().optional(), // From Claude
+  metadata: z.record(z.string(), z.any()).optional(),
+  time: z.object({
+    start: z.number(),
+    end: z.number().optional(),
+  }),
+})
+export type ReasoningPart = z.infer<typeof ReasoningPart>
+
+// Thinking (Claude's extended reasoning with signature)
+export const ThinkingPart = PartBase.extend({
+  type: z.literal("thinking"),
+  thinking: z.string(),
+  signature: z.string().optional(),
+})
+export type ThinkingPart = z.infer<typeof ThinkingPart>
+
+// Redacted Thinking (Claude - for sensitive reasoning)
+export const RedactedThinkingPart = PartBase.extend({
+  type: z.literal("redacted_thinking"),
+  data: z.string(),
+})
+export type RedactedThinkingPart = z.infer<typeof RedactedThinkingPart>
+
+// Tool Use (Claude style)
+export const ToolUsePart = PartBase.extend({
+  type: z.literal("tool_use"),
+  toolUseId: z.string(),
+  name: z.string(),
+  input: z.record(z.string(), z.any()),
+})
+export type ToolUsePart = z.infer<typeof ToolUsePart>
+
+// Tool Result (Claude style)
+export const ToolResultPart = PartBase.extend({
+  type: z.literal("tool_result"),
+  toolUseId: z.string(),
+  content: z.union([z.string(), z.array(z.record(z.string(), z.any()))]),
+  isError: z.boolean().optional(),
+})
+export type ToolResultPart = z.infer<typeof ToolResultPart>
+
+// Tool (Gizzi style with state machine)
+export const ToolStatePending = z.object({
+  status: z.literal("pending"),
+  input: z.record(z.string(), z.any()),
+  raw: z.string(),
+})
+
+export const ToolStateRunning = z.object({
+  status: z.literal("running"),
+  input: z.record(z.string(), z.any()),
+  title: z.string().optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
+  time: z.object({ start: z.number() }),
+})
+
+export const ToolStateCompleted = z.object({
+  status: z.literal("completed"),
+  input: z.record(z.string(), z.any()),
+  output: z.string(),
+  title: z.string(),
+  metadata: z.record(z.string(), z.any()),
+  time: z.object({
+    start: z.number(),
+    end: z.number(),
+    compacted: z.number().optional(),
+  }),
+})
+
+export const ToolStateError = z.object({
+  status: z.literal("error"),
+  input: z.record(z.string(), z.any()),
+  error: z.string(),
+  metadata: z.record(z.string(), z.any()).optional(),
+  time: z.object({ start: z.number(), end: z.number() }),
+})
+
+export const ToolState = z.discriminatedUnion("status", [
+  ToolStatePending,
+  ToolStateRunning,
+  ToolStateCompleted,
+  ToolStateError,
+])
+export type ToolState = z.infer<typeof ToolState>
+
+export const ToolPart = PartBase.extend({
+  type: z.literal("tool"),
+  callID: z.string(),
+  tool: z.string(),
+  state: ToolState,
+  metadata: z.record(z.string(), z.any()).optional(),
+})
+export type ToolPart = z.infer<typeof ToolPart>
+
+// Image (Claude)
+export const ImagePart = PartBase.extend({
+  type: z.literal("image"),
+  source: z.discriminatedUnion("type", [
+    z.object({
+      type: z.literal("base64"),
+      media_type: z.string(),
+      data: z.string(),
+    }),
+    z.object({
+      type: z.literal("url"),
+      url: z.string(),
+    }),
+  ]),
+})
+export type ImagePart = z.infer<typeof ImagePart>
+
+// File (Gizzi)
+export const FilePartSource = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("file"),
+    path: z.string(),
+    text: z.object({
+      value: z.string(),
+      start: z.number(),
+      end: z.number(),
+    }),
+  }),
+  z.object({
+    type: z.literal("symbol"),
+    path: z.string(),
+    range: z.any(), // LSP.Range
+    name: z.string(),
+    kind: z.number(),
+    text: z.object({
+      value: z.string(),
+      start: z.number(),
+      end: z.number(),
+    }),
+  }),
+  z.object({
+    type: z.literal("resource"),
+    clientName: z.string(),
+    uri: z.string(),
+    text: z.object({
+      value: z.string(),
+      start: z.number(),
+      end: z.number(),
+    }),
+  }),
+])
+
+export const FilePart = PartBase.extend({
+  type: z.literal("file"),
+  mime: z.string(),
+  filename: z.string().optional(),
+  url: z.string(),
+  source: FilePartSource.optional(),
+})
+export type FilePart = z.infer<typeof FilePart>
+
+// Agent (Gizzi)
+export const AgentPart = PartBase.extend({
+  type: z.literal("agent"),
+  name: z.string(),
+  source: z
+    .object({
+      value: z.string(),
+      start: z.number(),
+      end: z.number(),
+    })
+    .optional(),
+})
+export type AgentPart = z.infer<typeof AgentPart>
+
+// Step tracking (Gizzi)
+export const StepStartPart = PartBase.extend({
+  type: z.literal("step-start"),
+  snapshot: z.string().optional(),
+})
+export type StepStartPart = z.infer<typeof StepStartPart>
+
+export const StepFinishPart = PartBase.extend({
+  type: z.literal("step-finish"),
+  reason: z.string().optional().default("unknown"),
+  snapshot: z.string().optional(),
+  cost: z.number(),
+  tokens: z.object({
+    total: z.number().optional(),
+    input: z.number(),
+    output: z.number(),
+    reasoning: z.number(),
+    cache: z.object({ read: z.number(), write: z.number() }),
+  }),
+})
+export type StepFinishPart = z.infer<typeof StepFinishPart>
+
+// Compaction (Gizzi)
+export const CompactionPart = PartBase.extend({
+  type: z.literal("compaction"),
+  auto: z.boolean(),
+})
+export type CompactionPart = z.infer<typeof CompactionPart>
+
+// Subtask (Gizzi)
+export const SubtaskPart = PartBase.extend({
+  type: z.literal("subtask"),
+  prompt: z.string(),
+  description: z.string(),
+  agent: z.string(),
+  model: z
+    .object({
+      providerID: z.string(),
+      modelID: z.string(),
+    })
+    .optional(),
+  command: z.string().optional(),
+})
+export type SubtaskPart = z.infer<typeof SubtaskPart>
+
+// Retry (Gizzi)
+export const RetryPart = PartBase.extend({
+  type: z.literal("retry"),
+  attempt: z.number(),
+  error: z.any(), // APIError schema
+  time: z.object({ created: z.number() }),
+})
+export type RetryPart = z.infer<typeof RetryPart>
+
+// Snapshot (Gizzi)
+export const SnapshotPart = PartBase.extend({
+  type: z.literal("snapshot"),
+  snapshot: z.string(),
+})
+export type SnapshotPart = z.infer<typeof SnapshotPart>
+
+// Patch (Gizzi)
+export const PatchPart = PartBase.extend({
+  type: z.literal("patch"),
+  hash: z.string(),
+  files: z.string().array(),
+})
+export type PatchPart = z.infer<typeof PatchPart>
+
+// ============================================================================
+// Unified Part Union
+// ============================================================================
+
+export const Part = z.discriminatedUnion("type", [
+  // Text content
+  TextPart,
+  
+  // Reasoning/thinking
+  ReasoningPart,
+  ThinkingPart,
+  RedactedThinkingPart,
+  
+  // Tool interactions
+  ToolUsePart,
+  ToolResultPart,
+  ToolPart,
+  
+  // Media
+  ImagePart,
+  FilePart,
+  
+  // Agent/system
+  AgentPart,
+  
+  // Execution tracking
+  StepStartPart,
+  StepFinishPart,
+  SubtaskPart,
+  RetryPart,
+  
+  // State management
+  CompactionPart,
+  SnapshotPart,
+  PatchPart,
+])
+export type Part = z.infer<typeof Part>
+
+// ============================================================================
+// Message Types
+// ============================================================================
+
+export const MessageBase = z.object({
+  id: z.string(),
+  sessionID: z.string(),
+})
+
+export const UserMessage = MessageBase.extend({
+  role: z.literal("user"),
+  time: z.object({
+    created: z.number(),
+  }),
+  format: z
+    .discriminatedUnion("type", [
+      z.object({ type: z.literal("text") }),
+      z.object({ type: z.literal("json_schema"), schema: z.record(z.string(), z.any()), retryCount: z.number().default(2) }),
+    ])
+    .optional(),
+  summary: z
+    .object({
+      title: z.string().optional(),
+      body: z.string().optional(),
+      diffs: z.any().array(), // Snapshot.FileDiff
+    })
+    .optional(),
+  agent: z.string(),
+  model: z.object({
+    providerID: z.string(),
+    modelID: z.string(),
+  }),
+  system: z.string().optional(),
+  tools: z.record(z.string(), z.boolean()).optional(),
+  variant: z.string().optional(),
+})
+export type UserMessage = z.infer<typeof UserMessage>
+
+export const AssistantMessage = MessageBase.extend({
+  role: z.literal("assistant"),
+  time: z.object({
+    created: z.number(),
+    completed: z.number().optional(),
+  }),
+  error: z
+    .object({
+      name: z.string(),
+      message: z.string(),
+      data: z.any().optional(),
+      retries: z.number().optional(),
+      statusCode: z.number().optional(),
+      isRetryable: z.boolean().optional(),
+      providerID: z.string().optional(),
+    })
+    .optional(),
+  parentID: z.string(),
+  modelID: z.string(),
+  providerID: z.string(),
+  mode: z.string(),
+  agent: z.string(),
+  path: z.object({
+    cwd: z.string(),
+    root: z.string(),
+  }),
+  summary: z.boolean().optional(),
+  cost: z.number(),
+  tokens: z.object({
+    total: z.number().optional(),
+    input: z.number(),
+    output: z.number(),
+    reasoning: z.number(),
+    cache: z.object({ read: z.number(), write: z.number() }),
+  }),
+  structured: z.any().optional(),
+  variant: z.string().optional(),
+  finish: z.string().optional(),
+})
+export type AssistantMessage = z.infer<typeof AssistantMessage>
+
+export const Message = z.discriminatedUnion("role", [UserMessage, AssistantMessage])
+export type Message = z.infer<typeof Message>
+
+// ============================================================================
+// Events
+// ============================================================================
+
+export const MessageEvent = {
+  Updated: BusEvent.define(
+    "message.updated",
+    z.object({
+      info: Message,
+    }),
+  ),
+  PartUpdated: BusEvent.define(
+    "message.part.updated",
+    z.object({
+      part: Part,
+    }),
+  ),
+  PartDelta: BusEvent.define(
+    "message.part.delta",
+    z.object({
+      partID: z.string(),
+      delta: z.record(z.string(), z.any()),
+    }),
+  ),
+}
+
+// ============================================================================
+// Adapter Functions (for interoperability)
+// ============================================================================
+
+/**
+ * Convert Claude ContentBlock to merged Part
+ */
+export function fromClaudeContentBlock(
+  block: any,
+  base: { id: string; sessionID: string; messageID: string }
+): Part | null {
+  switch (block.type) {
+    case "text":
+      return TextPart.parse({ ...base, type: "text", text: block.text })
+    case "thinking":
+      return ThinkingPart.parse({
+        ...base,
+        type: "thinking",
+        thinking: block.thinking,
+        signature: block.signature,
+      })
+    case "redacted_thinking":
+      return RedactedThinkingPart.parse({
+        ...base,
+        type: "redacted_thinking",
+        data: block.data,
+      })
+    case "tool_use":
+      return ToolUsePart.parse({
+        ...base,
+        type: "tool_use",
+        toolUseId: block.id || block.toolUseId,
+        name: block.name,
+        input: block.input,
+      })
+    case "tool_result":
+      return ToolResultPart.parse({
+        ...base,
+        type: "tool_result",
+        toolUseId: block.tool_use_id,
+        content: block.content,
+        isError: block.is_error,
+      })
+    case "image":
+      return ImagePart.parse({
+        ...base,
+        type: "image",
+        source: block.source,
+      })
+    default:
+      return null
+  }
+}
+
+/**
+ * Convert Gizzi Part to Claude ContentBlock
+ */
+export function toClaudeContentBlock(part: Part): any {
+  switch (part.type) {
+    case "text":
+      return { type: "text", text: part.text }
+    case "thinking":
+      return {
+        type: "thinking",
+        thinking: part.thinking,
+        signature: part.signature,
+      }
+    case "redacted_thinking":
+      return { type: "redacted_thinking", data: part.data }
+    case "tool_use":
+      return {
+        type: "tool_use",
+        id: part.toolUseId,
+        name: part.name,
+        input: part.input,
+      }
+    case "tool_result":
+      return {
+        type: "tool_result",
+        tool_use_id: part.toolUseId,
+        content: part.content,
+        is_error: part.isError,
+      }
+    case "image":
+      return { type: "image", source: part.source }
+    case "tool":
+      // Convert ToolPart to tool_result
+      if (part.state.status === "completed") {
+        return {
+          type: "tool_result",
+          tool_use_id: part.callID,
+          content: part.state.output,
+        }
+      }
+      return null
+    default:
+      return null
+  }
+}
+
+/**
+ * Type guards
+ */
+export const PartGuards = {
+  isText: (p: Part): p is TextPart => p.type === "text",
+  isThinking: (p: Part): p is ThinkingPart => p.type === "thinking",
+  isRedactedThinking: (p: Part): p is RedactedThinkingPart =>
+    p.type === "redacted_thinking",
+  isToolUse: (p: Part): p is ToolUsePart => p.type === "tool_use",
+  isToolResult: (p: Part): p is ToolResultPart => p.type === "tool_result",
+  isTool: (p: Part): p is ToolPart => p.type === "tool",
+  isImage: (p: Part): p is ImagePart => p.type === "image",
+  isFile: (p: Part): p is FilePart => p.type === "file",
+  isReasoning: (p: Part): p is ReasoningPart => p.type === "reasoning",
+}

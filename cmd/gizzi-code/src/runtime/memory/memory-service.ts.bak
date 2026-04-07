@@ -1,0 +1,257 @@
+/**
+ * MemoryService — Structured memory CRUD for the Gizzi platform
+ *
+ * Mirrors Gizzi's memory system:
+ * - Frontmatter format: name / description / type
+ * - MEMORY.md always-loaded index (< 200 lines)
+ * - Topic .md files discovered and injected into context
+ * - Relevance scoring filters which topic files are loaded per session
+ */
+
+import path from "path"
+import { unlink } from "fs/promises"
+import z from "zod/v4"
+import { Filesystem } from "@/runtime/util/filesystem"
+import { Instance } from "@/runtime/context/project/instance"
+import { Global } from "@/runtime/context/global/global"
+import { Glob } from "@/runtime/util/glob"
+import { Log } from "@/runtime/util/log"
+import { Bus } from "@/runtime/bus/bus"
+import { BusEvent } from "@/runtime/bus/bus-event"
+
+const log = Log.create({ service: "memory-service" })
+
+export type MemoryType = "user" | "feedback" | "project" | "reference"
+
+export interface MemoryFrontmatter {
+  name: string
+  description: string
+  type: MemoryType
+}
+
+export interface MemoryEntry extends MemoryFrontmatter {
+  filename: string   // e.g. "user_role.md"
+  filepath: string   // absolute path
+  body: string       // content after frontmatter
+  mtime?: number
+}
+
+export interface MemoryIndexEntry {
+  filename: string
+  description: string
+  type: MemoryType
+}
+
+// ── Bus event ────────────────────────────────────────────────────────────────
+
+export namespace MemoryEvent {
+  export const Updated = BusEvent.define(
+    "memory.updated",
+    z.object({ filepath: z.string(), action: z.enum(["save", "delete"]) }),
+  )
+}
+
+// ── Frontmatter helpers ───────────────────────────────────────────────────────
+
+const FM_OPEN = "---"
+const FM_CLOSE = "---"
+
+export function parseFrontmatter(content: string): { fm: Partial<MemoryFrontmatter>; body: string } {
+  const lines = content.split("\n")
+  if (lines[0]?.trim() !== FM_OPEN) return { fm: {}, body: content }
+
+  const closeIdx = lines.findIndex((l, i) => i > 0 && l.trim() === FM_CLOSE)
+  if (closeIdx < 0) return { fm: {}, body: content }
+
+  const fmLines = lines.slice(1, closeIdx)
+  const body = lines.slice(closeIdx + 1).join("\n").trimStart()
+
+  const fm: Partial<MemoryFrontmatter> = {}
+  for (const line of fmLines) {
+    const colon = line.indexOf(":")
+    if (colon < 0) continue
+    const key = line.slice(0, colon).trim()
+    const val = line.slice(colon + 1).trim()
+    if (key === "name") fm.name = val
+    else if (key === "description") fm.description = val
+    else if (key === "type") fm.type = val as MemoryType
+  }
+  return { fm, body }
+}
+
+export function serializeFrontmatter(fm: MemoryFrontmatter, body: string): string {
+  return [
+    "---",
+    `name: ${fm.name}`,
+    `description: ${fm.description}`,
+    `type: ${fm.type}`,
+    "---",
+    "",
+    body,
+  ].join("\n")
+}
+
+// ── Path resolution ───────────────────────────────────────────────────────────
+
+export function projectHash(directory: string): string {
+  return directory.replace(/^\//, "").replace(/\//g, "-")
+}
+
+export function globalProjectMemoryDir(): string {
+  return path.join(Global.Path.config, "projects", projectHash(Instance.directory), "memory")
+}
+
+/** Primary write target — global per-project store (persists across workspace cleans) */
+function primaryMemoryDir(): string {
+  return globalProjectMemoryDir()
+}
+
+/** All memory directories to scan */
+function allMemoryDirs(): string[] {
+  return [
+    path.join(Instance.directory, ".gizzi", "L1-COGNITIVE", "memory"),
+    path.join(Instance.directory, ".openclaw", "L1-COGNITIVE", "memory"),
+    globalProjectMemoryDir(),
+  ]
+}
+
+function memoryIndexPath(dir: string): string {
+  return path.join(dir, "MEMORY.md")
+}
+
+// ── Index management ──────────────────────────────────────────────────────────
+
+async function readIndex(dir: string): Promise<MemoryIndexEntry[]> {
+  const content = await Filesystem.readText(memoryIndexPath(dir)).catch(() => "")
+  if (!content) return []
+  const entries: MemoryIndexEntry[] = []
+  // Parse lines like: - [name](filename.md) — description (type)
+  for (const line of content.split("\n")) {
+    const m = line.match(/^-\s+\[([^\]]+)\]\(([^)]+)\)\s*[—–-]\s*(.+?)\s*\((\w+)\)$/)
+    if (!m) continue
+    entries.push({
+      filename: m[2],
+      description: m[3],
+      type: m[4] as MemoryType,
+    })
+  }
+  return entries
+}
+
+async function writeIndex(dir: string, entries: MemoryIndexEntry[]): Promise<void> {
+  await Filesystem.mkdir(dir)
+  const header = "# Memory Index\n\n"
+  const lines = entries.map((e) => `- [${e.filename.replace(/\.md$/, "")}](${e.filename}) — ${e.description} (${e.type})`)
+  const content = header + lines.join("\n") + "\n"
+  await Filesystem.write(memoryIndexPath(dir), content)
+}
+
+async function upsertIndex(dir: string, entry: MemoryIndexEntry): Promise<void> {
+  const entries = await readIndex(dir)
+  const idx = entries.findIndex((e) => e.filename === entry.filename)
+  if (idx >= 0) entries[idx] = entry
+  else entries.push(entry)
+  await writeIndex(dir, entries)
+}
+
+async function removeFromIndex(dir: string, filename: string): Promise<void> {
+  const entries = await readIndex(dir)
+  const filtered = entries.filter((e) => e.filename !== filename)
+  await writeIndex(dir, filtered)
+}
+
+// ── MemoryService ─────────────────────────────────────────────────────────────
+
+export namespace MemoryService {
+  /** List all memory entries across all dirs (deduplicated by filename) */
+  export async function list(): Promise<MemoryEntry[]> {
+    const seen = new Set<string>()
+    const results: MemoryEntry[] = []
+
+    for (const dir of allMemoryDirs()) {
+      if (!(await Filesystem.exists(dir))) continue
+      const files = await Glob.scan("*.md", { cwd: dir, absolute: true, include: "file" }).catch(() => [])
+      for (const filepath of files) {
+        const filename = path.basename(filepath)
+        if (filename === "MEMORY.md") continue
+        if (seen.has(filename)) continue
+        seen.add(filename)
+        const entry = await readFile(filepath)
+        if (entry) results.push(entry)
+      }
+    }
+    return results
+  }
+
+  /** Read a memory entry by filename (searches all dirs) */
+  export async function get(filename: string): Promise<MemoryEntry | null> {
+    for (const dir of allMemoryDirs()) {
+      const filepath = path.join(dir, filename)
+      if (await Filesystem.exists(filepath)) {
+        return readFile(filepath)
+      }
+    }
+    return null
+  }
+
+  /** Save a memory entry to the primary dir and update index */
+  export async function save(fm: MemoryFrontmatter, body: string): Promise<MemoryEntry> {
+    const filename = fm.name.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_-]/g, "") + ".md"
+    const dir = primaryMemoryDir()
+    await Filesystem.mkdir(dir)
+    const filepath = path.join(dir, filename)
+
+    const content = serializeFrontmatter(fm, body)
+    await Filesystem.write(filepath, content)
+    await upsertIndex(dir, { filename, description: fm.description, type: fm.type })
+
+    log.info("memory saved", { filename, type: fm.type })
+    await Bus.publish(MemoryEvent.Updated, { filepath, action: "save" as const }).catch(() => {})
+
+    return { ...fm, filename, filepath, body }
+  }
+
+  /** Delete a memory entry by filename */
+  export async function remove(filename: string): Promise<boolean> {
+    for (const dir of allMemoryDirs()) {
+      const filepath = path.join(dir, filename)
+      if (await Filesystem.exists(filepath)) {
+        await unlink(filepath).catch(() => {})
+        await removeFromIndex(dir, filename)
+        log.info("memory deleted", { filename })
+        await Bus.publish(MemoryEvent.Updated, { filepath, action: "delete" as const }).catch(() => {})
+        return true
+      }
+    }
+    return false
+  }
+
+  /** Full-text search across all memories */
+  export async function search(query: string): Promise<MemoryEntry[]> {
+    const all = await list()
+    const terms = query.toLowerCase().split(/\s+/).filter(Boolean)
+    return all.filter((e) => {
+      const haystack = [e.name, e.description, e.type, e.body].join(" ").toLowerCase()
+      return terms.every((t) => haystack.includes(t))
+    })
+  }
+
+  // ── Private helpers ─────────────────────────────────────────────────────────
+
+  async function readFile(filepath: string): Promise<MemoryEntry | null> {
+    const content = await Filesystem.readText(filepath).catch(() => "")
+    if (!content) return null
+    const { fm, body } = parseFrontmatter(content)
+    if (!fm.name || !fm.description || !fm.type) return null
+    const filename = path.basename(filepath)
+    return {
+      name: fm.name,
+      description: fm.description,
+      type: fm.type,
+      filename,
+      filepath,
+      body,
+    }
+  }
+
+}

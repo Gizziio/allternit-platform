@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gizzi Code - Provider Setup</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #0a0c10;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+            color: #c9d1d9;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .terminal {
+            width: 950px;
+            height: 750px;
+            background: #161b22;
+            border-radius: 12px;
+            border: 1px solid #30363d;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.6);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .terminal-header {
+            background: #0d1117;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid #30363d;
+        }
+        
+        .terminal-btn {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+        }
+        
+        .btn-red { background: #ff5f56; }
+        .btn-yellow { background: #ffbd2e; }
+        .btn-green { background: #27c93f; }
+        
+        .terminal-title {
+            flex: 1;
+            text-align: center;
+            color: #8b949e;
+            font-size: 13px;
+        }
+        
+        .terminal-body {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            line-height: 1.6;
+        }
+        
+        /* Progress Steps */
+        .progress-container {
+            margin: 20px 0 30px;
+        }
+        
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+        }
+        
+        .progress-steps::before {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #30363d;
+            z-index: 0;
+        }
+        
+        .progress-line {
+            position: absolute;
+            top: 15px;
+            left: 0;
+            height: 2px;
+            background: #d4b08c;
+            width: 55%;
+            z-index: 1;
+            transition: width 0.5s ease;
+        }
+        
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            z-index: 2;
+        }
+        
+        .step-circle {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .step-complete .step-circle {
+            background: #238636;
+            color: white;
+        }
+        
+        .step-active .step-circle {
+            background: #d4b08c;
+            color: #0d1117;
+            box-shadow: 0 0 15px rgba(212, 176, 140, 0.4);
+        }
+        
+        .step-pending .step-circle {
+            background: #21262d;
+            color: #8b949e;
+            border: 2px solid #30363d;
+        }
+        
+        .step-label {
+            font-size: 11px;
+            color: #8b949e;
+            text-align: center;
+        }
+        
+        .step-active .step-label {
+            color: #d4b08c;
+        }
+        
+        /* Setup Card */
+        .setup-card {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 10px;
+            padding: 24px;
+        }
+        
+        .setup-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #21262d;
+        }
+        
+        .setup-icon {
+            width: 40px;
+            height: 40px;
+            background: #21262d;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        
+        .setup-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #c9d1d9;
+        }
+        
+        .setup-subtitle {
+            font-size: 12px;
+            color: #8b949e;
+            margin-top: 4px;
+        }
+        
+        /* Harness Mode Toggle */
+        .harness-banner {
+            background: rgba(212, 176, 140, 0.1);
+            border: 1px solid #d4b08c;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .harness-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .harness-badge {
+            background: #d4b08c;
+            color: #0d1117;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        
+        .harness-text {
+            font-size: 13px;
+            color: #c9d1d9;
+        }
+        
+        .harness-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: #7ee787;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #3fb950;
+            border-radius: 50%;
+            box-shadow: 0 0 6px #3fb950;
+        }
+        
+        /* Provider Grid */
+        .provider-section {
+            margin-bottom: 20px;
+        }
+        
+        .section-title {
+            font-size: 12px;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+        
+        .provider-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        
+        .provider-item {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .provider-item:hover {
+            background: #21262d;
+            border-color: #d4b08c;
+            transform: translateY(-2px);
+        }
+        
+        .provider-item.selected {
+            background: rgba(212, 176, 140, 0.1);
+            border-color: #d4b08c;
+        }
+        
+        .provider-icon {
+            font-size: 24px;
+        }
+        
+        .provider-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: #c9d1d9;
+        }
+        
+        .provider-meta {
+            font-size: 11px;
+            color: #8b949e;
+        }
+        
+        .provider-tag {
+            display: inline-block;
+            background: #21262d;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            color: #8b949e;
+            margin-top: 4px;
+        }
+        
+        .provider-tag.recommended {
+            background: rgba(212, 176, 140, 0.2);
+            color: #d4b08c;
+        }
+        
+        /* Options List */
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .option-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .option-item:hover {
+            background: #21262d;
+            border-color: #d4b08c;
+        }
+        
+        .option-bullet {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #8b949e;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: transparent;
+            transition: all 0.2s ease;
+        }
+        
+        .option-item.selected .option-bullet {
+            background: #d4b08c;
+            border-color: #d4b08c;
+            color: #0d1117;
+        }
+        
+        .option-content {
+            flex: 1;
+        }
+        
+        .option-title {
+            font-size: 14px;
+            color: #c9d1d9;
+            margin-bottom: 2px;
+        }
+        
+        .option-desc {
+            font-size: 12px;
+            color: #8b949e;
+        }
+        
+        .key-hint {
+            background: #21262d;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            color: #8b949e;
+        }
+        
+        /* Help text */
+        .help-text {
+            margin-top: 20px;
+            padding: 12px;
+            background: rgba(212, 176, 140, 0.05);
+            border-left: 3px solid #d4b08c;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #8b949e;
+        }
+        
+        /* Footer */
+        .footer {
+            background: #0d1117;
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid #30363d;
+            font-size: 11px;
+            color: #8b949e;
+        }
+        
+        .footer-left {
+            display: flex;
+            gap: 16px;
+        }
+        
+        .footer-right {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        
+        .nav-hint {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .kbd {
+            background: #21262d;
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid #30363d;
+            font-family: inherit;
+            font-size: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal">
+        <div class="terminal-header">
+            <div class="terminal-btn btn-red"></div>
+            <div class="terminal-btn btn-yellow"></div>
+            <div class="terminal-btn btn-green"></div>
+            <div class="terminal-title">Gizzi Code Setup — Provider Configuration</div>
+        </div>
+        
+        <div class="terminal-body">
+            <!-- Progress Steps -->
+            <div class="progress-container">
+                <div class="progress-steps">
+                    <div class="progress-line"></div>
+                    
+                    <div class="step step-complete">
+                        <div class="step-circle">✓</div>
+                        <div class="step-label">Workspace</div>
+                    </div>
+                    
+                    <div class="step step-complete">
+                        <div class="step-circle">✓</div>
+                        <div class="step-label">Theme</div>
+                    </div>
+                    
+                    <div class="step step-complete">
+                        <div class="step-circle">✓</div>
+                        <div class="step-label">Clerk</div>
+                    </div>
+                    
+                    <div class="step step-active">
+                        <div class="step-circle">4</div>
+                        <div class="step-label">Provider</div>
+                    </div>
+                    
+                    <div class="step step-pending">
+                        <div class="step-circle">5</div>
+                        <div class="step-label">Terminal</div>
+                    </div>
+                    
+                    <div class="step step-pending">
+                        <div class="step-circle">6</div>
+                        <div class="step-label">MCP</div>
+                    </div>
+                    
+                    <div class="step step-pending">
+                        <div class="step-circle">✓</div>
+                        <div class="step-label">Ready</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Setup Card -->
+            <div class="setup-card">
+                <div class="setup-header">
+                    <div class="setup-icon">🔌</div>
+                    <div>
+                        <div class="setup-title">Connect a Provider</div>
+                        <div class="setup-subtitle">Choose an AI provider to power your conversations</div>
+                    </div>
+                </div>
+                
+                <!-- Harness Banner -->
+                <div class="harness-banner">
+                    <div class="harness-info">
+                        <span class="harness-badge">ALLTERNIT HARNESS</span>
+                        <span class="harness-text">System prompt injection enabled • 15 providers available</span>
+                    </div>
+                    <div class="harness-status">
+                        <span class="status-dot"></span>
+                        <span>Active</span>
+                    </div>
+                </div>
+                
+                <!-- Recommended Providers -->
+                <div class="provider-section">
+                    <div class="section-title">Recommended Providers</div>
+                    <div class="provider-grid">
+                        <div class="provider-item selected">
+                            <div class="provider-icon">🅰️</div>
+                            <div class="provider-name">Anthropic</div>
+                            <div class="provider-meta">Claude 3.5 Sonnet</div>
+                            <span class="provider-tag recommended">RECOMMENDED</span>
+                        </div>
+                        
+                        <div class="provider-item">
+                            <div class="provider-icon">🅾️</div>
+                            <div class="provider-name">OpenAI</div>
+                            <div class="provider-meta">GPT-4o, GPT-4</div>
+                            <span class="provider-tag">API KEY</span>
+                        </div>
+                        
+                        <div class="provider-item">
+                            <div class="provider-icon">🌐</div>
+                            <div class="provider-name">Google</div>
+                            <div class="provider-meta">Gemini Pro</div>
+                            <span class="provider-tag">API KEY</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- More Providers -->
+                <div class="provider-section">
+                    <div class="section-title">Additional Providers (15 total)</div>
+                    <div class="provider-grid">
+                        <div class="provider-item">
+                            <div class="provider-icon">🦙</div>
+                            <div class="provider-name">Ollama</div>
+                            <div class="provider-meta">Local models</div>
+                        </div>
+                        
+                        <div class="provider-item">
+                            <div class="provider-icon">⚡</div>
+                            <div class="provider-name">Groq</div>
+                            <div class="provider-meta">Fast inference</div>
+                        </div>
+                        
+                        <div class="provider-item">
+                            <div class="provider-icon">🌙</div>
+                            <div class="provider-name">Kimi</div>
+                            <div class="provider-meta">Moonshot AI</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Actions -->
+                <div class="options-list">
+                    <div class="option-item selected">
+                        <div class="option-bullet">●</div>
+                        <div class="option-content">
+                            <div class="option-title">Enter API Key</div>
+                            <div class="option-desc">Input your Anthropic API key to start using Claude</div>
+                        </div>
+                        <span class="key-hint">Enter</span>
+                    </div>
+                    
+                    <div class="option-item">
+                        <div class="option-bullet">●</div>
+                        <div class="option-content">
+                            <div class="option-title">Use Allternit Cloud</div>
+                            <div class="option-desc">Connect via Allternit's managed gateway (no API key needed)</div>
+                        </div>
+                    </div>
+                    
+                    <div class="option-item">
+                        <div class="option-bullet">●</div>
+                        <div class="option-content">
+                            <div class="option-title">Use Local Ollama</div>
+                            <div class="option-desc">Run models locally (requires Ollama installed)</div>
+                        </div>
+                    </div>
+                    
+                    <div class="option-item">
+                        <div class="option-bullet">●</div>
+                        <div class="option-content">
+                            <div class="option-title">Skip for now</div>
+                            <div class="option-desc">Configure provider later in settings</div>
+                        </div>
+                        <span class="key-hint">s</span>
+                    </div>
+                </div>
+                
+                <div class="help-text">
+                    💡 <strong>Harness Mode:</strong> BYOK (Bring Your Own Key) — Your API keys are stored securely in the system keychain and never leave your machine. The harness automatically injects the Allternit system prompt to all requests.
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <div class="footer-left">
+                <span class="nav-hint"><span class="kbd">↑</span> <span class="kbd">↓</span> Navigate</span>
+                <span class="nav-hint"><span class="kbd">Tab</span> Switch provider</span>
+                <span class="nav-hint"><span class="kbd">Enter</span> Select</span>
+            </div>
+            <div class="footer-right">
+                <span style="color: #d4b08c;">●</span> Harness: BYOK
+                <span>|</span>
+                <span>Step 4 of 7</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

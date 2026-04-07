@@ -1,0 +1,60 @@
+import { createComponent as _$createComponent } from "@opentui/solid";
+import { createMemo, onMount } from "solid-js";
+import { useSync } from "@/cli/ui/tui/context/sync";
+import { DialogSelect } from "@/cli/ui/tui/ui/dialog-select";
+
+// Local TextPart type (SDK exports as unknown)
+
+import { Locale } from "@/shared/util/locale";
+import { DialogMessage } from "@/cli/ui/tui/routes/session/dialog-message";
+import { useDialog } from "@/cli/ui/tui/ui/dialog";
+import { GIZZICopy } from "@/shared/brand";
+export function DialogTimeline(props) {
+  const sync = useSync();
+  const dialog = useDialog();
+  onMount(() => {
+    dialog.setSize("large");
+  });
+  const options = createMemo(() => {
+    const messages = sync.data.message[props.sessionID] ?? [];
+    const result = [];
+    for (const message of messages) {
+      const msg = message;
+      if (msg.role !== "user") continue;
+      const part = (sync.data.part[msg.id] ?? []).find(x => {
+        const p = x;
+        return p.type === "text" && !p.synthetic && !p.ignored;
+      });
+      if (!part) continue;
+      result.push({
+        title: part.text.replace(/\n/g, " "),
+        value: msg.id,
+        footer: Locale.time(msg.time?.created ?? 0),
+        onSelect: dialog => {
+          dialog.replace(() => _$createComponent(DialogMessage, {
+            get messageID() {
+              return msg.id;
+            },
+            get sessionID() {
+              return props.sessionID;
+            },
+            get setPrompt() {
+              return props.setPrompt;
+            }
+          }));
+        }
+      });
+    }
+    result.reverse();
+    return result;
+  });
+  return _$createComponent(DialogSelect, {
+    onMove: option => props.onMove(option.value),
+    get title() {
+      return GIZZICopy.dialogs.timelineTitle;
+    },
+    get options() {
+      return options();
+    }
+  });
+}

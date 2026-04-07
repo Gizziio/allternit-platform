@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gizzi Code - Full Boot & Discretion Flow</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #0a0c10;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+            color: #c9d1d9;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .terminal {
+            width: 1000px;
+            height: 800px;
+            background: #161b22;
+            border-radius: 12px;
+            border: 1px solid #30363d;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.6);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .terminal-header {
+            background: #0d1117;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid #30363d;
+        }
+        
+        .terminal-btn {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+        }
+        
+        .btn-red { background: #ff5f56; }
+        .btn-yellow { background: #ffbd2e; }
+        .btn-green { background: #27c93f; }
+        
+        .terminal-title {
+            flex: 1;
+            text-align: center;
+            color: #8b949e;
+            font-size: 13px;
+        }
+        
+        .terminal-body {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            line-height: 1.6;
+        }
+        
+        /* ========== PHASE 1: BOOT SEQUENCE ========== */
+        .phase-boot {
+            animation: fadeOut 0.5s ease 4s forwards;
+        }
+        
+        .boot-sequence {
+            font-size: 13px;
+            margin-bottom: 20px;
+        }
+        
+        .boot-line {
+            margin: 6px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            opacity: 0;
+            animation: typeIn 0.3s ease forwards;
+        }
+        
+        .boot-line:nth-child(1) { animation-delay: 0.2s; }
+        .boot-line:nth-child(2) { animation-delay: 0.6s; }
+        .boot-line:nth-child(3) { animation-delay: 1.0s; }
+        .boot-line:nth-child(4) { animation-delay: 1.4s; }
+        .boot-line:nth-child(5) { animation-delay: 1.8s; }
+        .boot-line:nth-child(6) { animation-delay: 2.2s; }
+        .boot-line:nth-child(7) { animation-delay: 2.6s; }
+        .boot-line:nth-child(8) { animation-delay: 3.0s; }
+        
+        @keyframes typeIn {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        @keyframes fadeOut {
+            to { opacity: 0; pointer-events: none; }
+        }
+        
+        .boot-check { color: #3fb950; }
+        .boot-spinner {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #30363d;
+            border-top-color: #7ee787;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* ========== PHASE 2: DISCRETION SCREEN ========== */
+        .phase-discretion {
+            position: absolute;
+            top: 60px;
+            left: 24px;
+            right: 24px;
+            bottom: 80px;
+            opacity: 0;
+            pointer-events: none;
+            animation: showDiscretion 0.5s ease 4.5s forwards;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        @keyframes showDiscretion {
+            to { opacity: 1; pointer-events: all; }
+        }
+        
+        /* GIZZI Mascot */
+        .mascot-container {
+            margin-bottom: 20px;
+            animation: bounce 2s ease infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        
+        .mascot {
+            font-size: 60px;
+            line-height: 1;
+        }
+        
+        .welcome-title {
+            color: #d4b08c;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        
+        /* Access Granted Box */
+        .access-box {
+            background: #0d1117;
+            border: 1px solid #d4b08c;
+            border-radius: 10px;
+            padding: 24px 32px;
+            width: 100%;
+            max-width: 600px;
+        }
+        
+        .access-header {
+            text-align: center;
+            color: #d4b08c;
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #30363d;
+        }
+        
+        .project-info {
+            text-align: center;
+            margin-bottom: 16px;
+        }
+        
+        .project-label {
+            color: #8b949e;
+            font-size: 12px;
+        }
+        
+        .project-path {
+            color: #c9d1d9;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+        
+        .access-description {
+            background: rgba(212, 176, 140, 0.05);
+            border-left: 3px solid #d4b08c;
+            padding: 12px 16px;
+            margin: 16px 0;
+            font-size: 13px;
+            color: #8b949e;
+            line-height: 1.6;
+        }
+        
+        .warning-box {
+            background: rgba(200, 160, 80, 0.1);
+            border: 1px solid #c8a050;
+            border-radius: 6px;
+            padding: 12px;
+            margin: 16px 0;
+            font-size: 12px;
+            color: #c8a050;
+            font-style: italic;
+        }
+        
+        /* VM/Sandbox Notice */
+        .vm-notice {
+            background: rgba(100, 200, 120, 0.1);
+            border: 1px solid #64c878;
+            border-radius: 6px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+        
+        .vm-title {
+            color: #64c878;
+            font-weight: bold;
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+        
+        .vm-content {
+            font-size: 12px;
+            color: #8b949e;
+            line-height: 1.5;
+        }
+        
+        .tool-list {
+            margin-top: 8px;
+            font-size: 11px;
+        }
+        
+        .tool-item {
+            color: #7ee787;
+            margin: 2px 0;
+        }
+        
+        /* Action Options */
+        .action-list {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .action-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .action-item:hover, .action-item.selected {
+            background: rgba(212, 176, 140, 0.1);
+            border-color: #d4b08c;
+        }
+        
+        .action-bullet {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #8b949e;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            transition: all 0.2s ease;
+        }
+        
+        .action-item.selected .action-bullet {
+            background: #d4b08c;
+            border-color: #d4b08c;
+            color: #0d1117;
+        }
+        
+        .action-content {
+            flex: 1;
+        }
+        
+        .action-title {
+            font-size: 14px;
+            color: #c9d1d9;
+            font-weight: 600;
+        }
+        
+        .action-desc {
+            font-size: 12px;
+            color: #8b949e;
+            margin-top: 2px;
+        }
+        
+        .action-cmd {
+            background: #21262d;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            color: #8b949e;
+        }
+        
+        /* Harness Badge */
+        .harness-banner {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(212, 176, 140, 0.15);
+            border: 1px solid #d4b08c;
+            border-radius: 6px;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+        }
+        
+        .harness-badge {
+            background: #d4b08c;
+            color: #0d1117;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        
+        .harness-status {
+            color: #7ee787;
+        }
+        
+        /* Footer */
+        .footer {
+            background: #0d1117;
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid #30363d;
+            font-size: 11px;
+            color: #8b949e;
+        }
+        
+        .kbd {
+            background: #21262d;
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid #30363d;
+            font-family: inherit;
+            font-size: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal">
+        <div class="terminal-header">
+            <div class="terminal-btn btn-red"></div>
+            <div class="terminal-btn btn-yellow"></div>
+            <div class="terminal-btn btn-green"></div>
+            <div class="terminal-title">Gizzi Code — Boot Sequence</div>
+        </div>
+        
+        <div class="terminal-body">
+            <!-- PHASE 1: BOOT SEQUENCE -->
+            <div class="phase-boot">
+                <div class="boot-sequence">
+                    <div class="boot-line"><span class="boot-check">✓</span> Initializing Allternit Harness...</div>
+                    <div class="boot-line"><span class="boot-check">✓</span> Loading provider registry (15 providers)</div>
+                    <div class="boot-line"><span class="boot-check">✓</span> Checking workspace trust...</div>
+                    <div class="boot-line"><span class="boot-check">✓</span> Loading theme configuration</div>
+                    <div class="boot-line"><span class="boot-check">✓</span> Syncing with Clerk account</div>
+                    <div class="boot-line"><span class="boot-spinner"></span> Starting TUI renderer...</div>
+                    <div class="boot-line"><span class="boot-check">✓</span> Discretion check required</div>
+                    <div class="boot-line"><span style="color: #d4b08c;">⏺</span> Showing workspace access screen...</div>
+                </div>
+            </div>
+            
+            <!-- PHASE 2: DISCRETION SCREEN -->
+            <div class="phase-discretion">
+                <!-- Harness Badge -->
+                <div class="harness-banner">
+                    <span class="harness-badge">HARNESS</span>
+                    <span class="harness-status">● Active (BYOK)</span>
+                </div>
+                
+                <!-- Mascot -->
+                <div class="mascot-container">
+                    <div class="mascot">🦀</div>
+                </div>
+                
+                <div class="welcome-title">Welcome to Gizzi Code</div>
+                
+                <!-- Access Box -->
+                <div class="access-box">
+                    <div class="access-header">WORKSPACE ACCESS GRANTED</div>
+                    
+                    <div class="project-info">
+                        <div class="project-label">Project Root</div>
+                        <div class="project-path">/Users/macbook/project</div>
+                    </div>
+                    
+                    <div class="access-description">
+                        Gizzi Code now has access to this directory. It can read, 
+                        modify, and create files to assist with your engineering tasks.
+                    </div>
+                    
+                    <div class="warning-box">
+                        ⚠ Always review destructive actions before confirming.
+                    </div>
+                    
+                    <!-- VM Notice -->
+                    <div class="vm-notice">
+                        <div class="vm-title">VM ISOLATION ACTIVE</div>
+                        <div class="vm-content">
+                            Every agent session gets a dedicated Ubuntu 24.04 microVM.
+                            All bash commands run inside the VM — not on your host machine.
+                        </div>
+                        <div class="tool-list">
+                            <div class="tool-item">• Shells: bash, zsh, fish — bat, fzf, fd, rg</div>
+                            <div class="tool-item">• Node 22 + Bun + pnpm — Python 3 + uv</div>
+                            <div class="tool-item">• PostgreSQL 16 + Redis 7 — Docker CLI</div>
+                            <div class="tool-item">• TypeScript LS, pyright, eslint — LSP ready</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Options -->
+                    <div class="action-list">
+                        <div class="action-item selected">
+                            <div class="action-bullet">●</div>
+                            <div class="action-content">
+                                <div class="action-title">Resume Session</div>
+                                <div class="action-desc">Continue your last active conversation</div>
+                            </div>
+                            <span class="action-cmd">/resume</span>
+                        </div>
+                        
+                        <div class="action-item">
+                            <div class="action-bullet">●</div>
+                            <div class="action-content">
+                                <div class="action-title">Code Mode</div>
+                                <div class="action-desc">Enter optimized environment for engineering</div>
+                            </div>
+                            <span class="action-cmd">code</span>
+                        </div>
+                        
+                        <div class="action-item">
+                            <div class="action-bullet">●</div>
+                            <div class="action-content">
+                                <div class="action-title">Cowork Mode</div>
+                                <div class="action-desc">Multi-agent collaborative workspace</div>
+                            </div>
+                            <span class="action-cmd">cowork</span>
+                        </div>
+                        
+                        <div class="action-item">
+                            <div class="action-bullet">●</div>
+                            <div class="action-content">
+                                <div class="action-title">New Session</div>
+                                <div class="action-desc">Start a fresh interaction</div>
+                            </div>
+                            <span class="action-cmd">/new</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <div>
+                <span style="margin-right: 16px;"><span class="kbd">↑</span> <span class="kbd">↓</span> Navigate</span>
+                <span><span class="kbd">Enter</span> Select</span>
+            </div>
+            <div>
+                <span style="color: #d4b08c;">●</span> Harness: BYOK Mode | Discretion Screen
+            </div>
+        </div>
+    </div>
+</body>
+</html>

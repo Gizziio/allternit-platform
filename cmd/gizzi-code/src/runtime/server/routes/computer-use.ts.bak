@@ -1,0 +1,375 @@
+import { Hono } from "hono"
+import { streamSSE } from "hono/streaming"
+import { describeRoute, resolver, validator } from "hono-openapi"
+import z from "zod/v4"
+import { lazy } from "@/runtime/util/lazy"
+import { errors } from "@/runtime/server/error"
+import { ComputerUseService } from "@/runtime/computer-use/service"
+import { Log } from "@/runtime/util/log"
+
+const log = Log.create({ service: "computer-use-routes" })
+
+const ExecuteBodySchema = z.object({
+  mode: z.string(),
+  task: z.string(),
+  target_scope: z.string().optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+})
+
+const RunEventBatchSchema = z.object({
+  run_id: z.string(),
+  status: z.string(),
+  completed: z.boolean(),
+  next_index: z.number(),
+  events: ComputerUseService.EventRecordSchema.array(),
+})
+
+const RunSnapshotSchema = ComputerUseService.RunSchema
+
+const ApprovalBodySchema = z.object({
+  decision: z.enum(["approve", "deny"]),
+  approver_id: z.string().optional(),
+  comment: z.string().optional(),
+})
+
+const CancelBodySchema = z.object({
+  approver_id: z.string().optional(),
+  comment: z.string().optional(),
+})
+
+const ResumeBodySchema = z.object({
+  approver_id: z.string().optional(),
+  comment: z.string().optional(),
+})
+
+export const ComputerUseRoutes = lazy(() =>
+  new Hono()
+    .post(
+      "/execute",
+      describeRoute({
+        summary: "Execute managed computer-use run",
+        description: "Create and start a computer-use run on the managed gizzi-code server surface.",
+        operationId: "engine.execute",
+        responses: {
+          200: {
+            description: "Accepted run",
+            content: {
+              "application/json": {
+                schema: resolver(z.object({ run_id: z.string(), status: z.string() })),
+              },
+            },
+          },
+          ...errors(400),
+        },
+      }),
+      validator("json", ExecuteBodySchema),
+      async (c) => {
+        const input = c.req.valid("json")
+        return c.json(await ComputerUseService.executeManaged(input))
+      },
+    )
+    .get(
+      "/watch/:runId",
+      describeRoute({
+        summary: "Watch computer-use run",
+        description: "Stream event batches for a managed computer-use run via SSE.",
+        operationId: "engine.watch",
+        responses: {
+          200: {
+            description: "SSE event stream",
+            content: {
+              "text/event-stream": {
+                schema: resolver(RunEventBatchSchema),
+              },
+            },
+          },
+          ...errors(404),
+        },
+      }),
+      validator("param", z.object({ runId: z.string() })),
+      async (c) => {
+        const { runId } = c.req.valid("param")
+        const initial = await ComputerUseService.snapshot(runId)
+        if (!initial) return c.json({ error: `Run not found: ${runId}` }, 404)
+        c.header("X-Accel-Buffering", "no")
+        c.header("X-Content-Type-Options", "nosniff")
+        return streamSSE(c, async (stream) => {
+          let nextIndex = 0
+          while (true) {
+            const batch = await ComputerUseService.waitForEvents(runId, nextIndex, 15000)
+            if (!batch) {
+              stream.close()
+              return
+            }
+            nextIndex = batch.next_index
+            await stream.writeSSE({ data: JSON.stringify(batch) })
+            if (batch.completed) {
+              stream.close()
+              return
+            }
+          }
+        })
+      },
+    )
+    .get(
+      "/receipts/:runId",
+      describeRoute({
+        summary: "Get computer-use receipts",
+        description: "Return the stored receipts for a managed computer-use run.",
+        operationId: "engine.receipts",
+        responses: {
+          200: {
+            description: "Run receipts",
+            content: {
+              "application/json": {
+                schema: resolver(z.any()),
+              },
+            },
+          },
+          ...errors(404),
+        },
+      }),
+      validator("param", z.object({ runId: z.string() })),
+      async (c) => {
+        const { runId } = c.req.valid("param")
+        const receipts = await ComputerUseService.receipts(runId)
+        if (receipts === null) return c.json({ error: `Run not found: ${runId}` }, 404)
+        return c.json({ run_id: runId, receipts })
+      },
+    )
+    .get(
+      "/snapshot/:runId",
+      describeRoute({
+        summary: "Get computer-use snapshot",
+        description: "Return the latest snapshot for a managed computer-use run.",
+        operationId: "engine.snapshot",
+        responses: {
+          200: {
+            description: "Run snapshot",
+            content: {
+              "application/json": {
+                schema: resolver(RunSnapshotSchema),
+              },
+            },
+          },
+          ...errors(404),
+        },
+      }),
+      validator("param", z.object({ runId: z.string() })),
+      async (c) => {
+        const { runId } = c.req.valid("param")
+        const snapshot = await ComputerUseService.snapshot(runId)
+        if (!snapshot) return c.json({ error: `Run not found: ${runId}` }, 404)
+        return c.json(snapshot)
+      },
+    )
+    .get(
+      "/runs/:runId",
+      describeRoute({
+        summary: "Get computer-use run",
+        description: "Compatibility alias for the latest managed computer-use run snapshot.",
+        operationId: "engine.run.get",
+        responses: {
+          200: {
+            description: "Run snapshot",
+            content: {
+              "application/json": {
+                schema: resolver(RunSnapshotSchema),
+              },
+            },
+          },
+          ...errors(404),
+        },
+      }),
+      validator("param", z.object({ runId: z.string() })),
+      async (c) => {
+        const { runId } = c.req.valid("param")
+        const snapshot = await ComputerUseService.snapshot(runId)
+        if (!snapshot) return c.json({ error: `Run not found: ${runId}` }, 404)
+        return c.json(snapshot)
+      },
+    )
+    .get(
+      "/runs/:runId/events",
+      describeRoute({
+        summary: "Get computer-use run events",
+        description: "Return a paginated event batch for a managed computer-use run.",
+        operationId: "engine.run.events",
+        responses: {
+          200: {
+            description: "Run event batch",
+            content: {
+              "application/json": {
+                schema: resolver(RunEventBatchSchema),
+              },
+            },
+          },
+          ...errors(404),
+        },
+      }),
+      validator("param", z.object({ runId: z.string() })),
+      validator("query", z.object({ next_index: z.coerce.number().optional() })),
+      async (c) => {
+        const { runId } = c.req.valid("param")
+        const { next_index = 0 } = c.req.valid("query")
+        const batch = await ComputerUseService.events(runId, next_index)
+        if (!batch) return c.json({ error: `Run not found: ${runId}` }, 404)
+        return c.json(batch)
+      },
+    )
+    .post(
+      "/runs/:runId/approval",
+      describeRoute({
+        summary: "Approve or deny computer-use run",
+        description: "Apply an approval decision to a managed computer-use run.",
+        operationId: "engine.run.approval",
+        responses: {
+          200: {
+            description: "Updated run snapshot",
+            content: {
+              "application/json": {
+                schema: resolver(RunSnapshotSchema),
+              },
+            },
+          },
+          ...errors(404),
+        },
+      }),
+      validator("param", z.object({ runId: z.string() })),
+      validator("json", ApprovalBodySchema),
+      async (c) => {
+        const { runId } = c.req.valid("param")
+        const input = c.req.valid("json")
+        const existing = await ComputerUseService.snapshot(runId)
+        if (!existing) return c.json({ error: `Run not found: ${runId}` }, 404)
+        if (existing.status !== "needs_approval") {
+          return c.json({ error: "Run is not awaiting approval" }, 409)
+        }
+        const snapshot = await ComputerUseService.applyApproval(runId, input)
+        if (!snapshot) return c.json({ error: `Run not found: ${runId}` }, 404)
+        return c.json(snapshot)
+      },
+    )
+    .post(
+      "/runs/:runId/cancel",
+      describeRoute({
+        summary: "Cancel computer-use run",
+        description: "Cancel a managed computer-use run in the server-owned run registry.",
+        operationId: "engine.run.cancel",
+        responses: {
+          200: {
+            description: "Updated run snapshot",
+            content: {
+              "application/json": {
+                schema: resolver(RunSnapshotSchema),
+              },
+            },
+          },
+          ...errors(404),
+        },
+      }),
+      validator("param", z.object({ runId: z.string() })),
+      validator("json", CancelBodySchema),
+      async (c) => {
+        const { runId } = c.req.valid("param")
+        const input = c.req.valid("json")
+        const existing = await ComputerUseService.snapshot(runId)
+        if (!existing) return c.json({ error: `Run not found: ${runId}` }, 404)
+        const snapshot = await ComputerUseService.cancel(runId, input)
+        if (!snapshot) return c.json({ error: `Run not found: ${runId}` }, 404)
+        return c.json(snapshot)
+      },
+    )
+    .post(
+      "/runs/:runId/pause",
+      describeRoute({
+        summary: "Pause computer-use run",
+        description: "Pause a managed computer-use run through the operator-native engine control surface.",
+        operationId: "engine.run.pause",
+        responses: {
+          200: {
+            description: "Updated run snapshot",
+            content: {
+              "application/json": {
+                schema: resolver(RunSnapshotSchema),
+              },
+            },
+          },
+          ...errors(404),
+        },
+      }),
+      validator("param", z.object({ runId: z.string() })),
+      validator("json", CancelBodySchema),
+      async (c) => {
+        const { runId } = c.req.valid("param")
+        const input = c.req.valid("json")
+        const existing = await ComputerUseService.snapshot(runId)
+        if (!existing) return c.json({ error: `Run not found: ${runId}` }, 404)
+        const snapshot = await ComputerUseService.pause(runId, input)
+        if (!snapshot) return c.json({ error: `Run not found: ${runId}` }, 404)
+        return c.json(snapshot)
+      },
+    )
+    .post(
+      "/runs/:runId/resume",
+      describeRoute({
+        summary: "Resume computer-use run",
+        description: "Resume a paused managed computer-use run through the operator-native engine control surface.",
+        operationId: "engine.run.resume",
+        responses: {
+          200: {
+            description: "Updated run snapshot",
+            content: {
+              "application/json": {
+                schema: resolver(RunSnapshotSchema),
+              },
+            },
+          },
+          ...errors(404),
+        },
+      }),
+      validator("param", z.object({ runId: z.string() })),
+      validator("json", ResumeBodySchema),
+      async (c) => {
+        const { runId } = c.req.valid("param")
+        const input = c.req.valid("json")
+        const existing = await ComputerUseService.snapshot(runId)
+        if (!existing) return c.json({ error: `Run not found: ${runId}` }, 404)
+        const snapshot = await ComputerUseService.resume(runId, input)
+        if (!snapshot) return c.json({ error: `Run not found: ${runId}` }, 404)
+        return c.json(snapshot)
+      },
+    )
+    .get(
+      "/health",
+      describeRoute({
+        summary: "Computer-use engine health",
+        description: "Report whether the managed computer-use surface can reach the operator.",
+        operationId: "engine.health",
+        responses: {
+          200: {
+            description: "Engine health",
+            content: {
+              "application/json": {
+                schema: resolver(z.object({ status: z.string(), type: z.string() })),
+              },
+            },
+          },
+        },
+      }),
+      async (c) => {
+        try {
+          const response = await fetch(`${process.env.ALLTERNIT_COMPUTER_USE_URL || "http://localhost:3010"}/health`, {
+            signal: AbortSignal.timeout(2000),
+          })
+          if (!response.ok) {
+            return c.json({ status: "degraded", type: "managed" })
+          }
+          return c.json({ status: "healthy", type: "managed" })
+        } catch (error) {
+          log.warn("computer-use health check failed", { error })
+          return c.json({ status: "degraded", type: "managed" })
+        }
+      },
+    ),
+)

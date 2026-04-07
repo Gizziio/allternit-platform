@@ -1,0 +1,108 @@
+// @ts-nocheck
+import { afterEach, expect, test } from "bun:test"
+import path from "path"
+import { Config } from "../../src/runtime/context/config/config"
+import { Flag } from "../../src/runtime/context/flag/flag"
+import { Instance } from "../../src/runtime/context/project/instance"
+import { Filesystem } from "../../src/shared/util/filesystem"
+import { tmpdir } from "../fixture/fixture"
+
+afterEach(async () => {
+  delete process.env["GIZZI_DISABLE_PROJECT_CONFIG"]
+  await Instance.disposeAll().catch(() => undefined)
+})
+
+const legacyProductName = ["open", "code"].join("")
+const legacyHiddenDirName = `.${legacyProductName}`
+const legacyProjectConfigName = `${legacyProductName}.json`
+const legacySchemaUrl = `https://${legacyProductName}.ai/config.json`
+const legacyDisableProjectConfigEnv = `${legacyProductName.toUpperCase()}_DISABLE_PROJECT_CONFIG`
+
+test("canonical gizzi.json overrides legacy config.json in the same project", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Filesystem.writeJson(path.join(dir, "config.json"), {
+        $schema: "https://gizzi.sh/config.json",
+        model: "legacy-config/model",
+      })
+      await Filesystem.writeJson(path.join(dir, "gizzi.json"), {
+        $schema: "https://gizzi.io/config.json",
+        model: "canonical/model",
+      })
+    },
+  })
+
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const config = await Config.get()
+      expect(config.model).toBe("canonical/model")
+    },
+  })
+})
+
+test("legacy fork-era hidden directory config is ignored after the hard cut", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      const legacyDir = path.join(dir, legacyHiddenDirName)
+      await Filesystem.mkdir(legacyDir)
+      await Filesystem.writeJson(path.join(legacyDir, legacyProjectConfigName), {
+        $schema: legacySchemaUrl,
+        username: "legacy-user",
+      })
+    },
+  })
+
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const config = await Config.get()
+      expect(config.username).not.toBe("legacy-user")
+    },
+  })
+})
+
+test("Config.update writes canonical gizzi.json when no project config exists", async () => {
+  await using tmp = await tmpdir()
+
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      await Config.update({
+        model: "updated/model",
+      } as Config.Info)
+    },
+  })
+
+  const written = await Filesystem.readJson<any>(path.join(tmp.path, "gizzi.json"))
+  expect(written.model).toBe("updated/model")
+})
+
+test("Config.update migrates config.json content into canonical gizzi.json", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Filesystem.writeJson(path.join(dir, "config.json"), {
+        $schema: "https://gizzi.sh/config.json",
+        username: "legacy-config-user",
+      })
+    },
+  })
+
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      await Config.update({
+        model: "updated/model",
+      } as Config.Info)
+    },
+  })
+
+  const written = await Filesystem.readJson<any>(path.join(tmp.path, "gizzi.json"))
+  expect(written.username).toBe("legacy-config-user")
+  expect(written.model).toBe("updated/model")
+})
+
+test("legacy fork-era env flags no longer resolve through canonical GIZZI flag accessors", () => {
+  process.env[legacyDisableProjectConfigEnv] = "true"
+  expect(Flag.GIZZI_DISABLE_PROJECT_CONFIG).toBe(false)
+})

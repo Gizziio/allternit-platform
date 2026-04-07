@@ -1,0 +1,162 @@
+/**
+ * Injector Registry
+ * 
+ * Manages terminal injectors across platforms.
+ */
+
+import type { TerminalInjector, TerminalSession, InjectorConfig } from './injector-types.js';
+import { createTmuxInjector } from './tmux-injector.js';
+import { createWin32Injector, isWindows } from './win32-injector.js';
+
+/**
+ * Injector registry
+ */
+export class InjectorRegistry {
+  private injectors: Map<string, TerminalInjector>;
+  private defaultInjector: TerminalInjector;
+
+  constructor(config?: InjectorConfig) {
+    this.injectors = new Map();
+    
+    // Create default injector for current platform
+    if (isWindows()) {
+      this.defaultInjector = createWin32Injector(config);
+    } else {
+      this.defaultInjector = createTmuxInjector(config);
+    }
+  }
+
+  /**
+   * Get default injector
+   */
+  getDefault(): TerminalInjector {
+    return this.defaultInjector;
+  }
+
+  /**
+   * Get or create injector for session
+   */
+  get(sessionId: string): TerminalInjector {
+    return this.injectors.get(sessionId) || this.defaultInjector;
+  }
+
+  /**
+   * Register custom injector for session
+   */
+  register(sessionId: string, injector: TerminalInjector): void {
+    this.injectors.set(sessionId, injector);
+  }
+
+  /**
+   * Unregister injector
+   */
+  unregister(sessionId: string): void {
+    this.injectors.delete(sessionId);
+  }
+
+  /**
+   * Inject command into session
+   */
+  async inject(sessionId: string, command: string): Promise<any> {
+    const injector = this.get(sessionId);
+    return injector.inject(sessionId, command);
+  }
+
+  /**
+   * List all sessions across all injectors
+   */
+  async listAllSessions(): Promise<TerminalSession[]> {
+    const allSessions: TerminalSession[] = [];
+    
+    // Get sessions from default injector
+    const defaultSessions = await this.defaultInjector.listSessions();
+    allSessions.push(...defaultSessions);
+    
+    // Get sessions from registered injectors
+    for (const [sessionId, injector] of this.injectors.entries()) {
+      try {
+        const sessions = await injector.listSessions();
+        allSessions.push(...sessions);
+      } catch (error) {
+        console.error(`Failed to list sessions for ${sessionId}:`, error);
+      }
+    }
+    
+    return allSessions;
+  }
+
+  /**
+   * Create session using default injector
+   */
+  async createSession(name: string, command?: string): Promise<TerminalSession> {
+    return this.defaultInjector.createSession(name, command);
+  }
+
+  /**
+   * Kill session
+   */
+  async killSession(sessionId: string): Promise<void> {
+    // Try registered injectors first
+    for (const [id, injector] of this.injectors.entries()) {
+      if (id === sessionId || sessionId.startsWith(id)) {
+        return injector.killSession(sessionId);
+      }
+    }
+    
+    // Fall back to default
+    return this.defaultInjector.killSession(sessionId);
+  }
+
+  /**
+   * Capture output from session
+   */
+  async captureOutput(sessionId: string, lines?: number): Promise<string> {
+    const injector = this.get(sessionId);
+    return injector.captureOutput(sessionId, lines);
+  }
+
+  /**
+   * Check if any injector has the session
+   */
+  async hasSession(sessionId: string): Promise<boolean> {
+    // Check default
+    if (await this.defaultInjector.sessionExists(sessionId)) {
+      return true;
+    }
+    
+    // Check registered
+    for (const injector of this.injectors.values()) {
+      if (await injector.sessionExists(sessionId)) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  /**
+   * Clear all sessions (for testing)
+   */
+  async clear(): Promise<void> {
+    this.injectors.clear();
+  }
+}
+
+/**
+ * Create injector registry
+ */
+export function createInjectorRegistry(config?: InjectorConfig): InjectorRegistry {
+  return new InjectorRegistry(config);
+}
+
+/**
+ * Singleton registry instance
+ */
+let globalRegistry: InjectorRegistry | null = null;
+
+export function getGlobalRegistry(config?: InjectorConfig): InjectorRegistry {
+  if (!globalRegistry) {
+    globalRegistry = new InjectorRegistry(config);
+  }
+  return globalRegistry;
+}

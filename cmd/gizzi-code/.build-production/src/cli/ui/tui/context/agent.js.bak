@@ -1,0 +1,88 @@
+import { mergeProps as _$mergeProps } from "@opentui/solid";
+import { createComponent as _$createComponent } from "@opentui/solid";
+/**
+ * Agent Context - Global agent state management
+ * 
+ * Provides:
+ * - Agent enabled/disabled state
+ * - Agent mounting control
+ * - Agent configuration
+ * - Works in both Code and Cowork modes
+ */
+
+import { createContext, useContext, createMemo, createEffect, createSignal, onMount } from "solid-js";
+import { useKV } from "@/cli/ui/tui/context/kv";
+const AGENT_STORAGE_KEY = "gizzi-agent-enabled";
+// Create context with default values
+const AgentContext = createContext({
+  enabled: false,
+  setEnabled: () => {},
+  toggle: () => {},
+  agentId: undefined,
+  setAgentId: () => {}
+});
+
+// Provider component
+export function AgentProvider(props) {
+  const kv = useKV();
+  const [enabled, setEnabledState] = createSignal(false);
+  const [agentId, setAgentIdState] = createSignal();
+
+  // Load saved agent preference on mount
+  onMount(() => {
+    if (kv.ready) {
+      const saved = kv.get(AGENT_STORAGE_KEY, false);
+      setEnabledState(saved);
+    }
+  });
+
+  // Save agent state when it changes
+  createEffect(() => {
+    const isEnabled = enabled();
+    if (kv.ready) {
+      kv.set(AGENT_STORAGE_KEY, isEnabled);
+    }
+  });
+  const value = createMemo(() => ({
+    enabled: enabled(),
+    setEnabled: newEnabled => {
+      setEnabledState(newEnabled);
+    },
+    toggle: () => {
+      setEnabledState(!enabled());
+    },
+    agentId: agentId(),
+    setAgentId: id => {
+      setAgentIdState(id);
+    }
+  }));
+  return _$createComponent(AgentContext.Provider, {
+    get value() {
+      return value();
+    },
+    get children() {
+      return props.children;
+    }
+  });
+}
+
+// Hook for consuming agent context
+export function useAgent() {
+  const context = useContext(AgentContext);
+  if (!context) {
+    throw new Error("useAgent must be used within AgentProvider");
+  }
+  return context;
+}
+
+// HOC for agent-aware components
+export function withAgent(Component) {
+  return function WithAgent(props) {
+    const agent = useAgent();
+    return _$createComponent(Component, _$mergeProps(props, {
+      get agentEnabled() {
+        return agent.enabled;
+      }
+    }));
+  };
+}

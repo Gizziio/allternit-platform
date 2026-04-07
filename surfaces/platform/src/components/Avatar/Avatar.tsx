@@ -6,8 +6,8 @@
 
 import React, { useMemo } from 'react';
 import styles from './Avatar.module.css';
-import type { VisualState, AvatarSize, Mood } from '@a2r/visual-state/types';
-import { getMoodColor, getAnimationSpeed, getGlowIntensity } from '@a2r/visual-state/types';
+import type { VisualState, AvatarSize, Mood } from '@allternit/visual-state/types';
+import { getMoodColor, getAnimationSpeed, getGlowIntensity } from '@allternit/visual-state/types';
 
 export interface AvatarProps {
   /** Current visual state */

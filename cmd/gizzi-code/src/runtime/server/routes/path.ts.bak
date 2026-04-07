@@ -1,0 +1,46 @@
+import { Hono } from "hono"
+import { describeRoute, resolver } from "hono-openapi"
+import z from "zod/v4"
+import { Global } from "@/runtime/context/global/global"
+import { Instance } from "@/runtime/context/project/instance"
+
+export function PathRoutes() {
+  return new Hono().get(
+    "/",
+    describeRoute({
+      summary: "Get paths",
+      description:
+        "Retrieve the current working directory and related path information for the GIZZI instance.",
+      operationId: "path.get",
+      responses: {
+        200: {
+          description: "Path",
+          content: {
+            "application/json": {
+              schema: resolver(
+                z.object({
+                  data: z.object({
+                    home: z.string(),
+                    state: z.string(),
+                    config: z.string(),
+                    worktree: z.string(),
+                    directory: z.string(),
+                  }),
+                }),
+              ),
+            },
+          },
+        },
+      },
+    }),
+    async (c) => {
+      return c.json({
+        home: Global.Path.home,
+        state: Global.Path.state,
+        config: Global.Path.config,
+        worktree: Instance.worktree,
+        directory: Instance.directory,
+      })
+    },
+  )
+}

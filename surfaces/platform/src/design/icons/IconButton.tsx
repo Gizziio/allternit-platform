@@ -3,7 +3,7 @@
  * 
  * Button component that wraps icons with consistent styling and behavior.
  * 
- * @module @a2r/platform/icons/IconButton
+ * @module @allternit/platform/icons/IconButton
  */
 
 import * as React from 'react';

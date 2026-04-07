@@ -12,14 +12,14 @@
  *   await kernel.createWih({...});
  * 
  * NEW (recommended):
- *   import { api } from '@a2r/platform';
+ *   import { api } from '@allternit/platform';
  *   // WIH operations through API
  *   
  * See: MIGRATION_PLAN.md for complete migration guide.
  * @deprecated Use api-client.ts instead
  */
 
-import { createRuntimeBridge, RuntimeBridge } from '@a2r/runtime';
+import { createRuntimeBridge, RuntimeBridge } from '@allternit/runtime';
 import type {
   A2RKernel,
   WihItem,
@@ -31,7 +31,7 @@ import type {
   ToolContext,
   FileContext,
   RoutingResult,
-} from '@a2r/governor';
+} from '@allternit/governor';
 
 // Deprecation warning (silenced for production)
 // console.warn('[DEPRECATED] integration/kernel/index.ts is deprecated. Use api-client.ts instead.');

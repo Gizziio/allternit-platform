@@ -1,0 +1,7 @@
+{
+  "version": "v1.0.0",
+  "files": [
+    "event-envelope.json"
+  ],
+  "note": "Extend with remaining event types as needed; keep envelope stable."
+}

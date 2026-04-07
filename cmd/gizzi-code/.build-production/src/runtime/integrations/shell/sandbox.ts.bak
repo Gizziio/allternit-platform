@@ -1,0 +1,272 @@
+/**
+ * Shell Sandbox
+ *
+ * Wraps subprocess execution with platform-appropriate OS isolation:
+ *   - Linux:  bubblewrap (bwrap) — same as Claude Code
+ *   - macOS:  sandbox-exec with a Seatbelt profile — same as Claude Code
+ *   - Windows: no-op (not supported)
+ *
+ * The wrapper gives the spawned process:
+ *   - READ access to the entire host filesystem
+ *   - WRITE access only to declared write paths (workdir + /tmp by default)
+ *   - NETWORK access configurable (default: allowed so npm/cargo/etc. work)
+ *
+ * The agent's reasoning, tool dispatch, and API connections are completely
+ * outside this boundary — only subprocesses spawned by the Bash tool are wrapped.
+ */
+import path from "path"
+import os from "os"
+import { writeFile, unlink } from "fs/promises"
+import { Log } from "@/shared/util/log"
+
+const log = Log.create({ service: "shell-sandbox" })
+
+// ─────────────────────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────────────────────
+
+export interface SandboxPolicy {
+  /** Paths the subprocess may write to. Workdir + /tmp are always included. */
+  allowWritePaths: string[]
+  /** Allow outbound network. Default: true (agents need npm/pip/cargo etc.) */
+  allowNetwork: boolean
+}
+
+export type SandboxDriver = "bwrap" | "sandbox-exec" | "none"
+
+export interface WrappedCommand {
+  /** Binary to spawn (bwrap, sandbox-exec, or the shell itself) */
+  bin: string
+  /** Argument list including the shell and the original command */
+  args: string[]
+}
+
+// ─────────────────────────────────────────────────────────────
+// Driver detection
+// ─────────────────────────────────────────────────────────────
+
+export namespace Sandbox {
+  let _detected: SandboxDriver | undefined
+
+  export function detect(): SandboxDriver {
+    if (_detected !== undefined) return _detected
+
+    if (process.platform === "win32") {
+      _detected = "none"
+      return _detected
+    }
+
+    if (process.platform === "darwin") {
+      // sandbox-exec ships with every macOS install — always available
+      _detected = "sandbox-exec"
+      return _detected
+    }
+
+    // Linux: check for bwrap
+    const bwrap = Bun.which("bwrap")
+    _detected = bwrap ? "bwrap" : "none"
+    if (_detected === "none") {
+      log.warn("bwrap not found — sandbox disabled (install bubblewrap to enable)")
+    }
+    return _detected
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // Linux: bubblewrap
+  // ─────────────────────────────────────────────────────────
+
+  function bwrapArgs(command: string, shell: string, cwd: string, policy: SandboxPolicy): WrappedCommand {
+    const args: string[] = []
+
+    // ── Filesystem binds ──────────────────────────────────
+    // Bind the host's entire root read-only as the base layer,
+    // then selectively override paths as read-write.
+    // We bind real directories, skipping symlinks bwrap can't handle.
+    const roBinds = ["/usr", "/etc", "/opt"]
+    // /bin, /lib, /lib64 may be symlinks on modern distros — add conditionally
+    for (const p of ["/bin", "/sbin", "/lib", "/lib64", "/lib32"]) {
+      try {
+        const stat = Bun.file(p)
+        // Only bind if it exists as a real dir (not a symlink)
+        roBinds.push(p)
+      } catch {
+        // skip
+      }
+    }
+
+    for (const p of roBinds) {
+      args.push("--ro-bind-try", p, p)
+    }
+
+    // Write access to workdir and user home area
+    const writePaths = [
+      cwd,
+      os.tmpdir(),         // /tmp
+      "/var/tmp",
+      ...policy.allowWritePaths,
+    ]
+
+    // Always allow writes to the home .cache directory (npm, pip, cargo, etc.)
+    const homeCache = path.join(os.homedir(), ".cache")
+    writePaths.push(homeCache)
+
+    // .npm, .cargo/registry etc. — common package caches
+    for (const cache of [".npm", ".cargo", ".pnpm-store", ".bun"]) {
+      writePaths.push(path.join(os.homedir(), cache))
+    }
+
+    for (const p of writePaths) {
+      args.push("--bind-try", p, p)
+    }
+
+    // ── Special filesystems ────────────────────────────────
+    args.push("--proc", "/proc")
+    args.push("--dev", "/dev")
+    args.push("--tmpfs", "/run")
+
+    // ── Working directory ─────────────────────────────────
+    args.push("--chdir", cwd)
+
+    // ── Process isolation ─────────────────────────────────
+    args.push("--die-with-parent")
+    // Don't unshare PID — child tool calls like `git` need to see the parent shell
+    // Don't unshare net by default (agents need npm/pip/etc.)
+    if (!policy.allowNetwork) {
+      args.push("--unshare-net")
+    }
+
+    // ── The actual command ────────────────────────────────
+    args.push("--", shell, "-c", command)
+
+    return { bin: "bwrap", args }
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // macOS: sandbox-exec + Seatbelt profile
+  // ─────────────────────────────────────────────────────────
+
+  function buildSeatbeltProfile(writePaths: string[], allowNetwork: boolean): string {
+    const writeRules = writePaths
+      .map((p) => `  (subpath "${p.replace(/"/g, '\\"')}")`)
+      .join("\n")
+
+    const networkRule = allowNetwork
+      ? `(allow network*)`
+      : `; network blocked`
+
+    return `(version 1)
+(deny default)
+
+; ── Process execution ───────────────────────────────────────
+(allow process-exec*)
+(allow process-fork)
+(allow process-info*)
+(allow signal (target self))
+(allow signal (target children))
+
+; ── IPC / Mach ──────────────────────────────────────────────
+(allow ipc-posix*)
+(allow mach-lookup)
+(allow mach-priv-host-port)
+(allow mach-task-name)
+
+; ── System info ─────────────────────────────────────────────
+(allow sysctl-read)
+(allow system-socket)
+
+; ── File reads: entire filesystem ───────────────────────────
+(allow file-read*)
+(allow file-test-existence)
+
+; ── File writes: declared paths only ────────────────────────
+(allow file-write*
+${writeRules}
+)
+
+; ── Network ─────────────────────────────────────────────────
+${networkRule}
+
+; ── Devices / IOKit ─────────────────────────────────────────
+(allow file-ioctl)
+(allow iokit-open)
+`
+  }
+
+  // Profile files are keyed by sessionID so concurrent sessions don't collide
+  const profilePaths = new Map<string, string>()
+
+  export async function writeSeatbeltProfile(sessionID: string, policy: SandboxPolicy, cwd: string): Promise<string> {
+    const existing = profilePaths.get(sessionID)
+    if (existing) return existing
+
+    const writePaths = [
+      cwd,
+      os.tmpdir(),
+      "/private/tmp",
+      "/var/tmp",
+      "/private/var/folders",  // macOS per-user temp area
+      path.join(os.homedir(), ".cache"),
+      path.join(os.homedir(), ".npm"),
+      path.join(os.homedir(), ".cargo"),
+      path.join(os.homedir(), ".pnpm-store"),
+      path.join(os.homedir(), ".bun"),
+      ...policy.allowWritePaths,
+    ]
+
+    const profile = buildSeatbeltProfile(writePaths, policy.allowNetwork)
+    const profilePath = path.join(os.tmpdir(), `gizzi-sandbox-${sessionID}.sb`)
+    await writeFile(profilePath, profile, "utf8")
+    profilePaths.set(sessionID, profilePath)
+    log.info("wrote sandbox profile", { sessionID, profilePath })
+    return profilePath
+  }
+
+  export async function cleanupProfile(sessionID: string): Promise<void> {
+    const p = profilePaths.get(sessionID)
+    if (!p) return
+    profilePaths.delete(sessionID)
+    await unlink(p).catch(() => {})
+  }
+
+  async function sandboxExecArgs(
+    command: string,
+    shell: string,
+    cwd: string,
+    sessionID: string,
+    policy: SandboxPolicy,
+  ): Promise<WrappedCommand> {
+    const profilePath = await writeSeatbeltProfile(sessionID, policy, cwd)
+    return {
+      bin: "sandbox-exec",
+      args: ["-f", profilePath, shell, "-c", command],
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // Public: build the wrapped spawn args
+  // ─────────────────────────────────────────────────────────
+
+  export async function wrap(opts: {
+    command: string
+    shell: string
+    cwd: string
+    sessionID: string
+    policy: SandboxPolicy
+  }): Promise<WrappedCommand | null> {
+    const driver = detect()
+
+    if (driver === "none") {
+      log.warn("sandbox requested but no driver available", { platform: process.platform })
+      return null
+    }
+
+    log.info("wrapping command", { driver, sessionID: opts.sessionID, cwd: opts.cwd })
+
+    if (driver === "bwrap") {
+      return bwrapArgs(opts.command, opts.shell, opts.cwd, opts.policy)
+    }
+
+    // sandbox-exec (macOS) — async because it writes a profile file
+    return sandboxExecArgs(opts.command, opts.shell, opts.cwd, opts.sessionID, opts.policy)
+  }
+}

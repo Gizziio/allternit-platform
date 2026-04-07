@@ -1,0 +1,87 @@
+{
+  "id": "nix-unified",
+  "name": "Nix Unified Environment",
+  "description": "Nix flake with common development tools - the one environment to rule them all",
+  "version": "1.0.0",
+  "image": null,
+  "features": [],
+  "ports": [3000, 8080, 9000],
+  "postCreateCommand": null,
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "jnoortheen.nix-ide",
+        "mkhl.direnv"
+      ],
+      "settings": {
+        "nix.enableLanguageServer": true,
+        "nix.serverPath": "nil",
+        "nix.formatterPath": "nixpkgs-fmt",
+        "direnv.restartAutogeneration": true
+      }
+    }
+  },
+  "variables": {},
+  "dockerfile": null,
+  "buildContext": null,
+  "nix": {
+    "flake": true,
+    "flakeUri": "github:allternit/templates#unified",
+    "packages": [
+      "nodejs_20",
+      "pnpm",
+      "bun",
+      "python312",
+      "poetry",
+      "rustup",
+      "go",
+      "zig",
+      "docker",
+      "kubectl",
+      "terraform",
+      "ansible",
+      "jq",
+      "yq",
+      "ripgrep",
+      "fd",
+      "fzf",
+      "zoxide",
+      "starship",
+      "direnv",
+      "git",
+      "git-lfs",
+      "gh",
+      "glab",
+      "vim",
+      "neovim",
+      "tmux",
+      "htop",
+      "btop"
+    ],
+    "devShell": {
+      "packages": [
+        "nodejs_20",
+        "pnpm",
+        "python312",
+        "rustup",
+        "go",
+        "docker",
+        "kubectl",
+        "jq",
+        "ripgrep",
+        "fd",
+        "fzf",
+        "git"
+      ],
+      "env": {
+        "NODE_OPTIONS": "--max-old-space-size=4096",
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "RUST_BACKTRACE": "1"
+      },
+      "shellHook": "\n        echo 'Welcome to the unified development environment!'\n        echo ''\n        echo 'Available tools:'\n        echo '  Node.js: $(node --version)'\n        echo '  pnpm: $(pnpm --version)'\n        echo '  Python: $(python3 --version)'\n        echo '  Go: $(go version)'\n        echo '  Rust: $(rustc --version 2>/dev/null || echo \"run: rustup default stable\")'\n        echo ''\n        eval \"$(starship init bash)\"\n      "
+    }
+  },
+  "mounts": [],
+  "containerEnv": {},
+  "remoteUser": null
+}

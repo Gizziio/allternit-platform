@@ -1,0 +1,134 @@
+/**
+ * WebSocket API - DEPRECATED
+ * 
+ * This file is kept for backward compatibility.
+ * All functionality has been migrated to SSE (Server-Sent Events).
+ * 
+ * Please use `sse.ts` instead:
+ * ```typescript
+ * import { getSSEManager, initializeSSEManager } from "./sse";
+ * ```
+ * 
+ * Migration guide:
+ * - WebSocket connections → SSE EventSource
+ * - ws:// URLs → /api/v1/verification/stream (SSE endpoint)
+ * - subscribe message → GET with ?sessionId= query param
+ */
+
+import { Log } from "@/runtime/util/log";
+import {
+  VerificationSSEManager,
+  getSSEManager,
+  initializeSSEManager,
+  closeSSEManager,
+  sseStreamHandler,
+  sseSubscribeHandler,
+} from "./sse";
+
+const log = Log.create({ service: "verification.websocket" });
+
+// ============================================================================
+// Deprecation Warning
+// ============================================================================
+
+log.warn(
+  "WebSocket API is deprecated. Please migrate to SSE. " +
+  "See: src/runtime/verification/api/sse.ts"
+);
+
+// ============================================================================
+// Compatibility Exports
+// ============================================================================
+
+/**
+ * @deprecated Use VerificationSSEManager from `./sse` instead
+ */
+export class VerificationWebSocketManager {
+  private sseManager: VerificationSSEManager;
+  
+  constructor() {
+    log.warn("VerificationWebSocketManager is deprecated. Use VerificationSSEManager.");
+    this.sseManager = getSSEManager();
+  }
+  
+  initialize(): void {
+    initializeSSEManager();
+  }
+  
+  subscribeToSession(clientId: string, sessionId: string): void {
+    this.sseManager.subscribeToSession(clientId, sessionId);
+  }
+  
+  unsubscribeFromSession(clientId: string, sessionId: string): void {
+    this.sseManager.unsubscribeFromSession(clientId, sessionId);
+  }
+  
+  broadcastProgress(sessionId: string, progress: any): void {
+    this.sseManager.broadcastProgress(sessionId, progress);
+  }
+  
+  broadcastComplete(sessionId: string, result: any): void {
+    this.sseManager.broadcastComplete(sessionId, result);
+  }
+  
+  broadcastError(sessionId: string, error: Error): void {
+    this.sseManager.broadcastError(sessionId, error);
+  }
+  
+  sendAlert(alert: any, clientId?: string): void {
+    this.sseManager.sendAlert(alert, clientId);
+  }
+  
+  close(): void {
+    closeSSEManager();
+  }
+}
+
+/**
+ * @deprecated Use getSSEManager from `./sse` instead
+ */
+export function getWebSocketManager(): VerificationWebSocketManager {
+  return new VerificationWebSocketManager();
+}
+
+/**
+ * @deprecated Use initializeSSEManager from `./sse` instead
+ */
+export function initializeWebSocketServer(): void {
+  log.warn("initializeWebSocketServer is deprecated. Use initializeSSEManager.");
+  initializeSSEManager();
+}
+
+/**
+ * @deprecated Use closeSSEManager from `./sse` instead
+ */
+export function closeWebSocketServer(): void {
+  log.warn("closeWebSocketServer is deprecated. Use closeSSEManager.");
+  closeSSEManager();
+}
+
+// ============================================================================
+// Re-exports from SSE (recommended imports)
+// ============================================================================
+
+export {
+  VerificationSSEManager,
+  getSSEManager,
+  initializeSSEManager,
+  closeSSEManager,
+  sseStreamHandler,
+  sseSubscribeHandler,
+} from "./sse";
+
+export type {
+  SSEMessage,
+  ProgressUpdate,
+  VerificationComplete,
+  VerificationAlert,
+} from "./sse";
+
+// Backward compatibility type aliases
+/**
+ * @deprecated Use SSEMessage instead
+ */
+export type WebSocketMessage = import("./sse").SSEMessage;

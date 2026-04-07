@@ -1,0 +1,128 @@
+import type {
+  Client,
+  ReadTextFileRequest,
+  ReadTextFileResponse,
+  RequestPermissionRequest,
+  RequestPermissionResponse,
+  SessionNotification,
+  WriteTextFileRequest,
+  WriteTextFileResponse,
+} from "@agentclientprotocol/sdk"
+import { RequestError } from "@agentclientprotocol/sdk"
+import { Log } from "@/runtime/util/log"
+import { Filesystem } from "@/runtime/util/filesystem"
+
+const log = Log.create({ service: "acp-client" })
+
+export type PermissionMode = "allow_once" | "allow_always" | "reject"
+
+export interface ACPClientOptions {
+  // How to respond to permission requests when no interactive prompt is available.
+  // Defaults to "allow_once".
+  permissionMode?: PermissionMode
+  // Optional callback to receive session updates (streaming output, tool calls, etc.)
+  onSessionUpdate?: (update: SessionNotification) => void
+}
+
+// GizziClient implements the ACP Client interface for use in headless / programmatic
+// connections where gizzi acts as its own client (no IDE on the other end).
+//
+// In the standard "gizzi acp" flow an IDE like Zed IS the client — this class
+// is only needed when gizzi runs standalone (tests, CLI automation, embed mode).
+export class GizziClient implements Client {
+  private options: Required<Pick<ACPClientOptions, "permissionMode">> &
+    Pick<ACPClientOptions, "onSessionUpdate">
+
+  constructor(options: ACPClientOptions = {}) {
+    this.options = {
+      permissionMode: options.permissionMode ?? "allow_once",
+      onSessionUpdate: options.onSessionUpdate,
+    }
+  }
+
+  async requestPermission(params: RequestPermissionRequest): Promise<RequestPermissionResponse> {
+    const { toolCall, options, sessionId } = params
+
+    log.info("permission_requested", {
+      sessionId,
+      toolCallId: toolCall.toolCallId,
+      title: toolCall.title,
+      kind: toolCall.kind,
+      mode: this.options.permissionMode,
+    })
+
+    if (this.options.permissionMode === "reject") {
+      return {
+        outcome: { outcome: "selected", optionId: "reject" },
+      }
+    }
+
+    // Find the matching option for the configured mode.
+    const kindToOptionId: Record<PermissionMode, string> = {
+      allow_once: "once",
+      allow_always: "always",
+      reject: "reject",
+    }
+    const wantedOptionId = kindToOptionId[this.options.permissionMode]
+
+    // Prefer the matching option from whatever the agent advertised.
+    // Fall back to the first non-reject option if not found.
+    const match = options.find((o) => o.optionId === wantedOptionId)
+    const fallback = options.find((o) => o.kind !== "reject_once" && o.kind !== "reject_always")
+    const selected = match ?? fallback ?? options[0]
+
+    if (!selected) {
+      log.error("permission_no_options", { sessionId, toolCallId: toolCall.toolCallId })
+      return { outcome: { outcome: "cancelled" } }
+    }
+
+    log.info("permission_granted", {
+      sessionId,
+      toolCallId: toolCall.toolCallId,
+      optionId: selected.optionId,
+    })
+
+    return {
+      outcome: { outcome: "selected", optionId: selected.optionId },
+    }
+  }
+
+  async sessionUpdate(params: SessionNotification): Promise<void> {
+    log.debug("session_update", { sessionId: params.sessionId, type: (params.update as any)?.sessionUpdate })
+    this.options.onSessionUpdate?.(params)
+  }
+
+  async readTextFile(params: ReadTextFileRequest): Promise<ReadTextFileResponse> {
+    const { path, sessionId, line, limit } = params
+
+    log.info("read_text_file", { sessionId, path, line, limit })
+
+    if (!(await Filesystem.exists(path))) {
+      throw RequestError.resourceNotFound(path)
+    }
+
+    const full = await Filesystem.readText(path)
+
+    if (line == null && limit == null) {
+      return { content: full }
+    }
+
+    // Apply line/limit slicing (both 1-based per ACP spec).
+    const lines = full.split("\n")
+    const startIdx = line != null ? Math.max(0, line - 1) : 0
+    const endIdx = limit != null ? startIdx + limit : lines.length
+    const content = lines.slice(startIdx, endIdx).join("\n")
+
+    return { content }
+  }
+
+  async writeTextFile(params: WriteTextFileRequest): Promise<WriteTextFileResponse> {
+    const { path, content, sessionId } = params
+
+    log.info("write_text_file", { sessionId, path, bytes: content.length })
+
+    await Filesystem.write(path, content)
+
+    return {}
+  }
+}

@@ -1,0 +1,135 @@
+import { insertNode as _$insertNode } from "@opentui/solid";
+import { effect as _$effect } from "@opentui/solid";
+import { insert as _$insert } from "@opentui/solid";
+import { setProp as _$setProp } from "@opentui/solid";
+import { createElement as _$createElement } from "@opentui/solid";
+import { createComponent as _$createComponent } from "@opentui/solid";
+import { createContext, useContext, Show } from "solid-js";
+import { createStore } from "solid-js/store";
+import { useTheme } from "@/cli/ui/tui/context/theme";
+import { useTerminalDimensions } from "@opentui/solid";
+import { SplitBorder } from "@/cli/ui/tui/component/border";
+import { TextAttributes } from "@opentui/core";
+import { TuiEvent } from "@/cli/ui/tui/event";
+export function Toast() {
+  const toast = useToast();
+  const {
+    theme
+  } = useTheme();
+  const dimensions = useTerminalDimensions();
+  return _$createComponent(Show, {
+    get when() {
+      return toast.currentToast;
+    },
+    children: current => (() => {
+      var _el$ = _$createElement("box"),
+        _el$3 = _$createElement("text");
+      _$insertNode(_el$, _el$3);
+      _$setProp(_el$, "position", "absolute");
+      _$setProp(_el$, "justifyContent", "center");
+      _$setProp(_el$, "alignItems", "flex-start");
+      _$setProp(_el$, "top", 2);
+      _$setProp(_el$, "right", 2);
+      _$setProp(_el$, "paddingLeft", 2);
+      _$setProp(_el$, "paddingRight", 2);
+      _$setProp(_el$, "paddingTop", 1);
+      _$setProp(_el$, "paddingBottom", 1);
+      _$setProp(_el$, "border", ["left", "right"]);
+      _$insert(_el$, _$createComponent(Show, {
+        get when() {
+          return current().title;
+        },
+        get children() {
+          var _el$2 = _$createElement("text");
+          _$setProp(_el$2, "marginBottom", 1);
+          _$insert(_el$2, () => current().title);
+          _$effect(_p$ => {
+            var _v$ = TextAttributes.BOLD,
+              _v$2 = theme.text;
+            _v$ !== _p$.e && (_p$.e = _$setProp(_el$2, "attributes", _v$, _p$.e));
+            _v$2 !== _p$.t && (_p$.t = _$setProp(_el$2, "fg", _v$2, _p$.t));
+            return _p$;
+          }, {
+            e: undefined,
+            t: undefined
+          });
+          return _el$2;
+        }
+      }), _el$3);
+      _$setProp(_el$3, "wrapMode", "word");
+      _$setProp(_el$3, "width", "100%");
+      _$insert(_el$3, () => current().message);
+      _$effect(_p$ => {
+        var _v$3 = Math.min(60, dimensions().width - 6),
+          _v$4 = theme.backgroundPanel,
+          _v$5 = theme[current().variant],
+          _v$6 = SplitBorder.customBorderChars,
+          _v$7 = theme.text;
+        _v$3 !== _p$.e && (_p$.e = _$setProp(_el$, "maxWidth", _v$3, _p$.e));
+        _v$4 !== _p$.t && (_p$.t = _$setProp(_el$, "backgroundColor", _v$4, _p$.t));
+        _v$5 !== _p$.a && (_p$.a = _$setProp(_el$, "borderColor", _v$5, _p$.a));
+        _v$6 !== _p$.o && (_p$.o = _$setProp(_el$, "customBorderChars", _v$6, _p$.o));
+        _v$7 !== _p$.i && (_p$.i = _$setProp(_el$3, "fg", _v$7, _p$.i));
+        return _p$;
+      }, {
+        e: undefined,
+        t: undefined,
+        a: undefined,
+        o: undefined,
+        i: undefined
+      });
+      return _el$;
+    })()
+  });
+}
+function init() {
+  const [store, setStore] = createStore({
+    currentToast: null
+  });
+  let timeoutHandle = null;
+  const toast = {
+    show(options) {
+      const parsedOptions = TuiEvent.ToastShow.properties.parse(options);
+      const {
+        duration,
+        ...currentToast
+      } = parsedOptions;
+      setStore("currentToast", currentToast);
+      if (timeoutHandle) clearTimeout(timeoutHandle);
+      timeoutHandle = setTimeout(() => {
+        setStore("currentToast", null);
+      }, duration).unref();
+    },
+    error: err => {
+      if (err instanceof Error) return toast.show({
+        variant: "error",
+        message: err.message
+      });
+      toast.show({
+        variant: "error",
+        message: "An unknown error has occurred"
+      });
+    },
+    get currentToast() {
+      return store.currentToast;
+    }
+  };
+  return toast;
+}
+const ctx = createContext();
+export function ToastProvider(props) {
+  const value = init();
+  return _$createComponent(ctx.Provider, {
+    value: value,
+    get children() {
+      return props.children;
+    }
+  });
+}
+export function useToast() {
+  const value = useContext(ctx);
+  if (!value) {
+    throw new Error("useToast must be used within a ToastProvider");
+  }
+  return value;
+}

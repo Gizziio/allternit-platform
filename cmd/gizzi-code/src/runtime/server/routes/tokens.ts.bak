@@ -1,0 +1,329 @@
+import { Hono } from "hono"
+import { describeRoute, resolver, validator } from "hono-openapi"
+import z from "zod/v4"
+import { getEncoding, getEncodingNameForModel } from "js-tiktoken"
+import { Provider } from "@/runtime/providers/provider"
+import { Config } from "@/runtime/context/config/config"
+
+export const CountTokensBody = z.object({
+  model: z.string().optional(),
+  system: z.string().optional(),
+  messages: z.array(z.any()),
+  tools: z.array(z.any()).optional(),
+})
+
+export const CountTokensResponse = z.object({
+  input_tokens: z.number(),
+  cache_read_tokens: z.number().optional(),
+  cache_write_tokens: z.number().optional(),
+})
+
+function encodingNameForModel(modelID: string) {
+  try {
+    return getEncodingNameForModel(modelID as Parameters<typeof getEncodingNameForModel>[0])
+  } catch {
+    const id = modelID.toLowerCase()
+    if (id.includes("gpt-5") || id.includes("gpt-4.1") || id.includes("gpt-4o") || id.includes("o1") || id.includes("o3") || id.includes("o4")) {
+      return "o200k_base"
+    }
+    return "cl100k_base"
+  }
+}
+
+function countEncodedText(encodingName: string, text: string) {
+  const encoding = getEncoding(encodingName as Parameters<typeof getEncoding>[0])
+  return encoding.encode(text).length
+}
+
+function countOpenAIChatTokens(input: {
+  modelID: string
+  system?: string
+  messages: unknown[]
+  tools?: unknown[]
+}) {
+  const encodingName = encodingNameForModel(input.modelID)
+  const perMessage = input.modelID.includes("gpt-3.5") ? 4 : 3
+  const perName = 1
+  let total = 0
+
+  const allMessages = [
+    ...(input.system ? [{ role: "system", content: input.system }] : []),
+    ...input.messages,
+  ]
+
+  for (const message of allMessages) {
+    total += perMessage
+    const record = message as Record<string, unknown>
+    if (typeof record.role === "string") total += countEncodedText(encodingName, record.role)
+    if (typeof record.name === "string") total += countEncodedText(encodingName, record.name) + perName
+    if ("content" in record) {
+      total += countEncodedText(encodingName, JSON.stringify(record.content))
+    } else if ("parts" in record) {
+      total += countEncodedText(encodingName, JSON.stringify(record.parts))
+    } else {
+      total += countEncodedText(encodingName, JSON.stringify(record))
+    }
+  }
+
+  if (input.tools?.length) {
+    total += countEncodedText(encodingName, JSON.stringify(input.tools))
+  }
+
+  return total + 3
+}
+
+function resolveBaseUrl(raw: unknown, fallback: string) {
+  if (typeof raw !== "string") return fallback
+  return raw.replace(/\$\{([^}]+)\}/g, (_, key) => process.env[String(key)] ?? `\${${String(key)}}`)
+}
+
+async function resolveModelAndProvider(inputModel?: string) {
+  const parsed = inputModel ? Provider.parseModel(inputModel) : await Provider.defaultModel()
+  const [model, provider] = await Promise.all([
+    Provider.getModel(parsed.providerID, parsed.modelID),
+    Provider.getProvider(parsed.providerID),
+  ])
+  return { model, provider }
+}
+
+async function countTokensViaAnthropic(input: {
+  model: Awaited<ReturnType<typeof Provider.getModel>>
+  provider: Awaited<ReturnType<typeof Provider.getProvider>>
+  system?: string
+  messages: unknown[]
+  tools?: unknown[]
+}) {
+  if (!input.provider?.key) return null
+  const cfg = await Config.get()
+  const base = resolveBaseUrl(input.provider.options?.["baseURL"] ?? cfg.provider?.[input.model.providerID]?.options?.baseURL, input.model.api.url)
+  const response = await fetch(`${base.replace(/\/$/, "")}/messages/count_tokens`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": input.provider.key,
+      "anthropic-version": "2023-06-01",
+      ...(input.provider.options?.headers as Record<string, string> | undefined),
+      ...input.model.headers,
+    },
+    body: JSON.stringify({
+      model: input.model.api.id,
+      system: input.system,
+      messages: input.messages,
+      tools: input.tools,
+    }),
+  })
+  if (!response.ok) return null
+  const payload = await response.json().catch(() => null) as Record<string, unknown> | null
+  const inputTokens = typeof payload?.input_tokens === "number" ? payload.input_tokens : null
+  if (inputTokens === null) return null
+  return {
+    input_tokens: inputTokens,
+    cache_read_tokens: typeof payload?.cache_read_input_tokens === "number" ? payload.cache_read_input_tokens : undefined,
+    cache_write_tokens: typeof payload?.cache_creation_input_tokens === "number" ? payload.cache_creation_input_tokens : undefined,
+  }
+}
+
+function toGoogleParts(value: unknown): Array<{ text: string }> {
+  if (typeof value === "string") return [{ text: value }]
+  if (Array.isArray(value)) return value.flatMap(toGoogleParts)
+  if (!value || typeof value !== "object") return [{ text: JSON.stringify(value) }]
+  const record = value as Record<string, unknown>
+  if (typeof record.text === "string") return [{ text: record.text }]
+  if (typeof record.content === "string") return [{ text: record.content }]
+  return [{ text: JSON.stringify(record) }]
+}
+
+function toGoogleContents(messages: unknown[]) {
+  return messages.map((message) => {
+    const record = message as Record<string, unknown>
+    const role = record.role === "assistant" ? "model" : "user"
+    const content = "content" in record ? record.content : record.parts
+    return {
+      role,
+      parts: toGoogleParts(content),
+    }
+  })
+}
+
+async function countTokensViaGoogle(input: {
+  model: Awaited<ReturnType<typeof Provider.getModel>>
+  provider: Awaited<ReturnType<typeof Provider.getProvider>>
+  system?: string
+  messages: unknown[]
+}) {
+  if (!input.provider?.key) return null
+  const cfg = await Config.get()
+  const base = resolveBaseUrl(
+    input.provider.options?.["baseURL"] ?? cfg.provider?.[input.model.providerID]?.options?.baseURL,
+    input.model.api.url,
+  )
+  if (!String(base).includes("generativelanguage.googleapis.com")) return null
+  const modelPath = input.model.api.id.startsWith("models/") ? input.model.api.id : `models/${input.model.api.id}`
+  const url = `${String(base).replace(/\/$/, "")}/${modelPath}:countTokens?key=${encodeURIComponent(input.provider.key)}`
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...(input.provider.options?.headers as Record<string, string> | undefined),
+      ...input.model.headers,
+    },
+    body: JSON.stringify({
+      ...(input.system ? { system_instruction: { parts: [{ text: input.system }] } } : {}),
+      contents: toGoogleContents(input.messages),
+    }),
+  })
+  if (!response.ok) return null
+  const payload = await response.json().catch(() => null) as Record<string, unknown> | null
+  const totalTokens = typeof payload?.totalTokens === "number" ? payload.totalTokens : null
+  if (totalTokens === null) return null
+  return {
+    input_tokens: totalTokens,
+  }
+}
+
+function countTokensViaOpenAIEncoding(input: {
+  model: Awaited<ReturnType<typeof Provider.getModel>>
+  system?: string
+  messages: unknown[]
+  tools?: unknown[]
+}) {
+  return {
+    input_tokens: countOpenAIChatTokens({
+      modelID: input.model.api.id,
+      system: input.system,
+      messages: input.messages,
+      tools: input.tools,
+    }),
+  }
+}
+
+function approximateEncodingName(input: {
+  modelID?: string
+  providerID?: string
+  npm?: string
+}) {
+  const id = `${input.providerID ?? ""} ${input.modelID ?? ""} ${input.npm ?? ""}`.toLowerCase()
+  if (
+    id.includes("gpt-5") ||
+    id.includes("gpt-4.1") ||
+    id.includes("gpt-4o") ||
+    id.includes("o1") ||
+    id.includes("o3") ||
+    id.includes("o4") ||
+    id.includes("gemini") ||
+    id.includes("google") ||
+    id.includes("qwen") ||
+    id.includes("kimi") ||
+    id.includes("moonshot")
+  ) {
+    return "o200k_base"
+  }
+  return "cl100k_base"
+}
+
+function approximateTokenCount(input: {
+  model?: Awaited<ReturnType<typeof Provider.getModel>> | null
+  system?: string
+  messages: unknown[]
+  tools?: unknown[]
+}) {
+  const encodingName = approximateEncodingName({
+    modelID: input.model?.api.id,
+    providerID: input.model?.providerID,
+    npm: input.model?.api.npm,
+  })
+  const asText = JSON.stringify({
+    ...(input.system ? { system: input.system } : {}),
+    messages: input.messages,
+    ...(input.tools?.length ? { tools: input.tools } : {}),
+  })
+  const bodyTokens = countEncodedText(encodingName, asText)
+  const messageOverhead = (input.messages.length + (input.system ? 1 : 0)) * 4
+  const toolOverhead = (input.tools?.length ?? 0) * 12
+  return bodyTokens + messageOverhead + toolOverhead
+}
+
+function hasCacheBreakpoint(value: unknown): boolean {
+  if (!value) return false
+  if (typeof value === "string") return false
+  if (Array.isArray(value)) return value.some(hasCacheBreakpoint)
+  if (typeof value !== "object") return false
+
+  const record = value as Record<string, unknown>
+  if (
+    (record.cache_control as Record<string, unknown> | undefined)?.type === "ephemeral" ||
+    (record.cacheControl as Record<string, unknown> | undefined)?.type === "ephemeral"
+  ) {
+    return true
+  }
+
+  return Object.values(record).some(hasCacheBreakpoint)
+}
+
+export function TokensRoutes() {
+  return new Hono().post(
+    "/count",
+    describeRoute({
+      summary: "Count prompt tokens",
+      description: "Estimate prompt token usage for messages, system prompt, and tool definitions.",
+      operationId: "tokens.count",
+      responses: {
+        200: {
+          description: "Estimated token counts",
+          content: {
+            "application/json": {
+              schema: resolver(CountTokensResponse),
+            },
+          },
+        },
+      },
+    }),
+    validator("json", CountTokensBody),
+    async (c) => {
+      const { model: modelRef, system, messages, tools } = c.req.valid("json")
+      const resolved = await resolveModelAndProvider(modelRef).catch(() => null)
+      if (resolved && resolved.model.providerID === "anthropic") {
+        const providerCount = await countTokensViaAnthropic({
+          model: resolved.model,
+          provider: resolved.provider,
+          system,
+          messages,
+          tools,
+        }).catch(() => null)
+        if (providerCount) return c.json(providerCount)
+      }
+      if (resolved && resolved.model.providerID === "google") {
+        const providerCount = await countTokensViaGoogle({
+          model: resolved.model,
+          provider: resolved.provider,
+          system,
+          messages,
+        }).catch(() => null)
+        if (providerCount) return c.json(providerCount)
+      }
+
+      if (resolved && ["@ai-sdk/openai", "@ai-sdk/openai-compatible"].includes(resolved.model.api.npm)) {
+        return c.json(
+          countTokensViaOpenAIEncoding({
+            model: resolved.model,
+            system,
+            messages,
+            tools,
+          }),
+        )
+      }
+
+      const input_tokens = approximateTokenCount({
+        model: resolved?.model,
+        system,
+        messages,
+        tools,
+      })
+      const cacheAware = hasCacheBreakpoint(messages) || hasCacheBreakpoint(system)
+      return c.json({
+        input_tokens,
+        ...(cacheAware ? { cache_read_tokens: 0, cache_write_tokens: 0 } : {}),
+      })
+    },
+  )
+}

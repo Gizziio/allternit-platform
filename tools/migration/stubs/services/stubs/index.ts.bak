@@ -1,0 +1,129 @@
+// services/stubs/orchestrator.stub.ts
+import type { Orchestrator, Service, ServiceInfo, ServiceStatus, Task, TaskScheduler, TaskResult, TaskFilter } from '../contracts/orchestration';
+
+export class StubOrchestrator implements Orchestrator {
+  private services: Map<string, Service> = new Map();
+
+  async registerService(service: Service): Promise<void> {
+    console.log(`[STUB] Registering service: ${service.getConfig().name}`);
+    this.services.set(service.getConfig().name, service);
+  }
+
+  async startService(name: string): Promise<void> {
+    console.log(`[STUB] Starting service: ${name}`);
+    const service = this.services.get(name);
+    if (service) {
+      await service.start();
+    }
+  }
+
+  async stopService(name: string): Promise<void> {
+    console.log(`[STUB] Stopping service: ${name}`);
+    const service = this.services.get(name);
+    if (service) {
+      await service.stop();
+    }
+  }
+
+  async listServices(): Promise<ServiceInfo[]> {
+    console.log('[STUB] Listing services');
+    return Array.from(this.services.entries()).map(([name, service]) => ({
+      name,
+      status: service.getStatus(),
+      endpoint: `http://localhost:stub-${name}`,
+      dependencies: service.getConfig().dependencies
+    }));
+  }
+
+  async getServiceStatus(name: string): Promise<ServiceStatus> {
+    console.log(`[STUB] Getting service status: ${name}`);
+    const service = this.services.get(name);
+    return service ? service.getStatus() : {
+      name,
+      status: 'stopped',
+      uptime: 0,
+      health: 'unhealthy',
+      error: 'Service not found'
+    };
+  }
+}
+
+// services/stubs/task-scheduler.stub.ts
+export class StubTaskScheduler implements TaskScheduler {
+  async scheduleTask(task: Task): Promise<string> {
+    console.log(`[STUB] Scheduling task: ${task.title}`);
+    return task.id || `task-${Date.now()}`;
+  }
+
+  async cancelTask(taskId: string): Promise<boolean> {
+    console.log(`[STUB] Canceling task: ${taskId}`);
+    return true;
+  }
+
+  async getTask(taskId: string): Promise<Task | null> {
+    console.log(`[STUB] Getting task: ${taskId}`);
+    return {
+      id: taskId,
+      title: 'Stub Task',
+      description: 'This is a stub task',
+      status: 'pending',
+      priority: 'normal',
+      createdAt: new Date(),
+      dependencies: [],
+      resources: { cpu: 1, memory: 1024, storage: 100, network: 'normal' },
+      context: {}
+    };
+  }
+
+  async listTasks(filter?: TaskFilter): Promise<Task[]> {
+    console.log('[STUB] Listing tasks with filter:', filter);
+    return [
+      {
+        id: 'stub-task-1',
+        title: 'Sample Stub Task',
+        description: 'This is a sample stub task',
+        status: 'pending',
+        priority: 'normal',
+        createdAt: new Date(),
+        dependencies: [],
+        resources: { cpu: 1, memory: 1024, storage: 100, network: 'normal' },
+        context: {}
+      }
+    ];
+  }
+
+  async executeTask(taskId: string): Promise<TaskResult> {
+    console.log(`[STUB] Executing task: ${taskId}`);
+    return {
+      taskId,
+      status: 'success',
+      output: '[MOCK] Task executed successfully',
+      executionTimeMs: 1000,
+      resourcesUsed: { cpu: 0.5, memoryMb: 512, networkBytes: 1024 }
+    };
+  }
+}
+
+// services/stubs/gateway.stub.ts
+export class StubGatewayService {
+  async startGateway(config: any): Promise<void> {
+    console.log('[STUB] Starting gateway with config:', config);
+  }
+
+  async stopGateway(): Promise<void> {
+    console.log('[STUB] Stopping gateway');
+  }
+
+  async registerEndpoint(endpoint: string, handler: Function): Promise<void> {
+    console.log(`[STUB] Registering endpoint: ${endpoint}`);
+  }
+
+  async getStatus(): Promise<any> {
+    return {
+      status: 'running',
+      uptime: 0,
+      connections: 0,
+      endpoints: 0
+    };
+  }
+}

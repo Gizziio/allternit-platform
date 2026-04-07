@@ -1,0 +1,29 @@
+/**
+ * Commands Registry
+ */
+
+import type { Tool } from './runtime/tools/Tool.js'
+
+export interface Command {
+  name: string
+  description: string
+  execute(args: string[]): Promise<void>
+}
+
+const commands: Map<string, Command> = new Map()
+
+export function registerCommand(command: Command): void {
+  commands.set(command.name, command)
+}
+
+export function getCommand(name: string): Command | undefined {
+  return commands.get(name)
+}
+
+export function getCommands(): Command[] {
+  return Array.from(commands.values())
+}
+
+export function getSlashCommandToolSkills(): Tool[] {
+  return []
+}

@@ -1,0 +1,84 @@
+[package]
+name = "allternit-node"
+version = "0.1.0"
+edition = "2021"
+authors = ["A2R Team <team@allternit.com>"]
+license = "MIT OR Apache-2.0"
+description = "A2R Node Agent - runs on user VPS to connect to control plane"
+
+[[bin]]
+name = "allternit-node"
+path = "src/main.rs"
+
+[[bin]]
+name = "test-server"
+path = "src/test_server.rs"
+
+[dependencies]
+# Protocol
+allternit-node-protocol = { path = "../../../platform/protocols/allternit-protocol" }
+
+# Async runtime
+tokio = { version = "1.35", features = ["full"] }
+tokio-util = { version = "0.7", features = ["codec"] }
+futures = "0.3"
+async-trait = "0.1"
+
+# WebSocket
+tokio-tungstenite = "0.21"
+tungstenite = "0.21"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+
+# Logging & tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# UUIDs
+uuid = { version = "1.6", features = ["v4", "serde"] }
+
+# Docker client
+bollard = { workspace = true }
+
+# PTY support
+portable-pty = "0.8"
+
+# Configuration
+config = "0.14"
+
+# CLI
+clap = { version = "4.4", features = ["derive"] }
+
+# System info
+sysinfo = "0.30"
+
+# Random
+rand = "0.8"
+
+# URL parsing
+url = "2.5"
+
+# Retry logic
+backoff = { version = "0.4", features = ["tokio"] }
+
+# HTTP client/server
+reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
+axum = { version = "0.7", features = ["ws"] }
+tower = { version = "0.5" }
+gethostname = "1.1.0"
+semver = "1.0.27"
+mime_guess = "2.0"
+
+[dev-dependencies]
+tokio-test = "0.4"
+wiremock = "0.6"

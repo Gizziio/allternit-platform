@@ -1,0 +1,177 @@
+/**
+ * Bash hook compatibility shim.
+ *
+ * Translates .claude-plugin/ hooks/hooks.json entries (bash/python scripts)
+ * into gizzi-code TypeScript Hooks.
+ *
+ * Hook communication protocol (stdin/stdout JSON, identical to Claude Code):
+ *   stdin:  { tool_name, tool_input, session_id, hook_event_name }
+ *   stdout: { decision?: "allow"|"deny"|"block", reason?: string,
+ *             output?: string }  // non-zero exit = block
+ */
+
+import type { Hooks } from "@allternit/plugin"
+import { Log } from "@/shared/util/log"
+import type { HooksConfig, HookEntry, HookMatcher } from "./types"
+
+const log = Log.create({ service: "plugin.claude.hooks" })
+
+/** Map from Claude Code hook event names → gizzi-code hook trigger names */
+const EVENT_MAP = {
+  PreToolUse: "tool.execute.before",
+  PostToolUse: "tool.execute.after",
+} as const
+
+// ── Bash script runner ────────────────────────────────────────────────────────
+
+async function runScript(
+  entry: HookEntry,
+  inputPayload: Record<string, unknown>,
+  timeoutMs = 30_000,
+): Promise<{ blocked: boolean; reason?: string; output?: string }> {
+  const command = entry.command
+  const timeout = entry.timeout ? entry.timeout * 1000 : timeoutMs
+
+  try {
+    const proc = Bun.spawn({
+      cmd: ["sh", "-c", command],
+      stdin: "pipe",
+      stdout: "pipe",
+      stderr: "pipe",
+      env: { ...process.env },
+    })
+
+    const inputJson = JSON.stringify(inputPayload) + "\n"
+    proc.stdin.write(inputJson)
+    proc.stdin.end()
+
+    const timer = setTimeout(() => {
+      try { proc.kill() } catch {}
+    }, timeout)
+
+    const [exitCode, stdoutBuf, stderrBuf] = await Promise.all([
+      proc.exited,
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text(),
+    ])
+    clearTimeout(timer)
+
+    if (stderrBuf.trim()) {
+      log.warn("hook script stderr", { command, stderr: stderrBuf.slice(0, 500) })
+    }
+
+    const stdout = stdoutBuf.trim()
+
+    // Non-zero exit = block
+    if (exitCode !== 0) {
+      return { blocked: true, reason: stdout || `Hook exited with code ${exitCode}` }
+    }
+
+    // Parse stdout as JSON if present
+    if (stdout) {
+      try {
+        const parsed = JSON.parse(stdout) as {
+          decision?: "allow" | "deny" | "block"
+          reason?: string
+          output?: string
+        }
+        const blocked = parsed.decision === "deny" || parsed.decision === "block"
+        return { blocked, reason: parsed.reason, output: parsed.output }
+      } catch {
+        // stdout wasn't JSON — treat as informational output, not a block
+        return { blocked: false, output: stdout }
+      }
+    }
+
+    return { blocked: false }
+  } catch (e) {
+    log.error("hook script failed to spawn", { command, error: e })
+    return { blocked: false }
+  }
+}
+
+// ── Matcher ───────────────────────────────────────────────────────────────────
+
+function toolMatches(toolName: string, matcher: string | undefined): boolean {
+  if (!matcher) return true
+  // Matcher is pipe-separated patterns, e.g. "Edit|Write|MultiEdit"
+  return matcher.split("|").some((pattern) => {
+    const p = pattern.trim()
+    if (p.endsWith("*")) return toolName.startsWith(p.slice(0, -1))
+    return toolName === p
+  })
+}
+
+// ── Build TypeScript Hooks from HooksConfig ───────────────────────────────────
+
+export function buildHooks(config: HooksConfig, pluginRoot: string, pluginName: string): Partial<Hooks> {
+  const hooks: Partial<Hooks> = {}
+
+  const preHooks = config.hooks.PreToolUse ?? []
+  const postHooks = config.hooks.PostToolUse ?? []
+
+  if (preHooks.length > 0) {
+    hooks["tool.execute.before"] = async (input: any, output: any) => {
+      const payload = {
+        hook_event_name: "PreToolUse",
+        tool_name: input.tool ?? input.toolID ?? "",
+        tool_input: output?.args ?? {},
+        session_id: input.sessionID ?? "",
+        plugin_root: pluginRoot,
+      }
+
+      for (const matcher of preHooks) {
+        if (!toolMatches(payload.tool_name, matcher.matcher)) continue
+        for (const entry of matcher.hooks) {
+          const result = await runScript(
+            { ...entry, command: resolveCommand(entry.command, pluginRoot) },
+            payload,
+          )
+          if (result.blocked) {
+            log.info("hook blocked tool use", { plugin: pluginName, tool: payload.tool_name, reason: result.reason })
+            // Mutate output to signal block — gizzi-code's trigger() respects this
+            if (output && typeof output === "object") {
+              (output as any).__blocked = true
+              ;(output as any).__blockedReason = result.reason ?? `Blocked by plugin ${pluginName}`
+            }
+            return
+          }
+        }
+      }
+    }
+  }
+
+  if (postHooks.length > 0) {
+    hooks["tool.execute.after"] = async (input: any, output: any) => {
+      const payload = {
+        hook_event_name: "PostToolUse",
+        tool_name: input.tool ?? input.toolID ?? "",
+        tool_response: output ?? {},
+        session_id: input.sessionID ?? "",
+        plugin_root: pluginRoot,
+      }
+
+      for (const matcher of postHooks) {
+        if (!toolMatches(payload.tool_name, matcher.matcher)) continue
+        for (const entry of matcher.hooks) {
+          await runScript(
+            { ...entry, command: resolveCommand(entry.command, pluginRoot) },
+            payload,
+          )
+        }
+      }
+    }
+  }
+
+  return hooks
+}
+
+// ── Resolve ${CLAUDE_PLUGIN_ROOT} in command strings ─────────────────────────
+
+function resolveCommand(command: string, root: string): string {
+  return command
+    .replace(/\$\{CLAUDE_PLUGIN_ROOT\}/g, root)
+    .replace(/\$CLAUDE_PLUGIN_ROOT/g, root)
+    .replace(/\$\{CLAUDE_PROJECT_DIR\}/g, process.cwd())
+    .replace(/\$CLAUDE_PROJECT_DIR/g, process.cwd())
+}

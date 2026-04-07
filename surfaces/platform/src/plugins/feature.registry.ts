@@ -6,6 +6,7 @@
  */
 
 import type { FeaturePlugin, PluginCategory, RailSection, PluginViewEntry } from './feature.types';
+import { OFFICE_PLUGINS } from './office-plugins';
 
 // Re-export types for convenience
 export type { FeaturePlugin, PluginCategory, RailSection, PluginViewEntry };
@@ -313,6 +314,7 @@ export const FEATURE_PLUGIN_REGISTRY: FeaturePlugin[] = [
     builtin: true,
     views: [],
   },
+  ...OFFICE_PLUGINS,
 ];
 
 /**

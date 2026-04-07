@@ -11,9 +11,9 @@ import {
   loadAdapterSettings, 
   saveAdapterSettings,
   getCurrentAdapter,
-} from '@a2r/avatar-adapters';
-import type { AdapterSettings, AvatarAdapter } from '@a2r/avatar-adapters/types';
-import { Mood, VisualState } from '@a2r/visual-state/types';
+} from '@allternit/avatar-adapters';
+import type { AdapterSettings, AvatarAdapter } from '@allternit/avatar-adapters/types';
+import { Mood, VisualState } from '@allternit/visual-state/types';
 
 export interface AvatarSettingsProps {
   /** On settings change */

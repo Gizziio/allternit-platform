@@ -3,7 +3,7 @@
  * 
  * Icons for navigation, wayfinding, and directional UI elements.
  * 
- * @module @a2r/platform/icons/categories/navigation
+ * @module @allternit/platform/icons/categories/navigation
  */
 
 export const navigationIcons = [

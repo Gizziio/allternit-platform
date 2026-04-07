@@ -1,0 +1,396 @@
+import { createComponent as _$createComponent } from "@opentui/solid";
+import { effect as _$effect } from "@opentui/solid";
+import { insert as _$insert } from "@opentui/solid";
+import { memo as _$memo } from "@opentui/solid";
+import { createTextNode as _$createTextNode } from "@opentui/solid";
+import { insertNode as _$insertNode } from "@opentui/solid";
+import { setProp as _$setProp } from "@opentui/solid";
+import { createElement as _$createElement } from "@opentui/solid";
+/**
+ * Workspace Dialog
+ *
+ * Shows the active GizziClaw/.openclaw workspace identity and lets users:
+ *  - View current agent name, emoji, vibe, workspace path
+ *  - Initialize a new .gizzi/ workspace
+ *  - Import from an existing .openclaw/ installation
+ */
+
+import { createMemo, createSignal, Show, For } from "solid-js";
+import { useDialog } from "@/cli/ui/tui/ui/dialog";
+import { useSync } from "@/cli/ui/tui/context/sync";
+import { useTheme } from "@/cli/ui/tui/context/theme";
+import { useSDK } from "@/cli/ui/tui/context/sdk";
+import { useToast } from "@/cli/ui/tui/ui/toast";
+import { RGBA, TextAttributes } from "@opentui/core";
+import { useKeybind } from "@/cli/ui/tui/context/keybind";
+import { Log } from "@/shared/util/log";
+const log = Log.create({
+  service: "dialog-workspace"
+});
+export function DialogWorkspace() {
+  const dialog = useDialog();
+  const sync = useSync();
+  const {
+    theme
+  } = useTheme();
+  const sdk = useSDK();
+  const toast = useToast();
+  const keybind = useKeybind();
+  const workspace = createMemo(() => sync.data.workspace);
+  const [busy, setBusy] = createSignal(false);
+  const [result, setResult] = createSignal();
+  const accentColor = RGBA.fromInts(212, 176, 140);
+  const successColor = RGBA.fromInts(134, 239, 172);
+  const errorColor = RGBA.fromInts(248, 113, 113);
+  const mutedColor = () => theme.textMuted;
+  async function runAction(action) {
+    if (busy()) return;
+    if (action.type === "close") {
+      dialog.clear();
+      return;
+    }
+    setBusy(true);
+    setResult(undefined);
+    try {
+      if (action.type === "init") {
+        sdk.requireData(await sdk.client.workspace.init({
+          body: {
+            format: action.format ?? "flat"
+          }
+        }), "Failed to initialize workspace");
+        const label = action.format === "layered" ? "5-layer A2R workspace" : "flat workspace";
+        setResult(`${label} initialized at ~/.gizzi/`);
+        toast.show({
+          variant: "success",
+          message: `GizziClaw ${label} initialized`,
+          duration: 3000
+        });
+      } else if (action.type === "import") {
+        const data = sdk.requireData(await sdk.client.workspace.import({
+          body: {}
+        }), "Failed to import workspace");
+        const imported = Array.isArray(data?.imported) ? data.imported : [];
+        setResult(`Imported: ${imported.join(", ") || "nothing new"}`);
+        toast.show({
+          variant: "success",
+          message: `Imported ${imported.length} file(s) from OpenClaw`,
+          duration: 3000
+        });
+      }
+      // Refresh workspace state via instance sync
+      await sdk.client.instance.sync().catch(() => {});
+    } catch (e) {
+      const msg = e?.message ?? "Unknown error";
+      setResult(`Error: ${msg}`);
+      log.error("workspace action failed", {
+        action: action.type,
+        error: msg
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+  const menuItems = createMemo(() => {
+    const items = [];
+    if (!workspace()) {
+      items.push({
+        label: "Initialize workspace (5-layer)",
+        description: "Create ~/.gizzi/ with full A2R workspace: L1-COGNITIVE, L2-IDENTITY, L3-GOVERNANCE, L4-SKILLS",
+        action: {
+          type: "init",
+          format: "layered"
+        }
+      });
+      items.push({
+        label: "Initialize workspace (flat)",
+        description: "Create ~/.gizzi/ with SOUL.md, IDENTITY.md, USER.md, MEMORY.md — OpenClaw-compatible",
+        action: {
+          type: "init",
+          format: "flat"
+        }
+      });
+      items.push({
+        label: "Import from OpenClaw",
+        description: "Copy workspace files from ~/.openclaw/workspace/",
+        action: {
+          type: "import"
+        }
+      });
+    } else {
+      items.push({
+        label: "Sync from OpenClaw",
+        description: "Re-import changed files from ~/.openclaw/workspace/ (skips existing)",
+        action: {
+          type: "import"
+        }
+      });
+    }
+    items.push({
+      label: "Close",
+      description: "Dismiss this dialog",
+      action: {
+        type: "close"
+      }
+    });
+    return items;
+  });
+  const [selected, setSelected] = createSignal(0);
+  function handleKey(evt) {
+    if (keybind.match("up", evt) || evt.key === "ArrowUp") {
+      setSelected(i => Math.max(0, i - 1));
+      evt.preventDefault();
+    } else if (keybind.match("down", evt) || evt.key === "ArrowDown") {
+      setSelected(i => Math.min(menuItems().length - 1, i + 1));
+      evt.preventDefault();
+    } else if (evt.key === "Enter" || evt.key === " ") {
+      const item = menuItems()[selected()];
+      if (item) runAction(item.action);
+      evt.preventDefault();
+    } else if (evt.key === "Escape") {
+      dialog.clear();
+      evt.preventDefault();
+    }
+  }
+  return (() => {
+    var _el$ = _$createElement("box"),
+      _el$2 = _$createElement("box"),
+      _el$3 = _$createElement("text"),
+      _el$5 = _$createElement("box"),
+      _el$7 = _$createElement("box"),
+      _el$8 = _$createElement("box"),
+      _el$1 = _$createElement("box"),
+      _el$10 = _$createElement("text");
+    _$insertNode(_el$, _el$2);
+    _$insertNode(_el$, _el$7);
+    _$insertNode(_el$, _el$8);
+    _$insertNode(_el$, _el$1);
+    _$setProp(_el$, "flexDirection", "column");
+    _$setProp(_el$, "width", 60);
+    _$setProp(_el$, "maxWidth", "90%");
+    _$setProp(_el$, "borderStyle", "single");
+    _$setProp(_el$, "borderColor", accentColor);
+    _$setProp(_el$, "onKeyDown", handleKey);
+    _$insertNode(_el$2, _el$3);
+    _$insertNode(_el$2, _el$5);
+    _$setProp(_el$2, "paddingX", 2);
+    _$setProp(_el$2, "paddingY", 1);
+    _$setProp(_el$2, "borderStyle", "single");
+    _$setProp(_el$2, "flexDirection", "row");
+    _$setProp(_el$2, "gap", 1);
+    _$insertNode(_el$3, _$createTextNode(`GizziClaw Workspace`));
+    _$setProp(_el$3, "fg", accentColor);
+    _$setProp(_el$5, "flexGrow", 1);
+    _$insert(_el$2, _$createComponent(Show, {
+      get when() {
+        return workspace();
+      },
+      get children() {
+        var _el$6 = _$createElement("text");
+        _$insert(_el$6, (() => {
+          var _c$ = _$memo(() => workspace().type === "openclaw");
+          return () => _c$() ? "openclaw" : workspace().layered ? "gizzi · 5-layer" : "gizzi · flat";
+        })());
+        _$effect(_$p => _$setProp(_el$6, "fg", mutedColor(), _$p));
+        return _el$6;
+      }
+    }), null);
+    _$insert(_el$, _$createComponent(Show, {
+      get when() {
+        return workspace();
+      },
+      get fallback() {
+        return (() => {
+          var _el$12 = _$createElement("box"),
+            _el$13 = _$createElement("text");
+          _$insertNode(_el$12, _el$13);
+          _$setProp(_el$12, "paddingX", 2);
+          _$setProp(_el$12, "paddingTop", 1);
+          _$insertNode(_el$13, _$createTextNode(`No workspace detected`));
+          _$effect(_$p => _$setProp(_el$13, "fg", mutedColor(), _$p));
+          return _el$12;
+        })();
+      },
+      children: ws => (() => {
+        var _el$15 = _$createElement("box"),
+          _el$16 = _$createElement("box"),
+          _el$18 = _$createElement("text"),
+          _el$20 = _$createElement("box"),
+          _el$27 = _$createElement("box"),
+          _el$28 = _$createElement("text");
+        _$insertNode(_el$15, _el$16);
+        _$insertNode(_el$15, _el$20);
+        _$setProp(_el$15, "flexDirection", "column");
+        _$setProp(_el$15, "paddingX", 2);
+        _$setProp(_el$15, "paddingTop", 1);
+        _$setProp(_el$15, "gap", 0);
+        _$insertNode(_el$16, _el$18);
+        _$setProp(_el$16, "flexDirection", "row");
+        _$setProp(_el$16, "gap", 1);
+        _$insert(_el$16, _$createComponent(Show, {
+          get when() {
+            return ws().emoji;
+          },
+          get children() {
+            var _el$17 = _$createElement("text");
+            _$setProp(_el$17, "fg", accentColor);
+            _$insert(_el$17, () => ws().emoji);
+            return _el$17;
+          }
+        }), _el$18);
+        _$insert(_el$18, () => ws().name ?? "Gizzi Agent");
+        _$insert(_el$15, _$createComponent(Show, {
+          get when() {
+            return ws().vibe;
+          },
+          get children() {
+            var _el$19 = _$createElement("text");
+            _$insert(_el$19, () => ws().vibe);
+            _$effect(_$p => _$setProp(_el$19, "fg", mutedColor(), _$p));
+            return _el$19;
+          }
+        }), _el$20);
+        _$insertNode(_el$20, _el$27);
+        _$insertNode(_el$20, _el$28);
+        _$setProp(_el$20, "flexDirection", "row");
+        _$setProp(_el$20, "gap", 1);
+        _$setProp(_el$20, "paddingTop", 1);
+        _$insert(_el$20, _$createComponent(Show, {
+          get when() {
+            return ws().hasSoul;
+          },
+          get children() {
+            var _el$21 = _$createElement("text");
+            _$insertNode(_el$21, _$createTextNode(`soul`));
+            _$setProp(_el$21, "fg", successColor);
+            return _el$21;
+          }
+        }), _el$27);
+        _$insert(_el$20, _$createComponent(Show, {
+          get when() {
+            return ws().hasMemory;
+          },
+          get children() {
+            var _el$23 = _$createElement("text");
+            _$insertNode(_el$23, _$createTextNode(`memory`));
+            _$setProp(_el$23, "fg", successColor);
+            return _el$23;
+          }
+        }), _el$27);
+        _$insert(_el$20, _$createComponent(Show, {
+          get when() {
+            return ws().hasBrain;
+          },
+          get children() {
+            var _el$25 = _$createElement("text");
+            _$insertNode(_el$25, _$createTextNode(`brain`));
+            _$setProp(_el$25, "fg", successColor);
+            return _el$25;
+          }
+        }), _el$27);
+        _$setProp(_el$27, "flexGrow", 1);
+        _$insert(_el$28, () => ws().path);
+        _$effect(_p$ => {
+          var _v$5 = theme.text,
+            _v$6 = TextAttributes.BOLD,
+            _v$7 = mutedColor();
+          _v$5 !== _p$.e && (_p$.e = _$setProp(_el$18, "fg", _v$5, _p$.e));
+          _v$6 !== _p$.t && (_p$.t = _$setProp(_el$18, "attributes", _v$6, _p$.t));
+          _v$7 !== _p$.a && (_p$.a = _$setProp(_el$28, "fg", _v$7, _p$.a));
+          return _p$;
+        }, {
+          e: undefined,
+          t: undefined,
+          a: undefined
+        });
+        return _el$15;
+      })()
+    }), _el$7);
+    _$setProp(_el$7, "height", 0);
+    _$setProp(_el$7, "borderStyle", "single");
+    _$setProp(_el$7, "marginY", 1);
+    _$setProp(_el$8, "flexDirection", "column");
+    _$setProp(_el$8, "paddingX", 2);
+    _$setProp(_el$8, "paddingBottom", 1);
+    _$setProp(_el$8, "gap", 0);
+    _$insert(_el$8, _$createComponent(For, {
+      get each() {
+        return menuItems();
+      },
+      children: (item, i) => (() => {
+        var _el$29 = _$createElement("box"),
+          _el$30 = _$createElement("text"),
+          _el$31 = _$createElement("text");
+        _$insertNode(_el$29, _el$30);
+        _$insertNode(_el$29, _el$31);
+        _$setProp(_el$29, "flexDirection", "column");
+        _$setProp(_el$29, "paddingY", 0);
+        _$setProp(_el$29, "paddingX", 1);
+        _$setProp(_el$29, "onMouseUp", () => {
+          setSelected(i());
+          runAction(item.action);
+        });
+        _$setProp(_el$29, "onMouseMove", () => setSelected(i()));
+        _$insert(_el$30, () => selected() === i() ? "› " : "  ", null);
+        _$insert(_el$30, () => item.label, null);
+        _$setProp(_el$31, "paddingLeft", 2);
+        _$insert(_el$31, () => item.description);
+        _$effect(_p$ => {
+          var _v$8 = selected() === i() ? RGBA.fromInts(212, 176, 140, 30) : "transparent",
+            _v$9 = selected() === i() ? accentColor : theme.text,
+            _v$0 = selected() === i() ? TextAttributes.BOLD : undefined,
+            _v$1 = mutedColor();
+          _v$8 !== _p$.e && (_p$.e = _$setProp(_el$29, "backgroundColor", _v$8, _p$.e));
+          _v$9 !== _p$.t && (_p$.t = _$setProp(_el$30, "fg", _v$9, _p$.t));
+          _v$0 !== _p$.a && (_p$.a = _$setProp(_el$30, "attributes", _v$0, _p$.a));
+          _v$1 !== _p$.o && (_p$.o = _$setProp(_el$31, "fg", _v$1, _p$.o));
+          return _p$;
+        }, {
+          e: undefined,
+          t: undefined,
+          a: undefined,
+          o: undefined
+        });
+        return _el$29;
+      })()
+    }));
+    _$insert(_el$, _$createComponent(Show, {
+      get when() {
+        return result() || busy();
+      },
+      get children() {
+        var _el$9 = _$createElement("box"),
+          _el$0 = _$createElement("text");
+        _$insertNode(_el$9, _el$0);
+        _$setProp(_el$9, "paddingX", 2);
+        _$setProp(_el$9, "paddingBottom", 1);
+        _$insert(_el$0, (() => {
+          var _c$2 = _$memo(() => !!busy());
+          return () => _c$2() ? "Working…" : result();
+        })());
+        _$effect(_$p => _$setProp(_el$0, "fg", busy() ? mutedColor() : result()?.startsWith("Error") ? errorColor : successColor, _$p));
+        return _el$9;
+      }
+    }), _el$1);
+    _$insertNode(_el$1, _el$10);
+    _$setProp(_el$1, "paddingX", 2);
+    _$setProp(_el$1, "paddingBottom", 1);
+    _$insertNode(_el$10, _$createTextNode(`↑↓ select enter confirm esc close`));
+    _$effect(_p$ => {
+      var _v$ = RGBA.fromInts(212, 176, 140, 60),
+        _v$2 = TextAttributes.BOLD,
+        _v$3 = RGBA.fromInts(212, 176, 140, 40),
+        _v$4 = mutedColor();
+      _v$ !== _p$.e && (_p$.e = _$setProp(_el$2, "borderColor", _v$, _p$.e));
+      _v$2 !== _p$.t && (_p$.t = _$setProp(_el$3, "attributes", _v$2, _p$.t));
+      _v$3 !== _p$.a && (_p$.a = _$setProp(_el$7, "borderColor", _v$3, _p$.a));
+      _v$4 !== _p$.o && (_p$.o = _$setProp(_el$10, "fg", _v$4, _p$.o));
+      return _p$;
+    }, {
+      e: undefined,
+      t: undefined,
+      a: undefined,
+      o: undefined
+    });
+    return _el$;
+  })();
+}

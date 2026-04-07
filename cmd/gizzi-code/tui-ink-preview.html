@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gizzi Code - Ink TUI Preview</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #0a0c10;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+            color: #c9d1d9;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .terminal {
+            width: 1000px;
+            height: 750px;
+            background: #161b22;
+            border-radius: 12px;
+            border: 1px solid #30363d;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.6);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .terminal-header {
+            background: #0d1117;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid #30363d;
+        }
+        
+        .terminal-btn {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+        }
+        
+        .btn-red { background: #ff5f56; }
+        .btn-yellow { background: #ffbd2e; }
+        .btn-green { background: #27c93f; }
+        
+        .terminal-title {
+            flex: 1;
+            text-align: center;
+            color: #8b949e;
+            font-size: 13px;
+        }
+        
+        .ink-badge {
+            background: #61dafb;
+            color: #000;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        
+        .terminal-body {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            line-height: 1.6;
+        }
+        
+        /* ========== PHASE 1: BOOT SEQUENCE ========== */
+        .phase-boot {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+        }
+        
+        .logo {
+            color: #d4b08c;
+            font-size: 14px;
+            line-height: 1.4;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .boot-sequence {
+            width: 100%;
+            max-width: 500px;
+            font-size: 13px;
+        }
+        
+        .boot-line {
+            margin: 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .boot-check { color: #3fb950; }
+        .boot-loading { color: #c9a000; }
+        .boot-pending { color: #6e7681; }
+        
+        .harness-banner {
+            background: rgba(212, 176, 140, 0.15);
+            border: 1px solid #d4b08c;
+            border-radius: 6px;
+            padding: 10px 16px;
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .harness-badge {
+            background: #d4b08c;
+            color: #0d1117;
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        
+        /* ========== PHASE 2: DISCRETION SCREEN ========== */
+        .phase-discretion {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+        }
+        
+        .mascot {
+            font-size: 80px;
+            margin-bottom: 10px;
+            animation: bounce 2s ease infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .welcome-title {
+            color: #d4b08c;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        
+        .access-box {
+            background: #0d1117;
+            border: 1px solid #d4b08c;
+            border-radius: 10px;
+            padding: 24px 32px;
+            width: 100%;
+            max-width: 600px;
+        }
+        
+        .access-header {
+            text-align: center;
+            color: #d4b08c;
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #30363d;
+        }
+        
+        .project-info {
+            text-align: center;
+            margin-bottom: 16px;
+        }
+        
+        .project-label {
+            color: #8b949e;
+            font-size: 12px;
+        }
+        
+        .project-path {
+            color: #c9d1d9;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+        
+        .access-desc {
+            border-left: 3px solid #d4b08c;
+            padding-left: 12px;
+            margin: 16px 0;
+            font-size: 13px;
+            color: #8b949e;
+            line-height: 1.6;
+        }
+        
+        .warning-box {
+            background: rgba(200, 160, 80, 0.1);
+            border: 1px solid #c8a050;
+            border-radius: 6px;
+            padding: 12px;
+            margin: 16px 0;
+            font-size: 12px;
+            color: #c8a050;
+            font-style: italic;
+        }
+        
+        .action-list {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .action-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+        }
+        
+        .action-item.selected {
+            background: rgba(212, 176, 140, 0.1);
+            border-color: #d4b08c;
+        }
+        
+        .action-bullet {
+            color: #d4b08c;
+            font-weight: bold;
+        }
+        
+        .action-item.selected .action-bullet {
+            color: #d4b08c;
+        }
+        
+        .action-content {
+            flex: 1;
+        }
+        
+        .action-title {
+            font-size: 14px;
+            color: #c9d1d9;
+            font-weight: 600;
+        }
+        
+        .action-item.selected .action-title {
+            color: #fff;
+        }
+        
+        .action-desc {
+            font-size: 12px;
+            color: #8b949e;
+            margin-top: 2px;
+        }
+        
+        .action-cmd {
+            background: #21262d;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            color: #8b949e;
+        }
+        
+        /* ========== PHASE 3: REPL ========== */
+        .phase-repl {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        
+        .repl-header {
+            border: 1px solid #30363d;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .repl-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .message {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        
+        .message-user .message-header {
+            color: #58a6ff;
+        }
+        
+        .message-assistant .message-header {
+            color: #d4b08c;
+        }
+        
+        .message-header {
+            font-weight: bold;
+            font-size: 13px;
+        }
+        
+        .message-content {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #c9d1d9;
+        }
+        
+        .harness-indicator {
+            background: #d4b08c;
+            color: #000;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        
+        .thinking {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #8b949e;
+        }
+        
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .repl-input {
+            border: 1px solid #30363d;
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .input-prompt {
+            color: #d4b08c;
+            font-weight: bold;
+        }
+        
+        .input-text {
+            color: #c9d1d9;
+        }
+        
+        .cursor {
+            display: inline-block;
+            width: 10px;
+            height: 18px;
+            background: #58a6ff;
+            animation: blink 1s infinite;
+            vertical-align: middle;
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+        
+        .repl-footer {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 12px;
+            font-size: 11px;
+            color: #8b949e;
+        }
+        
+        .kbd {
+            background: #21262d;
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid #30363d;
+            font-family: inherit;
+            font-size: 10px;
+        }
+        
+        /* Footer */
+        .footer {
+            background: #0d1117;
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid #30363d;
+            font-size: 11px;
+            color: #8b949e;
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal">
+        <div class="terminal-header">
+            <div class="terminal-btn btn-red"></div>
+            <div class="terminal-btn btn-yellow"></div>
+            <div class="terminal-btn btn-green"></div>
+            <div class="terminal-title">Gizzi Code — Ink TUI (React)</div>
+            <span class="ink-badge">INK</span>
+        </div>
+        
+        <div class="terminal-body">
+            <!-- PHASE 1: BOOT SEQUENCE -->
+            <div class="phase-boot">
+                <div class="logo">
+<span style="color: #d4b08c;">▄▄</span>        <span style="color: #d4b08c;">▄████▄  ▄█  ██████  ██████  ▄█  ▄█  ████▄</span><br>
+<span style="color: #d4b08c;">▄▄▄  ▄▄▄</span>     <span style="color: #d4b08c;">██  ▀▀  ██     ▄█▀</span>     <span style="color: #d4b08c;">▄█▀  ██  ██  ██  ██</span><br>
+<span style="color: #d4b08c;">▄████████▄</span>   <span style="color: #d4b08c;">██  ▄▄  ██   ▄█▀</span>     <span style="color: #d4b08c;">▄█▀   ██  ██  ██  ██</span><br>
+<span style="color: #d4b08c;">█  ●    ●  █</span>   <span style="color: #d4b08c;">▀████▀  ▀█  ██████  ██████  ▀█  ▀█  ████▀</span><br>
+<span style="color: #d4b08c;">█  A : / / █</span><br>
+<span style="color: #d4b08c;">▀████████▀</span><br>
+<span style="color: #d4b08c;">█ █  █ █</span><br>
+<span style="color: #d4b08c;">▀ ▀  ▀ ▀</span>
+                </div>
+                
+                <div style="margin-top: 20px; text-align: center;">
+                    <div style="color: #58a6ff; font-size: 14px;">Starting Gizzi...</div>
+                    <div style="color: #6e7681; font-size: 12px; margin-top: 8px;">
+                        Using <span style="color: #d4b08c; font-weight: bold;">Allternit Harness</span> (BYOK)
+                    </div>
+                </div>
+            </div>
+            
+            <!-- PHASE 2: DISCRETION (uncomment to view) -->
+            <!--
+            <div class="phase-discretion">
+                <div class="mascot">🦀</div>
+                <div class="welcome-title">Welcome to Gizzi Code</div>
+                
+                <div class="access-box">
+                    <div class="access-header">WORKSPACE ACCESS GRANTED</div>
+                    
+                    <div class="project-info">
+                        <div class="project-label">Project Root</div>
+                        <div class="project-path">/Users/macbook/project</div>
+                    </div>
+                    
+                    <div class="access-desc">
+                        Gizzi Code now has access to this directory. It can read, 
+                        modify, and create files to assist with your engineering tasks.
+                    </div>
+                    
+                    <div class="warning-box">
+                        ⚠ Always review destructive actions before confirming.
+                    </div>
+                    
+                    <div class="action-list">
+                        <div class="action-item selected">
+                            <span class="action-bullet">●</span>
+                            <div class="action-content">
+                                <div class="action-title">Resume Session</div>
+                                <div class="action-desc">Continue your last active conversation</div>
+                            </div>
+                            <span class="action-cmd">/resume</span>
+                        </div>
+                        
+                        <div class="action-item">
+                            <span class="action-bullet">○</span>
+                            <div class="action-content">
+                                <div class="action-title">Code Mode</div>
+                                <div class="action-desc">Enter optimized environment for engineering</div>
+                            </div>
+                            <span class="action-cmd">code</span>
+                        </div>
+                        
+                        <div class="action-item">
+                            <span class="action-bullet">○</span>
+                            <div class="action-content">
+                                <div class="action-title">Cowork Mode</div>
+                                <div class="action-desc">Multi-agent collaborative workspace</div>
+                            </div>
+                            <span class="action-cmd">cowork</span>
+                        </div>
+                        
+                        <div class="action-item">
+                            <span class="action-bullet">○</span>
+                            <div class="action-content">
+                                <div class="action-title">New Session</div>
+                                <div class="action-desc">Start a fresh interaction</div>
+                            </div>
+                            <span class="action-cmd">/new</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            -->
+            
+            <!-- PHASE 3: REPL (uncomment to view) -->
+            <!--
+            <div class="phase-repl">
+                <div class="repl-header">
+                    <span style="color: #d4b08c;">⏺</span>
+                    <span>Gizzi Code</span>
+                    <div style="flex: 1;"></div>
+                    <span class="harness-indicator">HARNESS</span>
+                    <div style="flex: 1;"></div>
+                    <span style="color: #8b949e;">Session: abc123de</span>
+                </div>
+                
+                <div class="repl-messages">
+                    <div class="message message-user">
+                        <div class="message-header">👤 You</div>
+                        <div class="message-content">Explain how the Allternit Harness works</div>
+                    </div>
+                    
+                    <div class="thinking">
+                        <span class="spinner">◐</span>
+                        <span>Assistant is thinking...</span>
+                    </div>
+                    
+                    <div class="message message-assistant">
+                        <div class="message-header">⏺ Assistant</div>
+                        <div class="message-content">
+                            The Allternit Harness is a unified AI provider interface with automatic system prompt injection. It routes requests through BYOK, Cloud, Local, or Subprocess modes.
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="repl-input">
+                    <span class="input-prompt">❯</span>
+                    <span class="input-text">How do I </span>
+                    <span class="cursor"></span>
+                </div>
+                
+                <div class="repl-footer">
+                    <span>ESC Exit • Enter Send</span>
+                    <span>Harness: BYOK</span>
+                </div>
+            </div>
+            -->
+        </div>
+        
+        <div class="footer">
+            <div>
+                <span style="margin-right: 16px;"><span class="kbd">↑</span> <span class="kbd">↓</span> Navigate</span>
+                <span><span class="kbd">Enter</span> Select</span>
+            </div>
+            <div>
+                <span style="color: #61dafb;">●</span> Ink Renderer | Harness: BYOK
+            </div>
+        </div>
+    </div>
+</body>
+</html>

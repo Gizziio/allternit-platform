@@ -1,0 +1,59 @@
+/**
+ * Canvas Connector
+ *
+ * Stub/placeholder for Canvas LMS API integration.
+ */
+
+export interface CanvasAssignment {
+  id: number;
+  name: string;
+  description?: string;
+  due_at?: string;
+  points_possible?: number;
+  rubric_id?: number;
+  html_url?: string;
+  [key: string]: unknown;
+}
+
+export interface CanvasModule {
+  id: number;
+  name: string;
+  position?: number;
+  [key: string]: unknown;
+}
+
+export interface CanvasExecutionResult {
+  success: boolean;
+  data?: unknown;
+  error?: string;
+  responseData?: Record<string, any>;
+  objectUrl?: string;
+}
+
+export class CanvasConnector {
+  constructor(_config?: Record<string, unknown>) {}
+
+  isConfigured(): boolean {
+    return false;
+  }
+
+  getBaseUrl(): string {
+    return '';
+  }
+
+  async createAssignment(_data: unknown): Promise<CanvasExecutionResult> {
+    return { success: false, error: 'Not implemented' };
+  }
+
+  async listModules(_courseId: string): Promise<CanvasModule[]> {
+    return [];
+  }
+
+  async listAssignments(_courseId: string): Promise<CanvasAssignment[]> {
+    return [];
+  }
+
+  async updateModuleItem(_courseId: string, _moduleId: number, _data: unknown): Promise<CanvasExecutionResult> {
+    return { success: false, error: 'Not implemented' };
+  }
+}

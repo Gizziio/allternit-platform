@@ -1,0 +1,39 @@
+import z from "zod/v4"
+import { Tool } from "@/runtime/tools/builtins/tool"
+import { WebFetchTool } from "@/runtime/tools/builtins/webfetch"
+
+const DESCRIPTION = `Fetch a URL and return normalized text content using the runtime's hardened fetch toolchain.`
+
+export const HostedWebFetchTool = Tool.define("web_fetch", {
+  description: DESCRIPTION,
+  parameters: z.object({
+    url: z.string().url(),
+    max_length: z.number().default(50000),
+  }),
+  async execute(params, ctx) {
+    const fallback = await WebFetchTool.init()
+    const result = await fallback.execute(
+      {
+        url: params.url,
+        format: "text",
+      },
+      ctx,
+    )
+    const content = result.output
+    const truncated = content.length > params.max_length
+    return {
+      title: `Fetched: ${params.url}`,
+      output: JSON.stringify(
+        {
+          url: params.url,
+          content: content.slice(0, params.max_length),
+          fetched_at: new Date().toISOString(),
+          truncated,
+        },
+        null,
+        2,
+      ),
+      metadata: { truncated, sourceLength: content.length, provider: "runtime-webfetch" },
+    }
+  },
+})

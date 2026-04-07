@@ -1,0 +1,701 @@
+/**
+ * Verification API Routes
+ * 
+ * Provides HTTP endpoints for semi-formal verification capabilities.
+ * Uses the unified verification system from @/runtime/loop/verification
+ */
+
+import { Hono } from "hono";
+import { describeRoute, resolver, validator } from "hono-openapi";
+import z from "zod/v4";
+// Define a local helper to get current session context
+function getCurrentSession(): { id: string } | undefined {
+  // In server context, we don't have direct access to session state
+  // Return undefined to trigger fallback behavior
+  return undefined;
+}
+import {
+  VerificationOrchestrator,
+  SemiFormalVerifier,
+  formatCertificate,
+  VerificationStore,
+  quickVerify,
+  type VerificationCertificate,
+  type VerificationMode,
+  type VerificationStrategy,
+} from "@/runtime/loop/verification";
+import { type Plan } from "@/runtime/loop/planner";
+import { type ExecutionReceipt } from "@/runtime/loop/executor";
+import { Log } from "@/shared/util/log";
+import { fail, success } from "@/runtime/server/response";
+import { errors } from "@/runtime/server/error";
+
+const log = Log.create({ service: "server.routes.verification" });
+
+// ============================================================================
+// Request/Response Schemas
+// ============================================================================
+
+const VerifyRequestSchema = z.object({
+  mode: z.enum(["empirical", "semi-formal", "both", "adaptive"]).default("adaptive"),
+  description: z.string().default("Verify code changes"),
+  plan: z.object({
+    steps: z.array(z.object({
+      id: z.string(),
+      toolId: z.string(),
+      args: z.record(z.string(), z.any()).default({}),
+    })),
+  }).default({ steps: [] }),
+  receipts: z.array(z.object({
+    stepId: z.string(),
+    toolId: z.string(),
+    success: z.boolean(),
+    output: z.string(),
+    metadata: z.record(z.string(), z.any()).optional(),
+  })).default([]),
+  context: z.object({
+    patches: z.array(z.object({
+      path: z.string(),
+      content: z.string(),
+    })).optional(),
+    testFiles: z.array(z.string()).optional(),
+    description: z.string().optional(),
+  }).optional(),
+  fallbackOnUncertainty: z.boolean().default(true),
+  minConfidence: z.enum(["high", "medium", "low"]).default("medium"),
+});
+
+const QuickVerifyRequestSchema = z.object({
+  mode: z.enum(["empirical", "semi-formal", "both", "adaptive"]).default("adaptive"),
+  description: z.string(),
+  patches: z.array(z.object({
+    path: z.string(),
+    content: z.string(),
+  })).optional(),
+  testFiles: z.array(z.string()).optional(),
+});
+
+const PatchEquivalenceRequestSchema = z.object({
+  patch1: z.object({
+    path: z.string(),
+    diff: z.string(),
+    description: z.string(),
+  }),
+  patch2: z.object({
+    path: z.string(),
+    diff: z.string(),
+    description: z.string(),
+  }),
+  testContext: z.object({
+    testPatch: z.string().optional(),
+    repositoryContext: z.string(),
+    relevantTests: z.array(z.string()),
+  }),
+});
+
+const CertificateRequestSchema = z.object({
+  task: z.object({
+    type: z.enum(["patch_equivalence", "fault_localization", "code_qa", "general"]),
+    description: z.string(),
+  }),
+  context: z.string(),
+});
+
+const QueryBooleanSchema = z.preprocess((value) => {
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true") return true;
+    if (normalized === "false") return false;
+  }
+  return value;
+}, z.boolean());
+
+const QueryRequestSchema = z.object({
+  sessionId: z.string().optional(),
+  type: z.enum(["patch_equivalence", "fault_localization", "code_qa", "general"]).optional(),
+  passed: QueryBooleanSchema.optional(),
+  confidence: z.enum(["high", "medium", "low"]).optional(),
+  limit: z.coerce.number().default(20),
+  offset: z.coerce.number().default(0),
+});
+
+const VerificationIdParamSchema = z.object({
+  id: z.string(),
+});
+
+const VerificationConfirmRequestSchema = z.object({
+  correct: z.boolean(),
+  confirmedBy: z.string().optional(),
+});
+
+const VerificationSummarySchema = z.object({
+  id: z.string(),
+  sessionId: z.string(),
+  timestamp: z.string(),
+  type: z.enum(["patch_equivalence", "fault_localization", "code_qa", "general", "batch"]),
+  passed: z.boolean(),
+  confidence: z.enum(["high", "medium", "low"]),
+  methodsUsed: z.array(z.string()),
+  confirmed: z.boolean().optional(),
+  tags: z.array(z.string()).optional(),
+});
+
+const VerificationQueryResponseSchema = z.object({
+  count: z.number(),
+  results: z.array(VerificationSummarySchema),
+});
+
+const VerificationConfirmResponseSchema = z.object({
+  message: z.string(),
+});
+
+const VerificationTemplateResponseSchema = z.object({
+  template: z.string(),
+});
+
+// ============================================================================
+// Routes
+// ============================================================================
+
+export const VerificationRoutes = new Hono()
+  /**
+   * POST /verification/verify
+   * 
+   * General verification endpoint supporting all modes.
+   */
+  .post(
+    "/verify",
+    describeRoute({
+      summary: "Run verification",
+      description: "Run the full verification pipeline over a plan, receipts, and optional patch/test context.",
+      operationId: "verification.verify",
+      responses: {
+        200: {
+          description: "Verification result",
+          content: { "application/json": { schema: resolver(z.any()) } },
+        },
+        ...errors(400, 500),
+      },
+    }),
+    validator("json", VerifyRequestSchema),
+    async (c) => {
+    try {
+      const body = c.req.valid("json");
+      const session = getCurrentSession();
+      const sessionId = session?.id || `api_${Date.now()}`;
+      
+      log.info("Verification request", {
+        mode: body.mode,
+        sessionId,
+        steps: body.plan.steps.length,
+      });
+
+      const strategy: VerificationStrategy = {
+        mode: body.mode as VerificationMode,
+        fallbackOnUncertainty: body.fallbackOnUncertainty,
+      };
+
+      const orchestrator = new VerificationOrchestrator(sessionId, strategy);
+
+      const plan: Plan = {
+        sessionId: sessionId,
+        steps: body.plan.steps.map(s => ({ ...s, description: s.toolId })),
+        exitCriteria: [],
+        goal: body.description,
+      };
+      const receipts: ExecutionReceipt[] = body.receipts.map(r => ({
+        ...r,
+        output: r.output,
+        durationMs: 0,
+      }));
+      const result = await orchestrator.verify(plan, receipts);
+
+      // Check confidence requirement
+      const confidenceOrder = { high: 3, medium: 2, low: 1 };
+      const requiredConfidence = confidenceOrder[body.minConfidence];
+      const actualConfidence = confidenceOrder[result.confidence];
+      const confidenceMet = actualConfidence >= requiredConfidence;
+
+      return success(c, {
+        passed: result.passed && confidenceMet,
+        rawPassed: result.passed,
+        confidenceMet,
+        requiredConfidence: body.minConfidence,
+        actualConfidence: result.confidence,
+        reason: result.reason,
+        nextAction: result.nextAction,
+        confidence: result.confidence,
+        consensus: result.consensus,
+        methodsUsed: result.methodsUsed,
+        certificate: result.certificate,
+        formattedCertificate: result.certificate 
+          ? formatCertificate(result.certificate)
+          : undefined,
+      });
+    } catch (error) {
+      log.error("Verification failed", { error });
+      return fail(c, 500, "VERIFICATION_FAILED", error instanceof Error ? error.message : "Verification failed");
+    }
+    },
+  )
+
+  /**
+   * POST /verification/quick
+   * 
+   * Quick verification without plan/receipts.
+   */
+  .post(
+    "/quick",
+    describeRoute({
+      summary: "Run quick verification",
+      description: "Run the fast verification path without an explicit execution plan or receipts.",
+      operationId: "verification.quick",
+      responses: {
+        200: {
+          description: "Quick verification result",
+          content: { "application/json": { schema: resolver(z.any()) } },
+        },
+        ...errors(400, 500),
+      },
+    }),
+    validator("json", QuickVerifyRequestSchema),
+    async (c) => {
+    try {
+      const body = c.req.valid("json");
+      const session = getCurrentSession();
+      const sessionId = session?.id || `api_${Date.now()}`;
+      
+      log.info("Quick verification request", {
+        mode: body.mode,
+        sessionId,
+      });
+
+      const result = await quickVerify(sessionId, body.description, {
+        mode: body.mode as VerificationMode,
+        patches: body.patches,
+        testFiles: body.testFiles,
+      });
+
+      return success(c, result);
+    } catch (error) {
+      log.error("Quick verification failed", { error });
+      return fail(c, 500, "QUICK_VERIFICATION_FAILED", error instanceof Error ? error.message : "Quick verification failed");
+    }
+    },
+  )
+
+  /**
+   * POST /verification/patch-equivalence
+   * 
+   * Verify if two patches are equivalent (produce same test outcomes).
+   * This is the key use case from Meta's paper.
+   */
+  .post(
+    "/patch-equivalence",
+    describeRoute({
+      summary: "Verify patch equivalence",
+      description: "Check whether two patches are equivalent by comparing their behavioral outcomes in context.",
+      operationId: "verification.patchEquivalence",
+      responses: {
+        200: {
+          description: "Patch equivalence result",
+          content: { "application/json": { schema: resolver(z.any()) } },
+        },
+        ...errors(400, 500),
+      },
+    }),
+    validator("json", PatchEquivalenceRequestSchema),
+    async (c) => {
+    try {
+      const body = c.req.valid("json");
+      const session = getCurrentSession();
+      const sessionId = session?.id || `api_${Date.now()}`;
+      
+      log.info("Patch equivalence request", {
+        sessionId,
+        patch1: body.patch1.path,
+        patch2: body.patch2.path,
+      });
+
+      const orchestrator = new VerificationOrchestrator(sessionId, {
+        mode: "semi-formal",
+      });
+
+      const result = await orchestrator.verifyPatchEquivalence(
+        body.patch1,
+        body.patch2,
+        body.testContext
+      );
+
+      return success(c, {
+        equivalent: result.passed,
+        confidence: result.confidence,
+        reason: result.reason,
+        methodsUsed: result.methodsUsed,
+        certificate: result.certificate,
+        formattedCertificate: result.certificate
+          ? formatCertificate(result.certificate)
+          : undefined,
+      });
+    } catch (error) {
+      log.error("Patch equivalence verification failed", { error });
+      return fail(c, 500, "PATCH_EQUIVALENCE_VERIFICATION_FAILED", error instanceof Error ? error.message : "Patch equivalence verification failed");
+    }
+    },
+  )
+
+  /**
+   * POST /verification/certificate
+   * 
+   * Generate a verification certificate for a given task.
+   */
+  .post(
+    "/certificate",
+    describeRoute({
+      summary: "Generate verification certificate",
+      description: "Generate a semi-formal verification certificate for a verification task and context.",
+      operationId: "verification.certificate",
+      responses: {
+        200: {
+          description: "Verification certificate",
+          content: { "application/json": { schema: resolver(z.any()) } },
+        },
+        ...errors(400, 500),
+      },
+    }),
+    validator("json", CertificateRequestSchema),
+    async (c) => {
+    try {
+      const body = c.req.valid("json");
+      const session = getCurrentSession();
+      const sessionId = session?.id || `api_${Date.now()}`;
+      
+      log.info("Certificate generation request", {
+        sessionId,
+        taskType: body.task.type,
+      });
+
+      const verifier = new SemiFormalVerifier(sessionId);
+      
+      // Build context from task description
+      const fullContext = `
+## Task: ${body.task.description}
+
+Type: ${body.task.type}
+
+${body.context}
+
+Please generate a complete verification certificate following the semi-formal reasoning template.
+`;
+
+      // Import required modules
+      const { generateObject } = await import("ai");
+      const { Provider } = await import("@/runtime/providers/provider");
+      const { VerificationCertificateSchema } = await import("@/runtime/loop/semi-formal-verifier");
+      
+      const defaultModel = await Provider.defaultModel();
+      const model = await Provider.getModel(defaultModel.providerID, defaultModel.modelID);
+      const languageModel = await Provider.getLanguage(model);
+
+      const prompt = `
+You are a code verification engine using semi-formal reasoning.
+
+Your task is to verify code by constructing a formal certificate that proves your conclusion with explicit evidence for every claim. You cannot skip sections or make unsupported claims.
+
+## Structured Certificate Template
+
+You MUST fill in the following template completely:
+
+### DEFINITIONS
+State key definitions needed for the proof.
+
+### PREMISES  
+State explicit premises with evidence (file:line citations required).
+
+### EXECUTION TRACES
+For each relevant scenario, provide complete execution trace with code paths.
+
+### EDGE CASES
+Analyze edge cases that tests or usage might exercise.
+
+### CONCLUSION
+Formal conclusion with clear YES/NO/UNCERTAIN answer.
+
+### COUNTEREXAMPLE (if answer is NO)
+Provide specific, reproducible counterexample.
+
+## Rules
+1. NO SKIPPING: You cannot skip any section
+2. NO ASSUMPTIONS: Don't assume function behavior - trace to definition
+3. CITE EVIDENCE: Every claim needs file:line citations
+4. BE COMPLETE: Trace ALL relevant code paths
+5. ADMIT UNCERTAINTY: Mark unknowns rather than guessing
+`;
+
+      const genResult = await generateObject({
+        model: languageModel,
+        messages: [
+          { role: "system", content: prompt },
+          { role: "user", content: fullContext },
+        ],
+        schema: VerificationCertificateSchema,
+        experimental_telemetry: { isEnabled: false },
+      });
+
+      const certificate = genResult.object as VerificationCertificate;
+      const formatted = formatCertificate(certificate);
+
+      return success(c, {
+        certificate,
+        formatted,
+      });
+    } catch (error) {
+      log.error("Certificate generation failed", { error });
+      return fail(c, 500, "CERTIFICATE_GENERATION_FAILED", error instanceof Error ? error.message : "Certificate generation failed");
+    }
+    },
+  )
+
+  /**
+   * GET /verification/query
+   * 
+   * Query verification history.
+   */
+  .get(
+    "/query",
+    describeRoute({
+      summary: "Query verifications",
+      description: "Query stored verification history with optional filters for session, type, pass state, and confidence.",
+      operationId: "verification.query",
+      responses: {
+        200: {
+          description: "Matching verification history entries",
+          content: { "application/json": { schema: resolver(VerificationQueryResponseSchema) } },
+        },
+        ...errors(400, 500),
+      },
+    }),
+    validator("query", QueryRequestSchema),
+    async (c) => {
+    try {
+      const query = c.req.valid("query");
+      const store = VerificationStore.getInstance();
+      
+      log.info("Query request", { query });
+
+      const results = await store.query({
+        sessionId: query.sessionId,
+        type: query.type,
+        passed: query.passed,
+        confidence: query.confidence,
+        limit: query.limit,
+        offset: query.offset,
+      });
+
+      return success(c, {
+        count: results.length,
+        results: results.map(r => ({
+          id: r.id,
+          sessionId: r.sessionId,
+          timestamp: r.timestamp,
+          type: r.type,
+          passed: r.result.passed,
+          confidence: r.result.confidence,
+          methodsUsed: r.result.methodsUsed,
+          tags: r.tags,
+          confirmed: r.confirmed,
+        })),
+      });
+    } catch (error) {
+      log.error("Query failed", { error });
+      return fail(c, 500, "VERIFICATION_QUERY_FAILED", error instanceof Error ? error.message : "Query failed");
+    }
+    },
+  )
+
+  /**
+   * GET /verification/stats
+   * 
+   * Get verification statistics.
+   */
+  .get(
+    "/stats",
+    describeRoute({
+      summary: "Get verification stats",
+      description: "Get aggregate verification statistics from the verification store.",
+      operationId: "verification.stats",
+      responses: {
+        200: {
+          description: "Verification statistics",
+          content: { "application/json": { schema: resolver(z.any()) } },
+        },
+        ...errors(500),
+      },
+    }),
+    async (c) => {
+    try {
+      const store = VerificationStore.getInstance();
+      const stats = await store.getStats();
+
+      return success(c, stats);
+    } catch (error) {
+      log.error("Stats failed", { error });
+      return fail(c, 500, "VERIFICATION_STATS_FAILED", error instanceof Error ? error.message : "Stats failed");
+    }
+    },
+  )
+
+  /**
+   * GET /verification/:id
+   * 
+   * Get a specific verification by ID.
+   */
+  .get(
+    "/:id",
+    describeRoute({
+      summary: "Get verification",
+      description: "Fetch a stored verification entry by ID.",
+      operationId: "verification.get",
+      responses: {
+        200: {
+          description: "Verification entry",
+          content: { "application/json": { schema: resolver(z.any()) } },
+        },
+        ...errors(404, 500),
+      },
+    }),
+    validator("param", VerificationIdParamSchema),
+    async (c) => {
+    try {
+      const { id } = c.req.valid("param");
+      const store = VerificationStore.getInstance();
+      const verification = await store.get(id);
+
+      if (!verification) {
+        return fail(c, 404, "VERIFICATION_NOT_FOUND", "Verification not found");
+      }
+
+      return success(c, verification);
+    } catch (error) {
+      log.error("Get verification failed", { error });
+      return fail(c, 500, "VERIFICATION_GET_FAILED", error instanceof Error ? error.message : "Get verification failed");
+    }
+    },
+  )
+
+  /**
+   * POST /verification/:id/confirm
+   * 
+   * Confirm ground truth for a verification.
+   */
+  .post(
+    "/:id/confirm",
+    describeRoute({
+      summary: "Confirm verification",
+      description: "Record a ground-truth confirmation for a stored verification entry.",
+      operationId: "verification.confirm",
+      responses: {
+        200: {
+          description: "Verification confirmation recorded",
+          content: { "application/json": { schema: resolver(VerificationConfirmResponseSchema) } },
+        },
+        ...errors(400, 404, 500),
+      },
+    }),
+    validator("param", VerificationIdParamSchema),
+    validator("json", VerificationConfirmRequestSchema),
+    async (c) => {
+    try {
+      const { id } = c.req.valid("param");
+      const body = c.req.valid("json");
+
+      const store = VerificationStore.getInstance();
+      await store.confirm(id, body.correct, body.confirmedBy);
+
+      return success(c, {
+        message: `Verification marked as ${body.correct ? "correct" : "incorrect"}`,
+      });
+    } catch (error) {
+      log.error("Confirm verification failed", { error });
+      return fail(c, 500, "VERIFICATION_CONFIRMATION_FAILED", error instanceof Error ? error.message : "Confirm verification failed");
+    }
+    },
+  )
+
+  /**
+   * GET /verification/template
+   * 
+   * Get the semi-formal verification prompt template.
+   */
+  .get(
+    "/template",
+    describeRoute({
+      summary: "Get verification template",
+      description: "Get the semi-formal verification prompt template used by the verification system.",
+      operationId: "verification.template",
+      responses: {
+        200: {
+          description: "Verification template",
+          content: { "application/json": { schema: resolver(VerificationTemplateResponseSchema) } },
+        },
+      },
+    }),
+    async (c) => {
+    const template = `
+# Semi-Formal Verification Template
+
+Based on Meta's "Agentic Code Reasoning" (arXiv:2603.01896)
+
+## Certificate Structure
+
+### DEFINITIONS
+Define key terms for your proof.
+
+### PREMISES
+- P1: [Claim] | Evidence: [file:line] | Verified by: [method]
+- P2: [Claim] | Evidence: [file:line] | Verified by: [method]
+
+### EXECUTION TRACES
+Trace 1: [Name]
+- Code Path: [file:line] → [function] → [behavior]
+- Outcome: [PASS/FAIL]
+- Reasoning: [Explanation]
+
+### EDGE CASES
+- E1: [Case] → [Behavior] → [Outcome]
+
+### CONCLUSION
+- Statement: [Result]
+- Based on: [Premises]
+- Answer: [YES/NO/UNCERTAIN]
+
+### COUNTEREXAMPLE (if NO)
+- Test: [Name]
+- Expected: [Result]
+- Actual: [Result]
+- Location: [file:line]
+
+## Key Rules
+
+1. **No Assumptions**: Trace every function call
+2. **Cite Evidence**: file:line for every claim  
+3. **Name Check**: Verify what each identifier refers to
+4. **Complete Paths**: Trace entire execution flow
+5. **Admit Uncertainty**: Mark unknowns, don't guess
+`;
+
+    return success(c, { template });
+    },
+  );
+
+export const verificationRoutes = VerificationRoutes;
+
+// ============================================================================
+// Type Exports
+// ============================================================================
+
+export type VerifyRequest = z.infer<typeof VerifyRequestSchema>;
+export type QuickVerifyRequest = z.infer<typeof QuickVerifyRequestSchema>;
+export type PatchEquivalenceRequest = z.infer<typeof PatchEquivalenceRequestSchema>;
+export type CertificateRequest = z.infer<typeof CertificateRequestSchema>;
+export type QueryRequest = z.infer<typeof QueryRequestSchema>;

@@ -4,7 +4,7 @@
  * The main Icon component for the A2rchitect platform.
  * Provides a unified, type-safe interface to all icons.
  * 
- * @module @a2r/platform/icons/Icon
+ * @module @allternit/platform/icons/Icon
  */
 
 import * as React from 'react';
@@ -166,7 +166,7 @@ Icon.displayName = 'Icon';
  * <Icon name="home" />
  * 
  * // You can use (better tree-shaking):
- * import { HomeIcon } from '@a2r/platform/icons';
+ * import { HomeIcon } from '@allternit/platform/icons';
  * <HomeIcon />
  * ```
  */

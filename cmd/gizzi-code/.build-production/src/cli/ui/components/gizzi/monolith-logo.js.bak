@@ -1,0 +1,23 @@
+import { insert as _$insert } from "@opentui/solid";
+import { createComponent as _$createComponent } from "@opentui/solid";
+import { setProp as _$setProp } from "@opentui/solid";
+import { createElement as _$createElement } from "@opentui/solid";
+/**
+ * GIZZI Mascot Logo (TUI Version)
+ * 
+ * The primary branded representation of GIZZI.
+ * Replaced the legacy "Monolith G" with the high-fidelity mascot chassis.
+ */
+
+import { GIZZIMascot } from "@/cli/ui/components/gizzi/mascot";
+export function MonolithLogo() {
+  return (() => {
+    var _el$ = _$createElement("box");
+    _$setProp(_el$, "flexDirection", "column");
+    _$setProp(_el$, "alignItems", "center");
+    _$insert(_el$, _$createComponent(GIZZIMascot, {
+      state: "idle"
+    }));
+    return _el$;
+  })();
+}

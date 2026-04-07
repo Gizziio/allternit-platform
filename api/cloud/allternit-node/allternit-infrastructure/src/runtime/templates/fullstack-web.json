@@ -1,0 +1,121 @@
+{
+  "id": "fullstack-web",
+  "name": "Full-Stack Web Development",
+  "description": "Next.js, Postgres, and Redis development environment with all the bells and whistles",
+  "version": "1.0.0",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:20",
+  "features": [
+    "ghcr.io/devcontainers/features/github-cli:1",
+    "ghcr.io/devcontainers/features/docker-in-docker:2",
+    "ghcr.io/devcontainers/features/common-utils:2"
+  ],
+  "ports": [3000, 5432, 6379, 8080, 5555, 8025],
+  "postCreateCommand": "pnpm install && docker-compose -f .devcontainer/docker-compose.yml up -d",
+  "postAttachCommand": "docker-compose -f .devcontainer/docker-compose.yml ps",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "bradlc.vscode-tailwindcss",
+        "prisma.prisma",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "ms-vscode.vscode-typescript-next",
+        "antfu.iconify",
+        "formulahendry.auto-rename-tag",
+        "yoavbls.pretty-ts-errors",
+        "humao.rest-client",
+        "mtxr.sqltools",
+        "mtxr.sqltools-driver-pg"
+      ],
+      "settings": {
+        "typescript.tsdk": "node_modules/typescript/lib",
+        "prisma.fileWatcher": true,
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit"
+        },
+        "[prisma]": {
+          "editor.defaultFormatter": "Prisma.prisma"
+        },
+        "sqltools.connections": [
+          {
+            "name": "Local Postgres",
+            "driver": "PostgreSQL",
+            "server": "localhost",
+            "port": 5432,
+            "database": "app",
+            "username": "postgres",
+            "password": "postgres"
+          }
+        ]
+      }
+    }
+  },
+  "variables": {
+    "DATABASE_URL": {
+      "default": "postgresql://postgres:postgres@localhost:5432/app",
+      "description": "PostgreSQL connection string"
+    },
+    "REDIS_URL": {
+      "default": "redis://localhost:6379",
+      "description": "Redis connection string"
+    },
+    "NEXTAUTH_SECRET": {
+      "default": "dev-secret-change-in-production",
+      "description": "NextAuth secret key"
+    }
+  },
+  "dockerfile": null,
+  "buildContext": null,
+  "mounts": [
+    {
+      "type": "volume",
+      "source": "postgres-data",
+      "target": "/var/lib/postgresql/data"
+    },
+    {
+      "type": "volume",
+      "source": "redis-data",
+      "target": "/data"
+    },
+    {
+      "type": "volume",
+      "source": "node_modules",
+      "target": "/workspace/node_modules"
+    }
+  ],
+  "containerEnv": {
+    "PNPM_HOME": "/home/node/.local/share/pnpm",
+    "PATH": "/home/node/.local/share/pnpm:${PATH}",
+    "DATABASE_URL": "postgresql://postgres:postgres@localhost:5432/app",
+    "REDIS_URL": "redis://localhost:6379",
+    "NEXTAUTH_URL": "http://localhost:3000",
+    "NEXTAUTH_SECRET": "dev-secret-change-in-production",
+    "NODE_ENV": "development"
+  },
+  "remoteUser": "node",
+  "forwardPorts": [3000, 5432, 6379, 8080, 5555, 8025],
+  "portsAttributes": {
+    "3000": {
+      "label": "Next.js App",
+      "onAutoForward": "openBrowser"
+    },
+    "5432": {
+      "label": "PostgreSQL",
+      "onAutoForward": "silent"
+    },
+    "6379": {
+      "label": "Redis",
+      "onAutoForward": "silent"
+    },
+    "5555": {
+      "label": "Prisma Studio",
+      "onAutoForward": "openBrowser"
+    },
+    "8025": {
+      "label": "Mailpit",
+      "onAutoForward": "openBrowser"
+    }
+  }
+}

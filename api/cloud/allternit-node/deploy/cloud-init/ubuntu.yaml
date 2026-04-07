@@ -1,0 +1,95 @@
+#cloud-config
+# A2R Node Agent - Ubuntu/Debian Cloud Init
+# Usage: hcloud server create --user-data-from-file cloud-init.yaml
+
+package_update: true
+package_upgrade: false
+
+packages:
+  - docker.io
+  - curl
+  - ca-certificates
+
+# Enable Docker service
+systemd:
+  docker:
+    enabled: true
+    command: start
+
+# Create a2r user and group
+groups:
+  - docker
+
+users:
+  - name: a2r
+    homedir: /home/a2r
+    system: true
+    groups: docker
+
+# Write installation script
+write_files:
+  - path: /tmp/install-a2r.sh
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      set -e
+      
+      # Configuration from metadata
+      ALLTERNIT_TOKEN="${ALLTERNIT_TOKEN:-}"
+      ALLTERNIT_NODE_ID="${ALLTERNIT_NODE_ID:-}"
+      ALLTERNIT_CONTROL_PLANE="${ALLTERNIT_CONTROL_PLANE:-wss://control.allternit.com}"
+      
+      # If token not provided, try to get from instance tags (cloud provider specific)
+      if [ -z "$ALLTERNIT_TOKEN" ]; then
+        # Try to get from instance metadata (implement per cloud provider)
+        echo "Warning: ALLTERNIT_TOKEN not set"
+        exit 1
+      fi
+      
+      # Download and install
+      curl -sL https://github.com/a2r/node/releases/latest/download/a2r-node-linux-$(uname -m | sed 's/x86_64/x86_64/' | sed 's/aarch64/aarch64/') \
+        -o /opt/a2r/bin/a2r-node
+      chmod +x /opt/a2r/bin/a2r-node
+      
+      # Create configuration
+      mkdir -p /etc/a2r
+      cat > /etc/a2r/node.env << EOF
+ALLTERNIT_NODE_ID=${ALLTERNIT_NODE_ID:-node-$(hostname)}
+ALLTERNIT_TOKEN=${ALLTERNIT_TOKEN}
+ALLTERNIT_CONTROL_PLANE=${ALLTERNIT_CONTROL_PLANE}
+EOF
+      chmod 600 /etc/a2r/node.env
+      
+      # Install systemd service
+      mkdir -p /etc/systemd/system
+      cat > /etc/systemd/system/a2r-node.service << 'EOF'
+[Unit]
+Description=A2R Node Agent
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/a2r/node.env
+ExecStart=/opt/a2r/bin/a2r-node
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+      
+      systemctl daemon-reload
+      systemctl enable a2r-node
+      systemctl start a2r-node
+
+# Run installation on first boot
+runcmd:
+  - systemctl start docker
+  - /tmp/install-a2r.sh
+
+# Clean up on final boot
+final_message: |
+  A2R Node installation complete!
+  Check status: systemctl status a2r-node
+  View logs: journalctl -u a2r-node

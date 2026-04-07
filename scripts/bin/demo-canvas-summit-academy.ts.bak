@@ -1,0 +1,556 @@
+#!/usr/bin/env bun
+/**
+ * A2R Summit Academy — Canvas Autonomous Module Creation Demo
+ *
+ * What this does:
+ *   1. Reads content from the Ian's Sandbox Canvas export (zip)
+ *   2. Calls the Canvas REST API to autonomously create a module + lesson page
+ *   3. Opens a visible browser (with A2R extension) to show the content live in Canvas
+ *
+ * Usage:
+ *   export CANVAS_BASE_URL=https://canvas.instructure.com
+ *   export CANVAS_API_TOKEN=<your_token>
+ *   export CANVAS_COURSE_ID=14389375
+ *   bun scripts/bin/demo-canvas-summit-academy.ts
+ *
+ * Optional:
+ *   export CANVAS_EXPORT_ZIP=~/Downloads/Ian-s-Sandbox-2026-Mar-24_00-51-39-274.zip
+ *   export ALLTERNIT_EXTENSION_PATH=~/Desktop/a2r-extension-release/a2r-extension-unpacked
+ *   export HEADLESS=true   (skip browser, API only)
+ */
+
+import { execSync, spawn } from "child_process";
+import * as fs from "fs";
+import * as path from "path";
+import * as os from "os";
+
+// ─── Config ────────────────────────────────────────────────────────────────
+
+const CANVAS_BASE_URL =
+  process.env.CANVAS_BASE_URL || "https://canvas.instructure.com";
+const CANVAS_API_TOKEN = process.env.CANVAS_API_TOKEN || "";
+const CANVAS_COURSE_ID = process.env.CANVAS_COURSE_ID || "14389375";
+const HEADLESS = process.env.HEADLESS === "true";
+const EXPORT_ZIP =
+  process.env.CANVAS_EXPORT_ZIP ||
+  path.join(
+    os.homedir(),
+    "Downloads/Ian-s-Sandbox-2026-Mar-24_00-51-39-274.zip"
+  );
+const EXTENSION_PATH =
+  process.env.ALLTERNIT_EXTENSION_PATH ||
+  path.join(
+    os.homedir(),
+    "Desktop/a2r-extension-release/a2r-extension-unpacked"
+  );
+
+// ─── Terminal Narration ─────────────────────────────────────────────────────
+
+const RESET = "\x1b[0m";
+const BOLD = "\x1b[1m";
+const DIM = "\x1b[2m";
+const CYAN = "\x1b[36m";
+const GREEN = "\x1b[32m";
+const YELLOW = "\x1b[33m";
+const BLUE = "\x1b[34m";
+const MAGENTA = "\x1b[35m";
+const RED = "\x1b[31m";
+
+function log(msg: string) {
+  process.stdout.write(msg + "\n");
+}
+
+function step(n: number, total: number, msg: string) {
+  log(`\n${BOLD}${CYAN}[${n}/${total}]${RESET} ${BOLD}${msg}${RESET}`);
+}
+
+function info(msg: string) {
+  log(`  ${DIM}→${RESET} ${msg}`);
+}
+
+function success(msg: string) {
+  log(`  ${GREEN}✓${RESET} ${msg}`);
+}
+
+function warn(msg: string) {
+  log(`  ${YELLOW}⚠${RESET}  ${msg}`);
+}
+
+function error(msg: string) {
+  log(`  ${RED}✗${RESET} ${msg}`);
+}
+
+function banner() {
+  log("");
+  log(
+    `${BOLD}${MAGENTA}╔══════════════════════════════════════════════════════════╗${RESET}`
+  );
+  log(
+    `${BOLD}${MAGENTA}║   A2R PLATFORM — CANVAS AUTONOMOUS CONTENT CREATION      ║${RESET}`
+  );
+  log(
+    `${BOLD}${MAGENTA}║   Summit Academy · IT Fundamentals Demo                  ║${RESET}`
+  );
+  log(
+    `${BOLD}${MAGENTA}╚══════════════════════════════════════════════════════════╝${RESET}`
+  );
+  log("");
+}
+
+async function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+// ─── Canvas API ─────────────────────────────────────────────────────────────
+
+async function canvasAPI(
+  method: string,
+  path: string,
+  body?: object
+): Promise<any> {
+  if (!CANVAS_API_TOKEN) {
+    throw new Error(
+      "CANVAS_API_TOKEN is not set.\n  Run: export CANVAS_API_TOKEN=<your_token>"
+    );
+  }
+
+  const url = `${CANVAS_BASE_URL}/api/v1${path}`;
+  const res = await fetch(url, {
+    method,
+    headers: {
+      Authorization: `Bearer ${CANVAS_API_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Canvas API ${method} ${path} → ${res.status}: ${text}`);
+  }
+
+  return await res.json();
+}
+
+// ─── Extract Course Data from Zip ───────────────────────────────────────────
+
+interface CanvasModule {
+  id: number;
+  name: string;
+  items: CanvasItem[];
+}
+
+interface CanvasItem {
+  id: number;
+  title: string;
+  type: string;
+  content: string | null;
+  indent: number;
+}
+
+function extractCourseData(zipPath: string): {
+  title: string;
+  modules: CanvasModule[];
+} | null {
+  if (!fs.existsSync(zipPath)) return null;
+
+  try {
+    // Extract course-data.js from the zip using unzip
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "a2r-canvas-"));
+    execSync(
+      `unzip -p "${zipPath}" "*/viewer/course-data.js" > "${tmpDir}/course-data.js"`,
+      { stdio: ["pipe", "pipe", "pipe"] }
+    );
+
+    const raw = fs.readFileSync(`${tmpDir}/course-data.js`, "utf8");
+    const match = raw.match(/window\.COURSE_DATA\s*=\s*(\{[\s\S]*\});?\s*$/);
+    if (!match) return null;
+
+    const data = JSON.parse(match[1]);
+
+    // Cleanup
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+// ─── Build Summit Academy Content ───────────────────────────────────────────
+
+interface LessonContent {
+  title: string;
+  body: string;
+}
+
+interface ModuleSpec {
+  name: string;
+  description: string;
+  lessons: LessonContent[];
+}
+
+function buildModuleSpec(courseData: {
+  title: string;
+  modules: CanvasModule[];
+} | null): ModuleSpec {
+  // Default module spec (used if zip not available)
+  const defaultSpec: ModuleSpec = {
+    name: "Summit Academy: IT Fundamentals — Week 1",
+    description:
+      "Introduction to IT fundamentals including hardware, virtualization, and troubleshooting.",
+    lessons: [
+      {
+        title: "Course Overview",
+        body: `<h2><strong>Applied IT — Summit Academy</strong></h2>
+<p>This course builds on Phase 1 knowledge through student-led, project-based learning. Students will identify and complete production environment IT projects for Summit Academy.</p>
+<h3>What You Will Learn</h3>
+<ul>
+  <li>IT project lifecycle and professional workflow</li>
+  <li>Virtualization fundamentals (Oracle VirtualBox)</li>
+  <li>Hardware troubleshooting methodology</li>
+  <li>Technical documentation and communication</li>
+</ul>
+<h3>Course Structure</h3>
+<p>Each week includes a lab, a reading assignment, and a weekly update submission. Labs build toward a final project that you will present to the class.</p>`,
+      },
+      {
+        title: "Lab 1: Introduction to VirtualBox Hypervisor",
+        body: `<h2><strong>Lab 1 — VirtualBox Hypervisor Setup</strong></h2>
+<p>In this lab you will install Oracle VirtualBox and create your first virtual machine environment.</p>
+<h3>Objectives</h3>
+<ul>
+  <li>Download and install Oracle VirtualBox 7.x</li>
+  <li>Understand Type 1 vs Type 2 hypervisors</li>
+  <li>Configure host-only networking</li>
+  <li>Create a Windows VM snapshot</li>
+</ul>
+<h3>Prerequisites</h3>
+<p>Your laptop must have at least 8GB RAM and 40GB free disk space. Verify both before starting.</p>
+<h3>Steps</h3>
+<ol>
+  <li>Download VirtualBox from the official site</li>
+  <li>Run the installer with default settings</li>
+  <li>Install the Extension Pack for USB 3.0 and RDP support</li>
+  <li>Create a new VM: Windows 10, 4GB RAM, 25GB disk</li>
+  <li>Take a snapshot labeled "Clean Install"</li>
+</ol>
+<p><em>Refer to WinLab01 PDF for detailed screenshots and step-by-step instructions.</em></p>`,
+      },
+    ],
+  };
+
+  if (!courseData) return defaultSpec;
+
+  // Pull "Class Introduction" content from the real export
+  const classIntroModule = courseData.modules.find(
+    (m) => m.name === "Class Introduction"
+  );
+  const courseOverviewItem = classIntroModule?.items.find(
+    (i) => i.title === "Course Overview"
+  );
+
+  // Pull WinLab from Templates and Resources
+  const templatesModule = courseData.modules.find(
+    (m) => m.name === "Templates and Resources"
+  );
+  const winLabItem = templatesModule?.items.find((i) =>
+    i.title.includes("WinLab01")
+  );
+
+  const lessons: LessonContent[] = [];
+
+  if (courseOverviewItem?.content) {
+    lessons.push({
+      title: "Course Overview — Applied IT",
+      body:
+        courseOverviewItem.content +
+        `
+<hr>
+<h3>A2R Platform Integration</h3>
+<p>This module was created autonomously by the <strong>A2R Summit Academy Agent</strong>
+using content from your course export. The A2R platform can scaffold entire
+course structures from existing materials.</p>`,
+    });
+  } else {
+    lessons.push(defaultSpec.lessons[0]);
+  }
+
+  // Add the lab lesson
+  lessons.push(defaultSpec.lessons[1]);
+
+  return {
+    name: "Summit Academy: IT Fundamentals — Week 1",
+    description:
+      "Autonomously scaffolded by A2R using Ian's Sandbox export data.",
+    lessons,
+  };
+}
+
+// ─── Browser Launch (with A2R Extension) ────────────────────────────────────
+
+function launchCanvasBrowser(courseUrl: string): void {
+  const hasExtension = fs.existsSync(
+    path.join(EXTENSION_PATH, "manifest.json")
+  );
+
+  const args = [
+    "--no-first-run",
+    "--no-default-browser-check",
+    "--disable-extensions-except=" + EXTENSION_PATH,
+    "--load-extension=" + EXTENSION_PATH,
+    courseUrl,
+  ];
+
+  if (!hasExtension) {
+    // Launch without extension if not found
+    args.splice(0, 2);
+    warn(
+      "A2R extension not found at: " +
+        EXTENSION_PATH +
+        "\n  Launching without extension"
+    );
+  }
+
+  // Try Chrome, Chromium, or Google Chrome on macOS
+  const chromePaths = [
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "/Applications/Chromium.app/Contents/MacOS/Chromium",
+    "/usr/bin/google-chrome",
+    "/usr/bin/chromium-browser",
+  ];
+
+  const chromePath = chromePaths.find((p) => fs.existsSync(p));
+
+  if (!chromePath) {
+    warn("Chrome not found — skipping browser launch");
+    warn("Navigate manually to: " + courseUrl);
+    return;
+  }
+
+  info(`Launching Chrome with A2R Extension...`);
+  info(`→ ${courseUrl}`);
+
+  const proc = spawn(chromePath, args, {
+    detached: true,
+    stdio: "ignore",
+  });
+  proc.unref();
+}
+
+// ─── Main Demo Flow ──────────────────────────────────────────────────────────
+
+async function main() {
+  banner();
+
+  const TOTAL_STEPS = 7;
+
+  // ── Step 1: Check credentials ──────────────────────────────────────────
+  step(1, TOTAL_STEPS, "Checking Canvas credentials");
+  if (!CANVAS_API_TOKEN) {
+    error("CANVAS_API_TOKEN is not set");
+    log("");
+    log(`  ${BOLD}Set your credentials:${RESET}`);
+    log(`    export CANVAS_BASE_URL=https://canvas.instructure.com`);
+    log(`    export CANVAS_API_TOKEN=<your_token_here>`);
+    log(`    export CANVAS_COURSE_ID=14389375`);
+    log("");
+    process.exit(1);
+  }
+
+  info(`Canvas URL: ${CANVAS_BASE_URL}`);
+  info(`Course ID:  ${CANVAS_COURSE_ID}`);
+
+  let user: any;
+  try {
+    user = await canvasAPI("GET", "/users/self");
+    success(`Authenticated as: ${user.name} (${user.email || user.login_id})`);
+  } catch (e: any) {
+    error("Authentication failed: " + e.message);
+    process.exit(1);
+  }
+
+  await sleep(500);
+
+  // ── Step 2: Verify course access ───────────────────────────────────────
+  step(2, TOTAL_STEPS, "Verifying course access");
+  let course: any;
+  try {
+    course = await canvasAPI("GET", `/courses/${CANVAS_COURSE_ID}`);
+    success(`Course: "${course.name}"`);
+    info(`Workflow state: ${course.workflow_state}`);
+  } catch (e: any) {
+    error("Cannot access course: " + e.message);
+    process.exit(1);
+  }
+
+  await sleep(500);
+
+  // ── Step 3: Load content from Ian's Sandbox export ─────────────────────
+  step(3, TOTAL_STEPS, "Loading content from Ian's Sandbox export");
+  const courseData = extractCourseData(EXPORT_ZIP);
+
+  if (courseData) {
+    success(`Loaded export: "${courseData.title}"`);
+    info(`Found ${courseData.modules.length} modules in export`);
+    courseData.modules.forEach((m) => {
+      info(`  • [${m.id}] ${m.name} (${m.items.length} items)`);
+    });
+  } else {
+    warn("Export zip not found — using default Summit Academy content");
+    warn(`Expected: ${EXPORT_ZIP}`);
+  }
+
+  const moduleSpec = buildModuleSpec(courseData);
+
+  log("");
+  log(
+    `  ${BOLD}${BLUE}Module to create:${RESET} ${moduleSpec.name}`
+  );
+  log(
+    `  ${BOLD}${BLUE}Lessons to create:${RESET} ${moduleSpec.lessons.length}`
+  );
+  moduleSpec.lessons.forEach((l) => {
+    info(`  • ${l.title}`);
+  });
+
+  await sleep(800);
+
+  // ── Step 4: Create the module ──────────────────────────────────────────
+  step(4, TOTAL_STEPS, `Creating module: "${moduleSpec.name}"`);
+  let createdModule: any;
+  try {
+    createdModule = await canvasAPI(
+      "POST",
+      `/courses/${CANVAS_COURSE_ID}/modules`,
+      {
+        module: {
+          name: moduleSpec.name,
+          published: false,
+          require_sequential_progress: false,
+        },
+      }
+    );
+    success(`Module created — ID: ${createdModule.id}`);
+  } catch (e: any) {
+    error("Failed to create module: " + e.message);
+    process.exit(1);
+  }
+
+  await sleep(600);
+
+  // ── Step 5: Create lesson pages + add to module ────────────────────────
+  step(
+    5,
+    TOTAL_STEPS,
+    `Creating ${moduleSpec.lessons.length} lesson pages`
+  );
+
+  const createdPageIds: number[] = [];
+
+  for (let i = 0; i < moduleSpec.lessons.length; i++) {
+    const lesson = moduleSpec.lessons[i];
+    info(`Creating page (${i + 1}/${moduleSpec.lessons.length}): "${lesson.title}"`);
+
+    try {
+      // Create the page
+      const page = await canvasAPI(
+        "POST",
+        `/courses/${CANVAS_COURSE_ID}/pages`,
+        {
+          wiki_page: {
+            title: lesson.title,
+            body: lesson.body,
+            published: false,
+          },
+        }
+      );
+
+      success(`Page created: "${page.title}" (url: ${page.url})`);
+      createdPageIds.push(page.page_id || page.id);
+
+      // Add page as module item
+      info(`Adding "${lesson.title}" to module...`);
+      await canvasAPI(
+        "POST",
+        `/courses/${CANVAS_COURSE_ID}/modules/${createdModule.id}/items`,
+        {
+          module_item: {
+            title: lesson.title,
+            type: "Page",
+            page_url: page.url,
+            indent: 0,
+          },
+        }
+      );
+
+      success(`Module item added`);
+      await sleep(400);
+    } catch (e: any) {
+      error(`Failed for lesson "${lesson.title}": ${e.message}`);
+    }
+  }
+
+  // ── Step 6: Publish the module ─────────────────────────────────────────
+  step(6, TOTAL_STEPS, "Publishing module");
+  try {
+    await canvasAPI(
+      "PUT",
+      `/courses/${CANVAS_COURSE_ID}/modules/${createdModule.id}`,
+      {
+        module: { published: true },
+      }
+    );
+    success("Module published ✓");
+  } catch (e: any) {
+    warn("Could not publish module: " + e.message);
+  }
+
+  await sleep(500);
+
+  // ── Step 7: Open Canvas in browser ────────────────────────────────────
+  step(7, TOTAL_STEPS, "Opening Canvas in browser with A2R Extension");
+
+  const modulesUrl = `${CANVAS_BASE_URL}/courses/${CANVAS_COURSE_ID}/modules`;
+
+  if (!HEADLESS) {
+    launchCanvasBrowser(modulesUrl);
+    await sleep(2000);
+    success("Browser launched → navigating to newly created module");
+  } else {
+    info("Headless mode — skipping browser launch");
+  }
+
+  // ── Summary ────────────────────────────────────────────────────────────
+  log("");
+  log(
+    `${BOLD}${GREEN}╔══════════════════════════════════════════════════════════╗${RESET}`
+  );
+  log(
+    `${BOLD}${GREEN}║   ✓  DEMO COMPLETE — MODULE CREATED AUTONOMOUSLY         ║${RESET}`
+  );
+  log(
+    `${BOLD}${GREEN}╚══════════════════════════════════════════════════════════╝${RESET}`
+  );
+  log("");
+  log(`  ${BOLD}Course:${RESET}   ${course.name}`);
+  log(`  ${BOLD}Module:${RESET}   ${moduleSpec.name}`);
+  log(`  ${BOLD}Module ID:${RESET} ${createdModule.id}`);
+  log(`  ${BOLD}Lessons:${RESET}  ${moduleSpec.lessons.map((l) => l.title).join(", ")}`);
+  log("");
+  log(`  ${BOLD}Canvas URL:${RESET}`);
+  log(`  ${CYAN}${modulesUrl}${RESET}`);
+  log("");
+  log(
+    `  ${DIM}Content sourced from Ian's Sandbox export and scaffolded${RESET}`
+  );
+  log(
+    `  ${DIM}autonomously by the A2R Summit Academy Agent.${RESET}`
+  );
+  log("");
+}
+
+main().catch((e) => {
+  error("Fatal: " + e.message);
+  process.exit(1);
+});

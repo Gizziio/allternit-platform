@@ -1,0 +1,131 @@
+/**
+ * Types matching the .claude-plugin/ specification exactly.
+ * https://github.com/anthropics/claude-plugins-official
+ */
+
+// ── Plugin Manifest (.claude-plugin/plugin.json) ─────────────────────────────
+
+export interface PluginAuthor {
+  name: string
+  email?: string
+  url?: string
+}
+
+export interface PluginManifest {
+  name: string
+  version?: string
+  description?: string
+  author?: PluginAuthor | string
+  homepage?: string
+  repository?: string | { type: string; url: string }
+  license?: string
+  keywords?: string[]
+  /** Path(s) to command directories. Defaults to ./commands */
+  commands?: string | string[]
+  /** Path(s) to agent directories. Defaults to ./agents */
+  agents?: string | string[]
+  /** Path to hooks config or inline hooks object. Defaults to ./hooks/hooks.json */
+  hooks?: string | HooksConfig
+  /** Path to MCP server config or inline MCP object. Defaults to ./.mcp.json */
+  mcpServers?: string | Record<string, McpServerConfig>
+}
+
+// ── Command Frontmatter (commands/*.md) ───────────────────────────────────────
+
+export interface CommandFrontmatter {
+  description?: string
+  /** Pre-approved tools: "Read, Write" or ["Read", "Write"] or "Bash(git:*)" */
+  "allowed-tools"?: string | string[]
+  /** Argument hint shown to user, e.g. "<branch> [--force]" */
+  "argument-hint"?: string
+  /** Override model for this command */
+  model?: string
+  /** Prevent SlashCommand tool from re-invoking the model */
+  "disable-model-invocation"?: boolean
+}
+
+// ── Skill Frontmatter (skills/*/SKILL.md) ─────────────────────────────────────
+
+export interface SkillFrontmatter {
+  name: string
+  description: string
+  version?: string
+  license?: string
+}
+
+// ── Hooks (hooks/hooks.json) ──────────────────────────────────────────────────
+
+export type HookEvent = "PreToolUse" | "PostToolUse" | "SessionStart" | "Stop" | "UserPromptSubmit"
+
+export interface HookEntry {
+  type: "command"
+  command: string
+  timeout?: number
+}
+
+export interface HookMatcher {
+  /** Pipe-separated tool name patterns, e.g. "Edit|Write|MultiEdit" */
+  matcher?: string
+  hooks: HookEntry[]
+}
+
+export interface HooksConfig {
+  description?: string
+  hooks: Partial<Record<HookEvent, HookMatcher[]>>
+}
+
+// ── MCP Server Config (.mcp.json) ─────────────────────────────────────────────
+
+export interface McpServerStdio {
+  command: string
+  args?: string[]
+  env?: Record<string, string>
+}
+
+export interface McpServerSse {
+  type: "sse"
+  url: string
+  headers?: Record<string, string>
+}
+
+export interface McpServerHttp {
+  type: "http"
+  url: string
+  headers?: Record<string, string>
+}
+
+export type McpServerConfig = McpServerStdio | McpServerSse | McpServerHttp
+
+// ── Loaded Plugin (after parsing) ─────────────────────────────────────────────
+
+export interface LoadedCommand {
+  /** Kebab-case command name (filename without .md) */
+  name: string
+  description?: string
+  template: string
+  allowedTools?: string[]
+  argumentHint?: string
+  model?: string
+  /** Absolute path to the .md source file */
+  source: string
+  /** Plugin that provides this command */
+  pluginName: string
+}
+
+export interface LoadedSkill {
+  name: string
+  description: string
+  content: string
+  location: string
+  pluginName: string
+}
+
+export interface LoadedPlugin {
+  manifest: PluginManifest
+  /** Absolute path to plugin root directory */
+  root: string
+  commands: LoadedCommand[]
+  skills: LoadedSkill[]
+  hooksConfig: HooksConfig | null
+  mcpServers: Record<string, McpServerConfig>
+}

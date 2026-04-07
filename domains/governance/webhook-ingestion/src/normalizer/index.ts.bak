@@ -1,0 +1,32 @@
+/**
+ * Normalizer exports
+ */
+
+export {
+  normalizeGitHubWebhook,
+  requiresAgentAction as githubRequiresAgentAction,
+  inferAgentRole as githubInferAgentRole,
+} from './github-normalizer.js';
+export {
+  normalizeDiscordWebhook,
+  requiresAgentAction as discordRequiresAgentAction,
+  inferAgentRole as discordInferAgentRole,
+  extractMentions as discordExtractMentions,
+} from './discord-normalizer.js';
+export {
+  normalizeAntFarmWebhook,
+  requiresAgentAction as antfarmRequiresAgentAction,
+  inferAgentRole as antfarmInferAgentRole,
+  extractMentions as antfarmExtractMentions,
+  isTaskRequest,
+  getTaskPriorityScore,
+} from './antfarm-normalizer.js';
+export {
+  normalizeMoltbookWebhook,
+  requiresAgentAction as moltbookRequiresAgentAction,
+  inferAgentRole as moltbookInferAgentRole,
+  isMention,
+  isChallenge,
+  getChallengeData,
+} from './moltbook-normalizer.js';
+export * from './normalizer-registry.js';

@@ -1,0 +1,12 @@
+/**
+ * A2R Plugin System
+ * 
+ * Extensible plugin framework for A2R
+ */
+
+export { BasePlugin } from './plugin.js';
+export type { Plugin, PluginContext, Command, View, Tool, PluginConfig } from './plugin.js';
+export { PluginRegistry } from './registry.js';
+export { PluginLoader } from './loader.js';
+
+// Named exports above cover all public API — no default export needed

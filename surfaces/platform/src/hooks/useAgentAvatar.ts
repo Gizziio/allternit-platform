@@ -6,8 +6,8 @@
 
 import { useCallback, useEffect } from 'react';
 import { useVisualStateStore, createTelemetryEvent, subscribeToAgentState } from '@/stores/visual-state.store';
-import type { VisualState, TelemetryEvent } from '@a2r/visual-state/types';
-import type { AvatarSize } from '@a2r/visual-state/types';
+import type { VisualState, TelemetryEvent } from '@allternit/visual-state/types';
+import type { AvatarSize } from '@allternit/visual-state/types';
 
 export interface UseAgentAvatarOptions {
   /** Agent ID to track */
@@ -94,8 +94,8 @@ export function useAgentAvatar({
  * Default visual state for when agent is idle
  */
 export const DEFAULT_VISUAL_STATE: VisualState = {
-  mood: 'idle' as import('@a2r/visual-state/types').Mood,
-  intensity: 2 as import('@a2r/visual-state/types').IntensityLevel,
+  mood: 'idle' as import('@allternit/visual-state/types').Mood,
+  intensity: 2 as import('@allternit/visual-state/types').IntensityLevel,
   confidence: 1.0,
   reliability: 1.0,
   timestamp: new Date(),

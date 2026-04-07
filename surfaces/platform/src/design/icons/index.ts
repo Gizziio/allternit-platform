@@ -6,26 +6,26 @@
  * @example
  * ```tsx
  * // Basic usage
- * import { Icon } from '@a2r/platform/icons';
+ * import { Icon } from '@allternit/platform/icons';
  * <Icon name="home" size="md" />
  * 
  * // Named icon exports (better tree-shaking)
- * import { HomeIcon, SettingsIcon } from '@a2r/platform/icons';
+ * import { HomeIcon, SettingsIcon } from '@allternit/platform/icons';
  * 
  * // Icon button
- * import { IconButton } from '@a2r/platform/icons';
+ * import { IconButton } from '@allternit/platform/icons';
  * <IconButton name="add" buttonVariant="filled" />
  * 
  * // With badge
- * import { IconWithBadge, NotificationBell } from '@a2r/platform/icons';
+ * import { IconWithBadge, NotificationBell } from '@allternit/platform/icons';
  * <NotificationBell count={5} />
  * 
  * // Custom brand icons
- * import { A2RLogoIcon, ShellIconComponent } from '@a2r/platform/icons';
+ * import { A2RLogoIcon, ShellIconComponent } from '@allternit/platform/icons';
  * <A2RLogoIcon size={32} />
  * ```
  * 
- * @module @a2r/platform/icons
+ * @module @allternit/platform/icons
  */
 
 // ============================================================================

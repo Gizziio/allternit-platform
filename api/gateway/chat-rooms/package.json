@@ -1,0 +1,29 @@
+{
+  "name": "@allternit/chat-rooms",
+  "version": "1.0.0",
+  "description": "Chat rooms service for allternit - real-time agent-human communication",
+  "type": "module",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/main.js",
+    "dev": "tsx src/main.ts",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "fastify": "^4.25.2",
+    "@fastify/websocket": "^8.3.1",
+    "@fastify/cors": "^9.0.1",
+    "uuid": "^9.0.1",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.6",
+    "@types/uuid": "^9.0.7",
+    "@types/ws": "^8.5.10",
+    "typescript": "^5.3.3",
+    "tsx": "^4.7.0",
+    "vitest": "^1.1.3"
+  }
+}

@@ -1,0 +1,522 @@
+import { memo as _$memo } from "@opentui/solid";
+import { createComponent as _$createComponent } from "@opentui/solid";
+import { effect as _$effect } from "@opentui/solid";
+import { insert as _$insert } from "@opentui/solid";
+import { createTextNode as _$createTextNode } from "@opentui/solid";
+import { insertNode as _$insertNode } from "@opentui/solid";
+import { setProp as _$setProp } from "@opentui/solid";
+import { createElement as _$createElement } from "@opentui/solid";
+/**
+ * Dialog: Skill Evaluator (Skills 2.0)
+ *
+ * Configure → Run → Results
+ *
+ * Keys:
+ *   Tab / shift-tab  cycle steps
+ *   Enter            confirm / submit
+ *   Esc              close
+ */
+import { createSignal, For, Show, createMemo } from "solid-js";
+import { useDialog } from "@/cli/ui/tui/ui/dialog";
+import { useTheme } from "@/cli/ui/tui/context/theme";
+import { useSDK } from "@/cli/ui/tui/context/sdk";
+import { useKeyboard } from "@opentui/solid";
+import { DialogPrompt } from "@/cli/ui/tui/ui/dialog-prompt";
+export function DialogSkillEval(props) {
+  const dialog = useDialog();
+  const {
+    theme
+  } = useTheme();
+  const sdk = useSDK();
+  const [phase, setPhase] = createSignal("config");
+  const [config, setConfig] = createSignal({
+    testInput: "",
+    criteriaRaw: "",
+    runs: 3,
+    passingScore: 7
+  });
+  const [report, setReport] = createSignal(null);
+  const [error, setError] = createSignal(null);
+  const [selectedRunIdx, setSelectedRunIdx] = createSignal(0);
+  const [step, setStep] = createSignal(0);
+  const totalSteps = 4; // test input, criteria, runs, passingScore
+
+  const stepLabels = ["Test input", "Criteria (comma-separated)", "Runs (1–10)", "Passing score (0–10)"];
+  const stepPlaceholders = ["What should the assistant do with this input?", "Follows instructions, Stays on topic, Concise", "3", "7"];
+  const runEval = async () => {
+    setPhase("running");
+    setError(null);
+    const cfg = config();
+    const criteria = cfg.criteriaRaw.split(/,|\n/).map(s => s.trim()).filter(Boolean).map((desc, i) => ({
+      id: `c${i}`,
+      description: desc
+    }));
+    if (criteria.length === 0) {
+      criteria.push({
+        id: "c0",
+        description: "Follows the skill instructions correctly"
+      });
+    }
+    try {
+      const data = sdk.requireData(await sdk.client.skill.eval({
+        path: {
+          name: props.skillName
+        },
+        body: {
+          testInput: cfg.testInput,
+          criteria,
+          runs: cfg.runs,
+          passingScore: cfg.passingScore
+        }
+      }), "Failed to evaluate skill");
+      setReport(data);
+      setPhase("results");
+    } catch (err) {
+      setError(sdk.errorMessage(err));
+      setPhase("config");
+    }
+  };
+  const handleStepInput = async value => {
+    const s = step();
+    const cfg = {
+      ...config()
+    };
+    if (s === 0) cfg.testInput = value;else if (s === 1) cfg.criteriaRaw = value;else if (s === 2) cfg.runs = Math.max(1, Math.min(10, parseInt(value) || 3));else if (s === 3) cfg.passingScore = Math.max(0, Math.min(10, parseFloat(value) || 7));
+    setConfig(cfg);
+    if (s < totalSteps - 1) {
+      setStep(s + 1);
+    } else {
+      // All steps done — run
+      await runEval();
+    }
+  };
+  useKeyboard(evt => {
+    if (evt.name === "escape") {
+      evt.preventDefault();
+      dialog.clear();
+    }
+    if (phase() === "results") {
+      if (evt.name === "up" || evt.name === "k") {
+        evt.preventDefault();
+        setSelectedRunIdx(i => Math.max(0, i - 1));
+      }
+      if (evt.name === "down" || evt.name === "j") {
+        evt.preventDefault();
+        const r = report();
+        if (r) setSelectedRunIdx(i => Math.min(r.runs.length - 1, i + 1));
+      }
+    }
+  });
+  const scoreColor = score => {
+    if (score >= 8) return theme.success;
+    if (score >= 5) return theme.warning;
+    return theme.error;
+  };
+  const r = createMemo(() => report());
+  const selectedRun = createMemo(() => r()?.runs[selectedRunIdx()] ?? null);
+  return (() => {
+    var _el$ = _$createElement("box"),
+      _el$2 = _$createElement("box"),
+      _el$3 = _$createElement("text"),
+      _el$4 = _$createTextNode(`Skill Eval — `),
+      _el$5 = _$createElement("text");
+    _$insertNode(_el$, _el$2);
+    _$setProp(_el$, "flexDirection", "column");
+    _$setProp(_el$, "width", 100);
+    _$setProp(_el$, "maxHeight", 40);
+    _$setProp(_el$, "padding", 1);
+    _$setProp(_el$, "borderStyle", "single");
+    _$insertNode(_el$2, _el$3);
+    _$insertNode(_el$2, _el$5);
+    _$setProp(_el$2, "flexDirection", "row");
+    _$setProp(_el$2, "justifyContent", "space-between");
+    _$setProp(_el$2, "marginBottom", 1);
+    _$insertNode(_el$3, _el$4);
+    _$insert(_el$3, () => props.skillName, null);
+    _$insertNode(_el$5, _$createTextNode(`Esc close`));
+    _$insert(_el$, _$createComponent(Show, {
+      get when() {
+        return error();
+      },
+      get children() {
+        var _el$7 = _$createElement("text");
+        _$setProp(_el$7, "marginBottom", 1);
+        _$insert(_el$7, error);
+        _$effect(_$p => _$setProp(_el$7, "fg", theme.error, _$p));
+        return _el$7;
+      }
+    }), null);
+    _$insert(_el$, _$createComponent(Show, {
+      get when() {
+        return phase() === "config";
+      },
+      get children() {
+        var _el$8 = _$createElement("box"),
+          _el$9 = _$createElement("text"),
+          _el$0 = _$createTextNode(`Step `),
+          _el$1 = _$createTextNode(`/4: `);
+        _$insertNode(_el$8, _el$9);
+        _$setProp(_el$8, "flexDirection", "column");
+        _$setProp(_el$8, "gap", 1);
+        _$insertNode(_el$9, _el$0);
+        _$insertNode(_el$9, _el$1);
+        _$insert(_el$9, () => step() + 1, _el$1);
+        _$insert(_el$9, () => stepLabels[step()], null);
+        _$insert(_el$8, _$createComponent(DialogPrompt, {
+          get title() {
+            return stepLabels[step()];
+          },
+          get placeholder() {
+            return stepPlaceholders[step()];
+          },
+          get value() {
+            return _$memo(() => step() === 0)() ? config().testInput : _$memo(() => step() === 1)() ? config().criteriaRaw : _$memo(() => step() === 2)() ? String(config().runs) : String(config().passingScore);
+          },
+          onConfirm: v => void handleStepInput(v.trim() || stepPlaceholders[step()]),
+          onCancel: () => dialog.clear()
+        }), null);
+        _$insert(_el$8, _$createComponent(Show, {
+          get when() {
+            return step() > 0;
+          },
+          get children() {
+            var _el$12 = _$createElement("text"),
+              _el$13 = _$createTextNode(`Test input: `);
+            _$insertNode(_el$12, _el$13);
+            _$setProp(_el$12, "marginTop", 1);
+            _$insert(_el$12, () => config().testInput.slice(0, 60), null);
+            _$insert(_el$12, () => config().testInput.length > 60 ? "…" : "", null);
+            _$effect(_$p => _$setProp(_el$12, "fg", theme.textMuted, _$p));
+            return _el$12;
+          }
+        }), null);
+        _$effect(_$p => _$setProp(_el$9, "fg", theme.textMuted, _$p));
+        return _el$8;
+      }
+    }), null);
+    _$insert(_el$, _$createComponent(Show, {
+      get when() {
+        return phase() === "running";
+      },
+      get children() {
+        var _el$14 = _$createElement("box"),
+          _el$15 = _$createElement("text"),
+          _el$16 = _$createTextNode(`Running `),
+          _el$17 = _$createTextNode(` eval pass`),
+          _el$18 = _$createTextNode(` in parallel…`),
+          _el$19 = _$createElement("text");
+        _$insertNode(_el$14, _el$15);
+        _$insertNode(_el$14, _el$19);
+        _$setProp(_el$14, "flexDirection", "column");
+        _$setProp(_el$14, "gap", 1);
+        _$insertNode(_el$15, _el$16);
+        _$insertNode(_el$15, _el$17);
+        _$insertNode(_el$15, _el$18);
+        _$insert(_el$15, () => config().runs, _el$17);
+        _$insert(_el$15, () => config().runs !== 1 ? "es" : "", _el$18);
+        _$insertNode(_el$19, _$createTextNode(`This may take a minute. Each run generates and scores a response.`));
+        _$effect(_p$ => {
+          var _v$ = theme.accent,
+            _v$2 = theme.textMuted;
+          _v$ !== _p$.e && (_p$.e = _$setProp(_el$15, "fg", _v$, _p$.e));
+          _v$2 !== _p$.t && (_p$.t = _$setProp(_el$19, "fg", _v$2, _p$.t));
+          return _p$;
+        }, {
+          e: undefined,
+          t: undefined
+        });
+        return _el$14;
+      }
+    }), null);
+    _$insert(_el$, _$createComponent(Show, {
+      get when() {
+        return _$memo(() => phase() === "results")() && r();
+      },
+      get children() {
+        return (() => {
+          const rep = r();
+          return (() => {
+            var _el$21 = _$createElement("box"),
+              _el$22 = _$createElement("box"),
+              _el$23 = _$createElement("text"),
+              _el$24 = _$createTextNode(`Avg: `),
+              _el$25 = _$createTextNode(`/10`),
+              _el$26 = _$createElement("text"),
+              _el$27 = _$createTextNode(`Pass: `),
+              _el$28 = _$createTextNode(`%`),
+              _el$29 = _$createElement("text"),
+              _el$30 = _$createTextNode(`Tokens: `),
+              _el$31 = _$createElement("text"),
+              _el$32 = _$createTextNode(`Avg latency: `),
+              _el$33 = _$createTextNode(`s`),
+              _el$34 = _$createElement("box"),
+              _el$35 = _$createElement("box"),
+              _el$36 = _$createElement("text"),
+              _el$38 = _$createElement("box"),
+              _el$39 = _$createElement("box"),
+              _el$40 = _$createElement("box"),
+              _el$41 = _$createElement("text"),
+              _el$43 = _$createElement("text");
+            _$insertNode(_el$21, _el$22);
+            _$insertNode(_el$21, _el$34);
+            _$insertNode(_el$21, _el$40);
+            _$setProp(_el$21, "flexDirection", "column");
+            _$setProp(_el$21, "flexGrow", 1);
+            _$insertNode(_el$22, _el$23);
+            _$insertNode(_el$22, _el$26);
+            _$insertNode(_el$22, _el$29);
+            _$insertNode(_el$22, _el$31);
+            _$setProp(_el$22, "flexDirection", "row");
+            _$setProp(_el$22, "gap", 3);
+            _$setProp(_el$22, "marginBottom", 1);
+            _$insertNode(_el$23, _el$24);
+            _$insertNode(_el$23, _el$25);
+            _$insert(_el$23, () => rep.summary.avgScore.toFixed(1), _el$25);
+            _$insertNode(_el$26, _el$27);
+            _$insertNode(_el$26, _el$28);
+            _$insert(_el$26, () => (rep.summary.passRate * 100).toFixed(0), _el$28);
+            _$insertNode(_el$29, _el$30);
+            _$insert(_el$29, () => rep.summary.totalTokensIn + rep.summary.totalTokensOut, null);
+            _$insertNode(_el$31, _el$32);
+            _$insertNode(_el$31, _el$33);
+            _$insert(_el$31, () => (rep.summary.avgLatencyMs / 1000).toFixed(1), _el$33);
+            _$insertNode(_el$34, _el$35);
+            _$insertNode(_el$34, _el$38);
+            _$insertNode(_el$34, _el$39);
+            _$setProp(_el$34, "flexDirection", "row");
+            _$setProp(_el$34, "flexGrow", 1);
+            _$insertNode(_el$35, _el$36);
+            _$setProp(_el$35, "width", 22);
+            _$setProp(_el$35, "flexDirection", "column");
+            _$insertNode(_el$36, _$createTextNode(`Runs`));
+            _$setProp(_el$36, "marginBottom", 1);
+            _$insert(_el$35, _$createComponent(For, {
+              get each() {
+                return rep.runs;
+              },
+              children: (run, i) => (() => {
+                var _el$45 = _$createElement("box"),
+                  _el$46 = _$createElement("text"),
+                  _el$47 = _$createElement("text"),
+                  _el$48 = _$createElement("text"),
+                  _el$49 = _$createTextNode(`run #`);
+                _$insertNode(_el$45, _el$46);
+                _$insertNode(_el$45, _el$47);
+                _$insertNode(_el$45, _el$48);
+                _$setProp(_el$45, "flexDirection", "row");
+                _$setProp(_el$45, "paddingX", 1);
+                _$setProp(_el$45, "gap", 1);
+                _$insert(_el$46, () => run.totalScore.toFixed(1));
+                _$insert(_el$47, () => run.passed ? "✓" : "✗");
+                _$insertNode(_el$48, _el$49);
+                _$insert(_el$48, () => i() + 1, null);
+                _$effect(_p$ => {
+                  var _v$13 = selectedRunIdx() === i() ? theme.backgroundElement : undefined,
+                    _v$14 = scoreColor(run.totalScore),
+                    _v$15 = run.passed ? theme.success : theme.error,
+                    _v$16 = selectedRunIdx() === i() ? theme.text : theme.textMuted;
+                  _v$13 !== _p$.e && (_p$.e = _$setProp(_el$45, "backgroundColor", _v$13, _p$.e));
+                  _v$14 !== _p$.t && (_p$.t = _$setProp(_el$46, "fg", _v$14, _p$.t));
+                  _v$15 !== _p$.a && (_p$.a = _$setProp(_el$47, "fg", _v$15, _p$.a));
+                  _v$16 !== _p$.o && (_p$.o = _$setProp(_el$48, "fg", _v$16, _p$.o));
+                  return _p$;
+                }, {
+                  e: undefined,
+                  t: undefined,
+                  a: undefined,
+                  o: undefined
+                });
+                return _el$45;
+              })()
+            }), null);
+            _$setProp(_el$38, "width", 1);
+            _$setProp(_el$38, "borderStyle", "single");
+            _$setProp(_el$39, "flexGrow", 1);
+            _$setProp(_el$39, "flexDirection", "column");
+            _$setProp(_el$39, "paddingX", 1);
+            _$insert(_el$39, _$createComponent(Show, {
+              get when() {
+                return selectedRun();
+              },
+              get children() {
+                return (() => {
+                  const run = selectedRun();
+                  return (() => {
+                    var _el$50 = _$createElement("box"),
+                      _el$51 = _$createElement("box"),
+                      _el$52 = _$createElement("text"),
+                      _el$53 = _$createTextNode(`Score: `),
+                      _el$54 = _$createTextNode(`/10`),
+                      _el$55 = _$createElement("text"),
+                      _el$56 = _$createTextNode(`s`),
+                      _el$57 = _$createElement("text"),
+                      _el$58 = _$createTextNode(` tokens`),
+                      _el$61 = _$createElement("text"),
+                      _el$63 = _$createElement("text");
+                    _$insertNode(_el$50, _el$51);
+                    _$insertNode(_el$50, _el$61);
+                    _$insertNode(_el$50, _el$63);
+                    _$setProp(_el$50, "flexDirection", "column");
+                    _$setProp(_el$50, "gap", 1);
+                    _$insertNode(_el$51, _el$52);
+                    _$insertNode(_el$51, _el$55);
+                    _$insertNode(_el$51, _el$57);
+                    _$setProp(_el$51, "flexDirection", "row");
+                    _$setProp(_el$51, "gap", 2);
+                    _$insertNode(_el$52, _el$53);
+                    _$insertNode(_el$52, _el$54);
+                    _$insert(_el$52, () => run.totalScore.toFixed(1), _el$54);
+                    _$insertNode(_el$55, _el$56);
+                    _$insert(_el$55, () => (run.latencyMs / 1000).toFixed(1), _el$56);
+                    _$insertNode(_el$57, _el$58);
+                    _$insert(_el$57, () => run.tokensIn + run.tokensOut, _el$58);
+                    _$insert(_el$51, _$createComponent(Show, {
+                      get when() {
+                        return run.error;
+                      },
+                      get children() {
+                        var _el$59 = _$createElement("text"),
+                          _el$60 = _$createTextNode(`Error: `);
+                        _$insertNode(_el$59, _el$60);
+                        _$insert(_el$59, () => run.error, null);
+                        _$effect(_$p => _$setProp(_el$59, "fg", theme.error, _$p));
+                        return _el$59;
+                      }
+                    }), null);
+                    _$insert(_el$50, _$createComponent(For, {
+                      get each() {
+                        return rep.criteria;
+                      },
+                      children: criterion => {
+                        const s = run.scores[criterion.id];
+                        return (() => {
+                          var _el$64 = _$createElement("box"),
+                            _el$65 = _$createElement("box"),
+                            _el$66 = _$createElement("text"),
+                            _el$67 = _$createTextNode(`/10`),
+                            _el$68 = _$createElement("text");
+                          _$insertNode(_el$64, _el$65);
+                          _$setProp(_el$64, "flexDirection", "column");
+                          _$setProp(_el$64, "marginBottom", 1);
+                          _$insertNode(_el$65, _el$66);
+                          _$insertNode(_el$65, _el$68);
+                          _$setProp(_el$65, "flexDirection", "row");
+                          _$setProp(_el$65, "gap", 2);
+                          _$insertNode(_el$66, _el$67);
+                          _$insert(_el$66, () => (s?.score ?? 0).toFixed(1), _el$67);
+                          _$setProp(_el$68, "wrapMode", "none");
+                          _$insert(_el$68, () => criterion.description.slice(0, 50));
+                          _$insert(_el$64, _$createComponent(Show, {
+                            get when() {
+                              return s?.reasoning;
+                            },
+                            get children() {
+                              var _el$69 = _$createElement("text");
+                              _$setProp(_el$69, "paddingLeft", 6);
+                              _$setProp(_el$69, "wrapMode", "none");
+                              _$insert(_el$69, () => s.reasoning.slice(0, 70));
+                              _$effect(_$p => _$setProp(_el$69, "fg", theme.textMuted, _$p));
+                              return _el$69;
+                            }
+                          }), null);
+                          _$effect(_p$ => {
+                            var _v$22 = scoreColor(s?.score ?? 0),
+                              _v$23 = theme.textMuted;
+                            _v$22 !== _p$.e && (_p$.e = _$setProp(_el$66, "fg", _v$22, _p$.e));
+                            _v$23 !== _p$.t && (_p$.t = _$setProp(_el$68, "fg", _v$23, _p$.t));
+                            return _p$;
+                          }, {
+                            e: undefined,
+                            t: undefined
+                          });
+                          return _el$64;
+                        })();
+                      }
+                    }), _el$61);
+                    _$insertNode(_el$61, _$createTextNode(`Output preview:`));
+                    _$setProp(_el$63, "wrapMode", "none");
+                    _$insert(_el$63, () => run.output.slice(0, 200), null);
+                    _$insert(_el$63, () => run.output.length > 200 ? "…" : "", null);
+                    _$effect(_p$ => {
+                      var _v$17 = scoreColor(run.totalScore),
+                        _v$18 = theme.textMuted,
+                        _v$19 = theme.textMuted,
+                        _v$20 = theme.textMuted,
+                        _v$21 = theme.text;
+                      _v$17 !== _p$.e && (_p$.e = _$setProp(_el$52, "fg", _v$17, _p$.e));
+                      _v$18 !== _p$.t && (_p$.t = _$setProp(_el$55, "fg", _v$18, _p$.t));
+                      _v$19 !== _p$.a && (_p$.a = _$setProp(_el$57, "fg", _v$19, _p$.a));
+                      _v$20 !== _p$.o && (_p$.o = _$setProp(_el$61, "fg", _v$20, _p$.o));
+                      _v$21 !== _p$.i && (_p$.i = _$setProp(_el$63, "fg", _v$21, _p$.i));
+                      return _p$;
+                    }, {
+                      e: undefined,
+                      t: undefined,
+                      a: undefined,
+                      o: undefined,
+                      i: undefined
+                    });
+                    return _el$50;
+                  })();
+                })();
+              }
+            }));
+            _$insertNode(_el$40, _el$41);
+            _$insertNode(_el$40, _el$43);
+            _$setProp(_el$40, "flexDirection", "row");
+            _$setProp(_el$40, "gap", 2);
+            _$setProp(_el$40, "marginTop", 1);
+            _$insertNode(_el$41, _$createTextNode(`↑↓ select run`));
+            _$insertNode(_el$43, _$createTextNode(`Esc close`));
+            _$effect(_p$ => {
+              var _v$7 = scoreColor(rep.summary.avgScore),
+                _v$8 = rep.summary.passRate >= 0.7 ? theme.success : theme.warning,
+                _v$9 = theme.textMuted,
+                _v$0 = theme.textMuted,
+                _v$1 = theme.textMuted,
+                _v$10 = theme.border,
+                _v$11 = theme.textMuted,
+                _v$12 = theme.textMuted;
+              _v$7 !== _p$.e && (_p$.e = _$setProp(_el$23, "fg", _v$7, _p$.e));
+              _v$8 !== _p$.t && (_p$.t = _$setProp(_el$26, "fg", _v$8, _p$.t));
+              _v$9 !== _p$.a && (_p$.a = _$setProp(_el$29, "fg", _v$9, _p$.a));
+              _v$0 !== _p$.o && (_p$.o = _$setProp(_el$31, "fg", _v$0, _p$.o));
+              _v$1 !== _p$.i && (_p$.i = _$setProp(_el$36, "fg", _v$1, _p$.i));
+              _v$10 !== _p$.n && (_p$.n = _$setProp(_el$38, "borderColor", _v$10, _p$.n));
+              _v$11 !== _p$.s && (_p$.s = _$setProp(_el$41, "fg", _v$11, _p$.s));
+              _v$12 !== _p$.h && (_p$.h = _$setProp(_el$43, "fg", _v$12, _p$.h));
+              return _p$;
+            }, {
+              e: undefined,
+              t: undefined,
+              a: undefined,
+              o: undefined,
+              i: undefined,
+              n: undefined,
+              s: undefined,
+              h: undefined
+            });
+            return _el$21;
+          })();
+        })();
+      }
+    }), null);
+    _$effect(_p$ => {
+      var _v$3 = theme.backgroundPanel,
+        _v$4 = theme.border,
+        _v$5 = theme.text,
+        _v$6 = theme.textMuted;
+      _v$3 !== _p$.e && (_p$.e = _$setProp(_el$, "backgroundColor", _v$3, _p$.e));
+      _v$4 !== _p$.t && (_p$.t = _$setProp(_el$, "borderColor", _v$4, _p$.t));
+      _v$5 !== _p$.a && (_p$.a = _$setProp(_el$3, "fg", _v$5, _p$.a));
+      _v$6 !== _p$.o && (_p$.o = _$setProp(_el$5, "fg", _v$6, _p$.o));
+      return _p$;
+    }, {
+      e: undefined,
+      t: undefined,
+      a: undefined,
+      o: undefined
+    });
+    return _el$;
+  })();
+}

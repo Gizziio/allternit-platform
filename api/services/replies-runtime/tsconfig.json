@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "paths": {
+      "@allternit/replies-contract": ["../../../packages/@allternit/replies-contract/src/index.ts"],
+      "@allternit/replies-reducer": ["../../../packages/@allternit/replies-reducer/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*"]
+}

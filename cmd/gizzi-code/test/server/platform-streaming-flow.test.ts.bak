@@ -1,0 +1,655 @@
+// @ts-nocheck
+/**
+ * Platform surface streaming flow — end-to-end integration spec.
+ *
+ * Tests the complete event pipeline that the platform surface relies on:
+ *   session.create → SSE subscription → session events → message events
+ *   → part streaming (delta) → permission/question events → completion
+ *
+ * All traffic flows through Server.App().fetch (in-process) so no running
+ * server is required. The test uses the same pattern as sse-stream.test.ts
+ * and session-composer-dock.test.ts.
+ *
+ * Key assertions:
+ *  1. SSE stream opens and delivers server.connected
+ *  2. Session creation emits session.created → arrives in stream
+ *  3. Message created emits message.updated → arrives in stream
+ *  4. Part streaming emits message.part.updated + message.part.delta → arrive
+ *  5. Permission seeding emits permission.asked → arrives in stream
+ *  6. Question seeding emits question.asked → arrives in stream
+ *  7. Clearing a blocker emits permission.replied / question.replied
+ *  8. Session status transitions arrive via session.status events
+ */
+import { describe, expect, test } from "bun:test"
+import { Instance } from "../../src/runtime/context/project/instance"
+import { EventRoutes } from "../../src/runtime/server/routes/event"
+import { Bus } from "../../src/shared/bus"
+import { Session } from "../../src/session"
+import { MessageV2 } from "../../src/runtime/session/message-v2"
+import { PermissionNext } from "../../src/runtime/tools/guard/permission/next"
+import { Question } from "../../src/runtime/integrations/question"
+import { Identifier } from "../../src/shared/id/id"
+import { createA2RClient } from "@allternit/sdk"
+import { tmpdir } from "../fixture/fixture"
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Build a fetch function that routes SSE requests directly through EventRoutes.
+ *  Bypasses the auth middleware in Server.App() — the Instance context is
+ *  established via Instance.provide in each test, so Bus.subscribeAll() inside
+ *  the handler can access Instance.directory via AsyncLocalStorage. */
+function makeFetch(_directory: string) {
+  return async (input: RequestInfo | URL, init?: RequestInit) => {
+    const req = input instanceof Request
+      ? input
+      : new Request(typeof input === "string" ? input : (input as URL).href, init)
+    return EventRoutes().fetch(new Request("http://localhost/", {
+      headers: req.headers,
+      signal: req.signal,
+      method: req.method,
+    }))
+  }
+}
+
+/** Collect events from sdk.events() until the given type appears or
+ *  maxEvents have been received. Returns the collected list. */
+async function collectUntil(
+  sdk: ReturnType<typeof createA2RClient>,
+  targetType: string,
+  maxEvents = 50,
+): Promise<Array<{ type: string; properties: unknown }>> {
+  const ac = new AbortController()
+  const received: Array<{ type: string; properties: unknown }> = []
+  try {
+    for await (const event of sdk.events({ signal: ac.signal })) {
+      received.push({ type: event.type, properties: (event as any).properties })
+      if (event.type === targetType || received.length >= maxEvents) break
+    }
+  } finally {
+    ac.abort()
+  }
+  return received
+}
+
+// ---------------------------------------------------------------------------
+// 1. SSE handshake — stream opens with server.connected
+// ---------------------------------------------------------------------------
+
+describe("Platform streaming flow — SSE handshake", () => {
+  test("stream delivers server.connected as the first event", async () => {
+    await using tmp = await tmpdir({ git: true })
+
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const sdk = createA2RClient({
+          baseUrl: "http://gizzi.internal",
+          fetch: makeFetch(tmp.path) as typeof globalThis.fetch,
+        })
+
+        const events = await collectUntil(sdk, "server.connected", 5)
+
+        expect(events[0]?.type).toBe("server.connected")
+
+        await Instance.dispose()
+      },
+    })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 2. Session lifecycle — create / update / delete flow through SSE
+// ---------------------------------------------------------------------------
+
+describe("Platform streaming flow — session lifecycle", () => {
+  test("session.created arrives in the event stream after Session.create()", async () => {
+    await using tmp = await tmpdir({ git: true })
+
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const sdk = createA2RClient({
+          baseUrl: "http://gizzi.internal",
+          fetch: makeFetch(tmp.path) as typeof globalThis.fetch,
+        })
+
+        const ac = new AbortController()
+        const received: string[] = []
+
+        const streamPromise = (async () => {
+          for await (const event of sdk.events({ signal: ac.signal })) {
+            received.push(event.type)
+            if (event.type === "session.created") break
+          }
+        })()
+
+        await Bun.sleep(50) // allow SSE stream to connect
+
+        await Session.create({ title: "stream-test-session" })
+
+        await streamPromise
+        ac.abort()
+
+        expect(received).toContain("server.connected")
+        expect(received).toContain("session.created")
+
+        await Instance.dispose()
+      },
+    })
+  })
+
+  test("session.updated arrives after Session.update()", async () => {
+    await using tmp = await tmpdir({ git: true })
+
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const session = await Session.create({ title: "update-test" })
+
+        const sdk = createA2RClient({
+          baseUrl: "http://gizzi.internal",
+          fetch: makeFetch(tmp.path) as typeof globalThis.fetch,
+        })
+
+        const ac = new AbortController()
+        const received: string[] = []
+
+        const streamPromise = (async () => {
+          for await (const event of sdk.events({ signal: ac.signal })) {
+            received.push(event.type)
+            if (event.type === "session.updated") break
+            if (received.length > 20) break
+          }
+        })()
+
+        await Bun.sleep(50)
+
+        await Session.setTitle({ sessionID: session.id, title: "updated-title" })
+
+        await streamPromise
+        ac.abort()
+
+        expect(received).toContain("session.updated")
+
+        await Instance.dispose()
+      },
+    })
+  })
+
+  test("session.deleted arrives after Session.remove()", async () => {
+    await using tmp = await tmpdir({ git: true })
+
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const session = await Session.create({ title: "delete-test" })
+
+        const sdk = createA2RClient({
+          baseUrl: "http://gizzi.internal",
+          fetch: makeFetch(tmp.path) as typeof globalThis.fetch,
+        })
+
+        const ac = new AbortController()
+        const received: string[] = []
+
+        const streamPromise = (async () => {
+          for await (const event of sdk.events({ signal: ac.signal })) {
+            received.push(event.type)
+            if (event.type === "session.deleted") break
+            if (received.length > 20) break
+          }
+        })()
+
+        await Bun.sleep(50)
+
+        await Session.remove(session.id)
+
+        await streamPromise
+        ac.abort()
+
+        expect(received).toContain("session.deleted")
+
+        await Instance.dispose()
+      },
+    })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 3. Message events — message.updated arrives after upsert
+// ---------------------------------------------------------------------------
+
+describe("Platform streaming flow — message events", () => {
+  test("message.updated arrives in stream after a message is upserted", async () => {
+    await using tmp = await tmpdir({ git: true })
+
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const session = await Session.create({})
+
+        const sdk = createA2RClient({
+          baseUrl: "http://gizzi.internal",
+          fetch: makeFetch(tmp.path) as typeof globalThis.fetch,
+        })
+
+        const ac = new AbortController()
+        const received: Array<{ type: string; properties: any }> = []
+
+        const streamPromise = (async () => {
+          for await (const event of sdk.events({ signal: ac.signal })) {
+            received.push({ type: event.type, properties: (event as any).properties })
+            if (event.type === "message.updated") break
+            if (received.length > 30) break
+          }
+        })()
+
+        await Bun.sleep(50)
+
+        // Publish a message.updated event directly (simulates what the session
+        // run loop does after receiving a message from the model)
+        const msgID = Identifier.ascending("msg")
+        await Bus.publish(MessageV2.Event.Updated, {
+          info: {
+            id: msgID,
+            sessionID: session.id,
+            role: "user",
+            time: { created: Date.now() },
+          } as any,
+        })
+
+        await streamPromise
+        ac.abort()
+
+        const msgEvent = received.find((e) => e.type === "message.updated")
+        expect(msgEvent).toBeDefined()
+        expect(msgEvent?.properties?.info?.sessionID).toBe(session.id)
+
+        await Session.remove(session.id)
+        await Instance.dispose()
+      },
+    })
+  })
+
+  test("message.part.updated arrives for a streaming part", async () => {
+    await using tmp = await tmpdir({ git: true })
+
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const session = await Session.create({})
+        const msgID = Identifier.ascending("msg")
+        const partID = Identifier.ascending("part")
+
+        const sdk = createA2RClient({
+          baseUrl: "http://gizzi.internal",
+          fetch: makeFetch(tmp.path) as typeof globalThis.fetch,
+        })
+
+        const ac = new AbortController()
+        const received: Array<{ type: string; properties: any }> = []
+
+        const streamPromise = (async () => {
+          for await (const event of sdk.events({ signal: ac.signal })) {
+            received.push({ type: event.type, properties: (event as any).properties })
+            if (event.type === "message.part.updated") break
+            if (received.length > 30) break
+          }
+        })()
+
+        await Bun.sleep(50)
+
+        await Bus.publish(MessageV2.Event.PartUpdated, {
+          part: {
+            id: partID,
+            messageID: msgID,
+            sessionID: session.id,
+            type: "text",
+            text: "Hello from stream",
+            time: { created: Date.now() },
+          } as any,
+        })
+
+        await streamPromise
+        ac.abort()
+
+        const partEvent = received.find((e) => e.type === "message.part.updated")
+        expect(partEvent).toBeDefined()
+        expect(partEvent?.properties?.part?.type).toBe("text")
+
+        await Session.remove(session.id)
+        await Instance.dispose()
+      },
+    })
+  })
+
+  test("message.part.delta arrives for streaming incremental text", async () => {
+    await using tmp = await tmpdir({ git: true })
+
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const session = await Session.create({})
+        const msgID = Identifier.ascending("msg")
+        const partID = Identifier.ascending("part")
+
+        const sdk = createA2RClient({
+          baseUrl: "http://gizzi.internal",
+          fetch: makeFetch(tmp.path) as typeof globalThis.fetch,
+        })
+
+        const ac = new AbortController()
+        const received: Array<{ type: string; properties: any }> = []
+
+        const streamPromise = (async () => {
+          for await (const event of sdk.events({ signal: ac.signal })) {
+            received.push({ type: event.type, properties: (event as any).properties })
+            if (event.type === "message.part.delta") break
+            if (received.length > 30) break
+          }
+        })()
+
+        await Bun.sleep(50)
+
+        await Bus.publish(MessageV2.Event.PartDelta, {
+          sessionID: session.id,
+          messageID: msgID,
+          partID,
+          field: "text",
+          delta: " world",
+        })
+
+        await streamPromise
+        ac.abort()
+
+        const deltaEvent = received.find((e) => e.type === "message.part.delta")
+        expect(deltaEvent).toBeDefined()
+        expect(deltaEvent?.properties?.delta).toBe(" world")
+        expect(deltaEvent?.properties?.field).toBe("text")
+
+        await Session.remove(session.id)
+        await Instance.dispose()
+      },
+    })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 4. Blocker events — permission.asked / question.asked flow through SSE
+// ---------------------------------------------------------------------------
+
+describe("Platform streaming flow — blocker events", () => {
+  test("permission.asked arrives in stream when PermissionNext.ask() fires", async () => {
+    await using tmp = await tmpdir({ git: true })
+
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const sessionID = Identifier.ascending("session")
+
+        const sdk = createA2RClient({
+          baseUrl: "http://gizzi.internal",
+          fetch: makeFetch(tmp.path) as typeof globalThis.fetch,
+        })
+
+        const ac = new AbortController()
+        const received: Array<{ type: string; properties: any }> = []
+
+        const streamPromise = (async () => {
+          for await (const event of sdk.events({ signal: ac.signal })) {
+            received.push({ type: event.type, properties: (event as any).properties })
+            if (event.type === "permission.asked") break
+            if (received.length > 30) break
+          }
+        })()
+
+        await Bun.sleep(50)
+
+        // Fire-and-forget (permission.ask blocks until replied)
+        const p = PermissionNext.ask({
+          sessionID,
+          permission: "write",
+          patterns: ["/tmp/test.txt"],
+          metadata: { tool: "write" },
+          always: ["/tmp/test.txt"],
+          ruleset: [],
+        })
+        p.catch(() => {})
+
+        await streamPromise
+        ac.abort()
+
+        const permEvent = received.find((e) => e.type === "permission.asked")
+        expect(permEvent).toBeDefined()
+        expect(permEvent?.properties?.sessionID).toBe(sessionID)
+        expect(permEvent?.properties?.permission).toBe("write")
+
+        // Clean up
+        const pending = await PermissionNext.list()
+        const entry = pending.find((p) => p.sessionID === sessionID)
+        if (entry) await PermissionNext.reply({ requestID: entry.id, reply: "reject" })
+
+        await Instance.dispose()
+      },
+    })
+  })
+
+  test("question.asked arrives in stream when Question.ask() fires", async () => {
+    await using tmp = await tmpdir({ git: true })
+
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const sessionID = Identifier.ascending("session")
+
+        const sdk = createA2RClient({
+          baseUrl: "http://gizzi.internal",
+          fetch: makeFetch(tmp.path) as typeof globalThis.fetch,
+        })
+
+        const ac = new AbortController()
+        const received: Array<{ type: string; properties: any }> = []
+
+        const streamPromise = (async () => {
+          for await (const event of sdk.events({ signal: ac.signal })) {
+            received.push({ type: event.type, properties: (event as any).properties })
+            if (event.type === "question.asked") break
+            if (received.length > 30) break
+          }
+        })()
+
+        await Bun.sleep(50)
+
+        const q = Question.ask({
+          sessionID,
+          questions: [
+            {
+              header: "Approach",
+              question: "Which approach?",
+              options: [
+                { label: "Fast", description: "Optimise speed" },
+                { label: "Safe", description: "Optimise safety" },
+              ],
+            },
+          ],
+        })
+        q.catch(() => {})
+
+        await streamPromise
+        ac.abort()
+
+        const qEvent = received.find((e) => e.type === "question.asked")
+        expect(qEvent).toBeDefined()
+        expect(qEvent?.properties?.sessionID).toBe(sessionID)
+
+        // Clean up
+        const pending = await Question.list()
+        const entry = pending.find((q) => q.sessionID === sessionID)
+        if (entry) await Question.reject(entry.id)
+
+        await Instance.dispose()
+      },
+    })
+  })
+
+  test("permission.replied arrives in stream after PermissionNext.reply()", async () => {
+    await using tmp = await tmpdir({ git: true })
+
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const sessionID = Identifier.ascending("session")
+
+        // Seed permission first
+        const p = PermissionNext.ask({
+          sessionID,
+          permission: "bash",
+          patterns: ["echo hello"],
+          metadata: {},
+          always: ["echo hello"],
+          ruleset: [],
+        })
+        p.catch(() => {})
+
+        await Bun.sleep(30) // let it register
+
+        const pending = await PermissionNext.list()
+        const entry = pending.find((x) => x.sessionID === sessionID)
+        expect(entry).toBeDefined()
+
+        const sdk = createA2RClient({
+          baseUrl: "http://gizzi.internal",
+          fetch: makeFetch(tmp.path) as typeof globalThis.fetch,
+        })
+
+        const ac = new AbortController()
+        const received: Array<{ type: string; properties: any }> = []
+
+        const streamPromise = (async () => {
+          for await (const event of sdk.events({ signal: ac.signal })) {
+            received.push({ type: event.type, properties: (event as any).properties })
+            if (event.type === "permission.replied") break
+            if (received.length > 30) break
+          }
+        })()
+
+        await Bun.sleep(50)
+
+        await PermissionNext.reply({ requestID: entry!.id, reply: "once" })
+
+        await streamPromise
+        ac.abort()
+
+        const replyEvent = received.find((e) => e.type === "permission.replied")
+        expect(replyEvent).toBeDefined()
+        expect(replyEvent?.properties?.requestID).toBe(entry!.id)
+        expect(replyEvent?.properties?.reply).toBe("once")
+
+        await Instance.dispose()
+      },
+    })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// 5. Full composite flow: create session → message → part stream → clear
+// ---------------------------------------------------------------------------
+
+describe("Platform streaming flow — composite flow", () => {
+  test("session + message + part delta all arrive in one continuous stream", async () => {
+    await using tmp = await tmpdir({ git: true })
+
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const sdk = createA2RClient({
+          baseUrl: "http://gizzi.internal",
+          fetch: makeFetch(tmp.path) as typeof globalThis.fetch,
+        })
+
+        const ac = new AbortController()
+        const received = new Map<string, unknown>()
+
+        const targetTypes = new Set([
+          "server.connected",
+          "session.created",
+          "message.updated",
+          "message.part.updated",
+          "message.part.delta",
+        ])
+
+        const streamPromise = (async () => {
+          for await (const event of sdk.events({ signal: ac.signal })) {
+            received.set(event.type, (event as any).properties)
+            if ([...targetTypes].every((t) => received.has(t))) break
+            if (received.size > 50) break
+          }
+        })()
+
+        await Bun.sleep(50)
+
+        // 1. Create session
+        const session = await Session.create({ title: "composite-test" })
+
+        await Bun.sleep(20)
+
+        // 2. Publish a message
+        const msgID = Identifier.ascending("msg")
+        await Bus.publish(MessageV2.Event.Updated, {
+          info: {
+            id: msgID,
+            sessionID: session.id,
+            role: "assistant",
+            time: { created: Date.now() },
+          } as any,
+        })
+
+        await Bun.sleep(20)
+
+        // 3. Publish a part
+        const partID = Identifier.ascending("part")
+        await Bus.publish(MessageV2.Event.PartUpdated, {
+          part: {
+            id: partID,
+            messageID: msgID,
+            sessionID: session.id,
+            type: "text",
+            text: "Thinking...",
+            time: { created: Date.now() },
+          } as any,
+        })
+
+        await Bun.sleep(20)
+
+        // 4. Publish a delta (streaming token)
+        await Bus.publish(MessageV2.Event.PartDelta, {
+          sessionID: session.id,
+          messageID: msgID,
+          partID,
+          field: "text",
+          delta: " done",
+        })
+
+        await streamPromise
+        ac.abort()
+
+        // Assert all expected event types arrived
+        expect(received.has("server.connected")).toBe(true)
+        expect(received.has("session.created")).toBe(true)
+        expect(received.has("message.updated")).toBe(true)
+        expect(received.has("message.part.updated")).toBe(true)
+        expect(received.has("message.part.delta")).toBe(true)
+
+        // Spot-check payload integrity
+        const partDelta = received.get("message.part.delta") as any
+        expect(partDelta?.delta).toBe(" done")
+        expect(partDelta?.sessionID).toBe(session.id)
+
+        await Session.remove(session.id)
+        await Instance.dispose()
+      },
+    })
+  })
+})

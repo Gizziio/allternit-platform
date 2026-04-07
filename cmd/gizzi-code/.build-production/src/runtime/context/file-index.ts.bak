@@ -1,0 +1,103 @@
+import { Log } from "@/shared/util/log";
+import { Ripgrep } from "@/shared/file/ripgrep";
+import pathModule from "path";
+
+export interface FileMetadata {
+  path: string;
+  hash: string;
+  lastIndexed: number;
+  size: number;
+}
+
+export namespace FileIndex {
+  const log = Log.create({ service: "context.file-index" });
+
+  // In-memory file metadata cache keyed by root directory
+  const cache = new Map<string, Map<string, FileMetadata>>();
+
+  function getStore(root: string): Map<string, FileMetadata> {
+    let store = cache.get(root);
+    if (!store) {
+      store = new Map();
+      cache.set(root, store);
+    }
+    return store;
+  }
+
+  export async function index(root: string, options?: { maxFiles?: number }): Promise<void> {
+    log.info("Indexing files", { root });
+    const store = getStore(root);
+    const maxFiles = options?.maxFiles ?? 5000;
+    const now = Date.now();
+    let count = 0;
+
+    const seen = new Set<string>();
+    for await (const filePath of Ripgrep.files({ cwd: root })) {
+      if (count >= maxFiles) break;
+      count++;
+      seen.add(filePath);
+
+      const fullPath = pathModule.join(root, filePath);
+      try {
+        const file = Bun.file(fullPath);
+        const stat = await file.stat();
+        const existing = store.get(filePath);
+
+        // Skip if already indexed and file hasn't changed
+        if (existing && existing.size === stat.size && existing.lastIndexed > stat.mtimeMs) {
+          continue;
+        }
+
+        // Compute hash for smaller files, use size+mtime for large ones
+        let hash: string;
+        if (stat.size < 1_000_000) {
+          const hasher = new Bun.CryptoHasher("sha256");
+          hasher.update(await file.arrayBuffer());
+          hash = hasher.digest("hex");
+        } else {
+          hash = `${stat.size}-${stat.mtimeMs}`;
+        }
+
+        store.set(filePath, {
+          path: filePath,
+          hash,
+          lastIndexed: now,
+          size: stat.size,
+        });
+      } catch {
+        // File may have been deleted between listing and stat
+      }
+    }
+
+    // Remove entries for files that no longer exist
+    for (const key of store.keys()) {
+      if (!seen.has(key)) store.delete(key);
+    }
+
+    log.info("Indexing complete", { files: count, cached: store.size });
+  }
+
+  export async function getMetadata(filePath: string): Promise<FileMetadata | null> {
+    for (const store of cache.values()) {
+      const meta = store.get(filePath);
+      if (meta) return meta;
+    }
+    return null;
+  }
+
+  export async function listAll(root?: string): Promise<string[]> {
+    if (root) {
+      const store = cache.get(root);
+      return store ? Array.from(store.keys()) : [];
+    }
+    const all: string[] = [];
+    for (const store of cache.values()) {
+      all.push(...store.keys());
+    }
+    return all;
+  }
+
+  export function invalidate(root: string): void {
+    cache.delete(root);
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "@allternit/ars-contexta",
+  "version": "1.0.0",
+  "description": "Ars Contexta Knowledge System - Three-Space Architecture with 6Rs pipeline",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": ["allternit", "knowledge", "second-brain", "notes", "graph"],
+  "license": "MIT"
+}

@@ -1,0 +1,192 @@
+/**
+ * Allternit Cron - Unified TypeScript Cron System
+ * 
+ * Consolidated implementation replacing:
+ * - Rust allternit-scheduler (deprecated)
+ * - Previous in-memory CronService
+ * 
+ * Features:
+ * - SQLite persistence (Bun built-in)
+ * - Natural language scheduling
+ * - Multiple job types (shell, http, agent, cowork, function)
+ * - Timezone support
+ * - Exponential backoff retry
+ * - Job timeout enforcement
+ * - Graceful shutdown
+ * - Daemon mode with HTTP API
+ * - Prometheus metrics
+ * 
+ * Architecture based on research from:
+ * - Supabase Cron (best-in-class UX)
+ * - Vercel Cron (config-based simplicity)
+ * - GitHub Actions (workflow integration)
+ */
+
+// Core Types
+export type {
+  // Job Types
+  CronJob,
+  JobType,
+  JobStatus,
+  ShellJob,
+  HttpJob,
+  AgentJob,
+  CoworkJob,
+  FunctionJob,
+  
+  // Run Types
+  CronRun,
+  RunStatus,
+  
+  // Schedule Types
+  Schedule,
+  CronSchedule,
+  IntervalSchedule,
+  ParsedSchedule,
+  
+  // API Types
+  CreateJobInput,
+  UpdateJobInput,
+  ListJobsFilter,
+  ListRunsFilter,
+  
+  // Event Types
+  CronEvent,
+  CronEventType,
+  
+  // Daemon Types
+  DaemonConfig,
+  DaemonStatus,
+  CronServiceConfig,
+} from "./types";
+
+// Core Service (Legacy - use CronServiceEnhanced for production)
+export { CronService } from "./service";
+
+// Enhanced Service (Production-ready)
+export { CronServiceEnhanced } from "./service-enhanced";
+
+// Executors
+export { AgentExecutor, type AgentExecutorConfig } from "./executors/agent-executor";
+export { CoworkExecutor, type CoworkExecutorConfig } from "./executors/cowork-executor";
+
+// Utilities
+export { withRetry, RetryableErrors, calculateDelay, type RetryConfig } from "./utils/retry";
+export {
+  calculateNextRun,
+  nowInTimezone,
+  convertToTimezone,
+  getTimezoneOffset,
+  formatInTimezone,
+  isValidTimezone,
+  listTimezones,
+  searchTimezones,
+  COMMON_TIMEZONES,
+  SYSTEM_TIMEZONE,
+  type Timezone,
+} from "./utils/timezone";
+
+// Daemon Server
+export { CronDaemon, startDaemon, isDaemonRunning, getRemoteStatus, stopRemoteDaemon } from "./daemon";
+
+// Schedule Parser
+export {
+  parseSchedule,
+  parseScheduleToType,
+  describeSchedule,
+  suggestSchedules,
+  COMMON_SCHEDULES,
+} from "./parser";
+
+// Database
+export { CronDatabase } from "./database";
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Quick Start Examples
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Example 1: Local Mode with Enhanced Service
+ * 
+ * ```typescript
+ * import { CronServiceEnhanced, AgentExecutor, CoworkExecutor } from "./index";
+ * // Initialize CronService with executors
+ * CronServiceEnhanced.initialize({
+ *   dbPath: "~/.allternit/cron.db",
+ *   timezone: "America/New_York",
+ *   agent: {
+ *     defaultCwd: process.cwd(),
+ *   },
+ *   cowork: {
+ *     defaultCwd: process.cwd(),
+ *   },
+ * });
+ * 
+ * CronServiceEnhanced.start();
+ * 
+ * // Create a job with timezone
+ * const job = CronServiceEnhanced.create({
+ *   name: "Daily Report",
+ *   type: "agent",
+ *   schedule: "0 9 * * *", // 9 AM
+ *   config: {
+ *     prompt: "Generate daily sales report",
+ *   },
+ * });
+ * 
+ * // The job will run at 9 AM in the configured timezone
+ * ```
+ */
+
+/**
+ * Example 2: Retry with Exponential Backoff
+ * 
+ * ```typescript
+ * import { CronServiceEnhanced } from "./index";
+ * 
+ * const job = CronServiceEnhanced.create({
+ *   name: "API Health Check",
+ *   type: "http",
+ *   schedule: "star/5 star star star star", // Every 5 minutes
+ *   config: {
+ *     url: "https://api.example.com/health",
+ *     method: "GET",
+ *   },
+ *   maxRetries: 3, // Will retry 3 times with exponential backoff
+ * });
+ * ```
+ */
+
+/**
+ * Example 3: Graceful Shutdown
+ * 
+ * ```typescript
+ * import { CronServiceEnhanced } from "./index";
+ * 
+ * process.on('SIGTERM', async () => {
+ *   await CronServiceEnhanced.stop({ 
+ *     force: false,  // Wait for running jobs
+ *     timeoutMs: 30000 // 30 second timeout
+ *   });
+ *   process.exit(0);
+ * });
+ * ```
+ */
+
+/**
+ * Example 4: Daemon Mode with Production Config
+ * 
+ * ```typescript
+ * import { startDaemon } from "./index";
+ * 
+ * const daemon = await startDaemon({
+ *   port: 3031,
+ *   dbPath: "~/.allternit/cron.db",
+ *   checkIntervalMs: 60000,
+ *   timezone: "UTC",
+ * });
+ * ```
+ */
+
+// Version
+export const VERSION = "2.0.0";

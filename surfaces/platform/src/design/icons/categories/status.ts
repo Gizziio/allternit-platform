@@ -3,7 +3,7 @@
  * 
  * Icons for status indication, feedback, and alerts.
  * 
- * @module @a2r/platform/icons/categories/status
+ * @module @allternit/platform/icons/categories/status
  */
 
 export const statusIcons = [

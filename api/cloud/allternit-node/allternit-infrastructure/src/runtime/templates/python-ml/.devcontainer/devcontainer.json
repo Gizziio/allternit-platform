@@ -1,0 +1,147 @@
+{
+  "name": "Python ML & Data Science",
+  "dockerComposeFile": ["../docker-compose.yml"],
+  "service": "python-ml",
+  "workspaceFolder": "/workspace",
+  "shutdownAction": "stopCompose",
+  
+  "features": {
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.12",
+      "installTools": true,
+      "toolsToInstall": "black,flake8,mypy,pytest,isort,autopep8,pylint,bandit"
+    },
+    "ghcr.io/devcontainers/features/git:1": {
+      "version": "latest",
+      "ppa": true
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/nvidia-cuda:1": {
+      "installCudnn": true,
+      "cudaVersion": "12.1",
+      "cudnnVersion": "8.9.0"
+    }
+  },
+
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/bin/python3",
+        "python.linting.enabled": true,
+        "python.linting.pylintEnabled": false,
+        "python.linting.flake8Enabled": true,
+        "python.linting.mypyEnabled": true,
+        "python.formatting.provider": "black",
+        "python.formatting.blackPath": "/usr/local/bin/black",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.organizeImports": true
+        },
+        "jupyter.askForKernelRestart": false,
+        "jupyter.interactiveWindow.creationMode": "perFile",
+        "jupyter.notebookFileRoot": "${workspaceFolder}",
+        "files.exclude": {
+          "**/__pycache__": true,
+          "**/.pytest_cache": true,
+          "**/.mypy_cache": true,
+          "**/*.egg-info": true,
+          ".venv": true
+        }
+      },
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.black-formatter",
+        "ms-python.flake8",
+        "ms-python.mypy-type-checker",
+        "ms-toolsai.jupyter",
+        "ms-toolsai.jupyter-keymap",
+        "ms-toolsai.jupyter-renderers",
+        "ms-toolsai.vscode-jupyter-cell-tags",
+        "ms-toolsai.vscode-jupyter-slideshow",
+        "donjayamanne.python-environment-manager",
+        "kevinrose.vsc-python-indent",
+        "njpwerner.autodocstring",
+        "aaron-bond.better-comments",
+        "streetsidesoftware.code-spell-checker",
+        "eamodio.gitlens",
+        "mhutchie.git-graph",
+        "redhat.vscode-yaml",
+        "tamasfe.even-better-toml",
+        "yzhang.markdown-all-in-one",
+        "bierner.markdown-mermaid",
+        "pkief.material-icon-theme",
+        "usernamehw.errorlens",
+        "Gruntfuggly.todo-tree",
+        "ryanluker.vscode-coverage-gutters",
+        "littlefoxteam.vscode-python-test-adapter",
+        "github.copilot",
+        "github.copilot-chat",
+        "github.vscode-pull-request-github"
+      ]
+    }
+  },
+
+  "forwardPorts": [
+    8888,
+    5000,
+    6006,
+    8080,
+    9000,
+    9001,
+    5432,
+    6379
+  ],
+  "portsAttributes": {
+    "8888": {
+      "label": "JupyterLab",
+      "onAutoForward": "notify"
+    },
+    "5000": {
+      "label": "MLflow",
+      "onAutoForward": "notify"
+    },
+    "6006": {
+      "label": "TensorBoard",
+      "onAutoForward": "notify"
+    },
+    "8080": {
+      "label": "Web Apps",
+      "onAutoForward": "notify"
+    },
+    "9000": {
+      "label": "MinIO API",
+      "onAutoForward": "silent"
+    },
+    "9001": {
+      "label": "MinIO Console",
+      "onAutoForward": "notify"
+    }
+  },
+
+  "postCreateCommand": "bash /usr/local/bin/init-project.sh",
+  "postStartCommand": "echo 'Python ML Environment Ready!'",
+
+  "remoteUser": "root",
+  "containerEnv": {
+    "PYTHONPATH": "/workspace/src:${PYTHONPATH}",
+    "JUPYTER_TOKEN": "${localEnv:JUPYTER_TOKEN:a2r-ml-dev}",
+    "MLFLOW_TRACKING_URI": "http://mlflow:5000"
+  },
+
+  "mounts": [
+    "source=${localWorkspaceFolder}/notebooks,target=/workspace/notebooks,type=bind,consistency=cached",
+    "source=${localWorkspaceFolder}/src,target=/workspace/src,type=bind,consistency=cached",
+    "source=${localWorkspaceFolder}/data,target=/workspace/data,type=bind,consistency=cached",
+    "source=${localWorkspaceFolder}/models,target=/workspace/models,type=bind,consistency=cached"
+  ],
+
+  "runArgs": [
+    "--gpus=all",
+    "--ipc=host",
+    "--ulimit", "memlock=-1",
+    "--ulimit", "stack=67108864"
+  ]
+}

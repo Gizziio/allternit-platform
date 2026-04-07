@@ -1,0 +1,273 @@
+// @ts-nocheck
+import { describe, expect, test } from "bun:test"
+import * as fs from "fs/promises"
+import path from "path"
+import { Instance } from "../../src/runtime/context/project/instance"
+import { InstructionPrompt } from "../../src/runtime/session/instruction"
+import { tmpdir } from "../fixture/fixture"
+
+// Helper: write a memory file with frontmatter
+async function writeMemoryFile(
+  dir: string,
+  filename: string,
+  opts: { name: string; description: string; type: string; body: string },
+) {
+  await fs.mkdir(path.dirname(dir + "/" + filename), { recursive: true })
+  const content = [
+    "---",
+    `name: ${opts.name}`,
+    `description: ${opts.description}`,
+    `type: ${opts.type}`,
+    "---",
+    "",
+    opts.body,
+  ].join("\n")
+  await fs.writeFile(path.join(dir, filename), content)
+}
+
+// ── Auto-injection of MEMORY.md ───────────────────────────────────────────────
+
+describe("InstructionPrompt.systemPaths — MEMORY.md auto-load", () => {
+  test("includes MEMORY.md from .gizzi layer when it exists", async () => {
+    await using dir = await tmpdir({ git: true })
+    await Instance.provide({
+      directory: dir.path,
+      fn: async () => {
+        const memDir = path.join(dir.path, ".gizzi", "L1-COGNITIVE", "memory")
+        await fs.mkdir(memDir, { recursive: true })
+        await fs.writeFile(path.join(memDir, "MEMORY.md"), "# Memory Index\n\n- [user_role](user_role.md) — role (user)\n")
+
+        const paths = await InstructionPrompt.systemPaths()
+        const pathArr = Array.from(paths)
+        expect(pathArr.some((p) => p.endsWith("MEMORY.md"))).toBe(true)
+
+        await Instance.dispose()
+      },
+    })
+  })
+
+  test("excludes MEMORY.md when file does not exist", async () => {
+    await using dir = await tmpdir({ git: true })
+    await Instance.provide({
+      directory: dir.path,
+      fn: async () => {
+        const paths = await InstructionPrompt.systemPaths()
+        const pathArr = Array.from(paths)
+        // .gizzi MEMORY.md doesn't exist — should not be in paths
+        const gizziMem = path.join(dir.path, ".gizzi", "L1-COGNITIVE", "memory", "MEMORY.md")
+        expect(pathArr).not.toContain(gizziMem)
+
+        await Instance.dispose()
+      },
+    })
+  })
+})
+
+// ── Auto-injection of topic memory files ──────────────────────────────────────
+
+describe("InstructionPrompt.systemPaths — topic memory files", () => {
+  test("includes topic .md files from memory dir", async () => {
+    await using dir = await tmpdir({ git: true })
+    await Instance.provide({
+      directory: dir.path,
+      fn: async () => {
+        const memDir = path.join(dir.path, ".gizzi", "L1-COGNITIVE", "memory")
+        await writeMemoryFile(memDir, "user_role.md", {
+          name: "user_role",
+          description: "user is a senior engineer",
+          type: "user",
+          body: "Eoj is a senior engineer who builds platforms.",
+        })
+
+        const paths = await InstructionPrompt.systemPaths()
+        const pathArr = Array.from(paths)
+        expect(pathArr.some((p) => p.endsWith("user_role.md"))).toBe(true)
+
+        await Instance.dispose()
+      },
+    })
+  })
+
+  test("does not include MEMORY.md as a topic file (it's loaded separately)", async () => {
+    await using dir = await tmpdir({ git: true })
+    await Instance.provide({
+      directory: dir.path,
+      fn: async () => {
+        const memDir = path.join(dir.path, ".gizzi", "L1-COGNITIVE", "memory")
+        await fs.mkdir(memDir, { recursive: true })
+        await fs.writeFile(path.join(memDir, "MEMORY.md"), "# Memory Index\n")
+
+        const paths = await InstructionPrompt.systemPaths()
+        const pathArr = Array.from(paths)
+
+        // MEMORY.md should appear exactly once (not twice: once as index, once as topic)
+        const memMdPaths = pathArr.filter((p) => path.basename(p) === "MEMORY.md")
+        expect(memMdPaths.length).toBe(1)
+
+        await Instance.dispose()
+      },
+    })
+  })
+
+  test("deduplicates topic files that appear in multiple memory dirs", async () => {
+    await using dir = await tmpdir({ git: true })
+    await Instance.provide({
+      directory: dir.path,
+      fn: async () => {
+        const gizziMem = path.join(dir.path, ".gizzi", "L1-COGNITIVE", "memory")
+        const openclawMem = path.join(dir.path, ".openclaw", "L1-COGNITIVE", "memory")
+
+        const content = `---\nname: shared\ndescription: in both\ntype: user\n---\n\nbody`
+        await fs.mkdir(gizziMem, { recursive: true })
+        await fs.mkdir(openclawMem, { recursive: true })
+        await fs.writeFile(path.join(gizziMem, "shared.md"), content)
+        await fs.writeFile(path.join(openclawMem, "shared.md"), content)
+
+        const paths = await InstructionPrompt.systemPaths()
+        const sharedPaths = Array.from(paths).filter((p) => path.basename(p) === "shared.md")
+        expect(sharedPaths).toHaveLength(1)
+
+        await Instance.dispose()
+      },
+    })
+  })
+})
+
+// ── Auto-injection of L1 session working memory ────────────────────────────────
+
+describe("InstructionPrompt.systemPaths — sessions/ subdir (L1 working memory)", () => {
+  test("includes session working memory files from sessions/ subdir", async () => {
+    await using dir = await tmpdir({ git: true })
+    await Instance.provide({
+      directory: dir.path,
+      fn: async () => {
+        const sessDir = path.join(dir.path, ".gizzi", "L1-COGNITIVE", "memory", "sessions")
+        await fs.mkdir(sessDir, { recursive: true })
+        await fs.writeFile(
+          path.join(sessDir, "sess-abc123.md"),
+          "# Working Memory\n\nCurrent task: refactor auth module",
+        )
+
+        const paths = await InstructionPrompt.systemPaths()
+        const pathArr = Array.from(paths)
+        expect(pathArr.some((p) => p.endsWith("sess-abc123.md"))).toBe(true)
+
+        await Instance.dispose()
+      },
+    })
+  })
+
+  test("session files from sessions/ don't conflict with root memory files of the same name", async () => {
+    await using dir = await tmpdir({ git: true })
+    await Instance.provide({
+      directory: dir.path,
+      fn: async () => {
+        const memDir = path.join(dir.path, ".gizzi", "L1-COGNITIVE", "memory")
+        const sessDir = path.join(memDir, "sessions")
+        await fs.mkdir(sessDir, { recursive: true })
+
+        const sessionContent = "# Session Working Memory\n\ncurrent goal: fix bug"
+        await fs.writeFile(path.join(sessDir, "notes.md"), sessionContent)
+
+        // Also a root topic file with the same basename — both should be included
+        await writeMemoryFile(memDir, "notes.md", {
+          name: "notes",
+          description: "general notes",
+          type: "reference",
+          body: "general notes body",
+        })
+
+        const paths = await InstructionPrompt.systemPaths()
+        const pathArr = Array.from(paths)
+
+        // Both files should be included (different dedup keys: "notes.md" vs "sessions/notes.md")
+        expect(pathArr.some((p) => p === path.join(memDir, "notes.md"))).toBe(true)
+        expect(pathArr.some((p) => p === path.join(sessDir, "notes.md"))).toBe(true)
+
+        await Instance.dispose()
+      },
+    })
+  })
+
+  test("sessions/ not scanned when directory doesn't exist", async () => {
+    await using dir = await tmpdir({ git: true })
+    await Instance.provide({
+      directory: dir.path,
+      fn: async () => {
+        // No sessions/ directory created
+        const paths = await InstructionPrompt.systemPaths()
+        const pathArr = Array.from(paths)
+        expect(pathArr.some((p) => p.includes("sessions"))).toBe(false)
+
+        await Instance.dispose()
+      },
+    })
+  })
+})
+
+// ── system() content loading ──────────────────────────────────────────────────
+
+describe("InstructionPrompt.system — content loading", () => {
+  test("memory files are loaded with Auto-memory prefix", async () => {
+    await using dir = await tmpdir({ git: true })
+    await Instance.provide({
+      directory: dir.path,
+      fn: async () => {
+        const memDir = path.join(dir.path, ".gizzi", "L1-COGNITIVE", "memory")
+        await writeMemoryFile(memDir, "user_role.md", {
+          name: "user_role",
+          description: "user is a developer",
+          type: "user",
+          body: "User is a platform engineer.",
+        })
+
+        const contents = await InstructionPrompt.system()
+        const combined = contents.join("\n")
+        expect(combined).toContain("Auto-memory from:")
+        expect(combined).toContain("User is a platform engineer.")
+
+        await Instance.dispose()
+      },
+    })
+  })
+
+  test("MEMORY.md content is truncated at 200 lines", async () => {
+    await using dir = await tmpdir({ git: true })
+    await Instance.provide({
+      directory: dir.path,
+      fn: async () => {
+        const memDir = path.join(dir.path, ".gizzi", "L1-COGNITIVE", "memory")
+        await fs.mkdir(memDir, { recursive: true })
+
+        // Write a MEMORY.md with 250 lines
+        const lines = Array.from({ length: 250 }, (_, i) => `- entry ${i}`)
+        await fs.writeFile(path.join(memDir, "MEMORY.md"), lines.join("\n"))
+
+        const contents = await InstructionPrompt.system()
+        const combined = contents.join("\n")
+        expect(combined).toContain("Truncated at 200 lines")
+        expect(combined).toContain("50 lines omitted")
+
+        await Instance.dispose()
+      },
+    })
+  })
+
+  test("session working memory content is included", async () => {
+    await using dir = await tmpdir({ git: true })
+    await Instance.provide({
+      directory: dir.path,
+      fn: async () => {
+        const sessDir = path.join(dir.path, ".gizzi", "L1-COGNITIVE", "memory", "sessions")
+        await fs.mkdir(sessDir, { recursive: true })
+        await fs.writeFile(path.join(sessDir, "sess-xyz.md"), "# Working Memory\n\nRefactoring the auth module.")
+
+        const contents = await InstructionPrompt.system()
+        const combined = contents.join("\n")
+        expect(combined).toContain("Refactoring the auth module.")
+
+        await Instance.dispose()
+      },
+    })
+  })
+})

@@ -1,0 +1,44 @@
+{
+  "id": "nodejs-typescript",
+  "name": "Node.js + TypeScript",
+  "description": "Modern Node.js development with TypeScript, pnpm, Vitest, ESLint, and Prettier. Perfect for APIs, CLIs, and libraries.",
+  "version": "1.0.0",
+  "author": "A2R",
+  "type": "devcontainer",
+  "category": "web",
+  "language": "typescript",
+  "features": [
+    "Node.js 20 LTS",
+    "TypeScript 5.3",
+    "pnpm package manager",
+    "Vitest testing",
+    "ESLint + Prettier",
+    "tsx for fast execution",
+    "nodemon for hot reload",
+    "Git hooks with husky",
+    "Conventional commits"
+  ],
+  "ports": [3000, 8080, 9229],
+  "variables": [
+    {
+      "name": "NODE_VERSION",
+      "description": "Node.js version",
+      "type": "select",
+      "options": ["18", "20", "21"],
+      "default": "20"
+    },
+    {
+      "name": "PACKAGE_MANAGER",
+      "description": "Package manager",
+      "type": "select", 
+      "options": ["pnpm", "npm", "yarn"],
+      "default": "pnpm"
+    },
+    {
+      "name": "ENABLE_TESTS",
+      "description": "Include Vitest testing setup",
+      "type": "boolean",
+      "default": "true"
+    }
+  ]
+}

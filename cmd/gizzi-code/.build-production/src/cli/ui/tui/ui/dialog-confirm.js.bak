@@ -1,0 +1,115 @@
+import { effect as _$effect } from "@opentui/solid";
+import { createComponent as _$createComponent } from "@opentui/solid";
+import { createTextNode as _$createTextNode } from "@opentui/solid";
+import { insertNode as _$insertNode } from "@opentui/solid";
+import { insert as _$insert } from "@opentui/solid";
+import { setProp as _$setProp } from "@opentui/solid";
+import { createElement as _$createElement } from "@opentui/solid";
+import { TextAttributes } from "@opentui/core";
+import { useTheme } from "@/cli/ui/tui/context/theme";
+import { useDialog } from "@/cli/ui/tui/ui/dialog";
+import { createStore } from "solid-js/store";
+import { For } from "solid-js";
+import { useKeyboard } from "@opentui/solid";
+import { Locale } from "@/shared/util/locale";
+export function DialogConfirm(props) {
+  const dialog = useDialog();
+  const {
+    theme
+  } = useTheme();
+  const [store, setStore] = createStore({
+    active: "confirm"
+  });
+  useKeyboard(evt => {
+    if (evt.name === "return") {
+      if (store.active === "confirm") props.onConfirm?.();
+      if (store.active === "cancel") props.onCancel?.();
+      dialog.clear();
+    }
+    if (evt.name === "left" || evt.name === "right") {
+      setStore("active", store.active === "confirm" ? "cancel" : "confirm");
+    }
+  });
+  return (() => {
+    var _el$ = _$createElement("box"),
+      _el$2 = _$createElement("box"),
+      _el$3 = _$createElement("text"),
+      _el$4 = _$createElement("text"),
+      _el$6 = _$createElement("box"),
+      _el$7 = _$createElement("text"),
+      _el$8 = _$createElement("box");
+    _$insertNode(_el$, _el$2);
+    _$insertNode(_el$, _el$6);
+    _$insertNode(_el$, _el$8);
+    _$setProp(_el$, "paddingLeft", 2);
+    _$setProp(_el$, "paddingRight", 2);
+    _$setProp(_el$, "gap", 1);
+    _$insertNode(_el$2, _el$3);
+    _$insertNode(_el$2, _el$4);
+    _$setProp(_el$2, "flexDirection", "row");
+    _$setProp(_el$2, "justifyContent", "space-between");
+    _$insert(_el$3, () => props.title);
+    _$insertNode(_el$4, _$createTextNode(`esc`));
+    _$setProp(_el$4, "onMouseUp", () => dialog.clear());
+    _$insertNode(_el$6, _el$7);
+    _$setProp(_el$6, "paddingBottom", 1);
+    _$insert(_el$7, () => props.message);
+    _$setProp(_el$8, "flexDirection", "row");
+    _$setProp(_el$8, "justifyContent", "flex-end");
+    _$setProp(_el$8, "paddingBottom", 1);
+    _$insert(_el$8, _$createComponent(For, {
+      each: ["cancel", "confirm"],
+      children: key => (() => {
+        var _el$9 = _$createElement("box"),
+          _el$0 = _$createElement("text");
+        _$insertNode(_el$9, _el$0);
+        _$setProp(_el$9, "paddingLeft", 1);
+        _$setProp(_el$9, "paddingRight", 1);
+        _$setProp(_el$9, "onMouseUp", evt => {
+          if (key === "confirm") props.onConfirm?.();
+          if (key === "cancel") props.onCancel?.();
+          dialog.clear();
+        });
+        _$insert(_el$0, () => Locale.titlecase(key));
+        _$effect(_p$ => {
+          var _v$5 = key === store.active ? theme.primary : undefined,
+            _v$6 = key === store.active ? theme.selectedListItemText : theme.textMuted;
+          _v$5 !== _p$.e && (_p$.e = _$setProp(_el$9, "backgroundColor", _v$5, _p$.e));
+          _v$6 !== _p$.t && (_p$.t = _$setProp(_el$0, "fg", _v$6, _p$.t));
+          return _p$;
+        }, {
+          e: undefined,
+          t: undefined
+        });
+        return _el$9;
+      })()
+    }));
+    _$effect(_p$ => {
+      var _v$ = TextAttributes.BOLD,
+        _v$2 = theme.text,
+        _v$3 = theme.textMuted,
+        _v$4 = theme.textMuted;
+      _v$ !== _p$.e && (_p$.e = _$setProp(_el$3, "attributes", _v$, _p$.e));
+      _v$2 !== _p$.t && (_p$.t = _$setProp(_el$3, "fg", _v$2, _p$.t));
+      _v$3 !== _p$.a && (_p$.a = _$setProp(_el$4, "fg", _v$3, _p$.a));
+      _v$4 !== _p$.o && (_p$.o = _$setProp(_el$7, "fg", _v$4, _p$.o));
+      return _p$;
+    }, {
+      e: undefined,
+      t: undefined,
+      a: undefined,
+      o: undefined
+    });
+    return _el$;
+  })();
+}
+DialogConfirm.show = (dialog, title, message) => {
+  return new Promise(resolve => {
+    dialog.replace(() => _$createComponent(DialogConfirm, {
+      title: title,
+      message: message,
+      onConfirm: () => resolve(true),
+      onCancel: () => resolve(false)
+    }), () => resolve(false));
+  });
+};

@@ -1,0 +1,9 @@
+{
+  "name": "@allternit/schemas",
+  "version": "0.1.0",
+  "private": true,
+  "description": "JSON Schema definitions for all Allternit domain types",
+  "exports": {
+    "./*.schema.json": "./*.schema.json"
+  }
+}

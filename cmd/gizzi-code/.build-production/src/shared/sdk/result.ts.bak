@@ -1,0 +1,41 @@
+type SDKResult<T> = {
+  data?: T
+  error?: unknown
+  request?: unknown
+  response?: unknown
+}
+
+function isSDKResult<T>(value: unknown): value is SDKResult<T> {
+  return (
+    !!value &&
+    typeof value === "object" &&
+    ("error" in value || (("data" in value) && ("request" in value || "response" in value)))
+  )
+}
+
+export function sdkErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message
+  if (error && typeof error === "object") {
+    const message = (error as { message?: unknown }).message
+    if (typeof message === "string") return message
+    const nestedError = (error as { error?: unknown }).error
+    if (typeof nestedError === "string") return nestedError
+  }
+  return String(error ?? "Unknown SDK error")
+}
+
+export function sdkData<T>(result: SDKResult<T> | T | null | undefined) {
+  if (isSDKResult<T>(result)) return result.data
+  return result ?? undefined
+}
+
+export function sdkDataOr<T>(result: SDKResult<T> | T | null | undefined, fallback: T) {
+  return sdkData(result) ?? fallback
+}
+
+export function sdkRequireData<T>(result: SDKResult<T> | T | null | undefined, message?: string) {
+  const data = sdkData(result)
+  if (data !== undefined && data !== null) return data
+  const error = isSDKResult(result) ? result.error : undefined
+  throw new Error(error ? sdkErrorMessage(error) : (message ?? "SDK request did not return data"))
+}

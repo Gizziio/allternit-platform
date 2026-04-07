@@ -1,0 +1,64 @@
+{
+  "name": "@allternit/http-gateway",
+  "version": "1.0.1",
+  "description": "A2R Gateway - Transport-agnostic API Gateway with UI v0 Binding (Deterministic)",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "a2r-gateway": "./dist/index.js"
+  },
+  "scripts": {
+    "dev": "tsx watch index.ts",
+    "dev:stdio": "tsx watch index.ts --transport stdio",
+    "dev:http": "tsx watch index.ts --transport http",
+    "start": "tsx index.ts",
+    "start:stdio": "tsx index.ts --transport stdio",
+    "start:http": "tsx index.ts --transport http",
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:stdio": "vitest run tests/stdio.test.ts",
+    "test:http": "vitest run tests/http.test.ts",
+    "test:uiv0": "vitest run tests/uiv0-binding.test.ts",
+    "test:e2e": "vitest run tests/e2e-persistence.test.ts",
+    "test:tambo": "vitest run tests/tambo_determinism.test.ts",
+    "test:tambo:e2e": "vitest run tests/tambo-e2e.test.ts",
+    "lint": "eslint . && node scripts/check-determinism.js && node scripts/check-version-folders.js",
+    "lint:determinism": "node scripts/check-determinism.js",
+    "lint:version-folders": "node scripts/check-version-folders.js",
+    "verify:tambo": "node scripts/verify-tambo.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "allternit",
+    "gateway",
+    "api",
+    "sse",
+    "stdio",
+    "json-rpc",
+    "mcp",
+    "ui-v0",
+    "deterministic"
+  ],
+  "author": "A2R Platform Team",
+  "license": "MIT",
+  "dependencies": {
+    "@fastify/cors": "^9.0.0",
+    "@fastify/websocket": "^8.3.0",
+    "fastify": "^4.25.0",
+    "uuid": "^9.0.1",
+    "ws": "^8.14.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/uuid": "^9.0.0",
+    "@types/ws": "^8.5.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

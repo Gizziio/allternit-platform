@@ -3,7 +3,7 @@
  * 
  * Manages panel size and collapsed state persistence.
  * 
- * @module @a2r/platform/shell/panels
+ * @module @allternit/platform/shell/panels
  */
 
 import { useState, useCallback } from 'react';

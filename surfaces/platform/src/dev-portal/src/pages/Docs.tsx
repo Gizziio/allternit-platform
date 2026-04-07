@@ -198,7 +198,7 @@ export default function Docs() {
             <h2 className="text-xl font-semibold text-a2r-text mt-8">Installation</h2>
             <p>Install the A2R CLI using npm:</p>
             <pre className="bg-a2r-surface p-4 rounded-lg overflow-x-auto">
-              <code>npm install -g @a2r/cli</code>
+              <code>npm install -g @allternit/cli</code>
             </pre>
 
             <h2 className="text-xl font-semibold text-a2r-text mt-8">Next Steps</h2>

@@ -4,7 +4,7 @@
  * A wrapper around react-resizable-panels PanelGroup with A2R styling.
  * Provides horizontal or vertical panel layout with glass surface styling.
  * 
- * @module @a2r/platform/shell/panels
+ * @module @allternit/platform/shell/panels
  */
 
 import React from 'react';

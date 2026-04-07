@@ -1,0 +1,1 @@
+export { useCommandRegistry } from './useCommandRegistry';

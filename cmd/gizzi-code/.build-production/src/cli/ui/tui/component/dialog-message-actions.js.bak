@@ -1,0 +1,424 @@
+import { effect as _$effect } from "@opentui/solid";
+import { memo as _$memo } from "@opentui/solid";
+import { insert as _$insert } from "@opentui/solid";
+import { createTextNode as _$createTextNode } from "@opentui/solid";
+import { insertNode as _$insertNode } from "@opentui/solid";
+import { setProp as _$setProp } from "@opentui/solid";
+import { createElement as _$createElement } from "@opentui/solid";
+import { createComponent as _$createComponent } from "@opentui/solid";
+import { Show, createMemo } from "solid-js";
+import { useDialog } from "@/cli/ui/tui/ui/dialog";
+import { DialogSelect } from "@/cli/ui/tui/ui/dialog-select";
+import { useTheme } from "@/cli/ui/tui/context/theme";
+import { useSync } from "@/cli/ui/tui/context/sync";
+import { useBookmarks } from "@/cli/ui/tui/hooks/useBookmarks";
+import { Clipboard } from "@/cli/ui/tui/util/clipboard";
+import { useToast } from "@/cli/ui/tui/ui/toast";
+import { getFirstCodeBlock, getAllCodeBlocks } from "@/shared/util/code-blocks";
+import { useGIZZITheme } from "@/cli/ui/components/gizzi";
+
+// Local type definitions (SDK types are now unknown)
+
+export function DialogMessageActions(props) {
+  const dialog = useDialog();
+  const {
+    theme
+  } = useTheme();
+  const sync = useSync();
+  const bookmarks = useBookmarks(props.sessionID);
+  const toast = useToast();
+  const parts = createMemo(() => sync.data.part[props.message.id] ?? []);
+  const codeBlocks = createMemo(() => {
+    const textParts = parts().filter(p => p.type === "text");
+    const allText = textParts.map(p => p.text).join("\n");
+    return getAllCodeBlocks(allText);
+  });
+  const isBookmarked = createMemo(() => bookmarks.isBookmarked(props.message.id));
+  const isUser = props.message.role === "user";
+  const isAssistant = props.message.role === "assistant";
+  const handleAction = async action => {
+    switch (action) {
+      case "copy":
+        {
+          const textParts = parts().filter(p => p.type === "text");
+          const text = textParts.map(p => p.text).join("\n");
+          await Clipboard.copy(text);
+          toast.show({
+            message: "Message copied!",
+            variant: "success",
+            duration: 2000
+          });
+          break;
+        }
+      case "copy-code":
+        {
+          const textParts = parts().filter(p => p.type === "text");
+          const allText = textParts.map(p => p.text).join("\n");
+          const code = getFirstCodeBlock(allText);
+          if (code) {
+            await Clipboard.copy(code.code);
+            toast.show({
+              message: "Code copied!",
+              variant: "success",
+              duration: 2000
+            });
+          }
+          break;
+        }
+      case "bookmark":
+        {
+          bookmarks.toggle(props.message.id);
+          const isNowBookmarked = bookmarks.isBookmarked(props.message.id);
+          toast.show({
+            message: isNowBookmarked ? "Message bookmarked" : "Bookmark removed",
+            variant: "info",
+            duration: 2000
+          });
+          break;
+        }
+      case "view-metadata":
+        {
+          if (isAssistant) {
+            dialog.replace(() => _$createComponent(DialogMessageMetadata, {
+              get message() {
+                return props.message;
+              }
+            }));
+          }
+          return;
+        }
+      case "delete":
+      case "edit":
+      case "pin":
+      case "reply":
+      case "jump-to-related":
+        props.onAction?.(action);
+        dialog.clear();
+        break;
+    }
+  };
+  const options = [{
+    value: "copy",
+    title: "Copy message",
+    description: "Copy full message text"
+  }, ...(codeBlocks().length > 0 ? [{
+    value: "copy-code",
+    title: "Copy code block",
+    description: `Copy first of ${codeBlocks().length} code block${codeBlocks().length > 1 ? "s" : ""}`
+  }] : []), {
+    value: "bookmark",
+    title: isBookmarked() ? "Remove bookmark" : "Add bookmark",
+    description: isBookmarked() ? "Remove from bookmarks" : "Save for later reference"
+  }, ...(isUser ? [{
+    value: "edit",
+    title: "Edit message",
+    description: "Modify and resend"
+  }] : []), {
+    value: "reply",
+    title: "Reply to this",
+    description: "Start a thread from this message"
+  }, ...(isAssistant ? [{
+    value: "view-metadata",
+    title: "View metadata",
+    description: "Tokens, cost, model info"
+  }] : []), {
+    value: "jump-to-related",
+    title: "Jump to related",
+    description: "Parent or child messages"
+  }, {
+    value: "delete",
+    title: "Delete message",
+    description: "Remove from conversation"
+  }];
+  return _$createComponent(DialogSelect, {
+    title: `Message Actions ${isUser ? "(You)" : "(Assistant)"}`,
+    get options() {
+      return options.map(opt => ({
+        ...opt,
+        onSelect: () => handleAction(opt.value)
+      }));
+    },
+    onSelect: option => handleAction(option.value)
+  });
+}
+
+// Metadata dialog for assistant messages
+function DialogMessageMetadata(props) {
+  const dialog = useDialog();
+  const {
+    theme
+  } = useTheme();
+  const tone = useGIZZITheme();
+  const sync = useSync();
+  const assistant = props.message;
+  const model = sync.data.provider.find(p => p.id === assistant.providerID)?.models[assistant.modelID];
+  const totalTokens = () => assistant.tokens.input + assistant.tokens.output + assistant.tokens.cache.read + assistant.tokens.cache.write + assistant.tokens.reasoning;
+  return (() => {
+    var _el$ = _$createElement("box"),
+      _el$2 = _$createElement("box"),
+      _el$3 = _$createElement("span"),
+      _el$5 = _$createElement("box"),
+      _el$6 = _$createElement("box"),
+      _el$7 = _$createElement("span"),
+      _el$9 = _$createElement("box"),
+      _el$0 = _$createElement("span"),
+      _el$13 = _$createElement("box"),
+      _el$14 = _$createElement("text");
+    _$insertNode(_el$, _el$2);
+    _$insertNode(_el$, _el$5);
+    _$insertNode(_el$, _el$13);
+    _$setProp(_el$, "flexDirection", "column");
+    _$setProp(_el$, "width", 50);
+    _$setProp(_el$, "borderStyle", "single");
+    _$insertNode(_el$2, _el$3);
+    _$setProp(_el$2, "flexDirection", "row");
+    _$insertNode(_el$3, _$createTextNode(`Message Metadata`));
+    _$insertNode(_el$5, _el$6);
+    _$insertNode(_el$5, _el$9);
+    _$setProp(_el$5, "flexDirection", "column");
+    _$insert(_el$5, _$createComponent(MetadataRow, {
+      label: "Model",
+      get value() {
+        return `${assistant.providerID}/${assistant.modelID}`;
+      }
+    }), _el$6);
+    _$insert(_el$5, _$createComponent(MetadataRow, {
+      label: "Agent",
+      get value() {
+        return assistant.agent;
+      }
+    }), _el$6);
+    _$insertNode(_el$6, _el$7);
+    _$setProp(_el$6, "flexDirection", "column");
+    _$insertNode(_el$7, _$createTextNode(`Tokens`));
+    _$insert(_el$6, _$createComponent(MetadataRow, {
+      label: "Input",
+      get value() {
+        return assistant.tokens.input.toLocaleString();
+      }
+    }), null);
+    _$insert(_el$6, _$createComponent(MetadataRow, {
+      label: "Output",
+      get value() {
+        return assistant.tokens.output.toLocaleString();
+      }
+    }), null);
+    _$insert(_el$6, _$createComponent(Show, {
+      get when() {
+        return assistant.tokens.reasoning > 0;
+      },
+      get children() {
+        return _$createComponent(MetadataRow, {
+          label: "Reasoning",
+          get value() {
+            return assistant.tokens.reasoning.toLocaleString();
+          }
+        });
+      }
+    }), null);
+    _$insert(_el$6, _$createComponent(Show, {
+      get when() {
+        return assistant.tokens.cache.read > 0;
+      },
+      get children() {
+        return _$createComponent(MetadataRow, {
+          label: "Cache Read",
+          get value() {
+            return assistant.tokens.cache.read.toLocaleString();
+          }
+        });
+      }
+    }), null);
+    _$insert(_el$6, _$createComponent(Show, {
+      get when() {
+        return assistant.tokens.cache.write > 0;
+      },
+      get children() {
+        return _$createComponent(MetadataRow, {
+          label: "Cache Write",
+          get value() {
+            return assistant.tokens.cache.write.toLocaleString();
+          }
+        });
+      }
+    }), null);
+    _$insert(_el$6, _$createComponent(MetadataRow, {
+      label: "Total",
+      get value() {
+        return totalTokens().toLocaleString();
+      },
+      get color() {
+        return theme.accent;
+      }
+    }), null);
+    _$insert(_el$5, _$createComponent(MetadataRow, {
+      label: "Cost",
+      get value() {
+        return `$${assistant.cost.toFixed(4)}`;
+      },
+      get color() {
+        return theme.accent;
+      }
+    }), _el$9);
+    _$insertNode(_el$9, _el$0);
+    _$setProp(_el$9, "flexDirection", "column");
+    _$insertNode(_el$0, _$createTextNode(`Timing`));
+    _$insert(_el$9, _$createComponent(MetadataRow, {
+      label: "Created",
+      get value() {
+        return new Date(assistant.time.created).toLocaleTimeString();
+      }
+    }), null);
+    _$insert(_el$9, _$createComponent(Show, {
+      get when() {
+        return assistant.time.completed;
+      },
+      get children() {
+        return _$createComponent(MetadataRow, {
+          label: "Completed",
+          get value() {
+            return new Date(assistant.time.completed).toLocaleTimeString();
+          }
+        });
+      }
+    }), null);
+    _$insert(_el$5, _$createComponent(Show, {
+      get when() {
+        return model?.limit.context;
+      },
+      get children() {
+        var _el$10 = _$createElement("box"),
+          _el$11 = _$createElement("span");
+        _$insertNode(_el$10, _el$11);
+        _$setProp(_el$10, "flexDirection", "column");
+        _$insertNode(_el$11, _$createTextNode(`Context`));
+        _$insert(_el$10, _$createComponent(MetadataRow, {
+          label: "Context Limit",
+          get value() {
+            return `${(model.limit.context / 1000).toFixed(0)}K tokens`;
+          }
+        }), null);
+        _$insert(_el$10, _$createComponent(MetadataRow, {
+          label: "Usage",
+          get value() {
+            return `${Math.round(totalTokens() / model.limit.context * 100)}%`;
+          },
+          get color() {
+            return _$memo(() => totalTokens() / model.limit.context > 0.8)() ? theme.warning : theme.success;
+          }
+        }), null);
+        _$effect(_p$ => {
+          var _v$ = tone().space.xs,
+            _v$2 = tone().space.sm,
+            _v$3 = {
+              fg: theme.textMuted,
+              bold: true
+            };
+          _v$ !== _p$.e && (_p$.e = _$setProp(_el$10, "gap", _v$, _p$.e));
+          _v$2 !== _p$.t && (_p$.t = _$setProp(_el$10, "marginTop", _v$2, _p$.t));
+          _v$3 !== _p$.a && (_p$.a = _$setProp(_el$11, "style", _v$3, _p$.a));
+          return _p$;
+        }, {
+          e: undefined,
+          t: undefined,
+          a: undefined
+        });
+        return _el$10;
+      }
+    }), null);
+    _$insertNode(_el$13, _el$14);
+    _$setProp(_el$13, "flexDirection", "row");
+    _$insertNode(_el$14, _$createTextNode(`Esc to close`));
+    _$effect(_p$ => {
+      var _v$4 = tone().space.md,
+        _v$5 = theme.backgroundPanel,
+        _v$6 = theme.border,
+        _v$7 = tone().space.md,
+        _v$8 = {
+          fg: theme.accent,
+          bold: true
+        },
+        _v$9 = tone().space.sm,
+        _v$0 = tone().space.xs,
+        _v$1 = tone().space.sm,
+        _v$10 = {
+          fg: theme.textMuted,
+          bold: true
+        },
+        _v$11 = tone().space.xs,
+        _v$12 = tone().space.sm,
+        _v$13 = {
+          fg: theme.textMuted,
+          bold: true
+        },
+        _v$14 = tone().space.md,
+        _v$15 = tone().space.md,
+        _v$16 = theme.textMuted;
+      _v$4 !== _p$.e && (_p$.e = _$setProp(_el$, "padding", _v$4, _p$.e));
+      _v$5 !== _p$.t && (_p$.t = _$setProp(_el$, "backgroundColor", _v$5, _p$.t));
+      _v$6 !== _p$.a && (_p$.a = _$setProp(_el$, "borderColor", _v$6, _p$.a));
+      _v$7 !== _p$.o && (_p$.o = _$setProp(_el$2, "marginBottom", _v$7, _p$.o));
+      _v$8 !== _p$.i && (_p$.i = _$setProp(_el$3, "style", _v$8, _p$.i));
+      _v$9 !== _p$.n && (_p$.n = _$setProp(_el$5, "gap", _v$9, _p$.n));
+      _v$0 !== _p$.s && (_p$.s = _$setProp(_el$6, "gap", _v$0, _p$.s));
+      _v$1 !== _p$.h && (_p$.h = _$setProp(_el$6, "marginTop", _v$1, _p$.h));
+      _v$10 !== _p$.r && (_p$.r = _$setProp(_el$7, "style", _v$10, _p$.r));
+      _v$11 !== _p$.d && (_p$.d = _$setProp(_el$9, "gap", _v$11, _p$.d));
+      _v$12 !== _p$.l && (_p$.l = _$setProp(_el$9, "marginTop", _v$12, _p$.l));
+      _v$13 !== _p$.u && (_p$.u = _$setProp(_el$0, "style", _v$13, _p$.u));
+      _v$14 !== _p$.c && (_p$.c = _$setProp(_el$13, "gap", _v$14, _p$.c));
+      _v$15 !== _p$.w && (_p$.w = _$setProp(_el$13, "marginTop", _v$15, _p$.w));
+      _v$16 !== _p$.m && (_p$.m = _$setProp(_el$14, "fg", _v$16, _p$.m));
+      return _p$;
+    }, {
+      e: undefined,
+      t: undefined,
+      a: undefined,
+      o: undefined,
+      i: undefined,
+      n: undefined,
+      s: undefined,
+      h: undefined,
+      r: undefined,
+      d: undefined,
+      l: undefined,
+      u: undefined,
+      c: undefined,
+      w: undefined,
+      m: undefined
+    });
+    return _el$;
+  })();
+}
+function MetadataRow(props) {
+  const {
+    theme
+  } = useTheme();
+  const tone = useGIZZITheme();
+  return (() => {
+    var _el$16 = _$createElement("box"),
+      _el$17 = _$createElement("text"),
+      _el$18 = _$createElement("text");
+    _$insertNode(_el$16, _el$17);
+    _$insertNode(_el$16, _el$18);
+    _$setProp(_el$16, "flexDirection", "row");
+    _$setProp(_el$17, "width", 14);
+    _$setProp(_el$17, "wrapMode", "none");
+    _$insert(_el$17, () => props.label);
+    _$insert(_el$18, () => props.value);
+    _$effect(_p$ => {
+      var _v$17 = tone().space.md,
+        _v$18 = theme.textMuted,
+        _v$19 = props.color || theme.text;
+      _v$17 !== _p$.e && (_p$.e = _$setProp(_el$16, "gap", _v$17, _p$.e));
+      _v$18 !== _p$.t && (_p$.t = _$setProp(_el$17, "fg", _v$18, _p$.t));
+      _v$19 !== _p$.a && (_p$.a = _$setProp(_el$18, "fg", _v$19, _p$.a));
+      return _p$;
+    }, {
+      e: undefined,
+      t: undefined,
+      a: undefined
+    });
+    return _el$16;
+  })();
+}

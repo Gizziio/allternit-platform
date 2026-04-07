@@ -5,13 +5,13 @@
  * 
  * Usage:
  * ```tsx
- * import { IconExplorer } from '@a2r/platform/dev/icon-explorer';
+ * import { IconExplorer } from '@allternit/platform/dev/icon-explorer';
  * 
  * // In your dev page:
  * <IconExplorer />
  * ```
  * 
- * @module @a2r/platform/dev/icon-explorer
+ * @module @allternit/platform/dev/icon-explorer
  */
 
 'use client';
@@ -448,7 +448,7 @@ export function IconExplorer({
  * @example
  * ```tsx
  * // app/dev/icons/page.tsx
- * import { IconExplorerPage } from '@a2r/platform/dev/icon-explorer';
+ * import { IconExplorerPage } from '@allternit/platform/dev/icon-explorer';
  * 
  * export default function IconsPage() {
  *   return <IconExplorerPage />;

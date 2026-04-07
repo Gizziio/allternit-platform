@@ -1,0 +1,18 @@
+/**
+ * Load Agents Directory
+ */
+
+export interface AgentDefinition {
+  id: string
+  name: string
+  description?: string
+  systemPrompt?: string
+}
+
+export interface AgentDefinitionsResult {
+  agents: AgentDefinition[]
+}
+
+export async function loadAgentsDir(path?: string): Promise<AgentDefinitionsResult> {
+  return { agents: [] }
+}

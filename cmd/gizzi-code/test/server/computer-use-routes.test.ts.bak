@@ -1,0 +1,151 @@
+// @ts-nocheck
+import { describe, expect, mock, test } from "bun:test"
+import z from "zod/v4"
+
+const runSchema = z.object({
+  run_id: z.string(),
+  session_id: z.string(),
+  mode: z.string(),
+  task: z.string(),
+  target_scope: z.string().optional(),
+  status: z.enum(["pending", "running", "needs_approval", "paused", "completed", "failed", "cancelled"]),
+  created_at: z.string(),
+  updated_at: z.string(),
+  completed_at: z.string().optional(),
+  summary: z.string().optional(),
+  receipts: z.array(z.any()).default([]),
+  artifacts: z.array(z.any()).default([]),
+  result: z.any().optional(),
+  error: z.record(z.string(), z.any()).optional(),
+  events: z.array(z.object({
+    event_type: z.string(),
+    timestamp: z.string(),
+    data: z.record(z.string(), z.any()).optional(),
+  })).default([]),
+})
+
+const eventSchema = z.object({
+  event_type: z.string(),
+  timestamp: z.string(),
+  data: z.record(z.string(), z.any()).optional(),
+})
+
+const state = {
+  snapshot: mock(async (_runID: string) => null),
+  executeManaged: mock(async (_input: any) => ({ run_id: "run-1", status: "pending" })),
+  applyApproval: mock(async (_runID: string, _input: any) => null),
+  cancel: mock(async (_runID: string, _input: any) => null),
+  pause: mock(async (_runID: string, _input: any) => null),
+  resume: mock(async (_runID: string, _input: any) => null),
+  receipts: mock(async (_runID: string) => []),
+  events: mock(async (_runID: string, _nextIndex: number) => null),
+  waitForEvents: mock(async (_runID: string, _nextIndex: number) => null),
+}
+
+mock.module("../../src/runtime/computer-use/service", () => ({
+  ComputerUseService: {
+    RunSchema: runSchema,
+    EventRecordSchema: eventSchema,
+    snapshot: state.snapshot,
+    executeManaged: state.executeManaged,
+    applyApproval: state.applyApproval,
+    cancel: state.cancel,
+    pause: state.pause,
+    resume: state.resume,
+    receipts: state.receipts,
+    events: state.events,
+    waitForEvents: state.waitForEvents,
+  },
+}))
+
+const { ComputerUseRoutes } = await import("../../src/runtime/server/routes/computer-use")
+
+function run(status: "pending" | "running" | "needs_approval" | "paused" | "completed" | "failed" | "cancelled") {
+  return {
+    run_id: "run-1",
+    session_id: "run-1",
+    mode: "assist",
+    task: "Open example.com",
+    target_scope: "browser",
+    status,
+    created_at: new Date(0).toISOString(),
+    updated_at: new Date(0).toISOString(),
+    receipts: [],
+    artifacts: [],
+    events: [],
+  }
+}
+
+describe("computer-use routes", () => {
+  test("approval returns 409 when the run is not awaiting approval", async () => {
+    state.snapshot.mockReset()
+    state.snapshot.mockResolvedValue(run("running"))
+
+    const response = await ComputerUseRoutes().fetch(
+      new Request("http://localhost/runs/run-1/approval", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ decision: "approve", approver_id: "tester" }),
+      }),
+    )
+
+    expect(response.status).toBe(409)
+    expect(await response.json()).toEqual({ error: "Run is not awaiting approval" })
+  })
+
+  test("approval delegates to the managed service when the run needs approval", async () => {
+    state.snapshot.mockReset()
+    state.applyApproval.mockReset()
+    state.snapshot.mockResolvedValue(run("needs_approval"))
+    state.applyApproval.mockResolvedValue(run("running"))
+
+    const response = await ComputerUseRoutes().fetch(
+      new Request("http://localhost/runs/run-1/approval", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ decision: "approve", approver_id: "tester", comment: "ship it" }),
+      }),
+    )
+
+    expect(response.status).toBe(200)
+    expect(state.applyApproval).toHaveBeenCalledWith("run-1", {
+      decision: "approve",
+      approver_id: "tester",
+      comment: "ship it",
+    })
+    expect(await response.json()).toMatchObject({ run_id: "run-1", status: "running" })
+  })
+
+  test("pause and resume routes delegate through the managed service", async () => {
+    state.snapshot.mockReset()
+    state.pause.mockReset()
+    state.resume.mockReset()
+    state.snapshot
+      .mockResolvedValueOnce(run("running"))
+      .mockResolvedValueOnce(run("paused"))
+    state.pause.mockResolvedValue(run("paused"))
+    state.resume.mockResolvedValue(run("running"))
+
+    const pauseResponse = await ComputerUseRoutes().fetch(
+      new Request("http://localhost/runs/run-1/pause", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ approver_id: "tester", comment: "pause it" }),
+      }),
+    )
+    const resumeResponse = await ComputerUseRoutes().fetch(
+      new Request("http://localhost/runs/run-1/resume", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ approver_id: "tester", comment: "resume it" }),
+      }),
+    )
+
+    expect(pauseResponse.status).toBe(200)
+    expect(resumeResponse.status).toBe(200)
+    expect(state.pause).toHaveBeenCalledWith("run-1", { approver_id: "tester", comment: "pause it" })
+    expect(state.resume).toHaveBeenCalledWith("run-1", { approver_id: "tester", comment: "resume it" })
+    expect(await pauseResponse.json()).toMatchObject({ status: "paused" })
+    expect(await resumeResponse.json()).toMatchObject({ status: "running" })
+  })
+})

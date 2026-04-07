@@ -11,7 +11,6 @@ import type {
   ExtensionSidepanelHistoricalEvent,
   ExtensionSidepanelHistoryDetailViewProps,
   ExtensionSidepanelHistoryListViewProps,
-  ExtensionSidepanelSessionRecord,
 } from "./ExtensionSidepanelShell.types";
 
 type View = { name: "chat" } | { name: "config" } | { name: "history" } | { name: "history-detail"; sessionId: string };

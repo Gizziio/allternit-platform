@@ -1,0 +1,167 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug Rust Application",
+      "cargo": {
+        "args": [
+          "build",
+          "--bin=${workspaceFolderBasename}"
+        ],
+        "filter": {
+          "name": "${workspaceFolderBasename}",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "RUST_BACKTRACE": "1",
+        "RUST_LOG": "debug"
+      },
+      "console": "integratedTerminal",
+      "stopOnEntry": false,
+      "preLaunchTask": "cargo build"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug with Arguments",
+      "cargo": {
+        "args": [
+          "build",
+          "--bin=${workspaceFolderBasename}"
+        ],
+        "filter": {
+          "name": "${workspaceFolderBasename}",
+          "kind": "bin"
+        }
+      },
+      "args": [
+        "--config",
+        "config.toml",
+        "--verbose"
+      ],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "RUST_BACKTRACE": "1",
+        "RUST_LOG": "trace"
+      },
+      "console": "integratedTerminal",
+      "stopOnEntry": false
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug Release Build",
+      "cargo": {
+        "args": [
+          "build",
+          "--release",
+          "--bin=${workspaceFolderBasename}"
+        ],
+        "filter": {
+          "name": "${workspaceFolderBasename}",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "RUST_BACKTRACE": "1"
+      },
+      "console": "integratedTerminal",
+      "stopOnEntry": false
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug Tests",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run"
+        ],
+        "filter": {
+          "name": "${workspaceFolderBasename}",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "RUST_BACKTRACE": "1",
+        "RUST_LOG": "debug"
+      },
+      "console": "integratedTerminal",
+      "stopOnEntry": false
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug Single Test",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "${input:testName}"
+        ],
+        "filter": {
+          "name": "${workspaceFolderBasename}",
+          "kind": "lib"
+        }
+      },
+      "args": [
+        "${input:testName}",
+        "--exact",
+        "--nocapture"
+      ],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "RUST_BACKTRACE": "1",
+        "RUST_LOG": "debug"
+      },
+      "console": "integratedTerminal",
+      "stopOnEntry": false
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug Benchmark",
+      "cargo": {
+        "args": [
+          "bench",
+          "--no-run"
+        ],
+        "filter": {
+          "name": "benchmark",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "RUST_BACKTRACE": "1"
+      },
+      "console": "integratedTerminal",
+      "stopOnEntry": false
+    },
+    {
+      "type": "lldb",
+      "request": "attach",
+      "name": "Attach to Running Process",
+      "pid": "${command:pickProcess}",
+      "stopOnEntry": false
+    }
+  ],
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "testName",
+      "description": "Name of the test to debug",
+      "default": "test_name"
+    }
+  ]
+}

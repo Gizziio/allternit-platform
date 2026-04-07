@@ -1,0 +1,114 @@
+# ============================================================================
+# A2R Resource Monitor Rules
+# Configuration for resource monitoring and enforcement
+# ============================================================================
+
+# Default thresholds
+thresholds:
+  cpu:
+    warning: 80      # Percentage
+    critical: 95
+  memory:
+    warning: 80      # Percentage
+    critical: 95
+  disk:
+    warning: 80      # Percentage
+    critical: 95
+  pids:
+    warning: 500
+    critical: 900
+
+# Actions on threshold violations
+actions:
+  warning:
+    - log
+    - notify
+  critical:
+    - log
+    - notify
+    - throttle
+  emergency:
+    - log
+    - notify
+    - kill
+
+# Throttling configuration
+throttling:
+  enabled: true
+  cpu_quota_reduction: 0.5    # Reduce CPU quota by 50%
+  duration: 60                # Throttle for 60 seconds
+
+# Notification configuration
+notifications:
+  webhook:
+    enabled: false
+    url: "${WEBHOOK_URL}"
+    events: ["critical", "emergency"]
+  
+  slack:
+    enabled: false
+    webhook_url: "${SLACK_WEBHOOK_URL}"
+    channel: "#alerts"
+    events: ["critical", "emergency"]
+
+# Container-specific rules (override defaults)
+container_rules:
+  # Example: Specific rules for browser containers
+  "*browser*":
+    memory:
+      warning: 70
+      critical: 85
+    
+  # Example: Specific rules for vector DB
+  "*vector-db*":
+    memory:
+      warning: 75
+      critical: 90
+
+# Metrics collection
+metrics:
+  enabled: true
+  interval: 10
+  retention: 86400  # 24 hours in seconds
+  
+  # Metrics to collect
+  collect:
+    - cpu_usage
+    - memory_usage
+    - network_io
+    - disk_io
+    - pids
+    - open_files
+
+# Health check configuration
+health_checks:
+  enabled: true
+  interval: 30
+  timeout: 5
+  
+  endpoints:
+    - name: agent-workspace
+      url: http://agent-workspace:3000/health
+      expected_status: 200
+    
+    - name: vector-db
+      url: http://vector-db:8000/api/v1/heartbeat
+      expected_status: 200
+    
+    - name: sandbox-browser
+      url: http://sandbox-browser:3001/health
+      expected_status: 200
+
+# Auto-scaling triggers (future feature)
+scaling:
+  enabled: false
+  
+  scale_up:
+    cpu_threshold: 90
+    memory_threshold: 90
+    duration: 300  # 5 minutes
+  
+  scale_down:
+    cpu_threshold: 20
+    memory_threshold: 30
+    duration: 600  # 10 minutes

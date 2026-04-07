@@ -1,0 +1,114 @@
+import { generatePKCE } from "./pkce"
+import { getAvailablePort, waitForOAuthCallback } from "./localhost-server"
+
+// These are from the gemini-cli open source code.
+// Per Google's OAuth docs, client secrets for installed applications are NOT secret:
+// https://developers.google.com/identity/protocols/oauth2#installed
+const CLIENT_ID = "681255809395-oo8ft2oprdrnp9e3aqf6av3hmdib135j.apps.googleusercontent.com"
+const CLIENT_SECRET = "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"
+const AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+const TOKEN_URL = "https://oauth2.googleapis.com/token"
+const SCOPES = [
+  "https://www.googleapis.com/auth/cloud-platform",
+  "https://www.googleapis.com/auth/userinfo.email",
+  "https://www.googleapis.com/auth/userinfo.profile",
+].join(" ")
+
+export const googleOAuth = {
+  label: "Sign in with Google (Gemini Code Assist)",
+  description: "Use your Google Workspace + Gemini subscription",
+
+  async authorize(_inputs: Record<string, string>) {
+    const { verifier, challenge } = await generatePKCE()
+    const port = await getAvailablePort()
+    const redirectUri = `http://localhost:${port}/auth/callback`
+
+    const params = new URLSearchParams({
+      client_id: CLIENT_ID,
+      response_type: "code",
+      redirect_uri: redirectUri,
+      scope: SCOPES,
+      access_type: "offline",
+      code_challenge: challenge,
+      code_challenge_method: "S256",
+      prompt: "consent",
+    })
+
+    const url = `${AUTHORIZE_URL}?${params}`
+    const callbackPromise = waitForOAuthCallback(port)
+
+    return {
+      url,
+      method: "auto" as const,
+      instructions:
+        "Your browser will open. Sign in with your Google account and authorization will complete automatically.",
+      async callback() {
+        try {
+          const { code } = await callbackPromise
+
+          const tokenRes = await fetch(TOKEN_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({
+              grant_type: "authorization_code",
+              client_id: CLIENT_ID,
+              client_secret: CLIENT_SECRET,
+              code,
+              redirect_uri: redirectUri,
+              code_verifier: verifier,
+            }),
+          })
+
+          if (!tokenRes.ok) {
+            return { type: "failed" as const, error: await tokenRes.text() }
+          }
+
+          const data = (await tokenRes.json()) as {
+            access_token: string
+            refresh_token?: string
+            expires_in: number
+          }
+
+          if (!data.refresh_token) {
+            return {
+              type: "failed" as const,
+              error:
+                "No refresh token returned — try revoking access at myaccount.google.com/permissions and trying again",
+            }
+          }
+
+          const expires = Date.now() + data.expires_in * 1000 - 5 * 60 * 1000
+
+          return {
+            type: "success" as const,
+            provider: "google",
+            refresh: data.refresh_token,
+            access: data.access_token,
+            expires,
+          }
+        } catch (err) {
+          return { type: "failed" as const, error: String(err) }
+        }
+      },
+    }
+  },
+}
+
+export async function refreshGoogleToken(refreshToken: string): Promise<{ access: string; expires: number }> {
+  const res = await fetch(TOKEN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "refresh_token",
+      client_id: CLIENT_ID,
+      client_secret: CLIENT_SECRET,
+      refresh_token: refreshToken,
+    }),
+  })
+  if (!res.ok) throw new Error(`Google token refresh failed: ${await res.text()}`)
+  const data = (await res.json()) as { access_token: string; expires_in: number }
+  return {
+    access: data.access_token,
+    expires: Date.now() + data.expires_in * 1000 - 5 * 60 * 1000,
+  }
+}

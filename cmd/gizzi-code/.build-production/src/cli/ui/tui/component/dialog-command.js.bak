@@ -1,0 +1,134 @@
+import { createComponent as _$createComponent } from "@opentui/solid";
+import { useDialog } from "@/cli/ui/tui/ui/dialog";
+import { DialogSelect } from "@/cli/ui/tui/ui/dialog-select";
+import { createContext, createMemo, createSignal, onCleanup, useContext } from "solid-js";
+import { useKeyboard } from "@opentui/solid";
+import { useKeybind } from "@/cli/ui/tui/context/keybind";
+import { GIZZICopy } from "@/shared/brand";
+
+// Legacy type for backward compatibility
+
+const ctx = createContext();
+function init() {
+  const [registrations, setRegistrations] = createSignal([]);
+  const [suspendCount, setSuspendCount] = createSignal(0);
+  const dialog = useDialog();
+  const keybind = useKeybind();
+  const entries = createMemo(() => {
+    const all = registrations().flatMap(x => x());
+    return all.map(x => ({
+      ...x,
+      footer: x.keybind ? keybind.print(x.keybind) : undefined
+    }));
+  });
+  const isEnabled = option => option.enabled !== false;
+  const isVisible = option => isEnabled(option) && !option.hidden;
+  const visibleOptions = createMemo(() => entries().filter(option => isVisible(option)));
+  const suggestedOptions = createMemo(() => visibleOptions().filter(option => option.suggested).map(option => ({
+    ...option,
+    value: `suggested:${option.value}`,
+    category: GIZZICopy.dialogs.suggestedCategory
+  })));
+  const suspended = () => suspendCount() > 0;
+  useKeyboard(evt => {
+    if (suspended()) return;
+    if (dialog.stack.length > 0) return;
+    for (const option of entries()) {
+      if (!isEnabled(option)) continue;
+      if (option.keybind && keybind.match(option.keybind, evt)) {
+        evt.preventDefault();
+        option.onSelect?.(dialog);
+        return;
+      }
+    }
+  });
+  const result = {
+    trigger(name) {
+      for (const option of entries()) {
+        if (option.value === name) {
+          if (!isEnabled(option)) return;
+          option.onSelect?.(dialog);
+          return;
+        }
+      }
+    },
+    slashes() {
+      return visibleOptions().flatMap(option => {
+        const slash = option.slash;
+        if (!slash) return [];
+        return {
+          display: "/" + slash.name,
+          description: option.description ?? option.title,
+          aliases: slash.aliases?.map(alias => "/" + alias),
+          onSelect: () => result.trigger(option.value)
+        };
+      });
+    },
+    keybinds(enabled) {
+      setSuspendCount(count => count + (enabled ? -1 : 1));
+    },
+    suspended,
+    show() {
+      dialog.replace(() => _$createComponent(DialogCommand, {
+        get options() {
+          return visibleOptions();
+        },
+        get suggestedOptions() {
+          return suggestedOptions();
+        }
+      }));
+    },
+    register(cb) {
+      const results = createMemo(cb);
+      setRegistrations(arr => [results, ...arr]);
+      onCleanup(() => {
+        setRegistrations(arr => arr.filter(x => x !== results));
+      });
+    }
+  };
+  return result;
+}
+export function useCommandDialog() {
+  const value = useContext(ctx);
+  if (!value) {
+    throw new Error("useCommandDialog must be used within CommandProvider");
+  }
+  return value;
+}
+export function CommandProvider(props) {
+  const value = init();
+  const dialog = useDialog();
+  const keybind = useKeybind();
+  useKeyboard(evt => {
+    if (value.suspended()) return;
+    if (dialog.stack.length > 0) return;
+    if (evt.defaultPrevented) return;
+    if (keybind.match("command_list", evt)) {
+      evt.preventDefault();
+      value.show();
+      return;
+    }
+  });
+  return _$createComponent(ctx.Provider, {
+    value: value,
+    get children() {
+      return props.children;
+    }
+  });
+}
+function DialogCommand(props) {
+  let ref;
+  const list = () => {
+    if (ref?.filter) return props.options;
+    return [...props.suggestedOptions, ...props.options];
+  };
+  return _$createComponent(DialogSelect, {
+    ref: r => ref = r,
+    get title() {
+      return GIZZICopy.dialogs.commandsTitle;
+    },
+    get options() {
+      return list();
+    }
+  });
+}

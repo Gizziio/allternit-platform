@@ -4,7 +4,7 @@
  * An individual panel with tabs, collapse support, and glass styling.
  * Integrates with react-resizable-panels and A2R design system.
  * 
- * @module @a2r/platform/shell/panels
+ * @module @allternit/platform/shell/panels
  */
 
 import React, { useState, useCallback } from 'react';

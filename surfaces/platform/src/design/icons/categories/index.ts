@@ -3,7 +3,7 @@
  * 
  * Organized icon exports by category for selective imports.
  * 
- * @module @a2r/platform/icons/categories
+ * @module @allternit/platform/icons/categories
  */
 
 export { navigationIcons, type NavigationIcon } from './navigation';

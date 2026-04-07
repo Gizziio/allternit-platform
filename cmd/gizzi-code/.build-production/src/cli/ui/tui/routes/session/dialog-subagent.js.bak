@@ -1,0 +1,26 @@
+import { createComponent as _$createComponent } from "@opentui/solid";
+import { DialogSelect } from "@/cli/ui/tui/ui/dialog-select";
+import { useRoute } from "@/cli/ui/tui/context/route";
+import { GIZZICopy } from "@/shared/brand";
+export function DialogSubagent(props) {
+  const route = useRoute();
+  return _$createComponent(DialogSelect, {
+    get title() {
+      return GIZZICopy.dialogs.subagentActionsTitle;
+    },
+    get options() {
+      return [{
+        title: GIZZICopy.dialogs.open,
+        value: "subagent.view",
+        description: GIZZICopy.dialogs.subagentOpenDescription,
+        onSelect: dialog => {
+          route.navigate({
+            type: "session",
+            sessionID: props.sessionID
+          });
+          dialog.clear();
+        }
+      }];
+    }
+  });
+}

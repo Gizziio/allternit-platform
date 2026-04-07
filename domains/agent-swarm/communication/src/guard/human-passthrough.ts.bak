@@ -1,0 +1,176 @@
+/**
+ * Human Passthrough
+ * 
+ * Allows human-initiated messages to bypass loop guard restrictions.
+ */
+
+import type { LoopGuardResult } from './guard-types.js';
+
+/**
+ * Actor type
+ */
+export type ActorType = 'human' | 'agent' | 'system';
+
+/**
+ * Actor information
+ */
+export interface Actor {
+  /** Actor type */
+  type: ActorType;
+  /** Actor ID */
+  id: string;
+  /** Actor name */
+  name: string;
+}
+
+/**
+ * Check if actor is human
+ */
+export function isHuman(actor: Actor): boolean {
+  return actor.type === 'human';
+}
+
+/**
+ * Check if actor is agent
+ */
+export function isAgent(actor: Actor): boolean {
+  return actor.type === 'agent';
+}
+
+/**
+ * Create human actor
+ */
+export function createHumanActor(id: string, name: string): Actor {
+  return {
+    type: 'human',
+    id,
+    name,
+  };
+}
+
+/**
+ * Create agent actor
+ */
+export function createAgentActor(id: string, name: string, _role?: string): Actor {
+  return {
+    type: 'agent',
+    id,
+    name: name,
+  };
+}
+
+/**
+ * Human passthrough checker
+ */
+export class HumanPassthroughChecker {
+  private humanPrefixes: Set<string>;
+  private knownHumanIds: Set<string>;
+
+  constructor(options: {
+    humanPrefixes?: string[];
+    knownHumanIds?: string[];
+  } = {}) {
+    this.humanPrefixes = new Set(options.humanPrefixes || ['user:', 'human:']);
+    this.knownHumanIds = new Set(options.knownHumanIds || []);
+  }
+
+  /**
+   * Check if action should bypass loop guard
+   */
+  shouldBypass(
+    sourceActor: Actor,
+    _targetActor?: Actor
+  ): boolean {
+    // Source is human - always bypass
+    if (isHuman(sourceActor)) {
+      return true;
+    }
+
+    // Check ID prefixes
+    if (this.isHumanById(sourceActor.id)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Check if ID belongs to human
+   */
+  private isHumanById(id: string): boolean {
+    // Check known human IDs
+    if (this.knownHumanIds.has(id)) {
+      return true;
+    }
+
+    // Check prefixes
+    for (const prefix of this.humanPrefixes) {
+      if (id.startsWith(prefix)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Add known human ID
+   */
+  addKnownHuman(id: string): void {
+    this.knownHumanIds.add(id);
+  }
+
+  /**
+   * Remove known human ID
+   */
+  removeKnownHuman(id: string): void {
+    this.knownHumanIds.delete(id);
+  }
+
+  /**
+   * Add human prefix
+   */
+  addHumanPrefix(prefix: string): void {
+    this.humanPrefixes.add(prefix);
+  }
+
+  /**
+   * Parse actor from string ID
+   */
+  parseActor(id: string, name?: string): Actor {
+    if (this.isHumanById(id)) {
+      return createHumanActor(id, name || id);
+    }
+    return createAgentActor(id, name || id);
+  }
+
+  /**
+   * Create loop guard result for human
+   */
+  createHumanBypassResult(): LoopGuardResult {
+    return {
+      allowed: true,
+      reason: 'Human-initiated action (bypasses loop guard)',
+    };
+  }
+
+  /**
+   * Create loop guard result for agent
+   */
+  createAgentCheckResult(allowed: boolean, reason?: string): LoopGuardResult {
+    return {
+      allowed,
+      reason,
+    };
+  }
+}
+
+/**
+ * Create human passthrough checker
+ */
+export function createHumanPassthroughChecker(options?: {
+  humanPrefixes?: string[];
+  knownHumanIds?: string[];
+}): HumanPassthroughChecker {
+  return new HumanPassthroughChecker(options);
+}

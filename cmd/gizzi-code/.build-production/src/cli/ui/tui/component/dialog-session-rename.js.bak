@@ -1,0 +1,42 @@
+import { createComponent as _$createComponent } from "@opentui/solid";
+import { DialogPrompt } from "@/cli/ui/tui/ui/dialog-prompt";
+import { useDialog } from "@/cli/ui/tui/ui/dialog";
+import { useSync } from "@/cli/ui/tui/context/sync";
+import { createMemo } from "solid-js";
+import { useSDK } from "@/cli/ui/tui/context/sdk";
+import { GIZZICopy } from "@/shared/brand";
+import { Binary } from "@allternit/util/binary";
+
+// Local types since SDK exports 'unknown'
+
+export function DialogSessionRename(props) {
+  const dialog = useDialog();
+  const sync = useSync();
+  const sdk = useSDK();
+  const session = createMemo(() => {
+    const sessions = sync.data.session;
+    if (!sessions) return undefined;
+    const match = Binary.search(sessions, props.session, s => s.id);
+    return match.found ? sessions[match.index] : undefined;
+  });
+  return _$createComponent(DialogPrompt, {
+    get title() {
+      return GIZZICopy.dialogs.renameSessionTitle;
+    },
+    get value() {
+      return session()?.title;
+    },
+    onConfirm: value => {
+      sdk.client.session.update({
+        path: {
+          sessionID: props.session
+        },
+        body: {
+          title: value
+        }
+      });
+      dialog.clear();
+    },
+    onCancel: () => dialog.clear()
+  });
+}

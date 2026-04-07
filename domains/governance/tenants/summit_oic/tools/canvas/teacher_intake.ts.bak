@@ -1,0 +1,12 @@
+/**
+ * Teacher Intake stub for tools/canvas — re-exports from skills/canvas
+ */
+export {
+  TeacherIntakeSystem,
+  createTeacherIntakeSystem,
+  type TeacherIntakeQuestion,
+  type TeacherIntakeResponse,
+  type StyleAnalysis,
+  type TeacherProfile,
+  TEACHER_INTAKE_QUESTIONS,
+} from '../../skills/canvas/teacher_intake';

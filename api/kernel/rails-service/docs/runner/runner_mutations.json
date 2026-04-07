@@ -1,0 +1,42 @@
+[
+  {
+    "op": "create_node",
+    "node_id": "n_runner_step1",
+    "node_kind": "task",
+    "title": "Build the Rails Runner to tail the ledger",
+    "parent_node_id": "n_8830",
+    "execution_mode": "shared"
+  },
+  {
+    "op": "create_node",
+    "node_id": "n_runner_step2",
+    "node_kind": "task",
+    "title": "Drive the Ralph loop via deterministic events",
+    "parent_node_id": "n_8830",
+    "execution_mode": "shared"
+  },
+  {
+    "op": "create_node",
+    "node_id": "n_runner_step3",
+    "node_kind": "task",
+    "title": "Inject AGENTS.md policy on every turn",
+    "parent_node_id": "n_8830",
+    "execution_mode": "shared"
+  },
+  {
+    "op": "create_node",
+    "node_id": "n_runner_step4",
+    "node_kind": "task",
+    "title": "Ship the A2R Bus + tmux/unix transports",
+    "parent_node_id": "n_8830",
+    "execution_mode": "shared"
+  },
+  {
+    "op": "create_node",
+    "node_id": "n_runner_step5",
+    "node_kind": "task",
+    "title": "Enforce turn closeout/lease checks each iteration",
+    "parent_node_id": "n_8830",
+    "execution_mode": "shared"
+  }
+]

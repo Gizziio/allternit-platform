@@ -1,0 +1,151 @@
+/**
+ * Session Undo/Redo System
+ * 
+ * Tracks message operations (add, edit, delete) and allows reverting them.
+ * Uses a command pattern for operation history.
+ */
+
+import { Log } from "@/runtime/util/log"
+
+const log = Log.create({ service: "session.undo" })
+
+export interface UndoableOperation {
+  id: string
+  type: "add" | "edit" | "delete"
+  sessionID: string
+  messageID?: string
+  previousState?: any
+  newState?: any
+  timestamp: number
+}
+
+export class UndoManager {
+  private history: UndoableOperation[] = []
+  private position = -1
+  private maxHistory = 50
+  private sessionID: string
+
+  constructor(sessionID: string) {
+    this.sessionID = sessionID
+  }
+
+  /**
+   * Record an operation that can be undone
+   */
+  record(operation: Omit<UndoableOperation, "id" | "timestamp">): void {
+    // Remove any operations after current position (redo stack)
+    if (this.position < this.history.length - 1) {
+      this.history = this.history.slice(0, this.position + 1)
+    }
+
+    const fullOperation: UndoableOperation = {
+      ...operation,
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: Date.now(),
+    }
+
+    this.history.push(fullOperation)
+    this.position++
+
+    // Limit history size
+    if (this.history.length > this.maxHistory) {
+      this.history.shift()
+      this.position--
+    }
+
+    log.debug("Recorded operation", { type: operation.type, id: fullOperation.id })
+  }
+
+  /**
+   * Check if undo is available
+   */
+  canUndo(): boolean {
+    return this.position >= 0
+  }
+
+  /**
+   * Check if redo is available
+   */
+  canRedo(): boolean {
+    return this.position < this.history.length - 1
+  }
+
+  /**
+   * Get the current operation for undo
+   */
+  peekUndo(): UndoableOperation | null {
+    if (!this.canUndo()) return null
+    return this.history[this.position]
+  }
+
+  /**
+   * Get the next operation for redo
+   */
+  peekRedo(): UndoableOperation | null {
+    if (!this.canRedo()) return null
+    return this.history[this.position + 1]
+  }
+
+  /**
+   * Move position back (after undo is performed)
+   */
+  undo(): UndoableOperation | null {
+    if (!this.canUndo()) {
+      log.debug("Nothing to undo")
+      return null
+    }
+
+    const operation = this.history[this.position]
+    this.position--
+    log.debug("Undo performed", { type: operation.type, id: operation.id })
+    return operation
+  }
+
+  /**
+   * Move position forward (after redo is performed)
+   */
+  redo(): UndoableOperation | null {
+    if (!this.canRedo()) {
+      log.debug("Nothing to redo")
+      return null
+    }
+
+    this.position++
+    const operation = this.history[this.position]
+    log.debug("Redo performed", { type: operation.type, id: operation.id })
+    return operation
+  }
+
+  /**
+   * Clear all history
+   */
+  clear(): void {
+    this.history = []
+    this.position = -1
+    log.debug("History cleared")
+  }
+
+  /**
+   * Get current history stats
+   */
+  getStats(): { undoCount: number; redoCount: number } {
+    return {
+      undoCount: this.position + 1,
+      redoCount: this.history.length - this.position - 1,
+    }
+  }
+}
+
+// Global undo manager registry per session
+const undoManagers = new Map<string, UndoManager>()
+
+export function getUndoManager(sessionID: string): UndoManager {
+  if (!undoManagers.has(sessionID)) {
+    undoManagers.set(sessionID, new UndoManager(sessionID))
+  }
+  return undoManagers.get(sessionID)!
+}
+
+export function clearUndoManager(sessionID: string): void {
+  undoManagers.delete(sessionID)
+}

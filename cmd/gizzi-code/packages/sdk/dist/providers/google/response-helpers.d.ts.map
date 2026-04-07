@@ -1,0 +1,1 @@
+{"version":3,"file":"response-helpers.d.ts","sourceRoot":"","sources":["../../../src/providers/google/response-helpers.ts"],"names":[],"mappings":"AAAA;;;;;;;;;;;;;;;;GAgBG;AAGH,OAAO,EAEL,KAAK,uBAAuB,EAC5B,KAAK,+BAA+B,EAErC,MAAM,SAAS,CAAC;AAYjB,wBAAgB,uBAAuB,CAAC,QAAQ,EAAE,uBAAuB,GAAG,MAAM,CAuBjF;AA8CD;;GAEG;AACH,wBAAgB,UAAU,CACxB,QAAQ,EAAE,uBAAuB,GAChC,+BAA+B,CAqFjC"}

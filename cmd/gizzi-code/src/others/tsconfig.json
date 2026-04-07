@@ -1,0 +1,32 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": "..",
+    "outDir": "../../.build/others"
+  },
+  "include": [
+    ".",
+    "../shared/**/*",
+    "../agent/**/*",
+    "../agent-workspace/**/*",
+    "../auth/**/*",
+    "../bus/**/*",
+    "../config/**/*",
+    "../continuity/**/*",
+    "../file/**/*",
+    "../flag/**/*",
+    "../lib/**/*",
+    "../mcp/**/*",
+    "../permission/**/*",
+    "../project/**/*",
+    "../provider/**/*",
+    "../session/**/*",
+    "../tool/**/*",
+    "../util/**/*"
+  ],
+  "exclude": ["node_modules", "../../.build"],
+  "references": [
+    { "path": "../runtime" }
+  ]
+}

@@ -1,0 +1,26 @@
+[package]
+name = "allternit-gateway-browser"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tower-http = { workspace = true }
+uuid = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+async-trait = { workspace = true }
+futures = "0.3"
+tokio-stream = { workspace = true }
+allternit-sdk-core = { workspace = true }
+allternit-sdk-transport = { workspace = true }
+allternit-agent-router = { workspace = true }
+allternit-model-router = { workspace = true }
+allternit-sdk-policy = { workspace = true }
+sqlx = { workspace = true }
+reqwest = { workspace = true }

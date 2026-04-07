@@ -1,0 +1,17 @@
+/**
+ * Session Storage
+ */
+
+const storage: Map<string, unknown> = new Map()
+
+export function getSessionItem<T>(key: string): T | undefined {
+  return storage.get(key) as T
+}
+
+export function setSessionItem<T>(key: string, value: T): void {
+  storage.set(key, value)
+}
+
+export function removeSessionItem(key: string): void {
+  storage.delete(key)
+}

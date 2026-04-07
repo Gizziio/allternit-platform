@@ -1,0 +1,177 @@
+import { Hono } from "hono"
+import { validator } from "hono-openapi"
+import z from "zod/v4"
+import { Question } from "@/runtime/integrations/question/question"
+import { PermissionNext } from "@/runtime/tools/guard/permission/next"
+import { Todo } from "@/runtime/session/todo"
+import { lazy } from "@/runtime/util/lazy"
+
+/**
+ * Test-only routes for seeding deterministic session dock states.
+ *
+ * Only mounted when GIZZI_E2E=1. Never exposed in normal operation.
+ *
+ * Used by: test/session/session-composer-dock.test.ts
+ */
+export const E2ERoutes = lazy(() =>
+  new Hono()
+    /**
+     * Seed a question request for a session.
+     * Fire-and-forget: the pending question stays until replied/rejected.
+     * Returns the requestID so the caller can reply/reject it later.
+     */
+    .post(
+      "/question",
+      validator(
+        "json",
+        z.object({
+          sessionID: z.string(),
+          questions: z.array(
+            z.object({
+              header: z.string(),
+              question: z.string(),
+              options: z.array(
+                z.object({
+                  label: z.string(),
+                  description: z.string(),
+                }),
+              ),
+              multiple: z.boolean().optional(),
+              custom: z.boolean().optional(),
+            }),
+          ),
+        }),
+      ),
+      async (c) => {
+        const body = c.req.valid("json")
+        // Fire-and-forget: ask() blocks internally until replied.
+        // We intentionally don't await so the request stays pending.
+        let requestID: string | undefined
+        const p = Question.ask({
+          sessionID: body.sessionID,
+          questions: body.questions,
+        })
+        // Grab the ID from the pending map immediately after ask() registers it
+        const pending = await Question.list()
+        const entry = pending.find((r) => r.sessionID === body.sessionID)
+        requestID = entry?.id
+        p.catch(() => {}) // suppress unhandled rejection when test rejects it
+        return c.json({ requestID })
+      },
+    )
+
+    /**
+     * Seed a permission request for a session.
+     * Fire-and-forget: stays pending until replied.
+     */
+    .post(
+      "/permission",
+      validator(
+        "json",
+        z.object({
+          sessionID: z.string(),
+          permission: z.string(),
+          patterns: z.array(z.string()),
+          metadata: z.record(z.string(), z.any()).optional(),
+          always: z.array(z.string()).optional(),
+        }),
+      ),
+      async (c) => {
+        const body = c.req.valid("json")
+        const p = PermissionNext.ask({
+          sessionID: body.sessionID,
+          permission: body.permission,
+          patterns: body.patterns,
+          metadata: body.metadata ?? {},
+          always: body.always ?? body.patterns,
+          ruleset: [],
+        })
+        // Grab the ID immediately after it registers in pending
+        const pending = await PermissionNext.list()
+        const entry = pending.find((r) => r.sessionID === body.sessionID)
+        const requestID = entry?.id
+        p.catch(() => {})
+        return c.json({ requestID })
+      },
+    )
+
+    /**
+     * Seed todos for a session. Replaces all existing todos for the session.
+     */
+    .post(
+      "/todo",
+      validator(
+        "json",
+        z.object({
+          sessionID: z.string(),
+          todos: z.array(
+            z.object({
+              content: z.string(),
+              status: z.string(),
+              priority: z.string(),
+            }),
+          ),
+        }),
+      ),
+      async (c) => {
+        const body = c.req.valid("json")
+        Todo.update({ sessionID: body.sessionID, todos: body.todos })
+        return c.json({ ok: true })
+      },
+    )
+
+    /**
+     * Clear all seeded state (questions, permissions, todos) for a session.
+     */
+    .delete(
+      "/session/:sessionID",
+      validator("param", z.object({ sessionID: z.string() })),
+      async (c) => {
+        const { sessionID } = c.req.valid("param")
+
+        const questions = await Question.list()
+        await Promise.all(
+          questions.filter((q) => q.sessionID === sessionID).map((q) => Question.reject(q.id)),
+        )
+
+        const permissions = await PermissionNext.list()
+        await Promise.all(
+          permissions
+            .filter((p) => p.sessionID === sessionID)
+            .map((p) =>
+              PermissionNext.reply({ requestID: p.id, reply: "reject" }),
+            ),
+        )
+
+        Todo.update({ sessionID, todos: [] })
+
+        return c.json({ ok: true })
+      },
+    )
+
+    /**
+     * Clear a specific question by requestID.
+     */
+    .delete(
+      "/question/:requestID",
+      validator("param", z.object({ requestID: z.string() })),
+      async (c) => {
+        const { requestID } = c.req.valid("param")
+        await Question.reject(requestID)
+        return c.json({ ok: true })
+      },
+    )
+
+    /**
+     * Clear a specific permission by requestID.
+     */
+    .delete(
+      "/permission/:requestID",
+      validator("param", z.object({ requestID: z.string() })),
+      async (c) => {
+        const { requestID } = c.req.valid("param")
+        await PermissionNext.reply({ requestID, reply: "reject" })
+        return c.json({ ok: true })
+      },
+    ),
+)

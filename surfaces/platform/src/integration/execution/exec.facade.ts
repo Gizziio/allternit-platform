@@ -8,7 +8,7 @@
  *   await execFacade.startRun({ input: '...', modelId: '...' });
  * 
  * NEW (recommended):
- *   import { api } from '@a2r/platform';
+ *   import { api } from '@allternit/platform';
  *   const session = await api.createSession(modelId);
  *   await api.sendMessage(session.id, input);
  *   const events = api.connectEventStream(session.id);

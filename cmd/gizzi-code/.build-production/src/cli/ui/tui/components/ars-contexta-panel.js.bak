@@ -1,0 +1,195 @@
+import { memo as _$memo } from "@opentui/solid";
+import { effect as _$effect } from "@opentui/solid";
+import { insert as _$insert } from "@opentui/solid";
+import { createComponent as _$createComponent } from "@opentui/solid";
+import { createTextNode as _$createTextNode } from "@opentui/solid";
+import { insertNode as _$insertNode } from "@opentui/solid";
+import { setProp as _$setProp } from "@opentui/solid";
+import { createElement as _$createElement } from "@opentui/solid";
+/**
+ * Ars Contexta TUI Panel Component
+ *
+ * Shows real-time progress of:
+ * - Entity extraction
+ * - Insight generation
+ * - Knowledge graph operations
+ *
+ * WIH: GAP-78/GAP-79 TUI Integration
+ */
+
+import { createSignal, createEffect, onCleanup, For, Show } from "solid-js";
+import { RGBA, TextAttributes } from "@opentui/core";
+import { getArsContextaRuntime } from "@/cli/ui/components/gizzi/ars-contexta-runtime";
+const operationIcons = {
+  "entity-extraction": "◆",
+  "insight-generation": "◈",
+  "content-enrichment": "◇",
+  "knowledge-graph-update": "◉"
+};
+const statusColors = {
+  pending: RGBA.fromInts(204, 204, 0),
+  running: RGBA.fromInts(85, 153, 255),
+  completed: RGBA.fromInts(85, 204, 85),
+  failed: RGBA.fromInts(255, 85, 85)
+};
+export function ArsContextaPanel(props) {
+  const runtime = getArsContextaRuntime();
+  const [operations, setOperations] = createSignal([]);
+  createEffect(() => {
+    const unsubscribe = runtime.subscribe(ops => {
+      setOperations(props.showCompleted ? ops : ops.filter(o => o.status !== "completed"));
+    });
+    onCleanup(unsubscribe);
+  });
+  const renderProgressBar = progress => {
+    const width = 20;
+    const filled = Math.round(progress / 100 * width);
+    const empty = width - filled;
+    return "█".repeat(filled) + "░".repeat(empty);
+  };
+  const formatDuration = ms => {
+    if (!ms) return "";
+    if (ms < 1000) return `${ms}ms`;
+    return `${(ms / 1000).toFixed(1)}s`;
+  };
+  return _$createComponent(Show, {
+    get when() {
+      return operations().length > 0;
+    },
+    get children() {
+      var _el$ = _$createElement("box"),
+        _el$2 = _$createElement("box"),
+        _el$3 = _$createElement("text"),
+        _el$5 = _$createElement("text"),
+        _el$7 = _$createElement("box");
+      _$insertNode(_el$, _el$2);
+      _$insertNode(_el$, _el$7);
+      _$setProp(_el$, "flexDirection", "column");
+      _$insertNode(_el$2, _el$3);
+      _$insertNode(_el$2, _el$5);
+      _$setProp(_el$2, "flexDirection", "row");
+      _$setProp(_el$2, "gap", 1);
+      _$insertNode(_el$3, _$createTextNode(`◐`));
+      _$insertNode(_el$5, _$createTextNode(`Ars Contexta`));
+      _$setProp(_el$7, "flexDirection", "column");
+      _$insert(_el$7, _$createComponent(For, {
+        get each() {
+          return operations();
+        },
+        children: op => (() => {
+          var _el$8 = _$createElement("box"),
+            _el$9 = _$createElement("box"),
+            _el$0 = _$createElement("text"),
+            _el$1 = _$createElement("text"),
+            _el$10 = _$createElement("text");
+          _$insertNode(_el$8, _el$9);
+          _$setProp(_el$8, "flexDirection", "column");
+          _$setProp(_el$8, "paddingLeft", 1);
+          _$insertNode(_el$9, _el$0);
+          _$insertNode(_el$9, _el$1);
+          _$insertNode(_el$9, _el$10);
+          _$setProp(_el$9, "flexDirection", "row");
+          _$setProp(_el$9, "gap", 1);
+          _$insert(_el$0, () => String(operationIcons[op.type] ?? ""));
+          _$insert(_el$1, () => String(op.label ?? ""));
+          _$insert(_el$10, () => String(op.status ?? ""));
+          _$insert(_el$8, _$createComponent(Show, {
+            get when() {
+              return op.detail;
+            },
+            get children() {
+              var _el$11 = _$createElement("text");
+              _$setProp(_el$11, "paddingLeft", 2);
+              _$insert(_el$11, () => String(op.detail ?? ""));
+              _$effect(_$p => _$setProp(_el$11, "fg", RGBA.fromInts(136, 136, 136), _$p));
+              return _el$11;
+            }
+          }), null);
+          _$insert(_el$8, _$createComponent(Show, {
+            get when() {
+              return _$memo(() => op.status === "running")() && op.progress !== undefined;
+            },
+            get children() {
+              var _el$12 = _$createElement("box"),
+                _el$13 = _$createElement("text"),
+                _el$14 = _$createElement("text"),
+                _el$15 = _$createTextNode(`%`);
+              _$insertNode(_el$12, _el$13);
+              _$insertNode(_el$12, _el$14);
+              _$setProp(_el$12, "flexDirection", "row");
+              _$setProp(_el$12, "gap", 1);
+              _$setProp(_el$12, "paddingLeft", 2);
+              _$insert(_el$13, () => renderProgressBar(op.progress));
+              _$insertNode(_el$14, _el$15);
+              _$insert(_el$14, () => String(op.progress ?? 0), _el$15);
+              _$effect(_$p => _$setProp(_el$13, "fg", RGBA.fromInts(85, 153, 255), _$p));
+              return _el$12;
+            }
+          }), null);
+          _$insert(_el$8, _$createComponent(Show, {
+            get when() {
+              return op.status === "completed";
+            },
+            get children() {
+              var _el$16 = _$createElement("box");
+              _$setProp(_el$16, "flexDirection", "row");
+              _$setProp(_el$16, "gap", 1);
+              _$setProp(_el$16, "paddingLeft", 2);
+              _$insert(_el$16, _$createComponent(Show, {
+                get when() {
+                  return op.entityCount;
+                },
+                get children() {
+                  var _el$17 = _$createElement("text"),
+                    _el$18 = _$createTextNode(` entities`);
+                  _$insertNode(_el$17, _el$18);
+                  _$insert(_el$17, () => String(op.entityCount ?? 0), _el$18);
+                  _$effect(_$p => _$setProp(_el$17, "fg", RGBA.fromInts(85, 204, 85), _$p));
+                  return _el$17;
+                }
+              }), null);
+              _$insert(_el$16, _$createComponent(Show, {
+                get when() {
+                  return op.insightCount;
+                },
+                get children() {
+                  var _el$19 = _$createElement("text"),
+                    _el$20 = _$createTextNode(` insights`);
+                  _$insertNode(_el$19, _el$20);
+                  _$insert(_el$19, () => String(op.insightCount ?? 0), _el$20);
+                  _$effect(_$p => _$setProp(_el$19, "fg", RGBA.fromInts(85, 204, 85), _$p));
+                  return _el$19;
+                }
+              }), null);
+              _$insert(_el$16, _$createComponent(Show, {
+                get when() {
+                  return op.processingTimeMs;
+                },
+                get children() {
+                  var _el$21 = _$createElement("text");
+                  _$insert(_el$21, () => formatDuration(op.processingTimeMs));
+                  _$effect(_$p => _$setProp(_el$21, "fg", RGBA.fromInts(136, 136, 136), _$p));
+                  return _el$21;
+                }
+              }), null);
+              return _el$16;
+            }
+          }), null);
+          _$effect(_$p => _$setProp(_el$10, "fg", statusColors[op.status] ?? RGBA.fromInts(170, 170, 170), _$p));
+          return _el$8;
+        })()
+      }));
+      _$effect(_p$ => {
+        var _v$ = props.maxHeight,
+          _v$2 = TextAttributes.BOLD;
+        _v$ !== _p$.e && (_p$.e = _$setProp(_el$, "height", _v$, _p$.e));
+        _v$2 !== _p$.t && (_p$.t = _$setProp(_el$5, "attributes", _v$2, _p$.t));
+        return _p$;
+      }, {
+        e: undefined,
+        t: undefined
+      });
+      return _el$;
+    }
+  });
+}

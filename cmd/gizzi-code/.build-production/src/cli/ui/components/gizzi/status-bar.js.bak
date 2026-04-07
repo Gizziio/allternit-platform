@@ -1,0 +1,333 @@
+import { effect as _$effect } from "@opentui/solid";
+import { createTextNode as _$createTextNode } from "@opentui/solid";
+import { insertNode as _$insertNode } from "@opentui/solid";
+import { insert as _$insert } from "@opentui/solid";
+import { createComponent as _$createComponent } from "@opentui/solid";
+import { memo as _$memo } from "@opentui/solid";
+import { setProp as _$setProp } from "@opentui/solid";
+import { createElement as _$createElement } from "@opentui/solid";
+import { createEffect, createMemo, createSignal, For, onCleanup, Show } from "solid-js";
+import { GIZZISpinner } from "@/cli/ui/components/gizzi/spinner";
+import { useGIZZITheme } from "@/cli/ui/components/gizzi/theme";
+import { resolveFixtureState, resolveRuntimeState } from "@/cli/ui/components/gizzi/status-runtime";
+import { GIZZICopy } from "@/shared/brand";
+import { useAnimation, useStatusFrame } from "@/cli/ui/components/animation";
+import { formatRetryStatus } from "@/shared/util/provider-error";
+export function GIZZIStatusBar(props) {
+  const tone = useGIZZITheme();
+  const animation = useAnimation();
+  const [now, setNow] = createSignal(Date.now());
+  const width = createMemo(() => props.width ?? 120);
+  const compact = createMemo(() => !!props.compact);
+  const narrow = createMemo(() => compact() || width() < 112);
+  const micro = createMemo(() => width() < 88);
+  const queued = createMemo(() => !!props.queuedSince);
+  const fixture = createMemo(() => {
+    if ((props.parts ?? []).length > 0) return undefined;
+    if (props.status.type === "retry") return undefined;
+    return resolveFixtureState(props.fixtureMode, props.startedAt, now(), props.fixtureDelayMs);
+  });
+  const state = createMemo(() => fixture()?.state ?? resolveRuntimeState(props.status, props.parts ?? [], queued()));
+  const retry = createMemo(() => props.status.type === "retry" ? formatRetryStatus({
+    message: props.status.message,
+    attempt: props.status.attempt,
+    next: props.status.next,
+    now: now()
+  }) : undefined);
+  const color = createMemo(() => tone().status[state()]);
+  const statusLabel = createMemo(() => {
+    if (queued()) return GIZZICopy.session.modeQueued;
+    if (retry()) return retry().label;
+    if (fixture()?.state) return label(fixture().state);
+    return label(state());
+  });
+  const statusLimit = createMemo(() => {
+    if (micro()) return 10;
+    if (narrow()) return 20;
+    return 28;
+  });
+  const statusText = createMemo(() => truncateStatus(statusLabel(), statusLimit()));
+  const live = createMemo(() => state() !== "idle" || queued());
+  const tools = createMemo(() => fixture()?.tools ?? (props.parts ?? []).filter(part => part.type === "tool").filter(part => part.state.status === "pending" || part.state.status === "running").map(part => part.tool));
+  const overflow = createMemo(() => Math.max(0, tools().length - 3));
+  const detail = createMemo(() => {
+    if (fixture()?.hint) return fixture().hint;
+    if (queued()) {
+      return GIZZICopy.session.hintQueued;
+    }
+    if (retry()) return retry().detail;
+    return hint(state());
+  });
+  const elapsed = createMemo(() => {
+    const start = props.startedAt ?? props.queuedSince;
+    if (!start) return undefined;
+    return Math.max(0, Math.floor((now() - start) / 1000));
+  });
+
+  // Use new animation system for pulse frames
+  const pulse = useStatusFrame(() => queued() ? "connecting" : state());
+  const detailLine = createMemo(() => {
+    if (!live()) return detail();
+    if (queued() || retry() || compact() || narrow()) return detail();
+    return `${detail()} ${tone().glyph.separator} ${pulse()}`;
+  });
+  const detailLimit = createMemo(() => {
+    if (micro()) return 0;
+    if (narrow()) return Math.max(22, width() - 62);
+    return Math.max(28, width() - 76);
+  });
+  const detailText = createMemo(() => truncateStatus(detailLine(), detailLimit()));
+
+  // Keep timer for elapsed time display only
+  createEffect(() => {
+    if (!live()) return;
+    setNow(Date.now());
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    onCleanup(() => clearInterval(timer));
+  });
+  return (() => {
+    var _el$ = _$createElement("box"),
+      _el$2 = _$createElement("box"),
+      _el$3 = _$createElement("text"),
+      _el$4 = _$createElement("span"),
+      _el$5 = _$createTextNode(` `),
+      _el$13 = _$createElement("box");
+    _$insertNode(_el$, _el$2);
+    _$insertNode(_el$, _el$13);
+    _$setProp(_el$, "flexDirection", "row");
+    _$setProp(_el$, "justifyContent", "space-between");
+    _$setProp(_el$, "flexGrow", 1);
+    _$setProp(_el$, "width", "100%");
+    _$setProp(_el$, "gap", 1);
+    _$insertNode(_el$2, _el$3);
+    _$setProp(_el$2, "flexDirection", "row");
+    _$setProp(_el$2, "gap", 1);
+    _$setProp(_el$2, "flexShrink", 1);
+    _$insert(_el$2, _$createComponent(Show, {
+      get when() {
+        return _$memo(() => !!live())() && !micro();
+      },
+      get children() {
+        return _$createComponent(GIZZISpinner, {
+          get color() {
+            return color();
+          }
+        });
+      }
+    }), _el$3);
+    _$insertNode(_el$3, _el$4);
+    _$insertNode(_el$3, _el$5);
+    _$setProp(_el$3, "wrapMode", "none");
+    _$setProp(_el$4, "style", {
+      bold: true
+    });
+    _$insert(_el$4, () => tone().glyph.status);
+    _$insert(_el$3, statusText, null);
+    _$insert(_el$2, _$createComponent(Show, {
+      get when() {
+        return _$memo(() => !!props.runId)() && !narrow();
+      },
+      get children() {
+        var _el$6 = _$createElement("text"),
+          _el$7 = _$createElement("span"),
+          _el$9 = _$createTextNode(` run:`);
+        _$insertNode(_el$6, _el$7);
+        _$insertNode(_el$6, _el$9);
+        _$setProp(_el$6, "wrapMode", "none");
+        _$insertNode(_el$7, _$createTextNode(`*`));
+        _$setProp(_el$7, "style", {
+          bold: true
+        });
+        _$insert(_el$6, () => props.runId?.slice(0, 6), null);
+        _$effect(_$p => _$setProp(_el$6, "fg", tone().accent, _$p));
+        return _el$6;
+      }
+    }), null);
+    _$insert(_el$2, _$createComponent(Show, {
+      get when() {
+        return _$memo(() => !!(!compact() && tools().length === 0))() && detailText();
+      },
+      get children() {
+        var _el$0 = _$createElement("text");
+        _$setProp(_el$0, "wrapMode", "none");
+        _$insert(_el$0, detailText);
+        _$effect(_$p => _$setProp(_el$0, "fg", tone().muted, _$p));
+        return _el$0;
+      }
+    }), null);
+    _$insert(_el$2, _$createComponent(Show, {
+      get when() {
+        return _$memo(() => !!compact())() && tools().length > 0;
+      },
+      get children() {
+        var _el$1 = _$createElement("text"),
+          _el$10 = _$createElement("span"),
+          _el$11 = _$createTextNode(` `);
+        _$insertNode(_el$1, _el$10);
+        _$insertNode(_el$1, _el$11);
+        _$setProp(_el$1, "wrapMode", "none");
+        _$insert(_el$10, () => tone().glyph.tool);
+        _$insert(_el$1, () => truncateStatus(tools().length > 1 ? `${tools()[0]} +${tools().length - 1}` : tools()[0], 18), null);
+        _$effect(_p$ => {
+          var _v$ = tone().muted,
+            _v$2 = {
+              fg: tone().accent
+            };
+          _v$ !== _p$.e && (_p$.e = _$setProp(_el$1, "fg", _v$, _p$.e));
+          _v$2 !== _p$.t && (_p$.t = _$setProp(_el$10, "style", _v$2, _p$.t));
+          return _p$;
+        }, {
+          e: undefined,
+          t: undefined
+        });
+        return _el$1;
+      }
+    }), null);
+    _$insert(_el$2, _$createComponent(For, {
+      get each() {
+        return _$memo(() => !!(compact() || micro()))() ? [] : tools().slice(0, 3);
+      },
+      children: tool => (() => {
+        var _el$19 = _$createElement("text"),
+          _el$20 = _$createElement("span"),
+          _el$21 = _$createTextNode(` `),
+          _el$22 = _$createElement("span");
+        _$insertNode(_el$19, _el$20);
+        _$insertNode(_el$19, _el$21);
+        _$insertNode(_el$19, _el$22);
+        _$setProp(_el$19, "wrapMode", "none");
+        _$insert(_el$20, () => tone().glyph.tool);
+        _$insert(_el$22, tool);
+        _$effect(_p$ => {
+          var _v$5 = tone().fg,
+            _v$6 = {
+              fg: tone().accent
+            },
+            _v$7 = {
+              fg: tone().muted
+            };
+          _v$5 !== _p$.e && (_p$.e = _$setProp(_el$19, "fg", _v$5, _p$.e));
+          _v$6 !== _p$.t && (_p$.t = _$setProp(_el$20, "style", _v$6, _p$.t));
+          _v$7 !== _p$.a && (_p$.a = _$setProp(_el$22, "style", _v$7, _p$.a));
+          return _p$;
+        }, {
+          e: undefined,
+          t: undefined,
+          a: undefined
+        });
+        return _el$19;
+      })()
+    }), null);
+    _$insert(_el$2, _$createComponent(Show, {
+      get when() {
+        return _$memo(() => !!(!compact() && !micro()))() && overflow() > 0;
+      },
+      get children() {
+        var _el$12 = _$createElement("text");
+        _$setProp(_el$12, "wrapMode", "none");
+        _$insert(_el$12, () => GIZZICopy.session.moreTools({
+          count: overflow()
+        }));
+        _$effect(_$p => _$setProp(_el$12, "fg", tone().muted, _$p));
+        return _el$12;
+      }
+    }), null);
+    _$setProp(_el$13, "flexDirection", "row");
+    _$setProp(_el$13, "gap", 1);
+    _$setProp(_el$13, "flexShrink", 0);
+    _$insert(_el$13, _$createComponent(Show, {
+      get when() {
+        return _$memo(() => elapsed() !== undefined)() && !micro();
+      },
+      get children() {
+        var _el$14 = _$createElement("text");
+        _$setProp(_el$14, "wrapMode", "none");
+        _$insert(_el$14, () => formatElapsed(elapsed()));
+        _$effect(_$p => _$setProp(_el$14, "fg", tone().muted, _$p));
+        return _el$14;
+      }
+    }), null);
+    _$insert(_el$13, _$createComponent(Show, {
+      get when() {
+        return props.status.type !== "idle" || props.runId;
+      },
+      get children() {
+        return _$createComponent(Show, {
+          get when() {
+            return !compact();
+          },
+          get fallback() {
+            return (() => {
+              var _el$23 = _$createElement("text");
+              _$insertNode(_el$23, _$createTextNode(`esc`));
+              _$setProp(_el$23, "wrapMode", "none");
+              _$effect(_$p => _$setProp(_el$23, "fg", props.interrupt && props.interrupt > 0 ? color() : tone().fg, _$p));
+              return _el$23;
+            })();
+          },
+          get children() {
+            var _el$15 = _$createElement("text"),
+              _el$16 = _$createTextNode(`esc `),
+              _el$18 = _$createElement("span");
+            _$insertNode(_el$15, _el$16);
+            _$insertNode(_el$15, _el$18);
+            _$setProp(_el$15, "wrapMode", "none");
+            _$insert(_el$18, (() => {
+              var _c$ = _$memo(() => !!(props.interrupt && props.interrupt > 0));
+              return () => _c$() ? GIZZICopy.session.interruptAgainLabel : _$memo(() => !!props.runId)() ? `${GIZZICopy.session.interruptRunLabel} ${props.runId.slice(0, 6)}...` : GIZZICopy.session.interruptLabel;
+            })());
+            _$effect(_p$ => {
+              var _v$3 = props.interrupt && props.interrupt > 0 ? color() : tone().fg,
+                _v$4 = {
+                  fg: props.interrupt && props.interrupt > 0 ? color() : tone().muted
+                };
+              _v$3 !== _p$.e && (_p$.e = _$setProp(_el$15, "fg", _v$3, _p$.e));
+              _v$4 !== _p$.t && (_p$.t = _$setProp(_el$18, "style", _v$4, _p$.t));
+              return _p$;
+            }, {
+              e: undefined,
+              t: undefined
+            });
+            return _el$15;
+          }
+        });
+      }
+    }), null);
+    _$effect(_$p => _$setProp(_el$3, "fg", color(), _$p));
+    return _el$;
+  })();
+}
+function label(state) {
+  if (state === "idle") return GIZZICopy.session.modeIdle;
+  if (state === "connecting") return GIZZICopy.session.modeConnecting;
+  if (state === "hydrating") return GIZZICopy.session.modeHydrating;
+  if (state === "planning") return GIZZICopy.session.modeThinking;
+  if (state === "web") return GIZZICopy.session.modeWeb;
+  if (state === "executing") return GIZZICopy.session.modeTools;
+  if (state === "responding") return GIZZICopy.session.modeResponding;
+  return GIZZICopy.session.modeCompacting;
+}
+function hint(state) {
+  if (state === "idle") return "";
+  if (state === "connecting") return GIZZICopy.session.hintConnecting;
+  if (state === "hydrating") return GIZZICopy.session.hintHydrating;
+  if (state === "planning") return GIZZICopy.session.hintPlanning;
+  if (state === "web") return GIZZICopy.session.hintWeb;
+  if (state === "executing") return GIZZICopy.session.hintExecuting;
+  if (state === "responding") return GIZZICopy.session.hintResponding;
+  return GIZZICopy.session.hintCompacting;
+}
+function formatElapsed(seconds) {
+  if (seconds < 60) return `${seconds}s`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}m ${s}s`;
+}
+function truncateStatus(value, max) {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  if (!normalized) return "";
+  if (max <= 0) return "";
+  if (normalized.length <= max) return normalized;
+  if (max === 1) return "…";
+  return normalized.slice(0, max - 1) + "…";
+}

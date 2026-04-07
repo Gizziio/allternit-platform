@@ -1,0 +1,5 @@
+{
+  "name": "color-diff-napi",
+  "main": "index.js",
+  "types": "index.d.ts"
+}

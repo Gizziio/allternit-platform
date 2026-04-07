@@ -1,0 +1,314 @@
+/**
+ * Session Templates
+ *
+ * Save and reuse session structures including:
+ * - System prompts
+ * - Agent configurations
+ * - Initial context/messages
+ * - Tool configurations
+ */
+
+import { Log } from "@/runtime/util/log"
+import { Session } from "@/runtime/session/session"
+import * as path from "path"
+import * as fs from "fs/promises"
+import { homedir } from "os"
+
+const log = Log.create({ service: "session.template" })
+
+const TEMPLATES_DIR = process.env.GIZZI_TEMPLATES_DIR || path.join(homedir(), ".gizzi", "templates")
+
+export interface SessionTemplate {
+  id: string
+  name: string
+  description?: string
+  createdAt: number
+  updatedAt: number
+  
+  // Template content
+  systemPrompt?: string
+  agentName?: string
+  providerID?: string
+  modelID?: string
+  
+  // Initial messages to include
+  initialMessages?: Array<{
+    role: "user" | "assistant" | "system"
+    content: string
+  }>
+  
+  // Tool configuration
+  enabledTools?: string[]
+  disabledTools?: string[]
+  
+  // Metadata
+  tags?: string[]
+  category?: string
+}
+
+export namespace SessionTemplate {
+  
+  /**
+   * Ensure templates directory exists
+   */
+  async function ensureTemplatesDir(): Promise<void> {
+    try {
+      await fs.mkdir(TEMPLATES_DIR, { recursive: true })
+    } catch (error) {
+      log.error("Failed to create templates directory", { error })
+      throw error
+    }
+  }
+  
+  /**
+   * Get template file path
+   */
+  function getTemplatePath(id: string): string {
+    return path.join(TEMPLATES_DIR, `${id}.json`)
+  }
+  
+  /**
+   * Save a session as a template
+   */
+  export async function saveFromSession(
+    sessionID: string,
+    name: string,
+    options: {
+      description?: string
+      includeMessages?: boolean
+      messageCount?: number
+      tags?: string[]
+      category?: string
+    } = {}
+  ): Promise<SessionTemplate> {
+    await ensureTemplatesDir()
+    
+    // Get session data
+    const session = await Session.get(sessionID)
+    if (!session) {
+      throw new Error(`Session not found: ${sessionID}`)
+    }
+    
+    // Build template
+    const template: SessionTemplate = {
+      id: generateTemplateId(name),
+      name,
+      description: options.description,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      
+      // These would need to be extracted from session data
+      systemPrompt: undefined, // TODO: Extract from session config
+      agentName: undefined, // TODO: Extract from session
+      providerID: undefined,
+      modelID: undefined,
+      
+      initialMessages: options.includeMessages 
+        ? await getRecentMessages(sessionID, options.messageCount || 2)
+        : undefined,
+      
+      tags: options.tags,
+      category: options.category,
+    }
+    
+    // Save to file
+    const templatePath = getTemplatePath(template.id)
+    await fs.writeFile(templatePath, JSON.stringify(template, null, 2))
+    
+    log.info("Session template saved", { id: template.id, name })
+    return template
+  }
+  
+  /**
+   * Create a template from scratch
+   */
+  export async function create(
+    template: Omit<SessionTemplate, "id" | "createdAt" | "updatedAt">
+  ): Promise<SessionTemplate> {
+    await ensureTemplatesDir()
+    
+    const fullTemplate: SessionTemplate = {
+      ...template,
+      id: generateTemplateId(template.name),
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    }
+    
+    const templatePath = getTemplatePath(fullTemplate.id)
+    await fs.writeFile(templatePath, JSON.stringify(fullTemplate, null, 2))
+    
+    log.info("Session template created", { id: fullTemplate.id, name: template.name })
+    return fullTemplate
+  }
+  
+  /**
+   * Get recent messages from a session
+   */
+  async function getRecentMessages(
+    sessionID: string,
+    count: number
+  ): Promise<SessionTemplate["initialMessages"]> {
+    // This would need to be implemented based on how messages are stored
+    // For now, return empty
+    return []
+  }
+  
+  /**
+   * List all templates
+   */
+  export async function list(): Promise<SessionTemplate[]> {
+    try {
+      await ensureTemplatesDir()
+      const files = await fs.readdir(TEMPLATES_DIR)
+      
+      const templates: SessionTemplate[] = []
+      
+      for (const file of files) {
+        if (!file.endsWith(".json")) continue
+        
+        try {
+          const content = await fs.readFile(path.join(TEMPLATES_DIR, file), "utf-8")
+          const template = JSON.parse(content) as SessionTemplate
+          templates.push(template)
+        } catch (error) {
+          log.warn("Failed to load template", { file, error })
+        }
+      }
+      
+      // Sort by updated time, newest first
+      return templates.sort((a, b) => b.updatedAt - a.updatedAt)
+    } catch (error) {
+      log.error("Failed to list templates", { error })
+      return []
+    }
+  }
+  
+  /**
+   * Get a specific template
+   */
+  export async function get(id: string): Promise<SessionTemplate | null> {
+    try {
+      const templatePath = getTemplatePath(id)
+      const content = await fs.readFile(templatePath, "utf-8")
+      return JSON.parse(content) as SessionTemplate
+    } catch (error) {
+      log.warn("Template not found", { id })
+      return null
+    }
+  }
+  
+  /**
+   * Delete a template
+   */
+  export async function remove(id: string): Promise<boolean> {
+    try {
+      const templatePath = getTemplatePath(id)
+      await fs.unlink(templatePath)
+      log.info("Session template deleted", { id })
+      return true
+    } catch (error) {
+      log.error("Failed to delete template", { id, error })
+      return false
+    }
+  }
+  
+  /**
+   * Apply a template to create session configuration
+   */
+  export async function apply(id: string): Promise<{
+    systemPrompt?: string
+    agentName?: string
+    providerID?: string
+    modelID?: string
+    initialMessages?: SessionTemplate["initialMessages"]
+  } | null> {
+    const template = await get(id)
+    if (!template) return null
+    
+    return {
+      systemPrompt: template.systemPrompt,
+      agentName: template.agentName,
+      providerID: template.providerID,
+      modelID: template.modelID,
+      initialMessages: template.initialMessages,
+    }
+  }
+  
+  /**
+   * Update an existing template
+   */
+  export async function update(
+    id: string,
+    updates: Partial<Omit<SessionTemplate, "id" | "createdAt" | "updatedAt">>
+  ): Promise<SessionTemplate | null> {
+    const template = await get(id)
+    if (!template) return null
+    
+    const updated: SessionTemplate = {
+      ...template,
+      ...updates,
+      updatedAt: Date.now(),
+    }
+    
+    const templatePath = getTemplatePath(id)
+    await fs.writeFile(templatePath, JSON.stringify(updated, null, 2))
+    
+    log.info("Session template updated", { id })
+    return updated
+  }
+  
+  /**
+   * Generate a template ID from name
+   */
+  function generateTemplateId(name: string): string {
+    const base = name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+    const timestamp = Date.now().toString(36)
+    return `${base}-${timestamp}`
+  }
+  
+  /**
+   * Export templates to a file (for backup/sharing)
+   */
+  export async function exportTemplates(ids?: string[]): Promise<string> {
+    const templates = await list()
+    const toExport = ids 
+      ? templates.filter(t => ids.includes(t.id))
+      : templates
+    
+    return JSON.stringify(toExport, null, 2)
+  }
+  
+  /**
+   * Import templates from a file
+   */
+  export async function importTemplates(json: string): Promise<number> {
+    const templates = JSON.parse(json) as SessionTemplate[]
+    let count = 0
+    
+    for (const template of templates) {
+      try {
+        await create({
+          name: template.name,
+          description: template.description,
+          systemPrompt: template.systemPrompt,
+          agentName: template.agentName,
+          providerID: template.providerID,
+          modelID: template.modelID,
+          initialMessages: template.initialMessages,
+          enabledTools: template.enabledTools,
+          disabledTools: template.disabledTools,
+          tags: template.tags,
+          category: template.category,
+        })
+        count++
+      } catch (error) {
+        log.warn("Failed to import template", { name: template.name, error })
+      }
+    }
+    
+    return count
+  }
+}

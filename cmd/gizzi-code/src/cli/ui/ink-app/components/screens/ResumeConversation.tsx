@@ -1,0 +1,392 @@
+import { feature } from 'bun:bundle';
+import { dirname } from 'path';
+import React from 'react';
+import { useTerminalSize } from '../vendor/hooks/useTerminalSize';
+import { getOriginalCwd, switchSession } from './vendor/bootstrap/state';
+import type { Command } from './vendor/commands';
+import { LogSelector } from './components/vendored/LogSelector';
+import { Spinner } from './components/vendored/Spinner';
+import { restoreCostStateForSession } from '../cost-tracker';
+import { setClipboard } from './core/termio/osc';
+import { Box, Text } from './core/ink';
+import { useKeybinding } from '../keybindings/useKeybinding';
+import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from './vendor/services/analytics/index';
+import type { MCPServerConnection, ScopedMcpServerConfig } from './vendor/services/mcp/types';
+import { useAppState, useSetAppState } from '../state/AppState';
+import type { Tool } from '../Tool';
+import type { AgentColorName } from '../tools/AgentTool/agentColorManager';
+import type { AgentDefinition } from '../tools/AgentTool/loadAgentsDir';
+import { asSessionId } from './vendor/types/ids';
+import type { LogOption } from './vendor/types/logs';
+import type { Message } from './vendor/types/message';
+import { agenticSessionSearch } from './vendor/utils/agenticSessionSearch';
+import { renameRecordingForSession } from './vendor/utils/asciicast';
+import { updateSessionName } from './vendor/utils/concurrentSessions';
+import { loadConversationForResume } from './vendor/utils/conversationRecovery';
+import { checkCrossProjectResume } from './vendor/utils/crossProjectResume';
+import type { FileHistorySnapshot } from './vendor/utils/fileHistory';
+import { logError } from './vendor/utils/log';
+import { createSystemMessage } from './vendor/utils/messages';
+import { computeStandaloneAgentContext, restoreAgentFromSession, restoreWorktreeForResume } from './vendor/utils/sessionRestore';
+import { adoptResumedSessionFile, enrichLogs, isCustomTitleEnabled, loadAllProjectsMessageLogsProgressive, loadSameRepoMessageLogsProgressive, recordContentReplacement, resetSessionFilePointer, restoreSessionMetadata, type SessionLogResult } from './vendor/utils/sessionStorage';
+import type { ThinkingConfig } from './vendor/utils/thinking';
+import type { ContentReplacementRecord } from './vendor/utils/toolResultStorage';
+import { REPL } from './REPL';
+
+function parsePrIdentifier(value: string): number | null {
+  const directNumber = parseInt(value, 10);
+  if (!isNaN(directNumber) && directNumber > 0) {
+    return directNumber;
+  }
+  const urlMatch = value.match(/github\.com\/[^/]+\/[^/]+\/pull\/(\d+)/);
+  if (urlMatch?.[1]) {
+    return parseInt(urlMatch[1], 10);
+  }
+  return null;
+}
+
+type Props = {
+  commands: Command[];
+  worktreePaths: string[];
+  initialTools: Tool[];
+  mcpClients?: MCPServerConnection[];
+  dynamicMcpConfig?: Record<string, ScopedMcpServerConfig>;
+  debug: boolean;
+  mainThreadAgentDefinition?: AgentDefinition;
+  autoConnectIdeFlag?: boolean;
+  strictMcpConfig?: boolean;
+  systemPrompt?: string;
+  appendSystemPrompt?: string;
+  initialSearchQuery?: string;
+  disableSlashCommands?: boolean;
+  forkSession?: boolean;
+  taskListId?: string;
+  filterByPr?: boolean | number | string;
+  thinkingConfig: ThinkingConfig;
+  onTurnComplete?: (messages: Message[]) => void | Promise<void>;
+};
+
+export function ResumeConversation({
+  commands,
+  worktreePaths,
+  initialTools,
+  mcpClients,
+  dynamicMcpConfig,
+  debug,
+  mainThreadAgentDefinition,
+  autoConnectIdeFlag,
+  strictMcpConfig = false,
+  systemPrompt,
+  appendSystemPrompt,
+  initialSearchQuery,
+  disableSlashCommands = false,
+  forkSession,
+  taskListId,
+  filterByPr,
+  thinkingConfig,
+  onTurnComplete
+}: Props): React.ReactNode {
+  const { rows } = useTerminalSize();
+  const agentDefinitions = useAppState(s => s.agentDefinitions);
+  const setAppState = useSetAppState();
+  const [logs, setLogs] = React.useState<LogOption[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [resuming, setResuming] = React.useState(false);
+  const [showAllProjects, setShowAllProjects] = React.useState(false);
+  const [resumeData, setResumeData] = React.useState<{
+    messages: Message[];
+    fileHistorySnapshots?: FileHistorySnapshot[];
+    contentReplacements?: ContentReplacementRecord[];
+    agentName?: string;
+    agentColor?: AgentColorName;
+    mainThreadAgentDefinition?: AgentDefinition;
+  } | null>(null);
+  const [crossProjectCommand, setCrossProjectCommand] = React.useState<string | null>(null);
+  const sessionLogResultRef = React.useRef<SessionLogResult | null>(null);
+  const logCountRef = React.useRef(0);
+  
+  const filteredLogs = React.useMemo(() => {
+    let result = logs.filter(l => !l.isSidechain);
+    if (filterByPr !== undefined) {
+      if (filterByPr === true) {
+        result = result.filter(l => l.prNumber !== undefined);
+      } else if (typeof filterByPr === 'number') {
+        result = result.filter(l => l.prNumber === filterByPr);
+      } else if (typeof filterByPr === 'string') {
+        const prNumber = parsePrIdentifier(filterByPr);
+        if (prNumber !== null) {
+          result = result.filter(l => l.prNumber === prNumber);
+        }
+      }
+    }
+    return result;
+  }, [logs, filterByPr]);
+  
+  const isResumeWithRenameEnabled = isCustomTitleEnabled();
+  
+  React.useEffect(() => {
+    loadSameRepoMessageLogsProgressive(worktreePaths).then(result => {
+      sessionLogResultRef.current = result;
+      logCountRef.current = result.logs.length;
+      setLogs(result.logs);
+      setLoading(false);
+    }).catch(error => {
+      logError(error);
+    });
+  }, [worktreePaths]);
+  
+  const loadMoreLogs = React.useCallback((count: number) => {
+    const ref = sessionLogResultRef.current;
+    if (!ref || ref.nextIndex >= ref.allStatLogs.length) return;
+    void enrichLogs(ref.allStatLogs, ref.nextIndex, count).then(result => {
+      ref.nextIndex = result.nextIndex;
+      if (result.logs.length > 0) {
+        const offset = logCountRef.current;
+        result.logs.forEach((log, i) => {
+          log.value = offset + i;
+        });
+        setLogs(prev => prev.concat(result.logs));
+        logCountRef.current += result.logs.length;
+      } else if (ref.nextIndex < ref.allStatLogs.length) {
+        loadMoreLogs(count);
+      }
+    });
+  }, []);
+  
+  const loadLogs = React.useCallback((allProjects: boolean) => {
+    setLoading(true);
+    const promise = allProjects 
+      ? loadAllProjectsMessageLogsProgressive() 
+      : loadSameRepoMessageLogsProgressive(worktreePaths);
+    promise.then(result => {
+      sessionLogResultRef.current = result;
+      logCountRef.current = result.logs.length;
+      setLogs(result.logs);
+    }).catch(error => {
+      logError(error);
+    }).finally(() => {
+      setLoading(false);
+    });
+  }, [worktreePaths]);
+  
+  const handleToggleAllProjects = React.useCallback(() => {
+    const newValue = !showAllProjects;
+    setShowAllProjects(newValue);
+    loadLogs(newValue);
+  }, [showAllProjects, loadLogs]);
+  
+  function onCancel() {
+    process.exit(1);
+  }
+  
+  async function onSelect(log: LogOption) {
+    setResuming(true);
+    const resumeStart = performance.now();
+    const crossProjectCheck = checkCrossProjectResume(log, showAllProjects, worktreePaths);
+    
+    if (crossProjectCheck.isCrossProject) {
+      if (!crossProjectCheck.isSameRepoWorktree) {
+        const raw = await setClipboard(crossProjectCheck.command);
+        if (raw) process.stdout.write(raw);
+        setCrossProjectCommand(crossProjectCheck.command);
+        return;
+      }
+    }
+    
+    try {
+      const result = await loadConversationForResume(log, undefined);
+      if (!result) {
+        throw new Error('Failed to load conversation');
+      }
+      
+      if (feature('COORDINATOR_MODE')) {
+        const coordinatorModule = require('../coordinator/coordinatorMode.js') as typeof import('../coordinator/coordinatorMode.js');
+        const warning = coordinatorModule.matchSessionMode(result.mode);
+        if (warning) {
+          const {
+            getAgentDefinitionsWithOverrides,
+            getActiveAgentsFromList
+          } = require('../tools/AgentTool/loadAgentsDir.js') as typeof import('../tools/AgentTool/loadAgentsDir.js');
+          getAgentDefinitionsWithOverrides.cache.clear?.();
+          const freshAgentDefs = await getAgentDefinitionsWithOverrides(getOriginalCwd());
+          setAppState(prev => ({
+            ...prev,
+            agentDefinitions: {
+              ...freshAgentDefs,
+              allAgents: freshAgentDefs.allAgents,
+              activeAgents: getActiveAgentsFromList(freshAgentDefs.allAgents)
+            }
+          }));
+          result.messages.push(createSystemMessage(warning, 'warning'));
+        }
+      }
+      
+      if (result.sessionId && !forkSession) {
+        switchSession(asSessionId(result.sessionId), log.fullPath ? dirname(log.fullPath) : null);
+        await renameRecordingForSession();
+        await resetSessionFilePointer();
+        restoreCostStateForSession(result.sessionId);
+      } else if (forkSession && result.contentReplacements?.length) {
+        await recordContentReplacement(result.contentReplacements);
+      }
+      
+      const { agentDefinition: resolvedAgentDef } = restoreAgentFromSession(
+        result.agentSetting,
+        mainThreadAgentDefinition,
+        agentDefinitions
+      );
+      
+      setAppState(prev => ({
+        ...prev,
+        agent: resolvedAgentDef?.agentType
+      }));
+      
+      const { saveMode } = require('../utils/sessionStorage.js');
+      const { isCoordinatorMode } = require('../coordinator/coordinatorMode.js') as typeof import('../coordinator/coordinatorMode.js');
+      saveMode(isCoordinatorMode() ? 'coordinator' : 'normal');
+      
+      const standaloneAgentContext = computeStandaloneAgentContext(result.agentName, result.agentColor);
+      if (standaloneAgentContext) {
+        setAppState(prev => ({
+          ...prev,
+          standaloneAgentContext
+        }));
+      }
+      
+      void updateSessionName(result.agentName);
+      restoreSessionMetadata(forkSession ? { ...result, worktreeSession: undefined } : result);
+      
+      if (!forkSession) {
+        restoreWorktreeForResume(result.worktreeSession);
+        if (result.sessionId) {
+          adoptResumedSessionFile();
+        }
+      }
+      
+      if (feature('CONTEXT_COLLAPSE')) {
+        (require('../services/contextCollapse/persist.js') as typeof import('../services/contextCollapse/persist.js'))
+          .restoreFromEntries(result.contextCollapseCommits ?? [], result.contextCollapseSnapshot);
+      }
+      
+      logEvent('tengu_session_resumed', {
+        entrypoint: 'picker' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        success: true,
+        resume_duration_ms: Math.round(performance.now() - resumeStart)
+      });
+      
+      setLogs([]);
+      setResumeData({
+        messages: result.messages,
+        fileHistorySnapshots: result.fileHistorySnapshots,
+        contentReplacements: result.contentReplacements,
+        agentName: result.agentName,
+        agentColor: (result.agentColor === 'default' ? undefined : result.agentColor) as AgentColorName | undefined,
+        mainThreadAgentDefinition: resolvedAgentDef
+      });
+    } catch (e) {
+      logEvent('tengu_session_resumed', {
+        entrypoint: 'picker' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
+        success: false,
+        resume_duration_ms: Math.round(performance.now() - resumeStart)
+      });
+      logError(e as Error);
+      throw e;
+    }
+  }
+  
+  if (crossProjectCommand) {
+    return <CrossProjectMessage command={crossProjectCommand} />;
+  }
+  
+  if (resumeData) {
+    return (
+      <REPL 
+        debug={debug} 
+        commands={commands} 
+        initialTools={initialTools} 
+        initialMessages={resumeData.messages} 
+        initialFileHistorySnapshots={resumeData.fileHistorySnapshots} 
+        initialContentReplacements={resumeData.contentReplacements} 
+        initialAgentName={resumeData.agentName} 
+        initialAgentColor={resumeData.agentColor} 
+        mcpClients={mcpClients} 
+        dynamicMcpConfig={dynamicMcpConfig} 
+        strictMcpConfig={strictMcpConfig} 
+        systemPrompt={systemPrompt} 
+        appendSystemPrompt={appendSystemPrompt} 
+        mainThreadAgentDefinition={resumeData.mainThreadAgentDefinition} 
+        autoConnectIdeFlag={autoConnectIdeFlag} 
+        disableSlashCommands={disableSlashCommands} 
+        taskListId={taskListId} 
+        thinkingConfig={thinkingConfig} 
+        onTurnComplete={onTurnComplete} 
+      />
+    );
+  }
+  
+  if (loading) {
+    return (
+      <Box>
+        <Spinner />
+        <Text> Loading conversations…</Text>
+      </Box>
+    );
+  }
+  
+  if (resuming) {
+    return (
+      <Box>
+        <Spinner />
+        <Text> Resuming conversation…</Text>
+      </Box>
+    );
+  }
+  
+  if (filteredLogs.length === 0) {
+    return <NoConversationsMessage />;
+  }
+  
+  return (
+    <LogSelector 
+      logs={filteredLogs} 
+      maxHeight={rows} 
+      onCancel={onCancel} 
+      onSelect={onSelect} 
+      onLogsChanged={isResumeWithRenameEnabled ? () => loadLogs(showAllProjects) : undefined}
+      onLoadMore={loadMoreLogs}
+      initialSearchQuery={initialSearchQuery}
+      showAllProjects={showAllProjects}
+      onToggleAllProjects={handleToggleAllProjects}
+      onAgenticSearch={agenticSessionSearch}
+    />
+  );
+}
+
+function NoConversationsMessage() {
+  useKeybinding("app:interrupt", () => process.exit(1), { context: "Global" });
+  
+  return (
+    <Box flexDirection="column">
+      <Text>No conversations found to resume.</Text>
+      <Text dimColor={true}>Press Ctrl+C to exit and start a new conversation.</Text>
+    </Box>
+  );
+}
+
+function CrossProjectMessage({ command }: { command: string }) {
+  React.useEffect(() => {
+    const timeout = setTimeout(() => process.exit(0), 100);
+    return () => clearTimeout(timeout);
+  }, []);
+  
+  return (
+    <Box flexDirection="column" gap={1}>
+      <Text>This conversation is from a different directory.</Text>
+      <Box flexDirection="column">
+        <Text>To resume, run:</Text>
+        <Text> {command}</Text>
+      </Box>
+      <Text dimColor={true}>(Command copied to clipboard)</Text>
+    </Box>
+  );
+}

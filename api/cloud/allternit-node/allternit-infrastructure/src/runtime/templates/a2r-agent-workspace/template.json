@@ -1,0 +1,49 @@
+{
+  "id": "a2r-agent-workspace",
+  "name": "A2R Agent Workspace",
+  "description": "Isolated execution environment for AI agents with browsers, Node.js, Python, and common automation tools. Sandboxed and resource-limited.",
+  "version": "1.0.0",
+  "author": "A2R",
+  "type": "sandbox",
+  "category": "ai",
+  "features": [
+    "Chromium + Firefox browsers",
+    "Playwright for automation",
+    "Node.js 20 + Python 3.12",
+    "BeautifulSoup + Scrapy",
+    "Pandas + NumPy",
+    "Git + curl + wget",
+    "ImageMagick + FFmpeg",
+    "Pandoc document conversion",
+    "ChromaDB vector memory",
+    "Resource limits (configurable)",
+    "Network isolation (optional)"
+  ],
+  "ports": [3000, 8080, 9222],
+  "variables": [
+    {
+      "name": "AGENT_ID",
+      "description": "Unique identifier for this agent instance",
+      "type": "string",
+      "required": true
+    },
+    {
+      "name": "MAX_CPU",
+      "description": "CPU limit (cores)",
+      "type": "number",
+      "default": "2"
+    },
+    {
+      "name": "MAX_MEMORY",
+      "description": "Memory limit (GB)",
+      "type": "string",
+      "default": "4G"
+    },
+    {
+      "name": "ENABLE_NETWORK",
+      "description": "Allow external network access",
+      "type": "boolean",
+      "default": "true"
+    }
+  ]
+}

@@ -4,7 +4,7 @@
  * Custom SVG icons for the A2rchitect brand identity.
  * These icons follow the Lucide style guidelines for consistency.
  * 
- * @module @a2r/platform/icons/custom
+ * @module @allternit/platform/icons/custom
  */
 
 export { A2RLogo } from './Logo';

@@ -1,0 +1,56 @@
+{
+  "id": "node-typescript",
+  "name": "Node.js with TypeScript",
+  "description": "Complete Node.js development environment with TypeScript, pnpm, and Vitest",
+  "version": "1.0.0",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:20",
+  "features": [
+    "ghcr.io/devcontainers/features/github-cli:1",
+    "ghcr.io/devcontainers/features/git:1"
+  ],
+  "ports": [3000, 8080, 9229],
+  "postCreateCommand": "pnpm install",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+        "ms-vscode.vscode-typescript-next",
+        "vitest.explorer"
+      ],
+      "settings": {
+        "typescript.tsdk": "node_modules/typescript/lib",
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit"
+        }
+      }
+    }
+  },
+  "variables": {
+    "NODE_ENV": {
+      "default": "development",
+      "description": "Node environment"
+    },
+    "PNPM_HOME": {
+      "default": "/home/node/.local/share/pnpm",
+      "description": "pnpm home directory"
+    }
+  },
+  "dockerfile": null,
+  "buildContext": null,
+  "mounts": [
+    {
+      "type": "volume",
+      "source": "node_modules",
+      "target": "/workspace/node_modules"
+    }
+  ],
+  "containerEnv": {
+    "PNPM_HOME": "/home/node/.local/share/pnpm",
+    "PATH": "/home/node/.local/share/pnpm:${PATH}"
+  },
+  "remoteUser": "node"
+}

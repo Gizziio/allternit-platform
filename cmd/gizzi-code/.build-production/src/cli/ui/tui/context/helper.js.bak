@@ -1,0 +1,29 @@
+import { createComponent as _$createComponent } from "@opentui/solid";
+import { memo as _$memo } from "@opentui/solid";
+import { createContext, Show, useContext } from "solid-js";
+export function createSimpleContext(input) {
+  const ctx = createContext();
+  return {
+    provider: props => {
+      const init = input.init(props);
+      return _$createComponent(Show, {
+        get when() {
+          return init.ready === undefined || init.ready === true;
+        },
+        get children() {
+          return _$createComponent(ctx.Provider, {
+            value: init,
+            get children() {
+              return props.children;
+            }
+          });
+        }
+      });
+    },
+    use() {
+      const value = useContext(ctx);
+      if (!value) throw new Error(`${input.name} context must be used within a context provider`);
+      return value;
+    }
+  };
+}

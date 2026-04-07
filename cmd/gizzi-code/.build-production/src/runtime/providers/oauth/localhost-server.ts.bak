@@ -1,0 +1,45 @@
+import http from "http"
+import net from "net"
+
+export async function getAvailablePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer()
+    server.listen(0, () => {
+      const port = (server.address() as net.AddressInfo).port
+      server.close(() => resolve(port))
+    })
+    server.on("error", reject)
+  })
+}
+
+// Start a one-shot HTTP server on the given port that waits for a redirect with ?code= param.
+// Returns { code, state } from the redirect.
+export async function waitForOAuthCallback(
+  port: number,
+  signal?: AbortSignal,
+): Promise<{ code: string; state?: string }> {
+  return new Promise((resolve, reject) => {
+    const server = http.createServer((req, res) => {
+      const url = new URL(req.url!, `http://localhost:${port}`)
+      const code = url.searchParams.get("code")
+      const state = url.searchParams.get("state") ?? undefined
+
+      res.writeHead(200, { "Content-Type": "text/html" })
+      res.end(
+        `<html><body><p>Authentication successful. Return to your terminal.</p><script>window.close()</script></body></html>`,
+      )
+
+      server.close()
+      if (code) resolve({ code, state })
+      else reject(new Error("No code in callback"))
+    })
+
+    server.listen(port)
+    server.on("error", reject)
+
+    signal?.addEventListener("abort", () => {
+      server.close()
+      reject(new Error("OAuth cancelled"))
+    })
+  })
+}

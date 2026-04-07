@@ -1,0 +1,31 @@
+{
+  "name": "@allternit/a2a-gateway",
+  "version": "1.0.0",
+  "description": "A2A Gateway for A2rchitech",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.17",
+    "@types/node": "^20.10.0",
+    "@types/cors": "^2.8.13",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  },
+  "keywords": [
+    "a2a",
+    "gateway",
+    "agent",
+    "discovery",
+    "allternit"
+  ],
+  "author": "A2rchitech",
+  "license": "MIT"
+}

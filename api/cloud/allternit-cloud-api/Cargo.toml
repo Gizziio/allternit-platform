@@ -1,0 +1,68 @@
+[package]
+name = "allternit-cloud-api"
+version = "0.1.0"
+edition = "2021"
+description = "A2R Cloud API - Backend API for cloud deployment"
+
+[[bin]]
+name = "allternit-cloud-api"
+path = "src/main.rs"
+
+[dependencies]
+# A2R internal
+allternit-cloud-core = { path = ".." }
+allternit-cloud-ssh = { path = "../allternit-cloud-ssh" }
+allternit-cloud-hetzner = { path = "../../allternit-cloud-providers/hetzner" }
+
+# Web framework
+axum = { workspace = true, features = ["ws"] }
+tower = { workspace = true }
+tower-http = { workspace = true, features = ["cors", "trace"] }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Async runtime
+tokio = { workspace = true, features = ["full"] }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["json", "env-filter"] }
+
+# Time
+chrono = { workspace = true }
+chrono-tz = "0.9"
+
+# UUID
+uuid = { workspace = true }
+
+# Database (SQLite for now)
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid"] }
+
+# WebSocket
+tokio-tungstenite = "0.21"
+futures-util = "0.3"
+async-trait = "0.1"
+tokio-stream = { version = "0.1", features = ["sync"] }
+futures = "0.3"
+rand = "0.8"
+md5 = "0.7"
+cron = "0.12"
+tempfile = "3.14"
+regex = "1.10"
+lazy_static = "1.4"
+
+[dev-dependencies]
+tokio-test = "0.4"
+reqwest = { version = "0.11", features = ["json"] }
+assert_matches = "1.5"
+serial_test = "3.2"
+tempfile = "3.14"
+tower = { workspace = true, features = ["util"] }
+http-body-util = "0.1"
+hyper = { version = "1.0", features = ["full"] }

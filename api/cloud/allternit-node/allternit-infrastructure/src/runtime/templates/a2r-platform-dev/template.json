@@ -1,0 +1,213 @@
+{
+  "id": "allternit-platform-dev",
+  "name": "A2R Platform Development",
+  "description": "Full development environment for working on the A2R platform. Includes Node.js, Go, Rust, PostgreSQL, Redis, and all necessary tools for monorepo development.",
+  "version": "1.0.0",
+  "author": "A2R",
+  "type": "devcontainer",
+  "category": "infra",
+  "tags": [
+    "development",
+    "monorepo",
+    "go",
+    "rust",
+    "nodejs",
+    "typescript",
+    "react",
+    "postgresql",
+    "redis",
+    "minio",
+    "temporal",
+    "nats"
+  ],
+  "features": [
+    "Node.js 20 LTS with pnpm and yarn",
+    "Go 1.22 with air (live reload), golangci-lint, delve",
+    "Rust 1.75+ with cargo-watch, cargo-expand, sqlx-cli",
+    "PostgreSQL 16 with pgvector extension support",
+    "Redis 7 with persistence and ACLs",
+    "MinIO S3-compatible object storage",
+    "Mailpit for email testing and debugging",
+    "ChromaDB vector database for AI agents",
+    "LocalStack for AWS services emulation",
+    "Temporal for workflow orchestration",
+    "NATS for message streaming",
+    "Docker-in-Docker support",
+    "Pre-configured VS Code extensions for Go, Rust, TypeScript",
+    "Task runner (Taskfile)",
+    "Kubernetes tools (kubectl, helm, k9s)",
+    "WireGuard VPN tools"
+  ],
+  "ports": [
+    {
+      "port": 3000,
+      "name": "A2R Platform UI",
+      "description": "Main React frontend development server"
+    },
+    {
+      "port": 3010,
+      "name": "A2R Platform UI (Alt)",
+      "description": "Alternative frontend port"
+    },
+    {
+      "port": 8080,
+      "name": "A2R API Gateway",
+      "description": "Main API gateway for A2R services"
+    },
+    {
+      "port": 8081,
+      "name": "A2R Kernel Services",
+      "description": "Backend kernel service ports"
+    },
+    {
+      "port": 5432,
+      "name": "PostgreSQL",
+      "description": "Main database server"
+    },
+    {
+      "port": 6379,
+      "name": "Redis",
+      "description": "Redis cache and session store"
+    },
+    {
+      "port": 9000,
+      "name": "MinIO API",
+      "description": "S3-compatible object storage API"
+    },
+    {
+      "port": 9001,
+      "name": "MinIO Console",
+      "description": "MinIO web management console"
+    },
+    {
+      "port": 1025,
+      "name": "Mailpit SMTP",
+      "description": "SMTP server for email testing"
+    },
+    {
+      "port": 8025,
+      "name": "Mailpit Web UI",
+      "description": "Email testing web interface"
+    },
+    {
+      "port": 8000,
+      "name": "ChromaDB",
+      "description": "Vector database for AI embeddings"
+    },
+    {
+      "port": 4566,
+      "name": "LocalStack",
+      "description": "AWS services emulation endpoint"
+    },
+    {
+      "port": 7233,
+      "name": "Temporal",
+      "description": "Temporal workflow server"
+    },
+    {
+      "port": 8088,
+      "name": "Temporal Web UI",
+      "description": "Temporal workflow visualization"
+    },
+    {
+      "port": 4222,
+      "name": "NATS",
+      "description": "NATS message broker"
+    },
+    {
+      "port": 8222,
+      "name": "NATS Monitoring",
+      "description": "NATS monitoring and management"
+    }
+  ],
+  "variables": [
+    {
+      "name": "POSTGRES_PASSWORD",
+      "description": "PostgreSQL admin password",
+      "type": "secret",
+      "default": "a2r-dev-password",
+      "required": true
+    },
+    {
+      "name": "REDIS_PASSWORD",
+      "description": "Redis password for authentication",
+      "type": "secret",
+      "default": "a2r-redis-password",
+      "required": true
+    },
+    {
+      "name": "MINIO_ROOT_PASSWORD",
+      "description": "MinIO root user password",
+      "type": "secret",
+      "default": "minio-admin-password",
+      "required": true
+    },
+    {
+      "name": "DATABASE_URL",
+      "description": "Full PostgreSQL connection string",
+      "type": "string",
+      "default": "postgres://postgres:a2r-dev-password@postgres:5432/allternit_platform?sslmode=disable",
+      "required": false
+    },
+    {
+      "name": "REDIS_URL",
+      "description": "Full Redis connection string",
+      "type": "string",
+      "default": "redis://:a2r-redis-password@redis:6379/0",
+      "required": false
+    },
+    {
+      "name": "JWT_SECRET",
+      "description": "Secret key for JWT token signing",
+      "type": "secret",
+      "default": "a2r-dev-jwt-secret-change-in-production",
+      "required": true
+    },
+    {
+      "name": "ENCRYPTION_KEY",
+      "description": "Key for data encryption at rest",
+      "type": "secret",
+      "default": "a2r-dev-encryption-key-32-chars!!",
+      "required": true
+    },
+    {
+      "name": "OPENAI_API_KEY",
+      "description": "OpenAI API key for AI features (optional)",
+      "type": "secret",
+      "default": "",
+      "required": false
+    },
+    {
+      "name": "ANTHROPIC_API_KEY",
+      "description": "Anthropic API key for Claude integration (optional)",
+      "type": "secret",
+      "default": "",
+      "required": false
+    }
+  ],
+  "requirements": {
+    "docker": {
+      "minVersion": "24.0.0",
+      "recommendedVersion": "25.0.0"
+    },
+    "dockerCompose": {
+      "minVersion": "2.20.0"
+    },
+    "resources": {
+      "minCpu": 4,
+      "recommendedCpu": 8,
+      "minMemory": "8gb",
+      "recommendedMemory": "16gb",
+      "minDisk": "50gb"
+    }
+  },
+  "supportedPlatforms": [
+    "linux/amd64",
+    "linux/arm64",
+    "darwin/amd64",
+    "darwin/arm64"
+  ],
+  "documentationUrl": "https://docs.allternit.com/dev/platform-dev",
+  "repositoryUrl": "https://github.com/allternit-platform/allternit",
+  "issuesUrl": "https://github.com/allternit-platform/allternit/issues"
+}

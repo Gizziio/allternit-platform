@@ -1,0 +1,23 @@
+import { createTextNode as _$createTextNode } from "@opentui/solid";
+import { insertNode as _$insertNode } from "@opentui/solid";
+import { createElement as _$createElement } from "@opentui/solid";
+/**
+ * Dialog Skill Create Simple - Stub
+ * 
+ * This is a placeholder to fix type errors.
+ */
+
+import { useDialog } from "@/cli/ui/tui/ui/dialog";
+export function DialogSkillCreateSimple(props) {
+  const dialog = useDialog();
+  return (() => {
+    var _el$ = _$createElement("div"),
+      _el$2 = _$createElement("h2"),
+      _el$4 = _$createElement("p");
+    _$insertNode(_el$, _el$2);
+    _$insertNode(_el$, _el$4);
+    _$insertNode(_el$2, _$createTextNode(`Create Simple Skill`));
+    _$insertNode(_el$4, _$createTextNode(`Stub implementation`));
+    return _el$;
+  })();
+}

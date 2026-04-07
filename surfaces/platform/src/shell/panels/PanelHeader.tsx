@@ -4,7 +4,7 @@
  * Panel header with drag handle, tabs, and action buttons.
  * Integrates with A2R design system for consistent styling.
  * 
- * @module @a2r/platform/shell/panels
+ * @module @allternit/platform/shell/panels
  */
 
 import React from 'react';

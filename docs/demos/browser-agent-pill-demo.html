@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A2R Browser Agent - Floating Pill Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        
+        .container {
+            text-align: center;
+            max-width: 800px;
+            padding: 40px;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            background: linear-gradient(90deg, #69a8c8, #d4956a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        p {
+            font-size: 1.2rem;
+            color: #94a3b8;
+            margin-bottom: 40px;
+            line-height: 1.6;
+        }
+        
+        .demo-controls {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 60px;
+        }
+        
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #69a8c8, #4a90a4);
+            color: white;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .demo-browser {
+            width: 100%;
+            max-width: 900px;
+            background: #0f0f0f;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            border: 1px solid #333;
+            position: relative;
+        }
+        
+        .browser-header {
+            background: #1a1a1a;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .browser-dots {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        
+        .dot-red { background: #ff5f56; }
+        .dot-yellow { background: #ffbd2e; }
+        .dot-green { background: #27ca40; }
+        
+        .browser-address {
+            flex: 1;
+            background: #0f0f0f;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 8px 16px;
+            color: #888;
+            font-size: 0.9rem;
+        }
+        
+        .browser-viewport {
+            height: 400px;
+            background: linear-gradient(180deg, #1a1a2e 0%, #0f0f0f 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .viewport-content {
+            padding: 40px;
+            color: #64748b;
+        }
+        
+        /* Floating Control Pill Styles */
+        @keyframes pill-glow-running {
+            0%, 100% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.3), 0 4px 20px rgba(0,0,0,0.3); border-color: rgba(74, 222, 128, 0.5); }
+            50% { box-shadow: 0 0 35px rgba(34, 197, 94, 0.6), 0 4px 25px rgba(0,0,0,0.4); border-color: rgba(74, 222, 128, 0.8); }
+        }
+        
+        @keyframes pill-glow-approval {
+            0%, 100% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.3), 0 4px 20px rgba(0,0,0,0.3); border-color: rgba(251, 191, 36, 0.5); }
+            50% { box-shadow: 0 0 35px rgba(245, 158, 11, 0.6), 0 4px 25px rgba(0,0,0,0.4); border-color: rgba(251, 191, 36, 0.8); }
+        }
+        
+        @keyframes pill-glow-blocked {
+            0%, 100% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.3), 0 4px 20px rgba(0,0,0,0.3); border-color: rgba(248, 113, 113, 0.5); }
+            50% { box-shadow: 0 0 35px rgba(239, 68, 68, 0.6), 0 4px 25px rgba(0,0,0,0.4); border-color: rgba(248, 113, 113, 0.8); }
+        }
+        
+        @keyframes status-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        @keyframes slide-up {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+        
+        @keyframes mount-glow {
+            0% {
+                opacity: 0;
+                transform: translateX(-50%) scale(0.9);
+                box-shadow: 0 0 0 rgba(105, 168, 200, 0);
+            }
+            50% {
+                opacity: 1;
+                transform: translateX(-50%) scale(1.02);
+                box-shadow: 0 0 40px rgba(105, 168, 200, 0.4);
+            }
+            100% {
+                opacity: 1;
+                transform: translateX(-50%) scale(1);
+            }
+        }
+        
+        .floating-pill {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(20, 20, 20, 0.95);
+            border: 1px solid rgba(105, 168, 200, 0.4);
+            border-radius: 28px;
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            backdrop-filter: blur(20px);
+            z-index: 1000;
+            animation: mount-glow 0.5s ease-out, pill-glow-running 4s ease-in-out infinite 0.5s;
+        }
+        
+        .floating-pill.state-running {
+            animation: mount-glow 0.5s ease-out, pill-glow-running 4s ease-in-out infinite 0.5s;
+        }
+        
+        .floating-pill.state-approval {
+            animation: mount-glow 0.5s ease-out, pill-glow-approval 4s ease-in-out infinite 0.5s;
+        }
+        
+        .floating-pill.state-blocked {
+            animation: mount-glow 0.5s ease-out, pill-glow-blocked 4s ease-in-out infinite 0.5s;
+        }
+        
+        .pill-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        
+        .pill-status.running {
+            background: rgba(34, 197, 94, 0.15);
+            color: #86efac;
+            border: 1px solid rgba(74, 222, 128, 0.3);
+        }
+        
+        .pill-status.approval {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fde68a;
+            border: 1px solid rgba(251, 191, 36, 0.3);
+        }
+        
+        .pill-status.blocked {
+            background: rgba(239, 68, 68, 0.15);
+            color: #fecaca;
+            border: 1px solid rgba(248, 113, 113, 0.3);
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: status-pulse 2s ease-in-out infinite;
+        }
+        
+        .status-dot.running { background: #4ade80; }
+        .status-dot.approval { background: #fbbf24; }
+        .status-dot.blocked { background: #f87171; }
+        
+        .pill-divider {
+            width: 1px;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .pill-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .pill-btn {
+            padding: 6px 14px;
+            border: none;
+            border-radius: 14px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .pill-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .pill-btn-approve {
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+        }
+        
+        .pill-btn-deny {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        
+        .pill-btn-stop {
+            background: rgba(148, 163, 184, 0.15);
+            color: #cbd5e1;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+        }
+        
+        .pill-btn-pause {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fde68a;
+            border: 1px solid rgba(251, 191, 36, 0.3);
+        }
+        
+        /* Surface glow effect */
+        @keyframes surface-glow {
+            0%, 100% { 
+                box-shadow: inset 0 0 30px rgba(105, 168, 200, 0.05);
+            }
+            50% { 
+                box-shadow: inset 0 0 50px rgba(105, 168, 200, 0.12);
+            }
+        }
+        
+        .browser-viewport.engine-active {
+            animation: surface-glow 4s ease-in-out infinite;
+            border: 1px solid rgba(105, 168, 200, 0.2);
+        }
+        
+        /* Status legend */
+        .status-legend {
+            margin-top: 40px;
+            padding: 24px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .status-legend h3 {
+            margin-bottom: 16px;
+            color: #e2e8f0;
+        }
+        
+        .legend-items {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            color: #94a3b8;
+        }
+        
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        
+        .legend-dot.green { background: #22c55e; }
+        .legend-dot.yellow { background: #f59e0b; }
+        .legend-dot.red { background: #ef4444; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 A2R Browser Agent</h1>
+        <p>Floating Control Pill Demo — Shows how the pill mounts at the bottom center of the browser viewport with breathing glow animation based on engine state.</p>
+        
+        <div class="demo-controls">
+            <button class="btn btn-success" onclick="mountPill('running')">
+                <span>▶️</span> Start Engine (Running)
+            </button>
+            <button class="btn btn-warning" onclick="mountPill('approval')">
+                <span>⏸️</span> Needs Approval
+            </button>
+            <button class="btn btn-danger" onclick="mountPill('blocked')">
+                <span>🛑</span> Blocked / Error
+            </button>
+            <button class="btn btn-primary" onclick="unmountPill()">
+                <span>✕</span> Dismount Pill
+            </button>
+        </div>
+        
+        <div class="demo-browser">
+            <div class="browser-header">
+                <div class="browser-dots">
+                    <div class="dot dot-red"></div>
+                    <div class="dot dot-yellow"></div>
+                    <div class="dot dot-green"></div>
+                </div>
+                <div class="browser-address">https://example.com/dashboard</div>
+            </div>
+            <div class="browser-viewport" id="browserViewport">
+                <div class="viewport-content">
+                    <h2>Browser Content</h2>
+                    <p>The floating control pill mounts at the bottom center when the engine becomes active.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="status-legend">
+            <h3>Engine States</h3>
+            <div class="legend-items">
+                <div class="legend-item">
+                    <div class="legend-dot green"></div>
+                    <span>Running — Green glow, 4s breathing cycle</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot yellow"></div>
+                    <span>Needs Approval — Orange glow, waiting for user</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot red"></div>
+                    <span>Blocked/Error — Red glow, needs attention</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPill = null;
+        
+        function mountPill(state) {
+            unmountPill();
+            
+            const viewport = document.getElementById('browserViewport');
+            viewport.classList.add('engine-active');
+            
+            const pill = document.createElement('div');
+            pill.className = `floating-pill state-${state}`;
+            pill.id = 'enginePill';
+            
+            let statusHTML = '';
+            let actionsHTML = '';
+            
+            switch(state) {
+                case 'running':
+                    statusHTML = `
+                        <div class="pill-status running">
+                            <div class="status-dot running"></div>
+                            <span>Running</span>
+                        </div>
+                    `;
+                    actionsHTML = `
+                        <button class="pill-btn pill-btn-pause">⏸ Pause</button>
+                        <button class="pill-btn pill-btn-stop">⏹ Stop</button>
+                    `;
+                    break;
+                case 'approval':
+                    statusHTML = `
+                        <div class="pill-status approval">
+                            <div class="status-dot approval"></div>
+                            <span>Needs Approval</span>
+                        </div>
+                    `;
+                    actionsHTML = `
+                        <button class="pill-btn pill-btn-approve">✓ Approve</button>
+                        <button class="pill-btn pill-btn-deny">✕ Deny</button>
+                    `;
+                    break;
+                case 'blocked':
+                    statusHTML = `
+                        <div class="pill-status blocked">
+                            <div class="status-dot blocked"></div>
+                            <span>Blocked</span>
+                        </div>
+                    `;
+                    actionsHTML = `
+                        <button class="pill-btn pill-btn-stop">🔄 Retry</button>
+                        <button class="pill-btn pill-btn-deny">✕ Cancel</button>
+                    `;
+                    break;
+            }
+            
+            pill.innerHTML = `
+                ${statusHTML}
+                <div class="pill-divider"></div>
+                <div class="pill-actions">
+                    ${actionsHTML}
+                </div>
+            `;
+            
+            viewport.appendChild(pill);
+            currentPill = pill;
+        }
+        
+        function unmountPill() {
+            const viewport = document.getElementById('browserViewport');
+            viewport.classList.remove('engine-active');
+            
+            if (currentPill) {
+                currentPill.style.animation = 'slide-up 0.3s ease-out reverse';
+                setTimeout(() => {
+                    if (currentPill && currentPill.parentNode) {
+                        currentPill.parentNode.removeChild(currentPill);
+                    }
+                    currentPill = null;
+                }, 280);
+            }
+        }
+        
+        // Auto-mount running state on load for demo
+        setTimeout(() => {
+            mountPill('running');
+        }, 500);
+    </script>
+</body>
+</html>

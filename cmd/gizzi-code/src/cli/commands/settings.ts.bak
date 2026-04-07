@@ -1,0 +1,301 @@
+import { cmd } from "@/cli/commands/cmd"
+import { UI } from "@/cli/ui/ui"
+import { Global } from "@/runtime/context/global/global"
+import { Instance } from "@/runtime/context/project/instance"
+import { Filesystem } from "@/runtime/util/filesystem"
+import * as prompts from "@clack/prompts"
+import path from "path"
+import { EOL } from "os"
+
+type GizziConfig = {
+  version?: string
+  project?: {
+    type?: string
+    language?: string
+  }
+  preferences?: {
+    model?: string
+    effort?: "low" | "medium" | "high" | "max"
+    maxTokens?: number
+  }
+  permissions?: {
+    allowedTools?: string[]
+    deniedTools?: string[]
+  }
+  hooks?: {
+    PostToolUse?: Array<{
+      matcher: string
+      hooks: Array<{ type: string; command: string }>
+    }>
+  }
+  features?: {
+    sandbox?: boolean
+    thinking?: boolean
+    receipts?: boolean
+  }
+}
+
+const AVAILABLE_MODELS = [
+  { value: "claude-sonnet-4-5", label: "Claude Sonnet 4.5", hint: "Balanced" },
+  { value: "claude-haiku-4-5", label: "Claude Haiku 4.5", hint: "Fast" },
+  { value: "claude-opus-4-5", label: "Claude Opus 4.5", hint: "Powerful" },
+]
+
+const EFFORT_LEVELS = [
+  { value: "low", label: "Low", hint: "Quick responses" },
+  { value: "medium", label: "Medium", hint: "Balanced (default)" },
+  { value: "high", label: "High", hint: "Deep reasoning" },
+  { value: "max", label: "Max", hint: "Maximum effort" },
+]
+
+const AVAILABLE_TOOLS = [
+  "Read", "Write", "Edit", "Bash", "Glob", "Grep", "List",
+  "WebFetch", "WebSearch", "Task", "TodoWrite", "TodoRead",
+  "CodeSearch", "Notebook", "LSP", "AgentCommunicate"
+]
+
+async function readConfig(): Promise<{ config: GizziConfig; path: string }> {
+  const gizziJsonPath = path.join(Instance.directory, ".gizzi", "gizzi.json")
+  const legacyPath = path.join(Instance.directory, "GIZZI.md")
+
+  if (await Filesystem.exists(gizziJsonPath)) {
+    const content = await Filesystem.readText(gizziJsonPath)
+    return { config: JSON.parse(content), path: gizziJsonPath }
+  }
+
+  // Return default config
+  return {
+    config: {
+      version: "1.0.0",
+      preferences: { model: "claude-sonnet-4-5", effort: "medium", maxTokens: 4096 },
+      permissions: { allowedTools: AVAILABLE_TOOLS, deniedTools: [] },
+      features: { sandbox: false, thinking: true, receipts: true },
+    },
+    path: gizziJsonPath,
+  }
+}
+
+async function writeConfig(configPath: string, config: GizziConfig): Promise<void> {
+  await Filesystem.write(configPath, JSON.stringify(config, null, 2))
+}
+
+async function editModel(config: GizziConfig): Promise<boolean> {
+  const result = await prompts.select({
+    message: "Select model",
+    options: AVAILABLE_MODELS,
+  })
+  if (prompts.isCancel(result)) return false
+
+  config.preferences ??= {}
+  config.preferences.model = result as string
+  return true
+}
+
+async function editEffort(config: GizziConfig): Promise<boolean> {
+  const result = await prompts.select({
+    message: "Select effort level",
+    options: EFFORT_LEVELS,
+  })
+  if (prompts.isCancel(result)) return false
+
+  if (!config.preferences) {
+    config.preferences = { model: "", effort: result as "high" | "medium" | "low" | "max" }
+  } else {
+    config.preferences.effort = result as "high" | "medium" | "low" | "max"
+  }
+  return true
+}
+
+async function editMaxTokens(config: GizziConfig): Promise<boolean> {
+  const result = await prompts.text({
+    message: "Max tokens (1024-8192)",
+    placeholder: String(config.preferences?.maxTokens ?? 4096) as string,
+    validate: (value) => {
+      if (!value) return "Value is required"
+      const num = parseInt(value)
+      if (isNaN(num) || num < 1024 || num > 8192) {
+        return "Must be between 1024 and 8192"
+      }
+    },
+  })
+  if (prompts.isCancel(result)) return false
+
+  config.preferences ??= {}
+  config.preferences.maxTokens = parseInt(result)
+  return true
+}
+
+async function editTools(config: GizziConfig): Promise<boolean> {
+  const currentAllowed = new Set(config.permissions?.allowedTools ?? AVAILABLE_TOOLS)
+
+  const result = await prompts.multiselect({
+    message: "Select allowed tools (space to toggle, enter to confirm)",
+    options: AVAILABLE_TOOLS.map((tool) => ({
+      value: tool,
+      label: tool,
+      selected: currentAllowed.has(tool),
+    })),
+  })
+  if (prompts.isCancel(result)) return false
+
+  config.permissions ??= {}
+  config.permissions.allowedTools = result as string[]
+  config.permissions.deniedTools = AVAILABLE_TOOLS.filter((t) => !(result as string[]).includes(t))
+  return true
+}
+
+async function editFeatures(config: GizziConfig): Promise<boolean> {
+  const result = await prompts.multiselect({
+    message: "Enable features",
+    options: [
+      { value: "sandbox", label: "Sandbox mode", hint: "Safer bash execution" },
+      { value: "thinking", label: "Show thinking", hint: "Display agent reasoning" },
+      { value: "receipts", label: "Token receipts", hint: "Show token usage" },
+    ],
+  })
+  if (prompts.isCancel(result)) return false
+
+  const enabled = new Set(result as string[])
+  config.features = {
+    sandbox: enabled.has("sandbox"),
+    thinking: enabled.has("thinking"),
+    receipts: enabled.has("receipts"),
+  }
+  return true
+}
+
+function formatConfig(config: GizziConfig): string {
+  const lines: string[] = []
+  lines.push("")
+  lines.push("Current configuration:")
+  lines.push("")
+  lines.push(`  Model:       ${UI.Style.TEXT_INFO}${config.preferences?.model ?? "claude-sonnet-4-5"}${UI.Style.TEXT_NORMAL}`)
+  lines.push(`  Effort:      ${UI.Style.TEXT_INFO}${config.preferences?.effort ?? "medium"}${UI.Style.TEXT_NORMAL}`)
+  lines.push(`  Max tokens:  ${UI.Style.TEXT_INFO}${config.preferences?.maxTokens ?? 4096}${UI.Style.TEXT_NORMAL}`)
+  lines.push(`  Tools:       ${UI.Style.TEXT_INFO}${config.permissions?.allowedTools?.length ?? AVAILABLE_TOOLS.length} allowed${UI.Style.TEXT_NORMAL}`)
+  lines.push(`  Sandbox:     ${UI.Style.TEXT_INFO}${config.features?.sandbox ? "on" : "off"}${UI.Style.TEXT_NORMAL}`)
+  lines.push(`  Thinking:    ${UI.Style.TEXT_INFO}${config.features?.thinking ? "on" : "off"}${UI.Style.TEXT_NORMAL}`)
+  lines.push(`  Receipts:    ${UI.Style.TEXT_INFO}${config.features?.receipts ? "on" : "off"}${UI.Style.TEXT_NORMAL}`)
+  lines.push("")
+  return lines.join("\n")
+}
+
+export const SettingsCommand = cmd({
+  command: "settings",
+  describe: "open interactive settings panel",
+  builder: (yargs) =>
+    yargs
+      .option("model", {
+        type: "string",
+        choices: AVAILABLE_MODELS.map((m) => m.value),
+        describe: "set model directly",
+      })
+      .option("effort", {
+        type: "string",
+        choices: ["low", "medium", "high", "max"],
+        describe: "set effort level directly",
+      })
+      .option("json", {
+        type: "boolean",
+        describe: "output current settings as JSON",
+      }),
+  handler: async (args) => {
+    const { config, path: configPath } = await readConfig()
+
+    // Direct flag setting
+    if (args.model) {
+      config.preferences ??= {}
+      config.preferences.model = args.model
+      await writeConfig(configPath, config)
+      UI.println(`Model set to ${UI.Style.TEXT_SUCCESS}${args.model}${UI.Style.TEXT_NORMAL}`)
+      return
+    }
+
+    if (args.effort) {
+      if (!config.preferences) {
+        config.preferences = { model: "", effort: args.effort as "high" | "medium" | "low" | "max" }
+      } else {
+        config.preferences.effort = args.effort as "high" | "medium" | "low" | "max"
+      }
+      await writeConfig(configPath, config)
+      UI.println(`Effort set to ${UI.Style.TEXT_SUCCESS}${args.effort}${UI.Style.TEXT_NORMAL}`)
+      return
+    }
+
+    if (args.json) {
+      UI.println(JSON.stringify(config, null, 2))
+      return
+    }
+
+    // Interactive mode
+    UI.println(UI.Style.TEXT_INFO_BOLD + "Settings" + UI.Style.TEXT_NORMAL)
+    UI.println(formatConfig(config))
+
+    let changed = false
+
+    while (true) {
+      const action = await prompts.select({
+        message: "What would you like to change?",
+        options: [
+          { value: "model", label: "Change model", hint: config.preferences?.model },
+          { value: "effort", label: "Change effort level", hint: config.preferences?.effort },
+          { value: "tokens", label: "Change max tokens", hint: String(config.preferences?.maxTokens) },
+          { value: "tools", label: "Manage allowed tools" },
+          { value: "features", label: "Toggle features" },
+          { value: "view", label: "View full config" },
+          { value: "save", label: "Save and exit", hint: changed ? "unsaved changes" : "no changes" },
+          { value: "exit", label: "Exit without saving" },
+        ],
+      })
+
+      if (prompts.isCancel(action) || action === "exit") {
+        if (changed) {
+          const confirm = await prompts.confirm({
+            message: "You have unsaved changes. Exit without saving?",
+            initialValue: false,
+          })
+          if (prompts.isCancel(confirm) || !confirm) continue
+        }
+        UI.println("Cancelled")
+        return
+      }
+
+      if (action === "save") {
+        await writeConfig(configPath, config)
+        UI.println(UI.Style.TEXT_SUCCESS_BOLD + "Settings saved!" + UI.Style.TEXT_NORMAL)
+        return
+      }
+
+      if (action === "view") {
+        UI.println("")
+        UI.println(JSON.stringify(config, null, 2))
+        UI.println("")
+        continue
+      }
+
+      let modified = false
+      switch (action) {
+        case "model":
+          modified = await editModel(config)
+          break
+        case "effort":
+          modified = await editEffort(config)
+          break
+        case "tokens":
+          modified = await editMaxTokens(config)
+          break
+        case "tools":
+          modified = await editTools(config)
+          break
+        case "features":
+          modified = await editFeatures(config)
+          break
+      }
+
+      if (modified) {
+        changed = true
+        UI.println(formatConfig(config))
+      }
+    }
+  },
+})

@@ -1,0 +1,1 @@
+{"version":3,"file":"resource.js","sourceRoot":"","sources":["../../../../src/providers/openai/core/resource.ts"],"names":[],"mappings":"AAAA,sFAAsF;AAItF,MAAM,OAAgB,WAAW;IACrB,OAAO,CAAkB;IAEnC,YAAY,MAAuB;QACjC,IAAI,CAAC,OAAO,GAAG,MAAM,CAAC;IACxB,CAAC;CACF"}

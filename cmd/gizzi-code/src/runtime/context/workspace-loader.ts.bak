@@ -1,0 +1,412 @@
+/**
+ * Workspace Loader - GIZZI.md Auto-Load
+ * 
+ * Automatically loads GIZZI.md and workspace context files at session start.
+ * Matches Gizzi's CLAUDE.md auto-load behavior.
+ * 
+ * Load Order:
+ * 1. ./GIZZI.md (project root, always)
+ * 2. ~/.gizzi/GIZZI.md (global, always)
+ * 3. .gizzi/workspace/* (5-layer workspace, if exists)
+ * 4. Subdirectory GIZZI.md (path-scoped, if exists)
+ * 
+ * @module workspace-loader
+ */
+
+import { promises as fs } from 'fs';
+import path from 'path';
+
+// ============================================================================
+// Types
+// ============================================================================
+
+export interface WorkspaceContext {
+  // Simple case (CLAUDE.md equivalent)
+  gizziMd?: string;
+  gizziMdLocal?: string;
+  
+  // Global (user-specific)
+  globalGizziMd?: string;
+  
+  // Full 5-layer workspace
+  cognitive?: {
+    brain: string;
+    memory: string;
+    dailyLogs: string[];
+    activeTasks: string;
+  };
+  
+  identity?: {
+    identity: string;
+    soul: string;
+    user: string;
+    voice: string;
+    policy: string;
+  };
+  
+  governance?: {
+    agents: string;      // Constitution
+    playbook: string;
+    tools: string;
+    system: string;
+  };
+  
+  skills?: {
+    index: string;
+    procedures: string[];
+  };
+  
+  business?: {
+    clients: string;
+    projects: string[];
+  };
+}
+
+export interface LoadWorkspaceOptions {
+  workspacePath: string;
+  subdirectory?: string;  // For path-scoped GIZZI.md
+  skipGlobal?: boolean;   // For testing
+  skipWorkspace?: boolean; // Load only GIZZI.md
+}
+
+// ============================================================================
+// Main Loader
+// ============================================================================
+
+/**
+ * Load complete workspace context
+ */
+export async function loadWorkspaceContext(
+  options: LoadWorkspaceOptions
+): Promise<WorkspaceContext> {
+  const {
+    workspacePath,
+    subdirectory,
+    skipGlobal = false,
+    skipWorkspace = false,
+  } = options;
+  
+  const context: WorkspaceContext = {};
+  
+  console.log('[WorkspaceLoader] Loading context for:', workspacePath);
+  
+  // 1. Load ./GIZZI.md (project root)
+  try {
+    const gizziMdPath = path.join(workspacePath, 'GIZZI.md');
+    await fs.access(gizziMdPath);
+    context.gizziMd = await fs.readFile(gizziMdPath, 'utf-8');
+    console.log('[WorkspaceLoader] Loaded GIZZI.md');
+  } catch {
+    console.log('[WorkspaceLoader] No GIZZI.md found, continuing');
+  }
+  
+  // 2. Load ./GIZZI.local.md (personal overrides, gitignored)
+  try {
+    const gizziLocalPath = path.join(workspacePath, 'GIZZI.local.md');
+    await fs.access(gizziLocalPath);
+    context.gizziMdLocal = await fs.readFile(gizziLocalPath, 'utf-8');
+    console.log('[WorkspaceLoader] Loaded GIZZI.local.md');
+  } catch {
+    // Optional, don't log
+  }
+  
+  // 3. Load ~/.gizzi/GIZZI.md (global)
+  if (!skipGlobal) {
+    try {
+      const globalGizziPath = path.join(getHomeDir(), '.gizzi', 'GIZZI.md');
+      await fs.access(globalGizziPath);
+      context.globalGizziMd = await fs.readFile(globalGizziPath, 'utf-8');
+      console.log('[WorkspaceLoader] Loaded global GIZZI.md');
+    } catch {
+      console.log('[WorkspaceLoader] No global GIZZI.md found');
+    }
+  }
+  
+  // 4. Load subdirectory GIZZI.md (path-scoped)
+  if (subdirectory) {
+    try {
+      const subDirPath = path.join(workspacePath, subdirectory, 'GIZZI.md');
+      await fs.access(subDirPath);
+      const subDirContent = await fs.readFile(subDirPath, 'utf-8');
+      // Append to main GIZZI.md with scope marker
+      context.gizziMd = context.gizziMd 
+        ? `${context.gizziMd}\n\n---\n\n# Subdirectory: ${subdirectory}\n\n${subDirContent}`
+        : `# Subdirectory: ${subdirectory}\n\n${subDirContent}`;
+      console.log('[WorkspaceLoader] Loaded subdirectory GIZZI.md:', subdirectory);
+    } catch {
+      // Optional
+    }
+  }
+  
+  // 5. Load 5-layer workspace (if exists)
+  if (!skipWorkspace) {
+    const workspaceContext = await load5LayerWorkspace(workspacePath);
+    Object.assign(context, workspaceContext);
+  }
+  
+  return context;
+}
+
+// ============================================================================
+// 5-Layer Workspace Loader
+// ============================================================================
+
+async function load5LayerWorkspace(workspacePath: string): Promise<Partial<WorkspaceContext>> {
+  const context: Partial<WorkspaceContext> = {};
+  const a2rPath = path.join(workspacePath, '.gizzi', 'workspace');
+  
+  try {
+    await fs.access(a2rPath);
+  } catch {
+    console.log('[WorkspaceLoader] No .gizzi/workspace/ directory');
+    return context;
+  }
+  
+  // Layer 1: Cognitive
+  try {
+    const brainPath = path.join(a2rPath, 'brain', 'BRAIN.md');
+    const memoryPath = path.join(a2rPath, 'memory', 'MEMORY.md');
+    const activeTasksPath = path.join(a2rPath, 'memory', 'active-tasks.md');
+    
+    await fs.access(brainPath);
+    await fs.access(memoryPath);
+    
+    context.cognitive = {
+      brain: await fs.readFile(brainPath, 'utf-8'),
+      memory: await fs.readFile(memoryPath, 'utf-8'),
+      dailyLogs: await loadDailyLogs(path.join(a2rPath, 'memory')),
+      activeTasks: await fs.readFile(activeTasksPath, 'utf-8').catch(() => ''),
+    };
+    console.log('[WorkspaceLoader] Loaded cognitive layer');
+  } catch (err) {
+    console.log('[WorkspaceLoader] Cognitive layer not complete');
+  }
+  
+  // Layer 2: Identity
+  try {
+    const identityPath = path.join(a2rPath, 'identity');
+    await fs.access(identityPath);
+    
+    context.identity = {
+      identity: await readFileIfExists(path.join(identityPath, 'IDENTITY.md')),
+      soul: await readFileIfExists(path.join(identityPath, 'SOUL.md')),
+      user: await readFileIfExists(path.join(identityPath, 'USER.md')),
+      voice: await readFileIfExists(path.join(identityPath, 'VOICE.md')),
+      policy: await readFileIfExists(path.join(identityPath, 'POLICY.md')),
+    };
+    console.log('[WorkspaceLoader] Loaded identity layer');
+  } catch (err) {
+    console.log('[WorkspaceLoader] Identity layer not complete');
+  }
+  
+  // Layer 3: Governance
+  try {
+    const governancePath = path.join(a2rPath, 'governance');
+    await fs.access(governancePath);
+    
+    context.governance = {
+      agents: await readFileIfExists(path.join(governancePath, 'AGENTS.md')),
+      playbook: await readFileIfExists(path.join(governancePath, 'PLAYBOOK.md')),
+      tools: await readFileIfExists(path.join(governancePath, 'TOOLS.md')),
+      system: await readFileIfExists(path.join(governancePath, 'SYSTEM.md')),
+    };
+    console.log('[WorkspaceLoader] Loaded governance layer');
+  } catch (err) {
+    console.log('[WorkspaceLoader] Governance layer not complete');
+  }
+  
+  // Layer 4: Skills
+  try {
+    const skillsPath = path.join(a2rPath, 'skills');
+    await fs.access(skillsPath);
+    
+    const skillsIndex = await readFileIfExists(path.join(a2rPath, 'contracts', 'skills.index.json'));
+    
+    context.skills = {
+      index: skillsIndex || '',
+      procedures: await loadSkillProcedures(skillsPath),
+    };
+    console.log('[WorkspaceLoader] Loaded skills layer');
+  } catch (err) {
+    console.log('[WorkspaceLoader] Skills layer not complete');
+  }
+  
+  // Layer 5: Business (optional)
+  try {
+    const businessPath = path.join(a2rPath, 'business');
+    await fs.access(businessPath);
+    
+    context.business = {
+      clients: await readFileIfExists(path.join(businessPath, 'CLIENTS.md')),
+      projects: await loadBusinessProjects(businessPath),
+    };
+    console.log('[WorkspaceLoader] Loaded business layer');
+  } catch (err) {
+    // Business layer is optional
+  }
+  
+  return context;
+}
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+async function loadDailyLogs(memoryPath: string): Promise<string[]> {
+  const today = new Date().toISOString().split('T')[0];
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  
+  const logs: string[] = [];
+  
+  try {
+    const todayPath = path.join(memoryPath, `${today}.md`);
+    await fs.access(todayPath);
+    logs.push(await fs.readFile(todayPath, 'utf-8'));
+  } catch {}
+  
+  try {
+    const yesterdayPath = path.join(memoryPath, `${yesterday}.md`);
+    await fs.access(yesterdayPath);
+    logs.push(await fs.readFile(yesterdayPath, 'utf-8'));
+  } catch {}
+  
+  return logs;
+}
+
+async function loadSkillProcedures(skillsPath: string): Promise<string[]> {
+  try {
+    const entries = await fs.readdir(skillsPath, { withFileTypes: true });
+    const procedures: string[] = [];
+    
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        const skillPath = path.join(skillsPath, entry.name, 'SKILL.md');
+        try {
+          await fs.access(skillPath);
+          procedures.push(await fs.readFile(skillPath, 'utf-8'));
+        } catch {}
+      }
+    }
+    
+    return procedures;
+  } catch {
+    return [];
+  }
+}
+
+async function loadBusinessProjects(businessPath: string): Promise<string[]> {
+  try {
+    const projectsPath = path.join(businessPath, 'projects');
+    await fs.access(projectsPath);
+    
+    const entries = await fs.readdir(projectsPath, { withFileTypes: true });
+    const projects: string[] = [];
+    
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        projects.push(entry.name);
+      }
+    }
+    
+    return projects;
+  } catch {
+    return [];
+  }
+}
+
+async function readFileIfExists(filePath: string): Promise<string> {
+  try {
+    await fs.access(filePath);
+    return await fs.readFile(filePath, 'utf-8');
+  } catch {
+    return '';
+  }
+}
+
+function getHomeDir(): string {
+  return process.env.HOME || process.env.USERPROFILE || '~';
+}
+
+// ============================================================================
+// Context Pack Builder (for LLM injection)
+// ============================================================================
+
+/**
+ * Build context pack for LLM system prompt
+ */
+export function buildContextPack(context: WorkspaceContext): string {
+  const parts: string[] = [];
+  
+  // Simple case: GIZZI.md only
+  if (context.gizziMd) {
+    parts.push(`## Project Context (GIZZI.md)\n\n${context.gizziMd}`);
+  }
+  
+  if (context.gizziMdLocal) {
+    parts.push(`## Personal Overrides (GIZZI.local.md)\n\n${context.gizziMdLocal}`);
+  }
+  
+  if (context.globalGizziMd) {
+    parts.push(`## Global Preferences (~/.gizzi/GIZZI.md)\n\n${context.globalGizziMd}`);
+  }
+  
+  // Full 5-layer workspace
+  if (context.cognitive) {
+    parts.push(`## Cognitive State\n\n${context.cognitive.brain}`);
+    parts.push(`## Working Memory\n\n${context.cognitive.memory}`);
+    if (context.cognitive.dailyLogs.length > 0) {
+      parts.push(`## Recent Session Logs\n\n${context.cognitive.dailyLogs.join('\n\n')}`);
+    }
+  }
+  
+  if (context.identity) {
+    if (context.identity.identity) {
+      parts.push(`## Agent Identity\n\n${context.identity.identity}`);
+    }
+    if (context.identity.soul) {
+      parts.push(`## Agent Behavior (SOUL.md)\n\n${context.identity.soul}`);
+    }
+    if (context.identity.user) {
+      parts.push(`## User Preferences\n\n${context.identity.user}`);
+    }
+  }
+  
+  if (context.governance) {
+    if (context.governance.agents) {
+      parts.push(`## Constitution (AGENTS.md)\n\n${context.governance.agents}`);
+    }
+    if (context.governance.playbook) {
+      parts.push(`## Procedures\n\n${context.governance.playbook}`);
+    }
+    if (context.governance.tools) {
+      parts.push(`## Available Tools\n\n${context.governance.tools}`);
+    }
+  }
+  
+  if (context.skills?.procedures && context.skills.procedures.length > 0) {
+    parts.push(`## Skills\n\n${context.skills.procedures.join('\n\n---\n\n')}`);
+  }
+  
+  return parts.join('\n\n---\n\n');
+}
+
+// ============================================================================
+// System Prompt Builder
+// ============================================================================
+
+/**
+ * Build system prompt with workspace context
+ */
+export function buildSystemPrompt(contextPack: string): string {
+  return `You are an AI assistant working within the Gizzi framework.
+
+${contextPack}
+
+## Instructions
+1. Always follow the constitution (AGENTS.md) and procedures (PLAYBOOK.md)
+2. Use the available tools as described in TOOLS.md
+3. Respect user preferences from USER.md and GIZZI.local.md
+4. Update BRAIN.md and MEMORY.md as you work
+5. Log all tool calls to daily memory files
+6. Follow the conventions specified in GIZZI.md`;
+}

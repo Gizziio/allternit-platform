@@ -1,0 +1,649 @@
+import { memo as _$memo } from "@opentui/solid";
+import { insert as _$insert } from "@opentui/solid";
+import { createComponent as _$createComponent } from "@opentui/solid";
+import { effect as _$effect } from "@opentui/solid";
+import { createTextNode as _$createTextNode } from "@opentui/solid";
+import { insertNode as _$insertNode } from "@opentui/solid";
+import { setProp as _$setProp } from "@opentui/solid";
+import { createElement as _$createElement } from "@opentui/solid";
+import { createMemo, createSignal, For, Show, onMount, Match, Switch } from "solid-js";
+import { useDialog } from "@/cli/ui/tui/ui/dialog";
+import { useTheme } from "@/cli/ui/tui/context/theme";
+import { useGIZZITheme } from "@/cli/ui/components/gizzi";
+import { SessionUsage } from "@/runtime/session/usage";
+import { useKeyboard } from "@opentui/solid";
+import { UsagePanel } from "@/cli/ui/tui/component/usage-panel";
+export function DialogUsage(props) {
+  const dialog = useDialog();
+  const {
+    theme
+  } = useTheme();
+  const tone = useGIZZITheme();
+  const [activeTab, setActiveTab] = createSignal(props.sessionID ? "sessions" : "overview");
+  const [summary, setSummary] = createSignal(null);
+  const [loading, setLoading] = createSignal(true);
+  onMount(async () => {
+    const data = await SessionUsage.getSummary(props.sessionID ? {
+      sessionID: props.sessionID
+    } : undefined);
+    setSummary(data);
+    setLoading(false);
+  });
+  useKeyboard(evt => {
+    if (evt.name === "escape" || evt.name === "q") {
+      dialog.clear();
+      return;
+    }
+    if (evt.name === "1" || evt.name === "o") {
+      setActiveTab("overview");
+      return;
+    }
+    if (evt.name === "2" || evt.name === "d") {
+      setActiveTab("daily");
+      return;
+    }
+    if (evt.name === "3" || evt.name === "s") {
+      setActiveTab("sessions");
+      return;
+    }
+  });
+  const hasData = createMemo(() => {
+    const s = summary();
+    return s && s.grandTotal.messages > 0;
+  });
+  return (() => {
+    var _el$ = _$createElement("box"),
+      _el$2 = _$createElement("box"),
+      _el$3 = _$createElement("box"),
+      _el$4 = _$createElement("span"),
+      _el$1 = _$createElement("box"),
+      _el$20 = _$createElement("box"),
+      _el$21 = _$createElement("text");
+    _$insertNode(_el$, _el$2);
+    _$insertNode(_el$, _el$1);
+    _$insertNode(_el$, _el$20);
+    _$setProp(_el$, "flexDirection", "column");
+    _$setProp(_el$, "maxHeight", 45);
+    _$setProp(_el$, "borderStyle", "single");
+    _$insertNode(_el$2, _el$3);
+    _$setProp(_el$2, "flexDirection", "row");
+    _$setProp(_el$2, "justifyContent", "space-between");
+    _$insertNode(_el$3, _el$4);
+    _$setProp(_el$3, "flexDirection", "row");
+    _$insertNode(_el$4, _$createTextNode(` Usage`));
+    _$insert(_el$3, _$createComponent(Show, {
+      get when() {
+        return props.sessionID;
+      },
+      get children() {
+        var _el$6 = _$createElement("text");
+        _$insertNode(_el$6, _$createTextNode(`(Current Session)`));
+        _$effect(_$p => _$setProp(_el$6, "fg", theme.textMuted, _$p));
+        return _el$6;
+      }
+    }), null);
+    _$insert(_el$2, _$createComponent(Show, {
+      get when() {
+        return hasData();
+      },
+      get children() {
+        var _el$8 = _$createElement("text"),
+          _el$9 = _$createTextNode(` total`);
+        _$insertNode(_el$8, _el$9);
+        _$insert(_el$8, () => SessionUsage.formatCost(summary().grandTotal.cost), _el$9);
+        _$effect(_$p => _$setProp(_el$8, "fg", theme.accent, _$p));
+        return _el$8;
+      }
+    }), null);
+    _$insert(_el$, _$createComponent(Show, {
+      get when() {
+        return !props.sessionID;
+      },
+      get children() {
+        var _el$0 = _$createElement("box");
+        _$setProp(_el$0, "flexDirection", "row");
+        _$insert(_el$0, _$createComponent(TabButton, {
+          label: "Overview",
+          shortcut: "1",
+          get active() {
+            return activeTab() === "overview";
+          },
+          onClick: () => setActiveTab("overview")
+        }), null);
+        _$insert(_el$0, _$createComponent(TabButton, {
+          label: "Daily",
+          shortcut: "2",
+          get active() {
+            return activeTab() === "daily";
+          },
+          onClick: () => setActiveTab("daily")
+        }), null);
+        _$insert(_el$0, _$createComponent(TabButton, {
+          label: "Sessions",
+          shortcut: "3",
+          get active() {
+            return activeTab() === "sessions";
+          },
+          onClick: () => setActiveTab("sessions")
+        }), null);
+        _$effect(_p$ => {
+          var _v$ = tone().space.sm,
+            _v$2 = tone().space.md;
+          _v$ !== _p$.e && (_p$.e = _$setProp(_el$0, "gap", _v$, _p$.e));
+          _v$2 !== _p$.t && (_p$.t = _$setProp(_el$0, "marginBottom", _v$2, _p$.t));
+          return _p$;
+        }, {
+          e: undefined,
+          t: undefined
+        });
+        return _el$0;
+      }
+    }), _el$1);
+    _$setProp(_el$1, "flexDirection", "column");
+    _$setProp(_el$1, "flexGrow", 1);
+    _$insert(_el$1, _$createComponent(Show, {
+      get when() {
+        return loading();
+      },
+      get children() {
+        var _el$10 = _$createElement("box"),
+          _el$11 = _$createElement("text"),
+          _el$13 = _$createElement("text");
+        _$insertNode(_el$10, _el$11);
+        _$insertNode(_el$10, _el$13);
+        _$setProp(_el$10, "flexDirection", "column");
+        _$setProp(_el$10, "gap", 1);
+        _$setProp(_el$10, "alignItems", "center");
+        _$insertNode(_el$11, _$createTextNode(`◐`));
+        _$insertNode(_el$13, _$createTextNode(`Loading usage data...`));
+        _$effect(_p$ => {
+          var _v$3 = tone().space.lg,
+            _v$4 = theme.accent,
+            _v$5 = theme.textMuted;
+          _v$3 !== _p$.e && (_p$.e = _$setProp(_el$10, "padding", _v$3, _p$.e));
+          _v$4 !== _p$.t && (_p$.t = _$setProp(_el$11, "fg", _v$4, _p$.t));
+          _v$5 !== _p$.a && (_p$.a = _$setProp(_el$13, "fg", _v$5, _p$.a));
+          return _p$;
+        }, {
+          e: undefined,
+          t: undefined,
+          a: undefined
+        });
+        return _el$10;
+      }
+    }), null);
+    _$insert(_el$1, _$createComponent(Show, {
+      get when() {
+        return _$memo(() => !!!loading())() && !hasData();
+      },
+      get children() {
+        var _el$15 = _$createElement("box"),
+          _el$16 = _$createElement("text"),
+          _el$18 = _$createElement("text");
+        _$insertNode(_el$15, _el$16);
+        _$insertNode(_el$15, _el$18);
+        _$setProp(_el$15, "flexDirection", "column");
+        _$setProp(_el$15, "gap", 1);
+        _$setProp(_el$15, "alignItems", "center");
+        _$insertNode(_el$16, _$createTextNode(`No usage data available yet.`));
+        _$insertNode(_el$18, _$createTextNode(`Start a conversation to see usage statistics.`));
+        _$effect(_p$ => {
+          var _v$6 = tone().space.lg,
+            _v$7 = theme.textMuted,
+            _v$8 = theme.textMuted;
+          _v$6 !== _p$.e && (_p$.e = _$setProp(_el$15, "padding", _v$6, _p$.e));
+          _v$7 !== _p$.t && (_p$.t = _$setProp(_el$16, "fg", _v$7, _p$.t));
+          _v$8 !== _p$.a && (_p$.a = _$setProp(_el$18, "fg", _v$8, _p$.a));
+          return _p$;
+        }, {
+          e: undefined,
+          t: undefined,
+          a: undefined
+        });
+        return _el$15;
+      }
+    }), null);
+    _$insert(_el$1, _$createComponent(Show, {
+      get when() {
+        return _$memo(() => !!!loading())() && hasData();
+      },
+      get children() {
+        return _$createComponent(Switch, {
+          get children() {
+            return [_$createComponent(Match, {
+              get when() {
+                return activeTab() === "overview";
+              },
+              get children() {
+                return _$createComponent(OverviewView, {
+                  get summary() {
+                    return summary();
+                  }
+                });
+              }
+            }), _$createComponent(Match, {
+              get when() {
+                return activeTab() === "daily";
+              },
+              get children() {
+                return _$createComponent(DailyView, {
+                  get summary() {
+                    return summary();
+                  }
+                });
+              }
+            }), _$createComponent(Match, {
+              get when() {
+                return activeTab() === "sessions";
+              },
+              get children() {
+                return _$createComponent(SessionsView, {
+                  get summary() {
+                    return summary();
+                  },
+                  get detailed() {
+                    return !props.sessionID;
+                  }
+                });
+              }
+            })];
+          }
+        });
+      }
+    }), null);
+    _$insertNode(_el$20, _el$21);
+    _$setProp(_el$20, "flexDirection", "row");
+    _$insertNode(_el$21, _$createTextNode(`Esc/q close`));
+    _$insert(_el$20, _$createComponent(Show, {
+      get when() {
+        return !props.sessionID;
+      },
+      get children() {
+        var _el$23 = _$createElement("text");
+        _$insertNode(_el$23, _$createTextNode(`1/2/3 tabs`));
+        _$effect(_$p => _$setProp(_el$23, "fg", theme.textMuted, _$p));
+        return _el$23;
+      }
+    }), null);
+    _$effect(_p$ => {
+      var _v$9 = props.sessionID ? 50 : 80,
+        _v$0 = tone().space.md,
+        _v$1 = theme.backgroundPanel,
+        _v$10 = theme.border,
+        _v$11 = tone().space.sm,
+        _v$12 = tone().space.md,
+        _v$13 = tone().space.sm,
+        _v$14 = {
+          fg: theme.accent,
+          bold: true
+        },
+        _v$15 = tone().space.md,
+        _v$16 = tone().space.sm,
+        _v$17 = theme.textMuted;
+      _v$9 !== _p$.e && (_p$.e = _$setProp(_el$, "width", _v$9, _p$.e));
+      _v$0 !== _p$.t && (_p$.t = _$setProp(_el$, "padding", _v$0, _p$.t));
+      _v$1 !== _p$.a && (_p$.a = _$setProp(_el$, "backgroundColor", _v$1, _p$.a));
+      _v$10 !== _p$.o && (_p$.o = _$setProp(_el$, "borderColor", _v$10, _p$.o));
+      _v$11 !== _p$.i && (_p$.i = _$setProp(_el$2, "gap", _v$11, _p$.i));
+      _v$12 !== _p$.n && (_p$.n = _$setProp(_el$2, "marginBottom", _v$12, _p$.n));
+      _v$13 !== _p$.s && (_p$.s = _$setProp(_el$3, "gap", _v$13, _p$.s));
+      _v$14 !== _p$.h && (_p$.h = _$setProp(_el$4, "style", _v$14, _p$.h));
+      _v$15 !== _p$.r && (_p$.r = _$setProp(_el$20, "gap", _v$15, _p$.r));
+      _v$16 !== _p$.d && (_p$.d = _$setProp(_el$20, "marginTop", _v$16, _p$.d));
+      _v$17 !== _p$.l && (_p$.l = _$setProp(_el$21, "fg", _v$17, _p$.l));
+      return _p$;
+    }, {
+      e: undefined,
+      t: undefined,
+      a: undefined,
+      o: undefined,
+      i: undefined,
+      n: undefined,
+      s: undefined,
+      h: undefined,
+      r: undefined,
+      d: undefined,
+      l: undefined
+    });
+    return _el$;
+  })();
+}
+function TabButton(props) {
+  const {
+    theme
+  } = useTheme();
+  const tone = useGIZZITheme();
+  return (() => {
+    var _el$25 = _$createElement("box"),
+      _el$26 = _$createElement("text"),
+      _el$27 = _$createElement("text");
+    _$insertNode(_el$25, _el$26);
+    _$insertNode(_el$25, _el$27);
+    _$setProp(_el$25, "flexDirection", "row");
+    _$insert(_el$26, () => props.shortcut);
+    _$insert(_el$27, () => props.label);
+    _$effect(_p$ => {
+      var _v$18 = tone().space.xs,
+        _v$19 = tone().space.sm,
+        _v$20 = props.active ? theme.backgroundElement : undefined,
+        _v$21 = props.onClick,
+        _v$22 = props.active ? theme.accent : theme.textMuted,
+        _v$23 = props.active ? theme.text : theme.textMuted;
+      _v$18 !== _p$.e && (_p$.e = _$setProp(_el$25, "gap", _v$18, _p$.e));
+      _v$19 !== _p$.t && (_p$.t = _$setProp(_el$25, "padding", _v$19, _p$.t));
+      _v$20 !== _p$.a && (_p$.a = _$setProp(_el$25, "backgroundColor", _v$20, _p$.a));
+      _v$21 !== _p$.o && (_p$.o = _$setProp(_el$25, "onMouseUp", _v$21, _p$.o));
+      _v$22 !== _p$.i && (_p$.i = _$setProp(_el$26, "fg", _v$22, _p$.i));
+      _v$23 !== _p$.n && (_p$.n = _$setProp(_el$27, "fg", _v$23, _p$.n));
+      return _p$;
+    }, {
+      e: undefined,
+      t: undefined,
+      a: undefined,
+      o: undefined,
+      i: undefined,
+      n: undefined
+    });
+    return _el$25;
+  })();
+}
+function OverviewView(props) {
+  return _$createComponent(UsagePanel, {
+    get summary() {
+      return props.summary;
+    },
+    view: "full"
+  });
+}
+function DailyView(props) {
+  const {
+    theme
+  } = useTheme();
+  const tone = useGIZZITheme();
+  const maxCost = () => Math.max(...props.summary.daily.map(d => d.total.cost), 0.01);
+  return (() => {
+    var _el$28 = _$createElement("box");
+    _$setProp(_el$28, "flexDirection", "column");
+    _$insert(_el$28, _$createComponent(For, {
+      get each() {
+        return props.summary.daily.slice(0, 14);
+      },
+      children: day => {
+        const percentage = () => Math.round(day.total.cost / maxCost() * 100);
+        const barWidth = 20;
+        const filled = () => Math.round(percentage() / 100 * barWidth);
+        const empty = () => barWidth - filled();
+        return (() => {
+          var _el$29 = _$createElement("box"),
+            _el$30 = _$createElement("box"),
+            _el$31 = _$createElement("text"),
+            _el$32 = _$createElement("span"),
+            _el$33 = _$createElement("box"),
+            _el$34 = _$createElement("text"),
+            _el$35 = _$createElement("text"),
+            _el$36 = _$createElement("text"),
+            _el$37 = _$createElement("box"),
+            _el$38 = _$createElement("text"),
+            _el$39 = _$createTextNode(` sessions`),
+            _el$40 = _$createElement("text"),
+            _el$42 = _$createElement("text"),
+            _el$43 = _$createTextNode(` messages`),
+            _el$44 = _$createElement("text"),
+            _el$46 = _$createElement("text"),
+            _el$47 = _$createTextNode(` tokens`);
+          _$insertNode(_el$29, _el$30);
+          _$insertNode(_el$29, _el$37);
+          _$setProp(_el$29, "flexDirection", "column");
+          _$insertNode(_el$30, _el$31);
+          _$insertNode(_el$30, _el$33);
+          _$insertNode(_el$30, _el$36);
+          _$setProp(_el$30, "flexDirection", "row");
+          _$setProp(_el$30, "alignItems", "center");
+          _$insertNode(_el$31, _el$32);
+          _$setProp(_el$31, "width", 10);
+          _$setProp(_el$31, "wrapMode", "none");
+          _$setProp(_el$32, "style", {
+            bold: true
+          });
+          _$insert(_el$32, () => formatDate(day.date));
+          _$insertNode(_el$33, _el$34);
+          _$insertNode(_el$33, _el$35);
+          _$setProp(_el$33, "flexDirection", "row");
+          _$insert(_el$34, () => "█".repeat(filled()));
+          _$insert(_el$35, () => "█".repeat(empty()));
+          _$setProp(_el$36, "width", 8);
+          _$setProp(_el$36, "wrapMode", "none");
+          _$insert(_el$36, () => SessionUsage.formatCost(day.total.cost));
+          _$insertNode(_el$37, _el$38);
+          _$insertNode(_el$37, _el$40);
+          _$insertNode(_el$37, _el$42);
+          _$insertNode(_el$37, _el$44);
+          _$insertNode(_el$37, _el$46);
+          _$setProp(_el$37, "flexDirection", "row");
+          _$insertNode(_el$38, _el$39);
+          _$insert(_el$38, () => String(day.sessions.length ?? 0), _el$39);
+          _$insertNode(_el$40, _$createTextNode(`•`));
+          _$insertNode(_el$42, _el$43);
+          _$insert(_el$42, () => String(day.total.messages ?? 0), _el$43);
+          _$insertNode(_el$44, _$createTextNode(`•`));
+          _$insertNode(_el$46, _el$47);
+          _$insert(_el$46, () => SessionUsage.formatTokens(day.total.tokens), _el$47);
+          _$effect(_p$ => {
+            var _v$24 = tone().space.xs,
+              _v$25 = tone().space.sm,
+              _v$26 = theme.backgroundElement,
+              _v$27 = tone().space.md,
+              _v$28 = theme.text,
+              _v$29 = theme.info,
+              _v$30 = theme.backgroundElement,
+              _v$31 = theme.accent,
+              _v$32 = tone().space.md,
+              _v$33 = theme.textMuted,
+              _v$34 = theme.textMuted,
+              _v$35 = theme.textMuted,
+              _v$36 = theme.textMuted,
+              _v$37 = theme.textMuted;
+            _v$24 !== _p$.e && (_p$.e = _$setProp(_el$29, "gap", _v$24, _p$.e));
+            _v$25 !== _p$.t && (_p$.t = _$setProp(_el$29, "padding", _v$25, _p$.t));
+            _v$26 !== _p$.a && (_p$.a = _$setProp(_el$29, "backgroundColor", _v$26, _p$.a));
+            _v$27 !== _p$.o && (_p$.o = _$setProp(_el$30, "gap", _v$27, _p$.o));
+            _v$28 !== _p$.i && (_p$.i = _$setProp(_el$31, "fg", _v$28, _p$.i));
+            _v$29 !== _p$.n && (_p$.n = _$setProp(_el$34, "fg", _v$29, _p$.n));
+            _v$30 !== _p$.s && (_p$.s = _$setProp(_el$35, "fg", _v$30, _p$.s));
+            _v$31 !== _p$.h && (_p$.h = _$setProp(_el$36, "fg", _v$31, _p$.h));
+            _v$32 !== _p$.r && (_p$.r = _$setProp(_el$37, "gap", _v$32, _p$.r));
+            _v$33 !== _p$.d && (_p$.d = _$setProp(_el$38, "fg", _v$33, _p$.d));
+            _v$34 !== _p$.l && (_p$.l = _$setProp(_el$40, "fg", _v$34, _p$.l));
+            _v$35 !== _p$.u && (_p$.u = _$setProp(_el$42, "fg", _v$35, _p$.u));
+            _v$36 !== _p$.c && (_p$.c = _$setProp(_el$44, "fg", _v$36, _p$.c));
+            _v$37 !== _p$.w && (_p$.w = _$setProp(_el$46, "fg", _v$37, _p$.w));
+            return _p$;
+          }, {
+            e: undefined,
+            t: undefined,
+            a: undefined,
+            o: undefined,
+            i: undefined,
+            n: undefined,
+            s: undefined,
+            h: undefined,
+            r: undefined,
+            d: undefined,
+            l: undefined,
+            u: undefined,
+            c: undefined,
+            w: undefined
+          });
+          return _el$29;
+        })();
+      }
+    }));
+    _$effect(_$p => _$setProp(_el$28, "gap", tone().space.sm, _$p));
+    return _el$28;
+  })();
+}
+function SessionsView(props) {
+  const {
+    theme
+  } = useTheme();
+  const tone = useGIZZITheme();
+  const maxCost = () => Math.max(...props.summary.sessions.map(s => s.total.cost), 0.01);
+  return (() => {
+    var _el$48 = _$createElement("box");
+    _$setProp(_el$48, "flexDirection", "column");
+    _$insert(_el$48, _$createComponent(For, {
+      get each() {
+        return props.summary.sessions.slice(0, props.detailed ? 20 : 5);
+      },
+      children: session => {
+        const percentage = () => Math.round(session.total.cost / maxCost() * 100);
+        const barWidth = props.detailed ? 20 : 15;
+        const filled = () => Math.round(percentage() / 100 * barWidth);
+        const empty = () => barWidth - filled();
+        return (() => {
+          var _el$49 = _$createElement("box"),
+            _el$50 = _$createElement("box"),
+            _el$51 = _$createElement("text"),
+            _el$52 = _$createElement("span"),
+            _el$56 = _$createElement("text"),
+            _el$57 = _$createElement("box"),
+            _el$58 = _$createElement("text"),
+            _el$59 = _$createTextNode(` messages`),
+            _el$60 = _$createElement("text"),
+            _el$62 = _$createElement("text"),
+            _el$63 = _$createTextNode(` tokens`);
+          _$insertNode(_el$49, _el$50);
+          _$insertNode(_el$49, _el$57);
+          _$setProp(_el$49, "flexDirection", "column");
+          _$insertNode(_el$50, _el$51);
+          _$insertNode(_el$50, _el$56);
+          _$setProp(_el$50, "flexDirection", "row");
+          _$setProp(_el$50, "alignItems", "center");
+          _$insertNode(_el$51, _el$52);
+          _$setProp(_el$51, "flexGrow", 1);
+          _$setProp(_el$52, "style", {
+            bold: true
+          });
+          _$insert(_el$52, () => formatSessionID(session.sessionID));
+          _$insert(_el$50, _$createComponent(Show, {
+            get when() {
+              return props.detailed;
+            },
+            get children() {
+              var _el$53 = _$createElement("box"),
+                _el$54 = _$createElement("text"),
+                _el$55 = _$createElement("text");
+              _$insertNode(_el$53, _el$54);
+              _$insertNode(_el$53, _el$55);
+              _$setProp(_el$53, "flexDirection", "row");
+              _$insert(_el$54, () => "█".repeat(filled()));
+              _$insert(_el$55, () => "█".repeat(empty()));
+              _$effect(_p$ => {
+                var _v$38 = theme.accent,
+                  _v$39 = theme.backgroundElement;
+                _v$38 !== _p$.e && (_p$.e = _$setProp(_el$54, "fg", _v$38, _p$.e));
+                _v$39 !== _p$.t && (_p$.t = _$setProp(_el$55, "fg", _v$39, _p$.t));
+                return _p$;
+              }, {
+                e: undefined,
+                t: undefined
+              });
+              return _el$53;
+            }
+          }), _el$56);
+          _$setProp(_el$56, "width", 8);
+          _$setProp(_el$56, "wrapMode", "none");
+          _$insert(_el$56, () => SessionUsage.formatCost(session.total.cost));
+          _$insertNode(_el$57, _el$58);
+          _$insertNode(_el$57, _el$60);
+          _$insertNode(_el$57, _el$62);
+          _$setProp(_el$57, "flexDirection", "row");
+          _$insertNode(_el$58, _el$59);
+          _$insert(_el$58, () => String(session.messageCount ?? 0), _el$59);
+          _$insertNode(_el$60, _$createTextNode(`•`));
+          _$insertNode(_el$62, _el$63);
+          _$insert(_el$62, () => SessionUsage.formatTokens(session.total.tokens), _el$63);
+          _$insert(_el$57, _$createComponent(Show, {
+            get when() {
+              return props.detailed;
+            },
+            get children() {
+              return [(() => {
+                var _el$64 = _$createElement("text");
+                _$insertNode(_el$64, _$createTextNode(`•`));
+                _$effect(_$p => _$setProp(_el$64, "fg", theme.textMuted, _$p));
+                return _el$64;
+              })(), (() => {
+                var _el$66 = _$createElement("text");
+                _$insert(_el$66, () => formatTime(session.startTime));
+                _$effect(_$p => _$setProp(_el$66, "fg", theme.textMuted, _$p));
+                return _el$66;
+              })()];
+            }
+          }), null);
+          _$effect(_p$ => {
+            var _v$40 = tone().space.xs,
+              _v$41 = tone().space.sm,
+              _v$42 = theme.backgroundElement,
+              _v$43 = tone().space.md,
+              _v$44 = theme.text,
+              _v$45 = theme.accent,
+              _v$46 = tone().space.md,
+              _v$47 = theme.textMuted,
+              _v$48 = theme.textMuted,
+              _v$49 = theme.textMuted;
+            _v$40 !== _p$.e && (_p$.e = _$setProp(_el$49, "gap", _v$40, _p$.e));
+            _v$41 !== _p$.t && (_p$.t = _$setProp(_el$49, "padding", _v$41, _p$.t));
+            _v$42 !== _p$.a && (_p$.a = _$setProp(_el$49, "backgroundColor", _v$42, _p$.a));
+            _v$43 !== _p$.o && (_p$.o = _$setProp(_el$50, "gap", _v$43, _p$.o));
+            _v$44 !== _p$.i && (_p$.i = _$setProp(_el$51, "fg", _v$44, _p$.i));
+            _v$45 !== _p$.n && (_p$.n = _$setProp(_el$56, "fg", _v$45, _p$.n));
+            _v$46 !== _p$.s && (_p$.s = _$setProp(_el$57, "gap", _v$46, _p$.s));
+            _v$47 !== _p$.h && (_p$.h = _$setProp(_el$58, "fg", _v$47, _p$.h));
+            _v$48 !== _p$.r && (_p$.r = _$setProp(_el$60, "fg", _v$48, _p$.r));
+            _v$49 !== _p$.d && (_p$.d = _$setProp(_el$62, "fg", _v$49, _p$.d));
+            return _p$;
+          }, {
+            e: undefined,
+            t: undefined,
+            a: undefined,
+            o: undefined,
+            i: undefined,
+            n: undefined,
+            s: undefined,
+            h: undefined,
+            r: undefined,
+            d: undefined
+          });
+          return _el$49;
+        })();
+      }
+    }));
+    _$effect(_$p => _$setProp(_el$48, "gap", tone().space.sm, _$p));
+    return _el$48;
+  })();
+}
+
+// Helpers
+function formatDate(dateStr) {
+  const date = new Date(dateStr);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (dateStr === today.toISOString().split("T")[0]) return "Today";
+  if (dateStr === yesterday.toISOString().split("T")[0]) return "Yesterday";
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric"
+  });
+}
+function formatSessionID(id) {
+  if (id.length > 20) return id.slice(0, 8) + "..." + id.slice(-6);
+  return id;
+}
+function formatTime(timestamp) {
+  return new Date(timestamp).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit"
+  });
+}

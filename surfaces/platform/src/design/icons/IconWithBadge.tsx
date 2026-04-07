@@ -3,7 +3,7 @@
  * 
  * Displays an icon with a notification badge (count or dot).
  * 
- * @module @a2r/platform/icons/IconWithBadge
+ * @module @allternit/platform/icons/IconWithBadge
  */
 
 import * as React from 'react';

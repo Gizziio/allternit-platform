@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "@allternit/sdk",
+  "version": "1.2.10",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./client": {
+      "import": "./dist/gen/client.js",
+      "types": "./dist/gen/client.d.ts"
+    },
+    "./server": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./tools": {
+      "import": "./dist/tools.js",
+      "types": "./dist/tools.d.ts"
+    },
+    "./computer-use": {
+      "import": "./dist/computer-use.js",
+      "types": "./dist/computer-use.d.ts"
+    }
+  },
+  "files": ["dist"]
+}

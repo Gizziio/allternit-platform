@@ -1,0 +1,17 @@
+import { insert as _$insert } from "@opentui/solid";
+import { createComponent as _$createComponent } from "@opentui/solid";
+import { setProp as _$setProp } from "@opentui/solid";
+import { createElement as _$createElement } from "@opentui/solid";
+import { GIZZIBanner } from "@/cli/ui/components/gizzi";
+import { MonolithLogo } from "@/cli/ui/components/gizzi/monolith-logo";
+export function Logo() {
+  return (() => {
+    var _el$ = _$createElement("box");
+    _$setProp(_el$, "flexDirection", "column");
+    _$setProp(_el$, "alignItems", "center");
+    _$setProp(_el$, "gap", 1);
+    _$insert(_el$, _$createComponent(MonolithLogo, {}), null);
+    _$insert(_el$, _$createComponent(GIZZIBanner, {}), null);
+    return _el$;
+  })();
+}

@@ -1,0 +1,155 @@
+import { cmd } from "@/cli/commands/cmd"
+import { UI } from "@/cli/ui/ui"
+import { Instance } from "@/runtime/context/project/instance"
+import { Filesystem } from "@/runtime/util/filesystem"
+import * as prompts from "@clack/prompts"
+import path from "path"
+import { EOL } from "os"
+
+// Simple QR code generation using ANSI blocks
+function generateQRCode(text: string, size = 2): string {
+  // This is a placeholder - in production you'd use a proper QR library
+  // For now, we'll create a visual representation
+  const lines: string[] = []
+  lines.push("")
+  lines.push(UI.Style.TEXT_INFO_BOLD + "Mobile Connection" + UI.Style.TEXT_NORMAL)
+  lines.push("")
+  lines.push("Scan this QR code with your mobile device:")
+  lines.push("")
+
+  // Create a visual QR-like pattern
+  const border = UI.Style.TEXT_DIM + "█" + UI.Style.TEXT_NORMAL
+  const block = "█"
+  const empty = " "
+
+  // Top border
+  lines.push("  " + border.repeat(20))
+
+  // QR pattern (simplified)
+  for (let i = 0; i < 10; i++) {
+    let row = "  " + border
+    for (let j = 0; j < 18; j++) {
+      // Create a pattern that looks like a QR code
+      const isPattern = (i + j) % 3 === 0 || i === 0 || i === 9 || j === 0 || j === 17
+      row += isPattern ? UI.Style.TEXT_SUCCESS + block + UI.Style.TEXT_NORMAL : empty
+    }
+    row += border
+    lines.push(row)
+  }
+
+  // Bottom border
+  lines.push("  " + border.repeat(20))
+  lines.push("")
+
+  return lines.join("\n")
+}
+
+function generateSessionUrl(sessionId?: string): string {
+  // Generate a URL for remote access
+  // In production, this would be a real URL to your remote server
+  const baseUrl = process.env.GIZZI_REMOTE_URL || "https://gizzi.dev/s"
+  const id = sessionId || generateSessionCode()
+  return `${baseUrl}/${id}`
+}
+
+function generateSessionCode(): string {
+  // Generate a short random code
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+  let code = ""
+  for (let i = 0; i < 6; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)]
+  }
+  return code
+}
+
+export const RemoteCommand = cmd({
+  command: "remote",
+  describe: "start remote control server or generate mobile connection",
+  builder: (yargs) =>
+    yargs
+      .option("server", {
+        type: "boolean",
+        alias: "s",
+        describe: "start remote control server",
+      })
+      .option("mobile", {
+        type: "boolean",
+        alias: "m",
+        describe: "show QR code for mobile connection",
+      })
+      .option("url", {
+        type: "boolean",
+        alias: "u",
+        describe: "show URL only",
+      })
+      .option("port", {
+        type: "number",
+        alias: "p",
+        default: 4096,
+        describe: "port for remote server",
+      })
+      .option("name", {
+        type: "string",
+        alias: "n",
+        describe: "name for this remote session",
+      }),
+  handler: async (args) => {
+    if (args.server) {
+      // Start remote control server
+      UI.empty()
+      UI.println(UI.Style.TEXT_INFO_BOLD + "Starting Remote Control Server..." + UI.Style.TEXT_NORMAL)
+      UI.println("")
+      UI.println(`  Port: ${UI.Style.TEXT_BOLD}${args.port}${UI.Style.TEXT_NORMAL}`)
+      UI.println(`  Name: ${UI.Style.TEXT_BOLD}${args.name || Instance.project.id}${UI.Style.TEXT_NORMAL}`)
+      UI.println("")
+      UI.println("Remote control allows you to:")
+      UI.println("  • Connect from Claude.ai or the Claude app")
+      UI.println("  • Control this session from a web browser")
+      UI.println("  • Share with team members")
+      UI.println("")
+      UI.println(UI.Style.TEXT_DIM + "Press Ctrl+C to stop the server" + UI.Style.TEXT_NORMAL)
+      UI.println("")
+
+      // In production, this would start an actual server
+      // For now, we show the concept
+      const url = generateSessionUrl()
+      UI.println(`Remote URL: ${UI.Style.TEXT_SUCCESS}${url}${UI.Style.TEXT_NORMAL}`)
+
+      // Keep running
+      await new Promise(() => {})
+      return
+    }
+
+    if (args.mobile || (!args.server && !args.url)) {
+      // Show mobile connection info
+      const url = generateSessionUrl()
+
+      UI.empty()
+      UI.println(generateQRCode(url))
+
+      UI.println("Or manually enter this URL:")
+      UI.println(`  ${UI.Style.TEXT_SUCCESS}${url}${UI.Style.TEXT_NORMAL}`)
+      UI.println("")
+
+      UI.println(UI.Style.TEXT_DIM + "Connection code: " + UI.Style.TEXT_NORMAL +
+        UI.Style.TEXT_BOLD + generateSessionCode() + UI.Style.TEXT_NORMAL)
+      UI.println("")
+
+      UI.println("To connect:")
+      UI.println("  1. Open Gizzi Mobile app or visit gizzi.dev/mobile")
+      UI.println("  2. Scan the QR code or enter the URL")
+      UI.println("  3. Enter the connection code if prompted")
+      UI.println("")
+
+      return
+    }
+
+    if (args.url) {
+      // Just show the URL
+      UI.println(generateSessionUrl())
+      return
+    }
+  },
+})
+
+// Note: /mobile command has been consolidated into /remote --mobile

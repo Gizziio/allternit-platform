@@ -1,0 +1,26 @@
+import type { McpServer } from "@agentclientprotocol/sdk"
+import type { A2RClient } from "@allternit/sdk"
+
+export interface ACPSessionState {
+  id: string
+  cwd: string
+  mcpServers: McpServer[]
+  createdAt: Date
+  model?: {
+    providerID: string
+    modelID: string
+  }
+  variant?: string
+  modeId?: string
+}
+
+// Use the real A2RClient type
+export type A2RClientLike = A2RClient
+
+export interface ACPConfig {
+  sdk: A2RClientLike
+  defaultModel?: {
+    providerID: string
+    modelID: string
+  }
+}

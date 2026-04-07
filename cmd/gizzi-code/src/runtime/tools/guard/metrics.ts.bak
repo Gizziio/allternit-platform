@@ -1,0 +1,184 @@
+import { Log } from "@/runtime/util/log"
+import { Global } from "@/runtime/context/global/global"
+import path from "path"
+import { appendFile } from "fs/promises"
+import { Filesystem } from "@/runtime/util/filesystem"
+
+export namespace GuardMetrics {
+  const log = Log.create({ service: "guard.metrics" })
+
+  export interface OTelGenAIMetrics {
+    // Standard GenAI metrics (OTel semantic conventions)
+    "gen_ai.usage.input_tokens": number
+    "gen_ai.usage.output_tokens": number
+    "gen_ai.usage.total_tokens": number
+    "gen_ai.request.count": number
+    "gen_ai.request.latency_ms": number
+    "gen_ai.errors.count": number
+    
+    // GIZZI-specific extensions
+    "gizzi.context.ratio": number
+    "gizzi.context.window": number
+    "gizzi.context.used": number
+    "gizzi.quota.ratio": number
+    "gizzi.guard.actions.count": number
+    "gizzi.guard.state": string
+  }
+
+  export interface MetricAttributes {
+    model: string
+    provider: string
+    runner: string
+    workspace: string
+    session_id: string
+    run_id: string
+    dag_node_id?: string
+  }
+
+  export interface MetricsSnapshot {
+    timestamp: number
+    metrics: Partial<OTelGenAIMetrics>
+    attributes: MetricAttributes
+  }
+
+  const METRICS_FILE = path.join(Global.Path.cache, "guard-metrics.jsonl")
+  let snapshot: MetricsSnapshot | undefined
+
+  /**
+   * Record a metrics snapshot
+   */
+  export async function record(
+    metrics: Partial<OTelGenAIMetrics>,
+    attributes: MetricAttributes
+  ): Promise<void> {
+    const entry: MetricsSnapshot = {
+      timestamp: Date.now(),
+      metrics,
+      attributes,
+    }
+
+    // Update in-memory snapshot
+    snapshot = entry
+
+    // Append to file
+    try {
+      const line = JSON.stringify(entry) + "\n"
+      await appendFile(METRICS_FILE, line, "utf-8")
+    } catch (e) {
+      log.error("Failed to write metrics", { error: e })
+    }
+  }
+
+  /**
+   * Get latest snapshot
+   */
+  export function getSnapshot(): MetricsSnapshot | undefined {
+    return snapshot
+  }
+
+  /**
+   * Read recent metrics from file
+   */
+  export async function readRecent(
+    options?: {
+      since?: number
+      limit?: number
+      session_id?: string
+    }
+  ): Promise<MetricsSnapshot[]> {
+    try {
+      const content = await Filesystem.readText(METRICS_FILE)
+      const lines = content.split("\n").filter(Boolean)
+      
+      const entries: MetricsSnapshot[] = lines
+        .map((line: string) => JSON.parse(line) as MetricsSnapshot)
+        .filter((entry: MetricsSnapshot) => {
+          if (options?.since && entry.timestamp < options.since) return false
+          if (options?.session_id && entry.attributes.session_id !== options.session_id) return false
+          return true
+        })
+        .sort((a: MetricsSnapshot, b: MetricsSnapshot) => b.timestamp - a.timestamp)
+
+      if (options?.limit) {
+        return entries.slice(0, options.limit)
+      }
+      return entries
+    } catch {
+      return []
+    }
+  }
+
+  /**
+   * Calculate slope (change per minute) for a metric
+   */
+  export function calculateSlope(
+    entries: MetricsSnapshot[],
+    metricKey: keyof OTelGenAIMetrics,
+    windowMinutes: number = 1
+  ): number {
+    if (entries.length < 2) return 0
+
+    const now = Date.now()
+    const windowMs = windowMinutes * 60 * 1000
+    
+    const recent = entries.filter(e => now - e.timestamp <= windowMs)
+    if (recent.length < 2) return 0
+
+    const oldest = recent[recent.length - 1]
+    const newest = recent[0]
+    
+    const timeDiffMs = newest.timestamp - oldest.timestamp
+    const timeDiffMinutes = timeDiffMs / 60000
+    if (timeDiffMinutes <= 0) return 0
+
+    const newestValue = newest.metrics[metricKey] as number ?? 0
+    const oldestValue = oldest.metrics[metricKey] as number ?? 0
+    return (newestValue - oldestValue) / timeDiffMinutes
+  }
+
+  /**
+   * Export metrics in OTel format for external collectors
+   */
+  export function toOTelFormat(snapshot: MetricsSnapshot): object {
+    return {
+      resourceMetrics: [{
+        resource: {
+          attributes: [
+            { key: "service.name", value: { stringValue: "gizzi-code" } },
+            { key: "service.version", value: { stringValue: "1.0.0" } },
+            { key: "session.id", value: { stringValue: snapshot.attributes.session_id } },
+          ],
+        },
+        scopeMetrics: [{
+          scope: { name: "gizzi.genai" },
+          metrics: Object.entries(snapshot.metrics).map(([name, value]) => ({
+            name,
+            gauge: {
+              dataPoints: [{
+                asDouble: value,
+                timeUnixNano: snapshot.timestamp * 1000000,
+                attributes: [
+                  { key: "model", value: { stringValue: snapshot.attributes.model } },
+                  { key: "provider", value: { stringValue: snapshot.attributes.provider } },
+                  { key: "runner", value: { stringValue: snapshot.attributes.runner } },
+                ],
+              }],
+            },
+          })),
+        }],
+      }],
+    }
+  }
+
+  /**
+   * Clear metrics file
+   */
+  export async function clear(): Promise<void> {
+    try {
+      await Filesystem.write(METRICS_FILE, "")
+      snapshot = undefined
+    } catch (e) {
+      log.error("Failed to clear metrics", { error: e })
+    }
+  }
+}

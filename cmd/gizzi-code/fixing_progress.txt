@@ -1,0 +1,61 @@
+Fixed files in chunk 3 (67 files total):
+
+## Files fixed with closing braces and syntax corrections:
+
+1. WebFetchPermissionRequest.tsx - Fixed missing const, if/else blocks, switch cases (was off by 6)
+2. WorkerBadge.tsx - Fixed 3 missing closing braces in memo blocks
+3. WorkerPendingPermission.tsx - Fixed 9 missing closing braces
+4. bashToolUseOptions.tsx - Fixed function declarations and if/else blocks
+5. hooks.ts - Fixed imports, switch cases, nested if blocks (was off by 9)
+6. powershellToolUseOptions.tsx - Fixed if/else and push blocks
+7. AddPermissionRules.tsx - Fixed switch cases and if blocks
+8. AddWorkspaceDirectory.tsx - Fixed 19+ structural issues
+9. PermissionRuleDescription.tsx - Fixed switch cases and returns
+10. PermissionRuleInput.tsx - Fixed destructuring and if blocks
+11. PermissionRuleList.tsx - Fixed 77+ structural issues (large file)
+12. RecentDenialsTab.tsx - Fixed useEffect blocks and arrow functions
+13. RemoveWorkspaceDirectory.tsx - Already clean
+14. WorkspaceTab.tsx - Fixed destructuring and return blocks
+15. shellPermissionHelpers.tsx - Fixed switch returns and JSX
+16. useShellPermissionFeedback.ts - Fixed nested ifs and function closings
+17. utils.ts - Fixed function closing
+18. wizard/types.ts - Fixed interface declarations and closings
+19. AppContext.tsx - Fixed reducer cases and useCallback blocks
+20. KeybindingContext.tsx - Fixed useCallback and useEffect
+21. ThemeContext.tsx - Fixed interface and function closings
+22. workerAgent.ts - Fixed class method closing
+23. daemon/main.ts - Fixed function declarations
+24. daemon/workerRegistry.ts - Fixed function declarations
+25. entrypoints/sdk/controlTypes.ts - Fixed interface declarations
+26. coreTypes.generated.ts - Fixed interface declarations
+27. hookTypes.ts - Fixed interface declarations and exports
+28. mcpTypes.ts - Fixed interface declarations
+29. messageTypes.ts - Fixed interface declarations and exports
+30. runtimeTypes.ts - Fixed type declarations
+31. sdkUtilityTypes.ts - Fixed interface declarations
+32. settingsTypes.generated.ts - Fixed interface declarations
+33. toolTypes.ts - Fixed interface declarations
+34. environment-runner/main.ts - Fixed function declarations
+35. useCommandRegistry.ts - Fixed useMemo and useCallback
+36. fileSuggestions.ts - Fixed 57+ structural issues (large file)
+37-51. useCanSwitchToExistingSubscription.tsx through usePluginInstallationStatus.tsx - Fixed notification hooks
+52-58. useRateLimitWarningNotification.tsx through useTeammateShutdownNotification.ts - Fixed notification hooks
+59. renderPlaceholder.ts - Fixed return statement
+60. PermissionContext.ts - Fixed 14+ structural issues in permission context
+61. coordinatorHandler.ts - Fixed try/catch and exports
+62. interactiveHandler.ts - Fixed 14+ structural issues
+63. swarmWorkerHandler.ts - Fixed promise handling and exports
+64. permissionLogging.ts - Fixed 6+ structural issues
+
+## Remaining files to fix:
+- unifiedSuggestions.ts
+- useApiKeyVerification.ts  
+- useArrowKeyHistory.tsx
+- useAssistantHistory.ts
+- useAwaySummary.ts
+- useBackgroundTaskNavigation.ts
+- useCanUseTool.tsx
+- useCancelRequest.ts
+- useChromeExtensionNotification.tsx
+- useClaudeCodeHintRecommendation.tsx
+- useClipboardImageHint.ts

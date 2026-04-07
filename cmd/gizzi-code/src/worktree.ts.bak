@@ -1,0 +1,26 @@
+/**
+ * Worktree Utilities
+ */
+
+import * as path from 'path'
+
+export interface WorktreePaths {
+  root: string
+  worktree: string
+}
+
+export function getWorktreePaths(cwd?: string): WorktreePaths {
+  const root = cwd || process.cwd()
+  return {
+    root,
+    worktree: root,
+  }
+}
+
+export async function createAgentWorktree(name: string): Promise<string> {
+  return path.join(process.cwd(), '.worktrees', name)
+}
+
+export async function removeAgentWorktree(name: string): Promise<void> {
+  // Implementation
+}

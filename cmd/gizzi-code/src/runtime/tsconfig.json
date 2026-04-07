@@ -1,0 +1,33 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": "../..",
+    "outDir": "../../.build/runtime"
+  },
+  "include": [
+    ".",
+    "../shared/**/*",
+    "../constants/**/*",
+    "../types/**/*",
+    "../config/**/*",
+    "../bootstrap/**/*",
+    "../utils/**/*",
+    "../state/**/*",
+    "../memdir/**/*",
+    "../outputStyles/**/*",
+    "../context/**/*",
+    "../commands.ts",
+    "../hooks.ts",
+    "../ink.ts",
+    "../worktree.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "../../.build",
+    "./claude-core/**/*",
+    "./integrations/**/*",
+    "**/*.bak"
+  ],
+  "references": []
+}

@@ -1,0 +1,17 @@
+/**
+ * Vitest Workspace Configuration
+ *
+ * Defines the test workspace for all A2R packages.
+ */
+
+import { defineWorkspace } from 'vitest/config';
+
+export default defineWorkspace([
+  // Governance and runtime packages
+  'domains/governance/a2r-governor/vitest.config.ts',
+  'domains/governance/a2r-lawlayer/vitest.config.ts',
+  'services/allternit-runtime/vitest.config.ts',
+
+  // Integration and E2E tests
+  'tests/vitest.config.ts',
+]);

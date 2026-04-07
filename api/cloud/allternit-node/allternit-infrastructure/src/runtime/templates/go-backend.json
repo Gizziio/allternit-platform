@@ -1,0 +1,86 @@
+{
+  "id": "go-backend",
+  "name": "Go Backend Development",
+  "description": "Go 1.21+ environment with Air hot-reload, delve debugger, and backend tools",
+  "version": "1.0.0",
+  "image": "mcr.microsoft.com/devcontainers/go:1.21",
+  "features": [
+    "ghcr.io/devcontainers/features/github-cli:1",
+    "ghcr.io/devcontainers/features/docker-in-docker:2",
+    "ghcr.io/devcontainers/features/kubectl-helm-minikube:1"
+  ],
+  "ports": [8080, 9090, 3000, 40000],
+  "postCreateCommand": "go install github.com/cosmtrek/air@latest && go install github.com/go-delve/delve/cmd/dlv@latest && go install golang.org/x/tools/gopls@latest && go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest && go install github.com/swaggo/swag/cmd/swag@latest",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.Go",
+        "humao.rest-client",
+        "zxh404.vscode-proto3",
+        "esbenp.prettier-vscode",
+        "github.copilot",
+        "github.copilot-chat"
+      ],
+      "settings": {
+        "gopls": {
+          "formatting.gofumpt": true,
+          "ui.diagnostic.annotations": {
+            "bounds": true,
+            "escape": true,
+            "inline": true,
+            "nil": true
+          }
+        },
+        "go.toolsManagement.autoUpdate": true,
+        "go.lintTool": "golangci-lint",
+        "go.lintOnSave": "package",
+        "go.formatTool": "goimports",
+        "go.useLanguageServer": true,
+        "go.diagnostic.vulncheck": "imports",
+        "go.buildOnSave": "workspace",
+        "go.vulncheck.OnSave": true,
+        "editor.formatOnSave": true,
+        "[go]": {
+          "editor.defaultFormatter": "golang.Go"
+        }
+      }
+    }
+  },
+  "variables": {
+    "GOPATH": {
+      "default": "/go",
+      "description": "Go workspace path"
+    },
+    "CGO_ENABLED": {
+      "default": "0",
+      "description": "Disable CGO for static builds"
+    }
+  },
+  "dockerfile": null,
+  "buildContext": null,
+  "mounts": [
+    {
+      "type": "volume",
+      "source": "go-mod-cache",
+      "target": "/go/pkg/mod"
+    },
+    {
+      "type": "volume",
+      "source": "go-build-cache",
+      "target": "/root/.cache/go-build"
+    }
+  ],
+  "containerEnv": {
+    "GOPATH": "/go",
+    "GOBIN": "/go/bin",
+    "PATH": "/go/bin:/usr/local/go/bin:${PATH}",
+    "CGO_ENABLED": "0",
+    "GO111MODULE": "on"
+  },
+  "remoteUser": "vscode",
+  "runArgs": [
+    "--cap-add=SYS_PTRACE",
+    "--security-opt",
+    "seccomp=unconfined"
+  ]
+}

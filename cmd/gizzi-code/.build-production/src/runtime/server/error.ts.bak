@@ -1,0 +1,64 @@
+import { ErrorEnvelope } from "@/runtime/server/response"
+
+export const ERRORS = {
+  400: {
+    description: "Bad request",
+    content: {
+      "application/json": {
+        schema: ErrorEnvelope(),
+      },
+    },
+  },
+  401: {
+    description: "Unauthorized",
+    content: {
+      "application/json": {
+        schema: ErrorEnvelope(),
+      },
+    },
+  },
+  403: {
+    description: "Forbidden",
+    content: {
+      "application/json": {
+        schema: ErrorEnvelope(),
+      },
+    },
+  },
+  404: {
+    description: "Not found",
+    content: {
+      "application/json": {
+        schema: ErrorEnvelope(),
+      },
+    },
+  },
+  409: {
+    description: "Conflict",
+    content: {
+      "application/json": {
+        schema: ErrorEnvelope(),
+      },
+    },
+  },
+  500: {
+    description: "Internal server error",
+    content: {
+      "application/json": {
+        schema: ErrorEnvelope(),
+      },
+    },
+  },
+  503: {
+    description: "Service unavailable",
+    content: {
+      "application/json": {
+        schema: ErrorEnvelope(),
+      },
+    },
+  },
+} as const
+
+export function errors(...codes: number[]) {
+  return Object.fromEntries(codes.map((code) => [code, ERRORS[code as keyof typeof ERRORS]]))
+}

@@ -8,7 +8,7 @@
 import React from 'react';
 import { AgentAvatar } from '@/components/Avatar';
 import { useAgentAvatar, DEFAULT_VISUAL_STATE } from '@/hooks/useAgentAvatar';
-import type { AvatarSize } from '@a2r/visual-state/types';
+import type { AvatarSize } from '@allternit/visual-state/types';
 import type { AvatarEmotion } from '@/lib/agents/character.types';
 import styles from './AvatarDisplay.module.css';
 

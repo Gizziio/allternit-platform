@@ -1,0 +1,79 @@
+import { createComponent as _$createComponent } from "@opentui/solid";
+import { createMemo, onMount } from "solid-js";
+import { useSync } from "@/cli/ui/tui/context/sync";
+import { DialogSelect } from "@/cli/ui/tui/ui/dialog-select";
+
+// Local TextPart type (SDK exports as unknown)
+
+import { Locale } from "@/shared/util/locale";
+import { useSDK } from "@/cli/ui/tui/context/sdk";
+import { useRoute } from "@/cli/ui/tui/context/route";
+import { useDialog } from "@/cli/ui/tui/ui/dialog";
+import { GIZZICopy } from "@/shared/brand";
+export function DialogForkFromTimeline(props) {
+  const sync = useSync();
+  const dialog = useDialog();
+  const sdk = useSDK();
+  const route = useRoute();
+  onMount(() => {
+    dialog.setSize("large");
+  });
+  const options = createMemo(() => {
+    const messages = sync.data.message[props.sessionID] ?? [];
+    const result = [];
+    for (const message of messages) {
+      const msg = message;
+      if (msg.role !== "user") continue;
+      const part = (sync.data.part[msg.id] ?? []).find(x => {
+        const p = x;
+        return p.type === "text" && !p.synthetic && !p.ignored;
+      });
+      if (!part) continue;
+      result.push({
+        title: part.text.replace(/\n/g, " "),
+        value: msg.id,
+        footer: Locale.time(msg.time?.created ?? 0),
+        onSelect: async dialog => {
+          const forked = await sdk.client.session.fork({
+            path: {
+              sessionID: props.sessionID
+            },
+            body: {
+              messageID: msg.id
+            }
+          });
+          const parts = sync.data.part[msg.id] ?? [];
+          const initialPrompt = parts.reduce((agg, part) => {
+            const p = part;
+            if (p.type === "text") {
+              if (!p.synthetic) agg.input += p.text;
+            }
+            if (p.type === "file") agg.parts.push(p);
+            return agg;
+          }, {
+            input: "",
+            parts: []
+          });
+          const forkedSession = sdk.requireData(forked, "Failed to fork session");
+          route.navigate({
+            sessionID: forkedSession.id,
+            type: "session",
+            initialPrompt
+          });
+          dialog.clear();
+        }
+      });
+    }
+    result.reverse();
+    return result;
+  });
+  return _$createComponent(DialogSelect, {
+    onMove: option => props.onMove(option.value),
+    get title() {
+      return GIZZICopy.dialogs.forkFromMessageTitle;
+    },
+    get options() {
+      return options();
+    }
+  });
+}

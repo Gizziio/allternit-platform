@@ -1,0 +1,323 @@
+/**
+ * Discord Webhook Normalizer
+ * 
+ * Transforms raw Discord webhook payloads into normalized events.
+ */
+
+import type {
+  DiscordWebhookPayload,
+  NormalizedWebhookEvent,
+  WebhookSource,
+} from '../types/webhook.types.js';
+import { v4 as uuidv4 } from 'uuid';
+import { createHash } from 'crypto';
+
+/**
+ * Normalize Discord webhook payload
+ */
+export function normalizeDiscordWebhook(
+  rawPayload: DiscordWebhookPayload
+): NormalizedWebhookEvent {
+  const { eventType, timestamp, rawPayload: originalRaw } = rawPayload;
+  
+  // Extract base components
+  const [category, action] = eventType.split('.');
+  
+  // Build actor
+  const actor = buildActor(rawPayload);
+  
+  // Build target
+  const target = buildTarget(rawPayload);
+  
+  // Build action description
+  const actionDesc = buildActionDescription(rawPayload, actor);
+  
+  // Build content
+  const content = buildContent(rawPayload);
+  
+  // Build context
+  const context: Record<string, string> = {
+    eventType: eventType,
+  };
+  
+  if (rawPayload.guild) {
+    context.guild = rawPayload.guild.name;
+    context.guildId = rawPayload.guild.id;
+  }
+  
+  if (rawPayload.channel) {
+    context.channel = rawPayload.channel.name;
+    context.channelId = rawPayload.channel.id;
+  }
+  
+  // Generate idempotency key
+  const idempotencyKey = generateIdempotencyKey(rawPayload);
+  
+  // Generate deterministic event ID
+  const eventId = generateEventId(rawPayload);
+  
+  return {
+    eventId,
+    source: 'discord' as WebhookSource,
+    type: `discord.${category}.${action}`,
+    timestamp: timestamp,
+    actor,
+    target,
+    action: {
+      type: mapActionType(action),
+      description: actionDesc,
+    },
+    content,
+    context,
+    idempotencyKey,
+    rawPayload: originalRaw as Record<string, unknown>,
+    metadata: {
+      receivedAt: new Date().toISOString(),
+      normalizerVersion: '1.0.0',
+    },
+  };
+}
+
+/**
+ * Build actor from Discord payload
+ */
+function buildActor(payload: DiscordWebhookPayload): NormalizedWebhookEvent['actor'] {
+  if (payload.author) {
+    return {
+      id: payload.author.id,
+      name: payload.author.username,
+      type: payload.author.bot ? 'bot' : 'human',
+    };
+  }
+  
+  if (payload.member) {
+    return {
+      id: payload.member.id,
+      name: payload.member.username,
+      type: 'human',
+    };
+  }
+  
+  if (payload.reaction?.userId) {
+    return {
+      id: payload.reaction.userId,
+      name: `User_${payload.reaction.userId.slice(0, 8)}`,
+      type: 'human',
+    };
+  }
+  
+  return undefined;
+}
+
+/**
+ * Build target from Discord payload
+ */
+function buildTarget(payload: DiscordWebhookPayload): NormalizedWebhookEvent['target'] {
+  // Message events
+  if (payload.message) {
+    return {
+      type: 'message',
+      id: payload.message.id,
+      name: payload.message.content.slice(0, 50) + (payload.message.content.length > 50 ? '...' : ''),
+    };
+  }
+  
+  // Channel events
+  if (payload.channel) {
+    return {
+      type: 'message',
+      id: payload.channel.id,
+      name: payload.channel.name,
+    };
+  }
+  
+  // Member events
+  if (payload.member) {
+    return {
+      type: 'message',
+      id: payload.member.id,
+      name: payload.member.username,
+    };
+  }
+  
+  return undefined;
+}
+
+/**
+ * Build action description
+ */
+function buildActionDescription(
+  payload: DiscordWebhookPayload,
+  actor?: NormalizedWebhookEvent['actor']
+): string {
+  const actorName = actor?.name || 'Unknown';
+  const eventType = payload.eventType;
+  
+  const descriptions: Record<string, string> = {
+    'message.create': `${actorName} sent a message`,
+    'message.update': `${actorName} edited a message`,
+    'message.delete': `${actorName} deleted a message`,
+    'member.join': `${actorName} joined the server`,
+    'member.leave': `${actorName} left the server`,
+    'reaction.add': `${actorName} added a reaction`,
+    'reaction.remove': `${actorName} removed a reaction`,
+  };
+  
+  return descriptions[eventType] || `${actorName} triggered ${eventType}`;
+}
+
+/**
+ * Build content from Discord payload
+ */
+function buildContent(payload: DiscordWebhookPayload): NormalizedWebhookEvent['content'] {
+  const content: NormalizedWebhookEvent['content'] = {};
+  
+  // Message content
+  if (payload.message?.content) {
+    content.text = payload.message.content;
+  }
+  
+  // Attachments
+  const attachments: Array<{ type: 'image' | 'file' | 'link'; url: string; filename?: string }> = [];
+  
+  if (payload.message?.attachments) {
+    for (const attachment of payload.message.attachments) {
+      const isImage = attachment.contentType?.startsWith('image/') || 
+                      attachment.filename?.match(/\.(png|jpg|jpeg|gif|webp)$/i);
+      
+      attachments.push({
+        type: isImage ? 'image' : 'file',
+        url: attachment.url,
+        filename: attachment.filename,
+      });
+    }
+  }
+  
+  if (attachments.length > 0) {
+    content.attachments = attachments;
+  }
+  
+  return Object.keys(content).length > 0 ? content : undefined;
+}
+
+/**
+ * Map Discord action to normalized action type
+ */
+function mapActionType(action: string): NonNullable<NormalizedWebhookEvent['action']>['type'] {
+  const typeMap: Record<string, NonNullable<NormalizedWebhookEvent['action']>['type']> = {
+    create: 'created',
+    update: 'updated',
+    delete: 'deleted',
+    join: 'created',
+    leave: 'deleted',
+    add: 'created',
+    remove: 'deleted',
+  };
+  
+  return typeMap[action] || 'updated';
+}
+
+/**
+ * Generate idempotency key for deduplication
+ */
+function generateIdempotencyKey(payload: DiscordWebhookPayload): string {
+  const components: string[] = [
+    payload.source,
+    payload.eventType,
+  ];
+  
+  // Add message ID if present
+  if (payload.message?.id) {
+    components.push(`msg:${payload.message.id}`);
+  }
+  
+  // Add member ID if present
+  if (payload.member?.id) {
+    components.push(`member:${payload.member.id}`);
+  }
+  
+  // Add channel ID if present
+  if (payload.channel?.id) {
+    components.push(`channel:${payload.channel.id}`);
+  }
+  
+  // Add guild ID if present
+  if (payload.guild?.id) {
+    components.push(`guild:${payload.guild.id}`);
+  }
+  
+  // Add timestamp rounded to minute
+  const minuteTimestamp = Math.floor(new Date(payload.timestamp).getTime() / 60000);
+  components.push(`min:${minuteTimestamp}`);
+  
+  const keyString = components.join('|');
+  return `dc_${createHash('sha256').update(keyString).digest('hex').slice(0, 16)}`;
+}
+
+/**
+ * Generate deterministic event ID
+ */
+function generateEventId(_payload: DiscordWebhookPayload): string {
+  return `evt_dc_${uuidv4()}`;
+}
+
+/**
+ * Check if Discord webhook requires agent action
+ */
+export function requiresAgentAction(payload: DiscordWebhookPayload): boolean {
+  const actionEvents: Set<string> = new Set([
+    'message.create',
+    'member.join',
+    'reaction.add',
+  ]);
+  
+  // Check for @mentions
+  const hasMention = !!(payload.message?.mentions && payload.message.mentions.length > 0);
+
+  return actionEvents.has(payload.eventType) || hasMention;
+}
+
+/**
+ * Infer agent role from Discord webhook
+ */
+export function inferAgentRole(payload: DiscordWebhookPayload): 'builder' | 'validator' | 'reviewer' | 'security' {
+  // Check message content for keywords
+  const content = payload.message?.content?.toLowerCase() || '';
+  
+  if (content.includes('review') || content.includes('pr') || content.includes('pull request')) {
+    return 'reviewer';
+  }
+  
+  if (content.includes('security') || content.includes('vulnerability') || content.includes('exploit')) {
+    return 'security';
+  }
+  
+  if (content.includes('test') || content.includes('validate') || content.includes('verify')) {
+    return 'validator';
+  }
+  
+  return 'builder';
+}
+
+/**
+ * Extract @mentions from Discord message
+ */
+export function extractMentions(payload: DiscordWebhookPayload): string[] {
+  const mentions: string[] = [];
+  
+  // Discord mentions
+  if (payload.message?.mentions) {
+    for (const mention of payload.message.mentions) {
+      mentions.push(mention.username);
+    }
+  }
+  
+  // Role mentions (convert to agent roles if applicable)
+  if (payload.message?.mentionRoles) {
+    for (const roleId of payload.message.mentionRoles) {
+      mentions.push(`role:${roleId}`);
+    }
+  }
+  
+  return mentions;
+}

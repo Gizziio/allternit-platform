@@ -1,0 +1,45 @@
+{
+  "name": "allternit-excel",
+  "version": "1.0.0",
+  "displayName": "Allternit for Excel",
+  "description": "Deep Excel automation — formulas, charts, tables, financial modeling, data validation. Generates and executes Office.js code directly in the workbook.",
+  "author": { "name": "Allternit" },
+  "host": "excel",
+  "requiredOfficeApi": "ExcelApi 1.9",
+  "systemPrompt": "system-prompt.md",
+  "skills": [
+    "skills/range-operations.md",
+    "skills/formula-generation.md",
+    "skills/table-operations.md",
+    "skills/chart-creation.md",
+    "skills/cell-formatting.md",
+    "skills/worksheet-management.md",
+    "skills/financial-modeling.md",
+    "skills/data-validation.md"
+  ],
+  "commands": [
+    { "name": "excel:analyze",  "description": "Analyze and summarize the selected range",          "file": "commands/excel-analyze.md" },
+    { "name": "excel:formula",  "description": "Generate a formula for the selected cell/range",    "file": "commands/excel-formula.md" },
+    { "name": "excel:chart",    "description": "Create a chart from the selected data",             "file": "commands/excel-chart.md" },
+    { "name": "excel:table",    "description": "Convert the selected range into a structured table", "file": "commands/excel-table.md" },
+    { "name": "excel:format",   "description": "Apply professional formatting to the selection",    "file": "commands/excel-format.md" },
+    { "name": "excel:model",    "description": "Build or extend a financial model scaffold",        "file": "commands/excel-model.md" },
+    { "name": "excel:clean",    "description": "Remove errors and standardize formats in selection", "file": "commands/excel-clean.md" }
+  ],
+  "cookbooks": [
+    { "name": "DCF Model",         "file": "cookbooks/dcf-model.md" },
+    { "name": "Dashboard Builder", "file": "cookbooks/dashboard-creation.md" },
+    { "name": "Data Cleaner",      "file": "cookbooks/data-cleaning.md" },
+    { "name": "Pivot Reporter",    "file": "cookbooks/pivot-analysis.md" }
+  ],
+  "tools": "tools/tool-definitions.ts",
+  "executionPattern": "code-generation",
+  "errorRecovery": {
+    "maxRetries": 3,
+    "feedErrorToAgent": true,
+    "complexityLimits": {
+      "maxLinesPerStep": 30,
+      "maxInsertOperationsPerStep": 5
+    }
+  }
+}

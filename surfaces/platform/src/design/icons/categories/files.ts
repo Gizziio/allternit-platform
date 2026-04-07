@@ -3,7 +3,7 @@
  * 
  * Icons for files, folders, and document management.
  * 
- * @module @a2r/platform/icons/categories/files
+ * @module @allternit/platform/icons/categories/files
  */
 
 export const fileIcons = [

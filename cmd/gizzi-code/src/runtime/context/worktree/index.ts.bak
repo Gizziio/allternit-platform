@@ -1,0 +1,12 @@
+/**
+ * Worktree Context
+ */
+
+export interface WorktreeInfo {
+  path: string
+  isMain: boolean
+}
+
+export function getWorktreeInfo(): WorktreeInfo | null {
+  return null
+}

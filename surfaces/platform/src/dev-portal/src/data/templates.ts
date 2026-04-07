@@ -34,7 +34,7 @@ export const pluginTemplates: PluginTemplate[] = [
       },
       {
         path: 'index.js',
-        content: `import { a2r } from '@a2r/sdk';
+        content: `import { a2r } from '@allternit/sdk';
 import manifest from './plugin.json';
 
 // Register the plugin
@@ -54,7 +54,7 @@ plugin.on('disable', () => {
       },
     ],
     dependencies: {
-      '@a2r/sdk': '^1.0.0',
+      '@allternit/sdk': '^1.0.0',
     },
     usedCount: 1250,
     rating: 4.8,
@@ -111,7 +111,7 @@ plugin.on('disable', () => {
         path: 'src/index.tsx',
         content: `import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { a2r } from '@a2r/sdk';
+import { a2r } from '@allternit/sdk';
 import manifest from '../plugin.json';
 import { App } from './App';
 
@@ -152,7 +152,7 @@ export const App: React.FC = () => {
       },
     ],
     dependencies: {
-      '@a2r/sdk': '^1.0.0',
+      '@allternit/sdk': '^1.0.0',
       'react': '^18.2.0',
       'react-dom': '^18.2.0',
     },
@@ -180,7 +180,7 @@ export const App: React.FC = () => {
     files: [
       {
         path: 'src/ai/complete.ts',
-        content: `import { a2r } from '@a2r/sdk';
+        content: `import { a2r } from '@allternit/sdk';
 
 export async function generateWithContext(
   prompt: string,
@@ -214,7 +214,7 @@ export async function generateWithContext(
       },
     ],
     dependencies: {
-      '@a2r/sdk': '^1.0.0',
+      '@allternit/sdk': '^1.0.0',
     },
     usedCount: 980,
     rating: 4.7,
@@ -238,7 +238,7 @@ export async function generateWithContext(
     ],
     files: [],
     dependencies: {
-      '@a2r/sdk': '^1.0.0',
+      '@allternit/sdk': '^1.0.0',
     },
     usedCount: 756,
     rating: 4.6,
@@ -262,7 +262,7 @@ export async function generateWithContext(
     ],
     files: [],
     dependencies: {
-      '@a2r/sdk': '^1.0.0',
+      '@allternit/sdk': '^1.0.0',
     },
     usedCount: 623,
     rating: 4.5,
@@ -286,7 +286,7 @@ export async function generateWithContext(
     ],
     files: [],
     dependencies: {
-      '@a2r/sdk': '^1.0.0',
+      '@allternit/sdk': '^1.0.0',
     },
     usedCount: 445,
     rating: 4.4,

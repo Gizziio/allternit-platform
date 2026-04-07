@@ -1,0 +1,15 @@
+/**
+ * ARS Contexta Runtime
+ */
+
+export interface ArsContextaRuntime {
+  sessionId: string
+  context: Record<string, unknown>
+}
+
+export function getArsContextaRuntime(): ArsContextaRuntime {
+  return {
+    sessionId: '',
+    context: {},
+  }
+}

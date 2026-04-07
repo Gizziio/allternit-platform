@@ -1,0 +1,105 @@
+/**
+ * Deterministic Execution Provider (Kernel Port)
+ * 
+ * Bridges the A2R Kernel to the DAK Ralph Loop.
+ * Provides high-integrity, verified execution for critical tools.
+ */
+
+import { ToolRequest, ToolResponse } from './tool-executor.js';
+// Real DAK Runner Imports (Localized into Kernel)
+import { createRalphLoop } from './operator/dak/ralph.js';
+import { createWorkerManager } from './operator/dak/worker-manager.js';
+import { createPlanManager } from './operator/dak/plan-manager.js';
+
+export interface DAKProviderConfig {
+  useRalphLoop: boolean;
+  maxFixCycles: number;
+  workDir: string;
+}
+
+export class DeterministicExecutionProvider {
+  private config: DAKProviderConfig;
+  private workerManager: any;
+  private planManager: any;
+  private ralphLoop: any;
+
+  constructor(config?: Partial<DAKProviderConfig>) {
+    this.config = {
+      useRalphLoop: true,
+      maxFixCycles: 3,
+      workDir: process.env.ALLTERNIT_WORK_DIR || './.allternit/work',
+      ...config
+    };
+
+    // Initialize real DAK components
+    this.workerManager = createWorkerManager();
+    this.planManager = createPlanManager(this.config.workDir);
+    this.ralphLoop = createRalphLoop(this.workerManager, this.planManager, {
+      maxFixCycles: this.config.maxFixCycles,
+      enableParallelValidation: false,
+    });
+  }
+
+  /**
+   * Executes a tool request through the high-integrity Ralph Loop.
+   * This now performs a real Builder -> Validator cycle.
+   */
+  async executeVerified(request: ToolRequest): Promise<ToolResponse> {
+    console.log(`[DAK Provider] Starting Ralph Loop for: ${request.tool}`);
+    
+    try {
+      // 1. Prepare full request for real RalphLoop
+      const executionRequest = {
+        dagId: 'operator_dag',
+        nodeId: `task_${Date.now()}`,
+        wihId: `wih_${Date.now()}`,
+        runId: request.context?.sessionId || 'op_run',
+        baseContextPack: { files: [] } as any,
+        basePolicyBundle: { 
+          bundle_id: 'op_policy', 
+          constraints: {
+            allowed_tools: ['click', 'type', 'hover', 'scroll', 'Read', 'Glob'],
+            write_scope: { allowed_globs: ['**/*'] },
+            network_policy: 'none'
+          } 
+        } as any,
+        planFiles: {
+          planPath: 'plan.md',
+          todoPath: 'todo.md',
+          progressPath: 'progress.md',
+          findingsPath: 'findings.md'
+        }
+      };
+
+      // 2. Execute via real Ralph Loop
+      // The loop will spawn a Builder to run the tool and a Validator to check it
+      const result = await this.ralphLoop.executeNode(executionRequest);
+
+      if (result.status === 'done') {
+        return {
+          success: true,
+          output: typeof result.output === 'string' ? result.output : JSON.stringify(result.output),
+          metadata: {
+            execution_mode: 'deterministic',
+            integrity_check: 'passed',
+            cycles: result.cycles || 1,
+            validator_report: result.validation_report
+          }
+        };
+      } else {
+        return {
+          success: false,
+          output: '',
+          error: `Integrity check failed: ${result.error || 'Validation rejected the action'}`
+        };
+      }
+    } catch (err: any) {
+      console.error(`[DAK Provider] Ralph Loop crashed:`, err);
+      return {
+        success: false,
+        output: '',
+        error: `Deterministic execution error: ${err.message}`
+      };
+    }
+  }
+}

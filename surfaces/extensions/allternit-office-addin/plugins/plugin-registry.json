@@ -1,0 +1,47 @@
+{
+  "version": "1.0.0",
+  "description": "Allternit Office Add-in plugin registry — exclusive plugins for Excel, PowerPoint, and Word surfaces",
+  "surface": "office-addin",
+  "exclusive": true,
+  "plugins": [
+    {
+      "id": "allternit-excel",
+      "name": "Allternit for Excel",
+      "description": "Deep Excel automation — formulas, charts, tables, financial modeling, data validation",
+      "version": "1.0.0",
+      "host": "excel",
+      "icon": "📊",
+      "requiredOfficeApi": "ExcelApi 1.9",
+      "path": "./excel",
+      "tags": ["excel", "spreadsheet", "data", "formulas", "charts", "financial"],
+      "exclusive": true,
+      "bundled": true
+    },
+    {
+      "id": "allternit-powerpoint",
+      "name": "Allternit for PowerPoint",
+      "description": "Slide creation, design, content generation, and deck automation for PowerPoint",
+      "version": "1.0.0",
+      "host": "powerpoint",
+      "icon": "📽️",
+      "requiredOfficeApi": "PowerPointApi 1.3",
+      "path": "./powerpoint",
+      "tags": ["powerpoint", "slides", "design", "presentation", "deck"],
+      "exclusive": true,
+      "bundled": true
+    },
+    {
+      "id": "allternit-word",
+      "name": "Allternit for Word",
+      "description": "Document drafting, editing, redlining, style application, and structured content for Word",
+      "version": "1.0.0",
+      "host": "word",
+      "icon": "📄",
+      "requiredOfficeApi": "WordApi 1.4",
+      "path": "./word",
+      "tags": ["word", "document", "writing", "editing", "redline", "contracts"],
+      "exclusive": true,
+      "bundled": true
+    }
+  ]
+}

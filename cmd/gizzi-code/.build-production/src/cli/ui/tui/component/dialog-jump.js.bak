@@ -1,0 +1,301 @@
+import { createComponent as _$createComponent } from "@opentui/solid";
+import { effect as _$effect } from "@opentui/solid";
+import { use as _$use } from "@opentui/solid";
+import { insert as _$insert } from "@opentui/solid";
+import { createTextNode as _$createTextNode } from "@opentui/solid";
+import { insertNode as _$insertNode } from "@opentui/solid";
+import { setProp as _$setProp } from "@opentui/solid";
+import { createElement as _$createElement } from "@opentui/solid";
+import { createSignal, createMemo, For, Show } from "solid-js";
+import { useDialog } from "@/cli/ui/tui/ui/dialog";
+import { useTheme } from "@/cli/ui/tui/context/theme";
+import { useGIZZITheme } from "@/cli/ui/components/gizzi";
+import { useKeyboard } from "@opentui/solid";
+export function DialogJump(props) {
+  const dialog = useDialog();
+  const {
+    theme
+  } = useTheme();
+  const tone = useGIZZITheme();
+  const [input, setInput] = createSignal("");
+  const [error, setError] = createSignal(null);
+  let inputRef;
+  const suggestions = createMemo(() => {
+    const val = input().trim();
+    if (!val) return [];
+    const num = parseInt(val);
+    if (isNaN(num)) return [];
+
+    // Suggest nearby message numbers
+    const suggestions = [];
+    if (num >= 1 && num <= props.totalMessages) {
+      suggestions.push({
+        label: `Message ${num}`,
+        index: num - 1
+      });
+    }
+
+    // Add relative suggestions
+    if (props.currentIndex !== undefined) {
+      const current = props.currentIndex + 1;
+      if (num !== current) {
+        suggestions.push({
+          label: `Current (${current})`,
+          index: props.currentIndex
+        });
+      }
+      if (num !== 1) {
+        suggestions.push({
+          label: `First message`,
+          index: 0
+        });
+      }
+      if (num !== props.totalMessages) {
+        suggestions.push({
+          label: `Last message (${props.totalMessages})`,
+          index: props.totalMessages - 1
+        });
+      }
+    }
+    return suggestions.slice(0, 5);
+  });
+  const handleJump = index => {
+    if (index >= 0 && index < props.totalMessages) {
+      props.onJump(index);
+      dialog.clear();
+    } else {
+      setError(`Invalid message number (1-${props.totalMessages})`);
+    }
+  };
+  const handleSubmit = () => {
+    const val = input().trim();
+    if (!val) {
+      dialog.clear();
+      return;
+    }
+    const num = parseInt(val);
+    if (isNaN(num)) {
+      setError("Please enter a number");
+      return;
+    }
+    handleJump(num - 1); // Convert to 0-based index
+  };
+  useKeyboard(evt => {
+    if (evt.name === "escape") {
+      dialog.clear();
+      return;
+    }
+    if (evt.name === "return") {
+      evt.preventDefault();
+      handleSubmit();
+      return;
+    }
+
+    // Number input validation
+    if (/^[0-9]$/.test(evt.name)) {
+      // Allow numbers
+      return;
+    }
+
+    // Navigation in suggestions
+    if (evt.name === "up" || evt.name === "down") {
+      // Would need more complex state management for suggestion selection
+      return;
+    }
+  });
+  return (() => {
+    var _el$ = _$createElement("box"),
+      _el$2 = _$createElement("box"),
+      _el$3 = _$createElement("span"),
+      _el$5 = _$createElement("box"),
+      _el$6 = _$createElement("text"),
+      _el$7 = _$createTextNode(`Message # (1-`),
+      _el$8 = _$createTextNode(`):`),
+      _el$9 = _$createElement("box"),
+      _el$0 = _$createElement("textarea"),
+      _el$13 = _$createElement("box"),
+      _el$14 = _$createElement("text"),
+      _el$16 = _$createElement("text");
+    _$insertNode(_el$, _el$2);
+    _$insertNode(_el$, _el$5);
+    _$insertNode(_el$, _el$9);
+    _$insertNode(_el$, _el$13);
+    _$setProp(_el$, "flexDirection", "column");
+    _$setProp(_el$, "width", 50);
+    _$setProp(_el$, "borderStyle", "single");
+    _$insertNode(_el$2, _el$3);
+    _$setProp(_el$2, "flexDirection", "row");
+    _$insertNode(_el$3, _$createTextNode(`⏩ Jump to Message`));
+    _$insertNode(_el$5, _el$6);
+    _$setProp(_el$5, "flexDirection", "row");
+    _$insertNode(_el$6, _el$7);
+    _$insertNode(_el$6, _el$8);
+    _$insert(_el$6, () => String(props.totalMessages ?? 0), _el$8);
+    _$insertNode(_el$9, _el$0);
+    _$setProp(_el$9, "flexDirection", "row");
+    _$use(el => {
+      inputRef = el;
+    }, _el$0);
+    _$setProp(_el$0, "onContentChange", () => {
+      if (inputRef && !inputRef.isDestroyed) {
+        setInput(inputRef.plainText);
+        setError(null);
+      }
+    });
+    _$setProp(_el$0, "minHeight", 1);
+    _$setProp(_el$0, "maxHeight", 1);
+    _$setProp(_el$0, "width", 20);
+    _$insert(_el$, _$createComponent(Show, {
+      get when() {
+        return error();
+      },
+      get children() {
+        var _el$1 = _$createElement("text");
+        _$insert(_el$1, error);
+        _$effect(_p$ => {
+          var _v$ = theme.error,
+            _v$2 = tone().space.sm;
+          _v$ !== _p$.e && (_p$.e = _$setProp(_el$1, "fg", _v$, _p$.e));
+          _v$2 !== _p$.t && (_p$.t = _$setProp(_el$1, "marginBottom", _v$2, _p$.t));
+          return _p$;
+        }, {
+          e: undefined,
+          t: undefined
+        });
+        return _el$1;
+      }
+    }), _el$13);
+    _$insert(_el$, _$createComponent(Show, {
+      get when() {
+        return suggestions().length > 0;
+      },
+      get children() {
+        var _el$10 = _$createElement("box"),
+          _el$11 = _$createElement("text");
+        _$insertNode(_el$10, _el$11);
+        _$setProp(_el$10, "flexDirection", "column");
+        _$insertNode(_el$11, _$createTextNode(`Suggestions:`));
+        _$insert(_el$10, _$createComponent(For, {
+          get each() {
+            return suggestions();
+          },
+          children: suggestion => (() => {
+            var _el$18 = _$createElement("box"),
+              _el$19 = _$createElement("text"),
+              _el$20 = _$createElement("text");
+            _$insertNode(_el$18, _el$19);
+            _$insertNode(_el$18, _el$20);
+            _$setProp(_el$18, "flexDirection", "row");
+            _$setProp(_el$18, "onMouseUp", () => handleJump(suggestion.index));
+            _$insert(_el$19, () => String(suggestion.index + 1));
+            _$insert(_el$20, () => suggestion.label);
+            _$effect(_p$ => {
+              var _v$23 = tone().space.sm,
+                _v$24 = tone().space.sm,
+                _v$25 = theme.backgroundElement,
+                _v$26 = theme.accent,
+                _v$27 = theme.textMuted;
+              _v$23 !== _p$.e && (_p$.e = _$setProp(_el$18, "gap", _v$23, _p$.e));
+              _v$24 !== _p$.t && (_p$.t = _$setProp(_el$18, "padding", _v$24, _p$.t));
+              _v$25 !== _p$.a && (_p$.a = _$setProp(_el$18, "backgroundColor", _v$25, _p$.a));
+              _v$26 !== _p$.o && (_p$.o = _$setProp(_el$19, "fg", _v$26, _p$.o));
+              _v$27 !== _p$.i && (_p$.i = _$setProp(_el$20, "fg", _v$27, _p$.i));
+              return _p$;
+            }, {
+              e: undefined,
+              t: undefined,
+              a: undefined,
+              o: undefined,
+              i: undefined
+            });
+            return _el$18;
+          })()
+        }), null);
+        _$effect(_p$ => {
+          var _v$3 = tone().space.xs,
+            _v$4 = tone().space.sm,
+            _v$5 = theme.textMuted;
+          _v$3 !== _p$.e && (_p$.e = _$setProp(_el$10, "gap", _v$3, _p$.e));
+          _v$4 !== _p$.t && (_p$.t = _$setProp(_el$10, "marginTop", _v$4, _p$.t));
+          _v$5 !== _p$.a && (_p$.a = _$setProp(_el$11, "fg", _v$5, _p$.a));
+          return _p$;
+        }, {
+          e: undefined,
+          t: undefined,
+          a: undefined
+        });
+        return _el$10;
+      }
+    }), _el$13);
+    _$insertNode(_el$13, _el$14);
+    _$insertNode(_el$13, _el$16);
+    _$setProp(_el$13, "flexDirection", "row");
+    _$insertNode(_el$14, _$createTextNode(`Enter to jump`));
+    _$insertNode(_el$16, _$createTextNode(`Esc to cancel`));
+    _$effect(_p$ => {
+      var _v$6 = tone().space.md,
+        _v$7 = theme.backgroundPanel,
+        _v$8 = theme.border,
+        _v$9 = tone().space.sm,
+        _v$0 = tone().space.md,
+        _v$1 = {
+          fg: theme.accent,
+          bold: true
+        },
+        _v$10 = tone().space.sm,
+        _v$11 = tone().space.sm,
+        _v$12 = theme.textMuted,
+        _v$13 = tone().space.sm,
+        _v$14 = tone().space.md,
+        _v$15 = input(),
+        _v$16 = `1-${props.totalMessages}`,
+        _v$17 = theme.text,
+        _v$18 = theme.text,
+        _v$19 = tone().space.md,
+        _v$20 = tone().space.md,
+        _v$21 = theme.textMuted,
+        _v$22 = theme.textMuted;
+      _v$6 !== _p$.e && (_p$.e = _$setProp(_el$, "padding", _v$6, _p$.e));
+      _v$7 !== _p$.t && (_p$.t = _$setProp(_el$, "backgroundColor", _v$7, _p$.t));
+      _v$8 !== _p$.a && (_p$.a = _$setProp(_el$, "borderColor", _v$8, _p$.a));
+      _v$9 !== _p$.o && (_p$.o = _$setProp(_el$2, "gap", _v$9, _p$.o));
+      _v$0 !== _p$.i && (_p$.i = _$setProp(_el$2, "marginBottom", _v$0, _p$.i));
+      _v$1 !== _p$.n && (_p$.n = _$setProp(_el$3, "style", _v$1, _p$.n));
+      _v$10 !== _p$.s && (_p$.s = _$setProp(_el$5, "gap", _v$10, _p$.s));
+      _v$11 !== _p$.h && (_p$.h = _$setProp(_el$5, "marginBottom", _v$11, _p$.h));
+      _v$12 !== _p$.r && (_p$.r = _$setProp(_el$6, "fg", _v$12, _p$.r));
+      _v$13 !== _p$.d && (_p$.d = _$setProp(_el$9, "gap", _v$13, _p$.d));
+      _v$14 !== _p$.l && (_p$.l = _$setProp(_el$9, "marginBottom", _v$14, _p$.l));
+      _v$15 !== _p$.u && (_p$.u = _$setProp(_el$0, "initialValue", _v$15, _p$.u));
+      _v$16 !== _p$.c && (_p$.c = _$setProp(_el$0, "placeholder", _v$16, _p$.c));
+      _v$17 !== _p$.w && (_p$.w = _$setProp(_el$0, "textColor", _v$17, _p$.w));
+      _v$18 !== _p$.m && (_p$.m = _$setProp(_el$0, "focusedTextColor", _v$18, _p$.m));
+      _v$19 !== _p$.f && (_p$.f = _$setProp(_el$13, "gap", _v$19, _p$.f));
+      _v$20 !== _p$.y && (_p$.y = _$setProp(_el$13, "marginTop", _v$20, _p$.y));
+      _v$21 !== _p$.g && (_p$.g = _$setProp(_el$14, "fg", _v$21, _p$.g));
+      _v$22 !== _p$.p && (_p$.p = _$setProp(_el$16, "fg", _v$22, _p$.p));
+      return _p$;
+    }, {
+      e: undefined,
+      t: undefined,
+      a: undefined,
+      o: undefined,
+      i: undefined,
+      n: undefined,
+      s: undefined,
+      h: undefined,
+      r: undefined,
+      d: undefined,
+      l: undefined,
+      u: undefined,
+      c: undefined,
+      w: undefined,
+      m: undefined,
+      f: undefined,
+      y: undefined,
+      g: undefined,
+      p: undefined
+    });
+    return _el$;
+  })();
+}

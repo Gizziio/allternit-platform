@@ -1,0 +1,83 @@
+================================================================================
+GIzzI INK TUI - CONTEXT HYDRATION FOR NEW AGENT
+================================================================================
+
+SUMMARY:
+--------
+Port the full Claude Code TUI from free-code (Ink/React) to gizzi-code's 
+Ink implementation. Move away from OpenTUI (SolidJS) entirely.
+
+SOURCE:  /Users/macbook/free-code/  (1,909 files, 33MB, full Ink TUI)
+DEST:    src/cli/ui/ink-app/        (minimal, needs full port)
+
+WHAT'S WORKING:
+---------------
+- Build: bun run build (80MB binary) ✓
+- Basic flow: Boot → Discretion → Main ✓
+- Simple command palette ✓
+- Harness service stub ✓
+
+WHAT NEEDS PORTING (from free-code):
+------------------------------------
+P0: Core Ink components from /free-code/src/ink/components/
+P0: Main screen: /free-code/src/screens/REPL.tsx
+P0: Messages: /free-code/src/components/Messages.tsx + deps
+P1: Input: /free-code/src/components/PromptInput/
+P1: 45+ dialogs from /free-code/src/components/
+P2: Tool visualization components
+P3: All hooks from /free-code/src/hooks/
+
+KEY FILES TO READ:
+------------------
+/Users/macbook/free-code/src/screens/REPL.tsx        (3000+ lines, main screen)
+/Users/macbook/free-code/src/ink.tsx                 (core exports)
+/Users/macbook/free-code/src/components/Messages.tsx (message rendering)
+/Users/macbook/free-code/src/commands.ts             (207 slash commands)
+
+INTEGRATION POINTS:
+-------------------
+- Harness: src/cli/ui/ink-app/services/harness.ts (already created)
+- App entry: src/cli/ui/ink-app/app.tsx (replace MainScreen)
+- Theme: adapt free-code's theme to gizzi-code
+
+IMPORT MAPPING:
+---------------
+from '../ink.js' → from './core/ink.js'
+from '../utils/' → from '@/shared/util/'
+from '../hooks/' → from './hooks/'
+
+BUILD & TEST:
+-------------
+cd /Users/macbook/Desktop/allternit-workspace/allternit/cmd/gizzi-code
+bun run build
+./dist/gizzi-code-darwin-arm64 ink
+
+STRATEGY:
+---------
+1. Copy entire directories from free-code
+2. Adapt imports only
+3. Keep structure identical
+4. Test incrementally
+5. Don't reinvent - free-code is the reference
+
+HANDOFF DOCUMENTS:
+------------------
+INK_TUI_HANDOFF.md      - Full context and architecture
+INK_TUI_QUICKSTART.md   - Quick reference for new agent
+CONTEXT_HYDRATION.txt   - This file (summary)
+
+PREVIOUS AGENT MISTAKES:
+------------------------
+❌ Referenced OpenTUI (SolidJS) instead of free-code (Ink)
+❌ Tried to rebuild components instead of copying
+✅ Next agent should copy 1:1 from free-code
+
+SUCCESS CRITERIA:
+-----------------
+- All 207 slash commands work
+- Model picker dialog functional
+- Tool execution visualization
+- Message search (/), jump (:), bookmarks (m)
+- Full status bar
+- Session management
+================================================================================

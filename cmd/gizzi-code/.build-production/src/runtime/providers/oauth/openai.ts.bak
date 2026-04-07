@@ -1,0 +1,112 @@
+import { generatePKCE } from "./pkce"
+import { getAvailablePort, waitForOAuthCallback } from "./localhost-server"
+import crypto from "crypto"
+
+const CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"
+const AUTHORIZE_URL = "https://auth.openai.com/oauth/authorize"
+const TOKEN_URL = "https://auth.openai.com/oauth/token"
+const SCOPE = "openid profile email offline_access"
+
+export const openaiOAuth = {
+  label: "Sign in with OpenAI (ChatGPT Plus/Pro)",
+  description: "Use your ChatGPT subscription",
+
+  async authorize(_inputs: Record<string, string>) {
+    const { verifier, challenge } = await generatePKCE()
+    const state = crypto.randomBytes(16).toString("hex")
+    const port = await getAvailablePort()
+    const redirectUri = `http://localhost:${port}/auth/callback`
+
+    const params = new URLSearchParams({
+      client_id: CLIENT_ID,
+      response_type: "code",
+      redirect_uri: redirectUri,
+      scope: SCOPE,
+      code_challenge: challenge,
+      code_challenge_method: "S256",
+      state,
+    })
+
+    const url = `${AUTHORIZE_URL}?${params}`
+
+    const callbackPromise = waitForOAuthCallback(port)
+
+    return {
+      url,
+      method: "auto" as const,
+      instructions: "Your browser will open. Sign in with OpenAI and authorization will complete automatically.",
+      async callback() {
+        try {
+          const { code, state: returnedState } = await callbackPromise
+
+          if (returnedState !== state) {
+            return { type: "failed" as const, error: "State mismatch — possible CSRF attack" }
+          }
+
+          const tokenRes = await fetch(TOKEN_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({
+              grant_type: "authorization_code",
+              client_id: CLIENT_ID,
+              code,
+              redirect_uri: redirectUri,
+              code_verifier: verifier,
+            }),
+          })
+
+          if (!tokenRes.ok) {
+            return { type: "failed" as const, error: await tokenRes.text() }
+          }
+
+          const data = (await tokenRes.json()) as {
+            access_token: string
+            refresh_token?: string
+            expires_in: number
+          }
+          const expires = Date.now() + data.expires_in * 1000 - 5 * 60 * 1000
+
+          if (data.refresh_token) {
+            return {
+              type: "success" as const,
+              provider: "openai",
+              refresh: data.refresh_token,
+              access: data.access_token,
+              expires,
+            }
+          }
+
+          // Some flows return API key instead of refresh token
+          return {
+            type: "success" as const,
+            provider: "openai",
+            key: data.access_token,
+          }
+        } catch (err) {
+          return { type: "failed" as const, error: String(err) }
+        }
+      },
+    }
+  },
+}
+
+export async function refreshOpenAIToken(
+  refreshToken: string,
+): Promise<{ access: string; refresh: string; expires: number }> {
+  const res = await fetch(TOKEN_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "refresh_token",
+      client_id: CLIENT_ID,
+      refresh_token: refreshToken,
+    }),
+  })
+  if (!res.ok) throw new Error(`OpenAI token refresh failed: ${await res.text()}`)
+  const data = (await res.json()) as { access_token: string; refresh_token: string; expires_in: number }
+  return {
+    access: data.access_token,
+    refresh: data.refresh_token,
+    expires: Date.now() + data.expires_in * 1000 - 5 * 60 * 1000,
+  }
+}

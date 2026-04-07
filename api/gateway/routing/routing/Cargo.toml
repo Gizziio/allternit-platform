@@ -1,0 +1,121 @@
+[package]
+name = "allternit-api"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+validator = { version = "0.18", features = ["derive"] }
+thiserror = "1.0"
+axum = { version = "0.7", features = ["ws", "http1", "http2"] }
+axum-extra = { version = "0.9", features = ["typed-header"] }
+tower = { version = "0.5", features = ["limit"] }
+tower-http = { version = "0.6", features = ["limit", "trace", "compression-full", "cors"] }
+http = "1.0"
+hyper = { version = "1.0", features = ["full"] }
+uuid = { workspace = true }
+tokio-stream = { workspace = true, features = ["sync"] }
+sha2 = { workspace = true }
+semver = { workspace = true }
+opentelemetry = { version = "0.20", features = ["trace"] }
+opentelemetry_sdk = { version = "0.20", features = ["trace", "rt-tokio"] }
+opentelemetry-http = "0.9"
+tracing-opentelemetry = "0.23"
+utoipa = { version = "4.2", features = ["uuid", "chrono"] }
+utoipa-swagger-ui = { version = "6.0", features = ["axum"] }
+prometheus = "0.13"
+tokio-tungstenite = "0.20"
+futures-util = { workspace = true, features = ["sink"] }
+futures = { workspace = true }
+async-stream = "0.3"
+chrono = { workspace = true }
+reqwest = { workspace = true }
+lazy_static = "1.4"
+serde_yaml = "0.9"
+rand = "0.8"
+allternit-control-plane-service = { path = "../../domains/kernel/control-plane/allternit-control/control-plane-impl" }
+allternit-memory = { path = "../../services/memory/state/memory" }
+allternit-workflows = { workspace = true }
+allternit-kernel-contracts = { workspace = true }
+allternit-runtime-core = { workspace = true }
+allternit_runtime = { package = "allternit-runtime", path = "../../domains/kernel/infrastructure/allternit-runtime" }
+allternit-policy = { workspace = true }
+allternit-skills = { workspace = true }
+allternit-tools-gateway = { workspace = true }
+allternit-registry = { path = "../../domains/kernel/control-plane/unified-registry/registry" }
+allternit-capsule = { package = "allternit-capsule", path = "../../domains/kernel/capsule-system/allternit-capsule" }
+allternit-rlm = { path = "../../domains/kernel/infrastructure/allternit-rlm" }
+allternit-messaging = { workspace = true }
+allternit-sdk-core = { path = "../../infrastructure/sdk/sdk-core" }
+allternit-sdk-policy = { path = "../../infrastructure/sdk/sdk-policy" }
+allternit-security-hardening = { path = "../../domains/governance/security-network/security-hardening" }
+# P4 DAG Integration crates
+allternit-swarm-advanced = { path = "../../domains/kernel/infrastructure/swarm-advanced" }
+allternit-ivkge-advanced = { path = "../../domains/kernel/infrastructure/ivkge-advanced" }
+allternit-multimodal-streaming = { path = "../../domains/kernel/infrastructure/multimodal-streaming" }
+allternit-tambo-integration = { path = "../../domains/kernel/infrastructure/tambo-integration" }
+allternit-policy-tier-gating = { path = "../../domains/governance/identity-access-control/policy-tier-gating" }
+allternit-firecracker-driver = { path = "../../domains/kernel/execution/allternit-firecracker-driver" }
+allternit-driver-interface = { path = "../../domains/kernel/infrastructure/allternit-driver-interface" }
+mcp = { workspace = true }
+
+# Common dependencies used across OSs
+sqlx = { workspace = true, features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid"] }
+allternit-openclaw-host = { path = "../../domains/kernel/infrastructure/allternit-openclaw-host" }
+allternit_agent_system_rails = { package = "allternit-agent-system-rails", path = "../../infrastructure/allternit-agent-system-rails" }
+allternit-process-driver = { path = "../../domains/kernel/execution/allternit-process-driver" }
+allternit-budget-metering = { path = "../../services/orchestration/budget-metering" }
+allternit-replay = { path = "../../domains/governance/allternit-replay" }
+allternit-prewarm = { path = "../../services/orchestration/allternit-prewarm" }
+allternit-environment-spec = { path = "../../domains/kernel/infrastructure/allternit-environment-spec" }
+allternit-mcp-client = { path = "../../../../domains/mcp/mcp-client" }
+allternit-terminal = { path = "../../../../domains/governance/security-network/terminal" }
+allternit-node-protocol = { path = "../../../../platform/protocols/allternit-protocol" }
+walkdir = "2.5"
+dirs = "5.0"
+
+# SVG/PNG/PDF Rendering
+resvg = { version = "0.44" }
+printpdf = { version = "0.7", features = ["embedded_images"] }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif"] }
+gif = "0.13"
+base64 = { workspace = true }
+
+# Chrome Streaming Gateway dependencies
+# Note: Uses Firecracker microVMs on Linux, Docker on macOS
+bollard = { workspace = true, optional = true }
+hmac = { workspace = true }
+sha1 = { workspace = true }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+bollard = { workspace = true }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+md5 = "0.7"
+
+# JWT authentication
+jsonwebtoken = "9.3"
+
+# Cloud Provider SDKs - optional (enabled by cloud-deploy feature)
+aws-config = { version = "1.5", optional = true }
+aws-sdk-ec2 = { version = "1.105", optional = true }
+# google-cloud-compute-v1 = "0.1"
+azure_mgmt_compute = { version = "0.21", optional = true }
+azure_identity = { version = "0.21", optional = true }
+
+[features]
+default = []
+cloud-deploy = ["aws-config", "aws-sdk-ec2", "azure_mgmt_compute", "azure_identity"]
+
+[dev-dependencies]
+tempfile = "3.10"
+allternit-history = { path = "../../domains/kernel/data/history-ledger" }
+allternit-messaging = { workspace = true }
+reqwest = { version = "0.12", features = ["json"] }

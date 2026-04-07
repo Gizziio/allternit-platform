@@ -1,0 +1,60 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                  CLAUDE CODE → GIZZI CODE INTEGRATION                         ║
+║                         ARCHITECTURE DECISION                                  ║
+╠══════════════════════════════════════════════════════════════════════════════╣
+║                                                                               ║
+║  RUNTIME-FIRST WINS for primitive infrastructure                             ║
+║                                                                               ║
+║  Why:                                                                         ║
+║  • Modularity - runtime works without UI                                     ║
+║  • Testability - test primitives independently                               ║
+║  • Headless mode - server/agent use cases                                    ║
+║  • Clean separation of concerns                                              ║
+║                                                                               ║
+╠══════════════════════════════════════════════════════════════════════════════╣
+║  FILE COUNTS                                                                 ║
+║  ─────────────                                                               ║
+║  Claude Code:   1,962 files (mature, production quality)                     ║
+║  Gizzi Code:      670 files (working but drifted from OpenCode)              ║
+║                                                                               ║
+║  ALL 1,962 Claude files → INTO Gizzi Code structure                          ║
+║                                                                               ║
+╠══════════════════════════════════════════════════════════════════════════════╣
+║  KEY INTEGRATIONS                                                            ║
+║  ────────────────                                                            ║
+║                                                                               ║
+║  1. Session/Identity (The Fix)                                               ║
+║     • Claude's bootstrap/state.ts → src/runtime/bootstrap/                   ║
+║     • Claude's bridge/sessionIdCompat.ts → src/runtime/bridge/               ║
+║     • Problem: Gizzi session issues from OpenCode drift                      ║
+║     • Solution: Replace with Claude's mature session system                  ║
+║                                                                               ║
+║  2. Tool System (Merge)                                                      ║
+║     • Gizzi tools → src/runtime/tools/gizzi/                                 ║
+║     • Claude tools → src/runtime/tools/claude/                               ║
+║     • Unified registry → src/runtime/tools/registry.ts                       ║
+║                                                                               ║
+║  3. Bridge System (New Capability)                                           ║
+║     • Claude's complete bridge/ → src/runtime/bridge/                        ║
+║     • Gives Gizzi remote control, REPL bridge, sessions                      ║
+║                                                                               ║
+║  4. Context/Collapse (Advanced Features)                                     ║
+║     • Claude's services/compact/ → src/runtime/context/compact/              ║
+║     • Snip projection, reactive compact                                      ║
+║                                                                               ║
+║  5. Provider System (Preserve Gizzi)                                         ║
+║     • Gizzi's multi-provider abstraction WINS                                ║
+║     • Claude's Anthropic implementation as reference                         ║
+║                                                                               ║
+╠══════════════════════════════════════════════════════════════════════════════╣
+║  TIMELINE                                                                    ║
+║  ───────                                                                     ║
+║  Week 1: Move all 1,962 files                                                ║
+║  Week 2: Update all import paths (~20,000 updates)                           ║
+║  Week 3: Fix type alignments (ContentBlock, Message, Settings)               ║
+║  Week 4: Merge integration points (tools, CLI, providers)                    ║
+║  Weeks 5-6: Testing & refinement                                             ║
+║                                                                               ║
+║  Total: 6 weeks to production                                                ║
+║                                                                               ║
+╚══════════════════════════════════════════════════════════════════════════════╝

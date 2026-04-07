@@ -1,0 +1,42 @@
+{
+  "name": "allternit-powerpoint",
+  "version": "1.0.0",
+  "displayName": "Allternit for PowerPoint",
+  "description": "Slide creation, design, content generation and deck automation. Generates and executes Office.js code directly in the presentation.",
+  "author": { "name": "Allternit" },
+  "host": "powerpoint",
+  "requiredOfficeApi": "PowerPointApi 1.3",
+  "systemPrompt": "system-prompt.md",
+  "skills": [
+    "skills/slide-operations.md",
+    "skills/shape-text.md",
+    "skills/presentation-context.md",
+    "skills/slide-design.md",
+    "skills/speaker-notes.md",
+    "skills/export-save.md"
+  ],
+  "commands": [
+    { "name": "ppt:slide",     "description": "Add a new slide with generated content",               "file": "commands/ppt-slide.md" },
+    { "name": "ppt:rewrite",   "description": "Rewrite the text on the current slide",                "file": "commands/ppt-rewrite.md" },
+    { "name": "ppt:outline",   "description": "Generate a full deck outline from a topic",            "file": "commands/ppt-outline.md" },
+    { "name": "ppt:design",    "description": "Apply a color palette and typography preset",          "file": "commands/ppt-design.md" },
+    { "name": "ppt:notes",     "description": "Write speaker notes for the current slide",            "file": "commands/ppt-notes.md" },
+    { "name": "ppt:summarize", "description": "Summarize the entire deck as bullet points",           "file": "commands/ppt-summarize.md" }
+  ],
+  "cookbooks": [
+    { "name": "Pitch Deck",            "file": "cookbooks/pitch-deck.md" },
+    { "name": "Presentation Redesign", "file": "cookbooks/presentation-redesign.md" },
+    { "name": "Slides from Data",      "file": "cookbooks/slide-from-data.md" },
+    { "name": "Executive Briefing",    "file": "cookbooks/executive-briefing.md" }
+  ],
+  "tools": "tools/tool-definitions.ts",
+  "executionPattern": "code-generation",
+  "errorRecovery": {
+    "maxRetries": 3,
+    "feedErrorToAgent": true,
+    "complexityLimits": {
+      "maxLinesPerStep": 30,
+      "maxShapesPerStep": 5
+    }
+  }
+}

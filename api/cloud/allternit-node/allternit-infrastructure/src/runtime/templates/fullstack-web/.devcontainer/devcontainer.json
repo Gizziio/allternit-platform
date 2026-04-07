@@ -1,0 +1,129 @@
+{
+  "name": "Full Stack Web Template",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "nextjs",
+  "workspaceFolder": "/app",
+  "shutdownAction": "stopCompose",
+  
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20",
+      "nodeGypDependencies": true
+    }
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        // Next.js / React
+        "formulahendry.auto-rename-tag",
+        "dsznajder.es7-react-js-snippets",
+        "infeng.vscode-react-typescript",
+        "planbcoding.vscode-react-refactor",
+        
+        // TypeScript
+        "ms-vscode.vscode-typescript-next",
+        "pflannery.vscode-versionlens",
+        "yoavbls.pretty-ts-errors",
+        
+        // Prisma
+        "Prisma.prisma",
+        
+        // Tailwind CSS
+        "bradlc.vscode-tailwindcss",
+        "austenc.tailwind-docs",
+        
+        // ESLint & Prettier
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "rvest.vs-code-prettier-eslint",
+        
+        // Testing
+        "ms-playwright.playwright",
+        "ZixuanChen.vitest-explorer",
+        "orta.vscode-jest",
+        
+        // Git & GitHub
+        "eamodio.gitlens",
+        "GitHub.vscode-pull-request-github",
+        "github.vscode-github-actions",
+        
+        // Docker
+        "ms-azuretools.vscode-docker",
+        "ms-vscode-remote.remote-containers",
+        
+        // Database
+        "cweijan.vscode-database-client2",
+        
+        // General Productivity
+        "aaron-bond.better-comments",
+        "streetsidesoftware.code-spell-checker",
+        "Gruntfuggly.todo-tree",
+        "usernamehw.errorlens",
+        "christian-kohler.path-intellisense",
+        "wix.vscode-import-cost",
+        "mikestead.dotenv",
+        "rocketseat.rocketseat-reactjs"
+      ],
+      "settings": {
+        "typescript.tsdk": "node_modules/typescript/lib",
+        "typescript.enablePromptUseWorkspaceTsdk": true,
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit",
+          "source.organizeImports": "explicit"
+        },
+        "files.associations": {
+          "*.css": "tailwindcss"
+        },
+        "emmet.includeLanguages": {
+          "javascript": "javascriptreact",
+          "typescript": "typescriptreact"
+        },
+        "tailwindCSS.includeLanguages": {
+          "typescript": "javascript",
+          "typescriptreact": "javascript"
+        },
+        "prisma.fileWatcher": true,
+        "vitest.enable": true,
+        "playwright.reuseBrowser": true
+      }
+    }
+  },
+
+  "forwardPorts": [3000, 5432, 6379, 8025, 5555, 5050],
+  "portsAttributes": {
+    "3000": {
+      "label": "Next.js App",
+      "onAutoForward": "openPreview"
+    },
+    "5432": {
+      "label": "PostgreSQL"
+    },
+    "6379": {
+      "label": "Redis"
+    },
+    "8025": {
+      "label": "Mailpit",
+      "onAutoForward": "notify"
+    },
+    "5555": {
+      "label": "Prisma Studio"
+    },
+    "5050": {
+      "label": "pgAdmin"
+    }
+  },
+
+  "postCreateCommand": "bash scripts/init-project.sh",
+  "postStartCommand": "echo '🚀 Dev container ready! Run npm run dev to start the app.'",
+  
+  "remoteUser": "nodejs",
+  "updateRemoteUserUID": true,
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/app,type=bind,consistency=cached"
+  ]
+}

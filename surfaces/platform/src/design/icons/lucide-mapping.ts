@@ -4,7 +4,7 @@
  * Maps IconName type to actual Lucide React components.
  * This provides a unified interface while leveraging the Lucide icon library.
  * 
- * @module @a2r/platform/icons/lucide-mapping
+ * @module @allternit/platform/icons/lucide-mapping
  */
 
 import type { LucideIcon } from 'lucide-react';

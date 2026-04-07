@@ -3,7 +3,7 @@
  * 
  * Icons for user actions, operations, and interactive elements.
  * 
- * @module @a2r/platform/icons/categories/actions
+ * @module @allternit/platform/icons/categories/actions
  */
 
 export const actionIcons = [

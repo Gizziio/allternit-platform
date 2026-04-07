@@ -1,0 +1,712 @@
+import z from "zod/v4"
+import { Tool } from "@/runtime/tools/builtins/tool"
+import { Bus } from "@/shared/bus"
+import { BusEvent } from "@/shared/bus/bus-event"
+import { Identifier } from "@/shared/id/id"
+import { Session } from "@/runtime/session"
+import { MessageV2 } from "@/runtime/session/message-v2"
+import { Agent } from "@/runtime/loop/agent"
+import DESCRIPTION from "@/runtime/tools/builtins/agent-communicate.txt"
+
+export namespace AgentCommunicate {
+  // ============================================================================
+  // Event Definitions
+  // ============================================================================
+
+  export const MessageSent = BusEvent.define(
+    "agent.communicate.message.sent",
+    z.object({
+      messageId: z.string(),
+      sessionId: z.string(),
+      fromAgent: z.string(),
+      toAgent: z.string().optional(),
+      toRole: z.string().optional(),
+      channel: z.string().optional(),
+      content: z.string(),
+      type: z.enum(["direct", "channel", "broadcast"]),
+      correlationId: z.string().optional(),
+      inReplyTo: z.string().optional(),
+      mentions: z.array(z.string()).optional(),
+    }),
+  )
+
+  export const MessageBroadcastToUI = BusEvent.define(
+    "agent.communicate.message.broadcast.ui",
+    z.object({
+      sessionId: z.string(),
+      message: z.any(),
+    }),
+  )
+
+  export const MessageReceived = BusEvent.define(
+    "agent.communicate.message.received",
+    z.object({
+      messageId: z.string(),
+      sessionId: z.string(),
+      fromAgent: z.string(),
+      content: z.string(),
+      type: z.enum(["direct", "channel", "broadcast"]),
+      correlationId: z.string().optional(),
+    }),
+  )
+
+  export const ChannelCreated = BusEvent.define(
+    "agent.communicate.channel.created",
+    z.object({
+      channelId: z.string(),
+      name: z.string(),
+      createdBy: z.string(),
+      sessionId: z.string(),
+      members: z.array(z.string()),
+    }),
+  )
+
+  export const ChannelJoined = BusEvent.define(
+    "agent.communicate.channel.joined",
+    z.object({
+      channelId: z.string(),
+      agentId: z.string(),
+      sessionId: z.string(),
+    }),
+  )
+
+  export const LoopGuardTriggered = BusEvent.define(
+    "agent.communicate.loop.guard.triggered",
+    z.object({
+      correlationId: z.string(),
+      hopCount: z.number(),
+      sessionId: z.string(),
+      agentId: z.string(),
+    }),
+  )
+
+  // ============================================================================
+  // Types
+  // ============================================================================
+
+  export type MessageType = "direct" | "channel" | "broadcast"
+
+  export interface AgentMessage {
+    id: string
+    from: {
+      agentId: string
+      agentName: string
+      agentRole: string
+      sessionId: string
+    }
+    to: {
+      agentId?: string
+      agentName?: string
+      agentRole?: string
+      channel?: string
+    }
+    content: string
+    type: MessageType
+    timestamp: number
+    correlationId?: string
+    inReplyTo?: string
+    mentions?: string[]
+    read: boolean
+    readAt?: number
+  }
+
+  export interface CommunicationChannel {
+    id: string
+    name: string
+    description?: string
+    members: string[]
+    createdAt: number
+    createdBy: string
+    sessionId: string
+  }
+
+  export interface HopCounter {
+    count: number
+    firstHopAt: number
+    lastHopAt: number
+    history: HopEntry[]
+  }
+
+  export interface HopEntry {
+    timestamp: number
+    sourceAgent: string
+    targetAgent: string
+    action: string
+  }
+
+  // ============================================================================
+  // Constants
+  // ============================================================================
+
+  const MAX_HOP_COUNT = 4
+  const MESSAGE_RETENTION = 1000
+  const HOP_WINDOW_MS = 60000 // 1 minute
+
+  // ============================================================================
+  // State Management (per-session)
+  // ============================================================================
+
+  interface SessionState {
+    messages: AgentMessage[]
+    channels: CommunicationChannel[]
+    joinedChannels: Set<string>
+    hopCounters: Map<string, HopCounter>
+  }
+
+  const sessionStates = new Map<string, SessionState>()
+
+  function getSessionState(sessionId: string): SessionState {
+    let state = sessionStates.get(sessionId)
+    if (!state) {
+      state = {
+        messages: [],
+        channels: [],
+        joinedChannels: new Set(),
+        hopCounters: new Map(),
+      }
+      sessionStates.set(sessionId, state)
+    }
+    return state
+  }
+
+  function cleanupSession(sessionId: string) {
+    sessionStates.delete(sessionId)
+  }
+
+  // ============================================================================
+  // Helpers
+  // ============================================================================
+
+  export function extractMentions(text: string): string[] {
+    const mentionRegex = /\B@([A-Za-z][A-Za-z0-9_-]*)/g
+    const matches = text.match(mentionRegex)
+    return matches ? matches.map((m) => m.slice(1)) : []
+  }
+
+  export function isMessageForAgent(
+    message: AgentMessage,
+    agentId: string,
+    agentRole: string,
+  ): boolean {
+    return (
+      message.to.agentId === agentId ||
+      message.to.agentRole === agentRole ||
+      message.to.channel === "broadcast" ||
+      (message.mentions?.some((m) => m === agentId || m === agentRole) ?? false)
+    )
+  }
+
+  export function formatMessageForDisplay(message: AgentMessage): string {
+    const prefix =
+      message.type === "direct"
+        ? "DM"
+        : message.to.channel
+          ? `#${message.to.channel}`
+          : "broadcast"
+    return `[${prefix}] ${message.from.agentName} (${message.from.agentRole}): ${message.content}`
+  }
+
+  // ============================================================================
+  // Core Operations
+  // ============================================================================
+
+  export async function sendMessage(input: {
+    sessionID: string
+    agentId: string
+    agentName: string
+    agentRole: string
+    content: string
+    to?: { agentName?: string; agentRole?: string; channel?: string }
+    type?: MessageType
+    correlationId?: string
+    inReplyTo?: string
+  }): Promise<AgentMessage> {
+    const state = getSessionState(input.sessionID)
+
+    // Check loop guard
+    if (input.correlationId) {
+      const hopCounter = state.hopCounters.get(input.correlationId)
+      if (hopCounter && hopCounter.count >= MAX_HOP_COUNT) {
+        Bus.publish(LoopGuardTriggered, {
+          correlationId: input.correlationId!,
+          hopCount: hopCounter.count,
+          sessionId: input.sessionID,
+          agentId: input.agentId,
+        })
+        throw new Error(
+          `Maximum agent communication hops exceeded (${hopCounter.count}/${MAX_HOP_COUNT}). Escalating to human.`,
+        )
+      }
+    }
+
+    const message: AgentMessage = {
+      id: Identifier.ascending("message"),
+      from: {
+        agentId: input.agentId,
+        agentName: input.agentName,
+        agentRole: input.agentRole,
+        sessionId: input.sessionID,
+      },
+      to: {
+        agentId: input.to?.agentName,
+        agentName: input.to?.agentName,
+        agentRole: input.to?.agentRole,
+        channel: input.to?.channel,
+      },
+      content: input.content,
+      type: input.type || "direct",
+      timestamp: Date.now(),
+      correlationId: input.correlationId,
+      inReplyTo: input.inReplyTo,
+      mentions: extractMentions(input.content),
+      read: false,
+    }
+
+    // Add to state
+    state.messages.push(message)
+
+    // Trim old messages
+    if (state.messages.length > MESSAGE_RETENTION) {
+      state.messages = state.messages.slice(-MESSAGE_RETENTION)
+    }
+
+    // Increment hop counter
+    if (input.correlationId) {
+      incrementHopCount(state, input.correlationId, {
+        timestamp: message.timestamp,
+        sourceAgent: input.agentId,
+        targetAgent: input.to?.agentName || input.to?.agentRole || "broadcast",
+        action: "send_message",
+      })
+    }
+
+    // Publish event
+    Bus.publish(MessageSent, {
+      messageId: message.id,
+      sessionId: input.sessionID,
+      fromAgent: input.agentId,
+      toAgent: input.to?.agentName,
+      toRole: input.to?.agentRole,
+      channel: input.to?.channel,
+      content: message.content,
+      type: message.type,
+      correlationId: message.correlationId,
+      inReplyTo: message.inReplyTo,
+      mentions: message.mentions,
+    })
+
+    // If channel message, also publish as received for channel members
+    if (message.to.channel) {
+      Bus.publish(MessageReceived, {
+        messageId: message.id,
+        sessionId: input.sessionID,
+        fromAgent: input.agentId,
+        content: message.content,
+        type: message.type,
+        correlationId: message.correlationId,
+      })
+    }
+
+    return message
+  }
+
+  export function readMessages(input: {
+    sessionID: string
+    agentId: string
+    agentRole: string
+    channel?: string
+    fromAgent?: string
+    unreadOnly?: boolean
+    limit?: number
+  }): AgentMessage[] {
+    const state = getSessionState(input.sessionID)
+    let messages = [...state.messages]
+
+    // Filter: only messages for this agent
+    messages = messages.filter((m) => isMessageForAgent(m, input.agentId, input.agentRole))
+
+    // Filter by channel
+    if (input.channel) {
+      messages = messages.filter((m) => m.to.channel === input.channel)
+    }
+
+    // Filter by sender
+    if (input.fromAgent) {
+      messages = messages.filter((m) => m.from.agentId === input.fromAgent)
+    }
+
+    // Filter unread only
+    if (input.unreadOnly) {
+      messages = messages.filter((m) => !m.read)
+    }
+
+    // Mark as read
+    for (const message of messages) {
+      if (!message.read) {
+        message.read = true
+        message.readAt = Date.now()
+      }
+    }
+
+    // Apply limit
+    if (input.limit) {
+      messages = messages.slice(-input.limit)
+    }
+
+    // Sort by timestamp
+    messages.sort((a, b) => b.timestamp - a.timestamp)
+
+    return messages
+  }
+
+  export function createChannel(input: {
+    sessionID: string
+    name: string
+    description?: string
+    createdBy: string
+    members?: string[]
+  }): CommunicationChannel {
+    const state = getSessionState(input.sessionID)
+
+    const channel: CommunicationChannel = {
+      id: Identifier.ascending("part"),
+      name: input.name,
+      description: input.description,
+      members: input.members || [input.createdBy],
+      createdAt: Date.now(),
+      createdBy: input.createdBy,
+      sessionId: input.sessionID,
+    }
+
+    state.channels.push(channel)
+    state.joinedChannels.add(channel.id)
+
+    Bus.publish(ChannelCreated, {
+      channelId: channel.id,
+      name: channel.name,
+      createdBy: channel.createdBy,
+      sessionId: input.sessionID,
+      members: channel.members,
+    })
+
+    return channel
+  }
+
+  export function joinChannel(input: {
+    sessionID: string
+    channelId: string
+    agentId: string
+  }): void {
+    const state = getSessionState(input.sessionID)
+    const channel = state.channels.find((c) => c.id === input.channelId)
+
+    if (!channel) {
+      throw new Error(`Channel ${input.channelId} not found`)
+    }
+
+    state.joinedChannels.add(input.channelId)
+
+    if (!channel.members.includes(input.agentId)) {
+      channel.members.push(input.agentId)
+    }
+
+    Bus.publish(ChannelJoined, {
+      channelId: input.channelId,
+      agentId: input.agentId,
+      sessionId: input.sessionID,
+    })
+  }
+
+  export function getChannels(sessionID: string): CommunicationChannel[] {
+    const state = getSessionState(sessionID)
+    return [...state.channels]
+  }
+
+  export function getUnreadCount(input: {
+    sessionID: string
+    agentId: string
+    agentRole: string
+    channel?: string
+  }): number {
+    const state = getSessionState(input.sessionID)
+    return state.messages.filter(
+      (m) =>
+        !m.read &&
+        isMessageForAgent(m, input.agentId, input.agentRole) &&
+        (!input.channel || m.to.channel === input.channel),
+    ).length
+  }
+
+  // ============================================================================
+  // Loop Guard
+  // ============================================================================
+
+  function incrementHopCount(
+    state: SessionState,
+    correlationId: string,
+    entry: HopEntry,
+  ): number {
+    let counter = state.hopCounters.get(correlationId)
+
+    if (!counter) {
+      counter = {
+        count: 0,
+        firstHopAt: entry.timestamp,
+        lastHopAt: entry.timestamp,
+        history: [],
+      }
+      state.hopCounters.set(correlationId, counter)
+    }
+
+    counter.count++
+    counter.lastHopAt = entry.timestamp
+    counter.history.push(entry)
+
+    // Trim history to window
+    const windowStart = entry.timestamp - HOP_WINDOW_MS
+    counter.history = counter.history.filter((h) => h.timestamp > windowStart)
+
+    // Cleanup old counters
+    for (const [key, value] of state.hopCounters.entries()) {
+      if (value.history.length === 0) {
+        state.hopCounters.delete(key)
+      }
+    }
+
+    return counter.count
+  }
+
+  export function resetHopCount(sessionID: string, correlationId: string): void {
+    const state = getSessionState(sessionID)
+    state.hopCounters.delete(correlationId)
+  }
+
+  export function getHopCount(sessionID: string, correlationId: string): number {
+    const state = getSessionState(sessionID)
+    return state.hopCounters.get(correlationId)?.count || 0
+  }
+
+  // ============================================================================
+  // Cleanup
+  // ============================================================================
+
+  export function cleanup(sessionID: string): void {
+    cleanupSession(sessionID)
+  }
+}
+
+// ============================================================================
+// Tool Definition
+// ============================================================================
+
+interface AgentCommunicateMetadata {
+  messageId?: string
+  timestamp?: number
+  mentions?: string[]
+  messageCount?: number
+  messages?: { id: string; from: string; content: string; timestamp: number; read: boolean }[]
+  channelId?: string
+  name?: string
+  members?: string[]
+  channelCount?: number
+  channels?: { id: string; name: string; members: number }[]
+  unreadCount?: number
+}
+
+export const AgentCommunicateTool = Tool.define("agent_communicate", {
+  description: DESCRIPTION,
+  parameters: z.object({
+    action: z
+      .enum(["send", "read", "create_channel", "join_channel", "list_channels", "get_unread"])
+      .describe("The communication action to perform"),
+    content: z
+      .string()
+      .optional()
+      .describe("Message content (required for send action)"),
+    to: z
+      .object({
+        agentName: z.string().optional().describe("Specific agent name to message"),
+        agentRole: z
+          .string()
+          .optional()
+          .describe("Agent role (builder, validator, reviewer, planner, security)"),
+        channel: z.string().optional().describe("Channel name for broadcast/channel messages"),
+      })
+      .optional()
+      .describe("Recipient information"),
+    channel: z.string().optional().describe("Channel name (for read/join/list actions)"),
+    correlationId: z
+      .string()
+      .optional()
+      .describe("Thread/correlation ID for message threading (prevents loops)"),
+    limit: z.number().optional().default(50).describe("Max messages to read"),
+    unreadOnly: z.boolean().optional().default(false).describe("Only return unread messages"),
+  }),
+  async execute(params, ctx) {
+    const agent = await Agent.get(ctx.agent)
+    const agentId = ctx.agent
+    const agentName = agent?.name || ctx.agent
+    const agentRole = "agent"
+
+    switch (params.action) {
+      case "send": {
+        if (!params.content) {
+          throw new Error("Content is required for send action")
+        }
+
+        const message = await AgentCommunicate.sendMessage({
+          sessionID: ctx.sessionID,
+          agentId,
+          agentName,
+          agentRole,
+          content: params.content,
+          to: params.to,
+          type: params.to?.channel ? "channel" : params.to?.agentName ? "direct" : "broadcast",
+          correlationId: params.correlationId,
+        })
+
+        const sendMetadata: AgentCommunicateMetadata = {
+          messageId: message.id,
+          timestamp: message.timestamp,
+          mentions: message.mentions,
+        }
+        return {
+          title: `Message sent to ${params.to?.agentName || params.to?.agentRole || params.to?.channel || "broadcast"}`,
+          metadata: sendMetadata,
+          output: `Message sent successfully. ID: ${message.id}`,
+        }
+      }
+
+      case "read": {
+        const messages = AgentCommunicate.readMessages({
+          sessionID: ctx.sessionID,
+          agentId,
+          agentRole,
+          channel: params.channel,
+          unreadOnly: params.unreadOnly,
+          limit: params.limit,
+        })
+
+        const formatted = messages.map((m) => AgentCommunicate.formatMessageForDisplay(m)).join("\n")
+
+        const readMetadata: AgentCommunicateMetadata = {
+          messageCount: messages.length,
+          messages: messages.map((m) => ({
+            id: m.id,
+            from: m.from.agentName,
+            content: m.content,
+            timestamp: m.timestamp,
+            read: m.read,
+          })),
+        }
+        return {
+          title: `Read ${messages.length} message${messages.length !== 1 ? "s" : ""}`,
+          metadata: readMetadata,
+          output: formatted || "No messages found",
+        }
+      }
+
+      case "create_channel": {
+        if (!params.channel) {
+          throw new Error("Channel name is required")
+        }
+
+        const channel = AgentCommunicate.createChannel({
+          sessionID: ctx.sessionID,
+          name: params.channel,
+          createdBy: agentId,
+        })
+
+        const createMetadata: AgentCommunicateMetadata = {
+          channelId: channel.id,
+          name: channel.name,
+          members: channel.members,
+        }
+        return {
+          title: `Channel created: ${params.channel}`,
+          metadata: createMetadata,
+          output: `Channel "${params.channel}" created successfully. ID: ${channel.id}`,
+        }
+      }
+
+      case "join_channel": {
+        if (!params.channel) {
+          throw new Error("Channel name is required")
+        }
+
+        // Find channel by name
+        const channels = AgentCommunicate.getChannels(ctx.sessionID)
+        const channel = channels.find((c) => c.name === params.channel)
+
+        if (!channel) {
+          throw new Error(`Channel "${params.channel}" not found`)
+        }
+
+        AgentCommunicate.joinChannel({
+          sessionID: ctx.sessionID,
+          channelId: channel.id,
+          agentId,
+        })
+
+        const joinMetadata: AgentCommunicateMetadata = {
+          channelId: channel.id,
+          name: channel.name,
+        }
+        return {
+          title: `Joined channel: ${params.channel}`,
+          metadata: joinMetadata,
+          output: `Successfully joined channel "${params.channel}"`,
+        }
+      }
+
+      case "list_channels": {
+        const channels = AgentCommunicate.getChannels(ctx.sessionID)
+
+        const formatted = channels
+          .map((c) => `#${c.name} (${c.members.length} members)`)
+          .join("\n")
+
+        const listMetadata: AgentCommunicateMetadata = {
+          channelCount: channels.length,
+          channels: channels.map((c) => ({
+            id: c.id,
+            name: c.name,
+            members: c.members.length,
+          })),
+        }
+        return {
+          title: `Found ${channels.length} channel${channels.length !== 1 ? "s" : ""}`,
+          metadata: listMetadata,
+          output: formatted || "No channels found",
+        }
+      }
+
+      case "get_unread": {
+        const count = AgentCommunicate.getUnreadCount({
+          sessionID: ctx.sessionID,
+          agentId,
+          agentRole,
+          channel: params.channel,
+        })
+
+        const unreadMetadata: AgentCommunicateMetadata = {
+          unreadCount: count,
+        }
+        return {
+          title: `${count} unread message${count !== 1 ? "s" : ""}`,
+          metadata: unreadMetadata,
+          output: `You have ${count} unread message${count !== 1 ? "s" : ""}${params.channel ? ` in #${params.channel}` : ""}`,
+        }
+      }
+
+      default:
+        throw new Error(`Unknown action: ${params.action}`)
+    }
+  },
+})
+
+// ============================================================================
+// Session Lifecycle Hooks
+// ============================================================================
+// Note: Session hooks are handled by communication-runtime.ts
+// This file exports the cleanup function for manual use

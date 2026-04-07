@@ -1,0 +1,190 @@
+// @ts-nocheck
+import { describe, expect, test } from "bun:test"
+import * as fs from "fs/promises"
+import * as path from "path"
+import * as os from "os"
+import { GizziClient } from "../../src/runtime/integrations/acp/client"
+
+async function withTmpDir(fn: (dir: string) => Promise<void>) {
+  const dir = path.join(os.tmpdir(), "acp-client-test-" + Math.random().toString(36).slice(2))
+  await fs.mkdir(dir, { recursive: true })
+  try {
+    await fn(dir)
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true })
+  }
+}
+
+describe("GizziClient.requestPermission", () => {
+  const options = [
+    { optionId: "once", kind: "allow_once", name: "Allow once" },
+    { optionId: "always", kind: "allow_always", name: "Always allow" },
+    { optionId: "reject", kind: "reject_once", name: "Reject" },
+  ]
+
+  const toolCall = {
+    toolCallId: "tc-1",
+    status: "pending",
+    title: "edit",
+    kind: "edit",
+    locations: [],
+    rawInput: {},
+  }
+
+  test("defaults to allow_once — selects 'once' option", async () => {
+    const client = new GizziClient()
+    const res = await client.requestPermission({ sessionId: "s1", toolCall, options })
+    expect(res.outcome.outcome).toBe("selected")
+    expect((res.outcome as any).optionId).toBe("once")
+  })
+
+  test("allow_always mode selects 'always' option", async () => {
+    const client = new GizziClient({ permissionMode: "allow_always" })
+    const res = await client.requestPermission({ sessionId: "s1", toolCall, options })
+    expect(res.outcome.outcome).toBe("selected")
+    expect((res.outcome as any).optionId).toBe("always")
+  })
+
+  test("reject mode selects 'reject' option", async () => {
+    const client = new GizziClient({ permissionMode: "reject" })
+    const res = await client.requestPermission({ sessionId: "s1", toolCall, options })
+    expect(res.outcome.outcome).toBe("selected")
+    expect((res.outcome as any).optionId).toBe("reject")
+  })
+
+  test("falls back to first non-reject option when preferred not found", async () => {
+    const client = new GizziClient({ permissionMode: "allow_always" })
+    // Only offer "once" and "reject"
+    const limitedOptions = [
+      { optionId: "once", kind: "allow_once", name: "Allow once" },
+      { optionId: "reject", kind: "reject_once", name: "Reject" },
+    ]
+    const res = await client.requestPermission({ sessionId: "s1", toolCall, options: limitedOptions })
+    expect(res.outcome.outcome).toBe("selected")
+    // "always" not present, falls back to first non-reject option = "once"
+    expect((res.outcome as any).optionId).toBe("once")
+  })
+
+  test("cancelled outcome when no options provided", async () => {
+    const client = new GizziClient()
+    const res = await client.requestPermission({ sessionId: "s1", toolCall, options: [] })
+    expect(res.outcome.outcome).toBe("cancelled")
+  })
+})
+
+describe("GizziClient.sessionUpdate", () => {
+  test("calls onSessionUpdate callback with the notification", async () => {
+    const received: any[] = []
+    const client = new GizziClient({
+      onSessionUpdate: (n) => received.push(n),
+    })
+
+    await client.sessionUpdate({
+      sessionId: "s2",
+      update: { sessionUpdate: "agent_message_chunk", content: { type: "text", text: "hello" } },
+    })
+
+    expect(received).toHaveLength(1)
+    expect(received[0].sessionId).toBe("s2")
+  })
+
+  test("no-ops when onSessionUpdate is not provided", async () => {
+    const client = new GizziClient()
+    // Should not throw
+    await expect(
+      client.sessionUpdate({
+        sessionId: "s3",
+        update: { sessionUpdate: "agent_message_chunk", content: { type: "text", text: "ping" } },
+      })
+    ).resolves.toBeUndefined()
+  })
+})
+
+describe("GizziClient.readTextFile", () => {
+  test("reads full file content", async () => {
+    await withTmpDir(async (dir) => {
+      const file = path.join(dir, "hello.txt")
+      await fs.writeFile(file, "line1\nline2\nline3")
+
+      const client = new GizziClient()
+      const res = await client.readTextFile({ sessionId: "s4", path: file })
+      expect(res.content).toBe("line1\nline2\nline3")
+    })
+  })
+
+  test("respects line offset (1-based)", async () => {
+    await withTmpDir(async (dir) => {
+      const file = path.join(dir, "multi.txt")
+      await fs.writeFile(file, "a\nb\nc\nd")
+
+      const client = new GizziClient()
+      const res = await client.readTextFile({ sessionId: "s4", path: file, line: 2 })
+      expect(res.content).toBe("b\nc\nd")
+    })
+  })
+
+  test("respects limit", async () => {
+    await withTmpDir(async (dir) => {
+      const file = path.join(dir, "multi.txt")
+      await fs.writeFile(file, "a\nb\nc\nd")
+
+      const client = new GizziClient()
+      const res = await client.readTextFile({ sessionId: "s4", path: file, limit: 2 })
+      expect(res.content).toBe("a\nb")
+    })
+  })
+
+  test("respects line + limit together", async () => {
+    await withTmpDir(async (dir) => {
+      const file = path.join(dir, "multi.txt")
+      await fs.writeFile(file, "a\nb\nc\nd")
+
+      const client = new GizziClient()
+      const res = await client.readTextFile({ sessionId: "s4", path: file, line: 2, limit: 2 })
+      expect(res.content).toBe("b\nc")
+    })
+  })
+
+  test("throws resourceNotFound for missing file", async () => {
+    const client = new GizziClient()
+    await expect(
+      client.readTextFile({ sessionId: "s4", path: "/tmp/definitely-does-not-exist-acp.txt" })
+    ).rejects.toThrow()
+  })
+})
+
+describe("GizziClient.writeTextFile", () => {
+  test("writes content to the given path", async () => {
+    await withTmpDir(async (dir) => {
+      const file = path.join(dir, "output.txt")
+      const client = new GizziClient()
+
+      await client.writeTextFile({ sessionId: "s5", path: file, content: "written by acp" })
+
+      const written = await fs.readFile(file, "utf-8")
+      expect(written).toBe("written by acp")
+    })
+  })
+
+  test("returns empty object on success", async () => {
+    await withTmpDir(async (dir) => {
+      const file = path.join(dir, "output2.txt")
+      const client = new GizziClient()
+      const res = await client.writeTextFile({ sessionId: "s5", path: file, content: "ok" })
+      expect(res).toEqual({})
+    })
+  })
+
+  test("overwrites existing file content", async () => {
+    await withTmpDir(async (dir) => {
+      const file = path.join(dir, "existing.txt")
+      await fs.writeFile(file, "old content")
+
+      const client = new GizziClient()
+      await client.writeTextFile({ sessionId: "s5", path: file, content: "new content" })
+
+      const result = await fs.readFile(file, "utf-8")
+      expect(result).toBe("new content")
+    })
+  })
+})

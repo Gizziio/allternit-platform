@@ -1,0 +1,117 @@
+import { BusEvent } from "@/shared/bus/bus-event"
+import z from "zod/v4"
+import { Config } from "@/runtime/context/config/config"
+import { Instance } from "@/runtime/context/project/instance"
+import { Identifier } from "@/shared/id/id"
+import PROMPT_INITIALIZE from "./prompts/initialize.txt"
+import PROMPT_REVIEW from "./prompts/review.txt"
+import { MCP } from "@/runtime/tools/mcp"
+import { Skill } from "@/runtime/skills/skill"
+import * as ClaudePluginLoader from "@/runtime/integrations/plugin/claude/loader"
+
+export namespace Command {
+  export const Event = {
+    Executed: BusEvent.define(
+      "command.executed",
+      z.object({
+        name: z.string(),
+        sessionID: Identifier.schema("session"),
+        arguments: z.string(),
+        messageID: Identifier.schema("message"),
+      }),
+    ),
+  }
+
+  export const Info = z
+    .object({
+      name: z.string(),
+      description: z.string().optional(),
+      agent: z.string().optional(),
+      model: z.string().optional(),
+      source: z.enum(["command", "mcp", "skill"]).optional(),
+      // workaround for zod not supporting async functions natively so we use getters
+      // https://zod.dev/v4/changelog?id=zfunction
+      template: z.promise(z.string()).or(z.string()),
+      subtask: z.boolean().optional(),
+      hints: z.array(z.string()),
+    })
+    
+
+  // for some reason zod is inferring `string` for z.promise(z.string()).or(z.string()) so we have to manually override it
+  export type Info = Omit<z.infer<typeof Info>, "template"> & { template: Promise<string> | string }
+
+  export function hints(template: string): string[] {
+    const result: string[] = []
+    const numbered = template.match(/\$\d+/g)
+    if (numbered) {
+      for (const match of [...new Set(numbered)].sort()) result.push(match)
+    }
+    if (template.includes("$ARGUMENTS")) result.push("$ARGUMENTS")
+    return result
+  }
+
+  export const Default = {
+    INIT: "init",
+    REVIEW: "review",
+  }
+
+  export const list = Instance.state(async () => {
+    const cfg = await Config.get()
+    const result: Record<string, Info> = {
+      [Default.INIT]: {
+        name: Default.INIT,
+        description: "Initialize a new project",
+        template: PROMPT_INITIALIZE,
+        hints: [],
+      },
+      [Default.REVIEW]: {
+        name: Default.REVIEW,
+        description: "Review recent changes",
+        template: PROMPT_REVIEW,
+        hints: [],
+      },
+    }
+
+    // Load built-in knowledge-work commands (Anthropic & Partners) — lowest priority
+    const builtinPlugins = await ClaudePluginLoader.allBuiltin().catch(() => [])
+    for (const plugin of builtinPlugins) {
+      for (const cmd of plugin.commands) {
+        if (result[cmd.name]) continue // gizzi built-ins take precedence
+        result[cmd.name] = {
+          name: cmd.name,
+          description: cmd.description,
+          model: cmd.model,
+          source: "command",
+          template: cmd.template,
+          hints: hints(cmd.template),
+        }
+      }
+    }
+
+    // Load commands from user-installed .claude-plugin/ format plugins
+    const claudePlugins = await ClaudePluginLoader.all().catch(() => [])
+    for (const plugin of claudePlugins) {
+      for (const cmd of plugin.commands) {
+        if (result[cmd.name]) continue // built-ins take precedence
+        result[cmd.name] = {
+          name: cmd.name,
+          description: cmd.description,
+          model: cmd.model,
+          source: "command",
+          template: cmd.template,
+          hints: hints(cmd.template),
+        }
+      }
+    }
+
+    return result
+  })
+
+  export async function get(name: string) {
+    return (await list())[name]
+  }
+
+  export async function all() {
+    return Object.values(await list())
+  }
+}

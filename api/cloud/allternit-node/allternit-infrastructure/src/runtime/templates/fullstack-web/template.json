@@ -1,0 +1,44 @@
+{
+  "id": "fullstack-web",
+  "name": "Full Stack Web App",
+  "description": "Complete full-stack application with Next.js 14, TypeScript, PostgreSQL, Prisma ORM, and Redis. Includes auth, API routes, and deployment config.",
+  "version": "1.0.0",
+  "author": "A2R",
+  "type": "devcontainer",
+  "category": "web",
+  "language": "typescript",
+  "features": [
+    "Next.js 14 with App Router",
+    "TypeScript 5.3",
+    "PostgreSQL 16",
+    "Prisma ORM with migrations",
+    "Redis for sessions/cache",
+    "NextAuth.js authentication",
+    "Tailwind CSS + shadcn/ui",
+    "React Query + Zustand",
+    "Vitest + Playwright testing",
+    "Docker + Docker Compose",
+    "GitHub Actions CI/CD"
+  ],
+  "ports": [3000, 5432, 6379, 5555],
+  "variables": [
+    {
+      "name": "DATABASE_URL",
+      "description": "PostgreSQL connection string",
+      "type": "string",
+      "default": "postgresql://postgres:postgres@localhost:5432/myapp"
+    },
+    {
+      "name": "NEXTAUTH_SECRET",
+      "description": "NextAuth.js secret key",
+      "type": "secret",
+      "default": "your-secret-key-here"
+    },
+    {
+      "name": "ENABLE_STRIPE",
+      "description": "Include Stripe payment integration",
+      "type": "boolean",
+      "default": "false"
+    }
+  ]
+}

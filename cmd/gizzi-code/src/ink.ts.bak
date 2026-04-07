@@ -1,0 +1,30 @@
+/**
+ * Ink UI Components
+ */
+
+// Re-export from the actual ink-renderer
+export { stringWidth } from './cli/ui/ink-renderer/stringWidth.js'
+export { render } from './cli/ui/ink-renderer/renderer.js'
+export type { RenderOptions, Root } from './cli/ui/ink-renderer/renderer.js'
+
+// Text component
+export interface TextProps {
+  children?: string
+  bold?: boolean
+  dimColor?: boolean
+}
+
+export function Text(props: TextProps): string {
+  return props.children || ''
+}
+
+// Box component
+export interface BoxProps {
+  children?: unknown
+  flexDirection?: 'row' | 'column'
+  borderStyle?: string
+}
+
+export function Box(props: BoxProps): string {
+  return String(props.children || '')
+}

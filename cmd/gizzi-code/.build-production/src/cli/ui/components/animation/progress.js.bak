@@ -1,0 +1,161 @@
+import { insertNode as _$insertNode } from "@opentui/solid";
+import { createComponent as _$createComponent } from "@opentui/solid";
+import { insert as _$insert } from "@opentui/solid";
+import { setProp as _$setProp } from "@opentui/solid";
+import { createElement as _$createElement } from "@opentui/solid";
+/**
+ * Progress Bar Component
+ * 
+ * Deterministic progress indicator for known-duration tasks.
+ * Can be used standalone or with the animation system.
+ */
+
+import { createMemo, Show } from "solid-js";
+/**
+ * Render a progress bar string.
+ * Pure function - can be used outside of SolidJS.
+ */
+export function renderProgressBar(props) {
+  const max = Math.max(1, props.max ?? 100);
+  const width = Math.max(1, props.width ?? 20);
+  const fillChar = props.fillChar ?? "█";
+  const emptyChar = props.emptyChar ?? "░";
+  const clampedValue = Math.max(0, Math.min(props.value, max));
+  const ratio = clampedValue / max;
+  const filled = Math.round(ratio * width);
+  const empty = width - filled;
+  return fillChar.repeat(filled) + emptyChar.repeat(empty);
+}
+
+/**
+ * Get percentage string.
+ */
+export function getPercentage(value, max) {
+  const maxVal = Math.max(1, max ?? 100);
+  const clampedValue = Math.max(0, Math.min(value, maxVal));
+  const pct = Math.round(clampedValue / maxVal * 100);
+  return `${pct}%`;
+}
+
+/**
+ * Progress bar component for SolidJS.
+ * Static (non-animated) progress indicator.
+ */
+export function ProgressBar(props) {
+  const bar = createMemo(() => renderProgressBar({
+    value: props.value,
+    max: props.max,
+    width: props.width,
+    fillChar: props.fillChar,
+    emptyChar: props.emptyChar
+  }));
+  const percentage = createMemo(() => props.showPercentage ? getPercentage(props.value, props.max) : null);
+  return (() => {
+    var _el$ = _$createElement("box"),
+      _el$2 = _$createElement("text");
+    _$insertNode(_el$, _el$2);
+    _$setProp(_el$, "flexDirection", "row");
+    _$setProp(_el$, "gap", 1);
+    _$insert(_el$2, bar);
+    _$insert(_el$, _$createComponent(Show, {
+      get when() {
+        return percentage();
+      },
+      get children() {
+        var _el$3 = _$createElement("text");
+        _$insert(_el$3, percentage);
+        return _el$3;
+      }
+    }), null);
+    return _el$;
+  })();
+}
+
+/**
+ * Determinate progress with animation support.
+ * For tasks where you know the current progress (e.g., file download).
+ * 
+ * Example:
+ * ```tsx
+ * <DeterminateProgress 
+ *   value={downloadedBytes} 
+ *   max={totalBytes}
+ *   width={30}
+ *   showPercentage
+ * />
+ * ```
+ */
+export function DeterminateProgress(props) {
+  const bar = createMemo(() => renderProgressBar({
+    value: props.value,
+    max: props.max,
+    width: props.width ?? 30,
+    fillChar: props.fillChar,
+    emptyChar: props.emptyChar
+  }));
+  return (() => {
+    var _el$4 = _$createElement("box"),
+      _el$6 = _$createElement("text");
+    _$insertNode(_el$4, _el$6);
+    _$setProp(_el$4, "flexDirection", "row");
+    _$setProp(_el$4, "gap", 1);
+    _$insert(_el$4, _$createComponent(Show, {
+      get when() {
+        return props.label;
+      },
+      get children() {
+        var _el$5 = _$createElement("text");
+        _$insert(_el$5, () => props.label);
+        return _el$5;
+      }
+    }), _el$6);
+    _$insert(_el$6, bar);
+    _$insert(_el$4, _$createComponent(Show, {
+      get when() {
+        return props.showPercentage;
+      },
+      get children() {
+        var _el$7 = _$createElement("text");
+        _$insert(_el$7, () => getPercentage(props.value, props.max));
+        return _el$7;
+      }
+    }), null);
+    return _el$4;
+  })();
+}
+
+/**
+ * Indeterminate progress (animated) for unknown duration tasks.
+ * Uses the animation system.
+ * 
+ * Example:
+ * ```tsx
+ * const frame = useAnimatedFrame("spinner.braille")
+ * <text>{frame()}</text>
+ * ```
+ */
+
+// Animation specs for progress indicators
+export const ProgressAnimations = {
+  /** Braille dots moving left to right */
+  braille: {
+    id: "progress.braille",
+    frames: ["⠁", "⠂", "⠄", "⡀", "⢀", "⠠", "⠐", "⠈"],
+    intervalTicks: 1,
+    mode: "loop"
+  },
+  /** Blocks filling up */
+  blocks: {
+    id: "progress.blocks",
+    frames: ["▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"],
+    intervalTicks: 2,
+    mode: "loop"
+  },
+  /** Growing bar */
+  growing: {
+    id: "progress.growing",
+    frames: ["░░░░░░░░░░", "█░░░░░░░░░", "██░░░░░░░░", "███░░░░░░░", "████░░░░░░", "█████░░░░░", "██████░░░░", "███████░░░", "████████░░", "█████████░", "██████████"],
+    intervalTicks: 3,
+    mode: "loop"
+  }
+};

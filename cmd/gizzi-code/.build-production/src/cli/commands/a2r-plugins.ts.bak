@@ -1,0 +1,118 @@
+import { cmd } from "@/cli/commands/cmd"
+import { UI } from "@/cli/ui"
+import { createPluginController } from "@allternit/remote-control"
+
+export const A2rPluginsCommand = cmd({
+  command: "a2r plugins [action] [name]",
+  describe: "Manage A2R plugins",
+  builder: (yargs) =>
+    yargs
+      .positional("action", {
+        type: "string",
+        choices: ["list", "install", "uninstall", "enable", "disable", "update"],
+        describe: "Action to perform",
+      })
+      .positional("name", {
+        type: "string",
+        describe: "Plugin name or ID",
+      })
+      .option("version", {
+        type: "string",
+        describe: "Version to install (for install action)",
+      }),
+  handler: async (args) => {
+    const plugins = createPluginController()
+    const action = args.action || "list"
+
+    try {
+      switch (action) {
+        case "list": {
+          const list = await plugins.list()
+          UI.empty()
+          UI.println(UI.Style.TEXT_INFO_BOLD + "A2R Plugins")
+          UI.empty()
+
+          if (list.length === 0) {
+            UI.println("  No plugins found")
+            return
+          }
+
+          for (const plugin of list) {
+            const statusIcon = plugin.enabled ? UI.Style.TEXT_SUCCESS + "●" : UI.Style.TEXT_DIM + "○"
+            UI.println(
+              `  ${statusIcon} ${plugin.name.padEnd(30)} ${UI.Style.TEXT_DIM}v${plugin.version}${plugin.description ? UI.Style.TEXT_DIM + ` - ${plugin.description}` : ""}`,
+            )
+          }
+          break
+        }
+
+        case "install": {
+          if (!args.name) {
+            UI.error("Please specify a plugin name")
+            process.exitCode = 1
+            return
+          }
+          UI.println(`Installing plugin: ${args.name}${args.version ? `@${args.version}` : ""}...`)
+          const plugin = await plugins.install(args.name, args.version)
+          UI.println(UI.Style.TEXT_SUCCESS + `✓ Plugin ${plugin.name} installed`)
+          break
+        }
+
+        case "uninstall": {
+          if (!args.name) {
+            UI.error("Please specify a plugin name or ID")
+            process.exitCode = 1
+            return
+          }
+          UI.println(`Uninstalling plugin: ${args.name}...`)
+          await plugins.uninstall(args.name)
+          UI.println(UI.Style.TEXT_WARNING + `✓ Plugin ${args.name} uninstalled`)
+          break
+        }
+
+        case "enable": {
+          if (!args.name) {
+            UI.error("Please specify a plugin name or ID")
+            process.exitCode = 1
+            return
+          }
+          UI.println(`Enabling plugin: ${args.name}...`)
+          await plugins.enable(args.name)
+          UI.println(UI.Style.TEXT_SUCCESS + `✓ Plugin ${args.name} enabled`)
+          break
+        }
+
+        case "disable": {
+          if (!args.name) {
+            UI.error("Please specify a plugin name or ID")
+            process.exitCode = 1
+            return
+          }
+          UI.println(`Disabling plugin: ${args.name}...`)
+          await plugins.disable(args.name)
+          UI.println(UI.Style.TEXT_WARNING + `✓ Plugin ${args.name} disabled`)
+          break
+        }
+
+        case "update": {
+          if (!args.name) {
+            UI.error("Please specify a plugin name or ID")
+            process.exitCode = 1
+            return
+          }
+          UI.println(`Updating plugin: ${args.name}...`)
+          const plugin = await plugins.update(args.name)
+          UI.println(UI.Style.TEXT_SUCCESS + `✓ Plugin ${plugin.name} updated to v${plugin.version}`)
+          break
+        }
+
+        default:
+          UI.error(`Unknown action: ${action}`)
+          process.exitCode = 1
+      }
+    } catch (error) {
+      UI.error(error instanceof Error ? error.message : "Failed to execute command")
+      process.exitCode = 1
+    }
+  },
+})

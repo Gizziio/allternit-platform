@@ -3,7 +3,7 @@
  * 
  * Icons for messaging, notifications, and communication features.
  * 
- * @module @a2r/platform/icons/categories/communication
+ * @module @allternit/platform/icons/categories/communication
  */
 
 export const communicationIcons = [

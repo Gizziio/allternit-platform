@@ -1,0 +1,169 @@
+#!/bin/bash
+# A2R File Staging Pipeline Manager
+#
+# Usage: a2r-stage [command] [file]
+
+WORKSPACE="a2r-workspace"
+
+show_help() {
+    cat << 'HELP'
+A2R Agent Workspace Pipeline
+
+Commands:
+    status                  Show workspace status
+    inbox <file>            Move file to output/inbox/
+    to-active <file>        Move file to active/ (current work)
+    to-spec <file>          Move file to output/specs/
+    to-docs <file>          Move file to output/docs/
+    to-progress <file>      Move file to output/progress/
+    to-completed <file>     Move file to completed/
+    to-archive <file>       Move file to archive/
+    finalize <file>         Move file from output/ to permanent location
+    clean-archive           Clean old archive/ files (use carefully)
+    help                    Show this help
+
+Workflow:
+    New → inbox/ → categorize → active/ → completed/ → archive/
+
+Examples:
+    a2r-stage inbox PLAN_new.md
+    a2r-stage to-active inbox/PLAN_new.md
+    a2r-stage finalize output/specs/SPEC_protocol.md
+    a2r-stage to-completed active/PLAN_done.md
+HELP
+}
+
+show_status() {
+    echo "=== A2R Workspace Status ==="
+    echo "Location: $WORKSPACE/"
+    echo ""
+    
+    # Active work
+    count=$(find "$WORKSPACE/active" -type f 2>/dev/null | wc -l)
+    echo "📂 active/: $count files (CURRENT WORK)"
+    ls -1 "$WORKSPACE/active" 2>/dev/null | head -3 | sed 's/^/   - /'
+    [ "$count" -gt 3 ] && echo "   ... and $((count - 3)) more"
+    echo ""
+    
+    # Output pipeline
+    for dir in inbox specs docs progress; do
+        count=$(ls -1 "$WORKSPACE/output/$dir" 2>/dev/null | wc -l)
+        icon=""
+        [ "$dir" = "inbox" ] && icon="📥"
+        [ "$dir" = "specs" ] && icon="📋"
+        [ "$dir" = "docs" ] && icon="📄"
+        [ "$dir" = "progress" ] && icon="📊"
+        echo "$icon output/$dir/: $count files"
+        ls -1 "$WORKSPACE/output/$dir" 2>/dev/null | head -3 | sed 's/^/   - /'
+        [ "$count" -gt 3 ] && echo "   ... and $((count - 3)) more"
+        echo ""
+    done
+    
+    # Completed
+    count=$(find "$WORKSPACE/completed" -type f 2>/dev/null | wc -l)
+    echo "✅ completed/: $count files"
+    echo ""
+    
+    # Archive
+    count=$(find "$WORKSPACE/archive" -type f 2>/dev/null | wc -l)
+    echo "🗄️  archive/: $count files (for review)"
+    ls -1 "$WORKSPACE/archive" 2>/dev/null | head -3 | sed 's/^/   - /'
+    [ "$count" -gt 3 ] && echo "   ... and subdirectories"
+    echo ""
+    
+    # System
+    echo "System: receipts/$(ls -1 "$WORKSPACE/receipts" 2>/dev/null | wc -l), artifacts/$(ls -1 "$WORKSPACE/artifacts" 2>/dev/null | wc -l), config/$(ls -1 "$WORKSPACE/config" 2>/dev/null | wc -l)"
+}
+
+move_file() {
+    local src="$1"
+    local dst="$2"
+    
+    # Check if exists in workspace
+    if [ ! -f "$src" ] && [ -f "$WORKSPACE/$src" ]; then
+        src="$WORKSPACE/$src"
+    fi
+    
+    if [ ! -f "$src" ]; then
+        echo "❌ File not found: $1"
+        exit 1
+    fi
+    
+    mkdir -p "$(dirname "$dst")"
+    mv "$src" "$dst"
+    echo "✅ Moved: $(basename "$src") → ${dst#$WORKSPACE/}"
+}
+
+finalize_file() {
+    local file="$1"
+    local basename=$(basename "$file" .md)
+    local clean_name=$(echo "$basename" | sed 's/^[A-Z][A-Z0-9]*_//')
+    
+    if [[ "$file" == *"specs/"* ]] || [[ "$file" == *"SPEC"* ]]; then
+        # Find next spec number
+        last_num=$(ls spec/ 2>/dev/null | grep -E '^[0-9]+_' | tail -1 | cut -d'_' -f1)
+        next_num=$((10#$last_num + 1))
+        dst="spec/${next_num}_${clean_name}.md"
+        move_file "$file" "$dst"
+        echo "📋 Finalized to spec/${next_num}_${clean_name}.md"
+        
+    elif [[ "$file" == *"docs/"* ]] || [[ "$file" == *"ANALYSIS"* ]] || [[ "$file" == *"AUDIT"* ]]; then
+        dst="docs/internal/${clean_name}.md"
+        move_file "$file" "$dst"
+        echo "📄 Finalized to docs/internal/${clean_name}.md"
+        
+    elif [[ "$file" == *"progress/"* ]] || [[ "$file" == *"PLAN"* ]] || [[ "$file" == *"PROG"* ]] || [[ "$basename" =~ ^N[0-9]_ ]]; then
+        # Move to completed instead of docs_active
+        dst="$WORKSPACE/completed/${clean_name}.md"
+        move_file "$file" "$dst"
+        echo "✅ Finalized to a2r-workspace/completed/${clean_name}.md"
+        
+    else
+        dst="$WORKSPACE/completed/${clean_name}.md"
+        move_file "$file" "$dst"
+        echo "✅ Finalized to a2r-workspace/completed/${clean_name}.md"
+    fi
+}
+
+case "${1:-status}" in
+    status)
+        show_status
+        ;;
+    inbox)
+        move_file "$2" "$WORKSPACE/output/inbox/$(basename "$2")"
+        ;;
+    to-active)
+        move_file "$2" "$WORKSPACE/active/$(basename "$2")"
+        ;;
+    to-spec)
+        move_file "$2" "$WORKSPACE/output/specs/$(basename "$2")"
+        ;;
+    to-docs)
+        move_file "$2" "$WORKSPACE/output/docs/$(basename "$2")"
+        ;;
+    to-progress)
+        move_file "$2" "$WORKSPACE/output/progress/$(basename "$2")"
+        ;;
+    to-completed)
+        move_file "$2" "$WORKSPACE/completed/$(basename "$2")"
+        ;;
+    to-archive)
+        move_file "$2" "$WORKSPACE/archive/$(date +%Y%m%d)_$(basename "$2")"
+        ;;
+    finalize)
+        finalize_file "$2"
+        ;;
+    clean-archive)
+        echo "⚠️  Archive contains files for review. Manual deletion required."
+        echo "Location: $WORKSPACE/archive/"
+        ls "$WORKSPACE/archive/"
+        ;;
+    help|--help|-h)
+        show_help
+        ;;
+    *)
+        echo "Unknown command: $1"
+        show_help
+        exit 1
+        ;;
+esac

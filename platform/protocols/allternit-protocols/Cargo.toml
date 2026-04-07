@@ -1,0 +1,35 @@
+[package]
+name = "allternit-protocols"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Umbrella crate — re-exports all allternit protocol crates with feature flags"
+
+[features]
+default = ["messaging", "history"]
+full = [
+    "messaging",
+    "history",
+    "node-control",
+    "canvas",
+    "guest-agent",
+    "mcp",
+    "sms",
+]
+messaging    = ["dep:allternit-messaging"]
+history      = ["dep:allternit-history"]
+node-control = ["dep:allternit-node-protocol"]
+canvas       = ["dep:allternit-canvas-protocol"]
+guest-agent  = ["dep:allternit-guest-agent-protocol"]
+mcp          = ["dep:mcp", "dep:allternit-mcp-client"]
+sms          = ["dep:allternit-transport-sms"]
+
+[dependencies]
+allternit-messaging           = { workspace = true, optional = true }
+allternit-history             = { workspace = true, optional = true }
+allternit-node-protocol       = { workspace = true, optional = true }
+allternit-canvas-protocol     = { workspace = true, optional = true }
+allternit-guest-agent-protocol = { workspace = true, optional = true }
+mcp                           = { workspace = true, optional = true }
+allternit-mcp-client          = { workspace = true, optional = true }
+allternit-transport-sms       = { workspace = true, optional = true }

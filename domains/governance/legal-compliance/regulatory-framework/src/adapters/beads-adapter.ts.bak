@@ -1,0 +1,330 @@
+/**
+ * Beads Adapter
+ * 
+ * Integrates with the beads (bd) command-line tool for issue tracking.
+ * Provides bidirectional sync between beads issues and A2R WIH items.
+ */
+
+import { exec } from 'node:child_process';
+import { promisify } from 'node:util';
+import type { WihItem, A2RKernel } from '@allternit/governor';
+import {
+  type BeadsIssue,
+  type BeadsAdapterConfig,
+  type BeadsFilter,
+  BeadsAdapterError,
+} from '../types.js';
+
+const execAsync = promisify(exec);
+
+/**
+ * Beads Adapter Implementation
+ * 
+ * Uses the `bd` CLI to interact with beads issues.
+ */
+export class BeadsAdapter {
+  private config: Required<BeadsAdapterConfig>;
+  private kernel: A2RKernel;
+
+  constructor(kernel: A2RKernel, config: BeadsAdapterConfig = {}) {
+    this.kernel = kernel;
+    this.config = {
+      dbPath: '.beads/issues.db',
+      jsonlMode: false,
+      autoSync: true,
+      actor: 'a2r-lawlayer',
+      ...config,
+    };
+  }
+
+  /**
+   * Execute a bd command
+   */
+  private async execBd(args: string): Promise<string> {
+    const cmd = `bd ${args}`;
+    
+    try {
+      const { stdout } = await execAsync(cmd, {
+        cwd: process.cwd(),
+        env: {
+          ...process.env,
+          BD_ACTOR: this.config.actor,
+          BEADS_DB: this.config.dbPath,
+        },
+      });
+      return stdout.trim();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new BeadsAdapterError(`bd command failed: ${message}`, { cmd });
+    }
+  }
+
+  /**
+   * Get issue by ID
+   */
+  async getIssue(id: string): Promise<BeadsIssue | null> {
+    try {
+      const output = await this.execBd(`show ${id} --json`);
+      const data = JSON.parse(output);
+      return this.parseBeadsIssue(data);
+    } catch (error) {
+      if (error instanceof BeadsAdapterError && 
+          error.message.includes('not found')) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Create new issue
+   */
+  async createIssue(
+    issue: Omit<BeadsIssue, 'id' | 'createdAt'>
+  ): Promise<BeadsIssue> {
+    const title = issue.title;
+    const description = issue.description ?? '';
+    
+    // Build command arguments
+    let args = `create "${title}"`;
+    
+    if (description) {
+      args += ` --description "${description}"`;
+    }
+    
+    if (issue.priority) {
+      args += ` --priority ${issue.priority}`;
+    }
+    
+    if (issue.assignee) {
+      args += ` --assignee ${issue.assignee}`;
+    }
+    
+    for (const label of issue.labels) {
+      args += ` --label "${label}"`;
+    }
+    
+    if (issue.blockedBy.length > 0) {
+      args += ` --blocked-by ${issue.blockedBy.join(',')}`;
+    }
+
+    const output = await this.execBd(args);
+    
+    // Parse the new issue ID from output
+    const match = output.match(/created:\s*(\S+)/i);
+    if (!match) {
+      throw new BeadsAdapterError('Failed to parse created issue ID', { output });
+    }
+    
+    const newId = match[1];
+    const newIssue = await this.getIssue(newId);
+    
+    if (!newIssue) {
+      throw new BeadsAdapterError('Failed to retrieve created issue', { id: newId });
+    }
+
+    // Sync to WIH
+    await this.syncToWih(newIssue);
+
+    return newIssue;
+  }
+
+  /**
+   * List issues
+   */
+  async listIssues(filter?: BeadsFilter): Promise<BeadsIssue[]> {
+    let args = 'list --json';
+    
+    if (filter?.status) {
+      const statuses = Array.isArray(filter.status) 
+        ? filter.status 
+        : [filter.status];
+      args += ` --status ${statuses.join(',')}`;
+    }
+    
+    if (filter?.priority) {
+      const priorities = Array.isArray(filter.priority)
+        ? filter.priority
+        : [filter.priority];
+      args += ` --priority ${priorities.join(',')}`;
+    }
+
+    const output = await this.execBd(args);
+    const data = JSON.parse(output);
+    
+    if (!Array.isArray(data)) {
+      return [];
+    }
+
+    return data.map((item: unknown) => this.parseBeadsIssue(item));
+  }
+
+  /**
+   * Check if issue is ready for work
+   */
+  async isReadyForWork(id: string): Promise<boolean> {
+    const issue = await this.getIssue(id);
+    if (!issue) return false;
+
+    // Must be open
+    if (issue.status !== 'open') return false;
+
+    // Check dependencies
+    for (const depId of issue.blockedBy) {
+      const dep = await this.getIssue(depId);
+      if (!dep || dep.status !== 'closed') {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Sync with git
+   */
+  async sync(): Promise<void> {
+    await this.execBd('sync');
+  }
+
+  /**
+   * Convert beads issue to WIH
+   */
+  toWih(issue: BeadsIssue): WihItem {
+    return {
+      id: issue.id,
+      title: issue.title,
+      description: issue.description,
+      status: this.mapBeadsStatusToWih(issue.status),
+      priority: this.mapBeadsPriorityToWih(issue.priority),
+      blockedBy: issue.blockedBy,
+      blocks: [],
+      assignee: issue.assignee,
+      phase: undefined,
+      tags: issue.labels,
+      receiptRefs: [],
+      artifacts: [],
+      createdAt: issue.createdAt,
+      updatedAt: issue.updatedAt,
+      completedAt: issue.closedAt,
+      version: '1.0.0',
+    };
+  }
+
+  /**
+   * Sync beads issue to WIH in kernel
+   */
+  async syncToWih(issue: BeadsIssue): Promise<WihItem> {
+    const wih = this.toWih(issue);
+    
+    // Check if WIH exists in kernel
+    const existing = await this.kernel.getWih(wih.id);
+    
+    if (existing) {
+      // Update
+      return this.kernel.updateWih(wih.id, {
+        title: wih.title,
+        description: wih.description,
+        status: wih.status,
+        priority: wih.priority,
+        blockedBy: wih.blockedBy,
+        updatedAt: wih.updatedAt,
+      });
+    } else {
+      // Create new
+      return this.kernel.createWih({
+        title: wih.title,
+        description: wih.description,
+        status: wih.status,
+        priority: wih.priority,
+        blockedBy: wih.blockedBy,
+        tags: wih.tags,
+      });
+    }
+  }
+
+  /**
+   * Parse beads issue from JSON
+   */
+  private parseBeadsIssue(data: unknown): BeadsIssue {
+    if (!data || typeof data !== 'object') {
+      throw new BeadsAdapterError('Invalid beads issue data', { data });
+    }
+
+    const d = data as Record<string, unknown>;
+
+    return {
+      id: String(d.id ?? d._id ?? ''),
+      title: String(d.title ?? ''),
+      description: d.description ? String(d.description) : undefined,
+      status: this.parseBeadsStatus(d.status),
+      priority: this.parseBeadsPriority(d.priority),
+      blockedBy: Array.isArray(d.blockedBy) ? d.blockedBy.map(String) : [],
+      blocks: Array.isArray(d.blocks) ? d.blocks.map(String) : [],
+      labels: Array.isArray(d.labels) ? d.labels.map(String) : [],
+      assignee: d.assignee ? String(d.assignee) : undefined,
+      createdAt: String(d.createdAt ?? new Date().toISOString()),
+      updatedAt: d.updatedAt ? String(d.updatedAt) : undefined,
+      closedAt: d.closedAt ? String(d.closedAt) : undefined,
+      metadata: d.metadata as Record<string, unknown> | undefined,
+    };
+  }
+
+  /**
+   * Parse beads status
+   */
+  private parseBeadsStatus(status: unknown): BeadsIssue['status'] {
+    const s = String(status).toLowerCase();
+    if (['open', 'in_progress', 'blocked', 'closed'].includes(s)) {
+      return s as BeadsIssue['status'];
+    }
+    return 'open';
+  }
+
+  /**
+   * Parse beads priority
+   */
+  private parseBeadsPriority(priority: unknown): BeadsIssue['priority'] {
+    const p = String(priority).toLowerCase();
+    if (['low', 'medium', 'high', 'critical'].includes(p)) {
+      return p as BeadsIssue['priority'];
+    }
+    return 'medium';
+  }
+
+  /**
+   * Map beads status to WIH status
+   */
+  private mapBeadsStatusToWih(status: BeadsIssue['status']): WihItem['status'] {
+    switch (status) {
+      case 'open': return 'ready';
+      case 'in_progress': return 'in_progress';
+      case 'blocked': return 'blocked';
+      case 'closed': return 'complete';
+      default: return 'draft';
+    }
+  }
+
+  /**
+   * Map beads priority to WIH priority
+   */
+  private mapBeadsPriorityToWih(priority: BeadsIssue['priority']): number {
+    switch (priority) {
+      case 'critical': return 100;
+      case 'high': return 75;
+      case 'medium': return 50;
+      case 'low': return 25;
+      default: return 50;
+    }
+  }
+}
+
+/**
+ * Create beads adapter instance
+ */
+export function createBeadsAdapter(
+  kernel: A2RKernel,
+  config?: BeadsAdapterConfig
+): BeadsAdapter {
+  return new BeadsAdapter(kernel, config);
+}

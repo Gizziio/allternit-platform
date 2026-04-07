@@ -4,7 +4,7 @@ const features = [
   'Gizzi-powered agentic workspace',
   'Multi-surface: Desktop, Web, CLI',
   'Git-auditable agent lineage',
-  'Full @a2r/sdk access',
+  'Full @allternit/sdk access',
   'Constitutional AI guarantees',
 ]
 

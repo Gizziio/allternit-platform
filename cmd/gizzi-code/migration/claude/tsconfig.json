@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "ES2023"],
+    "jsx": "react-jsx",
+    "strict": false,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "declaration": false,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@anthropic-ai/sdk": ["./src/sdk/allternit-api/index.ts"],
+      "@anthropic-ai/sdk/resources": ["./src/sdk/allternit-api/resources/index.ts"],
+      "@anthropic-ai/sdk/resources/index.mjs": ["./src/sdk/allternit-api/resources/index.ts"],
+      "@anthropic-ai/sdk/resources/messages.mjs": ["./src/sdk/allternit-api/resources/index.ts"],
+      "@anthropic-ai/sdk/resources/beta/messages/messages.mjs": ["./src/sdk/allternit-api/resources/index.ts"],
+      "src/*": ["./src/*"]
+    },
+    "types": ["bun", "react", "node"]
+  },
+  "include": ["src/**/*", "src/types/**/*.d.ts"],
+  "exclude": ["node_modules", "dist"]
+}

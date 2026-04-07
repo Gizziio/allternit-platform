@@ -1,0 +1,461 @@
+# =============================================================================
+# A2R Platform Development Task Runner
+# =============================================================================
+# This Taskfile defines common development tasks for the A2R platform.
+# Install Task from https://taskfile.dev/
+# =============================================================================
+
+version: '3'
+
+vars:
+  VERSION: '1.0.0'
+  BUILD_DIR: './build'
+  DIST_DIR: './dist'
+
+env:
+  NODE_ENV: development
+  GOFLAGS: -mod=mod
+
+# =============================================================================
+# Default task - show available tasks
+# =============================================================================
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list-all
+
+  # ===========================================================================
+  # Setup Tasks
+  # ===========================================================================
+  setup:
+    desc: Run full development setup
+    cmds:
+      - task: setup:env
+      - task: setup:deps
+      - task: setup:db
+
+  setup:env:
+    desc: Setup environment files
+    cmds:
+      - |
+        if [ ! -f .env ]; then
+          cp .env.example .env
+          echo "Created .env from .env.example"
+        fi
+    silent: true
+
+  setup:deps:
+    desc: Install all dependencies
+    cmds:
+      - task: deps:ui
+      - task: deps:go
+      - task: deps:rust
+
+  setup:db:
+    desc: Setup databases and run migrations
+    cmds:
+      - task: db:migrate
+      - task: db:seed
+
+  # ===========================================================================
+  # Dependency Tasks
+  # ===========================================================================
+  deps:ui:
+    desc: Install UI dependencies
+    dir: 6-ui/allternit-platform
+    cmds:
+      - pnpm install
+
+  deps:go:
+    desc: Install Go dependencies
+    dir: 1-kernel
+    cmds:
+      - go mod download
+      - go mod tidy
+
+  deps:rust:
+    desc: Install Rust dependencies
+    dir: 1-kernel/a2r-infrastructure
+    cmds:
+      - cargo fetch
+
+  # ===========================================================================
+  # Development Tasks
+  # ===========================================================================
+  dev:
+    desc: Start all development services
+    cmds:
+      - ./scripts/start-services.sh
+
+  dev:ui:
+    desc: Start UI development server only
+    dir: 6-ui/allternit-platform
+    cmds:
+      - pnpm dev
+
+  dev:api:
+    desc: Start API gateway with hot reload
+    dir: 1-kernel/a2r-cloud
+    cmds:
+      - air
+
+  dev:kernel:
+    desc: Start kernel services with hot reload
+    dir: 1-kernel/allternit-kernel
+    cmds:
+      - air
+
+  dev:infra:
+    desc: Start infrastructure services with hot reload
+    dir: 1-kernel/a2r-infrastructure
+    cmds:
+      - cargo watch -x run
+
+  # ===========================================================================
+  # Build Tasks
+  # ===========================================================================
+  build:
+    desc: Build all services
+    cmds:
+      - task: build:ui
+      - task: build:go
+      - task: build:rust
+
+  build:ui:
+    desc: Build UI for production
+    dir: 6-ui/allternit-platform
+    cmds:
+      - pnpm build
+    generates:
+      - 6-ui/allternit-platform/dist/**/*
+
+  build:go:
+    desc: Build Go services
+    dir: 1-kernel
+    cmds:
+      - go build -o {{.BUILD_DIR}}/a2r-cloud ./a2r-cloud
+      - go build -o {{.BUILD_DIR}}/allternit-kernel ./allternit-kernel
+    generates:
+      - '{{.BUILD_DIR}}/a2r-*'
+
+  build:rust:
+    desc: Build Rust services
+    dir: 1-kernel/a2r-infrastructure
+    cmds:
+      - cargo build --release
+    generates:
+      - 1-kernel/a2r-infrastructure/target/release/a2r-infrastructure
+
+  # ===========================================================================
+  # Test Tasks
+  # ===========================================================================
+  test:
+    desc: Run all tests
+    cmds:
+      - task: test:go
+      - task: test:rust
+      - task: test:ui
+
+  test:go:
+    desc: Run Go tests
+    dir: 1-kernel
+    cmds:
+      - go test -v -race ./...
+
+  test:rust:
+    desc: Run Rust tests
+    dir: 1-kernel/a2r-infrastructure
+    cmds:
+      - cargo test --all-features
+
+  test:ui:
+    desc: Run UI tests
+    dir: 6-ui/allternit-platform
+    cmds:
+      - pnpm test
+
+  test:e2e:
+    desc: Run end-to-end tests
+    dir: 6-ui/allternit-platform
+    cmds:
+      - pnpm test:e2e
+
+  # ===========================================================================
+  # Lint Tasks
+  # ===========================================================================
+  lint:
+    desc: Run all linters
+    cmds:
+      - task: lint:go
+      - task: lint:rust
+      - task: lint:ui
+
+  lint:go:
+    desc: Run Go linter
+    dir: 1-kernel
+    cmds:
+      - golangci-lint run ./...
+
+  lint:rust:
+    desc: Run Rust linter
+    dir: 1-kernel/a2r-infrastructure
+    cmds:
+      - cargo clippy --all-features -- -D warnings
+
+  lint:ui:
+    desc: Run UI linter
+    dir: 6-ui/allternit-platform
+    cmds:
+      - pnpm lint
+
+  lint:fix:
+    desc: Fix linting issues where possible
+    cmds:
+      - task: lint:go:fix
+      - task: lint:rust:fix
+      - task: lint:ui:fix
+
+  lint:go:fix:
+    desc: Fix Go linting issues
+    dir: 1-kernel
+    cmds:
+      - golangci-lint run --fix ./...
+
+  lint:rust:fix:
+    desc: Fix Rust linting issues
+    dir: 1-kernel/a2r-infrastructure
+    cmds:
+      - cargo clippy --all-features --fix --allow-dirty
+      - cargo fmt
+
+  lint:ui:fix:
+    desc: Fix UI linting issues
+    dir: 6-ui/allternit-platform
+    cmds:
+      - pnpm lint:fix
+      - pnpm format
+
+  # ===========================================================================
+  # Database Tasks
+  # ===========================================================================
+  db:migrate:
+    desc: Run database migrations
+    cmds:
+      - task: db:migrate:goose
+      - task: db:migrate:sqlx
+      - task: db:migrate:prisma
+
+  db:migrate:goose:
+    desc: Run Goose migrations
+    dir: 1-kernel/a2r-infrastructure/migrations
+    cmds:
+      - goose up
+    ignore_error: true
+
+  db:migrate:sqlx:
+    desc: Run SQLx migrations
+    dir: 1-kernel/allternit-kernel
+    cmds:
+      - sqlx migrate run
+    ignore_error: true
+
+  db:migrate:prisma:
+    desc: Run Prisma migrations
+    dir: 6-ui/allternit-platform
+    cmds:
+      - pnpm prisma migrate deploy
+    ignore_error: true
+
+  db:rollback:
+    desc: Rollback database migrations
+    cmds:
+      - task: db:rollback:goose
+      - task: db:rollback:sqlx
+
+  db:rollback:goose:
+    desc: Rollback Goose migrations
+    dir: 1-kernel/a2r-infrastructure/migrations
+    cmds:
+      - goose down
+    ignore_error: true
+
+  db:rollback:sqlx:
+    desc: Rollback SQLx migrations
+    dir: 1-kernel/allternit-kernel
+    cmds:
+      - sqlx migrate revert
+    ignore_error: true
+
+  db:seed:
+    desc: Seed database with test data
+    cmds:
+      - |
+        if [ -f scripts/seed-db.sh ]; then
+          bash scripts/seed-db.sh
+        else
+          echo "No seed script found"
+        fi
+
+  db:reset:
+    desc: Reset database (drop and recreate)
+    cmds:
+      - psql $DATABASE_URL -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+      - task: db:migrate
+      - task: db:seed
+    ignore_error: true
+
+  db:studio:
+    desc: Open Prisma Studio
+    dir: 6-ui/allternit-platform
+    cmds:
+      - pnpm prisma studio
+
+  # ===========================================================================
+  # Docker Tasks
+  # ===========================================================================
+  docker:up:
+    desc: Start Docker services
+    cmds:
+      - docker compose up -d
+
+  docker:down:
+    desc: Stop Docker services
+    cmds:
+      - docker compose down
+
+  docker:logs:
+    desc: View Docker service logs
+    cmds:
+      - docker compose logs -f
+
+  docker:clean:
+    desc: Clean Docker resources (WARNING: removes volumes)
+    cmds:
+      - docker compose down -v
+      - docker system prune -f
+
+  # ===========================================================================
+  # Code Generation Tasks
+  # ===========================================================================
+  generate:
+    desc: Generate all code
+    cmds:
+      - task: generate:prisma
+      - task: generate:proto
+      - task: generate:swagger
+
+  generate:prisma:
+    desc: Generate Prisma client
+    dir: 6-ui/allternit-platform
+    cmds:
+      - pnpm prisma generate
+
+  generate:proto:
+    desc: Generate protobuf code
+    dir: 1-kernel
+    cmds:
+      - buf generate
+    ignore_error: true
+
+  generate:swagger:
+    desc: Generate Swagger documentation
+    dir: 1-kernel/a2r-cloud
+    cmds:
+      - swag init
+    ignore_error: true
+
+  # ===========================================================================
+  # Cleanup Tasks
+  # ===========================================================================
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - rm -rf {{.BUILD_DIR}}
+      - rm -rf {{.DIST_DIR}}
+      - rm -rf 6-ui/allternit-platform/.next
+      - rm -rf 6-ui/allternit-platform/dist
+      - rm -rf 1-kernel/a2r-infrastructure/target
+
+  clean:all:
+    desc: Deep clean (including dependencies)
+    cmds:
+      - task: clean
+      - rm -rf 6-ui/allternit-platform/node_modules
+      - rm -rf 1-kernel/a2r-infrastructure/target
+
+  # ===========================================================================
+  # Utility Tasks
+  # ===========================================================================
+  format:
+    desc: Format all code
+    cmds:
+      - task: format:go
+      - task: format:rust
+      - task: format:ui
+
+  format:go:
+    desc: Format Go code
+    dir: 1-kernel
+    cmds:
+      - gofmt -w .
+      - goimports -w .
+    ignore_error: true
+
+  format:rust:
+    desc: Format Rust code
+    dir: 1-kernel/a2r-infrastructure
+    cmds:
+      - cargo fmt
+
+  format:ui:
+    desc: Format UI code
+    dir: 6-ui/allternit-platform
+    cmds:
+      - pnpm format
+
+  check:
+    desc: Run all checks (lint, test, build)
+    cmds:
+      - task: lint
+      - task: test
+      - task: build
+
+  update:
+    desc: Update all dependencies
+    cmds:
+      - task: update:go
+      - task: update:rust
+      - task: update:ui
+
+  update:go:
+    desc: Update Go dependencies
+    dir: 1-kernel
+    cmds:
+      - go get -u ./...
+      - go mod tidy
+
+  update:rust:
+    desc: Update Rust dependencies
+    dir: 1-kernel/a2r-infrastructure
+    cmds:
+      - cargo update
+
+  update:ui:
+    desc: Update UI dependencies
+    dir: 6-ui/allternit-platform
+    cmds:
+      - pnpm update
+
+  # ===========================================================================
+  # Release Tasks
+  # ===========================================================================
+  release:patch:
+    desc: Create a patch release
+    cmds:
+      - task: check
+      - git add .
+      - git commit -m "chore: prepare release" || true
+      - git tag -a v{{.VERSION}} -m "Release v{{.VERSION}}"
+      - git push origin v{{.VERSION}}
+    interactive: true

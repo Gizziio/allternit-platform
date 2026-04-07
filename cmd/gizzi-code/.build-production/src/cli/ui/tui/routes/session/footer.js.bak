@@ -1,0 +1,382 @@
+import { memo as _$memo } from "@opentui/solid";
+import { createComponent as _$createComponent } from "@opentui/solid";
+import { effect as _$effect } from "@opentui/solid";
+import { createTextNode as _$createTextNode } from "@opentui/solid";
+import { insertNode as _$insertNode } from "@opentui/solid";
+import { insert as _$insert } from "@opentui/solid";
+import { setProp as _$setProp } from "@opentui/solid";
+import { createElement as _$createElement } from "@opentui/solid";
+import { createMemo, Match, onCleanup, onMount, Show, Switch } from "solid-js";
+import { useTheme } from "@/cli/ui/tui/context/theme";
+import { useSync } from "@/cli/ui/tui/context/sync";
+import { useDirectory } from "@/cli/ui/tui/context/directory";
+import { useConnected } from "@/cli/ui/tui/component/dialog-model";
+import { createStore } from "solid-js/store";
+import { useRoute } from "@/cli/ui/tui/context/route";
+import { useTerminalDimensions } from "@opentui/solid";
+import { useLocal } from "@/cli/ui/tui/context/local";
+import { GIZZICopy } from "@/shared/brand";
+import { GIZZIMascot } from "@/cli/ui/components/gizzi/mascot";
+export function Footer(props) {
+  const {
+    theme
+  } = useTheme();
+  const sync = useSync();
+  const route = useRoute();
+  const local = useLocal();
+  const mcp = createMemo(() => Object.values(sync.data.mcp ?? {}).filter(x => x?.status === "connected").length);
+  const mcpError = createMemo(() => Object.values(sync.data.mcp ?? {}).some(x => x?.status === "failed"));
+  const mcpErrorNames = createMemo(() => Object.entries(sync.data.mcp ?? {}).filter(([, v]) => v?.status === "failed").map(([k]) => k).slice(0, 2).join(", "));
+  const lsp = createMemo(() => Object.keys(sync.data.lsp ?? {}));
+  const permissions = createMemo(() => {
+    if (route.data.type !== "session") return [];
+    return sync.data.permission?.[route.data.sessionID] ?? [];
+  });
+  const directory = useDirectory();
+  const connected = useConnected();
+  const dimensions = useTerminalDimensions();
+  const [store, setStore] = createStore({
+    welcome: false
+  });
+  onMount(() => {
+    const timeouts = [];
+    function tick() {
+      if (connected()) return;
+      if (!store.welcome) {
+        setStore("welcome", true);
+        timeouts.push(setTimeout(() => tick(), 5000));
+        return;
+      }
+      if (store.welcome) {
+        setStore("welcome", false);
+        timeouts.push(setTimeout(() => tick(), 10_000));
+        return;
+      }
+    }
+    timeouts.push(setTimeout(() => tick(), 10_000));
+    onCleanup(() => {
+      timeouts.forEach(clearTimeout);
+    });
+  });
+
+  // Get current mode (yolo, bypass, etc.)
+  const currentMode = createMemo(() => {
+    const config = sync.data?.config;
+    if (config?.permissions === "allow_all" || config?.yolo) return "yolo";
+    return "safe";
+  });
+
+  // Get current agent info
+  const currentAgent = createMemo(() => {
+    const agent = local.agent.current();
+    if (!agent) return null;
+    return agent;
+  });
+
+  // Calculate context usage
+  const contextUsage = createMemo(() => {
+    const used = props.contextUsed || 0;
+    const total = props.contextTotal || 200000;
+    const percentage = Math.round(used / total * 100);
+    return {
+      used,
+      total,
+      percentage,
+      compact: `${percentage}% (${formatTokens(used)}/${formatTokens(total)})`
+    };
+  });
+  const autoCompactThreshold = 85;
+  const footerRightWidth = createMemo(() => {
+    if (store.welcome) {
+      return GIZZICopy.footer.boot.length + 16;
+    }
+    if (!connected()) return 0;
+    const law = permissions().length > 0 ? GIZZICopy.footer.lawBeacon({
+      count: permissions().length
+    }).length + 4 : 0;
+    const runtime = `${lsp().length} ${GIZZICopy.footer.runtime}`.length + 4;
+    const adapters = mcp() ? `${mcp()} ${GIZZICopy.footer.adapters}`.length + 4 : 0;
+    const mascotWidth = props.mascotState ? 16 : 0;
+    return law + runtime + adapters + mascotWidth + 12;
+  });
+  const directoryLabel = createMemo(() => {
+    const limit = Math.max(16, dimensions().width - footerRightWidth() - 8);
+    return truncateMiddle(directory(), limit);
+  });
+  const mascotColor = () => theme.textMuted;
+
+  // Pre-compute all text values to ensure they're strings
+  const modeText = createMemo(() => currentMode() === "yolo" ? "! yolo" : "X safe");
+  const agentNameText = createMemo(() => currentAgent()?.name ?? "");
+  const contextPercentText = createMemo(() => String(contextUsage().percentage));
+  const lawBeaconText = createMemo(() => String(GIZZICopy.footer.lawBeacon({
+    count: permissions().length
+  })));
+  const lspCountText = createMemo(() => String(lsp()?.length ?? 0));
+  const mcpCountText = createMemo(() => String(mcp()));
+  const mascotHintText = createMemo(() => props.mascotHint ?? "");
+  return (() => {
+    var _el$ = _$createElement("box"),
+      _el$2 = _$createElement("box"),
+      _el$3 = _$createElement("text"),
+      _el$4 = _$createElement("box"),
+      _el$5 = _$createElement("text"),
+      _el$6 = _$createElement("text"),
+      _el$10 = _$createElement("box"),
+      _el$11 = _$createElement("text"),
+      _el$12 = _$createElement("span"),
+      _el$13 = _$createTextNode(`%`),
+      _el$14 = _$createTextNode(` context`);
+    _$insertNode(_el$, _el$2);
+    _$setProp(_el$, "flexDirection", "column");
+    _$setProp(_el$, "flexShrink", 0);
+    _$insertNode(_el$2, _el$3);
+    _$insertNode(_el$2, _el$4);
+    _$insertNode(_el$2, _el$10);
+    _$setProp(_el$2, "flexDirection", "row");
+    _$setProp(_el$2, "justifyContent", "space-between");
+    _$setProp(_el$2, "gap", 1);
+    _$setProp(_el$2, "flexShrink", 0);
+    _$setProp(_el$2, "paddingTop", 1);
+    _$setProp(_el$2, "paddingBottom", 1);
+    _$setProp(_el$3, "wrapMode", "none");
+    _$insert(_el$3, directoryLabel);
+    _$insertNode(_el$4, _el$5);
+    _$insertNode(_el$4, _el$6);
+    _$setProp(_el$4, "flexDirection", "row");
+    _$setProp(_el$4, "gap", 2);
+    _$setProp(_el$4, "flexShrink", 0);
+    _$insert(_el$5, modeText);
+    _$insertNode(_el$6, _$createTextNode(`|`));
+    _$insert(_el$4, _$createComponent(Show, {
+      get when() {
+        return currentAgent();
+      },
+      get children() {
+        var _el$8 = _$createElement("text"),
+          _el$9 = _$createElement("span"),
+          _el$1 = _$createTextNode(` `);
+        _$insertNode(_el$8, _el$9);
+        _$insertNode(_el$8, _el$1);
+        _$insertNode(_el$9, _$createTextNode(`●`));
+        _$insert(_el$8, agentNameText, null);
+        _$effect(_p$ => {
+          var _v$ = theme.text,
+            _v$2 = {
+              fg: theme.primary
+            };
+          _v$ !== _p$.e && (_p$.e = _$setProp(_el$8, "fg", _v$, _p$.e));
+          _v$2 !== _p$.t && (_p$.t = _$setProp(_el$9, "style", _v$2, _p$.t));
+          return _p$;
+        }, {
+          e: undefined,
+          t: undefined
+        });
+        return _el$8;
+      }
+    }), null);
+    _$insertNode(_el$10, _el$11);
+    _$setProp(_el$10, "gap", 2);
+    _$setProp(_el$10, "flexDirection", "row");
+    _$setProp(_el$10, "flexShrink", 0);
+    _$setProp(_el$10, "alignItems", "center");
+    _$insertNode(_el$11, _el$12);
+    _$insertNode(_el$11, _el$14);
+    _$insertNode(_el$12, _el$13);
+    _$insert(_el$12, contextPercentText, _el$13);
+    _$insert(_el$10, _$createComponent(Switch, {
+      get children() {
+        return [_$createComponent(Match, {
+          get when() {
+            return store.welcome;
+          },
+          get children() {
+            var _el$16 = _$createElement("text"),
+              _el$17 = _$createTextNode(` `),
+              _el$18 = _$createElement("span");
+            _$insertNode(_el$16, _el$17);
+            _$insertNode(_el$16, _el$18);
+            _$insert(_el$16, () => GIZZICopy.footer.boot, _el$17);
+            _$insertNode(_el$18, _$createTextNode(`/connect`));
+            _$effect(_p$ => {
+              var _v$3 = theme.text,
+                _v$4 = {
+                  fg: theme.textMuted
+                };
+              _v$3 !== _p$.e && (_p$.e = _$setProp(_el$16, "fg", _v$3, _p$.e));
+              _v$4 !== _p$.t && (_p$.t = _$setProp(_el$18, "style", _v$4, _p$.t));
+              return _p$;
+            }, {
+              e: undefined,
+              t: undefined
+            });
+            return _el$16;
+          }
+        }), _$createComponent(Match, {
+          get when() {
+            return !connected();
+          },
+          get children() {
+            var _el$20 = _$createElement("text");
+            _$insertNode(_el$20, _$createTextNode(`⊘ connection lost`));
+            _$effect(_$p => _$setProp(_el$20, "fg", theme.error, _$p));
+            return _el$20;
+          }
+        }), _$createComponent(Match, {
+          get when() {
+            return connected();
+          },
+          get children() {
+            return [_$createComponent(Show, {
+              get when() {
+                return permissions().length > 0;
+              },
+              get children() {
+                var _el$22 = _$createElement("text"),
+                  _el$23 = _$createElement("span"),
+                  _el$25 = _$createTextNode(` `);
+                _$insertNode(_el$22, _el$23);
+                _$insertNode(_el$22, _el$25);
+                _$insertNode(_el$23, _$createTextNode(`△`));
+                _$insert(_el$22, () => String(lawBeaconText()), null);
+                _$effect(_p$ => {
+                  var _v$5 = theme.warning,
+                    _v$6 = {
+                      fg: theme.warning
+                    };
+                  _v$5 !== _p$.e && (_p$.e = _$setProp(_el$22, "fg", _v$5, _p$.e));
+                  _v$6 !== _p$.t && (_p$.t = _$setProp(_el$23, "style", _v$6, _p$.t));
+                  return _p$;
+                }, {
+                  e: undefined,
+                  t: undefined
+                });
+                return _el$22;
+              }
+            }), (() => {
+              var _el$26 = _$createElement("text"),
+                _el$27 = _$createElement("span"),
+                _el$29 = _$createTextNode(` `),
+                _el$30 = _$createTextNode(` `);
+              _$insertNode(_el$26, _el$27);
+              _$insertNode(_el$26, _el$29);
+              _$insertNode(_el$26, _el$30);
+              _$insertNode(_el$27, _$createTextNode(`•`));
+              _$insert(_el$26, () => String(lspCountText()), _el$30);
+              _$insert(_el$26, () => GIZZICopy.footer.runtime, null);
+              _$effect(_p$ => {
+                var _v$7 = theme.text,
+                  _v$8 = {
+                    fg: lsp().length > 0 ? theme.success : theme.textMuted
+                  };
+                _v$7 !== _p$.e && (_p$.e = _$setProp(_el$26, "fg", _v$7, _p$.e));
+                _v$8 !== _p$.t && (_p$.t = _$setProp(_el$27, "style", _v$8, _p$.t));
+                return _p$;
+              }, {
+                e: undefined,
+                t: undefined
+              });
+              return _el$26;
+            })(), _$createComponent(Show, {
+              get when() {
+                return mcp() || mcpError();
+              },
+              get children() {
+                var _el$31 = _$createElement("text"),
+                  _el$32 = _$createElement("span"),
+                  _el$34 = _$createTextNode(` `);
+                _$insertNode(_el$31, _el$32);
+                _$insertNode(_el$31, _el$34);
+                _$insertNode(_el$32, _$createTextNode(`⊙ `));
+                _$insert(_el$31, () => String(mcpCountText()), _el$34);
+                _$insert(_el$31, () => GIZZICopy.footer.adapters, null);
+                _$insert(_el$31, _$createComponent(Show, {
+                  get when() {
+                    return _$memo(() => !!mcpError())() && mcpErrorNames();
+                  },
+                  get children() {
+                    return [" ", "(", _$memo(() => mcpErrorNames()), " failed)"];
+                  }
+                }), null);
+                _$effect(_p$ => {
+                  var _v$9 = mcpError() ? theme.error : theme.text,
+                    _v$0 = {
+                      fg: mcpError() ? theme.error : theme.success
+                    };
+                  _v$9 !== _p$.e && (_p$.e = _$setProp(_el$31, "fg", _v$9, _p$.e));
+                  _v$0 !== _p$.t && (_p$.t = _$setProp(_el$32, "style", _v$0, _p$.t));
+                  return _p$;
+                }, {
+                  e: undefined,
+                  t: undefined
+                });
+                return _el$31;
+              }
+            })];
+          }
+        })];
+      }
+    }), null);
+    _$insert(_el$10, _$createComponent(Show, {
+      get when() {
+        return props.mascotState;
+      },
+      get children() {
+        return _$createComponent(GIZZIMascot, {
+          get state() {
+            return props.mascotState;
+          },
+          compact: true,
+          get color() {
+            return mascotColor();
+          }
+        });
+      }
+    }), null);
+    _$effect(_p$ => {
+      var _v$1 = theme.textMuted,
+        _v$10 = currentMode() === "yolo" ? theme.warning : theme.success,
+        _v$11 = theme.textMuted,
+        _v$12 = contextUsage().percentage > autoCompactThreshold ? theme.warning : theme.textMuted,
+        _v$13 = {
+          fg: contextUsage().percentage > 90 ? theme.error : contextUsage().percentage > autoCompactThreshold ? theme.warning : theme.success
+        };
+      _v$1 !== _p$.e && (_p$.e = _$setProp(_el$3, "fg", _v$1, _p$.e));
+      _v$10 !== _p$.t && (_p$.t = _$setProp(_el$5, "fg", _v$10, _p$.t));
+      _v$11 !== _p$.a && (_p$.a = _$setProp(_el$6, "fg", _v$11, _p$.a));
+      _v$12 !== _p$.o && (_p$.o = _$setProp(_el$11, "fg", _v$12, _p$.o));
+      _v$13 !== _p$.i && (_p$.i = _$setProp(_el$12, "style", _v$13, _p$.i));
+      return _p$;
+    }, {
+      e: undefined,
+      t: undefined,
+      a: undefined,
+      o: undefined,
+      i: undefined
+    });
+    return _el$;
+  })();
+}
+function truncateMiddle(value, max) {
+  if (max <= 0) return "";
+  if (value.length <= max) return value;
+  if (max === 1) return "…";
+  const left = Math.ceil((max - 1) / 2);
+  const right = Math.floor((max - 1) / 2);
+  return `${value.slice(0, left)}…${value.slice(-right)}`;
+}
+function formatTokens(n) {
+  if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+  return String(n);
+}
+
+// Helper to ensure string rendering
+function s(val) {
+  if (val === undefined || val === null) return '';
+  if (typeof val === 'string') return val;
+  if (typeof val === 'number') return String(val);
+  if (typeof val === 'boolean') return val ? 'true' : 'false';
+  return String(val);
+}
+// Force recompile Sat Mar 14 17:35:15 CDT 2026

@@ -1,0 +1,390 @@
+/**
+ * A2R Connection Manager
+ * 
+ * Handles all connection scenarios:
+ * 1. First-run: Auto-install local backend
+ * 2. Bundled: Use included backend
+ * 3. Existing: Connect to system-installed backend
+ * 4. Remote: Connect to user VPS
+ * 5. Development: Connect to localhost dev server
+ */
+
+import { app, ipcMain, dialog } from 'electron';
+import { spawn } from 'child_process';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+
+interface ConnectionMode {
+  type: 'auto-install' | 'bundled' | 'system' | 'remote' | 'development';
+  url?: string;
+  label: string;
+}
+
+interface BackendInstance {
+  mode: ConnectionMode;
+  process?: ReturnType<typeof spawn>;
+  url: string;
+  version?: string;
+}
+
+export class ConnectionManager {
+  private current: BackendInstance | null = null;
+  private userDataPath: string;
+
+  constructor() {
+    this.userDataPath = app.getPath('userData');
+  }
+
+  /**
+   * Auto-detect the best connection mode
+   */
+  async autoConnect(): Promise<BackendInstance> {
+    console.log('[ConnectionManager] Auto-detecting backend...');
+
+    // Priority order:
+    // 1. Development server (if running)
+    // 2. System-installed backend
+    // 3. User-configured remote backend
+    // 4. Previously auto-installed backend
+    // 5. Auto-install new backend
+
+    // 1. Check for dev server
+    if (await this.isBackendResponsive('http://localhost:4096')) {
+      console.log('[ConnectionManager] Found development server');
+      return this.connect({ type: 'development', url: 'http://localhost:4096', label: 'Development' });
+    }
+
+    // 2. Check for system-installed backend
+    if (await this.isSystemBackendRunning()) {
+      console.log('[ConnectionManager] Found system backend');
+      return this.connect({ type: 'system', url: 'http://localhost:4096', label: 'System' });
+    }
+
+    // 3. Check user settings for remote backend
+    const remoteUrl = this.getSavedRemoteUrl();
+    if (remoteUrl && await this.isBackendResponsive(remoteUrl)) {
+      console.log('[ConnectionManager] Found remote backend:', remoteUrl);
+      return this.connect({ type: 'remote', url: remoteUrl, label: 'Remote' });
+    }
+
+    // 4. Check for previously auto-installed backend
+    const localPath = path.join(this.userDataPath, 'backend', 'bin', this.getBinaryName('a2r-api'));
+    if (fs.existsSync(localPath)) {
+      console.log('[ConnectionManager] Found local backend');
+      return this.startLocalBackend(localPath);
+    }
+
+    // 5. Check for bundled backend
+    const bundledPath = this.getBundledBackendPath();
+    if (bundledPath && fs.existsSync(bundledPath)) {
+      console.log('[ConnectionManager] Found bundled backend');
+      return this.startLocalBackend(bundledPath);
+    }
+
+    // 6. Auto-install backend
+    console.log('[ConnectionManager] No backend found, auto-installing...');
+    return this.autoInstallBackend();
+  }
+
+  /**
+   * Connect to a specific URL (user VPS)
+   */
+  async connectToRemote(url: string): Promise<BackendInstance> {
+    // Validate URL
+    if (!await this.isBackendResponsive(url)) {
+      throw new Error(`Cannot connect to backend at ${url}`);
+    }
+
+    // Save for next time
+    this.saveRemoteUrl(url);
+
+    return this.connect({ type: 'remote', url, label: 'Remote' });
+  }
+
+  /**
+   * Switch connection mode
+   */
+  async switchMode(mode: ConnectionMode): Promise<BackendInstance> {
+    // Stop current backend if we started it
+    if (this.current?.process) {
+      this.current.process.kill();
+    }
+
+    switch (mode.type) {
+      case 'development':
+      case 'system':
+      case 'remote':
+        return this.connect(mode);
+      
+      case 'auto-install':
+      case 'bundled':
+        const binaryPath = mode.type === 'bundled' 
+          ? this.getBundledBackendPath()
+          : path.join(this.userDataPath, 'backend', 'bin', this.getBinaryName('a2r-api'));
+        
+        if (!binaryPath || !fs.existsSync(binaryPath)) {
+          // Need to install first
+          return this.autoInstallBackend();
+        }
+        return this.startLocalBackend(binaryPath);
+    }
+  }
+
+  /**
+   * Get current connection status
+   */
+  getCurrentConnection(): BackendInstance | null {
+    return this.current;
+  }
+
+  /**
+   * Check if backend is responsive
+   */
+  private async isBackendResponsive(url: string): Promise<boolean> {
+    try {
+      const response = await fetch(`${url}/health`, {
+        signal: AbortSignal.timeout(2000)
+      });
+      return response.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Check if system backend is running (systemd/launchd)
+   */
+  private async isSystemBackendRunning(): Promise<boolean> {
+    // Quick check on default port
+    return this.isBackendResponsive('http://localhost:4096');
+  }
+
+  /**
+   * Get path to bundled backend (if included in installer)
+   */
+  private getBundledBackendPath(): string | null {
+    // In packaged app, resources are in different locations per platform
+    const possiblePaths = [
+      // macOS
+      path.join(process.resourcesPath, 'backend', 'bin', 'a2r-api'),
+      // Windows
+      path.join(process.resourcesPath, 'backend', 'bin', 'a2r-api.exe'),
+      // Linux
+      path.join(process.resourcesPath, 'backend', 'bin', 'a2r-api'),
+      // Development
+      path.join(__dirname, '..', '..', 'bundled-backend', process.platform, process.arch, 'bin', this.getBinaryName('a2r-api')),
+    ];
+
+    for (const p of possiblePaths) {
+      if (fs.existsSync(p)) {
+        return p;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Start local backend binary
+   */
+  private async startLocalBackend(binaryPath: string): Promise<BackendInstance> {
+    const configPath = path.join(this.userDataPath, 'config', 'backend.yaml');
+    const dataDir = path.join(this.userDataPath, 'data');
+    const logDir = path.join(this.userDataPath, 'logs');
+
+    // Ensure directories exist
+    fs.mkdirSync(path.dirname(configPath), { recursive: true });
+    fs.mkdirSync(dataDir, { recursive: true });
+    fs.mkdirSync(logDir, { recursive: true });
+
+    // Create config if doesn't exist
+    if (!fs.existsSync(configPath)) {
+      await this.createDefaultConfig(configPath);
+    }
+
+    // Start process
+    const proc = spawn(binaryPath, [], {
+      env: {
+        ...process.env,
+        ALLTERNIT_CONFIG: configPath,
+        RUST_LOG: 'info',
+      },
+      detached: false,
+      windowsHide: true,
+    });
+
+    // Log output
+    proc.stdout?.on('data', (data) => {
+      console.log('[Backend]', data.toString().trim());
+    });
+
+    proc.stderr?.on('data', (data) => {
+      console.error('[Backend Error]', data.toString().trim());
+    });
+
+    // Wait for backend to be ready
+    const url = 'http://localhost:4096';
+    await this.waitForBackend(url, 30000);
+
+    this.current = {
+      mode: { type: 'auto-install', label: 'Local' },
+      process: proc,
+      url,
+    };
+
+    return this.current;
+  }
+
+  /**
+   * Auto-install backend from GitHub releases
+   */
+  private async autoInstallBackend(): Promise<BackendInstance> {
+    const { BackendManager } = await import('./backend-manager');
+    const manager = new BackendManager();
+
+    const url = await manager.ensureBackend();
+
+    this.current = {
+      mode: { type: 'auto-install', label: 'Local (Auto-installed)' },
+      process: undefined, // BackendManager manages the process
+      url,
+    };
+
+    return this.current;
+  }
+
+  /**
+   * Connect to existing backend (no process management)
+   */
+  private async connect(mode: ConnectionMode): Promise<BackendInstance> {
+    if (!mode.url) {
+      throw new Error('URL required for connection');
+    }
+
+    // Verify it's actually responding
+    if (!await this.isBackendResponsive(mode.url)) {
+      throw new Error(`Backend at ${mode.url} is not responding`);
+    }
+
+    this.current = {
+      mode,
+      url: mode.url,
+    };
+
+    return this.current;
+  }
+
+  /**
+   * Wait for backend to be ready
+   */
+  private async waitForBackend(url: string, timeoutMs: number): Promise<void> {
+    const startTime = Date.now();
+    
+    while (Date.now() - startTime < timeoutMs) {
+      if (await this.isBackendResponsive(url)) {
+        return;
+      }
+      await new Promise(r => setTimeout(r, 100));
+    }
+
+    throw new Error('Backend failed to start within timeout');
+  }
+
+  /**
+   * Create default backend config
+   */
+  private async createDefaultConfig(configPath: string): Promise<void> {
+    const jwtSecret = this.generateSecret();
+    
+    const config = `
+server:
+  host: 127.0.0.1
+  port: 4096
+
+api:
+  cors_origins:
+    - "http://localhost:3000"
+    - "http://localhost:5173"
+
+security:
+  jwt_secret: "${jwtSecret}"
+
+database:
+  type: sqlite
+  path: ${path.join(this.userDataPath, 'data', 'a2r.db').replace(/\\/g, '/')}
+
+storage:
+  data_dir: ${path.join(this.userDataPath, 'data').replace(/\\/g, '/')}
+  logs_dir: ${path.join(this.userDataPath, 'logs').replace(/\\/g, '/')}
+
+logging:
+  level: info
+  file: ${path.join(this.userDataPath, 'logs', 'a2r.log').replace(/\\/g, '/')}
+`;
+
+    fs.writeFileSync(configPath, config);
+  }
+
+  /**
+   * Get saved remote URL from settings
+   */
+  private getSavedRemoteUrl(): string | null {
+    try {
+      const settingsPath = path.join(this.userDataPath, 'settings.json');
+      if (fs.existsSync(settingsPath)) {
+        const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+        return settings.remoteUrl || null;
+      }
+    } catch {
+      // Ignore errors
+    }
+    return null;
+  }
+
+  /**
+   * Save remote URL to settings
+   */
+  private saveRemoteUrl(url: string): void {
+    try {
+      const settingsPath = path.join(this.userDataPath, 'settings.json');
+      let settings = {};
+      if (fs.existsSync(settingsPath)) {
+        settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+      }
+      settings = { ...settings, remoteUrl: url };
+      fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+    } catch {
+      // Ignore errors
+    }
+  }
+
+  /**
+   * Get binary name with platform extension
+   */
+  private getBinaryName(name: string): string {
+    return process.platform === 'win32' ? `${name}.exe` : name;
+  }
+
+  /**
+   * Generate random secret
+   */
+  private generateSecret(length: number = 64): string {
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  }
+}
+
+// Singleton
+let connectionManager: ConnectionManager | null = null;
+
+export function getConnectionManager(): ConnectionManager {
+  if (!connectionManager) {
+    connectionManager = new ConnectionManager();
+  }
+  return connectionManager;
+}
