@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>gizzi-code</id>
+    <version>1.0.0</version>
+    <title>Gizzi Code</title>
+    <authors>A2R Technologies</authors>
+    <owners>Gizziio</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <licenseUrl>https://github.com/Gizziio/gizzi-code/blob/main/LICENSE</licenseUrl>
+    <projectUrl>https://gizzi.sh</projectUrl>
+    <iconUrl>https://gizzi.sh/icon.png</iconUrl>
+    <description>AI-powered terminal interface for the A2R ecosystem</description>
+    <summary>AI Terminal Interface</summary>
+    <releaseNotes>https://github.com/Gizziio/gizzi-code/releases</releaseNotes>
+    <copyright>Copyright 2025 A2R Technologies</copyright>
+    <tags>ai terminal cli tui</tags>
+    <projectSourceUrl>https://github.com/Gizziio/gizzi-code</projectSourceUrl>
+    <packageSourceUrl>https://github.com/Gizziio/gizzi-code</packageSourceUrl>
+    <docsUrl>https://docs.gizzi.sh</docsUrl>
+    <bugTrackerUrl>https://github.com/Gizziio/gizzi-code/issues</bugTrackerUrl>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

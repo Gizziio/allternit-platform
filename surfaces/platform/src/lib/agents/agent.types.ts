@@ -757,3 +757,10 @@ export function safeValidate<T>(schema: z.ZodType<T>, data: unknown): T | null {
     return null;
   }
 }
+
+// Stubs for missing exports
+export const CHARACTER_SPECIALTY_OPTIONS: Record<string, { id: string; name: string; description: string }> = {};
+export const DEFAULT_LAYER_CONFIG = {};
+export const SETUP_CAPABILITY_PRESETS: Record<string, string[]> = {};
+export const CREATE_FLOW_STEPS: Array<{ id: string; title: string }> = [];
+export const BAN_CATEGORY_OPTIONS: Array<{ id: string; label: string; description: string }> = [];

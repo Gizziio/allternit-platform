@@ -1,0 +1,23 @@
+{
+  "version": "1.0.0",
+  "description": "AI-powered terminal interface for the A2R ecosystem",
+  "homepage": "https://gizzi.sh",
+  "license": "MIT",
+  "architecture": {
+    "64bit": {
+      "url": "https://github.com/Gizziio/gizzi-code/releases/download/v1.0.0/gizzi-code-1.0.0-windows-x64.zip",
+      "hash": "PLACEHOLDER_SHA256"
+    }
+  },
+  "bin": "gizzi-code.exe",
+  "checkver": {
+    "github": "https://github.com/Gizziio/gizzi-code"
+  },
+  "autoupdate": {
+    "architecture": {
+      "64bit": {
+        "url": "https://github.com/Gizziio/gizzi-code/releases/download/v$version/gizzi-code-$version-windows-x64.zip"
+      }
+    }
+  }
+}

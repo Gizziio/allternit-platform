@@ -1,0 +1,15 @@
+# Maintainer: A2R Technologies <team@a2r.io>
+pkgname=gizzi-code
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="AI-powered terminal interface for the A2R ecosystem"
+arch=('x86_64' 'aarch64')
+url="https://gizzi.sh"
+license=('MIT')
+depends=()
+source=("https://github.com/Gizziio/gizzi-code/releases/download/v${pkgver}/gizzi-code-${pkgver}-linux-${CARCH}.tar.gz")
+sha256sums=('PLACEHOLDER_SHA256')
+
+package() {
+  install -Dm755 gizzi-code "$pkgdir/usr/bin/gizzi-code"
+}

@@ -1127,3 +1127,15 @@ export function getStatusColor(status: string): string {
       return 'bg-gray-300';
   }
 }
+
+// Stubs for missing exports
+export function setupSeedDefaults() { return {}; }
+export function createDefaultAvatarConfig() { return {}; }
+export function detectPluginConflicts() { return { hasConflicts: false, conflicts: [] }; }
+export function splitLines(text: string): string[] { return text.split('\n'); }
+export function generateEnhancedWorkspaceDocuments() { return []; }
+export function buildSeedTelemetryEvents() { return []; }
+export function getSetupStatDefinitions() { return []; }
+export function getDefaultCharacterLayer() { return {}; }
+export function computeCharacterStats() { return {}; }
+export function getSpecialtyOptions() { return []; }

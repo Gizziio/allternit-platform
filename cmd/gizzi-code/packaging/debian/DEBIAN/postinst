@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+
+# Add gizzi-code to PATH if not already there
+if [ -f /usr/local/bin/gizzi-code ]; then
+    chmod +x /usr/local/bin/gizzi-code
+fi
+
+echo "Gizzi Code installed successfully!"
+echo "Run 'gizzi-code --help' to get started."

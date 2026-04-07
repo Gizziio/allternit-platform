@@ -1,26 +1,129 @@
 #!/bin/bash
 #
 # Gizzi Code Installer
-# Usage: curl -fsSL https://gizzi.sh/install.sh | bash
+# Usage: curl -fsSL https://gizzi.sh/install | bash
 #
 
 set -e
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
+# =============================================================================
+# BRAND COLORS (Turso-inspired)
+# =============================================================================
+RESET='\033[0m'
 BOLD='\033[1m'
-NC='\033[0m' # No Color
+DIM='\033[2m'
 
-# Configuration
-REPO="a2r/gizzi-code"
+# Primary brand colors
+BRIGHT_BLUE='\033[38;5;39m'      # Main brand color
+CYAN='\033[38;5;51m'             # Secondary accent
+MAGENTA='\033[38;5;201m'         # Highlight
+GREEN='\033[38;5;82m'            # Success
+YELLOW='\033[38;5;220m'          # Warning
+RED='\033[38;5;196m'             # Error
+ORANGE='\033[38;5;208m'          # Accent
+
+# Background colors (for progress bars)
+BG_BLUE='\033[48;5;39m'
+BG_GREEN='\033[48;5;82m'
+
+# =============================================================================
+# CONFIGURATION
+# =============================================================================
+REPO="Gizziio/gizzi-code"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
 VERSION="${VERSION:-latest}"
+GITHUB_API="https://api.github.com/repos/${REPO}"
 
-# Detect platform
+# =============================================================================
+# ASCII ART BANNER
+# =============================================================================
+print_banner() {
+    printf "${BRIGHT_BLUE}${BOLD}
+    ██████╗ ██╗███████╗███████╗██╗    ██████╗ ██████╗ ██████╗ ███████╗
+   ██╔════╝ ██║╚══███╔╝╚══███╔╝██║   ██╔════╝██╔═══██╗██╔══██╗██╔════╝
+   ██║  ███╗██║  ███╔╝   ███╔╝ ██║   ██║     ██║   ██║██║  ██║█████╗  
+   ██║   ██║██║ ███╔╝   ███╔╝  ██║   ██║     ██║   ██║██║  ██║██╔══╝  
+   ╚██████╔╝██║███████╗███████╗██║   ╚██████╗╚██████╔╝██████╔╝███████╗
+    ╚═════╝ ╚═╝╚══════╝╚══════╝╚═╝    ╚═════╝ ╚═════╝ ╚═════╝ ╚══════╝
+${RESET}\n"
+    printf "${DIM}              AI Terminal Interface for the A2R Ecosystem${RESET}\n\n"
+}
+
+# =============================================================================
+# UTILITY FUNCTIONS
+# =============================================================================
+
+# Print with color
+print_color() {
+    local color="$1"
+    local message="$2"
+    printf "${color}${message}${RESET}\n"
+}
+
+# Print step with progress indicator
+print_step() {
+    local step="$1"
+    local message="$2"
+    printf "${BRIGHT_BLUE}●${RESET} ${BOLD}%s${RESET} %s\n" "$step" "$message"
+}
+
+# Print success checkmark
+print_success() {
+    printf "${GREEN}✓${RESET} %s\n" "$1"
+}
+
+# Print error X
+print_error() {
+    printf "${RED}✗${RESET} %s\n" "$1" >&2
+}
+
+# Print warning
+print_warning() {
+    printf "${YELLOW}⚠${RESET} %s\n" "$1"
+}
+
+# Print info bullet
+print_info() {
+    printf "${CYAN}ℹ${RESET} %s\n" "$1"
+}
+
+# Animated spinner for long operations
+spinner() {
+    local pid=$1
+    local message="$2"
+    local spin='⣾⣽⣻⢿⡿⣟⣯⣷'
+    local i=0
+    
+    printf "${DIM}%s${RESET} " "$message"
+    while kill -0 $pid 2>/dev/null; do
+        i=$(( (i+1) % 8 ))
+        printf "\r${BRIGHT_BLUE}%s${RESET} ${DIM}%s${RESET} " "${spin:$i:1}" "$message"
+        sleep 0.1
+    done
+    printf "\r${GREEN}✓${RESET} %s\n" "$message"
+}
+
+# Progress bar
+progress_bar() {
+    local current=$1
+    local total=$2
+    local width=40
+    local percentage=$((current * 100 / total))
+    local filled=$((current * width / total))
+    local empty=$((width - filled))
+    
+    printf "\r${DIM}[${RESET}"
+    printf "${BG_BLUE}"
+    printf "%${filled}s" | tr ' ' ' '
+    printf "${RESET}"
+    printf "%${empty}s" | tr ' ' '─'
+    printf "${DIM}]${RESET} ${BRIGHT_BLUE}%3d%%${RESET}" "$percentage"
+}
+
+# =============================================================================
+# PLATFORM DETECTION
+# =============================================================================
+
 detect_platform() {
     local platform
     platform="$(uname -s | tr '[:upper:]' '[:lower:]')"
@@ -36,12 +139,12 @@ detect_platform() {
             echo "windows"
             ;;
         *)
-            echo "unsupported"
+            print_error "Unsupported platform: $platform"
+            exit 1
             ;;
     esac
 }
 
-# Detect architecture
 detect_arch() {
     local arch
     arch="$(uname -m)"
@@ -54,97 +157,161 @@ detect_arch() {
             echo "arm64"
             ;;
         *)
-            echo "unsupported"
+            print_warning "Unknown architecture: $arch, defaulting to x64"
+            echo "x64"
             ;;
     esac
 }
 
-# Print banner
-print_banner() {
-    echo "${CYAN}"
-    echo "   ╔═══════════════════════════════════════════╗"
-    echo "   ║                                           ║"
-    echo "   ║   ██████╗ ██╗███████╗███████╗██╗         ║"
-    echo "   ║  ██╔════╝ ██║╚══███╔╝╚══███╔╝██║         ║"
-    echo "   ║  ██║  ███╗██║  ███╔╝   ███╔╝ ██║         ║"
-    echo "   ║  ██║   ██║██║ ███╔╝   ███╔╝  ██║         ║"
-    echo "   ║  ╚██████╔╝██║███████╗███████╗██║         ║"
-    echo "   ║   ╚═════╝ ╚═╝╚══════╝╚══════╝╚═╝         ║"
-    echo "   ║                                           ║"
-    echo "   ║        AI Terminal Interface              ║"
-    echo "   ║                                           ║"
-    echo "   ╚═══════════════════════════════════════════╝"
-    echo "${NC}"
+# =============================================================================
+# DEPENDENCY CHECKS
+# =============================================================================
+
+check_dependencies() {
+    print_step "Checking" "dependencies..."
+    
+    if command -v curl >/dev/null 2>&1; then
+        DOWNLOADER="curl"
+        print_success "curl found"
+    elif command -v wget >/dev/null 2>&1; then
+        DOWNLOADER="wget"
+        print_success "wget found"
+    else
+        print_error "Neither curl nor wget found. Please install one of them."
+        exit 1
+    fi
 }
 
-# Check if command exists
-command_exists() {
-    command -v "$1" >/dev/null 2>&1
-}
+# =============================================================================
+# DOWNLOAD FUNCTIONS
+# =============================================================================
 
-# Download file
-download() {
+download_file() {
     local url="$1"
     local output="$2"
     
-    if command_exists curl; then
-        curl -fsSL "$url" -o "$output"
-    elif command_exists wget; then
-        wget -q "$url" -O "$output"
+    if [ "$DOWNLOADER" = "curl" ]; then
+        curl -fsSL -o "$output" "$url" 2>&1
     else
-        echo "${RED}Error: curl or wget is required${NC}"
-        exit 1
+        wget -q -O "$output" "$url" 2>&1
     fi
 }
 
-# Install via npm
-install_npm() {
-    echo "${YELLOW}Installing via npm...${NC}"
+download_with_progress() {
+    local url="$1"
+    local output="$2"
     
-    if ! command_exists npm; then
-        echo "${RED}Error: npm not found. Please install Node.js first:${NC}"
-        echo "  https://nodejs.org/"
+    if [ "$DOWNLOADER" = "curl" ]; then
+        # Get file size first
+        local size
+        size=$(curl -sI "$url" | grep -i content-length | awk '{print $2}' | tr -d '\r')
+        
+        if [ -n "$size" ]; then
+            # Download with progress
+            curl -fsSL --progress-bar -o "$output" "$url" 2>&1 | \
+                while read -r line; do
+                    # Parse curl progress
+                    if echo "$line" | grep -q '[0-9]\+\.[0-9]\+'; then
+                        local percent
+                        percent=$(echo "$line" | grep -o '[0-9]\+\.[0-9]\+' | head -1 | cut -d. -f1)
+                        if [ -n "$percent" ]; then
+                            progress_bar "$percent" 100
+                        fi
+                    fi
+                done
+            printf "\n"
+        else
+            curl -fsSL -o "$output" "$url"
+        fi
+    else
+        wget -q --show-progress -O "$output" "$url" 2>&1
+    fi
+}
+
+# =============================================================================
+# VERSION FUNCTIONS
+# =============================================================================
+
+get_latest_version() {
+    print_step "Fetching" "latest version..."
+    
+    local version
+    version=$(curl -s "$GITHUB_API/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+    
+    if [ -z "$version" ]; then
+        print_error "Failed to fetch latest version"
         exit 1
     fi
     
-    npm install -g @a2r/gizzi-code
+    print_success "Latest version: ${BRIGHT_BLUE}${version}${RESET}"
+    echo "$version"
 }
 
-# Install binary directly
+# =============================================================================
+# INSTALLATION METHODS
+# =============================================================================
+
+install_via_npm() {
+    print_step "Installing" "via npm..."
+    
+    if ! command -v npm >/dev/null 2>&1; then
+        print_error "npm not found. Please install Node.js first:"
+        print_info "https://nodejs.org/"
+        return 1
+    fi
+    
+    # Run npm install in background with spinner
+    npm install -g @gizzi/gizzi-code >/dev/null 2>&1 &
+    local pid=$!
+    spinner $pid "Installing via npm..."
+    
+    wait $pid
+    if [ $? -eq 0 ]; then
+        print_success "Successfully installed via npm"
+        return 0
+    else
+        print_error "npm installation failed"
+        return 1
+    fi
+}
+
 install_binary() {
     local platform="$1"
     local arch="$2"
-    local bin_name="gizzi-code-${platform}"
+    local version="$3"
     
+    print_step "Installing" "binary for ${CYAN}${platform}-${arch}${RESET}..."
+    
+    # Determine binary name
+    local bin_name="gizzi-code-${version}-${platform}-${arch}"
     if [ "$platform" = "windows" ]; then
-        bin_name="gizzi-code-win.exe"
+        bin_name="${bin_name}.exe"
     fi
     
     local download_url
-    if [ "$VERSION" = "latest" ]; then
+    if [ "$version" = "latest" ]; then
         download_url="https://github.com/${REPO}/releases/latest/download/${bin_name}"
     else
-        download_url="https://github.com/${REPO}/releases/download/${VERSION}/${bin_name}"
+        download_url="https://github.com/${REPO}/releases/download/${version}/${bin_name}"
     fi
     
-    echo "${YELLOW}Downloading Gizzi Code for ${platform}-${arch}...${NC}"
+    print_info "Downloading from: ${DIM}${download_url}${RESET}"
     
     # Create install directory
     mkdir -p "$INSTALL_DIR"
     
+    # Download to temp file
     local temp_file
     temp_file="$(mktemp)"
     
-    # Download
-    if ! download "$download_url" "$temp_file"; then
-        echo "${RED}Error: Failed to download binary${NC}"
-        echo "Falling back to npm installation..."
-        install_npm
-        return
+    if ! download_file "$download_url" "$temp_file"; then
+        print_error "Failed to download binary"
+        rm -f "$temp_file"
+        return 1
     fi
     
-    # Install as 'gizzi' command
-    local target_path="${INSTALL_DIR}/gizzi"
+    # Install
+    local target_path="${INSTALL_DIR}/gizzi-code"
     if [ "$platform" = "windows" ]; then
         target_path="${target_path}.exe"
     fi
@@ -152,11 +319,16 @@ install_binary() {
     mv "$temp_file" "$target_path"
     chmod +x "$target_path"
     
-    echo "${GREEN}✓ Gizzi installed to ${target_path}${NC}"
+    print_success "Binary installed to ${CYAN}${target_path}${RESET}"
 }
 
-# Add to PATH
+# =============================================================================
+# PATH SETUP
+# =============================================================================
+
 add_to_path() {
+    print_step "Configuring" "PATH..."
+    
     local shell_rc=""
     local path_export="export PATH=\"\$HOME/.local/bin:\$PATH\""
     
@@ -175,133 +347,163 @@ add_to_path() {
     
     if [ -n "$shell_rc" ] && [ -f "$shell_rc" ]; then
         if ! grep -q "$INSTALL_DIR" "$shell_rc" 2>/dev/null; then
-            echo "" >> "$shell_rc"
-            echo "# Added by Gizzi installer" >> "$shell_rc"
-            echo "$path_export" >> "$shell_rc"
-            echo "${YELLOW}Added $INSTALL_DIR to PATH in $shell_rc${NC}"
-            echo "${YELLOW}Please restart your terminal or run: source $shell_rc${NC}"
+            printf "\n# Added by Gizzi Code installer\n%s\n" "$path_export" >> "$shell_rc"
+            print_success "Added ${CYAN}${INSTALL_DIR}${RESET} to PATH in ${CYAN}${shell_rc}${RESET}"
+            print_warning "Please restart your terminal or run: ${BOLD}source ${shell_rc}${RESET}"
+        else
+            print_info "${INSTALL_DIR} already in PATH"
         fi
     fi
 }
 
-# Verify installation
+# =============================================================================
+# VERIFICATION
+# =============================================================================
+
 verify_installation() {
-    echo ""
-    echo "${BLUE}Verifying installation...${NC}"
+    print_step "Verifying" "installation..."
     
-    if command_exists gizzi; then
-        echo "${GREEN}✓ Gizzi is installed!${NC}"
-        gizzi --version 2>/dev/null || true
+    if command -v gizzi-code >/dev/null 2>&1; then
+        print_success "gizzi-code is installed!"
+        local version
+        version=$(gizzi-code --version 2>/dev/null || echo "unknown")
+        print_info "Version: ${BRIGHT_BLUE}${version}${RESET}"
         return 0
     else
-        echo "${YELLOW}⚠ Gizzi installed but not in PATH${NC}"
-        echo "   Add this to your shell profile:"
-        echo "   export PATH=\"\$HOME/.local/bin:\$PATH\""
+        print_warning "gizzi-code installed but not in PATH"
+        print_info "Add this to your shell profile:"
+        print_color "$CYAN" "  export PATH=\"\$HOME/.local/bin:\$PATH\""
         return 1
     fi
 }
 
-# Print post-install instructions
+# =============================================================================
+# POST-INSTALL
+# =============================================================================
+
 print_post_install() {
-    echo ""
-    echo "${GREEN}${BOLD}✓ Installation complete!${NC}"
-    echo ""
-    echo "${BOLD}Get started:${NC}"
-    echo "  ${CYAN}gizzi${NC}              Start the TUI"
-    echo "  ${CYAN}gizzi --help${NC}       Show all commands"
-    echo "  ${CYAN}gizzi --version${NC}    Check version"
-    echo ""
-    echo "${BOLD}Documentation:${NC}"
-    echo "  ${BLUE}https://docs.gizzi.sh${NC}"
-    echo "  ${BLUE}https://github.com/a2r/gizzi-code${NC}"
-    echo ""
+    printf "\n"
+    printf "${GREEN}${BOLD}╔══════════════════════════════════════════════════════════════╗${RESET}\n"
+    printf "${GREEN}${BOLD}║                                                              ║${RESET}\n"
+    printf "${GREEN}${BOLD}║${RESET}   ${BRIGHT_BLUE}Installation Complete!${RESET}                                    ${GREEN}${BOLD}║${RESET}\n"
+    printf "${GREEN}${BOLD}║                                                              ║${RESET}\n"
+    printf "${GREEN}${BOLD}╚══════════════════════════════════════════════════════════════╝${RESET}\n"
+    printf "\n"
+    
+    printf "${BOLD}Get started:${RESET}\n"
+    printf "  ${CYAN}gizzi-code${RESET}              Start the TUI\n"
+    printf "  ${CYAN}gizzi-code --help${RESET}       Show all commands\n"
+    printf "  ${CYAN}gizzi-code --version${RESET}    Check version\n"
+    printf "\n"
+    
+    printf "${BOLD}Documentation:${RESET}\n"
+    printf "  ${BRIGHT_BLUE}https://docs.gizzi.sh${RESET}\n"
+    printf "  ${BRIGHT_BLUE}https://github.com/Gizziio/gizzi-code${RESET}\n"
+    printf "\n"
+    
+    printf "${DIM}Need help? Run: gizzi-code --help${RESET}\n"
+    printf "\n"
 }
 
-# Main
+# =============================================================================
+# MAIN
+# =============================================================================
+
 main() {
+    # Clear screen for clean install experience (optional)
+    # clear
+    
     print_banner
     
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --version)
+                VERSION="$2"
+                shift 2
+                ;;
+            --install-dir)
+                INSTALL_DIR="$2"
+                shift 2
+                ;;
+            --help|-h)
+                printf "Gizzi Code Installer\n\n"
+                printf "Usage: %s [options]\n\n" "$0"
+                printf "Options:\n"
+                printf "  --version <version>   Install specific version\n"
+                printf "  --install-dir <dir>   Custom install directory\n"
+                printf "  --help, -h            Show this help\n"
+                exit 0
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
+    
+    # Detect platform
     local platform
     local arch
     
     platform="$(detect_platform)"
     arch="$(detect_arch)"
     
-    if [ "$platform" = "unsupported" ]; then
-        echo "${RED}Error: Unsupported platform${NC}"
-        exit 1
-    fi
+    print_info "Platform: ${CYAN}${platform}${RESET}"
+    print_info "Architecture: ${CYAN}${arch}${RESET}"
+    print_info "Install directory: ${CYAN}${INSTALL_DIR}${RESET}"
+    printf "\n"
     
-    if [ "$arch" = "unsupported" ]; then
-        echo "${YELLOW}Warning: Unsupported architecture, trying anyway...${NC}"
-    fi
+    # Check dependencies
+    check_dependencies
+    printf "\n"
     
-    echo "Platform: $platform"
-    echo "Architecture: $arch"
-    echo "Install directory: $INSTALL_DIR"
-    echo ""
+    # Get version
+    local target_version
+    if [ "$VERSION" = "latest" ]; then
+        target_version="$(get_latest_version)"
+    else
+        target_version="$VERSION"
+        print_info "Installing version: ${BRIGHT_BLUE}${target_version}${RESET}"
+    fi
+    printf "\n"
     
     # Check if already installed
-    if command_exists gizzi; then
+    if command -v gizzi-code >/dev/null 2>&1; then
         local current_version
-        current_version=$(gizzi --version 2>/dev/null | head -1 || echo "unknown")
-        echo "${YELLOW}Gizzi is already installed: $current_version${NC}"
-        echo "Location: $(command -v gizzi)"
-        echo ""
-        read -p "Reinstall/Update? [y/N] " -n 1 -r
-        echo ""
+        current_version=$(gizzi-code --version 2>/dev/null | head -1 || echo "unknown")
+        printf "${YELLOW}⚠ Gizzi Code is already installed: ${BRIGHT_BLUE}%s${RESET}\n" "$current_version"
+        print_info "Location: $(command -v gizzi-code)"
+        printf "\n"
+        printf "Reinstall/Update? [y/N] "
+        read -r REPLY
+        printf "\n"
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            echo "Installation cancelled."
+            print_info "Installation cancelled."
             print_post_install
             exit 0
         fi
     fi
     
     # Install
-    if command_exists npm; then
-        echo "${BLUE}Node.js detected. Installing via npm...${NC}"
-        install_npm
-    else
-        install_binary "$platform" "$arch"
+    local install_success=false
+    
+    if command -v npm >/dev/null 2>&1; then
+        if install_via_npm; then
+            install_success=true
+        fi
+    fi
+    
+    if [ "$install_success" = false ]; then
+        install_binary "$platform" "$arch" "$target_version"
         add_to_path
     fi
     
+    printf "\n"
     verify_installation
+    printf "\n"
+    
     print_post_install
 }
 
-# Parse arguments
-while [ $# -gt 0 ]; do
-    case "$1" in
-        --version)
-            VERSION="$2"
-            shift 2
-            ;;
-        --install-dir)
-            INSTALL_DIR="$2"
-            shift 2
-            ;;
-        --help)
-            echo "Gizzi Code Installer"
-            echo ""
-            echo "Usage:"
-            echo "  curl -fsSL https://gizzi.sh/install.sh | bash"
-            echo ""
-            echo "Options:"
-            echo "  --version <ver>      Install specific version (e.g., v1.0.0)"
-            echo "  --install-dir <dir>  Custom installation directory (default: ~/.local/bin)"
-            echo "  --help               Show this help"
-            echo ""
-            echo "Alternative installation methods:"
-            echo "  npm install -g @a2r/gizzi-code"
-            echo "  brew install --cask gizzi-code"
-            echo "  winget install A2R.GizziCode"
-            exit 0
-            ;;
-        *)
-            shift
-            ;;
-    esac
-done
-
-main
+# Run main
+main "$@"
