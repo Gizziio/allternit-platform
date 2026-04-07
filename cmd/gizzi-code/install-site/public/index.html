@@ -4,14 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Gizzi Code - AI-powered terminal interface for the A2R ecosystem">
-    <meta name="theme-color" content="#0066FF">
+    <meta name="theme-color" content="#d97757">
     <title>Gizzi Code - AI Terminal Interface</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         :root {
-            --brand-blue: #0066FF;
-            --brand-cyan: #00D4FF;
+            /* Gizzi Brand Colors */
+            --gizzi-orange: #d97757;     /* Primary - mascot head */
+            --gizzi-beige: #d4b08c;      /* Secondary - face */
+            --gizzi-brown: #8f6f56;      /* Tertiary - body */
+            --gizzi-dark: #111318;       /* Eyes/background */
+            
+            /* UI Colors */
             --bg-primary: #0a0a0f;
             --bg-secondary: #12121a;
             --text-primary: #ffffff;
@@ -40,18 +45,22 @@
             margin-bottom: 60px;
         }
         
-        .logo {
-            font-family: 'SF Mono', Monaco, monospace;
-            font-size: 12px;
+        .mascot {
+            font-family: 'Courier New', 'Courier', monospace;
+            font-size: 16px;
             line-height: 1.2;
-            color: var(--brand-blue);
             margin-bottom: 30px;
             white-space: pre;
             overflow-x: auto;
         }
         
+        .mascot .head { color: var(--gizzi-orange); }
+        .mascot .face { color: var(--gizzi-beige); }
+        .mascot .body { color: var(--gizzi-brown); }
+        .mascot .eyes { color: var(--gizzi-dark); }
+        
         @media (max-width: 600px) {
-            .logo { font-size: 8px; }
+            .mascot { font-size: 12px; }
         }
         
         .tagline {
@@ -84,7 +93,7 @@
             display: flex;
             align-items: center;
             gap: 15px;
-            font-family: 'SF Mono', Monaco, monospace;
+            font-family: 'Courier New', 'Courier', monospace;
             font-size: 16px;
         }
         
@@ -96,15 +105,15 @@
         }
         
         .install-command code {
-            color: var(--brand-cyan);
+            color: var(--gizzi-orange);
             flex: 1;
             overflow-x: auto;
         }
         
         .copy-btn {
-            background: rgba(0, 102, 255, 0.1);
-            border: 1px solid var(--brand-blue);
-            color: var(--brand-blue);
+            background: rgba(217, 119, 87, 0.1);
+            border: 1px solid var(--gizzi-orange);
+            color: var(--gizzi-orange);
             padding: 8px 16px;
             border-radius: 6px;
             cursor: pointer;
@@ -113,13 +122,13 @@
         }
         
         .copy-btn:hover {
-            background: var(--brand-blue);
-            color: white;
+            background: var(--gizzi-orange);
+            color: var(--bg-primary);
         }
         
         .copy-btn.copied {
-            background: var(--brand-cyan);
-            border-color: var(--brand-cyan);
+            background: var(--gizzi-beige);
+            border-color: var(--gizzi-beige);
             color: var(--bg-primary);
         }
         
@@ -146,9 +155,9 @@
         }
         
         .method code {
-            font-family: 'SF Mono', Monaco, monospace;
+            font-family: 'Courier New', 'Courier', monospace;
             font-size: 14px;
-            color: var(--brand-cyan);
+            color: var(--gizzi-orange);
             background: #0d0d12;
             padding: 8px 12px;
             border-radius: 4px;
@@ -171,14 +180,14 @@
         }
         
         .links a {
-            color: var(--brand-blue);
+            color: var(--gizzi-orange);
             text-decoration: none;
             font-size: 14px;
             transition: color 0.2s;
         }
         
         .links a:hover {
-            color: var(--brand-cyan);
+            color: var(--gizzi-beige);
         }
         
         footer {
@@ -190,7 +199,7 @@
         }
         
         footer a {
-            color: var(--brand-blue);
+            color: var(--gizzi-orange);
             text-decoration: none;
         }
         
@@ -201,7 +210,7 @@
             transform: translate(-50%, -50%);
             width: 600px;
             height: 600px;
-            background: radial-gradient(circle, rgba(0, 102, 255, 0.15) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(217, 119, 87, 0.15) 0%, transparent 70%);
             pointer-events: none;
             z-index: -1;
         }
@@ -212,12 +221,16 @@
     
     <div class="container">
         <header class="header">
-            <div class="logo">    ██████╗ ██╗███████╗███████╗██╗    ██████╗ ██████╗ ██████╗ ███████╗
-   ██╔════╝ ██║╚══███╔╝╚══███╔╝██║   ██╔════╝██╔═══██╗██╔══██╗██╔════╝
-   ██║  ███╗██║  ███╔╝   ███╔╝ ██║   ██║     ██║   ██║██║  ██║█████╗  
-   ██║   ██║██║ ███╔╝   ███╔╝  ██║   ██║     ██║   ██║██║  ██║██╔══╝  
-   ╚██████╔╝██║███████╗███████╗██║   ╚██████╗╚██████╔╝██████╔╝███████╗
-    ╚═════╝ ╚═╝╚══════╝╚══════╝╚═╝    ╚═════╝ ╚═════╝ ╚═════╝ ╚══════╝</div>
+            <div class="mascot">
+<span class="head">      ▄▄      </span>
+<span class="face">   ▄▄▄  ▄▄▄   </span>
+<span class="face"> ▄██████████▄ </span>
+<span class="face"> █  </span><span class="eyes">●    ●</span><span class="face">  █ </span>
+<span class="face"> █  A : / / █ </span>
+<span class="face">  ▀████████▀  </span>
+<span class="body">   █ █  █ █   </span>
+<span class="body">   ▀ ▀  ▀ ▀   </span>
+            </div>
             <p class="tagline">AI-powered terminal interface for the A2R ecosystem</p>
         </header>
         

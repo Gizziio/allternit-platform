@@ -7,24 +7,37 @@
 set -e
 
 # =============================================================================
-# BRAND COLORS (Turso-inspired)
+# GIZZI BRAND COLORS (from mascot)
 # =============================================================================
 RESET='\033[0m'
 BOLD='\033[1m'
 DIM='\033[2m'
 
 # Primary brand colors
-BRIGHT_BLUE='\033[38;5;39m'      # Main brand color
-CYAN='\033[38;5;51m'             # Secondary accent
-MAGENTA='\033[38;5;201m'         # Highlight
-GREEN='\033[38;5;82m'            # Success
-YELLOW='\033[38;5;220m'          # Warning
-RED='\033[38;5;196m'             # Error
-ORANGE='\033[38;5;208m'          # Accent
+ORANGE='\033[38;5;173m'        # #d97757 - Main brand color
+BEIGE='\033[38;5;180m'         # #d4b08c - Secondary
+BROWN='\033[38;5;95m'          # #8f6f56 - Tertiary
+DARK='\033[38;5;233m'          # #111318 - Dark
 
-# Background colors (for progress bars)
-BG_BLUE='\033[48;5;39m'
-BG_GREEN='\033[48;5;82m'
+# Functional colors
+GREEN='\033[38;5;114m'         # Success
+YELLOW='\033[38;5;220m'        # Warning  
+RED='\033[38;5;203m'           # Error
+CYAN='\033[38;5;80m'           # Info/accent
+
+# =============================================================================
+# GIZZI MASCOT ASCII ART
+# =============================================================================
+print_mascot() {
+    printf "${ORANGE}      ▄▄      ${RESET}\n"
+    printf "${BEIGE}   ▄▄▄  ▄▄▄   ${RESET}\n"
+    printf "${BEIGE} ▄██████████▄ ${RESET}\n"
+    printf "${BEIGE} █  ${DARK}●    ●${BEIGE}  █ ${RESET}\n"
+    printf "${BEIGE} █  A : / / █ ${RESET}\n"
+    printf "${BEIGE}  ▀████████▀  ${RESET}\n"
+    printf "${BROWN}   █ █  █ █   ${RESET}\n"
+    printf "${BROWN}   ▀ ▀  ▀ ▀   ${RESET}\n"
+}
 
 # =============================================================================
 # CONFIGURATION
@@ -35,89 +48,50 @@ VERSION="${VERSION:-latest}"
 GITHUB_API="https://api.github.com/repos/${REPO}"
 
 # =============================================================================
-# ASCII ART BANNER
-# =============================================================================
-print_banner() {
-    printf "${BRIGHT_BLUE}${BOLD}
-    ██████╗ ██╗███████╗███████╗██╗    ██████╗ ██████╗ ██████╗ ███████╗
-   ██╔════╝ ██║╚══███╔╝╚══███╔╝██║   ██╔════╝██╔═══██╗██╔══██╗██╔════╝
-   ██║  ███╗██║  ███╔╝   ███╔╝ ██║   ██║     ██║   ██║██║  ██║█████╗  
-   ██║   ██║██║ ███╔╝   ███╔╝  ██║   ██║     ██║   ██║██║  ██║██╔══╝  
-   ╚██████╔╝██║███████╗███████╗██║   ╚██████╗╚██████╔╝██████╔╝███████╗
-    ╚═════╝ ╚═╝╚══════╝╚══════╝╚═╝    ╚═════╝ ╚═════╝ ╚═════╝ ╚══════╝
-${RESET}\n"
-    printf "${DIM}              AI Terminal Interface for the A2R Ecosystem${RESET}\n\n"
-}
-
-# =============================================================================
 # UTILITY FUNCTIONS
 # =============================================================================
 
-# Print with color
 print_color() {
     local color="$1"
     local message="$2"
     printf "${color}${message}${RESET}\n"
 }
 
-# Print step with progress indicator
 print_step() {
     local step="$1"
-    local message="$2"
-    printf "${BRIGHT_BLUE}●${RESET} ${BOLD}%s${RESET} %s\n" "$step" "$message"
+    printf "${ORANGE}●${RESET} ${BOLD}%s${RESET}\n" "$step"
 }
 
-# Print success checkmark
 print_success() {
     printf "${GREEN}✓${RESET} %s\n" "$1"
 }
 
-# Print error X
 print_error() {
     printf "${RED}✗${RESET} %s\n" "$1" >&2
 }
 
-# Print warning
 print_warning() {
     printf "${YELLOW}⚠${RESET} %s\n" "$1"
 }
 
-# Print info bullet
 print_info() {
     printf "${CYAN}ℹ${RESET} %s\n" "$1"
 }
 
-# Animated spinner for long operations
+# Spinner for long operations
 spinner() {
     local pid=$1
     local message="$2"
-    local spin='⣾⣽⣻⢿⡿⣟⣯⣷'
+    local spin='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
     local i=0
     
     printf "${DIM}%s${RESET} " "$message"
     while kill -0 $pid 2>/dev/null; do
-        i=$(( (i+1) % 8 ))
-        printf "\r${BRIGHT_BLUE}%s${RESET} ${DIM}%s${RESET} " "${spin:$i:1}" "$message"
+        i=$(( (i+1) % 10 ))
+        printf "\r${ORANGE}%s${RESET} ${DIM}%s${RESET} " "${spin:$i:1}" "$message"
         sleep 0.1
     done
     printf "\r${GREEN}✓${RESET} %s\n" "$message"
-}
-
-# Progress bar
-progress_bar() {
-    local current=$1
-    local total=$2
-    local width=40
-    local percentage=$((current * 100 / total))
-    local filled=$((current * width / total))
-    local empty=$((width - filled))
-    
-    printf "\r${DIM}[${RESET}"
-    printf "${BG_BLUE}"
-    printf "%${filled}s" | tr ' ' ' '
-    printf "${RESET}"
-    printf "%${empty}s" | tr ' ' '─'
-    printf "${DIM}]${RESET} ${BRIGHT_BLUE}%3d%%${RESET}" "$percentage"
 }
 
 # =============================================================================
@@ -168,7 +142,7 @@ detect_arch() {
 # =============================================================================
 
 check_dependencies() {
-    print_step "Checking" "dependencies..."
+    print_step "Checking dependencies..."
     
     if command -v curl >/dev/null 2>&1; then
         DOWNLOADER="curl"
@@ -197,43 +171,12 @@ download_file() {
     fi
 }
 
-download_with_progress() {
-    local url="$1"
-    local output="$2"
-    
-    if [ "$DOWNLOADER" = "curl" ]; then
-        # Get file size first
-        local size
-        size=$(curl -sI "$url" | grep -i content-length | awk '{print $2}' | tr -d '\r')
-        
-        if [ -n "$size" ]; then
-            # Download with progress
-            curl -fsSL --progress-bar -o "$output" "$url" 2>&1 | \
-                while read -r line; do
-                    # Parse curl progress
-                    if echo "$line" | grep -q '[0-9]\+\.[0-9]\+'; then
-                        local percent
-                        percent=$(echo "$line" | grep -o '[0-9]\+\.[0-9]\+' | head -1 | cut -d. -f1)
-                        if [ -n "$percent" ]; then
-                            progress_bar "$percent" 100
-                        fi
-                    fi
-                done
-            printf "\n"
-        else
-            curl -fsSL -o "$output" "$url"
-        fi
-    else
-        wget -q --show-progress -O "$output" "$url" 2>&1
-    fi
-}
-
 # =============================================================================
 # VERSION FUNCTIONS
 # =============================================================================
 
 get_latest_version() {
-    print_step "Fetching" "latest version..."
+    print_step "Fetching latest version..."
     
     local version
     version=$(curl -s "$GITHUB_API/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
@@ -243,7 +186,7 @@ get_latest_version() {
         exit 1
     fi
     
-    print_success "Latest version: ${BRIGHT_BLUE}${version}${RESET}"
+    print_success "Latest version: ${ORANGE}${version}${RESET}"
     echo "$version"
 }
 
@@ -252,7 +195,7 @@ get_latest_version() {
 # =============================================================================
 
 install_via_npm() {
-    print_step "Installing" "via npm..."
+    print_step "Installing via npm..."
     
     if ! command -v npm >/dev/null 2>&1; then
         print_error "npm not found. Please install Node.js first:"
@@ -260,7 +203,6 @@ install_via_npm() {
         return 1
     fi
     
-    # Run npm install in background with spinner
     npm install -g @gizzi/gizzi-code >/dev/null 2>&1 &
     local pid=$!
     spinner $pid "Installing via npm..."
@@ -280,9 +222,8 @@ install_binary() {
     local arch="$2"
     local version="$3"
     
-    print_step "Installing" "binary for ${CYAN}${platform}-${arch}${RESET}..."
+    print_step "Installing binary for ${BEIGE}${platform}-${arch}${RESET}..."
     
-    # Determine binary name
     local bin_name="gizzi-code-${version}-${platform}-${arch}"
     if [ "$platform" = "windows" ]; then
         bin_name="${bin_name}.exe"
@@ -297,10 +238,8 @@ install_binary() {
     
     print_info "Downloading from: ${DIM}${download_url}${RESET}"
     
-    # Create install directory
     mkdir -p "$INSTALL_DIR"
     
-    # Download to temp file
     local temp_file
     temp_file="$(mktemp)"
     
@@ -310,7 +249,6 @@ install_binary() {
         return 1
     fi
     
-    # Install
     local target_path="${INSTALL_DIR}/gizzi-code"
     if [ "$platform" = "windows" ]; then
         target_path="${target_path}.exe"
@@ -319,7 +257,7 @@ install_binary() {
     mv "$temp_file" "$target_path"
     chmod +x "$target_path"
     
-    print_success "Binary installed to ${CYAN}${target_path}${RESET}"
+    print_success "Binary installed to ${BEIGE}${target_path}${RESET}"
 }
 
 # =============================================================================
@@ -327,7 +265,7 @@ install_binary() {
 # =============================================================================
 
 add_to_path() {
-    print_step "Configuring" "PATH..."
+    print_step "Configuring PATH..."
     
     local shell_rc=""
     local path_export="export PATH=\"\$HOME/.local/bin:\$PATH\""
@@ -348,7 +286,7 @@ add_to_path() {
     if [ -n "$shell_rc" ] && [ -f "$shell_rc" ]; then
         if ! grep -q "$INSTALL_DIR" "$shell_rc" 2>/dev/null; then
             printf "\n# Added by Gizzi Code installer\n%s\n" "$path_export" >> "$shell_rc"
-            print_success "Added ${CYAN}${INSTALL_DIR}${RESET} to PATH in ${CYAN}${shell_rc}${RESET}"
+            print_success "Added ${BEIGE}${INSTALL_DIR}${RESET} to PATH in ${BEIGE}${shell_rc}${RESET}"
             print_warning "Please restart your terminal or run: ${BOLD}source ${shell_rc}${RESET}"
         else
             print_info "${INSTALL_DIR} already in PATH"
@@ -361,13 +299,13 @@ add_to_path() {
 # =============================================================================
 
 verify_installation() {
-    print_step "Verifying" "installation..."
+    print_step "Verifying installation..."
     
     if command -v gizzi-code >/dev/null 2>&1; then
         print_success "gizzi-code is installed!"
         local version
         version=$(gizzi-code --version 2>/dev/null || echo "unknown")
-        print_info "Version: ${BRIGHT_BLUE}${version}${RESET}"
+        print_info "Version: ${ORANGE}${version}${RESET}"
         return 0
     else
         print_warning "gizzi-code installed but not in PATH"
@@ -383,22 +321,22 @@ verify_installation() {
 
 print_post_install() {
     printf "\n"
-    printf "${GREEN}${BOLD}╔══════════════════════════════════════════════════════════════╗${RESET}\n"
-    printf "${GREEN}${BOLD}║                                                              ║${RESET}\n"
-    printf "${GREEN}${BOLD}║${RESET}   ${BRIGHT_BLUE}Installation Complete!${RESET}                                    ${GREEN}${BOLD}║${RESET}\n"
-    printf "${GREEN}${BOLD}║                                                              ║${RESET}\n"
-    printf "${GREEN}${BOLD}╚══════════════════════════════════════════════════════════════╝${RESET}\n"
+    printf "${BEIGE}${BOLD}╔══════════════════════════════════════════════════════════════╗${RESET}\n"
+    printf "${BEIGE}${BOLD}║                                                              ║${RESET}\n"
+    printf "${BEIGE}${BOLD}║${RESET}   ${ORANGE}${BOLD}Installation Complete!${RESET}                                    ${BEIGE}${BOLD}║${RESET}\n"
+    printf "${BEIGE}${BOLD}║                                                              ║${RESET}\n"
+    printf "${BEIGE}${BOLD}╚══════════════════════════════════════════════════════════════╝${RESET}\n"
     printf "\n"
     
     printf "${BOLD}Get started:${RESET}\n"
-    printf "  ${CYAN}gizzi-code${RESET}              Start the TUI\n"
-    printf "  ${CYAN}gizzi-code --help${RESET}       Show all commands\n"
-    printf "  ${CYAN}gizzi-code --version${RESET}    Check version\n"
+    printf "  ${ORANGE}gizzi-code${RESET}              Start the TUI\n"
+    printf "  ${ORANGE}gizzi-code --help${RESET}       Show all commands\n"
+    printf "  ${ORANGE}gizzi-code --version${RESET}    Check version\n"
     printf "\n"
     
     printf "${BOLD}Documentation:${RESET}\n"
-    printf "  ${BRIGHT_BLUE}https://docs.gizzi.sh${RESET}\n"
-    printf "  ${BRIGHT_BLUE}https://github.com/Gizziio/gizzi-code${RESET}\n"
+    printf "  ${CYAN}https://docs.allternit.com${RESET}\n"
+    printf "  ${CYAN}https://github.com/Gizziio/gizzi-code${RESET}\n"
     printf "\n"
     
     printf "${DIM}Need help? Run: gizzi-code --help${RESET}\n"
@@ -410,10 +348,12 @@ print_post_install() {
 # =============================================================================
 
 main() {
-    # Clear screen for clean install experience (optional)
-    # clear
-    
-    print_banner
+    printf "\n"
+    print_mascot
+    printf "\n"
+    printf "${BEIGE}${BOLD}              GIZZI CODE - AI Terminal Interface${RESET}\n"
+    printf "${DIM}                    for the A2R Ecosystem${RESET}\n"
+    printf "\n"
     
     # Parse arguments
     while [[ $# -gt 0 ]]; do
@@ -448,9 +388,9 @@ main() {
     platform="$(detect_platform)"
     arch="$(detect_arch)"
     
-    print_info "Platform: ${CYAN}${platform}${RESET}"
-    print_info "Architecture: ${CYAN}${arch}${RESET}"
-    print_info "Install directory: ${CYAN}${INSTALL_DIR}${RESET}"
+    print_info "Platform: ${BEIGE}${platform}${RESET}"
+    print_info "Architecture: ${BEIGE}${arch}${RESET}"
+    print_info "Install directory: ${BEIGE}${INSTALL_DIR}${RESET}"
     printf "\n"
     
     # Check dependencies
@@ -463,7 +403,7 @@ main() {
         target_version="$(get_latest_version)"
     else
         target_version="$VERSION"
-        print_info "Installing version: ${BRIGHT_BLUE}${target_version}${RESET}"
+        print_info "Installing version: ${ORANGE}${target_version}${RESET}"
     fi
     printf "\n"
     
@@ -471,7 +411,7 @@ main() {
     if command -v gizzi-code >/dev/null 2>&1; then
         local current_version
         current_version=$(gizzi-code --version 2>/dev/null | head -1 || echo "unknown")
-        printf "${YELLOW}⚠ Gizzi Code is already installed: ${BRIGHT_BLUE}%s${RESET}\n" "$current_version"
+        printf "${YELLOW}⚠ Gizzi Code is already installed: ${ORANGE}%s${RESET}\n" "$current_version"
         print_info "Location: $(command -v gizzi-code)"
         printf "\n"
         printf "Reinstall/Update? [y/N] "

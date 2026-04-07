@@ -4,21 +4,39 @@
 $ErrorActionPreference = "Stop"
 
 # =============================================================================
-# BRAND COLORS
+# GIZZI BRAND COLORS (from mascot)
 # =============================================================================
 
 $Reset = "`e[0m"
 $Bold = "`e[1m"
 $Dim = "`e[2m"
 
-# Colors
-$BrightBlue = "`e[38;5;39m"
-$Cyan = "`e[38;5;51m"
-$Magenta = "`e[38;5;201m"
-$Green = "`e[38;5;82m"
-$Yellow = "`e[38;5;220m"
-$Red = "`e[38;5;196m"
-$Orange = "`e[38;5;208m"
+# Primary brand colors (approximate for PowerShell)
+$Orange = "`e[38;5;173m"     # #d97757 - Main brand color
+$Beige = "`e[38;5;180m"      # #d4b08c - Secondary
+$Brown = "`e[38;5;95m"       # #8f6f56 - Tertiary
+
+# Functional colors
+$Green = "`e[38;5;114m"      # Success
+$Yellow = "`e[38;5;220m"     # Warning
+$Red = "`e[38;5;203m"        # Error
+$Cyan = "`e[38;5;80m"        # Info/accent
+
+# =============================================================================
+# GIZZI MASCOT ASCII ART
+# =============================================================================
+
+function Print-Mascot {
+    Write-Host ""
+    Write-Host "$Orange      ▄▄      $Reset"
+    Write-Host "$Beige   ▄▄▄  ▄▄▄   $Reset"
+    Write-Host "$Beige ▄██████████▄ $Reset"
+    Write-Host "$Beige █  $Dim●    ●$Beige  █ $Reset"
+    Write-Host "$Beige █  A : / / █ $Reset"
+    Write-Host "$Beige  ▀████████▀  $Reset"
+    Write-Host "$Brown   █ █  █ █   $Reset"
+    Write-Host "$Brown   ▀ ▀  ▀ ▀   $Reset"
+}
 
 # =============================================================================
 # CONFIGURATION
@@ -28,23 +46,6 @@ $Repo = "Gizziio/gizzi-code"
 $InstallDir = if ($env:INSTALL_DIR) { $env:INSTALL_DIR } else { "$env:LOCALAPPDATA\gizzi" }
 $Version = if ($env:VERSION) { $env:VERSION } else { "latest" }
 $GithubApi = "https://api.github.com/repos/$Repo"
-
-# =============================================================================
-# ASCII ART BANNER
-# =============================================================================
-
-function Print-Banner {
-    Write-Host ""
-    Write-Host "$BrightBlue$Bold    ██████╗ ██╗███████╗███████╗██╗    ██████╗ ██████╗ ██████╗ ███████╗$Reset"
-    Write-Host "$BrightBlue$Bold   ██╔════╝ ██║╚══███╔╝╚══███╔╝██║   ██╔════╝██╔═══██╗██╔══██╗██╔════╝$Reset"
-    Write-Host "$BrightBlue$Bold   ██║  ███╗██║  ███╔╝   ███╔╝ ██║   ██║     ██║   ██║██║  ██║█████╗  $Reset"
-    Write-Host "$BrightBlue$Bold   ██║   ██║██║ ███╔╝   ███╔╝  ██║   ██║     ██║   ██║██║  ██║██╔══╝  $Reset"
-    Write-Host "$BrightBlue$Bold   ╚██████╔╝██║███████╗███████╗██║   ╚██████╗╚██████╔╝██████╔╝███████╗$Reset"
-    Write-Host "$BrightBlue$Bold    ╚═════╝ ╚═╝╚══════╝╚══════╝╚═╝    ╚═════╝ ╚═════╝ ╚═════╝ ╚══════╝$Reset"
-    Write-Host ""
-    Write-Host "$Dim              AI Terminal Interface for the A2R Ecosystem$Reset"
-    Write-Host ""
-}
 
 # =============================================================================
 # UTILITY FUNCTIONS
@@ -58,8 +59,8 @@ function Write-Color($Color, $Message, $NoNewline = $false) {
     }
 }
 
-function Write-Step($Step, $Message) {
-    Write-Host "$BrightBlue●$Reset $Bold$Step$Reset $Message"
+function Write-Step($Step) {
+    Write-Host "$Orange●$Reset $Bold$Step$Reset"
 }
 
 function Write-Success($Message) {
@@ -67,7 +68,7 @@ function Write-Success($Message) {
 }
 
 function Write-Error($Message) {
-    Write-Host "$Red✗$Reset $Message" -ForegroundColor Red
+    Write-Host "$Red✗$Reset $Message"
 }
 
 function Write-Warning($Message) {
@@ -76,16 +77,6 @@ function Write-Warning($Message) {
 
 function Write-Info($Message) {
     Write-Host "$Cyanℹ$Reset $Message"
-}
-
-function Show-Progress($Current, $Total, $Activity) {
-    $percent = [math]::Floor(($Current / $Total) * 100)
-    $width = 40
-    $filled = [math]::Floor(($Current / $Total) * $width)
-    $empty = $width - $filled
-    
-    $bar = "[" + ("█" * $filled) + ("─" * $empty) + "]"
-    Write-Host "`r$Dim$Activity$Reset $BrightBlue$bar$Reset $BrightBlue$percent%$Reset" -NoNewline
 }
 
 function Test-Command($Command) {
@@ -106,7 +97,7 @@ function Get-Architecture {
     } elseif ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") {
         return "arm64"
     } else {
-        return "x64"  # Default to x64
+        return "x64"
     }
 }
 
@@ -115,12 +106,12 @@ function Get-Architecture {
 # =============================================================================
 
 function Get-LatestVersion {
-    Write-Step "Fetching" "latest version..."
+    Write-Step "Fetching latest version..."
     
     try {
         $response = Invoke-RestMethod -Uri "$GithubApi/releases/latest" -UseBasicParsing
         $version = $response.tag_name
-        Write-Success "Latest version: $BrightBlue$version$Reset"
+        Write-Success "Latest version: $Orange$version$Reset"
         return $version
     } catch {
         Write-Error "Failed to fetch latest version"
@@ -133,7 +124,7 @@ function Get-LatestVersion {
 # =============================================================================
 
 function Install-Npm {
-    Write-Step "Installing" "via npm..."
+    Write-Step "Installing via npm..."
     
     if (!(Test-Command "npm")) {
         Write-Error "npm not found. Please install Node.js first:"
@@ -152,7 +143,7 @@ function Install-Npm {
 }
 
 function Install-Binary($Platform, $Arch, $Version) {
-    Write-Step "Installing" "binary for $Cyan$Platform-$Arch$Reset..."
+    Write-Step "Installing binary for $Beige$Platform-$Arch$Reset..."
     
     $BinName = "gizzi-code-$Version-$Platform-$Arch.exe"
     
@@ -164,23 +155,19 @@ function Install-Binary($Platform, $Arch, $Version) {
     
     Write-Info "Downloading from: $Dim$DownloadUrl$Reset"
     
-    # Create install directory
     New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
     
     $TempFile = [System.IO.Path]::GetTempFileName()
     
     try {
-        # Download with progress
         $ProgressPreference = 'Continue'
         Invoke-WebRequest -Uri $DownloadUrl -OutFile $TempFile -UseBasicParsing
         
-        # Install as 'gizzi-code.exe'
         $TargetPath = Join-Path $InstallDir "gizzi-code.exe"
         Move-Item -Path $TempFile -Destination $TargetPath -Force
         
-        Write-Success "Binary installed to $Cyan$TargetPath$Reset"
+        Write-Success "Binary installed to $Beige$TargetPath$Reset"
         
-        # Add to PATH if not already there
         $UserPath = [Environment]::GetEnvironmentVariable("Path", "User")
         if ($UserPath -notlike "*$InstallDir*") {
             [Environment]::SetEnvironmentVariable(
@@ -188,7 +175,7 @@ function Install-Binary($Platform, $Arch, $Version) {
                 "$UserPath;$InstallDir",
                 "User"
             )
-            Write-Success "Added $Cyan$InstallDir$Reset to PATH"
+            Write-Success "Added $Beige$InstallDir$Reset to PATH"
             Write-Warning "Please restart your terminal to use 'gizzi-code' command"
         }
         
@@ -209,7 +196,7 @@ function Install-Binary($Platform, $Arch, $Version) {
 # =============================================================================
 
 function Verify-Installation {
-    Write-Step "Verifying" "installation..."
+    Write-Step "Verifying installation..."
     
     $GizziPath = Join-Path $InstallDir "gizzi-code.exe"
     
@@ -217,7 +204,7 @@ function Verify-Installation {
         Write-Success "gizzi-code is installed!"
         try {
             $version = & $GizziPath --version 2>$null
-            Write-Info "Version: $BrightBlue$version$Reset"
+            Write-Info "Version: $Orange$version$Reset"
         } catch {
             # Ignore version check error
         }
@@ -236,22 +223,22 @@ function Verify-Installation {
 
 function Print-PostInstall {
     Write-Host ""
-    Write-Host "$Green$Bold╔══════════════════════════════════════════════════════════════╗$Reset"
-    Write-Host "$Green$Bold║                                                              ║$Reset"
-    Write-Host "$Green$Bold║$Reset   $BrightBlue$BoldInstallation Complete!$Reset                                    $Green$Bold║$Reset"
-    Write-Host "$Green$Bold║                                                              ║$Reset"
-    Write-Host "$Green$Bold╚══════════════════════════════════════════════════════════════╝$Reset"
+    Write-Host "$Beige$Bold╔══════════════════════════════════════════════════════════════╗$Reset"
+    Write-Host "$Beige$Bold║                                                              ║$Reset"
+    Write-Host "$Beige$Bold║$Reset   $Orange$BoldInstallation Complete!$Reset                                    $Beige$Bold║$Reset"
+    Write-Host "$Beige$Bold║                                                              ║$Reset"
+    Write-Host "$Beige$Bold╚══════════════════════════════════════════════════════════════╝$Reset"
     Write-Host ""
     
-    Write-Host "$Bold$Reset$Reset Get started:$Reset"
-    Write-Host "  $Cyan$Bold$Reset gizzi-code$Reset              Start the TUI"
-    Write-Host "  $Cyan$Bold$Reset gizzi-code --help$Reset       Show all commands"
-    Write-Host "  $Cyan$Bold$Reset gizzi-code --version$Reset    Check version"
+    Write-Host "$Bold$Reset Get started:$Reset"
+    Write-Host "  $Orange$Reset gizzi-code$Reset              Start the TUI"
+    Write-Host "  $Orange$Reset gizzi-code --help$Reset       Show all commands"
+    Write-Host "  $Orange$Reset gizzi-code --version$Reset    Check version"
     Write-Host ""
     
     Write-Host "$Bold$Reset Documentation:$Reset"
-    Write-Host "  $BrightBlue$Reset https://docs.gizzi.sh$Reset"
-    Write-Host "  $BrightBlue$Reset https://github.com/Gizziio/gizzi-code$Reset"
+    Write-Host "  $Cyan$Reset https://docs.allternit.com$Reset"
+    Write-Host "  $Cyan$Reset https://github.com/Gizziio/gizzi-code$Reset"
     Write-Host ""
     
     Write-Host "$Dim$Reset Need help? Run: gizzi-code --help$Reset"
@@ -262,31 +249,32 @@ function Print-PostInstall {
 # MAIN
 # =============================================================================
 
-# Clear-Host (optional, for clean install experience)
-
-Print-Banner
+Write-Host ""
+Print-Mascot
+Write-Host ""
+Write-Host "$Beige$Bold              GIZZI CODE - AI Terminal Interface$Reset"
+Write-Host "$Dim                    for the A2R Ecosystem$Reset"
+Write-Host ""
 
 $Platform = Get-Platform
 $Arch = Get-Architecture
 
-Write-Info "Platform: $Cyan$Platform$Reset"
-Write-Info "Architecture: $Cyan$Arch$Reset"
-Write-Info "Install directory: $Cyan$InstallDir$Reset"
+Write-Info "Platform: $Beige$Platform$Reset"
+Write-Info "Architecture: $Beige$Arch$Reset"
+Write-Info "Install directory: $Beige$InstallDir$Reset"
 Write-Host ""
 
-# Get version
 $TargetVersion = if ($Version -eq "latest") {
     Get-LatestVersion
 } else {
-    Write-Info "Installing version: $BrightBlue$Version$Reset"
+    Write-Info "Installing version: $Orange$Version$Reset"
     $Version
 }
 Write-Host ""
 
-# Check if already installed
 if (Test-Command "gizzi-code") {
     $CurrentVersion = & gizzi-code --version 2>$null | Select-Object -First 1
-    Write-Warning "Gizzi Code is already installed: $BrightBlue$CurrentVersion$Reset"
+    Write-Warning "Gizzi Code is already installed: $Orange$CurrentVersion$Reset"
     Write-Info "Location: $(Get-Command gizzi-code | Select-Object -ExpandProperty Source)"
     Write-Host ""
     $Reinstall = Read-Host "Reinstall/Update? [y/N]"
@@ -297,7 +285,6 @@ if (Test-Command "gizzi-code") {
     }
 }
 
-# Install
 $InstallSuccess = $false
 
 if (Test-Command "npm") {
