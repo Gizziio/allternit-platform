@@ -39,7 +39,7 @@ jobs:
           version: 8
           
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --ignore-scripts
         
       - name: Generate Prisma Client
         run: pnpm prisma generate
