@@ -130,6 +130,7 @@ export function useOfficeAgent(): UseOfficeAgentResult {
       const body: Record<string, unknown> = {
         model: config.model,
         stream: true,
+        max_tokens: 4096,
         messages,
       }
       if (tools.length > 0) {
@@ -274,9 +275,14 @@ export function useOfficeAgent(): UseOfficeAgentResult {
             (delta) => setActivity({ type: 'executing', tool: 'stream', input: delta }),
           )
 
+          // Capture ANY text the model emits — both from tool-call turns (thinking
+          // aloud) and the final text-only turn. Concatenate across iterations.
+          if (content) {
+            finalContent = finalContent ? `${finalContent}\n\n${content}` : content
+          }
+
           if (toolCalls.length === 0) {
-            // Model returned a plain text response — this is the final answer
-            finalContent = content
+            // Model produced no tool calls — this turn is the final answer
             break
           }
 

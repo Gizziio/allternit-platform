@@ -14,10 +14,14 @@ import type { ParsedToolCall } from './tool-schemas'
 
 // ── Safety helper ────────────────────────────────────────────────────────────
 
-/** Escape a string for safe interpolation into a JS template literal */
+/** Escape a string for safe interpolation into a double-quoted JS string literal */
 function escStr(val: unknown): string {
   if (val === undefined || val === null) return ''
-  return String(val).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')
+  return String(val)
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\r/g, '\\r')
+    .replace(/\n/g, '\\n')
 }
 
 function strArg(args: Record<string, unknown>, key: string, fallback = ''): string {
@@ -408,44 +412,49 @@ return await PowerPoint.run(async (context) => {
     }
 
     case 'ppt_set_notes': {
+      // PowerPoint.Slide.notes does not exist at PowerPointApi 1.3.
+      // The Notes slide body is only accessible via NotesSlide shapes (API 1.8+).
+      // Return a clear not-supported message so the AI can inform the user.
       const slideIndex = numArg(args, 'slideIndex', 0)
       const notes = strArg(args, 'notes', '')
       return `
 return await PowerPoint.run(async (context) => {
+  // Verify the slide index is valid before reporting unsupported
   context.presentation.slides.load("items");
   await context.sync();
-  const slide = context.presentation.slides.items[${slideIndex}];
-  if (!slide) throw new Error("Slide index ${slideIndex} out of range");
-  slide.load("notes");
-  await context.sync();
-  slide.notes = "${notes}";
-  await context.sync();
-  return "Notes set for slide ${slideIndex}";
+  if (${slideIndex} >= context.presentation.slides.items.length) {
+    throw new Error("Slide index ${slideIndex} out of range");
+  }
+  // Speaker notes are not accessible via the Office.js PowerPoint API at the
+  // required API version (PowerPointApi 1.3). Notes access requires API 1.8+.
+  // As a workaround, add the notes text to the slide as a hidden text box
+  // positioned off-screen, or advise the user to add notes manually.
+  void "${notes}"; // notes content acknowledged but not applied
+  return JSON.stringify({
+    success: false,
+    reason: "Speaker notes are not supported by the PowerPoint Office.js API at the required API level (1.3). Notes require PowerPointApi 1.8+. Please add notes manually via the Notes pane.",
+  });
 });`
     }
 
     case 'ppt_read_notes': {
+      // Same limitation — slide.notes is not a property at PowerPointApi 1.3.
       const slideIndex = typeof args['slideIndex'] === 'number' ? args['slideIndex'] : null
-      if (slideIndex !== null) {
-        return `
-return await PowerPoint.run(async (context) => {
-  context.presentation.slides.load("items");
-  await context.sync();
-  const slide = context.presentation.slides.items[${slideIndex}];
-  if (!slide) throw new Error("Slide index ${slideIndex} out of range");
-  slide.load("notes");
-  await context.sync();
-  return JSON.stringify({ index: ${slideIndex}, notes: slide.notes });
-});`
-      }
+      const target = slideIndex !== null ? `slide ${slideIndex}` : 'all slides'
       return `
 return await PowerPoint.run(async (context) => {
   context.presentation.slides.load("items");
   await context.sync();
-  context.presentation.slides.items.forEach(s => s.load("notes"));
-  await context.sync();
-  const allNotes = context.presentation.slides.items.map((s, i) => ({ index: i, notes: s.notes }));
-  return JSON.stringify(allNotes);
+  ${slideIndex !== null && slideIndex >= 0 ? `
+  if (${slideIndex} >= context.presentation.slides.items.length) {
+    throw new Error("Slide index ${slideIndex} out of range");
+  }` : ''}
+  // slide.notes is not available at PowerPointApi 1.3 (requires 1.8+).
+  void "${target}"; // target acknowledged
+  return JSON.stringify({
+    success: false,
+    reason: "Reading speaker notes is not supported by the PowerPoint Office.js API at the required API level (1.3). Notes require PowerPointApi 1.8+.",
+  });
 });`
     }
 

@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import {
-  buildAgentSessionUiMetadata,
-  getAgentSessionUiDescriptor,
+  buildAgentSessionMetadata,
+  getAgentSessionDescriptor,
 } from '@/lib/agents/session-metadata';
 import { useNativeAgentStore } from '@/lib/agents/native-agent.store';
 
@@ -64,7 +64,7 @@ export const useAgentSurfaceModeStore = create<AgentSurfaceModeState>()(
           });
           const session = nativeStore.sessions.find((item) => item.id === nativeStore.activeSessionId);
           void nativeStore.updateSession(nativeStore.activeSessionId, {
-            metadata: buildAgentSessionUiMetadata({
+            metadata: buildAgentSessionMetadata({
               metadata: session?.metadata ?? {},
               currentSurface: surface,
               selectedAgentIdBySurface: get().selectedAgentIdBySurface,
@@ -95,7 +95,7 @@ export const useAgentSurfaceModeStore = create<AgentSurfaceModeState>()(
           });
           const session = nativeStore.sessions.find((item) => item.id === nativeStore.activeSessionId);
           void nativeStore.updateSession(nativeStore.activeSessionId, {
-            metadata: buildAgentSessionUiMetadata({
+            metadata: buildAgentSessionMetadata({
               metadata: session?.metadata ?? {},
               currentSurface: get().currentSurface,
               selectedAgentIdBySurface: nextSelectedAgentIdBySurface,
@@ -129,7 +129,7 @@ export const useAgentSurfaceModeStore = create<AgentSurfaceModeState>()(
           });
           const session = nativeStore.sessions.find((item) => item.id === nativeStore.activeSessionId);
           void nativeStore.updateSession(nativeStore.activeSessionId, {
-            metadata: buildAgentSessionUiMetadata({
+            metadata: buildAgentSessionMetadata({
               metadata: session?.metadata ?? {},
               currentSurface: get().currentSurface,
               selectedAgentIdBySurface: get().selectedAgentIdBySurface,
@@ -155,7 +155,7 @@ useNativeAgentStore.subscribe((state) => {
   const activeSession = state.activeSessionId
     ? state.sessions.find((session) => session.id === state.activeSessionId)
     : null;
-  const uiDescriptor = getAgentSessionUiDescriptor(activeSession?.metadata);
+  const uiDescriptor = getAgentSessionDescriptor(activeSession?.metadata);
 
   useAgentSurfaceModeStore.setState((current) => {
     const nextCurrentSurface = uiDescriptor.currentSurface ?? current.currentSurface;

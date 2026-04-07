@@ -13,7 +13,7 @@ import {
 } from "@phosphor-icons/react";
 import { useAgentStore } from "@/lib/agents/agent.store";
 import type { Agent } from "@/lib/agents/agent.types";
-import { parseCharacterBlueprint } from "@/lib/agents/agent.service";
+import { parseCharacterBlueprint } from "@/lib/agents";
 import { 
   CHARACTER_SETUPS, 
   getSetupStatDefinitions 

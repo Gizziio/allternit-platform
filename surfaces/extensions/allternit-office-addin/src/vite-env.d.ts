@@ -6,7 +6,7 @@
 // only picks them up in files that are transitively included in the compilation.
 // This file is included via "include": ["src"] in tsconfig.json and pulls in
 // the full @types/office-js ambient declarations for every file in the project.
-/// <reference types="office-js" />
+/// <reference path="../node_modules/.ignored/@types/office-js/index.d.ts" />
 
 // OfficeRuntime is the separate runtime SDK (auth, storage) not included in
 // @types/office-js. Declare a minimal ambient type for the storage API we use.

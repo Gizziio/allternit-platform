@@ -2280,3 +2280,72 @@ export function useExecutionModeState(): {
 }
 
 export default useNativeAgentStore;
+
+// ============================================================================
+// Standalone Session Creation Helper
+// ============================================================================
+
+/**
+ * Create a canonical session (standalone helper)
+ * Creates a new session with default options and returns it
+ */
+export async function createCanonicalSession(
+  name = "New Session",
+  projectId?: string,
+): Promise<NativeSession | null> {
+  const store = useNativeAgentStore.getState();
+  try {
+    const session = await store.createSession(name, undefined, {
+      projectId,
+      originSurface: "chat",
+      sessionMode: "regular",
+    });
+    return session;
+  } catch (err) {
+    console.error("[createCanonicalSession] Failed to create session:", err);
+    return null;
+  }
+}
+
+// ============================================================================
+// Message Hooks
+// ============================================================================
+
+interface ConversationReplyState {
+  isAwaitingReply: boolean;
+  replyToMessageId: string | null;
+  replyContent: string;
+}
+
+/**
+ * Hook to get conversation reply state for a session
+ */
+export function useConversationReplies(
+  sessionId: string | undefined,
+): ConversationReplyState {
+  return useNativeAgentStore((state): ConversationReplyState => {
+    if (!sessionId) {
+      return { isAwaitingReply: false, replyToMessageId: null, replyContent: "" };
+    }
+    const messages = state.messages[sessionId] ?? [];
+    const lastMessage = messages[messages.length - 1];
+    const isAwaitingReply = lastMessage?.role === "assistant";
+    return {
+      isAwaitingReply,
+      replyToMessageId: lastMessage?.id ?? null,
+      replyContent: lastMessage?.content ?? "",
+    };
+  });
+}
+
+/**
+ * Hook to get user messages for a session
+ */
+export function useUserMessages(
+  sessionId: string | undefined,
+): NativeMessage[] {
+  return useNativeAgentStore((state): NativeMessage[] => {
+    if (!sessionId) return [];
+    return (state.messages[sessionId] ?? []).filter((m) => m.role === "user");
+  });
+}

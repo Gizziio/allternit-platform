@@ -26,7 +26,7 @@ import type {
   Commit as AgentCommit,
   TaskStatus
 } from "@/lib/agents/agent.types";
-import { parseCharacterBlueprint } from "@/lib/agents/agent.service";
+import { parseCharacterBlueprint } from "@/lib/agents";
 import type { AvatarConfig } from "@/lib/agents/character.types";
 import { createDefaultAvatarConfig } from "@/lib/agents/character.types";
 import { AgentAvatar } from "@/components/Avatar";

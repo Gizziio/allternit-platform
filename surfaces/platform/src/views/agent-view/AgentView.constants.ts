@@ -198,3 +198,12 @@ export const ENHANCED_HARD_BAN_CATEGORIES = {
   file_delete: { label: 'Destructive Deletion', description: 'No permanent file deletion', severity: 'warning' },
 };
 
+// Studio theme for agent creation UI
+export const STUDIO_THEME = {
+  bg: '#0f0f0f',
+  bgCard: '#1a1a1a',
+  border: '#2a2a2a',
+  textPrimary: '#e0e0e0',
+  textSecondary: '#888888',
+  accent: '#D4956A',
+};

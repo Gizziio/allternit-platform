@@ -124,11 +124,8 @@ const PowerPointBridge: OfficeBridge = {
       await ctx.sync()
       const slide = slides.items[0]
       if (!slide) return
-      const shape = slide.shapes.addTextBox(text)
-      shape.left = 100
-      shape.top = 100
-      shape.width = 500
-      shape.height = 80
+      // Positioning must be passed as ShapeAddOptions — cannot be set after creation
+      slide.shapes.addTextBox(text, { left: 100, top: 100, width: 500, height: 80 })
       await ctx.sync()
     })
   },
