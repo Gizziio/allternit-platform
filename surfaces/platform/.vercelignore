@@ -24,3 +24,11 @@ vitest.config.ts.timestamp-*
 
 # Next.js build output (rebuilt on Vercel)
 out
+
+# Rust API source (separate from Next.js frontend)
+api
+
+# Ignore conflicting Rust files
+*.rs
+Cargo.toml
+Cargo.lock
