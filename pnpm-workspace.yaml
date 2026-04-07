@@ -8,6 +8,7 @@ packages:
   - 'domains/*/*'
   - 'packages/@allternit/types/visual-state'
   - 'packages/@allternit/types/allternit-types'
+  - 'sdk/*'
   - 'services/*/*'
   - 'services/runtime/adapter/allternit-runtime'
   - 'surfaces/*'
