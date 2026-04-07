@@ -50,15 +50,17 @@ jobs:
       - name: Pull Vercel Environment Information
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
         
-      - name: Build Project (Direct)
+      - name: Build Project
         working-directory: surfaces/platform
-        run: pnpm next build
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NPM_FLAGS: --ignore-scripts
+          PNPM_FLAGS: --ignore-scripts
         
       - name: Deploy to Vercel
         working-directory: surfaces/platform
-        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
