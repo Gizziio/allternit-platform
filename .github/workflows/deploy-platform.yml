@@ -98,40 +98,22 @@ jobs:
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
         
-      # IMPORTANT: Vercel Project Settings (from dashboard):
-      # - Root Directory: "." (repo root)
-      # - Build Command: "cd surfaces/platform && next build"
-      # - Output Directory: "surfaces/platform/out"
-      # - Install Command: "pnpm install --no-frozen-lockfile"
+      # VERCEL PROJECT SETTINGS (as of 2026-04-07):
+      # ✓ Root Directory: "surfaces/platform"
+      # ✓ Build Command: "next build"
+      # ✓ Output Directory: ".next"
+      # ✓ Install Command: "pnpm install --no-frozen-lockfile --ignore-scripts"
       #
-      # PROBLEM: Output Directory is wrong! It should be ".next" not "out"
-      # This causes path duplication: surfaces/platform/surfaces/platform/.next
-      #
-      # SOLUTION OPTIONS:
-      # 1. Update Vercel dashboard settings (Recommended):
-      #    - Root Directory: "surfaces/platform"
-      #    - Build Command: "next build"
-      #    - Output Directory: ".next"
-      #    - Then run all vercel commands from surfaces/platform
-      #
-      # 2. Use vercel.json override in surfaces/platform/ (Attempted below):
-      #    - The local vercel.json should override dashboard settings
+      # IMPORTANT: Since Root Directory is "surfaces/platform", run ALL vercel 
+      # commands from the repo root. Vercel CLI will automatically use the 
+      # Root Directory setting to find the project files.
       
-      - name: Install dependencies (for Vercel build)
-        working-directory: surfaces/platform
-        run: pnpm install --ignore-scripts
-        
-      - name: Generate Prisma Client
-        working-directory: surfaces/platform
-        run: pnpm prisma generate
-        
       - name: Pull Vercel Environment Information
-        # vercel.json is in surfaces/platform/, so run from there
-        working-directory: surfaces/platform
+        # Run from repo root - Vercel will use Root Directory: surfaces/platform
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
         
       - name: Build with Vercel
-        working-directory: surfaces/platform
+        # Run from repo root - Vercel will use Root Directory: surfaces/platform
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
@@ -140,7 +122,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         
       - name: Deploy to Vercel
-        working-directory: surfaces/platform
+        # Run from repo root - Vercel will use Root Directory: surfaces/platform
         run: |
           # Attempt deployment but don't fail on rate limiting
           set +e
