@@ -49,17 +49,47 @@ export function DrawerRoot() {
       }
     };
 
+    // Touch event handlers for mobile
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!isDragging.current) return;
+      const touch = e.touches[0];
+      const delta = startY.current - touch.clientY;
+      const newHeight = Math.min(Math.max(startHeight.current + delta, 100), window.innerHeight - 40);
+      setConsoleHeight(newHeight);
+    };
+
+    const handleTouchEnd = () => {
+      if (isDragging.current) {
+        isDragging.current = false;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        if (height < 150) closeDrawer('console');
+      }
+    };
+
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd);
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
     };
   }, [closeDrawer, height, setConsoleHeight]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     isDragging.current = true;
     startY.current = e.clientY;
+    startHeight.current = height;
+    document.body.style.cursor = 'row-resize';
+    document.body.style.userSelect = 'none';
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    isDragging.current = true;
+    startY.current = e.touches[0].clientY;
     startHeight.current = height;
     document.body.style.cursor = 'row-resize';
     document.body.style.userSelect = 'none';
@@ -105,6 +135,7 @@ export function DrawerRoot() {
         isOpen={isOpen} 
         onToggle={() => (isOpen ? closeDrawer('console') : openDrawer('console'))} 
         onMouseDown={handleMouseDown} 
+        onTouchStart={handleTouchStart}
       />
 
       <div 

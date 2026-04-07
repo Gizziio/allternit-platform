@@ -75,7 +75,17 @@ export function PlatformSignIn(props: {
     )
   }
 
-  return <SignIn {...props} />
+  // Default redirect to shell after sign-in
+  const defaultRedirectUrl = "/shell"
+  
+  return (
+    <SignIn 
+      forceRedirectUrl={props.forceRedirectUrl || defaultRedirectUrl}
+      signUpForceRedirectUrl={props.signUpForceRedirectUrl || defaultRedirectUrl}
+      fallbackRedirectUrl={defaultRedirectUrl}
+      {...props} 
+    />
+  )
 }
 
 export function PlatformSignUp() {
@@ -88,5 +98,13 @@ export function PlatformSignUp() {
     )
   }
 
-  return <SignUp />
+  // Default redirect to shell after sign-up
+  const defaultRedirectUrl = "/shell"
+  
+  return (
+    <SignUp 
+      forceRedirectUrl={defaultRedirectUrl}
+      fallbackRedirectUrl={defaultRedirectUrl}
+    />
+  )
 }

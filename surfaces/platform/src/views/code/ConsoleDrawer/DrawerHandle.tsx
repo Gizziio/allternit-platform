@@ -6,9 +6,10 @@ interface DrawerHandleProps {
   isOpen: boolean;
   onToggle: () => void;
   onMouseDown: (e: React.MouseEvent) => void;
+  onTouchStart?: (e: React.TouchEvent) => void;
 }
 
-export function DrawerHandle({ isOpen, onToggle, onMouseDown }: DrawerHandleProps) {
+export function DrawerHandle({ isOpen, onToggle, onMouseDown, onTouchStart }: DrawerHandleProps) {
   return (
     <div 
       style={{
@@ -21,6 +22,7 @@ export function DrawerHandle({ isOpen, onToggle, onMouseDown }: DrawerHandleProp
         paddingBottom: isOpen ? 0 : 'calc(env(safe-area-inset-bottom, 0px) + 12px)',
       }}
       onMouseDown={isOpen ? onMouseDown : undefined}
+      onTouchStart={isOpen && onTouchStart ? onTouchStart : undefined}
       onClick={!isOpen ? onToggle : undefined}
     >
       <GlassSurface
