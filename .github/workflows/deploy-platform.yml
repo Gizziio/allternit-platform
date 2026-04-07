@@ -20,8 +20,68 @@ env:
   VERCEL_PROJECT_ID: prj_veXmWY1vWUn6N9aBWA4gTRyeSmrx
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          
+      - name: Install dependencies
+        working-directory: surfaces/platform
+        run: pnpm install --ignore-scripts
+        
+      - name: Generate Prisma Client
+        working-directory: surfaces/platform
+        run: pnpm prisma generate
+        
+      - name: Build Next.js App
+        working-directory: surfaces/platform
+        run: pnpm next build
+        env:
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Verify Build Output
+        working-directory: surfaces/platform
+        run: |
+          echo "=== Build Output Structure ==="
+          ls -la .next/
+          echo ""
+          echo "=== Checking for routes-manifest.json ==="
+          if [ -f ".next/routes-manifest.json" ]; then
+            echo "✓ routes-manifest.json exists"
+            head -20 .next/routes-manifest.json
+          else
+            echo "✗ routes-manifest.json NOT found"
+            exit 1
+          fi
+          echo ""
+          echo "=== Build Size ==="
+          du -sh .next/
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-build
+          path: surfaces/platform/.next/
+          retention-days: 1
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    # Only deploy on main branch pushes, not PRs
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
       
@@ -46,65 +106,26 @@ jobs:
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
         
+      # NOTE: The Vercel project likely has Root Directory set to "surfaces/platform"
+      # When running from repo root with --cwd, vercel commands should work correctly.
+      # If there are path issues, the Root Directory setting in Vercel dashboard
+      # needs to be changed to "./" (root) or removed.
+      
       - name: Pull Vercel Environment Information
-        working-directory: surfaces/platform
+        # Run from repo root, CLI will use the project settings
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
         
-      - name: Build Next.js App
+      - name: Build with Vercel
+        # Build from the platform directory
         working-directory: surfaces/platform
-        run: pnpm next build
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-
-      - name: Create Vercel Output Structure
-        working-directory: surfaces/platform
-        run: |
-          # Create the .vercel/output directory structure expected by vercel deploy --prebuilt
-          mkdir -p .vercel/output
-          
-          # Copy the static directory
-          if [ -d ".next/static" ]; then
-            cp -r .next/static .vercel/output/
-          fi
-          
-          # Copy serverless functions (if they exist in standalone output)
-          if [ -d ".next/standalone" ]; then
-            cp -r .next/standalone .vercel/output/
-          fi
-          
-          # Copy any server files
-          if [ -d ".next/server" ]; then
-            mkdir -p .vercel/output/server
-            cp -r .next/server/* .vercel/output/server/ 2>/dev/null || true
-          fi
-          
-          # Copy build manifest files
-          cp .next/build-manifest.json .vercel/output/ 2>/dev/null || true
-          cp .next/prerender-manifest.json .vercel/output/ 2>/dev/null || true
-          cp .next/routes-manifest.json .vercel/output/ 2>/dev/null || true
-          
-          # Create the config.json for Build Output API v3
-          cat > .vercel/output/config.json << 'EOF'
-          {
-            "version": 3,
-            "routes": [
-              { "handle": "filesystem" },
-              { "src": "/(.*)", "dest": "/__next.js" }
-            ],
-            "framework": {
-              "slug": "nextjs",
-              "version": "15.5.14"
-            }
-          }
-          EOF
-          
-          echo "Created .vercel/output structure:"
-          ls -la .vercel/output/
-          du -sh .vercel/output/ 2>/dev/null || echo "Could not check size"
         
       - name: Deploy to Vercel
+        # Deploy from the platform directory where .vercel/output was created
         working-directory: surfaces/platform
         run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
