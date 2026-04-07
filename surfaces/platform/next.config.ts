@@ -160,7 +160,7 @@ const nextConfig: NextConfig = {
   
   // Output to 'out/' to match Vercel project setting outputDirectory: "out"
   // Note: this is NOT a static export — it's a full Next.js SSR build in a custom distDir
-  distDir: 'out',
+  distDir: '.next',
 
   // Fix standalone output path in monorepo
   outputFileTracingRoot: path.join(__dirname, '../../'),
