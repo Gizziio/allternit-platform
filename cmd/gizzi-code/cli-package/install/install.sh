@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Gizzi Code Installer
-# Usage: curl -fsSL https://gizzi.sh/install | bash
+# Usage: curl -fsSL https://install.gizziio.com/install | bash
 #
 
 set -e

@@ -13,8 +13,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/server-auth";
 
-// Fluid Compute — allow long-running agent sessions (requires Fluid Compute enabled in Vercel dashboard)
-export const maxDuration = 800;
+// Serverless Function timeout - max 300s for hobby plan
+export const maxDuration = 300;
 import {
   resolveRuntimeBackendForAuthUserId,
   toGatewayAuthorizationHeader,

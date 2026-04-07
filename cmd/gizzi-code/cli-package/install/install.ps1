@@ -1,5 +1,5 @@
 # Gizzi Code Installer for Windows
-# Usage: irm https://gizzi.sh/install.ps1 | iex
+# Usage: irm https://install.gizziio.com/install.ps1 | iex
 
 $ErrorActionPreference = "Stop"
 
