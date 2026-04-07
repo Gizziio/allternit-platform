@@ -235,3 +235,6 @@ export function AgentView({ hideCreateButton = false, forceListMode = false, tit
     </div>
   );
 }
+
+// Re-export CreateAgentForm for AgentHub
+export { CreateAgentForm } from "./agent-view/components/CreateAgentForm";

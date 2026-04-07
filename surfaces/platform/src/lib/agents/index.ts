@@ -468,6 +468,9 @@ export {
   useSessionStreamingState,
   useSessionSyncState,
   useExecutionModeState,
+  createCanonicalSession,
+  useConversationReplies,
+  useUserMessages,
 } from "./native-agent.store";
 
 // Native Agent API Layer
