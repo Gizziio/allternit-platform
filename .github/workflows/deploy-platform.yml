@@ -1,4 +1,5 @@
 name: Deploy Platform to Vercel
+# Trigger: SDK dist now in git
 
 on:
   push:
