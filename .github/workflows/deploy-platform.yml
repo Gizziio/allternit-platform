@@ -6,10 +6,14 @@ on:
     paths:
       - 'surfaces/platform/**'
       - '.github/workflows/deploy-platform.yml'
+      - 'pnpm-workspace.yaml'
+      - 'pnpm-lock.yaml'
   pull_request:
     branches: [main]
     paths:
       - 'surfaces/platform/**'
+      - 'pnpm-workspace.yaml'
+      - 'pnpm-lock.yaml'
 
 env:
   VERCEL_ORG_ID: team_95y07fz0Hfm77hZMHdsQj4mQ
