@@ -95,7 +95,29 @@ jobs:
         with:
           version: 8
           
-      - name: Install dependencies
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+        
+      # IMPORTANT: Vercel Project Settings (from dashboard):
+      # - Root Directory: "." (repo root)
+      # - Build Command: "cd surfaces/platform && next build"
+      # - Output Directory: "surfaces/platform/out"
+      # - Install Command: "pnpm install --no-frozen-lockfile"
+      #
+      # PROBLEM: Output Directory is wrong! It should be ".next" not "out"
+      # This causes path duplication: surfaces/platform/surfaces/platform/.next
+      #
+      # SOLUTION OPTIONS:
+      # 1. Update Vercel dashboard settings (Recommended):
+      #    - Root Directory: "surfaces/platform"
+      #    - Build Command: "next build"
+      #    - Output Directory: ".next"
+      #    - Then run all vercel commands from surfaces/platform
+      #
+      # 2. Use vercel.json override in surfaces/platform/ (Attempted below):
+      #    - The local vercel.json should override dashboard settings
+      
+      - name: Install dependencies (for Vercel build)
         working-directory: surfaces/platform
         run: pnpm install --ignore-scripts
         
@@ -103,26 +125,8 @@ jobs:
         working-directory: surfaces/platform
         run: pnpm prisma generate
         
-      - name: Install Vercel CLI
-        run: npm install --global vercel@latest
-        
-      # IMPORTANT: Vercel Project Configuration
-      # 
-      # The Vercel project (prj_veXmWY1vWUn6N9aBWA4gTRyeSmrx) should have:
-      # - Root Directory: "surfaces/platform" (set in Vercel dashboard)
-      # - Framework Preset: Next.js
-      # - Build Command: next build
-      # - Output Directory: .next
-      #
-      # If you see path duplication errors like:
-      #   "ENOENT: surfaces/platform/surfaces/platform/.next/routes-manifest.json"
-      # This means the Root Directory setting conflicts with the working-directory in CI.
-      #
-      # SOLUTION: Either:
-      # 1. Change Vercel project Root Directory to "./" (repo root) and keep CI as-is, OR
-      # 2. Keep Vercel Root Directory as "surfaces/platform" and remove working-directory from CI
-      
       - name: Pull Vercel Environment Information
+        # vercel.json is in surfaces/platform/, so run from there
         working-directory: surfaces/platform
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
         
