@@ -137,4 +137,24 @@ jobs:
         
       - name: Deploy to Vercel
         working-directory: surfaces/platform
-        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
+        run: |
+          # Attempt deployment but don't fail on rate limiting
+          set +e
+          DEPLOY_OUTPUT=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }} --yes 2>&1)
+          DEPLOY_EXIT_CODE=$?
+          set -e
+          
+          echo "$DEPLOY_OUTPUT"
+          
+          if [ $DEPLOY_EXIT_CODE -ne 0 ]; then
+            if echo "$DEPLOY_OUTPUT" | grep -q "api-deployments-free-per-day"; then
+              echo "⚠️ Vercel rate limit hit (100 deployments/day). Build succeeded but deployment skipped."
+              echo "The site will auto-deploy via Git integration when the rate limit resets."
+              exit 0
+            else
+              echo "❌ Deployment failed with error"
+              exit $DEPLOY_EXIT_CODE
+            fi
+          fi
+          
+          echo "✅ Deployment successful!"
