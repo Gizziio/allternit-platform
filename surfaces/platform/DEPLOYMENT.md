@@ -1,28 +1,49 @@
 # Allternit Platform Deployment Guide
 
-## Overview
+## Current Status
 
-This Next.js application is deployed to Vercel. Due to the monorepo structure (`surfaces/platform/`), special configuration is required.
+✅ **Build**: Working - Next.js compiles successfully  
+⚠️ **Deploy**: Blocked by Vercel rate limit (100 deployments/day) - will reset in ~12 hours  
+🔧 **Configuration**: Needs manual fix in Vercel dashboard
 
-## Deployment Methods
+## The Problem
 
-### Method 1: Git Integration (Recommended)
+The Vercel project has **incorrect settings** that cause path duplication errors:
 
-Vercel can automatically deploy when you push to GitHub.
+```
+Error: ENOENT: no such file or directory, 
+  lstat '/.../surfaces/platform/surfaces/platform/.next/routes-manifest.json'
+                                                     ^^^^^^^^^^^^^^^^^
+                                                     Path is duplicated!
+```
 
-**Setup:**
-1. Go to [Vercel Dashboard](https://vercel.com/dashboard)
-2. Select the `platform` project
-3. Go to **Settings → Git**
-4. Ensure GitHub repository is connected
-5. Configure:
-   - **Production Branch**: `main`
-   - **Root Directory**: `surfaces/platform`
-   - **Build Command**: `next build`
-   - **Output Directory**: `.next`
-   - **Install Command**: `pnpm install --no-frozen-lockfile --ignore-scripts`
+## Required Fix (Action Needed)
 
-**Environment Variables** (set in Vercel Dashboard → Settings → Environment Variables):
+You need to update the Vercel project settings in the dashboard:
+
+### Step 1: Go to Vercel Dashboard
+
+Open: https://vercel.com/gizzi-io-6138s-projects/platform/settings
+
+### Step 2: Update Build & Output Settings
+
+Navigate to **Settings → Build & Output Settings**
+
+Change these values:
+
+| Setting | Current (Wrong) | Change To (Correct) |
+|---------|-----------------|---------------------|
+| **Root Directory** | `.` | `surfaces/platform` |
+| **Build Command** | `cd surfaces/platform && next build` | `next build` |
+| **Output Directory** | `surfaces/platform/out` | `.next` |
+| **Install Command** | `pnpm install --no-frozen-lockfile` | `pnpm install --no-frozen-lockfile --ignore-scripts` |
+
+### Step 3: Verify Environment Variables
+
+Navigate to **Settings → Environment Variables**
+
+Ensure these are set for Production:
+
 ```
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
 CLERK_SECRET_KEY=sk_test_...
@@ -30,95 +51,104 @@ ENCRYPTION_KEY=your-encryption-key
 DATABASE_URL=your-database-url
 ```
 
-### Method 2: GitHub Actions (CLI)
+### Step 4: Save and Deploy
 
-The repository includes `.github/workflows/deploy-platform.yml` for CI/CD deployment.
+1. Click **Save** at the bottom of the page
+2. Go to the **Deployments** tab
+3. Click **Redeploy** on the latest deployment
 
-**Required GitHub Secrets:**
-- `VERCEL_TOKEN` - Vercel API token
-- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
-- `CLERK_SECRET_KEY`
-- `ENCRYPTION_KEY`
-- `DATABASE_URL`
+## Alternative: Use Git Integration (Recommended)
 
-**Workflow Features:**
-- Build verification on every PR
-- Automatic deployment on merge to main
-- Artifact upload for debugging
+If the CLI deployment keeps having issues, you can use Vercel's native Git integration:
 
-### Method 3: Manual CLI Deployment
+1. In Vercel dashboard, go to **Settings → Git**
+2. Ensure GitHub repository is connected
+3. After fixing the settings above, the project will auto-deploy on every push to main
+
+## What We've Fixed Already
+
+1. ✅ Import fixes (`@a2r` → `@allternit`)
+2. ✅ SDK dist committed to git for CI builds
+3. ✅ Added missing exports for agent hooks and components
+4. ✅ Created `.vercelignore` to exclude conflicting Rust files
+5. ✅ Created GitHub Actions workflow with rate limit handling
+6. ✅ Added `vercel.json` in `surfaces/platform/` with correct settings
+7. ✅ Workflow now runs all commands from `surfaces/platform/` directory
+
+## Workflow Details
+
+The GitHub Actions workflow (`.github/workflows/deploy-platform.yml`) will:
+
+1. **On every PR**: Build the app and verify output (no deployment)
+2. **On main branch push**: 
+   - Build the app
+   - Deploy to Vercel (if not rate limited)
+   - If rate limited, build succeeds but shows warning
+
+## If You Hit Rate Limits
+
+Free tier allows 100 deployments per day. If you see:
+```
+Error: Resource is limited - try again in 24 hours
+```
+
+Options:
+1. Wait 24 hours for the limit to reset
+2. Upgrade to Vercel Pro ($20/month) for unlimited deployments
+3. Use the Git integration instead (counts toward the same limit but more reliable)
+
+## Testing Locally
 
 ```bash
-# From repo root
 cd surfaces/platform
 
-# Install Vercel CLI
-npm install -g vercel
+# Install dependencies
+pnpm install --ignore-scripts
 
-# Login (first time only)
-vercel login
+# Generate Prisma client
+pnpm prisma generate
 
-# Link to existing project
-vercel link
+# Build
+pnpm next build
 
-# Deploy
-vercel --prod
+# Verify output
+ls -la .next/
 ```
 
 ## Troubleshooting
 
-### Path Duplication Error
+### Build succeeds but deploy fails with path error
 
-**Error:**
-```
-ENOENT: no such file or directory, lstat '.../surfaces/platform/surfaces/platform/.next/...'
-```
+The Vercel dashboard settings are wrong. Follow "Required Fix" above.
 
-**Cause:**
-Vercel project has Root Directory set to `surfaces/platform`, but commands are run from that directory in CI.
+### "Module not found" errors
 
-**Solutions:**
-
-1. **Fix Vercel Dashboard Settings:**
-   - Set Root Directory to `./` (repo root)
-   - Update Build Command to: `cd surfaces/platform && next build`
-   - Update Install Command to: `cd surfaces/platform && pnpm install --no-frozen-lockfile --ignore-scripts`
-
-2. **Or Fix CI Workflow:**
-   - Remove `working-directory: surfaces/platform` from all steps
-   - Run all commands from repo root
-
-### Rate Limiting
-
-**Error:**
-```
-Error: Resource is limited - try again in 24 hours (more than 100, code: "api-deployments-free-per-day")
+Make sure `sdk/allternit-sdk/dist/` is committed to git:
+```bash
+git add sdk/allternit-sdk/dist/
+git commit -m "Update SDK dist"
 ```
 
-**Solution:**
-- Free tier allows 100 deployments per day
-- Wait 24 hours or upgrade to Pro plan
-- Use Git integration instead of CLI for fewer deployments
+### "Conflicting star exports" warning
 
-### Build Failures
+This is a non-fatal warning in `src/lib/agents/index.ts`. Can be ignored for now.
 
-**Check:**
-1. All environment variables are set
-2. Prisma client is generated (`pnpm prisma generate`)
-3. Dependencies are installed (`pnpm install`)
-4. No conflicting star exports in `src/lib/agents/index.ts`
+### Rate limit errors
 
-## Current Configuration
+Wait 24 hours or upgrade to Vercel Pro.
 
-- **Vercel Project**: `gizzi-io-6138s-projects/platform`
+## Project Information
+
 - **Project ID**: `prj_veXmWY1vWUn6N9aBWA4gTRyeSmrx`
 - **Org ID**: `team_95y07fz0Hfm77hZMHdsQj4mQ`
 - **Framework**: Next.js 15.5.14
-- **Node Version**: 20
+- **Node Version**: 20 (CI) / 24 (Vercel default)
 - **Package Manager**: pnpm 8
+- **Repository**: https://github.com/Gizziio/allternit-platform
 
-## Important Notes
+## Support
 
-1. **Skip Postinstall**: We use `--ignore-scripts` because extension packages have failing postinstall hooks
-2. **SDK Dist**: The `sdk/allternit-sdk/dist/` folder is committed to git for CI builds
-3. **Vercel Ignore**: Root `.vercelignore` excludes Rust files that conflict with TypeScript on case-insensitive filesystems
+If issues persist:
+1. Check GitHub Actions logs: https://github.com/Gizziio/allternit-platform/actions
+2. Check Vercel deployment logs: https://vercel.com/gizzi-io-6138s-projects/platform
+3. Verify dashboard settings match this guide
