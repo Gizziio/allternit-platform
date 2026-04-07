@@ -26,3 +26,6 @@ build/
 out/
 .vercel
 !cmd/gizzi-code/packages/sdk/dist/
+
+# SDK dist is needed for CI builds
+!sdk/allternit-sdk/dist/
