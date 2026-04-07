@@ -1,0 +1,25 @@
+# Rust API files (conflict with .ts files on case-insensitive file systems)
+api/
+*.rs
+Cargo.toml
+Cargo.lock
+
+# Node modules
+node_modules/
+
+# Build outputs
+.next/
+dist/
+out/
+
+# Large directories not needed for frontend
+cmd/
+domains/
+services/
+infrastructure/
+tools/
+
+# Local data
+data/
+*.db
+*.sqlite
