@@ -19,6 +19,7 @@ packages:
   - 'surfaces/page-agent/packages/*'
   - '!surfaces/page-agent/packages/extension'
   - '!surfaces/page-agent/packages/website'
+  - 'surfaces/extensions/allternit-extension/packages/*'
   - 'platform/*/*'
   - 'packages/@allternit/*'
   
