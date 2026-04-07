@@ -63,8 +63,12 @@ jobs:
         working-directory: surfaces/platform
         run: |
           mkdir -p .vercel/output
-          cp -r .next .vercel/output/
+          # Copy .next but exclude cache and large trace files
+          rsync -av --exclude='cache' --exclude='*.nft.json' --exclude='trace' .next/ .vercel/output/.next/ 2>/dev/null || cp -r .next .vercel/output/
+          # Create build output config for Next.js
           echo '{"version":3}' > .vercel/output/config.json
+          # List size
+          du -sh .vercel/output/ 2>/dev/null || echo "Size check failed"
         
       - name: Deploy to Vercel
         working-directory: surfaces/platform
