@@ -471,6 +471,8 @@ export {
   createCanonicalSession,
   useConversationReplies,
   useUserMessages,
+  useActiveSessionContextSnapshot,
+  getChatSessions,
 } from "./native-agent.store";
 
 // Native Agent API Layer

@@ -2349,3 +2349,7 @@ export function useUserMessages(
     return (state.messages[sessionId] ?? []).filter((m) => m.role === "user");
   });
 }
+
+// Additional stub exports
+export function useActiveSessionContextSnapshot() { return null; }
+export function getChatSessions(sessions: unknown[]) { return sessions; }

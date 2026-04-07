@@ -1,0 +1,28 @@
+{
+  "name": "Gizzi Code",
+  "version": "1.0.0",
+  "description": "AI-powered terminal interface for the A2R ecosystem",
+  "repository": "https://github.com/Gizziio/gizzi-code",
+  "homepage": "https://gizzi.sh",
+  "download_url": "https://github.com/Gizziio/gizzi-code/releases/latest",
+  "install_methods": {
+    "curl": {
+      "command": "curl -fsSL https://gizzi.sh/install | bash",
+      "description": "Universal install for macOS/Linux"
+    },
+    "powershell": {
+      "command": "irm https://gizzi.sh/install.ps1 | iex",
+      "description": "PowerShell install for Windows"
+    },
+    "npm": {
+      "command": "npm install -g @gizzi/gizzi-code",
+      "description": "Node.js package manager"
+    },
+    "homebrew": {
+      "command": "brew install gizzi-code",
+      "description": "macOS/Linux package manager (coming soon)"
+    }
+  },
+  "platforms": ["darwin", "linux", "win32"],
+  "architectures": ["x64", "arm64"]
+}
