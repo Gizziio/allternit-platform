@@ -1,5 +1,4 @@
 name: Deploy Platform to Vercel
-# Trigger: SDK dist now in git
 
 on:
   push:
@@ -48,15 +47,64 @@ jobs:
         run: npm install --global vercel@latest
         
       - name: Pull Vercel Environment Information
+        working-directory: surfaces/platform
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
         
-      - name: Build Project with Vercel
-        run: vercel build --token=${{ secrets.VERCEL_TOKEN }} --yes
+      - name: Build Next.js App
+        working-directory: surfaces/platform
+        run: pnpm next build
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Create Vercel Output Structure
+        working-directory: surfaces/platform
+        run: |
+          # Create the .vercel/output directory structure expected by vercel deploy --prebuilt
+          mkdir -p .vercel/output
+          
+          # Copy the static directory
+          if [ -d ".next/static" ]; then
+            cp -r .next/static .vercel/output/
+          fi
+          
+          # Copy serverless functions (if they exist in standalone output)
+          if [ -d ".next/standalone" ]; then
+            cp -r .next/standalone .vercel/output/
+          fi
+          
+          # Copy any server files
+          if [ -d ".next/server" ]; then
+            mkdir -p .vercel/output/server
+            cp -r .next/server/* .vercel/output/server/ 2>/dev/null || true
+          fi
+          
+          # Copy build manifest files
+          cp .next/build-manifest.json .vercel/output/ 2>/dev/null || true
+          cp .next/prerender-manifest.json .vercel/output/ 2>/dev/null || true
+          cp .next/routes-manifest.json .vercel/output/ 2>/dev/null || true
+          
+          # Create the config.json for Build Output API v3
+          cat > .vercel/output/config.json << 'EOF'
+          {
+            "version": 3,
+            "routes": [
+              { "handle": "filesystem" },
+              { "src": "/(.*)", "dest": "/__next.js" }
+            ],
+            "framework": {
+              "slug": "nextjs",
+              "version": "15.5.14"
+            }
+          }
+          EOF
+          
+          echo "Created .vercel/output structure:"
+          ls -la .vercel/output/
+          du -sh .vercel/output/ 2>/dev/null || echo "Could not check size"
         
       - name: Deploy to Vercel
+        working-directory: surfaces/platform
         run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
