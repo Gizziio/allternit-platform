@@ -1,0 +1,105 @@
+<!-- Gizzi Code Install Section for docs.allternit.com -->
+<!-- Add this to your docs site -->
+
+<section class="gizzi-install" style="
+  background: linear-gradient(135deg, #0a0a0f 0%, #12121a 100%);
+  border: 1px solid rgba(217, 119, 87, 0.2);
+  border-radius: 12px;
+  padding: 40px;
+  margin: 40px 0;
+  text-align: center;
+">
+  <!-- Gizzi Mascot -->
+  <pre style="
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.2;
+    margin-bottom: 20px;
+    color: #d97757;
+  "><span style="color: #d97757;">      ▄▄      </span>
+<span style="color: #d4b08c;">   ▄▄▄  ▄▄▄   </span>
+<span style="color: #d4b08c;"> ▄██████████▄ </span>
+<span style="color: #d4b08c;"> █  </span><span style="color: #111318;">●    ●</span><span style="color: #d4b08c;">  █ </span>
+<span style="color: #d4b08c;"> █  A : / / █ </span>
+<span style="color: #d4b08c;">  ▀████████▀  </span>
+<span style="color: #8f6f56;">   █ █  █ █   </span>
+<span style="color: #8f6f56;">   ▀ ▀  ▀ ▀   </span></pre>
+
+  <h2 style="
+    color: #d97757;
+    font-size: 24px;
+    margin-bottom: 10px;
+  ">Install Gizzi Code</h2>
+  
+  <p style="
+    color: #a0a0b0;
+    margin-bottom: 30px;
+  ">AI-powered terminal interface for the A2R ecosystem</p>
+
+  <!-- Install Command -->
+  <div style="
+    background: #0d0d12;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    max-width: 600px;
+    margin: 0 auto 20px;
+  ">
+    <code id="gizzi-install-cmd" style="
+      font-family: 'Courier New', monospace;
+      font-size: 16px;
+      color: #d97757;
+      flex: 1;
+      text-align: left;
+    ">curl -fsSL https://install.gizziio.com/install | bash</code>
+    <button onclick="copyGizziInstall()" style="
+      background: rgba(217, 119, 87, 0.1);
+      border: 1px solid #d97757;
+      color: #d97757;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    ">Copy</button>
+  </div>
+
+  <!-- Other methods -->
+  <div style="
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-top: 20px;
+  ">
+    <a href="https://install.gizziio.com" style="
+      color: #d97757;
+      text-decoration: none;
+      font-size: 14px;
+    ">Other install methods →</a>
+    <a href="https://github.com/Gizziio/gizzi-code" style="
+      color: #d4b08c;
+      text-decoration: none;
+      font-size: 14px;
+    ">GitHub</a>
+  </div>
+
+  <script>
+    function copyGizziInstall() {
+      const cmd = document.getElementById('gizzi-install-cmd').textContent;
+      navigator.clipboard.writeText(cmd);
+      const btn = document.querySelector('button[onclick="copyGizziInstall()"]');
+      btn.textContent = 'Copied!';
+      btn.style.background = '#d4b08c';
+      btn.style.color = '#0a0a0f';
+      setTimeout(() => {
+        btn.textContent = 'Copy';
+        btn.style.background = 'rgba(217, 119, 87, 0.1)';
+        btn.style.color = '#d97757';
+      }, 2000);
+    }
+  </script>
+</section>

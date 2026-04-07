@@ -103,14 +103,19 @@ jobs:
       # ✓ Build Command: "next build"
       # ✓ Output Directory: ".next"
       # ✓ Install Command: "pnpm install --no-frozen-lockfile --ignore-scripts"
-      #
-      # IMPORTANT: Since Root Directory is "surfaces/platform", run ALL vercel 
-      # commands from the repo root. Vercel CLI will automatically use the 
-      # Root Directory setting to find the project files.
       
       - name: Pull Vercel Environment Information
         # Run from repo root - Vercel will use Root Directory: surfaces/platform
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+        
+      - name: Generate Prisma Client (for Linux)
+        # Generate Prisma client for the correct binary target (debian-openssl-3.0.x)
+        working-directory: surfaces/platform
+        run: |
+          # Remove any cached Prisma client
+          rm -rf src/generated/prisma
+          # Generate fresh for Linux
+          pnpm prisma generate
         
       - name: Build with Vercel
         # Run from repo root - Vercel will use Root Directory: surfaces/platform
