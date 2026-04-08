@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/dialog";
 import { useModelDiscovery } from '@/integration/api-client';
 import { useAgentSurfaceModeStore, type AgentModeSurface, type AgentModeId } from '@/stores/agent-surface-mode.store';
+import ConsolidatedModeSelector from '@/components/chat/ConsolidatedModeSelector';
 import { getProviderMeta } from '@/lib/providers/provider-registry';
 import { useRuntimeExecutionMode } from '@/hooks/useRuntimeExecutionMode';
 import type { RuntimeExecutionMode } from '@/lib/agents/native-agent-api';
@@ -2248,14 +2249,28 @@ export function ChatComposer({
           flexDirection: 'column',
           alignItems: 'center',
         }}>
-          <ModeDock
-            selectedMode={selectedModeId}
-            onSelectMode={(modeId) => {
-              if (agentModeSurface) {
-                setSelectedMode(agentModeSurface, modeId as AgentModeId);
+          <ConsolidatedModeSelector
+            selectedMode={selectedModeId ? {
+              groupId: (selectedModeId === 'code' || selectedModeId === 'agents' || selectedModeId === 'assets' || selectedModeId === 'flow') 
+                ? (selectedModeId === 'code' || selectedModeId === 'agents' ? 'build' : 'automate')
+                : (selectedModeId === 'research' || selectedModeId === 'data' ? 'analyze' : 'create'),
+              subModeId: selectedModeId
+            } : null}
+            onSelectMode={(mode) => {
+              if (agentModeSurface && mode) {
+                setSelectedMode(agentModeSurface, mode.subModeId as AgentModeId);
               }
             }}
-            agentModeSurface={agentModeSurface}
+            onSelectTemplate={(prompt) => {
+              // Set input value with the template prompt
+              setInput(prompt);
+              // Focus the textarea
+              const textarea = textareaRef.current;
+              if (textarea) {
+                textarea.focus();
+              }
+            }}
+            showTemplates={true}
           />
         </div>
       )}
