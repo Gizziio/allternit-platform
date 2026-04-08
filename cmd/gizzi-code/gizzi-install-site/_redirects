@@ -1,14 +1,16 @@
-# Install script redirects
-/install        https://raw.githubusercontent.com/Gizziio/gizzi-code/main/cli-package/install/install.sh      302
-/install.sh     https://raw.githubusercontent.com/Gizziio/gizzi-code/main/cli-package/install/install.sh      302
-/install.ps1    https://raw.githubusercontent.com/Gizziio/gizzi-code/main/cli-package/install/install.ps1     302
+# Install script redirects - serve directly from this site
+/install        /install      200
+/install.sh     /install      200
+/install.ps1    /install.ps1  200
 
 # Version endpoint
 /version        /.well-known/version.json                                    200
-/latest         https://github.com/Gizziio/gizzi-code/releases/latest       302
+
+# Latest release redirect
+/latest         https://github.com/Gizziio/allternit-platform/releases/latest       302
 
 # Root redirect
 /               /index.html                                                 200
 
 # Docs redirect
-/docs           https://docs.allternit.com                                  302
+/docs           https://docs.gizziio.com                                    302
