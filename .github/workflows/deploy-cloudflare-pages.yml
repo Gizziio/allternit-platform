@@ -44,8 +44,15 @@ jobs:
           ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           
-      # NOTE: Create the project first in Cloudflare dashboard:
-      # https://dash.cloudflare.com/ → Pages → Create a project → Direct upload
+      # Create project if it doesn't exist, then deploy
+      # Cloudflare requires an initial upload to create the project
+      - name: Create Pages Project if needed
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages project create allternit-platform --production-branch=main || true
+          
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
