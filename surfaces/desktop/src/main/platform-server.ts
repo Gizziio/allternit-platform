@@ -24,7 +24,7 @@ const PORT_MAX = 3200;
 const HEALTH_TIMEOUT_MS = 30_000;
 
 export interface PlatformServerConfig {
-  /** URL of the Rust allternit-api backend (port 4097) */
+  /** URL of the Rust allternit-api backend (port 8013) */
   apiUrl: string;
   /** Bearer token for the Rust API */
   apiKey: string;
@@ -71,12 +71,15 @@ export class PlatformServerManager {
       PORT: String(this.port),
       HOSTNAME: '127.0.0.1',
       NODE_ENV: 'production',
-      // Rust operator API (vm-session, rails, terminal routes)
+      // allternit-api gateway (tools, providers, permissions, questions — port 8013)
       ALLTERNIT_API_URL: config.apiUrl,
       ALLTERNIT_OPERATOR_API_KEY: config.apiKey,
       NEXT_PUBLIC_API_BASE_URL: config.apiUrl,
       NEXT_PUBLIC_ALLTERNIT_BASE_URL: config.apiUrl,
-      // Gizzi-code AI runtime (agent sessions, conversations, tools)
+      // runtime-gateway-proxy.ts reads this to know where to forward gateway calls
+      NEXT_PUBLIC_ALLTERNIT_GATEWAY_URL: config.apiUrl,
+      VITE_ALLTERNIT_GATEWAY_URL: config.apiUrl,
+      // gizzi-code terminal server (agent sessions, conversations, streaming — port 4096)
       TERMINAL_SERVER_URL: config.gizziUrl ?? 'http://127.0.0.1:4096',
       GIZZI_USERNAME: 'gizzi',
       GIZZI_PASSWORD: config.gizziPassword ?? '',

@@ -11,7 +11,7 @@
 //! - `/health`        — Health check (no auth required)
 //!
 //! Configuration (env vars):
-//!   ALLTERNIT_API_PORT          — listen port (default: 3000)
+//!   ALLTERNIT_API_PORT          — listen port (default: 8013)
 //!   ALLTERNIT_API_HOST          — listen host (default: 127.0.0.1)
 //!   ALLTERNIT_OPERATOR_API_KEY  — bearer token required for all API routes
 //!   ALLTERNIT_PLATFORM_STATIC   — path to Next.js static export (default: auto-detected)
@@ -74,7 +74,7 @@ async fn main() {
     let port: u16 = std::env::var("ALLTERNIT_API_PORT")
         .ok()
         .and_then(|v| v.parse().ok())
-        .unwrap_or(3000);
+        .unwrap_or(8013);
 
     let host = std::env::var("ALLTERNIT_API_HOST")
         .unwrap_or_else(|_| "127.0.0.1".to_string());

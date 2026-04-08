@@ -109,7 +109,7 @@ export class BackendManager {
     // Wait for it to be ready
     await this.waitForReady();
     
-    return 'http://localhost:4096';
+    return 'http://localhost:8013';
   }
   
   /**
@@ -125,14 +125,14 @@ export class BackendManager {
     if (installed) {
       // Check if running by hitting health endpoint
       try {
-        const response = await fetch('http://localhost:4096/health', {
+        const response = await fetch('http://localhost:8013/health', {
           signal: AbortSignal.timeout(1000)
         });
         running = response.ok;
         
         if (running) {
           // Get version from API
-          const versionResponse = await fetch('http://localhost:4096/version', {
+          const versionResponse = await fetch('http://localhost:8013/version', {
             signal: AbortSignal.timeout(1000)
           });
           if (versionResponse.ok) {
@@ -149,7 +149,7 @@ export class BackendManager {
       installed,
       version,
       running,
-      url: 'http://localhost:4096',
+      url: 'http://localhost:8013',
     };
   }
   
@@ -257,7 +257,7 @@ export class BackendManager {
     
     while (Date.now() - startTime < timeoutMs) {
       try {
-        const response = await fetch('http://localhost:4096/health', {
+        const response = await fetch('http://localhost:8013/health', {
           signal: AbortSignal.timeout(500)
         });
         if (response.ok) {
@@ -320,7 +320,7 @@ export class BackendManager {
 
 server:
   host: 127.0.0.1
-  port: 4096
+  port: 8013
 
 api:
   cors_origins:

@@ -41,7 +41,7 @@ let mainWindow: BrowserWindow | null = null;
 let splashWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 /** Resolved backend URL — set once the app initializes. Used by sdk:get-backend-url IPC. */
-let activeBackendUrl: string = 'http://localhost:4096';
+let activeBackendUrl: string = 'http://localhost:8013';
 
 interface StoreSchema {
   windowBounds: { width: number; height: number; x?: number; y?: number };
@@ -249,7 +249,7 @@ async function initializeBundledMode(): Promise<void> {
     const gizziUrl = await gizziManager.start();
     activeBackendUrl = gizziUrl;
 
-    // Step 2 — allternit-api (Rust operator API, port 4097 — VM, rails, terminal)
+    // Step 2 — allternit-api (Rust operator API, port 8013 — VM, rails, terminal)
     const apiStatus = await backendManager.getStatus();
     if (!apiStatus.installed) {
       updateSplash('Setting up Allternit for the first time…', 25);

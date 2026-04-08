@@ -61,7 +61,7 @@ export class GizziManager {
       GIZZI_PASSWORD: this.password,
       GIZZI_USERNAME: 'gizzi',
       // Point at allternit-api for operator-level routes (vm-session, rails, etc.)
-      ALLTERNIT_API_URL: 'http://127.0.0.1:4097',
+      ALLTERNIT_API_URL: 'http://127.0.0.1:8013',
       NODE_ENV: 'production',
     };
 
