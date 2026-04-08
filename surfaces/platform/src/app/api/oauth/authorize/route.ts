@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'redirect_uri_mismatch' }, { status: 400 });
   }
 
-  const code = createAuthCode({
+  const code = await createAuthCode({
     clientId,
     redirectUri,
     userId,

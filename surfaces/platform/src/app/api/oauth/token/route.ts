@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Consume and validate code
-  const stored = consumeAuthCode(code);
+  const stored = await consumeAuthCode(code);
   if (!stored) {
     return errorResponse('invalid_grant', 'Authorization code is invalid or expired', 400);
   }

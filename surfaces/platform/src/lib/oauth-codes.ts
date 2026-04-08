@@ -1,39 +1,50 @@
 /**
- * In-process OAuth authorization code store.
+ * OAuth authorization code store.
  *
- * Codes are single-use, expire after 5 minutes, and are tied to
- * a specific clientId + redirectUri + userId + PKCE challenge.
+ * Uses Redis (via the project's existing ioredis client) when REDIS_URL or
+ * UPSTASH_REDIS_REST_URL is configured. Falls back to an in-process Map for
+ * single-instance / local dev environments.
  *
- * For multi-instance deployments replace with Vercel KV or Redis.
+ * Codes are single-use, expire after 5 minutes, and are tied to a specific
+ * clientId + redirectUri + userId + PKCE challenge.
  */
 
-interface StoredCode {
+import { getRedisClient } from '@/lib/redis/client';
+
+const CODE_TTL_SECONDS = 300; // 5 minutes
+const KEY_PREFIX = 'oauth:code:';
+
+export interface StoredCode {
   code: string;
   clientId: string;
   redirectUri: string;
   userId: string;
   userEmail: string;
-  codeChallenge?: string;       // PKCE S256 challenge
-  codeChallengeMethod?: string; // 'S256' | 'plain'
+  codeChallenge?: string;
+  codeChallengeMethod?: string;
   scope: string;
-  expiresAt: number;
-  used: boolean;
 }
 
-// Module-level store — survives across requests in the same Node.js process.
-const codeStore = new Map<string, StoredCode>();
+// ─── In-memory fallback ────────────────────────────────────────────────────────
 
-// Sweep expired codes every 5 minutes.
+interface MemEntry extends StoredCode {
+  expiresAt: number;
+}
+
+const memStore = new Map<string, MemEntry>();
+
 if (typeof setInterval !== 'undefined') {
   setInterval(() => {
     const now = Date.now();
-    for (const [key, entry] of codeStore.entries()) {
-      if (entry.expiresAt < now || entry.used) codeStore.delete(key);
+    for (const [k, v] of memStore.entries()) {
+      if (v.expiresAt < now) memStore.delete(k);
     }
-  }, 5 * 60 * 1000);
+  }, 60_000);
 }
 
-export function createAuthCode(params: {
+// ─── Public API ────────────────────────────────────────────────────────────────
+
+export async function createAuthCode(params: {
   clientId: string;
   redirectUri: string;
   userId: string;
@@ -41,26 +52,57 @@ export function createAuthCode(params: {
   codeChallenge?: string;
   codeChallengeMethod?: string;
   scope?: string;
-}): string {
-  const code = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
-  codeStore.set(code, {
+}): Promise<string> {
+  const code =
+    crypto.randomUUID().replace(/-/g, '') +
+    crypto.randomUUID().replace(/-/g, '');
+
+  const entry: StoredCode = {
     code,
     ...params,
     scope: params.scope ?? 'openid profile email',
-    expiresAt: Date.now() + 5 * 60 * 1000,
-    used: false,
-  });
+  };
+
+  const redis = getRedisClient();
+  if (redis) {
+    await redis.set(
+      `${KEY_PREFIX}${code}`,
+      JSON.stringify(entry),
+      'EX',
+      CODE_TTL_SECONDS,
+    );
+  } else {
+    memStore.set(code, {
+      ...entry,
+      expiresAt: Date.now() + CODE_TTL_SECONDS * 1000,
+    });
+  }
+
   return code;
 }
 
-export function consumeAuthCode(code: string): StoredCode | null {
-  const entry = codeStore.get(code);
+export async function consumeAuthCode(code: string): Promise<StoredCode | null> {
+  const redis = getRedisClient();
+
+  if (redis) {
+    const key = `${KEY_PREFIX}${code}`;
+    const raw = await redis.get(key);
+    if (!raw) return null;
+    await redis.del(key); // single-use: delete immediately on consume
+    try {
+      return JSON.parse(raw) as StoredCode;
+    } catch {
+      return null;
+    }
+  }
+
+  // In-memory fallback
+  const entry = memStore.get(code);
   if (!entry) return null;
-  if (entry.used || entry.expiresAt < Date.now()) {
-    codeStore.delete(code);
+  if (entry.expiresAt < Date.now()) {
+    memStore.delete(code);
     return null;
   }
-  entry.used = true;
-  codeStore.delete(code);
+  memStore.delete(code);
   return entry;
 }
