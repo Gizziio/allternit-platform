@@ -201,7 +201,7 @@ export function AgentationOverlay() {
           
           {copiedOutput && (
             <div style={styles.copiedToast}>
-              ✓ Copied to clipboard! Paste into your A2R agent.
+              ✓ Copied to clipboard! Paste into your Allternit agent.
             </div>
           )}
         </div>
@@ -225,7 +225,7 @@ export function AgentationOverlay() {
 }
 
 /**
- * Format output for A2R agent
+ * Format output for Allternit agent
  */
 function formatOutput(output: { notes: string; selectors: string[]; context: string }) {
   return `

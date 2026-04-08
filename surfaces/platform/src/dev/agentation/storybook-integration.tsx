@@ -44,7 +44,7 @@ const preview: Preview = {
     // Agentation-specific parameters
     agentation: {
       enabled: process.env.NODE_ENV !== 'production',
-      storageKey: 'a2r-agentation-annotations',
+      storageKey: 'allternit-agentation-annotations',
       hotkey: 'a',
     },
   },

@@ -1,7 +1,7 @@
 /**
  * WIH: T2-A2
  * Agent: T2-A2 (Navigation System)
- * Scope: 6-ui/a2r-platform/src/shell/navigation/command-actions.ts
+ * Scope: 6-ui/allternit-platform/src/shell/navigation/command-actions.ts
  * Acceptance: 15+ default command actions for navigation, views, actions, preferences
  * Risk Tier: 2
  * Dependencies: CommandAction type, navigation utilities
@@ -266,7 +266,7 @@ export function createDefaultActions(config: CommandActionsConfig): CommandActio
       keywords: 'keyboard shortcuts help hotkeys',
       perform: () => {
         // This will be handled by ShortcutsHelp component
-        const event = new CustomEvent('a2r:show-shortcuts');
+        const event = new CustomEvent('allternit:show-shortcuts');
         window.dispatchEvent(event);
       },
       icon: 'keyboard',

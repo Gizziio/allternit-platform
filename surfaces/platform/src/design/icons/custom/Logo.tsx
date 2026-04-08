@@ -1,5 +1,5 @@
 /**
- * A2R Logo Component
+ * Allternit Logo Component
  * 
  * Full A2rchitect logo with wordmark.
  */

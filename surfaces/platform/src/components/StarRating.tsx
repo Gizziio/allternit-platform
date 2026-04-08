@@ -3,7 +3,7 @@
  * 
  * A reusable star rating component that supports both display and interactive modes.
  * Supports half-star ratings, hover effects, and custom sizing.
- * Uses A2R dark theme colors.
+ * Uses Allternit dark theme colors.
  */
 
 import React, { useState, useCallback } from 'react';

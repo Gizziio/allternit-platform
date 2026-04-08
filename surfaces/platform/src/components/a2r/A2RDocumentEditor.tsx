@@ -1,8 +1,8 @@
 /**
  * AllternitDocumentEditor.tsx
  * 
- * A2R-native document editor wrapping BlockNote.
- * Rich, Notion-style block editor with A2R theming.
+ * Allternit-native document editor wrapping BlockNote.
+ * Rich, Notion-style block editor with Allternit theming.
  */
 
 import React, { useEffect, useState } from 'react';
@@ -46,10 +46,10 @@ interface AllternitDocumentEditorProps {
 }
 
 /**
- * A2R Document Editor
+ * Allternit Document Editor
  * 
- * Wraps BlockNote with A2R-native theming and branding.
- * All user-facing labels say "A2R Document" not "BlockNote".
+ * Wraps BlockNote with Allternit-native theming and branding.
+ * All user-facing labels say "Allternit Document" not "BlockNote".
  */
 export function AllternitDocumentEditor({
   initialContent,
@@ -70,7 +70,7 @@ export function AllternitDocumentEditor({
     initialContent: typeof initialContent === 'string' 
       ? undefined 
       : initialContent,
-    // A2R-native placeholders
+    // Allternit-native placeholders
     placeholders: {
       default: "Start typing or press '/' for commands...",
       heading: "Heading",
@@ -129,7 +129,7 @@ export function AllternitDocumentEditor({
   if (!editor) {
     return (
       <div className="flex items-center justify-center h-64 bg-[#1a1a1a] rounded-lg">
-        <div className="text-[var(--text-tertiary)]">Loading A2R Document...</div>
+        <div className="text-[var(--text-tertiary)]">Loading Allternit Document...</div>
       </div>
     );
   }
@@ -141,7 +141,7 @@ export function AllternitDocumentEditor({
         className
       )}
     >
-      {/* A2R Document Toolbar */}
+      {/* Allternit Document Toolbar */}
       {showToolbar && (
         <div className="h-12 border-b border-[#333] flex items-center justify-between px-4 bg-[#1e1e1e]">
           <div className="flex items-center gap-3">
@@ -197,8 +197,8 @@ export function AllternitDocumentEditor({
         </div>
       )}
 
-      {/* BlockNote Editor with A2R Theme */}
-      <div className="flex-1 overflow-auto a2r-document-theme">
+      {/* BlockNote Editor with Allternit Theme */}
+      <div className="flex-1 overflow-auto allternit-document-theme">
         <BlockNoteView
           editor={editor}
           editable={!readOnly}
@@ -228,7 +228,7 @@ export function AllternitDocumentEditor({
       {/* Status bar */}
       <div className="h-8 border-t border-[#333] flex items-center justify-between px-4 text-xs text-[#666] bg-[#1e1e1e]">
         <div className="flex items-center gap-4">
-          <span>A2R Document</span>
+          <span>Allternit Document</span>
           <span>{editor.document.length} blocks</span>
           <span>{wordCount} words</span>
         </div>

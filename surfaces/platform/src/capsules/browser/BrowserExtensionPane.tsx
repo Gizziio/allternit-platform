@@ -12,9 +12,9 @@ import {
 import { ExtensionSidepanelShell } from "../../../../shared/extension-sidepanel/ExtensionSidepanelShell";
 
 const BROWSER_EXTENSION_COPY = {
-  title: "A2R Extension",
+  title: "Allternit Extension",
   subtitle: "Browser Sidepanel",
-  emptyStateTitle: "A2R Extension",
+  emptyStateTitle: "Allternit Extension",
   emptyStateDescription: "Execute multi-page tasks",
   readyLabel: "Ready",
   contextLabel: "Current Browser Tab",

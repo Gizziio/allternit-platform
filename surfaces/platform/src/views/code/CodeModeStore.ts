@@ -226,7 +226,7 @@ export const useCodeModeStore = create<CodeModeState>()(
     }),
   }),
   {
-    name: 'a2r-code-storage-v1',
+    name: 'allternit-code-storage-v1',
     partialize: (state) => ({
       workspaces: state.workspaces,
       sessions: state.sessions,

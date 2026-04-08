@@ -629,7 +629,7 @@ export const DuplicateNameWarning: React.FC<DuplicateNameWarningProps> = ({
 
   const isDuplicate = (() => {
     try {
-      const stored = localStorage.getItem('a2r-existing-agent-names');
+      const stored = localStorage.getItem('allternit-existing-agent-names');
       if (!stored) return false;
       const names = JSON.parse(stored) as string[];
       return names.some(n => n.toLowerCase() === agentName.toLowerCase());

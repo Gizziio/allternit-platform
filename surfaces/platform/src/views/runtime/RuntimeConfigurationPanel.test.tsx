@@ -32,8 +32,8 @@ const settings = {
   },
   versioning: {
     auto_commit: false,
-    commit_message_template: "[a2r] {description}",
-    branch_prefix: "a2r-session-",
+    commit_message_template: "[allternit] {description}",
+    branch_prefix: "allternit-session-",
   },
 } as const;
 

@@ -18,7 +18,7 @@ const meta: Meta<typeof StatusBar> = {
   tags: ['autodocs'],
   parameters: {
     layout: 'fullscreen',
-    a2r: {
+    allternit: {
       componentId: 'design-components-status-bar',
       evidence: {
         types: ['VISUAL_SNAPSHOT', 'A11Y_SCAN'],

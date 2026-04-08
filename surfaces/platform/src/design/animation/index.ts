@@ -1,5 +1,5 @@
 /**
- * A2R Animation System
+ * Allternit Animation System
  * 
  * Comprehensive animation system using Framer Motion.
  * All animations respect prefers-reduced-motion and use GPU-accelerated properties.

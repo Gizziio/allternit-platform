@@ -41,16 +41,16 @@ export function Footer() {
           {/* Brand */}
           <div className="col-span-2">
             <Link to="/" className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-a2r-500 to-violet-500 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-allternit-500 to-violet-500 flex items-center justify-center">
                 <Sparkle className="w-5 h-5 text-white" />
               </div>
               <span className="font-bold text-xl">
-                A2R <span className="text-a2r-500">Dev</span>
+                Allternit <span className="text-allternit-500">Dev</span>
               </span>
             </Link>
             <p className="text-sm text-surface-600 dark:text-surface-400 mb-4 max-w-xs">
-              Build, test, and publish plugins for the A2R platform. 
-              Join thousands of developers extending A2R.
+              Build, test, and publish plugins for the Allternit platform. 
+              Join thousands of developers extending Allternit.
             </p>
             <div className="flex items-center gap-4">
               <a
@@ -94,7 +94,7 @@ export function Footer() {
                   <li key={link.label}>
                     <a
                       href={link.href}
-                      className="text-sm text-surface-600 dark:text-surface-400 hover:text-a2r-600 dark:hover:text-a2r-400 transition-colors"
+                      className="text-sm text-surface-600 dark:text-surface-400 hover:text-allternit-600 dark:hover:text-allternit-400 transition-colors"
                     >
                       {link.label}
                     </a>
@@ -108,7 +108,7 @@ export function Footer() {
         {/* Bottom */}
         <div className="mt-12 pt-8 border-t border-surface-200 dark:border-surface-800 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-surface-500 dark:text-surface-500">
-            © {new Date().getFullYear()} A2R. All rights reserved.
+            © {new Date().getFullYear()} Allternit. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
             <a

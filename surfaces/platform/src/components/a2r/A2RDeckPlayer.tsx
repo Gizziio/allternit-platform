@@ -1,8 +1,8 @@
 /**
  * AllternitDeckPlayer.tsx
  * 
- * A2R-native presentation deck wrapping Reveal.js.
- * PowerPoint-style slides with A2R theming.
+ * Allternit-native presentation deck wrapping Reveal.js.
+ * PowerPoint-style slides with Allternit theming.
  */
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
@@ -47,7 +47,7 @@ interface AllternitDeckPlayerProps {
   /** Optional className */
   className?: string;
   /** Theme name */
-  theme?: 'a2r-dark' | 'a2r-light' | 'a2r-amber';
+  theme?: 'allternit-dark' | 'allternit-light' | 'allternit-amber';
   /** Show/hide toolbar */
   showToolbar?: boolean;
   /** Enable presenter mode */
@@ -55,10 +55,10 @@ interface AllternitDeckPlayerProps {
 }
 
 /**
- * A2R Deck Player
+ * Allternit Deck Player
  * 
- * Wraps Reveal.js with A2R-native theming and branding.
- * All user-facing labels say "A2R Deck" not "Reveal.js".
+ * Wraps Reveal.js with Allternit-native theming and branding.
+ * All user-facing labels say "Allternit Deck" not "Reveal.js".
  */
 export function AllternitDeckPlayer({
   slides,
@@ -66,7 +66,7 @@ export function AllternitDeckPlayer({
   currentSlide: controlledSlide,
   onSlideChange,
   className,
-  theme = 'a2r-dark',
+  theme = 'allternit-dark',
   showToolbar = true,
   enablePresenterMode = true,
 }: AllternitDeckPlayerProps) {
@@ -195,9 +195,9 @@ export function AllternitDeckPlayer({
 
   // Theme classes
   const themeClasses = {
-    'a2r-dark': 'a2r-deck-dark',
-    'a2r-light': 'a2r-deck-light',
-    'a2r-amber': 'a2r-deck-amber',
+    'allternit-dark': 'allternit-deck-dark',
+    'allternit-light': 'allternit-deck-light',
+    'allternit-amber': 'allternit-deck-amber',
   };
 
   return (
@@ -207,7 +207,7 @@ export function AllternitDeckPlayer({
         className
       )}
     >
-      {/* A2R Deck Toolbar */}
+      {/* Allternit Deck Toolbar */}
       {showToolbar && (
         <div className="h-12 border-b border-[#333] flex items-center justify-between px-4 bg-[#1e1e1e] z-10">
           <div className="flex items-center gap-3">
@@ -227,9 +227,9 @@ export function AllternitDeckPlayer({
               onChange={(e) => setActiveTheme(e.target.value as any)}
               className="bg-[#1a1a1a] border border-[#333] text-[#888] text-xs rounded px-2 py-1 outline-none focus:border-[#D4956A]"
             >
-              <option value="a2r-dark">A2R Dark</option>
-              <option value="a2r-light">A2R Light</option>
-              <option value="a2r-amber">A2R Amber</option>
+              <option value="allternit-dark">Allternit Dark</option>
+              <option value="allternit-light">Allternit Light</option>
+              <option value="allternit-amber">Allternit Amber</option>
             </select>
 
             {/* Grid view */}
@@ -300,10 +300,10 @@ export function AllternitDeckPlayer({
                 key={slide.id}
                 data-background={slide.background}
                 className={cn(
-                  "a2r-slide",
-                  slide.type === 'title' && 'a2r-slide-title',
-                  slide.type === 'split' && 'a2r-slide-split',
-                  slide.type === 'quote' && 'a2r-slide-quote',
+                  "allternit-slide",
+                  slide.type === 'title' && 'allternit-slide-title',
+                  slide.type === 'split' && 'allternit-slide-split',
+                  slide.type === 'quote' && 'allternit-slide-quote',
                 )}
               >
                 {renderSlideContent(slide)}

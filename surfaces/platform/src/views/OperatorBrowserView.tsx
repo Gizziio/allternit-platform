@@ -1,7 +1,7 @@
 /**
  * OperatorBrowserView
  *
- * UI for A2R Operator Browser Automation Control.
+ * UI for Allternit Operator Browser Automation Control.
  * Provides interface for creating and monitoring browser automation tasks.
  */
 

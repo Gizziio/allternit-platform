@@ -278,7 +278,7 @@ export const useChatStore = create<ChatState>()(
       },
     }),
     {
-      name: 'a2r-chat-storage-v6',
+      name: 'allternit-chat-storage-v6',
       partialize: (state) => ({
         projects: state.projects,
         // activeProjectId is intentionally NOT persisted — it's navigation state.

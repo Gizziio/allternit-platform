@@ -89,9 +89,9 @@ const EXTENSION_SIDEPANEL_ANIMATIONS = `
 `;
 
 const DEFAULT_COPY: ExtensionSidepanelCopy = {
-  title: "A2R Extension",
+  title: "Allternit Extension",
   subtitle: "Chrome Sidepanel",
-  emptyStateTitle: "A2R Extension",
+  emptyStateTitle: "Allternit Extension",
   emptyStateDescription: "Execute multi-page tasks",
   readyLabel: "Ready",
   contextLabel: "Current Browser Tab",

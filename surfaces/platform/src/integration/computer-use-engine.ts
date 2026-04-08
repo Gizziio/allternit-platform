@@ -11,8 +11,8 @@ import {
   type WatchRunOptions,
 } from '@allternit/sdk/computer-use';
 
-const ENGINE_BASE_URL_STORAGE_KEY = 'a2r.platform.computerUse.baseUrl';
-const ENGINE_BASE_URL_SOURCE_STORAGE_KEY = 'a2r.platform.computerUse.baseUrlSource';
+const ENGINE_BASE_URL_STORAGE_KEY = 'allternit.platform.computerUse.baseUrl';
+const ENGINE_BASE_URL_SOURCE_STORAGE_KEY = 'allternit.platform.computerUse.baseUrlSource';
 
 function readElectronEngineBaseUrl(): string | null {
   if (typeof window === 'undefined') {

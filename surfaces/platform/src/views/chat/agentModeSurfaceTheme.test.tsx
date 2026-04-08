@@ -207,6 +207,6 @@ describe('AgentModeBackdrop', () => {
     
     const styleElement = document.querySelector('style');
     expect(styleElement).toBeInTheDocument();
-    expect(styleElement?.textContent).toContain('@keyframes a2r-agent-surface-glow');
+    expect(styleElement?.textContent).toContain('@keyframes allternit-agent-surface-glow');
   });
 });

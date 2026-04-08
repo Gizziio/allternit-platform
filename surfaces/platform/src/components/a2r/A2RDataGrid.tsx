@@ -1,8 +1,8 @@
 /**
  * AllternitDataGrid.tsx
  * 
- * A2R-native data grid wrapping AG-Grid.
- * Excel-like spreadsheet interface with A2R theming.
+ * Allternit-native data grid wrapping AG-Grid.
+ * Excel-like spreadsheet interface with Allternit theming.
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
@@ -71,10 +71,10 @@ interface AllternitDataGridProps {
 }
 
 /**
- * A2R Data Grid
+ * Allternit Data Grid
  * 
- * Wraps AG-Grid with A2R-native theming and branding.
- * All user-facing labels say "A2R Data" not "AG-Grid".
+ * Wraps AG-Grid with Allternit-native theming and branding.
+ * All user-facing labels say "Allternit Data" not "AG-Grid".
  */
 export function AllternitDataGrid({
   columns,
@@ -92,7 +92,7 @@ export function AllternitDataGrid({
   const [selectedRows, setSelectedRows] = useState<number>(0);
   const [filterEnabled, setFilterEnabled] = useState(false);
 
-  // Convert A2R columns to AG-Grid column defs
+  // Convert Allternit columns to AG-Grid column defs
   const columnDefs = useMemo<ColDef[]>(() => {
     return columns.map((col) => ({
       field: col.key,
@@ -102,8 +102,8 @@ export function AllternitDataGrid({
       filter: filterEnabled,
       sortable: true,
       resizable: true,
-      cellClass: 'a2r-data-cell',
-      headerClass: 'a2r-data-header',
+      cellClass: 'allternit-data-cell',
+      headerClass: 'allternit-data-header',
       valueFormatter: (params: any) => {
         if (col.type === 'number' && typeof params.value === 'number') {
           return params.value.toLocaleString();
@@ -186,7 +186,7 @@ export function AllternitDataGrid({
         className
       )}
     >
-      {/* A2R Data Toolbar */}
+      {/* Allternit Data Toolbar */}
       {showToolbar && (
         <div className="h-12 border-b border-[#333] flex items-center justify-between px-4 bg-[#1e1e1e]">
           <div className="flex items-center gap-3">
@@ -272,9 +272,9 @@ export function AllternitDataGrid({
         </div>
       )}
 
-      {/* AG-Grid with A2R Theme */}
+      {/* AG-Grid with Allternit Theme */}
       <div 
-        className="flex-1 a2r-data-theme"
+        className="flex-1 allternit-data-theme"
         style={{ height: typeof height === 'number' ? `${height}px` : height }}
       >
         <AgGridReact
@@ -289,14 +289,14 @@ export function AllternitDataGrid({
           animateRows={true}
           pagination={rowCount > 100}
           paginationPageSize={50}
-          className="ag-theme-a2r"
+          className="ag-theme-allternit"
         />
       </div>
 
       {/* Status bar */}
       <div className="h-8 border-t border-[#333] flex items-center justify-between px-4 text-xs text-[#666] bg-[#1e1e1e]">
         <div className="flex items-center gap-4">
-          <span>A2R Data</span>
+          <span>Allternit Data</span>
           <span>{rowCount} rows</span>
           <span>{columns.length} columns</span>
           {selectedRows > 0 && (

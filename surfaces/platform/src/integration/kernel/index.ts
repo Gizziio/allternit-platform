@@ -47,7 +47,7 @@ function createKernelStub(): AllternitKernel {
   const fileAccess = new Map<string, FileAccessFunction>();
   let counter = 1;
 
-  const nextWihId = () => `A2R-${String(counter++).padStart(4, "0")}`;
+  const nextWihId = () => `Allternit-${String(counter++).padStart(4, "0")}`;
   const nextReceiptId = () => `RCPT-${Math.random().toString(36).slice(2, 10)}`;
 
   const routeList = async <TContext>(
@@ -236,10 +236,10 @@ export async function executeKernelTool(
     const nodeId = safeComponent(ctx.node_id, `node-${randomId()}`);
     const wihId = safeComponent(ctx.wih_id, `wih-${randomId()}`);
     const writeScope = ctx.write_scope ?? {
-      root: "/.a2r/",
+      root: "/.allternit/",
       allowed_globs: [
-        `/.a2r/receipts/${runId}/**`,
-        `/.a2r/artifacts/${runId}/**`,
+        `/.allternit/receipts/${runId}/**`,
+        `/.allternit/artifacts/${runId}/**`,
       ],
     };
     const payload = {

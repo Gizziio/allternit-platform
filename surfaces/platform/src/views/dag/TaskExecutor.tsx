@@ -19,7 +19,7 @@ export function TaskExecutor() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Backend: <code className="bg-muted px-2 py-1 rounded">1-kernel/execution/a2r-local-compute/executor</code>
+            Backend: <code className="bg-muted px-2 py-1 rounded">1-kernel/execution/allternit-local-compute/executor</code>
           </p>
           <p className="text-sm text-muted-foreground mt-2">
             Status: ✅ Backend implemented, UI placeholder

@@ -172,7 +172,7 @@ export const ProviderGallery: React.FC = () => {
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-white mb-2">Connect Providers</h2>
         <p className="text-white/40 text-sm">
-          Select an AI provider to enable their models on the A2R Platform.
+          Select an AI provider to enable their models on the Allternit Platform.
         </p>
       </div>
 

@@ -89,8 +89,8 @@ async function readAgentIdentityFiles(agentId: string): Promise<Record<string, s
   await Promise.all(
     names.map(async (f) => {
       try {
-        const content = await agentWorkspaceService.readFile(agentId, `.a2r/identity/${f}`)
-          .catch(() => agentWorkspaceService.readFile(agentId, `.a2r/${f}`))
+        const content = await agentWorkspaceService.readFile(agentId, `.allternit/identity/${f}`)
+          .catch(() => agentWorkspaceService.readFile(agentId, `.allternit/${f}`))
           .catch(() => null);
         if (content) files[f.replace('.md', '').toLowerCase()] = content;
       } catch {}

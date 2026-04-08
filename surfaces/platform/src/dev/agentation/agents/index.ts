@@ -1,5 +1,5 @@
 /**
- * Agent Role Definitions for A2R UI Development
+ * Agent Role Definitions for Allternit UI Development
  */
 
 import type { AgentRole } from '../types';

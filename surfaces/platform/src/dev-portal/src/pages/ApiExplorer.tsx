@@ -81,18 +81,18 @@ export default function ApiExplorer() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-a2r-text mb-2">API Explorer</h1>
-          <p className="text-a2r-text-secondary">
-            Explore and test the A2R Platform API endpoints.
+          <h1 className="text-2xl font-bold text-allternit-text mb-2">API Explorer</h1>
+          <p className="text-allternit-text-secondary">
+            Explore and test the Allternit Platform API endpoints.
           </p>
         </div>
-        <div className="flex items-center gap-2 p-1 bg-a2r-surface rounded-lg border border-a2r-border">
+        <div className="flex items-center gap-2 p-1 bg-allternit-surface rounded-lg border border-allternit-border">
           <button
             onClick={() => setActiveTab('rest')}
             className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
               activeTab === 'rest' 
-                ? 'bg-a2r-accent text-a2r-bg' 
-                : 'text-a2r-text-secondary hover:text-a2r-text'
+                ? 'bg-allternit-accent text-allternit-bg' 
+                : 'text-allternit-text-secondary hover:text-allternit-text'
             }`}
           >
             <Globe size={16} />
@@ -102,8 +102,8 @@ export default function ApiExplorer() {
             onClick={() => setActiveTab('websocket')}
             className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
               activeTab === 'websocket' 
-                ? 'bg-a2r-accent text-a2r-bg' 
-                : 'text-a2r-text-secondary hover:text-a2r-text'
+                ? 'bg-allternit-accent text-allternit-bg' 
+                : 'text-allternit-text-secondary hover:text-allternit-text'
             }`}
           >
             <WebhooksLogo size={16} />
@@ -113,13 +113,13 @@ export default function ApiExplorer() {
       </div>
 
       {/* API Key Notice */}
-      <div className="p-4 bg-a2r-accent/10 border border-a2r-accent/20 rounded-lg flex items-start gap-3">
-        <Shield className="w-5 h-5 text-a2r-accent shrink-0 mt-0.5" />
+      <div className="p-4 bg-allternit-accent/10 border border-allternit-accent/20 rounded-lg flex items-start gap-3">
+        <Shield className="w-5 h-5 text-allternit-accent shrink-0 mt-0.5" />
         <div>
-          <h4 className="font-medium text-a2r-text mb-1">Authentication Required</h4>
-          <p className="text-sm text-a2r-text-secondary">
+          <h4 className="font-medium text-allternit-text mb-1">Authentication Required</h4>
+          <p className="text-sm text-allternit-text-secondary">
             All API requests require an API key. Include it in the Authorization header:{' '}
-            <code className="text-a2r-accent">Authorization: Bearer YOUR_API_KEY</code>
+            <code className="text-allternit-accent">Authorization: Bearer YOUR_API_KEY</code>
           </p>
         </div>
       </div>
@@ -130,7 +130,7 @@ export default function ApiExplorer() {
         <div className="lg:col-span-1 space-y-4">
           {endpoints.map((category) => (
             <div key={category.category}>
-              <h3 className="text-sm font-semibold text-a2r-text-muted uppercase tracking-wider mb-2 px-2">
+              <h3 className="text-sm font-semibold text-allternit-text-muted uppercase tracking-wider mb-2 px-2">
                 {category.category}
               </h3>
               <div className="space-y-1">
@@ -140,8 +140,8 @@ export default function ApiExplorer() {
                     onClick={() => setSelectedEndpoint(endpoint)}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${
                       selectedEndpoint.path === endpoint.path
-                        ? 'bg-a2r-accent/10 border border-a2r-accent/20'
-                        : 'hover:bg-a2r-surface-hover'
+                        ? 'bg-allternit-accent/10 border border-allternit-accent/20'
+                        : 'hover:bg-allternit-surface-hover'
                     }`}
                   >
                     <span className={`text-xs font-mono font-semibold px-2 py-0.5 rounded ${methodColors[endpoint.method]}`}>
@@ -149,11 +149,11 @@ export default function ApiExplorer() {
                     </span>
                     <div className="flex-1 min-w-0">
                       <div className={`text-sm font-mono truncate ${
-                        selectedEndpoint.path === endpoint.path ? 'text-a2r-accent' : 'text-a2r-text'
+                        selectedEndpoint.path === endpoint.path ? 'text-allternit-accent' : 'text-allternit-text'
                       }`}>
                         {endpoint.path}
                       </div>
-                      <div className="text-xs text-a2r-text-muted truncate">
+                      <div className="text-xs text-allternit-text-muted truncate">
                         {endpoint.description}
                       </div>
                     </div>
@@ -167,27 +167,27 @@ export default function ApiExplorer() {
         {/* Request/Response Panel */}
         <div className="lg:col-span-2 space-y-4">
           {/* Endpoint Header */}
-          <div className="p-4 bg-a2r-surface border border-a2r-border rounded-lg">
+          <div className="p-4 bg-allternit-surface border border-allternit-border rounded-lg">
             <div className="flex items-center gap-3 mb-4">
               <span className={`text-sm font-mono font-semibold px-3 py-1 rounded ${methodColors[selectedEndpoint.method]}`}>
                 {selectedEndpoint.method}
               </span>
               <code className="text-a2r-text font-mono">https://api.a2r.dev{selectedEndpoint.path}</code>
             </div>
-            <p className="text-sm text-a2r-text-secondary">{selectedEndpoint.description}</p>
+            <p className="text-sm text-allternit-text-secondary">{selectedEndpoint.description}</p>
           </div>
 
           {/* Request Panel */}
-          <div className="bg-a2r-surface border border-a2r-border rounded-lg overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-a2r-border bg-a2r-surface-elevated">
+          <div className="bg-allternit-surface border border-allternit-border rounded-lg overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-allternit-border bg-allternit-surface-elevated">
               <div className="flex items-center gap-2">
-                <Terminal className="w-4 h-4 text-a2r-text-muted" />
-                <span className="text-sm font-medium text-a2r-text">Request</span>
+                <Terminal className="w-4 h-4 text-allternit-text-muted" />
+                <span className="text-sm font-medium text-allternit-text">Request</span>
               </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => copyToClipboard(requestBody)}
-                  className="p-1.5 text-a2r-text-muted hover:text-a2r-text hover:bg-a2r-surface-hover rounded transition-colors"
+                  className="p-1.5 text-allternit-text-muted hover:text-allternit-text hover:bg-allternit-surface-hover rounded transition-colors"
                 >
                   {copied ? <Check size={16} /> : <Copy size={16} />}
                 </button>
@@ -197,12 +197,12 @@ export default function ApiExplorer() {
               <textarea
                 value={requestBody}
                 onChange={(e) => setRequestBody(e.target.value)}
-                className="w-full h-48 bg-a2r-bg border border-a2r-border rounded-lg p-4 font-mono text-sm text-a2r-text resize-none focus:outline-none focus:border-a2r-accent"
+                className="w-full h-48 bg-allternit-bg border border-allternit-border rounded-lg p-4 font-mono text-sm text-allternit-text resize-none focus:outline-none focus:border-allternit-accent"
                 spellCheck={false}
               />
             </div>
-            <div className="px-4 py-3 border-t border-a2r-border bg-a2r-surface-elevated">
-              <button className="flex items-center gap-2 px-4 py-2 bg-a2r-accent text-a2r-bg rounded-lg font-medium hover:bg-a2r-accent-hover transition-colors">
+            <div className="px-4 py-3 border-t border-allternit-border bg-allternit-surface-elevated">
+              <button className="flex items-center gap-2 px-4 py-2 bg-allternit-accent text-allternit-bg rounded-lg font-medium hover:bg-allternit-accent-hover transition-colors">
                 <Play size={16} />
                 Send Request
               </button>
@@ -210,20 +210,20 @@ export default function ApiExplorer() {
           </div>
 
           {/* Response Panel */}
-          <div className="bg-a2r-surface border border-a2r-border rounded-lg overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-a2r-border bg-a2r-surface-elevated">
+          <div className="bg-allternit-surface border border-allternit-border rounded-lg overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-allternit-border bg-allternit-surface-elevated">
               <div className="flex items-center gap-2">
-                <Code className="w-4 h-4 text-a2r-text-muted" />
-                <span className="text-sm font-medium text-a2r-text">Response</span>
+                <Code className="w-4 h-4 text-allternit-text-muted" />
+                <span className="text-sm font-medium text-allternit-text">Response</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-emerald-400">200 OK</span>
-                <span className="text-xs text-a2r-text-muted">·</span>
-                <span className="text-xs text-a2r-text-muted">142ms</span>
+                <span className="text-xs text-allternit-text-muted">·</span>
+                <span className="text-xs text-allternit-text-muted">142ms</span>
               </div>
             </div>
             <div className="p-4">
-              <pre className="font-mono text-sm text-a2r-text overflow-x-auto">
+              <pre className="font-mono text-sm text-allternit-text overflow-x-auto">
                 <code>{sampleResponse}</code>
               </pre>
             </div>
@@ -232,18 +232,18 @@ export default function ApiExplorer() {
       </div>
 
       {/* Code Examples */}
-      <div className="pt-8 border-t border-a2r-border">
-        <h2 className="text-lg font-semibold text-a2r-text mb-4">Code Examples</h2>
+      <div className="pt-8 border-t border-allternit-border">
+        <h2 className="text-lg font-semibold text-allternit-text mb-4">Code Examples</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {['JavaScript', 'Python', 'cURL', 'Go'].map((lang) => (
-            <div key={lang} className="bg-a2r-surface border border-a2r-border rounded-lg p-4">
+            <div key={lang} className="bg-allternit-surface border border-allternit-border rounded-lg p-4">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium text-a2r-text">{lang}</span>
-                <button className="text-xs text-a2r-text-muted hover:text-a2r-accent transition-colors">
+                <span className="text-sm font-medium text-allternit-text">{lang}</span>
+                <button className="text-xs text-allternit-text-muted hover:text-allternit-accent transition-colors">
                   Copy
                 </button>
               </div>
-              <pre className="font-mono text-xs text-a2r-text-secondary overflow-x-auto">
+              <pre className="font-mono text-xs text-allternit-text-secondary overflow-x-auto">
                 <code>{`// ${lang} example
 const response = await fetch(
   'https://api.a2r.dev${selectedEndpoint.path}',

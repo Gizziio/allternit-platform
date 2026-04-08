@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/db';
 
 function buildPlaceholderEmail(authUserId: string): string {
-  return `${Buffer.from(authUserId).toString('hex')}@a2r.local`;
+  return `${Buffer.from(authUserId).toString('hex')}@allternit.local`;
 }
 
 export async function resolvePlatformUserId(authUserId: string): Promise<string> {

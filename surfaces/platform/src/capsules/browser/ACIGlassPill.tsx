@@ -7,7 +7,7 @@
  * doing right now: action label, step progress, adapter, controls.
  *
  * Inspired by: Kimi's Computer header pattern.
- * A2R aesthetic: dark glass, copper accent, minimal chrome.
+ * Allternit aesthetic: dark glass, copper accent, minimal chrome.
  *
  * Hidden when idle. Appears on engine activity. No heavy strips.
  */

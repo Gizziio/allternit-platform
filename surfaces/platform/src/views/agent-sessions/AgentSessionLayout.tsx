@@ -1,7 +1,7 @@
 /**
  * Agent Session Layout - Base Layout Component
  * 
- * Provides consistent dark A2R obsidian theming across all agent session modes.
+ * Provides consistent dark Allternit obsidian theming across all agent session modes.
  * Features:
  * - Mode-specific accent colors
  * - Glass morphism panels
@@ -152,14 +152,14 @@ export function AgentSessionLayout({
             <div className="h-10 flex items-center justify-between px-4 bg-white/5 border-b border-white/10">
               <div className="flex items-center gap-2">
                 <TerminalIcon size={14} className="text-green-500" />
-                <span className="text-xs font-mono text-white/70">root@a2r-orchestrator:~#</span>
+                <span className="text-xs font-mono text-white/70">root@allternit-orchestrator:~#</span>
               </div>
               <button onClick={() => setShowTerminal(false)} className="text-white/40 hover:text-white">
                 <X size={16} />
               </button>
             </div>
             <div className="flex-1 p-4 font-mono text-sm overflow-auto text-green-400/90">
-              <p className="mb-2">Welcome to A2R Orchestration Shell v1.0.0</p>
+              <p className="mb-2">Welcome to Allternit Orchestration Shell v1.0.0</p>
               <p className="mb-2 text-white/50">Session initialized for {agentName}...</p>
               <div className="flex gap-2">
                 <span>$</span>

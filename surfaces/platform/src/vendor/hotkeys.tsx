@@ -71,7 +71,7 @@ export const AllternitHotkeysProvider: React.FC<AllternitHotkeysProviderProps> =
   );
 };
 
-const DISABLED_HOTKEY_SENTINEL = 'a2r-disabled-hotkey-sentinel';
+const DISABLED_HOTKEY_SENTINEL = 'allternit-disabled-hotkey-sentinel';
 
 function normalizeHotkeysInput(keys: string | string[] | undefined | null): string {
   if (Array.isArray(keys)) {

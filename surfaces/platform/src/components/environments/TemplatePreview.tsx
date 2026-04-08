@@ -100,7 +100,7 @@ export function TemplatePreview({
 
 FROM ${baseImages[template.id] || 'alpine:latest'}
 
-LABEL maintainer="A2R Platform"
+LABEL maintainer="Allternit Platform"
 LABEL environment="${template.id}"
 
 # Install dependencies

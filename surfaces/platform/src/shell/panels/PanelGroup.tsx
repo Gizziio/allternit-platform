@@ -1,7 +1,7 @@
 /**
  * PanelGroup Component
  * 
- * A wrapper around react-resizable-panels PanelGroup with A2R styling.
+ * A wrapper around react-resizable-panels PanelGroup with Allternit styling.
  * Provides horizontal or vertical panel layout with glass surface styling.
  * 
  * @module @allternit/platform/shell/panels

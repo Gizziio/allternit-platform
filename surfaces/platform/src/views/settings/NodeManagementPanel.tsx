@@ -1,7 +1,7 @@
 /**
  * Node Management Panel
  * 
- * Full production implementation for managing compute nodes in A2R.
+ * Full production implementation for managing compute nodes in Allternit.
  * Features:
  * - List all compute nodes with real-time status
  * - Add new nodes (BYOC via token or Cloud deploy)
@@ -1875,7 +1875,7 @@ export const NodeManagementPanel: React.FC = () => {
         <AddNodeModal
           onClose={() => setShowAddModal(false)}
           onDeployCloud={() => {
-            window.dispatchEvent(new CustomEvent('a2r:navigate-settings', { detail: { section: 'infrastructure', tab: 'providers' } }));
+            window.dispatchEvent(new CustomEvent('allternit:navigate-settings', { detail: { section: 'infrastructure', tab: 'providers' } }));
           }}
         />
       )}

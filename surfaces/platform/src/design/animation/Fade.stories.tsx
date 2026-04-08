@@ -19,7 +19,7 @@ const meta: Meta<typeof Fade> = {
   tags: ['autodocs'],
   parameters: {
     layout: 'centered',
-    a2r: {
+    allternit: {
       componentId: 'design-animation-fade',
       evidence: {
         types: ['INTERACTION_TEST', 'VISUAL_SNAPSHOT', 'A11Y_SCAN'],

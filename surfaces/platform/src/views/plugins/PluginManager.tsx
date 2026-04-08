@@ -165,17 +165,17 @@ const TAB_ICON: Record<TabId, string> = {
 // Storage Keys
 // ============================================================================
 
-const ENABLED_OVERRIDES_STORAGE_KEY = 'a2r:plugin-manager:enabled-overrides:v1';
-const CUSTOM_CAPABILITIES_STORAGE_KEY = 'a2r:plugin-manager:custom-capabilities:v1';
-const MARKETPLACE_INSTALLS_STORAGE_KEY = 'a2r:plugin-manager:marketplace-installs:v1';
-const PERSONAL_MARKETPLACE_STORAGE_KEY = 'a2r:plugin-manager:personal-marketplaces:v1';
-const CONNECTOR_CONNECTIONS_STORAGE_KEY = 'a2r:plugin-manager:connector-connections:v1';
-const CURATED_SOURCE_SETTINGS_STORAGE_KEY = 'a2r:plugin-manager:curated-source-settings:v1';
-const ALLOW_UNTRUSTED_MARKETPLACE_STORAGE_KEY = 'a2r:plugin-manager:allow-untrusted-marketplace:v1';
-const PLUGIN_MANAGER_STATE_DIR = '.a2r/plugin-manager';
+const ENABLED_OVERRIDES_STORAGE_KEY = 'allternit:plugin-manager:enabled-overrides:v1';
+const CUSTOM_CAPABILITIES_STORAGE_KEY = 'allternit:plugin-manager:custom-capabilities:v1';
+const MARKETPLACE_INSTALLS_STORAGE_KEY = 'allternit:plugin-manager:marketplace-installs:v1';
+const PERSONAL_MARKETPLACE_STORAGE_KEY = 'allternit:plugin-manager:personal-marketplaces:v1';
+const CONNECTOR_CONNECTIONS_STORAGE_KEY = 'allternit:plugin-manager:connector-connections:v1';
+const CURATED_SOURCE_SETTINGS_STORAGE_KEY = 'allternit:plugin-manager:curated-source-settings:v1';
+const ALLOW_UNTRUSTED_MARKETPLACE_STORAGE_KEY = 'allternit:plugin-manager:allow-untrusted-marketplace:v1';
+const PLUGIN_MANAGER_STATE_DIR = '.allternit/plugin-manager';
 const PLUGIN_MANAGER_STATE_FILE = 'ui-state.json';
 const PLUGIN_MANAGER_STATE_VERSION = 1;
-const SKILL_IMPORT_DIR = '.a2r/skills';
+const SKILL_IMPORT_DIR = '.allternit/skills';
 
 const LEFT_PANE_TOP_OFFSET = 98;
 

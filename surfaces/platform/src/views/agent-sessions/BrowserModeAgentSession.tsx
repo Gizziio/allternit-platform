@@ -5,7 +5,7 @@
  * - Left: Agent Orchestration & Chat
  * - Right: Web Computer / Browser Preview
  * 
- * Uses A2R browser mode accent colors (steel blue)
+ * Uses Allternit browser mode accent colors (steel blue)
  * 
  * @module BrowserModeAgentSession
  */
@@ -184,7 +184,7 @@ function BrowserComputer({
            <div className="p-6 font-mono text-[11px] text-white/40 space-y-1">
              <p className="text-blue-400">{`<html>`}</p>
              <p className="pl-4 text-blue-400">{`<head>`}</p>
-             <p className="pl-8 text-white/30">{`<title>A2R Browser Session</title>`}</p>
+             <p className="pl-8 text-white/30">{`<title>Allternit Browser Session</title>`}</p>
              <p className="pl-4 text-blue-400">{`</head>`}</p>
              <p className="pl-4 text-blue-400">{`<body>`}</p>
              <p className="pl-8 text-blue-400">{`<div id="app">`}</p>

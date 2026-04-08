@@ -529,7 +529,7 @@ function ToolsTab({ agent }: { agent: Agent }) {
             <Button 
               onClick={() => {
                 // Navigate to Agent Hub with memory tab (Skills Registry)
-                window.dispatchEvent(new CustomEvent('a2r:navigate', { 
+                window.dispatchEvent(new CustomEvent('allternit:navigate', { 
                   detail: { view: 'agents', tab: 'memory' } 
                 }));
               }} 

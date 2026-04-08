@@ -398,7 +398,7 @@ export function SSHConnectionsList({
                       )}
                       {connection.allternitInstalled !== undefined && (
                         <div>
-                          <span style={{ color: TEXT.secondary }}>A2R Agent:</span>
+                          <span style={{ color: TEXT.secondary }}>Allternit Agent:</span>
                           <span 
                             className="ml-2"
                             style={{ color: connection.allternitInstalled ? STATUS.success : STATUS.warning }}
@@ -527,7 +527,7 @@ function EmptyState({ onAddConnection }: { onAddConnection: () => void }) {
       
       <h3 className="text-xl font-semibold text-white mb-3">No VPS Connections</h3>
       <p className="text-sm mb-8 max-w-md mx-auto leading-relaxed" style={{ color: TEXT.secondary }}>
-        Connect to your remote servers to deploy A2R agents on your own infrastructure. 
+        Connect to your remote servers to deploy Allternit agents on your own infrastructure. 
         Works with any VPS provider.
       </p>
       
@@ -576,7 +576,7 @@ function EmptyState({ onAddConnection }: { onAddConnection: () => void }) {
             'Have a VPS ready (Hetzner, DigitalOcean, AWS, etc.)',
             'Ensure SSH key or password access is enabled',
             'Add your connection details below',
-            'A2R automatically installs the remote agent',
+            'Allternit automatically installs the remote agent',
           ].map((step, i) => (
             <div key={i} className="flex items-start gap-3">
               <span 

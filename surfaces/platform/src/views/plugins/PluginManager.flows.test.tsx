@@ -58,7 +58,7 @@ vi.mock('../../plugins/marketplaceApi', () => ({
         name: 'Market Plugin',
         description: 'Plugin from marketplace',
         version: '1.0.0',
-        author: 'A2R',
+        author: 'Allternit',
         icon: 'puzzle',
         category: 'productivity',
         installCount: 12,
@@ -295,15 +295,15 @@ describe('PluginManager key flows', () => {
     
     // Enter the repository
     const repoInput = screen.getByPlaceholderText('owner/repository');
-    await user.type(repoInput, 'a2r/test-marketplace');
+    await user.type(repoInput, 'allternit/test-marketplace');
     
     // Click Add Source button
     await user.click(screen.getByRole('button', { name: 'Add Source' }));
 
     // Verify the source appears in the personal sources list
-    await screen.findByText('a2r/test-marketplace');
+    await screen.findByText('allternit/test-marketplace');
     await user.click(within(browseDialog).getByRole('button', { name: 'Remove' }));
-    await waitFor(() => expect(screen.queryByText('a2r/test-marketplace')).toBeNull());
+    await waitFor(() => expect(screen.queryByText('allternit/test-marketplace')).toBeNull());
   });
 
   it('creates plugins through the wizard with manifest payload', async () => {

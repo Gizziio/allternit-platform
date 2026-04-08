@@ -67,7 +67,7 @@ export function NodesView({ initialTab = 'nodes' }: NodesViewProps = {}) {
 
   const handleDeployNew = useCallback(() => {
     // Navigate to Cloud Deploy view
-    window.dispatchEvent(new CustomEvent('a2r:openView', { detail: { viewType: 'deploy' } }));
+    window.dispatchEvent(new CustomEvent('allternit:openView', { detail: { viewType: 'deploy' } }));
   }, []);
 
   return (

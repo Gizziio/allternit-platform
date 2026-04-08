@@ -1,7 +1,7 @@
 /**
  * WIH: T2-A2
  * Agent: T2-A2 (Navigation System)
- * Scope: 6-ui/a2r-platform/src/shell/navigation/CommandPalette.tsx
+ * Scope: 6-ui/allternit-platform/src/shell/navigation/CommandPalette.tsx
  * Acceptance: Command palette with kbar integration, glassmorphism UI, shortcut support
  * Risk Tier: 2
  * Dependencies: kbar, design tokens, Icon component (T1-A5)

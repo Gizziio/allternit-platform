@@ -1,11 +1,11 @@
 /**
  * Package Manager Component
  * 
- * Handles exporting and importing agent workspaces as .a2r packages (ZIP format).
+ * Handles exporting and importing agent workspaces as .allternit packages (ZIP format).
  * 
  * Features:
- * - Export agent workspace to .a2r file
- * - Import .a2r file to create/update agent
+ * - Export agent workspace to .allternit file
+ * - Import .allternit file to create/update agent
  * - View package manifest
  * - Validate package integrity
  */
@@ -123,7 +123,7 @@ export function PackageManager({ agentId, onClose, onImport, theme = STUDIO_THEM
     }
   }, [agentId]);
 
-  // Export workspace to .a2r
+  // Export workspace to .allternit
   const handleExport = async () => {
     setIsExporting(true);
     setError(null);
@@ -134,7 +134,7 @@ export function PackageManager({ agentId, onClose, onImport, theme = STUDIO_THEM
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `${workspace?.agentName || 'agent'}.a2r`;
+      link.download = `${workspace?.agentName || 'agent'}.allternit`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -160,7 +160,7 @@ export function PackageManager({ agentId, onClose, onImport, theme = STUDIO_THEM
       // Read manifest
       const manifestFile = zip.file('manifest.json');
       if (!manifestFile) {
-        setError('Invalid .a2r package: manifest.json not found');
+        setError('Invalid .allternit package: manifest.json not found');
         setIsLoading(false);
         return;
       }
@@ -189,7 +189,7 @@ export function PackageManager({ agentId, onClose, onImport, theme = STUDIO_THEM
     }
   };
 
-  // Import workspace from .a2r
+  // Import workspace from .allternit
   const handleImport = async () => {
     if (!importFile) return;
     setIsImporting(true);
@@ -281,7 +281,7 @@ export function PackageManager({ agentId, onClose, onImport, theme = STUDIO_THEM
                 Package Manager
               </h3>
               <p style={{ margin: '2px 0 0 0', fontSize: '13px', color: theme.textSecondary }}>
-                Export or import .a2r packages
+                Export or import .allternit packages
               </p>
             </div>
           </div>
@@ -481,7 +481,7 @@ export function PackageManager({ agentId, onClose, onImport, theme = STUDIO_THEM
                   ) : (
                     <>
                       <DownloadSimple style={{ width: 18, height: 18 }} />
-                      Export .a2r Package
+                      Export .allternit Package
                     </>
                   )}
                 </Button>
@@ -519,16 +519,16 @@ export function PackageManager({ agentId, onClose, onImport, theme = STUDIO_THEM
                     onDrop={(e) => {
                       e.preventDefault();
                       const file = e.dataTransfer.files[0];
-                      if (file?.name.endsWith('.a2r')) {
+                      if (file?.name.endsWith('.allternit')) {
                         previewImport(file);
                       } else {
-                        setError('Please drop a valid .a2r file');
+                        setError('Please drop a valid .allternit file');
                       }
                     }}
                   >
                     <FileArchive style={{ width: 48, height: 48, color: theme.accent, margin: '0 auto 16px' }} />
                     <p style={{ fontSize: '15px', color: theme.textPrimary, margin: '0 0 8px 0' }}>
-                      Drop your .a2r package here
+                      Drop your .allternit package here
                     </p>
                     <p style={{ fontSize: '13px', color: theme.textMuted, margin: 0 }}>
                       or click to browse
@@ -536,7 +536,7 @@ export function PackageManager({ agentId, onClose, onImport, theme = STUDIO_THEM
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept=".a2r"
+                      accept=".allternit"
                       onChange={handleFileSelect}
                       style={{ display: 'none' }}
                     />

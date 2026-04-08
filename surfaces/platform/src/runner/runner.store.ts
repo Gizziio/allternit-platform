@@ -10,7 +10,7 @@ import type { RunnerRun, RunnerTraceEntry } from "./runner.types";
 import { api } from "../integration/api-client";
 
 // Storage key for session persistence
-const STORAGE_KEY = 'a2r-agent-runner-session';
+const STORAGE_KEY = 'allternit-agent-runner-session';
 
 // Session TTL: 24 hours in milliseconds
 const SESSION_TTL = 24 * 60 * 60 * 1000;

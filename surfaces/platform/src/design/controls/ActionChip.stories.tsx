@@ -18,7 +18,7 @@ const meta: Meta<typeof ActionChip> = {
   tags: ['autodocs'],
   parameters: {
     layout: 'centered',
-    a2r: {
+    allternit: {
       componentId: 'design-controls-action-chip',
       evidence: {
         types: ['INTERACTION_TEST', 'VISUAL_SNAPSHOT', 'A11Y_SCAN'],

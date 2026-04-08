@@ -18,7 +18,7 @@ interface WaveCardProps {
 }
 
 /**
- * WaveCard - Interactive inline card for A2R Native protocol updates
+ * WaveCard - Interactive inline card for Allternit Native protocol updates
  */
 export function WaveCard({ type, data, className }: WaveCardProps) {
   if (type === "plan") {

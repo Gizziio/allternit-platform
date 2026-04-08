@@ -20,7 +20,7 @@ export type { TerminalSession, TerminalDataHandler, TerminalStatusHandler } from
 /**
  * Node Management Architecture
  * 
- * This module provides the Compute/Node management UI for A2R.
+ * This module provides the Compute/Node management UI for Allternit.
  * 
  * Integration with Cloud Deploy:
  * - NodesView is the primary entry point (accessed via Settings → Compute & Runtimes)

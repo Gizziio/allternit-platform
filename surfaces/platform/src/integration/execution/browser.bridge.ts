@@ -28,7 +28,7 @@ async function ensureSession(runId: string, payload: any = {}) {
   const sessionId = response.sessionId as string;
   sessionsByRun.set(runId, sessionId);
   window.dispatchEvent(
-    new CustomEvent("a2r:browser:spawn", {
+    new CustomEvent("allternit:browser:spawn", {
       detail: { url: payload.url || "about:blank", title: payload.url || "Browser", sessionId },
     })
   );

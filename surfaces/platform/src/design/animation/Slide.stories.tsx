@@ -17,7 +17,7 @@ const meta: Meta<typeof Slide> = {
   tags: ['autodocs'],
   parameters: {
     layout: 'centered',
-    a2r: {
+    allternit: {
       componentId: 'design-animation-slide',
       evidence: {
         types: ['INTERACTION_TEST', 'VISUAL_SNAPSHOT'],

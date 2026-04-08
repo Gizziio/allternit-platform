@@ -1,7 +1,7 @@
 /**
  * Server Discovery Module
  * 
- * Automatically discovers the A2R API server using multiple strategies:
+ * Automatically discovers the Allternit API server using multiple strategies:
  * 1. Check Electron sidecar (if running in desktop app)
  * 2. Check persisted configuration from previous session
  * 3. Check common local ports

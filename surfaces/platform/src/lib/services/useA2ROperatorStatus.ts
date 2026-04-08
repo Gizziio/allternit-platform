@@ -1,12 +1,12 @@
 /**
- * A2R Operator Service Status Hook
- * Monitors the health and availability of A2R Operator services
+ * Allternit Operator Service Status Hook
+ * Monitors the health and availability of Allternit Operator services
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import { createModuleLogger } from '@/lib/logger';
 
-const log = createModuleLogger('services/a2r-operator-status');
+const log = createModuleLogger('services/allternit-operator-status');
 
 const ALLTERNIT_OPERATOR_URL = process.env.ALLTERNIT_OPERATOR_URL || 'http://127.0.0.1:3000';
 
@@ -45,7 +45,7 @@ const initialStatus: AllternitOperatorStatus = {
 };
 
 /**
- * Check A2R Operator health and capabilities
+ * Check Allternit Operator health and capabilities
  */
 async function checkAllternitOperatorHealth(): Promise<Partial<AllternitOperatorStatus>> {
   try {
@@ -103,7 +103,7 @@ async function checkAllternitOperatorHealth(): Promise<Partial<AllternitOperator
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    log.error({ error: message }, 'A2R Operator health check failed');
+    log.error({ error: message }, 'Allternit Operator health check failed');
     return {
       status: 'offline',
       error: message,
@@ -113,7 +113,7 @@ async function checkAllternitOperatorHealth(): Promise<Partial<AllternitOperator
 }
 
 /**
- * Hook to monitor A2R Operator service status
+ * Hook to monitor Allternit Operator service status
  */
 export function useAllternitOperatorStatus(pollInterval = 30000) {
   const [status, setStatus] = useState<AllternitOperatorStatus>(initialStatus);

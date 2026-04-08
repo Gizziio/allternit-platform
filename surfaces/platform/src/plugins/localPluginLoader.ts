@@ -379,7 +379,7 @@ async function findReadme(dirPath: string, fs: FileSystemAPI): Promise<string> {
 // Storage
 // ============================================================================
 
-const LOCAL_SOURCES_STORAGE_KEY = 'a2r:plugin-manager:local-sources:v1';
+const LOCAL_SOURCES_STORAGE_KEY = 'allternit:plugin-manager:local-sources:v1';
 
 export function loadLocalSources(): LocalPluginSource[] {
   if (typeof window === 'undefined') return [];

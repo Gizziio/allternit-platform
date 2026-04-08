@@ -59,7 +59,7 @@ export const ViewHost = React.memo(function ViewHost({ active, registry }: { act
   const Cmp = view.component;
 
   return (
-    <div data-a2r-primary-root data-testid="view-host-wrapper" data-active-view={active.viewType} style={{ height: "100%", width: "100%", position: 'relative', display: 'flex', flex: 1 }}>
+    <div data-allternit-primary-root data-testid="view-host-wrapper" data-active-view={active.viewType} style={{ height: "100%", width: "100%", position: 'relative', display: 'flex', flex: 1 }}>
       <ViewRenderBoundary key={active.viewId} viewType={active.viewType}>
         <div style={{ width: '100%', height: '100%', flex: 1 }}>
           <Cmp context={active} />

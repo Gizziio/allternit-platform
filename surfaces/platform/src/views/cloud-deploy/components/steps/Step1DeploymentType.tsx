@@ -32,8 +32,8 @@ export const Step1DeploymentType: React.FC<Step1DeploymentTypeProps> = ({ onNext
     },
     {
       id: 'partnership' as const,
-      title: '🤝 VPS + A2R Bundle',
-      description: 'Get VPS through our partners with A2R pre-configured.',
+      title: '🤝 VPS + Allternit Bundle',
+      description: 'Get VPS through our partners with Allternit pre-configured.',
       price: 'From $10/mo',
       features: ['One-click setup', 'Partner pricing', 'Affiliate support', 'Easy start'],
       popular: false,
@@ -48,7 +48,7 @@ export const Step1DeploymentType: React.FC<Step1DeploymentTypeProps> = ({ onNext
   return (
     <div className="step-deployment-type">
       <h2>Choose Your Deployment Type</h2>
-      <p className="step-description">Select how you want to run your A2R instance.</p>
+      <p className="step-description">Select how you want to run your Allternit instance.</p>
 
       <form onSubmit={handleSubmit}>
         <div className="deployment-type-grid">

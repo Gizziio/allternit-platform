@@ -48,7 +48,7 @@ export interface VoiceState {
 }
 
 /**
- * Voice Service using A2R Gateway
+ * Voice Service using Allternit Gateway
  */
 class VoiceServiceAdapter {
   private baseUrl: string;

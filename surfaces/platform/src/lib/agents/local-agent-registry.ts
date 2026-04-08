@@ -1,6 +1,6 @@
 import type { Agent, CreateAgentInput } from "./agent.types";
 
-const STORAGE_KEY = "a2r.local-agent-registry.v1";
+const STORAGE_KEY = "allternit.local-agent-registry.v1";
 
 interface OpenClawBinding {
   source: string | null;

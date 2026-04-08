@@ -12,7 +12,7 @@
 // Import types from the plugin
 import { MyAllternitPlugin, IMyPluginAPI, IMyPluginEvents } from '../src/index';
 
-// Import A2R Platform types (when available)
+// Import Allternit Platform types (when available)
 // import { A2RPlugin, PluginContext, EventEmitter } from '@allternit/platform';
 
 // ============================================================================
@@ -43,7 +43,7 @@ async function initializePlugin(): Promise<MyAllternitPlugin | null> {
 
   try {
     // In a real scenario, you'd get the plugin from the platform
-    // const plugin = A2R.plugins.get('{{PLUGIN_ID}}') as MyAllternitPlugin;
+    // const plugin = Allternit.plugins.get('{{PLUGIN_ID}}') as MyAllternitPlugin;
     
     // For this example, we'll create a mock instance
     const plugin = new MyAllternitPlugin();
@@ -162,8 +162,8 @@ function eventHandlingExample(): () => void {
   };
 
   // In real usage:
-  // const disposable1 = A2R.events.on('{{PLUGIN_ID}}:action-completed', handleActionCompleted);
-  // const disposable2 = A2R.events.on('{{PLUGIN_ID}}:settings-changed', handleSettingsChanged);
+  // const disposable1 = Allternit.events.on('{{PLUGIN_ID}}:action-completed', handleActionCompleted);
+  // const disposable2 = Allternit.events.on('{{PLUGIN_ID}}:settings-changed', handleSettingsChanged);
 
   console.log('Event listeners registered');
 

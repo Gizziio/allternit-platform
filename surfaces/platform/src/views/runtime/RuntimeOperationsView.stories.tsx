@@ -59,7 +59,7 @@ function SeededRuntimeOperationsPanel() {
               versioning: {
                 auto_commit: executionMode === "auto",
                 commit_message_template: "[a2r] {description}",
-                branch_prefix: "a2r-session-",
+                branch_prefix: "allternit-session-",
               },
             }}
             drivers={[

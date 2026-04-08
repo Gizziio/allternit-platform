@@ -7,7 +7,7 @@
 
 import { FEATURE_PLUGIN_REGISTRY } from './feature.registry';
 
-const STORAGE_KEY = 'a2r:feature-plugins:v1';
+const STORAGE_KEY = 'allternit:feature-plugins:v1';
 
 // ─── Read / Write ─────────────────────────────────────────────────────────────
 

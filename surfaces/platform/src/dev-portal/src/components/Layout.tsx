@@ -29,7 +29,7 @@ export default function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-a2r-bg flex">
+    <div className="min-h-screen bg-allternit-bg flex">
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div 
@@ -42,23 +42,23 @@ export default function Layout({ children }: LayoutProps) {
       <aside 
         className={`
           fixed lg:sticky top-0 left-0 z-50 h-screen
-          w-64 bg-a2r-surface border-r border-a2r-border
+          w-64 bg-allternit-surface border-r border-allternit-border
           transform transition-transform duration-300 ease-out
           lg:transform-none
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
         {/* Sidebar Header */}
-        <div className="h-16 flex items-center px-6 border-b border-a2r-border">
+        <div className="h-16 flex items-center px-6 border-b border-allternit-border">
           <Link to="/" className="flex items-center gap-3 group">
-            <div className="w-8 h-8 rounded-lg bg-a2r-accent/10 flex items-center justify-center">
-              <span className="text-a2r-accent font-bold text-lg">A2R</span>
+            <div className="w-8 h-8 rounded-lg bg-allternit-accent/10 flex items-center justify-center">
+              <span className="text-allternit-accent font-bold text-lg">Allternit</span>
             </div>
             <div className="flex flex-col">
-              <span className="font-semibold text-a2r-text group-hover:text-a2r-accent transition-colors">
+              <span className="font-semibold text-allternit-text group-hover:text-allternit-accent transition-colors">
                 Developer
               </span>
-              <span className="text-xs text-a2r-text-muted">Portal</span>
+              <span className="text-xs text-allternit-text-muted">Portal</span>
             </div>
           </Link>
         </div>
@@ -76,15 +76,15 @@ export default function Layout({ children }: LayoutProps) {
                   flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm
                   transition-all duration-200 group
                   ${isActive 
-                    ? 'bg-a2r-accent/10 text-a2r-accent font-medium' 
-                    : 'text-a2r-text-secondary hover:text-a2r-text hover:bg-a2r-surface-hover'
+                    ? 'bg-allternit-accent/10 text-allternit-accent font-medium' 
+                    : 'text-allternit-text-secondary hover:text-allternit-text hover:bg-allternit-surface-hover'
                   }
                 `}
               >
                 <Icon size={16} />
                 <span>{item.label}</span>
                 {item.path === '/publish' && (
-                  <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-a2r-accent/20 text-a2r-accent">
+                  <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-allternit-accent/20 text-allternit-accent">
                     New
                   </span>
                 )}
@@ -94,15 +94,15 @@ export default function Layout({ children }: LayoutProps) {
         </nav>
 
         {/* Sidebar Footer */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-a2r-border">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-allternit-border">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-a2r-text-muted">v1.0.0</span>
+            <span className="text-xs text-allternit-text-muted">v1.0.0</span>
             <div className="flex items-center gap-2">
               <a 
                 href="https://github.com/a2r" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="p-2 rounded-lg text-a2r-text-muted hover:text-a2r-text hover:bg-a2r-surface-hover transition-all"
+                className="p-2 rounded-lg text-allternit-text-muted hover:text-allternit-text hover:bg-allternit-surface-hover transition-all"
               >
                 <Github size={16} />
               </a>
@@ -110,7 +110,7 @@ export default function Layout({ children }: LayoutProps) {
                 href="https://twitter.com/a2r" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="p-2 rounded-lg text-a2r-text-muted hover:text-a2r-text hover:bg-a2r-surface-hover transition-all"
+                className="p-2 rounded-lg text-allternit-text-muted hover:text-allternit-text hover:bg-allternit-surface-hover transition-all"
               >
                 <Twitter size={16} />
               </a>
@@ -122,21 +122,21 @@ export default function Layout({ children }: LayoutProps) {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="h-16 border-b border-a2r-border bg-a2r-bg/80 backdrop-blur-sm sticky top-0 z-30">
+        <header className="h-16 border-b border-allternit-border bg-allternit-bg/80 backdrop-blur-sm sticky top-0 z-30">
           <div className="h-full px-4 lg:px-8 flex items-center justify-between">
             {/* Left: Mobile Menu Button */}
             <button
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 -ml-2 rounded-lg text-a2r-text-secondary hover:text-a2r-text hover:bg-a2r-surface-hover transition-all"
+              className="lg:hidden p-2 -ml-2 rounded-lg text-allternit-text-secondary hover:text-allternit-text hover:bg-allternit-surface-hover transition-all"
             >
               <List size={20} />
             </button>
 
             {/* Center: Breadcrumb (hidden on mobile) */}
             <div className="hidden lg:flex items-center gap-2 text-sm">
-              <span className="text-a2r-text-muted">A2R Platform</span>
-              <CaretRight className="w-4 h-4 text-a2r-text-muted" />
-              <span className="text-a2r-text">Developer Portal</span>
+              <span className="text-allternit-text-muted">Allternit Platform</span>
+              <CaretRight className="w-4 h-4 text-allternit-text-muted" />
+              <span className="text-allternit-text">Developer Portal</span>
             </div>
 
             {/* Right: Actions */}
@@ -145,16 +145,16 @@ export default function Layout({ children }: LayoutProps) {
                 href="https://a2r.dev"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hidden sm:flex items-center gap-2 px-4 py-2 text-sm text-a2r-text-secondary hover:text-a2r-text transition-colors"
+                className="hidden sm:flex items-center gap-2 px-4 py-2 text-sm text-allternit-text-secondary hover:text-allternit-text transition-colors"
               >
                 <span>Go to App</span>
                 <ArrowSquareOut size={16} />
               </a>
               <a
                 href="https://a2r.dev"
-                className="flex items-center gap-2 px-4 py-2 bg-a2r-accent text-a2r-bg rounded-lg font-medium hover:bg-a2r-accent-hover transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-allternit-accent text-allternit-bg rounded-lg font-medium hover:bg-allternit-accent-hover transition-colors"
               >
-                <span className="hidden sm:inline">Launch A2R</span>
+                <span className="hidden sm:inline">Launch Allternit</span>
                 <span className="sm:hidden">Launch</span>
               </a>
             </div>
@@ -169,27 +169,27 @@ export default function Layout({ children }: LayoutProps) {
         </main>
 
         {/* Footer */}
-        <footer className="border-t border-a2r-border py-6 px-4 lg:px-8">
+        <footer className="border-t border-allternit-border py-6 px-4 lg:px-8">
           <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2 text-sm text-a2r-text-muted">
-              <span>© 2024 A2R Platform</span>
+            <div className="flex items-center gap-2 text-sm text-allternit-text-muted">
+              <span>© 2024 Allternit Platform</span>
               <span className="hidden sm:inline">·</span>
-              <a href="/privacy" className="hover:text-a2r-text">Privacy</a>
+              <a href="/privacy" className="hover:text-allternit-text">Privacy</a>
               <span className="hidden sm:inline">·</span>
-              <a href="/terms" className="hover:text-a2r-text">Terms</a>
+              <a href="/terms" className="hover:text-allternit-text">Terms</a>
             </div>
             <div className="flex items-center gap-4">
               <a 
                 href="https://discord.gg/a2r" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="text-sm text-a2r-text-muted hover:text-a2r-accent transition-colors"
+                className="text-sm text-allternit-text-muted hover:text-allternit-accent transition-colors"
               >
                 Discord
               </a>
               <a 
-                href="mailto:dev@a2r.dev" 
-                className="text-sm text-a2r-text-muted hover:text-a2r-accent transition-colors"
+                href="mailto:dev@allternit.dev" 
+                className="text-sm text-allternit-text-muted hover:text-allternit-accent transition-colors"
               >
                 Contact
               </a>

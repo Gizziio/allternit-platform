@@ -183,7 +183,7 @@ export function InfrastructureStep({ data, onUpdate, onStatusChange }: Props) {
             setSystemInfo(result.systemInfo);
           }
           setStatus('ready');
-          setStatusMessage('A2R backend installed and ready!');
+          setStatusMessage('Allternit backend installed and ready!');
           onStatusChange('ready', 'Backend installed successfully');
           setCurrentStep('complete');
         } else {
@@ -490,7 +490,7 @@ export function InfrastructureStep({ data, onUpdate, onStatusChange }: Props) {
               <div className="flex justify-between"><span className="text-white/50">OS:</span> <span className="text-white">{systemInfo.os}</span></div>
               <div className="flex justify-between"><span className="text-white/50">Architecture:</span> <span className="text-white">{systemInfo.architecture}</span></div>
               <div className="flex justify-between"><span className="text-white/50">Service Manager:</span> <span className="text-white">{systemInfo.hasSystemd ? 'systemd' : 'Direct Process'}</span></div>
-              <div className="flex justify-between"><span className="text-white/50">A2R:</span> <span className="text-white">{systemInfo.isAllternitInstalled ? `v${systemInfo.allternitVersion}` : 'Will install natively'}</span></div>
+              <div className="flex justify-between"><span className="text-white/50">Allternit:</span> <span className="text-white">{systemInfo.isAllternitInstalled ? `v${systemInfo.allternitVersion}` : 'Will install natively'}</span></div>
             </div>
           )}
         </div>

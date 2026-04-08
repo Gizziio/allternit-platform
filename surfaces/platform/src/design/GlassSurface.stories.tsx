@@ -19,7 +19,7 @@ const meta: Meta<typeof GlassSurface> = {
     backgrounds: {
       default: 'glass',
     },
-    a2r: {
+    allternit: {
       componentId: 'design-glass-surface',
       evidence: {
         types: ['VISUAL_SNAPSHOT', 'A11Y_SCAN'],

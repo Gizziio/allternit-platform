@@ -221,7 +221,7 @@ export function FiveColumnLayout({
       >
         {mailColumn || (
           <div style={{ padding: 12, color: '#6b7280', fontSize: 12 }}>
-            A2R Mail integration
+            Allternit Mail integration
           </div>
         )}
       </Column>

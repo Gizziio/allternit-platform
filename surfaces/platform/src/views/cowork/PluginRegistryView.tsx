@@ -24,7 +24,7 @@ export function PluginRegistryView() {
         <div>
           <h1 style={{ margin: 0, fontSize: 32, fontWeight: 800 }}>Plugin Registry</h1>
           <p style={{ margin: '8px 0 0 0', opacity: 0.7 }}>
-            A2R Operator feeds telemetry-enabled providers so you can toggle them on/off.
+            Allternit Operator feeds telemetry-enabled providers so you can toggle them on/off.
           </p>
         </div>
         <button

@@ -1185,7 +1185,7 @@ function toWsUrl(httpUrl: string): string {
 
 async function loadOpenClawRuntimeConfig(): Promise<OpenClawRuntimeConfig | null> {
   try {
-    const response = await fetch(`/a2r-config.json?nocache=${Date.now()}`, { cache: "no-store" });
+    const response = await fetch(`/allternit-config.json?nocache=${Date.now()}`, { cache: "no-store" });
     if (!response.ok) {
       return null;
     }

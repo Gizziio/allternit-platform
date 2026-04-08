@@ -46,7 +46,7 @@ export interface Annotation {
 }
 
 /**
- * Viewport information for A2R execution header
+ * Viewport information for Allternit execution header
  */
 export interface AllternitViewport {
   width: number;
@@ -55,7 +55,7 @@ export interface AllternitViewport {
 }
 
 /**
- * A2R Execution Header for DAG-ready work items
+ * Allternit Execution Header for DAG-ready work items
  */
 export interface AllternitExecutionHeader {
   uiSurface: string;
@@ -80,7 +80,7 @@ export interface AnnotationOutput {
 }
 
 /**
- * A2R-formatted annotation output
+ * Allternit-formatted annotation output
  */
 export interface AllternitAnnotationOutput extends AnnotationOutput {
   header: AllternitExecutionHeader;

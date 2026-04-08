@@ -70,6 +70,6 @@ export const useBrowserShortcutsStore = create<BrowserShortcutsStore>()(
           return { shortcuts: next };
         }),
     }),
-    { name: 'a2r.browser.shortcuts' }
+    { name: 'allternit.browser.shortcuts' }
   )
 );

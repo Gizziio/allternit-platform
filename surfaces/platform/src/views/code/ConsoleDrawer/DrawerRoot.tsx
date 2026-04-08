@@ -97,7 +97,7 @@ export function DrawerRoot() {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'terminal': return <UnifiedTerminal sessionId="a2r-session" />;
+      case 'terminal': return <UnifiedTerminal sessionId="allternit-session" />;
       case 'queue': return <KanbanBoard />;
       case 'changes': return <ChangeSetReview changeSetId="cs-legacy-patchgate" />;
       case 'logs': return <LogsView />;

@@ -21,7 +21,7 @@ const meta: Meta<typeof GlassCard> = {
     backgrounds: {
       default: 'glass',
     },
-    a2r: {
+    allternit: {
       componentId: 'design-glass-card',
       evidence: {
         types: ['INTERACTION_TEST', 'VISUAL_SNAPSHOT', 'A11Y_SCAN'],

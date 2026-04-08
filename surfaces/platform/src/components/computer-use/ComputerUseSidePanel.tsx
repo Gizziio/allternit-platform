@@ -69,7 +69,7 @@ export function ComputerUseSidePanel({ onClose, agentModeSurface, onEnableAgentM
         flexDirection: 'column',
         background: '#1C1814',
         borderLeft: '1px solid rgba(255,255,255,0.08)',
-        animation: 'a2r-panel-slidein 0.22s cubic-bezier(0.22,1,0.36,1)',
+        animation: 'allternit-panel-slidein 0.22s cubic-bezier(0.22,1,0.36,1)',
         overflow: 'hidden',
       }}
     >

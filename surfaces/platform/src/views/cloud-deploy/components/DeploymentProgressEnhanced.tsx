@@ -59,7 +59,7 @@ export const DeploymentProgressEnhanced: React.FC<DeploymentProgressEnhancedProp
     { id: 'ssh', label: 'Generating SSH Keys', progress: 15, estimatedDuration: 15 },
     { id: 'provision', label: `Provisioning ${providerName} VM`, progress: 35, estimatedDuration: 120 },
     { id: 'network', label: 'Configuring Network', progress: 60, estimatedDuration: 30 },
-    { id: 'install', label: 'Installing A2R Agent', progress: 75, estimatedDuration: 60 },
+    { id: 'install', label: 'Installing Allternit Agent', progress: 75, estimatedDuration: 60 },
     { id: 'health', label: 'Health Checks', progress: 90, estimatedDuration: 20 },
     { id: 'complete', label: 'Deployment Complete', progress: 100, estimatedDuration: 5 },
   ], [providerName]);
@@ -204,7 +204,7 @@ export const DeploymentProgressEnhanced: React.FC<DeploymentProgressEnhancedProp
           <h2>
             {isComplete ? '✅ Deployment Complete' : 
              hasError ? '❌ Deployment Failed' : 
-             '🚀 Deploying A2R Instance'}
+             '🚀 Deploying Allternit Instance'}
           </h2>
           <p className="deployment-id">Deployment ID: <code>{status.id}</code></p>
         </div>

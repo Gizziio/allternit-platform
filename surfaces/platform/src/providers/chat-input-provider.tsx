@@ -66,7 +66,7 @@ export function ChatInputProvider({
     if (!localStorageEnabled || !hasHydrated) return;
     
     try {
-      const savedInput = localStorage.getItem("a2r:input");
+      const savedInput = localStorage.getItem("allternit:input");
       if (savedInput && !initialInput) {
         setInputValue(savedInput);
       }
@@ -80,7 +80,7 @@ export function ChatInputProvider({
     if (!localStorageEnabled) return;
     
     try {
-      localStorage.setItem("a2r:input", inputValue);
+      localStorage.setItem("allternit:input", inputValue);
     } catch {
       // Ignore localStorage errors
     }
@@ -93,7 +93,7 @@ export function ChatInputProvider({
     setAttachments([]);
     setSelectedTool(null);
     if (localStorageEnabled) {
-      localStorage.removeItem("a2r:input");
+      localStorage.removeItem("allternit:input");
     }
   }, [localStorageEnabled]);
 

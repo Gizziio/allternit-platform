@@ -1,5 +1,5 @@
 /**
- * TypeScript types for A2R Agent Workspace
+ * TypeScript types for Allternit Agent Workspace
  * 
  * These types mirror the Rust types from a2r-agent-workspace crate
  */
@@ -293,7 +293,7 @@ export interface IdentityConfig {
   metadata?: Record<string, unknown>;
 }
 
-/** A2R Native Project State (GSD-inspired context engineering) */
+/** Allternit Native Project State (GSD-inspired context engineering) */
 export interface AllternitNativeState {
   project?: {
     name: string;
@@ -344,7 +344,7 @@ export interface WorkspaceAPI {
     getLayers?(): Promise<WorkspaceLayers>;
   };
 
-  // A2R Native Context State (Protocol Layer)
+  // Allternit Native Context State (Protocol Layer)
   allternitNative?: {
     getState(): Promise<AllternitNativeState>;
     refreshState(): Promise<AllternitNativeState>;

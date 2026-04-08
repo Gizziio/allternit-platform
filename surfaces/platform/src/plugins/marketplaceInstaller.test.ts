@@ -8,7 +8,7 @@ function makePlugin(overrides: Partial<MarketplacePlugin> = {}): MarketplacePlug
     name: 'Example Plugin',
     description: 'Example plugin',
     version: '1.0.0',
-    author: 'A2R',
+    author: 'Allternit',
     icon: 'puzzle',
     category: 'development',
     installCount: 0,

@@ -58,7 +58,7 @@ export const Step5Review: React.FC<Step5ReviewProps> = ({ config, onStart, onBac
             <span className="value">
               {config.deploymentType === 'self-host' && '🏠 Self-Host (BYOC)'}
               {config.deploymentType === 'managed' && '⚙️ Managed Hosting'}
-              {config.deploymentType === 'partnership' && '🤝 VPS + A2R Bundle'}
+              {config.deploymentType === 'partnership' && '🤝 VPS + Allternit Bundle'}
             </span>
           </div>
 

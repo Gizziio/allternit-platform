@@ -1,7 +1,7 @@
 /**
  * SSH Components - Index
  * 
- * Claude Code style SSH connection management for A2R.
+ * Claude Code style SSH connection management for Allternit.
  * Simplified BYOC (Bring Your Own Cloud) VPS setup.
  */
 

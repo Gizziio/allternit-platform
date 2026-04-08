@@ -81,10 +81,10 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   operator: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
 
   // P3 UI Views
-  'a2r-ix': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+  'allternit-ix': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   'form-surfaces': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
   canvas: { singleton: false, maxInstances: 3, allowNew: true, surface: 'view', ownsTabs: false },
-  'a2r-canvas': { singleton: false, maxInstances: 3, allowNew: true, surface: 'view', ownsTabs: false },
+  'allternit-canvas': { singleton: false, maxInstances: 3, allowNew: true, surface: 'view', ownsTabs: false },
   hooks: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
 
   // P4 UI Views
@@ -97,7 +97,7 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   verification: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
 
   // A2rOS view
-  'a2r-os': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+  'allternit-os': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
 
   // Runtime Management Views (N11, N12, N16)
   'runtime-ops': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },

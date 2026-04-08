@@ -15,7 +15,7 @@ export interface CodeModeGreetingSelection extends CodeModeGreeting {
   helperAnimation: number;
 }
 
-const GREETING_STORAGE_KEY = 'a2r.code-mode.greeting-index';
+const GREETING_STORAGE_KEY = 'allternit.code-mode.greeting-index';
 
 export const CODE_MODE_GREETINGS: CodeModeGreeting[] = [
   {
@@ -31,7 +31,7 @@ export const CODE_MODE_GREETINGS: CodeModeGreeting[] = [
   {
     title: 'Open The Worktree',
     tagline:
-      'Choose the repo, isolate the branch, and let the A2R runtime move with receipts instead of guesswork.',
+      'Choose the repo, isolate the branch, and let the Allternit runtime move with receipts instead of guesswork.',
     helper_locked:
       'Select the folder you actually want to operate on so Gizzi can map the right worktree and history.',
     helper_ready:

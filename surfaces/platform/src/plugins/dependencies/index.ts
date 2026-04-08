@@ -2,7 +2,7 @@
  * Plugin Dependencies Module
  * 
  * Provides dependency resolution, version checking, and conflict detection
- * for the A2R Plugin system.
+ * for the Allternit Plugin system.
  * 
  * Features:
  * - Semver version range parsing and comparison

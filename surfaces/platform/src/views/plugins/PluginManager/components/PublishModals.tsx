@@ -94,7 +94,7 @@ export function CreatePluginModal({ fs, onClose, showInfo, showError }: CreatePl
       $schema: 'https://anthropic.com/claude-code/plugin.schema.json',
       id: slug,
       name: name,
-      description: description || `${name} - A2R Plugin`,
+      description: description || `${name} - Allternit Plugin`,
       version: '1.0.0',
       author: 'User',
       createdAt,
@@ -117,7 +117,7 @@ export function CreatePluginModal({ fs, onClose, showInfo, showError }: CreatePl
         files.push({ path: 'src/index.ts', content: `export const config = { name: '${name}', description: '${desc || `${name} command`}', trigger: '/${slug}' };\nexport async function execute(args: string[]): Promise<string> { return \`Executed ${name} with args: \${args.join(' ')}\`; }` });
         break;
       case 'skill':
-        files.push({ path: 'SKILL.md', content: `# ${name}\n\n## Purpose\n${desc || `${name} skill for A2R`}\n\n## Instructions\n- Step 1\n` });
+        files.push({ path: 'SKILL.md', content: `# ${name}\n\n## Purpose\n${desc || `${name} skill for Allternit`}\n\n## Instructions\n- Step 1\n` });
         break;
       case 'mcp':
         files.push({ path: 'src/main.ts', content: `import { Server } from '@modelcontextprotocol/sdk/server/index.js';\nimport { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';\nconst server = new Server({ name: '${slug}', version: '1.0.0' }, { capabilities: { tools: {} } });\nasync function main() { const transport = new StdioServerTransport(); await server.connect(transport); }\nmain().catch(console.error);` });
@@ -134,7 +134,7 @@ export function CreatePluginModal({ fs, onClose, showInfo, showError }: CreatePl
   }
 
   function generateReadme(type: PluginType, slug: string, name: string, desc: string) {
-    return `# ${name}\n\n${desc || `${name} - A2R Plugin`}\n\n## Installation\n\n1. Copy this directory to your A2R plugins folder\n2. Run \`a2r plugin enable ${slug}\``;
+    return `# ${name}\n\n${desc || `${name} - Allternit Plugin`}\n\n## Installation\n\n1. Copy this directory to your Allternit plugins folder\n2. Run \`allternit plugin enable ${slug}\``;
   }
 
   if (createdPath) {

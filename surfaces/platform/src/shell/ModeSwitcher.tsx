@@ -50,7 +50,7 @@ const MODES: ModeConfig[] = [
 ];
 
 // Hook for localStorage persistence
-const MODE_STORAGE_KEY = 'a2r-platform-mode';
+const MODE_STORAGE_KEY = 'allternit-platform-mode';
 
 export function useModePersistence() {
   const [mode, setMode] = useState<AppMode>('chat');

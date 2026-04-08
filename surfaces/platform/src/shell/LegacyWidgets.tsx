@@ -38,7 +38,7 @@ function VoiceOrbWidget() {
           ? "0 0 24px var(--status-info)"
           : "var(--shadow-lg)",
         border: "1px solid var(--shell-floating-border)",
-        animation: state === "active" ? "a2r-orb-pulse 1.6s ease-in-out infinite" : "none",
+        animation: state === "active" ? "allternit-orb-pulse 1.6s ease-in-out infinite" : "none",
       }} />
       <div style={{
         padding: "4px 10px",
@@ -55,7 +55,7 @@ function VoiceOrbWidget() {
         {lastMessage}
       </div>
       <style>{`
-        @keyframes a2r-orb-pulse {
+        @keyframes allternit-orb-pulse {
           0% { transform: scale(0.95); opacity: 0.9; }
           50% { transform: scale(1.05); opacity: 1; }
           100% { transform: scale(0.95); opacity: 0.9; }
@@ -86,7 +86,7 @@ function VisionWidget() {
       minWidth: 220,
     }}>
       <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.6, textTransform: "uppercase" }}>
-        A2R Vision
+        Allternit Vision
       </div>
       {lastTool ? (
         <div style={{ marginTop: 6 }}>

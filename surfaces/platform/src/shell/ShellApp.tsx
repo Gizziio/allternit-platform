@@ -501,7 +501,7 @@ const BROWSER_TITLES = [
   "Navigator's Deck",
   'Browse & Build',
   'The Web Layer',
-  'A2R Explorer',
+  'Allternit Explorer',
   'Portal Online',
   'Web Surface',
 ];
@@ -794,7 +794,7 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }) {
               }}
             >
               <span>🧩</span>
-              <span>A2R Agent: {agentActive ? 'Active' : 'Off'}</span>
+              <span>Allternit Agent: {agentActive ? 'Active' : 'Off'}</span>
             </button>
 
             {/* ── Shortcut Grid ── */}
@@ -1155,9 +1155,9 @@ function ShellAppInner() {
   // Helper to get pending agent message safely
   const getPendingAgentMessage = useCallback((): string | undefined => {
     if (typeof window === 'undefined') return undefined;
-    const msg = window.sessionStorage.getItem('a2r-pending-agent-message');
+    const msg = window.sessionStorage.getItem('allternit-pending-agent-message');
     // Clear after reading to prevent reuse
-    window.sessionStorage.removeItem('a2r-pending-agent-message');
+    window.sessionStorage.removeItem('allternit-pending-agent-message');
     return msg || undefined;
   }, []);
 
@@ -1442,8 +1442,8 @@ function ShellAppInner() {
       </ErrorBoundary>
     ),
     // P3 UI Views
-    "a2r-ix": ({ context }: { context: ViewContext }) => (
-      <ErrorBoundary fallback={<div>Failed to load A2R-IX Renderer</div>}>
+    "allternit-ix": ({ context }: { context: ViewContext }) => (
+      <ErrorBoundary fallback={<div>Failed to load Allternit-IX Renderer</div>}>
         <AllternitIXRendererView />
       </ErrorBoundary>
     ),
@@ -1457,7 +1457,7 @@ function ShellAppInner() {
         <CanvasProtocolView />
       </ErrorBoundary>
     ),
-    "a2r-canvas": ({ context }: { context: ViewContext }) => (
+    "allternit-canvas": ({ context }: { context: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load A2r-Canvas</div>}>
         <A2rCanvasView
           sourceView={(context.viewType as any) || 'chat'}
@@ -1466,7 +1466,7 @@ function ShellAppInner() {
       </ErrorBoundary>
     ),
     // A2rOS - Super-Agent OS View
-    "a2r-os": ({ context }: { context: ViewContext }) => (
+    "allternit-os": ({ context }: { context: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load A2rOS</div>}>
         <A2rOSView context={context} />
       </ErrorBoundary>
@@ -2010,7 +2010,7 @@ function ShellAppInner() {
       <ChatModeAgentSession 
         mode="chat"
         sessionId={context.viewId}
-        context={typeof window !== 'undefined' ? window.sessionStorage.getItem('a2r-pending-agent-message') || undefined : undefined}
+        context={typeof window !== 'undefined' ? window.sessionStorage.getItem('allternit-pending-agent-message') || undefined : undefined}
         onClose={() => open('chat')}
       />
     ),
@@ -2076,8 +2076,8 @@ function ShellAppInner() {
     const handleOpenSettings = () => {
       open('settings');
     };
-    window.addEventListener('a2r:open-settings' as any, handleOpenSettings);
-    return () => window.removeEventListener('a2r:open-settings' as any, handleOpenSettings);
+    window.addEventListener('allternit:open-settings' as any, handleOpenSettings);
+    return () => window.removeEventListener('allternit:open-settings' as any, handleOpenSettings);
   }, [open]);
 
   // Listen for settings close events to return to previous view
@@ -2086,8 +2086,8 @@ function ShellAppInner() {
       // Navigate back to chat view when closing settings
       open('chat');
     };
-    window.addEventListener('a2r:close-settings' as any, handleCloseSettings);
-    return () => window.removeEventListener('a2r:close-settings' as any, handleCloseSettings);
+    window.addEventListener('allternit:close-settings' as any, handleCloseSettings);
+    return () => window.removeEventListener('allternit:close-settings' as any, handleCloseSettings);
   }, [open]);
 
   const handleModeChange = useCallback((mode: AppMode) => {
@@ -2254,8 +2254,8 @@ function ShellAppInner() {
           onClose={() => setPluginPanelOpen(false)}
           onOpenSettings={() => {
             setPluginPanelOpen(false);
-            sessionStorage.setItem('a2r-settings-section', 'integrations');
-            sessionStorage.setItem('a2r-settings-tab', 'connectors');
+            sessionStorage.setItem('allternit-settings-section', 'integrations');
+            sessionStorage.setItem('allternit-settings-tab', 'connectors');
             open('settings');
           }}
         />
@@ -2299,7 +2299,7 @@ function Placeholder({ context }: { context: ViewContext }) {
       <div style={{ fontWeight: 700, marginBottom: 8 }}>{context.viewType}</div>
       <div style={{ opacity: 0.8 }}>View ID: {context.viewId}</div>
       <div style={{ opacity: 0.6, fontSize: '12px', marginTop: 8 }}>
-        Replace this view via ViewRegistry or integration/a2r/legacy.bridge.
+        Replace this view via ViewRegistry or integration/allternit/legacy.bridge.
       </div>
     </div>
   );

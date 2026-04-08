@@ -6,9 +6,9 @@ export const apiNamespaces: APINamespace[] = [
     description: 'Core plugin registration and lifecycle management',
     methods: [
       {
-        name: 'a2r.register',
-        description: 'Register a plugin with the A2R platform. This must be called before using any other API methods.',
-        signature: 'a2r.register(manifest: PluginManifest): Promise<PluginContext>',
+        name: 'allternit.register',
+        description: 'Register a plugin with the Allternit platform. This must be called before using any other API methods.',
+        signature: 'allternit.register(manifest: PluginManifest): Promise<PluginContext>',
         params: [
           {
             name: 'manifest',
@@ -25,10 +25,10 @@ export const apiNamespaces: APINamespace[] = [
           {
             title: 'Basic Registration',
             language: 'typescript',
-            code: `import { a2r } from '@allternit/sdk';
+            code: `import { allternit } from '@allternit/sdk';
 import manifest from './plugin.json';
 
-const context = await a2r.register(manifest);
+const context = await allternit.register(manifest);
 
 console.log('Plugin registered:', context.id);`,
           },
@@ -36,7 +36,7 @@ console.log('Plugin registered:', context.id);`,
             title: 'With Error Handling',
             language: 'typescript',
             code: `try {
-  const context = await a2r.register(manifest);
+  const context = await allternit.register(manifest);
   
   // Plugin is now ready
   context.on('ready', () => {
@@ -50,9 +50,9 @@ console.log('Plugin registered:', context.id);`,
         since: '1.0.0',
       },
       {
-        name: 'a2r.on',
+        name: 'allternit.on',
         description: 'Subscribe to platform events and plugin lifecycle hooks.',
-        signature: 'a2r.on(event: string, handler: Function): () => void',
+        signature: 'allternit.on(event: string, handler: Function): () => void',
         params: [
           {
             name: 'event',
@@ -76,17 +76,17 @@ console.log('Plugin registered:', context.id);`,
             title: 'Lifecycle Events',
             language: 'typescript',
             code: `// Plugin is initialized
-a2r.on('ready', () => {
+allternit.on('ready', () => {
   console.log('Plugin ready');
 });
 
 // Plugin is being disabled
-a2r.on('disable', () => {
+allternit.on('disable', () => {
   console.log('Plugin disabled');
 });
 
 // Plugin settings changed
-a2r.on('settings:changed', (changes) => {
+allternit.on('settings:changed', (changes) => {
   console.log('Settings updated:', changes);
 });`,
           },
@@ -94,9 +94,9 @@ a2r.on('settings:changed', (changes) => {
         since: '1.0.0',
       },
       {
-        name: 'a2r.off',
+        name: 'allternit.off',
         description: 'Unsubscribe from platform events.',
-        signature: 'a2r.off(event: string, handler: Function): void',
+        signature: 'allternit.off(event: string, handler: Function): void',
         params: [
           {
             name: 'event',
@@ -137,9 +137,9 @@ a2r.on('settings:changed', (changes) => {
     description: 'User interface components and interactions',
     methods: [
       {
-        name: 'a2r.ui.showPanel',
-        description: 'Display a panel in the A2R sidebar.',
-        signature: 'a2r.ui.showPanel(options: PanelOptions): Promise<Panel>',
+        name: 'allternit.ui.showPanel',
+        description: 'Display a panel in the Allternit sidebar.',
+        signature: 'allternit.ui.showPanel(options: PanelOptions): Promise<Panel>',
         params: [
           {
             name: 'options',
@@ -156,7 +156,7 @@ a2r.on('settings:changed', (changes) => {
           {
             title: 'Show a Panel',
             language: 'typescript',
-            code: `const panel = await a2r.ui.showPanel({
+            code: `const panel = await allternit.ui.showPanel({
   id: 'my-plugin-panel',
   title: 'My Plugin',
   icon: 'sparkles',
@@ -167,9 +167,9 @@ a2r.on('settings:changed', (changes) => {
         since: '1.0.0',
       },
       {
-        name: 'a2r.ui.notify',
+        name: 'allternit.ui.notify',
         description: 'Show a notification toast to the user.',
-        signature: 'a2r.ui.notify(message: string, type?: NotificationType): void',
+        signature: 'allternit.ui.notify(message: string, type?: NotificationType): void',
         params: [
           {
             name: 'message',
@@ -193,9 +193,9 @@ a2r.on('settings:changed', (changes) => {
           {
             title: 'Different Notification Types',
             language: 'typescript',
-            code: `a2r.ui.notify('Operation completed', 'success');
-a2r.ui.notify('Something went wrong', 'error');
-a2r.ui.notify('Please review your settings', 'warning');`,
+            code: `allternit.ui.notify('Operation completed', 'success');
+allternit.ui.notify('Something went wrong', 'error');
+allternit.ui.notify('Please review your settings', 'warning');`,
           },
         ],
         since: '1.0.0',
@@ -220,9 +220,9 @@ a2r.ui.notify('Please review your settings', 'warning');`,
     description: 'Data persistence and settings management',
     methods: [
       {
-        name: 'a2r.storage.get',
+        name: 'allternit.storage.get',
         description: 'Retrieve a value from plugin storage.',
-        signature: 'a2r.storage.get<T>(key: string): Promise<T | undefined>',
+        signature: 'allternit.storage.get<T>(key: string): Promise<T | undefined>',
         params: [
           {
             name: 'key',
@@ -239,7 +239,7 @@ a2r.ui.notify('Please review your settings', 'warning');`,
           {
             title: 'Get Stored Value',
             language: 'typescript',
-            code: `const settings = await a2r.storage.get('user-settings');
+            code: `const settings = await allternit.storage.get('user-settings');
 if (settings) {
   console.log('Loaded settings:', settings);
 }`,
@@ -248,9 +248,9 @@ if (settings) {
         since: '1.0.0',
       },
       {
-        name: 'a2r.storage.set',
+        name: 'allternit.storage.set',
         description: 'Store a value in plugin storage.',
-        signature: 'a2r.storage.set<T>(key: string, value: T): Promise<void>',
+        signature: 'allternit.storage.set<T>(key: string, value: T): Promise<void>',
         params: [
           {
             name: 'key',
@@ -273,7 +273,7 @@ if (settings) {
           {
             title: 'Save Settings',
             language: 'typescript',
-            code: `await a2r.storage.set('user-settings', {
+            code: `await allternit.storage.set('user-settings', {
   theme: 'dark',
   notifications: true,
 });`,

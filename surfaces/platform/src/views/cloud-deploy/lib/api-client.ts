@@ -1,7 +1,7 @@
 /**
  * Cloud Deploy API Client
  * 
- * TypeScript client for the A2R Cloud API backend.
+ * TypeScript client for the Allternit Cloud API backend.
  */
 
 export interface DeploymentConfig {

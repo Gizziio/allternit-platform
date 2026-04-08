@@ -30,7 +30,7 @@ const meta: Meta<typeof IconButton> = {
   tags: ['autodocs'],
   parameters: {
     layout: 'centered',
-    a2r: {
+    allternit: {
       componentId: 'design-controls-icon-button',
       evidence: {
         types: ['INTERACTION_TEST', 'VISUAL_SNAPSHOT', 'A11Y_SCAN'],

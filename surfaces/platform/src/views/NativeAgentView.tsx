@@ -7,7 +7,7 @@
  * - Left side: Chat interface with streaming support
  * - Right side: Canvas panel for tool visualization and content
  * - Session management with dropdown selector
- * - A2R Native Milestone Progress (Protocol Layer)
+ * - Allternit Native Milestone Progress (Protocol Layer)
  * - Full integration with native-agent.store
  */
 
@@ -160,7 +160,7 @@ export function NativeAgentView({
     isLoadingExecutionMode = false,
   } = useNativeAgentStore();
 
-  // A2R Native Context Integration
+  // Allternit Native Context Integration
   const { allternitNativeState } = useWorkspace(activeSessionId || "");
 
   const { isStreaming } = useSessionStreamingState(activeSessionId ?? '');
@@ -359,7 +359,7 @@ function WorkspaceHeader({
             </div>
           </div>
 
-          {/* A2R Native Milestone Progress - The "Layer" */}
+          {/* Allternit Native Milestone Progress - The "Layer" */}
           {allternitNativeState && (
             <div className="flex-1 lg:max-w-xl mx-4">
               <MilestoneProgress state={allternitNativeState} />
@@ -511,7 +511,7 @@ function ChatPanel({ sessionId }: { sessionId: string | null }) {
                 <Sparkle size={32} />
               </div>
               <h3 className="text-xl font-medium">How can I assist you?</h3>
-              <p className="text-sm max-w-xs">Start a conversation or use the A2R Native protocol to build your project.</p>
+              <p className="text-sm max-w-xs">Start a conversation or use the Allternit Native protocol to build your project.</p>
             </div>
           )}
 

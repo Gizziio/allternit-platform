@@ -3,7 +3,7 @@
 import React from "react";
 
 const PAGE_AGENT_TAKEOVER_ANIMATIONS = `
-@keyframes a2r-page-agent-takeover-glow-a {
+@keyframes allternit-page-agent-takeover-glow-a {
   0%, 100% {
     opacity: 0.52;
     transform: scale(1);
@@ -14,7 +14,7 @@ const PAGE_AGENT_TAKEOVER_ANIMATIONS = `
   }
 }
 
-@keyframes a2r-page-agent-takeover-glow-b {
+@keyframes allternit-page-agent-takeover-glow-b {
   0%, 100% {
     opacity: 0.18;
     transform: scale(1.02);
@@ -25,7 +25,7 @@ const PAGE_AGENT_TAKEOVER_ANIMATIONS = `
   }
 }
 
-@keyframes a2r-page-agent-takeover-border {
+@keyframes allternit-page-agent-takeover-border {
   0% {
     opacity: 0.55;
     box-shadow: inset 0 0 0 1px rgba(91, 153, 255, 0.32), 0 0 36px rgba(91, 153, 255, 0.12);
@@ -40,7 +40,7 @@ const PAGE_AGENT_TAKEOVER_ANIMATIONS = `
   }
 }
 
-@keyframes a2r-page-agent-takeover-badge {
+@keyframes allternit-page-agent-takeover-badge {
   0%, 100% {
     transform: translateY(0);
   }
@@ -84,7 +84,7 @@ export function PageAgentTakeoverOverlay({
             "conic-gradient(from 180deg, rgba(92, 136, 255, 0.28), rgba(83, 196, 255, 0.08), rgba(179, 96, 255, 0.2), rgba(92, 136, 255, 0.28))",
           filter: "blur(18px)",
           opacity: 0.6,
-          animation: "a2r-page-agent-takeover-glow-a 5s ease-in-out infinite",
+          animation: "allternit-page-agent-takeover-glow-a 5s ease-in-out infinite",
         }}
       />
       <div
@@ -92,7 +92,7 @@ export function PageAgentTakeoverOverlay({
           position: "absolute",
           inset: 0,
           boxShadow: "inset 0 0 0 1px rgba(91, 153, 255, 0.32)",
-          animation: "a2r-page-agent-takeover-border 2.4s ease-in-out infinite",
+          animation: "allternit-page-agent-takeover-border 2.4s ease-in-out infinite",
         }}
       />
     </div>

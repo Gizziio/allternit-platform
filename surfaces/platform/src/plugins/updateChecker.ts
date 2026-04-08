@@ -42,8 +42,8 @@ export type UpdateListener = (updates: UpdateInfo[]) => void;
 // ============================================================================
 
 const DEFAULT_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
-const STORAGE_KEY = 'a2r:plugin-updates:dismissed';
-const LAST_CHECK_KEY = 'a2r:plugin-updates:last-check';
+const STORAGE_KEY = 'allternit:plugin-updates:dismissed';
+const LAST_CHECK_KEY = 'allternit:plugin-updates:last-check';
 
 // ============================================================================
 // State

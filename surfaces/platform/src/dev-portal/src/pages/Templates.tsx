@@ -155,8 +155,8 @@ export default function Templates() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-a2r-text mb-2">Templates</h1>
-        <p className="text-a2r-text-secondary">
+        <h1 className="text-2xl font-bold text-allternit-text mb-2">Templates</h1>
+        <p className="text-allternit-text-secondary">
           Jumpstart your development with pre-built skill templates and boilerplates.
         </p>
       </div>
@@ -164,16 +164,16 @@ export default function Templates() {
       {/* Search and Filter */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
-          <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-a2r-text-muted" />
+          <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-allternit-text-muted" />
           <input
             type="text"
             placeholder="Search templates..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-a2r-surface border border-a2r-border rounded-lg text-sm text-a2r-text placeholder:text-a2r-text-muted focus:outline-none focus:border-a2r-accent"
+            className="w-full pl-10 pr-4 py-2 bg-allternit-surface border border-allternit-border rounded-lg text-sm text-allternit-text placeholder:text-allternit-text-muted focus:outline-none focus:border-allternit-accent"
           />
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-a2r-surface border border-a2r-border rounded-lg text-sm text-a2r-text hover:bg-a2r-surface-hover transition-colors">
+        <button className="flex items-center gap-2 px-4 py-2 bg-allternit-surface border border-allternit-border rounded-lg text-sm text-allternit-text hover:bg-allternit-surface-hover transition-colors">
           <Funnel size={16} />
           Filter
         </button>
@@ -187,12 +187,12 @@ export default function Templates() {
             onClick={() => setActiveCategory(category.id)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               activeCategory === category.id
-                ? 'bg-a2r-accent text-a2r-bg'
-                : 'bg-a2r-surface text-a2r-text-secondary hover:text-a2r-text hover:bg-a2r-surface-hover'
+                ? 'bg-allternit-accent text-allternit-bg'
+                : 'bg-allternit-surface text-allternit-text-secondary hover:text-allternit-text hover:bg-allternit-surface-hover'
             }`}
           >
             {category.label}
-            <span className={`ml-2 text-xs ${activeCategory === category.id ? 'text-a2r-bg/70' : 'text-a2r-text-muted'}`}>
+            <span className={`ml-2 text-xs ${activeCategory === category.id ? 'text-allternit-bg/70' : 'text-allternit-text-muted'}`}>
               {category.count}
             </span>
           </button>
@@ -204,13 +204,13 @@ export default function Templates() {
         {filteredTemplates.map((template) => (
           <div
             key={template.id}
-            className="group p-5 bg-a2r-surface border border-a2r-border rounded-xl hover:border-a2r-border-hover transition-all cursor-pointer"
+            className="group p-5 bg-allternit-surface border border-allternit-border rounded-xl hover:border-allternit-border-hover transition-all cursor-pointer"
             onClick={() => setSelectedTemplate(template.id)}
           >
             {/* Header */}
             <div className="flex items-start justify-between mb-3">
-              <div className="w-10 h-10 rounded-lg bg-a2r-accent/10 flex items-center justify-center">
-                <Browsers className="w-5 h-5 text-a2r-accent" />
+              <div className="w-10 h-10 rounded-lg bg-allternit-accent/10 flex items-center justify-center">
+                <Browsers className="w-5 h-5 text-allternit-accent" />
               </div>
               <div className="flex items-center gap-1">
                 {template.verified && (
@@ -225,10 +225,10 @@ export default function Templates() {
             </div>
 
             {/* Content */}
-            <h3 className="font-semibold text-a2r-text mb-1 group-hover:text-a2r-accent transition-colors">
+            <h3 className="font-semibold text-allternit-text mb-1 group-hover:text-allternit-accent transition-colors">
               {template.name}
             </h3>
-            <p className="text-sm text-a2r-text-secondary mb-4 line-clamp-2">
+            <p className="text-sm text-allternit-text-secondary mb-4 line-clamp-2">
               {template.description}
             </p>
 
@@ -237,7 +237,7 @@ export default function Templates() {
               {template.tags.slice(0, 3).map((tag) => (
                 <span
                   key={tag}
-                  className="text-xs px-2 py-0.5 rounded bg-a2r-bg text-a2r-text-muted"
+                  className="text-xs px-2 py-0.5 rounded bg-allternit-bg text-allternit-text-muted"
                 >
                   {tag}
                 </span>
@@ -245,7 +245,7 @@ export default function Templates() {
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-between pt-4 border-t border-a2r-border text-xs text-a2r-text-muted">
+            <div className="flex items-center justify-between pt-4 border-t border-allternit-border text-xs text-allternit-text-muted">
               <div className="flex items-center gap-3">
                 <span className="flex items-center gap-1">
                   <Star className="w-3.5 h-3.5" />
@@ -266,22 +266,22 @@ export default function Templates() {
       </div>
 
       {/* Quick Start CTA */}
-      <div className="mt-12 p-6 bg-gradient-to-br from-a2r-surface to-a2r-surface-elevated border border-a2r-border rounded-xl">
+      <div className="mt-12 p-6 bg-gradient-to-br from-allternit-surface to-allternit-surface-elevated border border-allternit-border rounded-xl">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6">
           <div>
-            <h3 className="text-lg font-semibold text-a2r-text mb-2">
+            <h3 className="text-lg font-semibold text-allternit-text mb-2">
               Create your own template
             </h3>
-            <p className="text-sm text-a2r-text-secondary max-w-md">
+            <p className="text-sm text-allternit-text-secondary max-w-md">
               Have a reusable skill pattern? Share it with the community by publishing 
               your own template to the marketplace.
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <code className="hidden sm:block px-4 py-2 bg-a2r-bg rounded-lg text-sm font-mono text-a2r-accent border border-a2r-border">
-              a2r template create
+            <code className="hidden sm:block px-4 py-2 bg-allternit-bg rounded-lg text-sm font-mono text-allternit-accent border border-allternit-border">
+              allternit template create
             </code>
-            <button className="flex items-center gap-2 px-4 py-2 bg-a2r-accent text-a2r-bg rounded-lg font-medium hover:bg-a2r-accent-hover transition-colors whitespace-nowrap">
+            <button className="flex items-center gap-2 px-4 py-2 bg-allternit-accent text-allternit-bg rounded-lg font-medium hover:bg-allternit-accent-hover transition-colors whitespace-nowrap">
               <Terminal size={16} />
               Learn More
             </button>

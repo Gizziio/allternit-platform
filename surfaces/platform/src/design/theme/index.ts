@@ -1,5 +1,5 @@
 /**
- * A2R Design System - Theme Exports
+ * Allternit Design System - Theme Exports
  */
 
 export {
@@ -9,9 +9,9 @@ export {
   useAllternitTheme,
   ThemeContext,
   AllternitThemeProvider,
-} from "./a2r-theme.tsx"
+} from "./allternit-theme.tsx"
 
 export type {
   AllternitTheme,
   AllternitRuntimeState,
-} from "./a2r-theme.tsx"
+} from "./allternit-theme.tsx"

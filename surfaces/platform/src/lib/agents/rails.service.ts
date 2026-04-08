@@ -1,10 +1,10 @@
 /**
- * Rails Service - A2R Agent System Rails API Client
+ * Rails Service - Allternit Agent System Rails API Client
  * 
- * This service connects to the ACTUAL A2R Agent System Rails backend.
+ * This service connects to the ACTUAL Allternit Agent System Rails backend.
  * Rails provides: DAG planning, WIH tracking, Ledger events, Mail, Gates, Vault
  * 
- * Service: a2r-agent-system-rails (port 3011)
+ * Service: allternit-agent-system-rails (port 3011)
  * Gateway: /api/v1/rails/*
  * 
  * UI Concepts → Rails Concepts:

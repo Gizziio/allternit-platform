@@ -26,7 +26,7 @@ export const DeploymentComplete: React.FC<DeploymentCompleteProps> = ({ status, 
 
       <h2>Deployment Complete!</h2>
       <p className="success-message">
-        Your A2R instance is ready to use.
+        Your Allternit instance is ready to use.
       </p>
 
       <div className="access-details">
@@ -80,10 +80,10 @@ export const DeploymentComplete: React.FC<DeploymentCompleteProps> = ({ status, 
       <div className="next-steps">
         <h3>Next Steps</h3>
         <ol>
-          <li>Click the access URL to open your A2R instance</li>
+          <li>Click the access URL to open your Allternit instance</li>
           <li>Login with the temporary password</li>
           <li>Change your password immediately</li>
-          <li>Configure your settings and start using A2R!</li>
+          <li>Configure your settings and start using Allternit!</li>
         </ol>
       </div>
 

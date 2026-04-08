@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
       os: systemInfo.os,
       architecture: systemInfo.architecture,
       docker_installed: systemInfo.dockerInstalled,
-      a2r_installed: systemInfo.allternitInstalled,
+      allternit_installed: systemInfo.allternitInstalled,
     });
   } catch (error) {
     console.error('SSH connection test failed:', error);

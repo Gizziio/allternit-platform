@@ -19,7 +19,7 @@ export interface Skill {
   category: string;
   tags: string[];
   requires: string[];
-  source: 'a2r-registry' | 'openclaw-registry' | 'local' | 'remote';
+  source: 'allternit-registry' | 'openclaw-registry' | 'local' | 'remote';
   downloadUrl?: string;
   license: string;
   lastUpdated: string;

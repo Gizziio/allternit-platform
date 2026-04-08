@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
         username: 'manual',
         authType: 'key',
         status: 'connected',
-        a2rInstalled: true,
+        allternitInstalled: true,
       },
     });
 

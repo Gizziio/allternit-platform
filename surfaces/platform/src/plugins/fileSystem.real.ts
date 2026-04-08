@@ -277,8 +277,8 @@ export class EnvironmentScanner {
     }> = [];
 
     const searchPaths = [
-      this.fs.join(this.fs.getHomeDir(), '.a2r', 'skills'),
-      '/usr/share/a2r/skills',
+      this.fs.join(this.fs.getHomeDir(), '.allternit', 'skills'),
+      '/usr/share/allternit/skills',
     ];
 
     for (const basePath of searchPaths) {
@@ -397,7 +397,7 @@ export class EnvironmentScanner {
     }> = [];
 
     const searchPaths = [
-      this.fs.join(this.fs.getHomeDir(), '.a2r', 'plugins'),
+      this.fs.join(this.fs.getHomeDir(), '.allternit', 'plugins'),
     ];
 
     for (const basePath of searchPaths) {

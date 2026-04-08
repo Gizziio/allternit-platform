@@ -4,11 +4,11 @@ export const pluginTemplates: PluginTemplate[] = [
   {
     id: 'basic',
     name: 'Basic Plugin',
-    description: 'The minimal setup for an A2R plugin. Perfect for learning the basics or building simple utilities.',
+    description: 'The minimal setup for an Allternit plugin. Perfect for learning the basics or building simple utilities.',
     version: '1.0.0',
     category: 'developer',
     tags: ['starter', 'minimal', 'javascript'],
-    author: 'A2R Team',
+    author: 'Allternit Team',
     repositoryUrl: 'https://github.com/a2r-dev/template-basic',
     features: [
       'Minimal configuration',
@@ -23,7 +23,7 @@ export const pluginTemplates: PluginTemplate[] = [
           id: 'my-basic-plugin',
           name: 'My Basic Plugin',
           version: '1.0.0',
-          description: 'A simple A2R plugin',
+          description: 'A simple Allternit plugin',
           author: 'Your Name',
           license: 'MIT',
           entry: 'index.js',
@@ -34,16 +34,16 @@ export const pluginTemplates: PluginTemplate[] = [
       },
       {
         path: 'index.js',
-        content: `import { a2r } from '@allternit/sdk';
+        content: `import { allternit } from '@allternit/sdk';
 import manifest from './plugin.json';
 
 // Register the plugin
-const plugin = await a2r.register(manifest);
+const plugin = await allternit.register(manifest);
 
 // Log when plugin is ready
 plugin.on('ready', () => {
   console.log('Plugin is ready!');
-  a2r.ui.notify('Hello from my plugin!', 'success');
+  allternit.ui.notify('Hello from my plugin!', 'success');
 });
 
 // Clean up when plugin is disabled
@@ -67,7 +67,7 @@ plugin.on('disable', () => {
     version: '2.1.0',
     category: 'developer',
     tags: ['react', 'typescript', 'hot-reload', 'full-featured'],
-    author: 'A2R Team',
+    author: 'Allternit Team',
     repositoryUrl: 'https://github.com/a2r-dev/template-react',
     demoUrl: 'https://demo.a2r.dev/templates/react',
     features: [
@@ -85,7 +85,7 @@ plugin.on('disable', () => {
           id: 'my-react-plugin',
           name: 'My React Plugin',
           version: '1.0.0',
-          description: 'A React-based A2R plugin',
+          description: 'A React-based Allternit plugin',
           author: 'Your Name',
           license: 'MIT',
           entry: 'dist/index.js',
@@ -111,16 +111,16 @@ plugin.on('disable', () => {
         path: 'src/index.tsx',
         content: `import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { a2r } from '@allternit/sdk';
+import { allternit } from '@allternit/sdk';
 import manifest from '../plugin.json';
 import { App } from './App';
 
 async function main() {
-  const plugin = await a2r.register(manifest);
+  const plugin = await allternit.register(manifest);
   
   plugin.on('ready', () => {
     // Show the plugin panel
-    a2r.ui.showPanel({
+    allternit.ui.showPanel({
       id: 'main-panel',
       title: manifest.name,
       component: App,
@@ -143,7 +143,7 @@ export const App: React.FC = () => {
     <div className="p-4">
       <h1 className="text-xl font-bold">Welcome to {manifest.name}</h1>
       <p className="text-gray-600">
-        This is your React plugin running inside A2R.
+        This is your React plugin running inside Allternit.
       </p>
     </div>
   );
@@ -167,7 +167,7 @@ export const App: React.FC = () => {
     version: '1.2.0',
     category: 'ai',
     tags: ['ai', 'llm', 'context', 'prompts'],
-    author: 'A2R Team',
+    author: 'Allternit Team',
     repositoryUrl: 'https://github.com/a2r-dev/template-ai-tool',
     demoUrl: 'https://demo.a2r.dev/templates/ai-tool',
     features: [
@@ -180,7 +180,7 @@ export const App: React.FC = () => {
     files: [
       {
         path: 'src/ai/complete.ts',
-        content: `import { a2r } from '@allternit/sdk';
+        content: `import { allternit } from '@allternit/sdk';
 
 export async function generateWithContext(
   prompt: string,
@@ -191,13 +191,13 @@ export async function generateWithContext(
   } = {}
 ) {
   // Get current context from the workspace
-  const context = await a2r.ai.getContext();
+  const context = await allternit.ai.getContext();
   
   // Build the full prompt with context
   const fullPrompt = \`\${context}\n\nUser request: \${prompt}\`;
   
   // Call the AI completion API
-  const response = await a2r.ai.complete(fullPrompt, {
+  const response = await allternit.ai.complete(fullPrompt, {
     model: options.model || 'gpt-4',
     temperature: options.temperature ?? 0.7,
     maxTokens: options.maxTokens ?? 2000,
@@ -227,7 +227,7 @@ export async function generateWithContext(
     version: '1.1.0',
     category: 'developer',
     tags: ['ui', 'sidebar', 'panel', 'persistent'],
-    author: 'A2R Team',
+    author: 'Allternit Team',
     repositoryUrl: 'https://github.com/a2r-dev/template-sidebar',
     features: [
       'Persistent sidebar panel',
@@ -247,11 +247,11 @@ export async function generateWithContext(
   {
     id: 'command',
     name: 'Slash Commands',
-    description: 'Add custom slash commands to the A2R command palette with argument parsing and autocompletion.',
+    description: 'Add custom slash commands to the Allternit command palette with argument parsing and autocompletion.',
     version: '1.0.0',
     category: 'productivity',
     tags: ['commands', 'slash', 'palette', 'shortcuts'],
-    author: 'A2R Team',
+    author: 'Allternit Team',
     repositoryUrl: 'https://github.com/a2r-dev/template-command',
     features: [
       'Slash command registration',
@@ -275,7 +275,7 @@ export async function generateWithContext(
     version: '1.0.0',
     category: 'integration',
     tags: ['api', 'integration', 'auth', 'fetch'],
-    author: 'A2R Team',
+    author: 'Allternit Team',
     repositoryUrl: 'https://github.com/a2r-dev/template-integration',
     features: [
       'API client setup',

@@ -1,7 +1,7 @@
 /**
  * Cloud Deploy Module
  * 
- * One-stop cloud deployment for A2R.
+ * One-stop cloud deployment for Allternit.
  */
 
 // Main Views

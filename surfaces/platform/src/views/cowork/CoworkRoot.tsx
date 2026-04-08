@@ -788,9 +788,9 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
       setComposerInputValue(text);
     };
 
-    window.addEventListener('a2r:cowork-compose', onComposeRequest as EventListener);
+    window.addEventListener('allternit:cowork-compose', onComposeRequest as EventListener);
     return () => {
-      window.removeEventListener('a2r:cowork-compose', onComposeRequest as EventListener);
+      window.removeEventListener('allternit:cowork-compose', onComposeRequest as EventListener);
     };
   }, [handleSend]);
   
@@ -945,7 +945,7 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
           textAlign: 'center',
           pointerEvents: 'auto',
         }}>
-          A2R is AI and can make mistakes. Please double-check responses.
+          Allternit is AI and can make mistakes. Please double-check responses.
         </div>
       </div>
     </div>

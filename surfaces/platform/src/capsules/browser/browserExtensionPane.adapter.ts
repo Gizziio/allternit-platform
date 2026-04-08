@@ -104,7 +104,7 @@ export function useBrowserExtensionPaneAdapter(): BrowserExtensionPaneAdapter {
     config: {
       permissionMode,
       language,
-      runtimeLabel: "A2R extension bridge in native browser mode",
+      runtimeLabel: "Allternit extension bridge in native browser mode",
       apiKey: extensionApiKey,
       baseURL: extensionBaseUrl,
       model: extensionModel,

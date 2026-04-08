@@ -1,13 +1,13 @@
 /**
  * Platform detection and web proxy utilities.
  *
- * `isElectronShell()` — true when running inside the A2R Electron desktop app.
+ * `isElectronShell()` — true when running inside the Allternit Electron desktop app.
  * `getWebProxyUrl(url)` — returns a Terminal-Server-proxied URL suitable for
  *   embedding in an iframe (strips X-Frame-Options / CSP frame-ancestors).
  */
 
 /**
- * Detect whether the current page is running inside the A2R Electron shell.
+ * Detect whether the current page is running inside the Allternit Electron shell.
  *
  * Checks for the preload-exposed `window.allternitSidecar` bridge first, then
  * falls back to the classic `process.versions.electron` check.

@@ -95,7 +95,7 @@ interface LayoutContextValue extends LayoutState {
 // Constants & Defaults
 // =============================================================================
 
-const STORAGE_KEY = 'a2r-layout-v1';
+const STORAGE_KEY = 'allternit-layout-v1';
 
 const defaultLayoutState: LayoutState = {
   sidebar: {

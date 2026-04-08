@@ -240,7 +240,7 @@ export function getAvailableModels(): ModelData[] {
     {
       id: "codex",
       name: "Codex CLI",
-      provider: "a2r-kernel",
+      provider: "allternit-kernel",
       description: "Local CLI agent via kernel",
       runtimeType: "cli",
       features: { vision: false, fileUpload: false, webSearch: false },
@@ -248,7 +248,7 @@ export function getAvailableModels(): ModelData[] {
     {
       id: "claude-code",
       name: "Claude Code",
-      provider: "a2r-kernel",
+      provider: "allternit-kernel",
       description: "Claude Code CLI via kernel",
       runtimeType: "cli",
       features: { vision: false, fileUpload: false, webSearch: false },

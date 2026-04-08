@@ -55,6 +55,6 @@ export const useArtifactStore = create<ArtifactState>()(
         activeArtifactId: state.activeArtifactId === id ? null : state.activeArtifactId
       }))
     }),
-    { name: 'a2r-artifact-storage' }
+    { name: 'allternit-artifact-storage' }
   )
 );

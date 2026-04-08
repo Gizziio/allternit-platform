@@ -15,7 +15,7 @@ export const useThemeStore = create<ThemeState>()(
       theme: 'light',
       setTheme: (theme) => set({ theme }),
     }),
-    { name: 'a2r-theme-storage' }
+    { name: 'allternit-theme-storage' }
   )
 );
 

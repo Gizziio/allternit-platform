@@ -200,7 +200,7 @@ export async function createWorkspace(
     if (server) {
       console.log('[Workspace] Using HTTP backend:', server.url);
       return createHttpWorkspace(path, server.url, server.password ? {
-        username: server.username || 'a2r',
+        username: server.username || 'allternit',
         password: server.password,
       } : undefined);
     }

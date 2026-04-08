@@ -57,7 +57,7 @@ const SURFACE_THEMES: Record<AgentModeSurface, AgentModeSurfaceTheme> = {
 };
 
 const backdropAnimationStyles = `
-@keyframes a2r-agent-surface-glow {
+@keyframes allternit-agent-surface-glow {
   0% {
     opacity: 0.48;
   }
@@ -69,7 +69,7 @@ const backdropAnimationStyles = `
   }
 }
 
-@keyframes a2r-agent-activation-sweep {
+@keyframes allternit-agent-activation-sweep {
   0% {
     opacity: 0;
     transform: scaleX(0);
@@ -92,7 +92,7 @@ const backdropAnimationStyles = `
   }
 }
 
-@keyframes a2r-agent-composer-halo {
+@keyframes allternit-agent-composer-halo {
   0% {
     box-shadow: 0 0 0 0px currentColor;
     opacity: 0;
@@ -151,7 +151,7 @@ export function AgentModeBackdrop({
           opacity,
           background: `radial-gradient(120% 88% at 50% 0%, ${theme.fog} 0%, transparent 58%), linear-gradient(90deg, ${theme.wash} 0%, transparent 18%, transparent 82%, ${theme.wash} 100%), linear-gradient(180deg, ${theme.soft} 0%, transparent 24%, transparent 76%, ${theme.soft} 100%)`,
           boxShadow: `inset 0 0 0 1px ${theme.edge}, inset 0 0 56px ${theme.shadow}`,
-          animation: 'a2r-agent-surface-glow 3.2s ease-in-out infinite',
+          animation: 'allternit-agent-surface-glow 3.2s ease-in-out infinite',
         }}
       />
     </>
@@ -192,7 +192,7 @@ export function AgentActivationSweep({
           zIndex: 50,
           background: `linear-gradient(90deg, transparent 0%, ${theme.accent} 50%, transparent 100%)`,
           opacity: 0,
-          animation: 'a2r-agent-activation-sweep 1.2s ease-out forwards',
+          animation: 'allternit-agent-activation-sweep 1.2s ease-out forwards',
         }}
       />
     </>
@@ -228,7 +228,7 @@ export function AgentComposerHalo({
           pointerEvents: 'none',
           zIndex: 10,
           color: theme.accent,
-          animation: 'a2r-agent-composer-halo 0.8s ease-out forwards',
+          animation: 'allternit-agent-composer-halo 0.8s ease-out forwards',
         }}
       />
     </>

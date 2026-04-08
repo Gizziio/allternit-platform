@@ -1,7 +1,7 @@
 /**
  * RemoteSessionView.tsx
  * 
- * Remote Control / Session Mirroring View for A2R ShellUI
+ * Remote Control / Session Mirroring View for Allternit ShellUI
  * Similar to Claude Code Remote Control - view ANY session from any device
  * 
  * Supports:
@@ -159,7 +159,7 @@ export function RemoteSessionView() {
 
     // Welcome message
     terminal.current.writeln('\x1b[1;36m╔════════════════════════════════════════╗\x1b[0m')
-    terminal.current.writeln('\x1b[1;36m║\x1b[0m  \x1b[1;33mA2R Remote Session Viewer\x1b[0m       \x1b[1;36m║\x1b[0m')
+    terminal.current.writeln('\x1b[1;36m║\x1b[0m  \x1b[1;33mAllternit Remote Session Viewer\x1b[0m       \x1b[1;36m║\x1b[0m')
     terminal.current.writeln('\x1b[1;36m║\x1b[0m  \x1b[32mReady to connect\x1b[0m                  \x1b[1;36m║\x1b[0m')
     terminal.current.writeln('\x1b[1;36m╚════════════════════════════════════════╝\x1b[0m')
     terminal.current.writeln('')

@@ -16,7 +16,7 @@ export const retrieveUrl = tool({
   description: `Fetch structured information from a URL using browser automation.
 
 Uses browser-use library (Chromium + CDP) for agent-based browser automation.
-Runs locally via A2R Operator service - no external API keys required.
+Runs locally via Allternit Operator service - no external API keys required.
 
 Use for:
 - Extract content from a specific URL supplied by the user
@@ -51,7 +51,7 @@ Three modes available via superconductor:
         }
         
         return {
-          error: "Browser automation service not available. Ensure A2R Operator is running on port 3008.",
+          error: "Browser automation service not available. Ensure Allternit Operator is running on port 3008.",
           results: [],
         };
       }
@@ -79,7 +79,7 @@ Three modes available via superconductor:
     } catch (error) {
       log.error({ err: error, url }, "URL retrieval error");
       return {
-        error: "Failed to retrieve content. Is the A2R Operator service running?",
+        error: "Failed to retrieve content. Is the Allternit Operator service running?",
         results: [],
       };
     }

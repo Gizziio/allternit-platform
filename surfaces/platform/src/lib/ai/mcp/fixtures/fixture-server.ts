@@ -333,7 +333,7 @@ export interface FixtureServerOptions {
 }
 
 export function createFixtureServer(options: FixtureServerOptions = {}) {
-  const serverName = options.name || "a2r-mcp-apps-fixture";
+  const serverName = options.name || "allternit-mcp-apps-fixture";
   const serverVersion = options.version || "1.0.0";
   
   const server = new Server(

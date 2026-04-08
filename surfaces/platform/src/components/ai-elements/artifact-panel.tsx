@@ -288,7 +288,7 @@ export function ArtifactSidePanel({ artifact, onClose }: ArtifactSidePanelProps)
         background: "#1e1a17",
         position: "relative",
         overflow: "hidden",
-        animation: "a2r-panel-slidein 0.22s cubic-bezier(0.22,1,0.36,1)",
+        animation: "allternit-panel-slidein 0.22s cubic-bezier(0.22,1,0.36,1)",
       }}
     >
       {/* ── Header ── */}
@@ -577,7 +577,7 @@ function MermaidRenderer({ content }: { content: string }) {
   if (!svg) {
     return (
       <div style={{ padding: "32px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-        <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "rgba(212,176,140,0.5)", animation: "a2r-fadein 0.6s ease-in-out infinite alternate" }} />
+        <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "rgba(212,176,140,0.5)", animation: "allternit-fadein 0.6s ease-in-out infinite alternate" }} />
         <span style={{ fontSize: "12px", color: "rgba(255,255,255,0.3)" }}>Rendering diagram…</span>
       </div>
     );

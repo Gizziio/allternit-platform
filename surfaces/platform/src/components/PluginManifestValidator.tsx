@@ -41,7 +41,7 @@ import {
 } from '../plugins/pluginStandards';
 
 // ============================================================================
-// Theme - Matches A2R dark theme
+// Theme - Matches Allternit dark theme
 // ============================================================================
 
 const THEME = {

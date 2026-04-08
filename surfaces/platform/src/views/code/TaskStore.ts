@@ -62,6 +62,6 @@ export const useTaskStore = create<TaskState>()(
 
       setActiveTask: (id) => set({ activeTaskId: id })
     }),
-    { name: 'a2r-task-storage' }
+    { name: 'allternit-task-storage' }
   )
 );

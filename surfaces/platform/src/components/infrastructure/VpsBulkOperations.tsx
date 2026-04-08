@@ -285,7 +285,7 @@ export function VpsBulkOperations({
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => handleOperationClick('install-agent')}>
                     <DownloadSimple className="w-4 h-4 mr-2" />
-                    Install A2R Agent
+                    Install Allternit Agent
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem

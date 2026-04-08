@@ -1,7 +1,7 @@
 /**
  * Backend Installer Service
  * 
- * Manages native installation of A2R backend on remote VPS instances.
+ * Manages native installation of Allternit backend on remote VPS instances.
  * NO DOCKER REQUIRED - runs as native systemd service.
  * Docker is optional for advanced containerized workloads only.
  */
@@ -44,7 +44,7 @@ export type ProgressCallback = (progress: InstallProgress) => void;
 class BackendInstallerService {
   private readonly BACKEND_VERSION = '1.0.0';
   private readonly runtimeBinaryName = 'gizzi-code';
-  private readonly runtimeServiceName = 'a2r-backend';
+  private readonly runtimeServiceName = 'allternit-backend';
   private readonly runtimeServiceUser = 'gizzi';
   private readonly runtimeAuthUser = 'gizzi';
   private readonly runtimePort = 4096;
@@ -128,7 +128,7 @@ class BackendInstallerService {
   }
 
   /**
-   * Install A2R backend - NATIVE (no Docker)
+   * Install Allternit backend - NATIVE (no Docker)
    */
   async installBackend(
     installationId: string,
@@ -172,7 +172,7 @@ class BackendInstallerService {
       await this.installDependencies(ssh, systemInfo.distro);
 
       // Run the canonical remote bootstrap path.
-      onProgress({ step: 'downloading', progress: 40, message: 'Bootstrapping A2R runtime from remote installer...' });
+      onProgress({ step: 'downloading', progress: 40, message: 'Bootstrapping Allternit runtime from remote installer...' });
       await this.runRemoteInstaller(
         ssh,
         runtimePassword,
@@ -334,8 +334,8 @@ exit 1`;
 
     await this.execShell(
       ssh,
-      `ln -sf /opt/a2r/bin/${this.runtimeBinaryName} /usr/local/bin/${this.runtimeBinaryName} 2>/dev/null || true
-rm -f /usr/local/bin/a2r-node /opt/a2r/bin/a2r-node 2>/dev/null || true`,
+      `ln -sf /opt/allternit/bin/${this.runtimeBinaryName} /usr/local/bin/${this.runtimeBinaryName} 2>/dev/null || true
+rm -f /usr/local/bin/allternit-node /opt/allternit/bin/allternit-node 2>/dev/null || true`,
     );
   }
 
@@ -375,10 +375,10 @@ rm -f /usr/local/bin/a2r-node /opt/a2r/bin/a2r-node 2>/dev/null || true`,
 echo ---
 systemctl status ${this.runtimeServiceName} --no-pager --full -n 25 2>/dev/null || true
 echo ---
-tail -n 50 /var/log/a2r.log 2>/dev/null || true`)
+tail -n 50 /var/log/allternit.log 2>/dev/null || true`)
       : await this.execShell(ssh, `ps aux | grep '[g]izzi-code serve' || true
 echo ---
-tail -n 50 /var/log/a2r.log 2>/dev/null || true`);
+tail -n 50 /var/log/allternit.log 2>/dev/null || true`);
 
     const detail = [diagnostics.stdout, diagnostics.stderr]
       .map((value) => value.trim())
@@ -386,7 +386,7 @@ tail -n 50 /var/log/a2r.log 2>/dev/null || true`);
       .join('\n');
 
     throw new Error(
-      `A2R runtime failed health verification at ${apiUrl}.${detail ? ` Diagnostics:\n${detail}` : ''}`,
+      `Allternit runtime failed health verification at ${apiUrl}.${detail ? ` Diagnostics:\n${detail}` : ''}`,
     );
   }
 

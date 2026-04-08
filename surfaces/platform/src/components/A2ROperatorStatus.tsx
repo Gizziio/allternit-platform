@@ -1,6 +1,6 @@
 /**
- * A2R Operator Status Indicator
- * Displays the availability and capabilities of A2R Operator services
+ * Allternit Operator Status Indicator
+ * Displays the availability and capabilities of Allternit Operator services
  */
 
 import React, { useState } from 'react';
@@ -67,13 +67,13 @@ export function AllternitOperatorStatus() {
           background: 'var(--bg-secondary)',
           border: '1px solid var(--border-subtle)'
         }}
-        title="A2R Operator Status - Click to refresh"
+        title="Allternit Operator Status - Click to refresh"
       >
         <Robot size={16} style={{ color: 'var(--text-secondary)' }} />
         <div className="flex items-center gap-1.5">
           {getStatusIcon()}
           <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
-            A2R {status === 'online' ? 'Ready' : status}
+            Allternit {status === 'online' ? 'Ready' : status}
           </span>
         </div>
       </button>
@@ -90,7 +90,7 @@ export function AllternitOperatorStatus() {
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Robot size={20} style={{ color: 'var(--accent-chat)' }} />
-              <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>A2R Operator</span>
+              <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>Allternit Operator</span>
             </div>
             <button
               onClick={refresh}
@@ -160,7 +160,7 @@ export function AllternitOperatorStatus() {
                 icon={Eye}
                 label="Vision"
                 available={hasVision}
-                sublabel="A2R Vision"
+                sublabel="Allternit Vision"
               />
 
               {/* Parallel Execution */}

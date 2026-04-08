@@ -1,7 +1,7 @@
 /**
  * WIH: T2-A2
  * Agent: T2-A2 (Navigation System)
- * Scope: 6-ui/a2r-platform/src/shell/navigation/Breadcrumbs.tsx
+ * Scope: 6-ui/allternit-platform/src/shell/navigation/Breadcrumbs.tsx
  * Acceptance: Breadcrumbs with collapsible items, multiple separators, auto-generation from routes
  * Risk Tier: 2
  * Dependencies: Icon component (T1-A5), DropdownMenu component, cn utility

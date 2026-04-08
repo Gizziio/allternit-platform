@@ -8,7 +8,7 @@
  * - Workspace execution monitoring
  * - Policy-bound orchestration
  * 
- * Uses A2R cowork mode accent colors (soft violet purple)
+ * Uses Allternit cowork mode accent colors (soft violet purple)
  * 
  * @module CoworkModeAgentTasks
  */

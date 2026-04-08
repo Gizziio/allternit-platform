@@ -1,5 +1,5 @@
 // ============================================================================
-// A2R Developer Portal - Type Definitions
+// Allternit Developer Portal - Type Definitions
 // ============================================================================
 
 // Plugin Manifest Types

@@ -1,5 +1,5 @@
 /**
- * Agentation Integration for A2R
+ * Agentation Integration for Allternit
  * 
  * Provides local-first agent assistance for UI development.
  * Forked from benjitaylor/agentation (PolyForm Shield 1.0.0)
@@ -14,4 +14,4 @@ export { AgentationOverlay } from './components/AgentationOverlay';
 export type { AgentationConfig, AgentRole, AgentMessage } from './types';
 
 // Version for compatibility checking
-export const AGENTATION_VERSION = '1.0.0-a2r';
+export const AGENTATION_VERSION = '1.0.0-allternit';

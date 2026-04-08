@@ -494,7 +494,7 @@ export function ACIDebugPanel({
           flexShrink: 0,
         }}
       >
-        <span>A2R ACI Debug · {operatorBaseUrl}</span>
+        <span>Allternit ACI Debug · {operatorBaseUrl}</span>
         <span>polling 3s</span>
       </div>
     </div>

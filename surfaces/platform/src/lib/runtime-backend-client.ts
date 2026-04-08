@@ -8,8 +8,8 @@ const DEFAULT_GATEWAY_BASE_URL = normalizeBaseUrl(
     "http://127.0.0.1:8013",
 );
 
-const SNAPSHOT_STORAGE_KEY = "a2r.runtime-backend.snapshot";
-const SNAPSHOT_EVENT = "a2r:runtime-backend-changed";
+const SNAPSHOT_STORAGE_KEY = "allternit.runtime-backend.snapshot";
+const SNAPSHOT_EVENT = "allternit:runtime-backend-changed";
 const SNAPSHOT_TTL_MS = 15_000;
 
 export interface ClientRuntimeBackendSnapshot extends RuntimeBackendResponse {

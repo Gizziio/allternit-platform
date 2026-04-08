@@ -355,7 +355,7 @@ export function AddSSHConnectionForm({
             </div>
             <div>
               <h2 style={{ fontSize: '16px', fontWeight: 600, color: TEXT.primary }}>Add SSH Connection</h2>
-              <p style={{ fontSize: '12px', color: TEXT.secondary }}>Connect to a remote machine to run A2R</p>
+              <p style={{ fontSize: '12px', color: TEXT.secondary }}>Connect to a remote machine to run Allternit</p>
             </div>
           </div>
           <button 
@@ -601,7 +601,7 @@ export function AddSSHConnectionForm({
                   <h4 style={{ fontSize: '13px', fontWeight: 500, color: TEXT.primary, marginBottom: '4px' }}>Generate SSH keys</h4>
                   <p style={{ fontSize: '12px', color: TEXT.secondary }}>If needed, run:</p>
                   <div style={{ marginTop: '8px', padding: '10px 12px', background: '#252525', borderRadius: '6px', fontFamily: 'monospace', fontSize: '11px', color: SAND[500] }}>
-                    ssh-keygen -t ed25519 -C "a2r@your-email.com"
+                    ssh-keygen -t ed25519 -C "allternit-email.com"
                   </div>
                 </div>
               </div>
@@ -619,7 +619,7 @@ export function AddSSHConnectionForm({
                 <Warning size={20} color={STATUS.warning} style={{ flexShrink: 0 }} />
                 <div>
                   <p style={{ fontSize: '13px', fontWeight: 500, color: STATUS.warning }}>Security tip</p>
-                  <p style={{ fontSize: '11px', color: TEXT.secondary, marginTop: '2px' }}>A2R stores keys encrypted and only uses them for SSH connections.</p>
+                  <p style={{ fontSize: '11px', color: TEXT.secondary, marginTop: '2px' }}>Allternit stores keys encrypted and only uses them for SSH connections.</p>
                 </div>
               </div>
             </div>

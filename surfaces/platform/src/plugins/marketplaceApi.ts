@@ -1,7 +1,7 @@
 /**
  * Marketplace API
  *
- * Fetches plugins from A2R API, curated marketplace manifests, and GitHub fallback.
+ * Fetches plugins from Allternit API, curated marketplace manifests, and GitHub fallback.
  */
 
 import type { MarketplacePlugin } from './capability.types';
@@ -91,12 +91,12 @@ export interface CuratedMarketplaceSource {
 const ALLTERNIT_MARKETPLACE_API = 'https://api.a2r.dev/v1/marketplace';
 const GITHUB_API = 'https://api.github.com';
 
-// Search queries for finding A2R plugins on GitHub
+// Search queries for finding Allternit plugins on GitHub
 const GITHUB_SEARCH_QUERIES = [
-  'topic:a2r-plugin',
-  'topic:a2r-skill',
-  'a2r-plugin in:name',
-  'a2r-skill in:name',
+  'topic:allternit-plugin',
+  'topic:allternit-skill',
+  'allternit-plugin in:name',
+  'allternit-skill in:name',
 ];
 
 const MARKETPLACE_API_TIMEOUT_MS = 3500;
@@ -116,12 +116,12 @@ const CLAUDE_MARKETPLACES_SKILLS_API = 'https://claudemarketplaces.com/api/skill
 const CLAUDE_PLUGIN_HUB_MARKETPLACES_API = 'https://www.claudepluginhub.com/api/marketplaces';
 
 const API_SOURCE_CONTEXT: CuratedMarketplaceSource = {
-  id: 'a2r-api',
-  label: 'A2R Marketplace',
-  owner: 'A2R',
+  id: 'allternit-api',
+  label: 'Allternit Marketplace',
+  owner: 'Allternit',
   trust: 'verified',
   manifestUrl: '',
-  description: 'A2R marketplace API source context.',
+  description: 'Allternit marketplace API source context.',
 };
 
 export const CURATED_MARKETPLACE_SOURCES: CuratedMarketplaceSource[] = [
@@ -570,7 +570,7 @@ function parseMarketplaceManifest(payload: unknown, source: CuratedMarketplaceSo
 }
 
 /**
- * Search GitHub for A2R plugins.
+ * Search GitHub for Allternit plugins.
  */
 export async function searchGitHubForPlugins(query: string = ''): Promise<MarketplacePlugin[]> {
   const plugins: MarketplacePlugin[] = [];
@@ -617,9 +617,9 @@ export async function searchGitHubForPlugins(query: string = ''): Promise<Market
         id: `github-${repo.full_name.replace('/', '-')}`,
         name: repo.full_name.split('/')[1]
           .replace(/-/g, ' ')
-          .replace(/a2r\s*/i, '')
+          .replace(/allternit\s*/i, '')
           .replace(/\b\w/g, (c) => c.toUpperCase()),
-        description: repo.description || `A2R plugin from ${repo.full_name}`,
+        description: repo.description || `Allternit plugin from ${repo.full_name}`,
         version: 'unknown',
         author: repo.full_name.split('/')[0],
         icon: 'puzzle',
@@ -829,14 +829,14 @@ function normalizeMarketplacePluginFromApi(value: unknown): MarketplacePlugin | 
     name,
     description: firstNonEmptyString([record.description, record.summary]) || '',
     version: firstNonEmptyString([record.version]) || '1.0.0',
-    author: authorToDisplayName(record.author, 'A2R Marketplace'),
+    author: authorToDisplayName(record.author, 'Allternit Marketplace'),
     icon: firstNonEmptyString([record.icon]) || 'puzzle',
     category: normalizeCategory(firstNonEmptyString([record.category, record.type])),
     installCount: toNumber(record.installCount) || toNumber(record.downloads) || 0,
     rating: toNumber(record.rating) || 0,
     installed: false,
     tags: collectStringList(record.tags),
-    sourceLabel: 'A2R Marketplace',
+    sourceLabel: 'Allternit Marketplace',
     sourceId: API_SOURCE_CONTEXT.id,
     sourceKind: 'api',
     sourceTrust: 'verified',

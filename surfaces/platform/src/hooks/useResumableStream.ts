@@ -61,7 +61,7 @@ export function useResumableStream(options: UseResumableStreamOptions) {
     const checkForActiveStream = async () => {
       try {
         // Check sessionStorage first for immediate recovery
-        const storedStreamId = sessionStorage.getItem(`a2r:active-stream:${chatId}`);
+        const storedStreamId = sessionStorage.getItem(`allternit:active-stream:${chatId}`);
         
         if (storedStreamId) {
           log.debug({ chatId, streamId: storedStreamId }, 'Found active stream in sessionStorage');
@@ -86,7 +86,7 @@ export function useResumableStream(options: UseResumableStreamOptions) {
             setRecoveredChunks(data.chunks);
             
             // Store in sessionStorage for recovery across refreshes
-            sessionStorage.setItem(`a2r:active-stream:${chatId}`, data.streamId);
+            sessionStorage.setItem(`allternit:active-stream:${chatId}`, data.streamId);
           }
         }
       } catch (error) {
@@ -127,7 +127,7 @@ export function useResumableStream(options: UseResumableStreamOptions) {
       setHasActiveStream(false); // Mark as recovered
       
       // Clear from sessionStorage
-      sessionStorage.removeItem(`a2r:active-stream:${chatId}`);
+      sessionStorage.removeItem(`allternit:active-stream:${chatId}`);
       
       onResume?.(data);
       return data;
@@ -146,7 +146,7 @@ export function useResumableStream(options: UseResumableStreamOptions) {
   const dismissActiveStream = useCallback(() => {
     setHasActiveStream(false);
     if (activeStreamId) {
-      sessionStorage.removeItem(`a2r:active-stream:${chatId}`);
+      sessionStorage.removeItem(`allternit:active-stream:${chatId}`);
     }
   }, [activeStreamId, chatId]);
 
@@ -154,7 +154,7 @@ export function useResumableStream(options: UseResumableStreamOptions) {
    * Store active stream ID for potential recovery
    */
   const storeActiveStream = useCallback((streamId: string) => {
-    sessionStorage.setItem(`a2r:active-stream:${chatId}`, streamId);
+    sessionStorage.setItem(`allternit:active-stream:${chatId}`, streamId);
     setActiveStreamId(streamId);
     log.debug({ chatId, streamId }, 'Active stream stored');
   }, [chatId]);

@@ -1,5 +1,5 @@
 /**
- * A2R Network Adapter
+ * Allternit Network Adapter
  * 
  * Single source of truth for all API communications.
  * All UI networking goes through ALLTERNIT_BASE_URL.
@@ -12,7 +12,7 @@
 // =============================================================================
 
 /**
- * Resolve the A2R base URL from environment or window injection
+ * Resolve the Allternit base URL from environment or window injection
  * Priority: window.__ALLTERNIT_BASE_URL__ > VITE_ALLTERNIT_BASE_URL > default
  */
 const resolveBaseURL = (): string => {
@@ -47,7 +47,7 @@ export const ALLTERNIT_BASE_URL = resolveBaseURL();
  */
 export const API_VERSION = '/v1';
 
-console.log(`[A2R Network] Using base URL: ${ALLTERNIT_BASE_URL}`);
+console.log(`[Allternit Network] Using base URL: ${ALLTERNIT_BASE_URL}`);
 
 // =============================================================================
 // Types
@@ -208,7 +208,7 @@ const getAuthToken = (): string | null => {
 };
 
 /**
- * Make an HTTP request through the A2R Gateway
+ * Make an HTTP request through the Allternit Gateway
  */
 export async function allternitFetch<T = unknown>(
   path: string,
@@ -342,7 +342,7 @@ export class AllternitHttpError extends Error {
 // =============================================================================
 
 /**
- * Establish an SSE connection to the A2R Gateway
+ * Establish an SSE connection to the Allternit Gateway
  */
 export function createSSEConnection(): SSEConnection {
   const sessionId = `sse-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -367,7 +367,7 @@ export function createSSEConnection(): SSEConnection {
       eventSource.onopen = () => {
         state = 'open';
         reconnectAttempts = 0;
-        console.log('[A2R SSE] Connection established');
+        console.log('[Allternit SSE] Connection established');
       };
       
       eventSource.onmessage = (event) => {
@@ -387,21 +387,21 @@ export function createSSEConnection(): SSEConnection {
       };
       
       eventSource.onerror = (error) => {
-        console.warn('[A2R SSE] Connection error:', error);
+        console.warn('[Allternit SSE] Connection error:', error);
         state = 'error';
         
         // Try to reconnect
         if (reconnectAttempts < maxReconnectAttempts) {
           reconnectAttempts++;
           const delay = baseReconnectDelay * Math.pow(2, reconnectAttempts - 1);
-          console.log(`[A2R SSE] Reconnecting in ${delay}ms (attempt ${reconnectAttempts}/${maxReconnectAttempts})`);
+          console.log(`[Allternit SSE] Reconnecting in ${delay}ms (attempt ${reconnectAttempts}/${maxReconnectAttempts})`);
           
           reconnectTimeout = setTimeout(() => {
             eventSource?.close();
             connect();
           }, delay);
         } else {
-          console.error('[A2R SSE] Max reconnection attempts reached');
+          console.error('[Allternit SSE] Max reconnection attempts reached');
           state = 'closed';
         }
       };
@@ -475,7 +475,7 @@ export function createSSEConnection(): SSEConnection {
       });
       
     } catch (error) {
-      console.error('[A2R SSE] Failed to create connection:', error);
+      console.error('[Allternit SSE] Failed to create connection:', error);
       state = 'error';
     }
   };

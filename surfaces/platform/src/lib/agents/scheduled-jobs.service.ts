@@ -80,8 +80,8 @@ interface GatewayJob {
 // ============================================================================
 
 const AGENT_CONTROL_API = "/api/agent-control";
-const CRON_REST_API_BASE = "/a2r-api/cron";
-const LOCAL_JOBS_STORAGE_KEY = "a2r-scheduled-jobs";
+const CRON_REST_API_BASE = "/allternit-api/cron";
+const LOCAL_JOBS_STORAGE_KEY = "allternit-scheduled-jobs";
 
 /**
  * Call the agent-control API with proper error handling

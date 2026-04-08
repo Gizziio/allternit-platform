@@ -1,5 +1,5 @@
 /**
- * SSH Connections API - Install A2R Backend
+ * SSH Connections API - Install Allternit Backend
  *
  * POST /api/v1/ssh-connections/:id/install-agent
  *
@@ -87,8 +87,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
       return NextResponse.json({
         success: true,
-        message: 'A2R backend is already installed on this server',
-        installation_log: ['A2R backend already installed, skipping reinstallation.'],
+        message: 'Allternit backend is already installed on this server',
+        installation_log: ['Allternit backend already installed, skipping reinstallation.'],
         version: connection.allternitVersion ?? backendInstaller.getBackendVersion(),
         api_url: existingBackendUrl,
         backend_target_id: backendTarget.id,
@@ -205,8 +205,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({
       success: true,
       message: externalHealth.reachable
-        ? 'A2R backend installed and started successfully'
-        : 'A2R backend installed, but it is not reachable from this shell yet',
+        ? 'Allternit backend installed and started successfully'
+        : 'Allternit backend installed, but it is not reachable from this shell yet',
       installation_log: log,
       version: updated.allternitVersion,
       api_url: result.apiUrl ?? null,

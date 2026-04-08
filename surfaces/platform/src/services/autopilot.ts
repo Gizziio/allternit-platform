@@ -53,7 +53,7 @@ export interface JobProgress {
 // Storage (IndexedDB wrapper)
 // ============================================================================
 
-const DB_NAME = 'a2r-autopilot';
+const DB_NAME = 'allternit-autopilot';
 const DB_VERSION = 1;
 const STORE_NAME = 'jobs';
 

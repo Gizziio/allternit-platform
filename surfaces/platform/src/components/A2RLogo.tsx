@@ -12,9 +12,9 @@ interface AllternitLogoProps {
 }
 
 /**
- * A2R Brand Logo Component
+ * Allternit Brand Logo Component
  * 
- * Represents the A2R (Autonomous Agent Runtime) brand identity
+ * Represents the Allternit (Autonomous Agent Runtime) brand identity
  * using the sand/nude color palette from the design system.
  * Optimized for dark theme backgrounds.
  */
@@ -27,7 +27,7 @@ export function AllternitLogo({ size = 'md', variant = 'horizontal', showText = 
 
   const config = sizeConfig[size];
 
-  // A2R Brand Colors from design system (dark theme optimized)
+  // Allternit Brand Colors from design system (dark theme optimized)
   const brandColors = {
     primary: '#D4B08C',    // nude-400 (brighter for dark theme)
     secondary: '#B08D6E',  // sand-500
@@ -78,7 +78,7 @@ export function AllternitLogo({ size = 'md', variant = 'horizontal', showText = 
         className={`${config.text} font-bold tracking-tight`}
         style={{ color: brandColors.light }}
       >
-        A2R
+        Allternit
       </span>
       {size !== 'sm' && (
         <span 

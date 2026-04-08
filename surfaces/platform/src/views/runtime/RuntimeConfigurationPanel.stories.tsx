@@ -38,7 +38,7 @@ function SeededRuntimeConfigurationPanel() {
     versioning: {
       auto_commit: false,
       commit_message_template: "[a2r] {description}",
-      branch_prefix: "a2r-session-",
+      branch_prefix: "allternit-session-",
     },
   });
 

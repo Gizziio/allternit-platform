@@ -1,7 +1,7 @@
 /**
  * useKeyboard Hook
  * 
- * Keyboard shortcut handling for the A2R platform.
+ * Keyboard shortcut handling for the Allternit platform.
  */
 
 import { useEffect, useCallback } from 'react';

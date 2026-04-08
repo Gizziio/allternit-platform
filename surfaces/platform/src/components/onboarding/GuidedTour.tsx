@@ -30,19 +30,19 @@ const tourSteps: TourStep[] = [
   {
     target: '[data-tour="plugins"]',
     title: 'Plugin Widget',
-    description: 'Access the plugin marketplace to extend A2R with custom skills, integrations, and agent capabilities. Install community plugins or build your own.',
+    description: 'Access the plugin marketplace to extend Allternit with custom skills, integrations, and agent capabilities. Install community plugins or build your own.',
     position: 'right',
   },
   {
     target: '[data-tour="model-selector"]',
     title: 'Model Selector & Auto-Discovery',
-    description: 'Switch between AI models seamlessly. A2R auto-discovers CLI subprocesses running on your computer and can interface with them directly.',
+    description: 'Switch between AI models seamlessly. Allternit auto-discovers CLI subprocesses running on your computer and can interface with them directly.',
     position: 'bottom',
   },
   {
     target: '[data-tour="agent-toggle"]',
     title: 'Agent Mode',
-    description: 'When Agent Mode is ON, A2R can take autonomous actions using tools. The A2R OS toolbar shows available capabilities: Auto-fix, file browsing, context management, and more.',
+    description: 'When Agent Mode is ON, Allternit can take autonomous actions using tools. The Allternit OS toolbar shows available capabilities: Auto-fix, file browsing, context management, and more.',
     position: 'top',
   },
   {

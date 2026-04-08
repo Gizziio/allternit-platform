@@ -1,7 +1,7 @@
 /**
  * DocumentCard.tsx
  * 
- * Compact A2R Document card for chat thread.
+ * Compact Allternit Document card for chat thread.
  * Shows preview with "Open Full" option to expand to sidecar.
  */
 
@@ -46,9 +46,9 @@ interface DocumentCardProps {
 }
 
 /**
- * A2R Document Card
+ * Allternit Document Card
  * 
- * Inline preview of an A2R Document in the chat thread.
+ * Inline preview of an Allternit Document in the chat thread.
  * Shows hero section, excerpt, and citations.
  * "Open Full" expands to full editor in sidecar.
  */
@@ -93,7 +93,7 @@ export function DocumentCard({
           </div>
           <div>
             <h3 className="text-sm font-semibold text-[#ECECEC]">
-              A2R Document
+              Allternit Document
             </h3>
             <p className="text-xs text-[#666]">
               {metadata?.wordCount || 0} words • {citations.length} sources

@@ -229,7 +229,7 @@ export function BootSequence({ onComplete }: BootSequenceProps) {
         style={versionBadgeStyle}
       >
         <span style={{ color: `${SAND[500]}66`, fontSize: '11px', letterSpacing: '0.1em' }}>
-          A2R PLATFORM v1.0.0
+          Allternit PLATFORM v1.0.0
         </span>
       </motion.div>
     </div>
@@ -835,7 +835,7 @@ function MatrixLogoBoot({ showContent }: { showContent: boolean }) {
           animate={{ opacity: [0.7, 1, 0.7] }}
           transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
         >
-          A2R Platform
+          Allternit Platform
         </motion.h1>
         <p style={{ fontSize: '13px', color: `${SAND[500]}99`, letterSpacing: '0.08em', margin: '8px 0 0' }}>
           Initializing system core...

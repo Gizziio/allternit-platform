@@ -355,11 +355,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         }
       }
     };
-    window.addEventListener('a2r:navigate-settings' as any, handleNavigateSettings as any);
-    window.addEventListener('a2r:open-settings' as any, handleNavigateSettings as any);
+    window.addEventListener('allternit:navigate-settings' as any, handleNavigateSettings as any);
+    window.addEventListener('allternit:open-settings' as any, handleNavigateSettings as any);
     return () => {
-      window.removeEventListener('a2r:navigate-settings' as any, handleNavigateSettings as any);
-      window.removeEventListener('a2r:open-settings' as any, handleNavigateSettings as any);
+      window.removeEventListener('allternit:navigate-settings' as any, handleNavigateSettings as any);
+      window.removeEventListener('allternit:open-settings' as any, handleNavigateSettings as any);
     };
   }, []);
 
@@ -1178,7 +1178,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </select>
       </div>
       <ToggleItem label="Show system messages" value={showSystemMessages} onChange={setShowSystemMessages} description="Display internal system operations" />
-      <ToggleItem label="Enable telemetry" value={enableTelemetry} onChange={setEnableTelemetry} description="Help improve A2R by sharing usage data" />
+      <ToggleItem label="Enable telemetry" value={enableTelemetry} onChange={setEnableTelemetry} description="Help improve Allternit by sharing usage data" />
       <ToggleItem label="Auto-save" value={autoSave} onChange={setAutoSave} description="Automatically save your work" />
     </div>
   );
@@ -1257,7 +1257,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           {Array.from({ length: 16 }).map((_, i) => <div key={i} style={{ backgroundColor: '#d4b08c', borderRadius: '4px', opacity: i % 3 === 0 ? 0.3 : i % 2 === 0 ? 0.6 : 1 }} />)}
         </div>
       </div>
-      <h1 style={{ fontSize: '32px', margin: '0 0 8px 0', color: '#ffffff' }}>A2R & <span style={{ color: '#d4b08c' }}>Coffee</span></h1>
+      <h1 style={{ fontSize: '32px', margin: '0 0 8px 0', color: '#ffffff' }}>Allternit & <span style={{ color: '#d4b08c' }}>Coffee</span></h1>
       <p style={{ fontSize: '14px', color: '#888' }}>v0.9.1-beta</p>
     </div>
   );
@@ -1684,14 +1684,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   return (
     <div style={{ display: 'flex', justifyContent: 'center', height: '100vh', backgroundColor: 'transparent', overflow: 'hidden', position: 'relative', paddingTop: '80px', color: 'var(--text-primary)' }}>
-      <button onClick={() => window.dispatchEvent(new CustomEvent('a2r:close-settings'))} style={{ position: 'absolute', top: 24, right: 24, width: 44, height: 44, borderRadius: 12, background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-tertiary)' }}>
+      <button onClick={() => window.dispatchEvent(new CustomEvent('allternit:close-settings'))} style={{ position: 'absolute', top: 24, right: 24, width: 44, height: 44, borderRadius: 12, background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-tertiary)' }}>
         <X size={20} />
       </button>
 
       <div style={{ display: 'flex', width: '100%', maxWidth: '1200px', minWidth: '600px', height: 'calc(100vh - 80px)', margin: '0 auto' }}>
         <div style={{ width: '220px', minWidth: '180px', height: 'calc(100vh - 80px)', backgroundColor: 'transparent', padding: '16px 16px 32px', overflowY: 'auto', flexShrink: 0 }}>
           <div style={{ padding: '0 12px', marginBottom: '24px' }}>
-            <button onClick={() => window.dispatchEvent(new CustomEvent('a2r:close-settings'))} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'transparent', border: 'none', color: 'var(--text-secondary)', fontSize: '16px', fontWeight: '500', cursor: 'pointer' }}>
+            <button onClick={() => window.dispatchEvent(new CustomEvent('allternit:close-settings'))} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'transparent', border: 'none', color: 'var(--text-secondary)', fontSize: '16px', fontWeight: '500', cursor: 'pointer' }}>
               <span style={{ fontSize: '18px' }}>←</span> Settings
             </button>
           </div>

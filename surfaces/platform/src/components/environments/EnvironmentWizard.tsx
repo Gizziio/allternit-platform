@@ -1,14 +1,14 @@
 /**
  * Environment Setup Wizard
  * 
- * A2R-native wizard for creating and provisioning development environments.
+ * Allternit-native wizard for creating and provisioning development environments.
  * Features:
  * - 4-step guided creation (Template Selection, Configuration, Target Selection, Review & Deploy)
  * - Template library with search and filtering
  * - Dynamic form generation based on template variables
  * - Target selection (Local Docker, VPS, Cloud)
  * - Real-time deployment logs
- * - Dark theme with A2R styling
+ * - Dark theme with Allternit styling
  * 
  * @module EnvironmentWizard
  */
@@ -114,9 +114,9 @@ interface TemplateVariable {
 const defaultTemplates: EnvironmentTemplate[] = [
   {
     id: 'allternit-platform-dev',
-    name: 'A2R Platform Dev',
+    name: 'Allternit Platform Dev',
     type: 'devcontainer',
-    description: 'Complete A2R platform development environment with all services pre-configured',
+    description: 'Complete Allternit platform development environment with all services pre-configured',
     icon: 'sparkles',
     features: ['Node.js 20', 'Rust', 'Python', 'Docker', 'PostgreSQL', 'Redis'],
     setupTime: '3 minutes',
@@ -137,7 +137,7 @@ const defaultTemplates: EnvironmentTemplate[] = [
   },
   {
     id: 'a2r-agent-workspace',
-    name: 'A2R Agent Workspace',
+    name: 'Allternit Agent Workspace',
     type: 'devcontainer',
     description: 'Lightweight environment for agent development and testing',
     icon: 'bot',
@@ -252,7 +252,7 @@ const defaultTemplates: EnvironmentTemplate[] = [
 // Template variables definition (would normally come from template.json)
 const templateVariables: Record<string, TemplateVariable[]> = {
   'allternit-platform-dev': [
-    { name: 'PROJECT_NAME', type: 'string', label: 'Project Name', default: 'a2r-project', required: true },
+    { name: 'PROJECT_NAME', type: 'string', label: 'Project Name', default: 'allternit-project', required: true },
     { name: 'ENABLE_GPU', type: 'boolean', label: 'Enable GPU Support', default: false },
     { name: 'DATABASE', type: 'select', label: 'Database', default: 'postgres', options: [
       { label: 'PostgreSQL', value: 'postgres' },
@@ -309,7 +309,7 @@ const templateVariables: Record<string, TemplateVariable[]> = {
   ],
 };
 
-// A2R official template IDs
+// Allternit official template IDs
 const allternitOfficialIds = ['allternit-platform-dev', 'a2r-agent-workspace'];
 
 // Cloud providers
@@ -837,7 +837,7 @@ function TemplateCard({
               <div className="flex items-center gap-2 mt-1">
                 {isOfficial && (
                   <Badge variant="default" className="text-[10px] bg-primary/20 text-primary hover:bg-primary/30">
-                    A2R Official
+                    Allternit Official
                   </Badge>
                 )}
                 <span className="text-xs text-muted-foreground flex items-center gap-1">

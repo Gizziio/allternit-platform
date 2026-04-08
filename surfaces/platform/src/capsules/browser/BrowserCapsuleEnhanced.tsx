@@ -203,7 +203,7 @@ interface ExtensionsStore {
 }
 
 const DEFAULT_EXTENSIONS: BrowserExtension[] = [
-  { id: 'a2r-agent', name: 'A2R Agent', description: 'AI-powered browsing automation', icon: '🤖', enabled: true, version: '1.0.0', installStatus: 'installed' },
+  { id: 'allternit-agent', name: 'Allternit Agent', description: 'AI-powered browsing automation', icon: '🤖', enabled: true, version: '1.0.0', installStatus: 'installed' },
 ];
 
 const useExtensionsStore = create<ExtensionsStore>()(
@@ -245,7 +245,7 @@ const useExtensionsStore = create<ExtensionsStore>()(
           ),
         })),
     }),
-    { name: 'a2r.browser.extensions' }
+    { name: 'allternit.browser.extensions' }
   )
 );
 
@@ -569,7 +569,7 @@ function AgentPopup({ open, onClose }: { open: boolean; onClose: () => void }) {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#ccc', fontWeight: 600 }}>
           <ScaledMatrixLogo state={agentActive ? 'thinking' : 'idle'} displaySize={14} />
-          <span>A2R Agent</span>
+          <span>Allternit Agent</span>
         </div>
         <button
           onClick={() => setMode(agentActive ? 'Human' : 'Assist')}
@@ -717,13 +717,13 @@ function ExtensionManagerPopup({ open, onClose, onNavigate }: { open: boolean; o
   // Settings panel — which extension's settings are open
   const [settingsExtId, setSettingsExtId] = useState<string | null>(null);
 
-  // Wire A2R Agent extension toggle to agent store + chat pane
+  // Wire Allternit Agent extension toggle to agent store + chat pane
   const { isOpen: sidecarOpen, toggle: toggleSidecar, setActivePanel } = useSidecarStore();
   const handleToggle = (extId: string) => {
     const ext = extensions.find(e => e.id === extId);
     if (!ext) return;
     toggleExtension(extId);
-    if (extId === 'a2r-agent') {
+    if (extId === 'allternit-agent') {
       if (ext.enabled) {
         setAgentMode('Human');
         if (sidecarOpen) toggleSidecar();
@@ -856,7 +856,7 @@ function ExtensionManagerPopup({ open, onClose, onNavigate }: { open: boolean; o
                 display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px',
                 borderBottom: '1px solid rgba(255,255,255,0.04)',
               }}>
-                {ext.id === 'a2r-agent' ? (
+                {ext.id === 'allternit-agent' ? (
                   <ScaledMatrixLogo state={ext.enabled ? 'listening' : 'idle'} displaySize={20} />
                 ) : (
                   <ExtensionStoreIcon storeUrl={ext.storeUrl} fallbackIcon={ext.icon} size={20} />
@@ -935,7 +935,7 @@ function ExtensionManagerPopup({ open, onClose, onNavigate }: { open: boolean; o
                   </button>
                 )}
                 {/* Remove */}
-                {ext.id !== 'a2r-agent' && (
+                {ext.id !== 'allternit-agent' && (
                   <button
                     onClick={() => removeExtension(ext.id)}
                     style={{
@@ -1112,7 +1112,7 @@ function ExtensionManagerPopup({ open, onClose, onNavigate }: { open: boolean; o
               >
                 <ArrowLeft style={{ width: 13, height: 13 }} />
               </button>
-              {settingsExt.id === 'a2r-agent' ? (
+              {settingsExt.id === 'allternit-agent' ? (
                 <ScaledMatrixLogo state="idle" displaySize={16} />
               ) : (
                 <ExtensionStoreIcon storeUrl={settingsExt.storeUrl} fallbackIcon={settingsExt.icon} size={16} />
@@ -1392,11 +1392,11 @@ export function BrowserCapsuleEnhanced({
 
   // Listen for proxy navigation messages posted by the injected nav-intercept
   // script inside the iframe.  When the page navigates (link click, JS redirect,
-  // history.pushState, etc.) the script posts { type: 'a2r-navigate', url } to
+  // history.pushState, etc.) the script posts { type: 'allternit-navigate', url } to
   // the parent window so we can update the tab URL and keep the URL bar in sync.
   useEffect(() => {
     const handler = (event: MessageEvent) => {
-      if (event.data?.type !== 'a2r-navigate') return;
+      if (event.data?.type !== 'allternit-navigate') return;
       const rawUrl: string = event.data.url;
       if (!rawUrl) return;
 
@@ -1882,12 +1882,12 @@ export function BrowserCapsuleEnhanced({
 
         {/* Dynamic enabled extension icons — only shown when toggled on */}
         {enabledExtensions.map((ext) =>
-          ext.id === 'a2r-agent' ? (
+          ext.id === 'allternit-agent' ? (
             <div key={ext.id} style={{ position: 'relative' }}
               onContextMenu={(e) => { e.preventDefault(); setAgentPopupOpen(!agentPopupOpen); }}
             >
               <NavBtn
-                title={agentActive ? "A2R Agent (Active) — right-click for controls" : "A2R Agent — right-click for controls"}
+                title={agentActive ? "Allternit Agent (Active) — right-click for controls" : "Allternit Agent — right-click for controls"}
                 onClick={() => {
                   // Click → toggle chat pane
                   toggleChatPane();
@@ -1973,7 +1973,7 @@ export function BrowserCapsuleEnhanced({
               {isElectronShell() ? (
                 /* @ts-ignore */
                 <webview
-                  data-testid="a2r-webview-content"
+                  data-testid="allternit-webview-content"
                   src={(activeTab as WebTab).url}
                   style={{ width: '100%', height: '100%', border: 'none', background: 'white' }}
                   allowpopups="true"
@@ -1981,7 +1981,7 @@ export function BrowserCapsuleEnhanced({
               ) : (
                 <iframe
                   ref={iframeRef}
-                  data-testid="a2r-iframe-content"
+                  data-testid="allternit-iframe-content"
                   src={getWebProxyUrl((activeTab as WebTab).url)}
                   sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-modals allow-pointer-lock allow-downloads"
                   allow="accelerometer; autoplay; clipboard-read; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"

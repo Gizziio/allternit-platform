@@ -296,7 +296,7 @@ export function installBackend(
       });
 
       emit('detecting_os', 34, `Connected to ${connected.os || 'server'} (${connected.architecture || 'unknown'})`);
-      emit('downloading', 54, connected.allternitInstalled ? 'Verifying existing A2R backend...' : 'Installing the A2R backend...');
+      emit('downloading', 54, connected.allternitInstalled ? 'Verifying existing Allternit backend...' : 'Installing the Allternit backend...');
 
       const installResult = await sshApi.installAgent(connection.id);
       if (!installResult.success) {

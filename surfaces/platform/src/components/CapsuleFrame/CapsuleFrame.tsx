@@ -94,7 +94,7 @@ export const CapsuleFrame: React.FC<CapsuleFrameProps> = ({
 <body>
   <div id="root">${html}</div>
   <script>
-    // A2R Capsule Runtime API
+    // Allternit Capsule Runtime API
     (function() {
       'use strict';
       
@@ -138,7 +138,7 @@ export const CapsuleFrame: React.FC<CapsuleFrameProps> = ({
       }
       
       // Public API exposed to capsule
-      window.a2r = {
+      window.allternit = {
         version: '1.0.0',
         capsuleId: capsuleId,
         
@@ -219,7 +219,7 @@ export const CapsuleFrame: React.FC<CapsuleFrameProps> = ({
       // Handle messages from parent
       window.addEventListener('message', function(event) {
         if (!validateOrigin(event.origin)) {
-          console.warn('[A2R Capsule] Rejected message from invalid origin:', event.origin);
+          console.warn('[Allternit Capsule] Rejected message from invalid origin:', event.origin);
           return;
         }
         
@@ -236,7 +236,7 @@ export const CapsuleFrame: React.FC<CapsuleFrameProps> = ({
         // Handle tool data push
         if (data.type === 'tool:data') {
           // Dispatch custom event for capsule to listen
-          const customEvent = new CustomEvent('a2r:data', { 
+          const customEvent = new CustomEvent('allternit:data', { 
             detail: data.payload 
           });
           window.dispatchEvent(customEvent);
@@ -245,7 +245,7 @@ export const CapsuleFrame: React.FC<CapsuleFrameProps> = ({
         // Handle prop updates
         if (data.type === 'props:update') {
           Object.assign(props, data.payload);
-          const customEvent = new CustomEvent('a2r:props', { 
+          const customEvent = new CustomEvent('allternit:props', { 
             detail: props 
           });
           window.dispatchEvent(customEvent);

@@ -54,10 +54,10 @@ export type ViewType =
   // Operator Browser Control (P3.10/P3.12)
   | "operator"
   // P3 UI Views
-  | "a2r-ix"
+  | "allternit-ix"
   | "form-surfaces"
   | "canvas"
-  | "a2r-canvas"  // A2r-Canvas viewer (Sparkpages equivalent)
+  | "allternit-canvas"  // A2r-Canvas viewer (Sparkpages equivalent)
   | "hooks"
   // P4 UI Views
   | "evolution"
@@ -65,7 +65,7 @@ export type ViewType =
   | "memory-kernel"
   | "acf"
   // A2rOS View
-  | "a2r-os"
+  | "allternit-os"
   // Other views
   | "settings"
   | "terminal"

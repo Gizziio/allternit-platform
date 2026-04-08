@@ -9,7 +9,7 @@
  * - Tool call visualization
  * - File attachments
  * 
- * Uses A2R chat mode accent colors (warm terracotta)
+ * Uses Allternit chat mode accent colors (warm terracotta)
  * 
  * @module ChatModeAgentSession
  */
@@ -119,7 +119,7 @@ export function ChatModeAgentSession({
     <AgentSessionLayout
       mode={mode}
       title="Agent Chat Session"
-      agentName="A2R Assistant"
+      agentName="Allternit Assistant"
       status={isStreaming ? 'streaming' : 'idle'}
       onClose={onClose}
       computerView={<ChatCanvasPanel mode={mode} canvases={canvases} />}

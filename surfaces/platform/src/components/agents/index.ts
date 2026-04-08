@@ -1,8 +1,8 @@
 /**
  * Agent Components Index
  * 
- * Comprehensive suite of A2R-native agent UI components.
- * All components follow A2R design system with:
+ * Comprehensive suite of Allternit-native agent UI components.
+ * All components follow Allternit design system with:
  * - Sand/nude obsidian color palette
  * - Glass morphism effects
  * - Mode-aware theming (chat/cowork/code/browser)

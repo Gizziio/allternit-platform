@@ -188,7 +188,7 @@ export function HeartbeatScheduler({ agentId, onClose, theme = STUDIO_THEME }: H
     setIsLoading(true);
     setError(null);
     try {
-      const content = await agentWorkspaceService.readFile(agentId, '.a2r/governance/HEARTBEAT.md');
+      const content = await agentWorkspaceService.readFile(agentId, '.allternit/governance/HEARTBEAT.md');
       const parsed = parseHeartbeatContent(content);
       setTasks(parsed);
     } catch (e) {
@@ -221,7 +221,7 @@ export function HeartbeatScheduler({ agentId, onClose, theme = STUDIO_THEME }: H
     setError(null);
     try {
       const content = generateHeartbeatContent(tasks);
-      await agentWorkspaceService.writeFile(agentId, '.a2r/governance/HEARTBEAT.md', content);
+      await agentWorkspaceService.writeFile(agentId, '.allternit/governance/HEARTBEAT.md', content);
 
       // Sync with scheduled jobs
       for (const task of tasks) {
@@ -667,7 +667,7 @@ export function HeartbeatScheduler({ agentId, onClose, theme = STUDIO_THEME }: H
       >
         <GearSix style={{ width: 16, height: 16, color: theme.accent }} />
         <p style={{ fontSize: '12px', color: theme.textSecondary, margin: 0 }}>
-          Heartbeat tasks are stored in <code style={{ background: theme.bg, padding: '2px 6px', borderRadius: '4px' }}>.a2r/governance/HEARTBEAT.md</code> and synced with the Cron scheduler.
+          Heartbeat tasks are stored in <code style={{ background: theme.bg, padding: '2px 6px', borderRadius: '4px' }}>.allternit/governance/HEARTBEAT.md</code> and synced with the Cron scheduler.
         </p>
       </div>
     </div>

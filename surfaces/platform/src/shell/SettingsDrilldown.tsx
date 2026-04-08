@@ -164,7 +164,7 @@ export function SettingsDrilldown({ children }: { children?: React.ReactNode }) 
   const handleOpenSettings = (section?: string) => {
     setOpen(false);
     setActiveSubmenuId(null);
-    window.dispatchEvent(new CustomEvent('a2r:open-settings', { 
+    window.dispatchEvent(new CustomEvent('allternit:open-settings', { 
       detail: { section: section || 'general' } 
     }));
   };
@@ -197,7 +197,7 @@ export function SettingsDrilldown({ children }: { children?: React.ReactNode }) 
 
   const learnItems: MenuItem[] = [
     { id: 'api', label: 'API Console', onClick: () => setActiveSubmenuId(null) },
-    { id: 'about', label: 'About A2R', onClick: () => { setActiveSubmenuId(null); handleOpenSettings('about'); } },
+    { id: 'about', label: 'About Allternit', onClick: () => { setActiveSubmenuId(null); handleOpenSettings('about'); } },
     { id: 'tutorials', label: 'Tutorials', onClick: () => setActiveSubmenuId(null) },
     { id: 'courses', label: 'Courses', onClick: () => setActiveSubmenuId(null) },
     { id: 'usage', label: 'Usage Policy', onClick: () => setActiveSubmenuId(null) },
@@ -225,10 +225,10 @@ export function SettingsDrilldown({ children }: { children?: React.ReactNode }) 
         label: 'Agentation', 
         icon: <Puzzle size={18} weight="regular" />,
         onClick: () => {
-          const enabled = localStorage.getItem('a2r-agentation-enabled') === 'true';
-          localStorage.setItem('a2r-agentation-enabled', enabled ? 'false' : 'true');
+          const enabled = localStorage.getItem('allternit-agentation-enabled') === 'true';
+          localStorage.setItem('allternit-agentation-enabled', enabled ? 'false' : 'true');
           window.dispatchEvent(new StorageEvent('storage', {
-            key: 'a2r-agentation-enabled',
+            key: 'allternit-agentation-enabled',
             newValue: enabled ? 'false' : 'true'
           }));
           location.reload();
@@ -263,7 +263,7 @@ export function SettingsDrilldown({ children }: { children?: React.ReactNode }) 
     },
     { 
       id: 'gift', 
-      label: 'Gift A2R', 
+      label: 'Gift Allternit', 
       icon: <Gift size={18} weight="regular" />,
       onClick: () => {}
     },

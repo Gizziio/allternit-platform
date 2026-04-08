@@ -79,7 +79,7 @@ function getWorkspacePath(agentId: string): string {
 async function workspaceExists(agentId: string): Promise<boolean> {
   try {
     const path = getWorkspacePath(agentId);
-    await filesApi.readFile({ path: `${path}/.a2r/manifest.json` });
+    await filesApi.readFile({ path: `${path}/.allternit/manifest.json` });
     return true;
   } catch {
     return false;
@@ -106,7 +106,7 @@ async function loadWorkspace(agentId: string): Promise<AgentWorkspace> {
   // Try to load manifest
   let manifest: any = {};
   try {
-    const response = await filesApi.readFile({ path: `${path}/.a2r/manifest.json` });
+    const response = await filesApi.readFile({ path: `${path}/.allternit/manifest.json` });
     manifest = JSON.parse(response.content);
   } catch {
     // No manifest, create minimal workspace
@@ -157,7 +157,7 @@ async function loadWorkspace(agentId: string): Promise<AgentWorkspace> {
  */
 async function createWorkspace(
   input: CreateAgentInput,
-  templateId: string = 'a2r-standard',
+  templateId: string = 'allternit-standard',
   userContext?: { userName?: string; userGoals?: string; userId: string },
   layerConfig?: AgentWorkspaceLayers
 ): Promise<AgentWorkspace> {
@@ -194,19 +194,19 @@ async function createWorkspace(
     if (!filePath.includes('/')) return true;
     
     // Check which layer this file belongs to
-    if (filePath.startsWith('.a2r/brain/') || filePath.startsWith('.a2r/memory/')) {
+    if (filePath.startsWith('.allternit/brain/') || filePath.startsWith('.allternit/memory/')) {
       return finalLayers.cognitive;
     }
-    if (filePath.startsWith('.a2r/identity/')) {
+    if (filePath.startsWith('.allternit/identity/')) {
       return finalLayers.identity;
     }
-    if (filePath.startsWith('.a2r/governance/')) {
+    if (filePath.startsWith('.allternit/governance/')) {
       return finalLayers.governance;
     }
-    if (filePath.startsWith('.a2r/skills/')) {
+    if (filePath.startsWith('.allternit/skills/')) {
       return finalLayers.skills;
     }
-    if (filePath.startsWith('.a2r/business/')) {
+    if (filePath.startsWith('.allternit/business/')) {
       return finalLayers.business;
     }
     return true;
@@ -258,7 +258,7 @@ async function createWorkspace(
   };
 
   await filesApi.writeFile({
-    path: `${workspacePath}/.a2r/manifest.json`,
+    path: `${workspacePath}/.allternit/manifest.json`,
     content: JSON.stringify(manifest, null, 2)
   });
 
@@ -301,7 +301,7 @@ function generateFromInlineTemplate(
       id: '{{AGENT_ID}}',
       agentId: '{{AGENT_ID}}',
       agentName: variables.agent_name,
-      template: 'a2r-standard',
+      template: 'allternit-standard',
       version: '1.0.0',
       createdAt: Date.now(),
       lastModified: Date.now(),
@@ -365,7 +365,7 @@ ${variables.agent_description || 'Ready to assist with tasks'}
 {{agent_description || 'To assist the user effectively'}}
 
 ## Origin Story
-Created on {{DATE}} to serve the A2R platform.
+Created on {{DATE}} to serve the Allternit platform.
 
 ## Core Values
 - Helpfulness
@@ -385,8 +385,8 @@ Created on {{DATE}} to serve the A2R platform.
 ## Self-Awareness
 I am {{agent_name}}, an AI assistant. I aim to be helpful while being honest about my nature.
 
-## A2R Alignment
-This agent follows A2R Platform principles:
+## Allternit Alignment
+This agent follows Allternit Platform principles:
 - Agent-first architecture
 - Transparent operations
 - User-centric design`,
@@ -452,7 +452,7 @@ async function updateWorkspace(
 
   // Update manifest if layers changed
   if (updates.layers) {
-    const manifestPath = `${path}/.a2r/manifest.json`;
+    const manifestPath = `${path}/.allternit/manifest.json`;
     const manifest = {
       ...workspace.manifest,
       layers: { ...workspace.layers, ...updates.layers },
@@ -505,7 +505,7 @@ async function deleteWorkspace(agentId: string): Promise<void> {
 }
 
 /**
- * Export workspace as .a2r package (ZIP)
+ * Export workspace as .allternit package (ZIP)
  */
 async function exportWorkspace(
   agentId: string,
@@ -562,7 +562,7 @@ async function exportWorkspace(
 }
 
 /**
- * Import workspace from .a2r package
+ * Import workspace from .allternit package
  */
 async function importWorkspace(
   file: File,
@@ -573,7 +573,7 @@ async function importWorkspace(
   // Read manifest
   const manifestFile = zip.file('manifest.json');
   if (!manifestFile) {
-    throw new Error('Invalid .a2r package: missing manifest.json');
+    throw new Error('Invalid .allternit package: missing manifest.json');
   }
 
   let manifest: Record<string, unknown>;
@@ -592,7 +592,7 @@ async function importWorkspace(
     provider: (manifest.provider as 'openai' | 'anthropic' | 'local' | 'custom') || 'openai'
   };
 
-  const workspace = await createWorkspace(input, 'a2r-standard', userContext);
+  const workspace = await createWorkspace(input, 'allternit-standard', userContext);
 
   // Extract files
   const workspacePath = getWorkspacePath(workspace.agentId);
@@ -642,7 +642,7 @@ async function writeWorkspaceFile(
   await filesApi.writeFile({ path: fullPath, content });
 
   // Update manifest lastModified
-  const manifestPath = `${path}/.a2r/manifest.json`;
+  const manifestPath = `${path}/.allternit/manifest.json`;
   try {
     const response = await filesApi.readFile({ path: manifestPath });
     const manifest = JSON.parse(response.content);
@@ -710,7 +710,7 @@ async function restoreSnapshot(agentId: string, snapshot: FileSystemSnapshot): P
 async function getManifest(agentId: string): Promise<{ layers: import('./agent.types').AgentWorkspaceLayers; [key: string]: unknown } | null> {
   try {
     const path = getWorkspacePath(agentId);
-    const response = await filesApi.readFile({ path: `${path}/.a2r/manifest.json` });
+    const response = await filesApi.readFile({ path: `${path}/.allternit/manifest.json` });
     return JSON.parse(response.content);
   } catch (e) {
     console.warn('[WorkspaceService] Failed to load manifest:', e);
@@ -726,7 +726,7 @@ async function updateManifest(
   updates: Partial<{ layers: import('./agent.types').AgentWorkspaceLayers; [key: string]: unknown }>
 ): Promise<void> {
   const path = getWorkspacePath(agentId);
-  const manifestPath = `${path}/.a2r/manifest.json`;
+  const manifestPath = `${path}/.allternit/manifest.json`;
   
   try {
     // Read existing manifest

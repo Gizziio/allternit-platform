@@ -291,7 +291,7 @@ export function ChatView({
   }, [activeIsLoading, nativeMessages, activeMessages, shouldAutoScroll, scrollToBottom]);
 
   const [greeting, setGreeting] = useState({
-    title: "A2R & Coffee",
+    title: "Allternit & Coffee",
     tagline: "The Intelligent Workspace",
     effectType: "reveal" as "typing" | "reveal"
   });
@@ -344,7 +344,7 @@ export function ChatView({
       const userName = session?.name || "Eoj";
 
       const titles = [
-        "A2R & Coffee",
+        "Allternit & Coffee",
         `Welcome back, ${userName}`,
         "Ready to Build?",
         "The Architect's Den",
@@ -935,7 +935,7 @@ export function ChatView({
             textAlign: 'center',
             pointerEvents: 'auto',
           }}>
-            A2R is AI and can make mistakes. Please double-check responses.
+            Allternit is AI and can make mistakes. Please double-check responses.
           </div>
         </div>
       )}

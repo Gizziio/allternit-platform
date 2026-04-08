@@ -31,7 +31,7 @@ export const InstancesPage: React.FC = () => {
     // Demo data - in production, fetch from backend
     {
       id: 'inst-1',
-      name: 'a2r-worker-1',
+      name: 'allternit-worker-1',
       provider: 'Hetzner',
       region: 'fsn1',
       status: 'running',
@@ -44,7 +44,7 @@ export const InstancesPage: React.FC = () => {
     },
     {
       id: 'inst-2',
-      name: 'a2r-worker-2',
+      name: 'allternit-worker-2',
       provider: 'DigitalOcean',
       region: 'nyc3',
       status: 'running',
@@ -57,7 +57,7 @@ export const InstancesPage: React.FC = () => {
     },
     {
       id: 'inst-3',
-      name: 'a2r-worker-3',
+      name: 'allternit-worker-3',
       provider: 'AWS',
       region: 'us-east-1',
       status: 'error',
@@ -81,7 +81,7 @@ export const InstancesPage: React.FC = () => {
         <div>
           <h1 className="page-title">Instances</h1>
           <p className="page-description">
-            Manage your deployed A2R instances across all providers.
+            Manage your deployed Allternit instances across all providers.
           </p>
         </div>
         <button className="btn-primary">+ New Instance</button>
@@ -179,7 +179,7 @@ export const InstancesPage: React.FC = () => {
       <div className="control-plane-notice">
         <p>
           <strong>Note:</strong> This is the Console control plane. 
-          Instances shown here are managed through the A2R deployment system.
+          Instances shown here are managed through the Allternit deployment system.
           For manual BYOC instances, connect your provider credentials in 
           the Deploy flow.
         </p>

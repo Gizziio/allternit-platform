@@ -250,8 +250,8 @@ export const CloudDeployView: React.FC = () => {
   return (
     <div className="cloud-deploy-view">
       <div className="cloud-deploy-header">
-        <h1>🚀 Deploy A2R to Cloud</h1>
-        <p>Get your A2R instance running in minutes. No technical expertise required.</p>
+        <h1>🚀 Deploy Allternit to Cloud</h1>
+        <p>Get your Allternit instance running in minutes. No technical expertise required.</p>
       </div>
 
       {/* Error Banner */}

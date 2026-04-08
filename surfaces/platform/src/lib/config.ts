@@ -7,7 +7,7 @@ export const config = {
   appUrl: env.NEXT_PUBLIC_APP_URL,
   kernelUrl: env.KERNEL_URL,
   nodeEnv: env.NODE_ENV,
-  appPrefix: "a2r",
+  appPrefix: "allternit",
   
   // Model configuration
   models: {
@@ -42,7 +42,7 @@ export const config = {
   tavilyApiKey: process.env.TAVILY_API_KEY,
   
   // Feature flags
-  enableWebSearch: true, // Now using A2R Operator instead of external APIs
+  enableWebSearch: true, // Now using Allternit Operator instead of external APIs
   enableCodeExecution: true, // Enabled via Docker/WebAssembly sandbox
 };
 

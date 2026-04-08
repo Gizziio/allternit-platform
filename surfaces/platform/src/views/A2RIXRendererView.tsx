@@ -1,7 +1,7 @@
 /**
  * AllternitIXRendererView
  *
- * UI for A2R-IX JSON Renderer / Interface eXecution.
+ * UI for Allternit-IX JSON Renderer / Interface eXecution.
  * Real JSON → UI renderer demo with specification editor and live preview.
  */
 
@@ -171,7 +171,7 @@ export function AllternitIXRendererView() {
           <div className="flex items-center gap-3">
             <Lightning className="w-6 h-6 text-[var(--accent-primary)]" />
             <div>
-              <h2 className="text-lg font-semibold">A2R-IX Renderer</h2>
+              <h2 className="text-lg font-semibold">Allternit-IX Renderer</h2>
               <p className="text-sm text-[var(--text-tertiary)]">
                 JSON specification → UI execution
               </p>

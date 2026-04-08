@@ -1,7 +1,7 @@
 /**
  * Skill Installer UI - OC-015
  *
- * Native React component for installing and managing skills in A2R.
+ * Native React component for installing and managing skills in Allternit.
  * This component provides the UI for the skill installation functionality
  * that will eventually replace OpenClaw's skill installation UI.
  */
@@ -25,7 +25,7 @@ export interface Skill {
   category: string;
   tags: string[];
   requires: string[];
-  source: 'a2r-registry' | 'openclaw-registry' | 'local' | 'remote';
+  source: 'allternit-registry' | 'openclaw-registry' | 'local' | 'remote';
   downloadUrl?: string;
   license: string;
   lastUpdated: string;
@@ -286,7 +286,7 @@ const SkillInstaller: React.FC<SkillInstallerProps> = ({
                 <Tag 
                   color={
                     record.status === 'installed' ? 'green' : 
-                    record.source === 'a2r-registry' ? 'blue' : 
+                    record.source === 'allternit-registry' ? 'blue' : 
                     record.source === 'openclaw-registry' ? 'orange' : 'default'
                   }
                 >
@@ -301,12 +301,12 @@ const SkillInstaller: React.FC<SkillInstallerProps> = ({
             render={(_, record) => (
               <Tag 
                 color={
-                  record.source === 'a2r-registry' ? 'blue' : 
+                  record.source === 'allternit-registry' ? 'blue' : 
                   record.source === 'openclaw-registry' ? 'orange' : 
                   record.source === 'local' ? 'green' : 'default'
                 }
               >
-                {record.source === 'a2r-registry' ? 'A2R Registry' : 
+                {record.source === 'allternit-registry' ? 'Allternit Registry' : 
                  record.source === 'openclaw-registry' ? 'OpenClaw' : 
                  record.source === 'local' ? 'Local' : 'Remote'}
               </Tag>

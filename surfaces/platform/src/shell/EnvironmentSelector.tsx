@@ -301,7 +301,7 @@ function getDefaultEnvironment(type: EnvironmentType): EnvironmentTarget {
       return {
         id: "cloud-default",
         type: "cloud",
-        name: "A2R Cloud",
+        name: "Allternit Cloud",
         description: "Hosted execution plane",
         status: "inactive",
         createdAt: now,

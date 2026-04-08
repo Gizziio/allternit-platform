@@ -1,7 +1,7 @@
 /**
  * DataCard.tsx
  * 
- * Compact A2R Data card for chat thread.
+ * Compact Allternit Data card for chat thread.
  * Shows preview of rows/columns with "Open Full" option.
  */
 
@@ -53,9 +53,9 @@ interface DataCardProps {
 }
 
 /**
- * A2R Data Card
+ * Allternit Data Card
  * 
- * Inline preview of an A2R Data spreadsheet in the chat thread.
+ * Inline preview of an Allternit Data spreadsheet in the chat thread.
  * Shows table preview with header and first few rows.
  * "Open Full" expands to full AG-Grid editor in sidecar.
  */
@@ -110,7 +110,7 @@ export function DataCard({
           </div>
           <div>
             <h3 className="text-sm font-semibold text-[#ECECEC]">
-              A2R Data
+              Allternit Data
             </h3>
             <div className="flex items-center gap-2 text-xs text-[#666]">
               <span className="flex items-center gap-1">

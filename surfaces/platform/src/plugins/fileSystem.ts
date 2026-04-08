@@ -26,7 +26,7 @@ import { resolveMarketplacePluginPackage } from './marketplaceInstaller';
 import { validatePluginManifestV1 } from './pluginStandards';
 
 // Base directories to scan
-const ALLTERNIT_DIR = '.a2r';
+const ALLTERNIT_DIR = '.allternit';
 const SKILLS_DIR = `${ALLTERNIT_DIR}/skills`;
 const COMMANDS_DIR = `${ALLTERNIT_DIR}/commands`;
 const PLUGINS_DIR = `${ALLTERNIT_DIR}/plugins`;
@@ -38,12 +38,12 @@ const SKILL_DIR_CANDIDATES = [SKILLS_DIR, '.agents/skills', '.codex/skills'];
 const COMMAND_DIR_CANDIDATES = [COMMANDS_DIR, '.agents/commands', '.codex/commands'];
 const COMMAND_MARKDOWN_DIR_CANDIDATES = ['.claude/commands'];
 const COMMAND_CONFIG_FILE_CANDIDATES = [
-  '.config/a2r-shell/opencode.json',
+  '.config/allternit-shell/opencode.json',
   '.config/gizzi/opencode.json',
-  '.config/gizzi/a2r.json',
+  '.config/gizzi/allternit.json',
   '.config/opencode/opencode.json',
   '.config/opencode/oh-my-opencode.json',
-  '.config/gizzi-code/a2r.json',
+  '.config/gizzi-code/allternit.json',
   '.claude/settings.json',
 ];
 const INTERNAL_COMMAND_SOURCE_FILE_CANDIDATES = [
@@ -55,10 +55,10 @@ const INTERNAL_COMMAND_SOURCE_FILE_CANDIDATES = [
 const PLUGIN_DIR_CANDIDATES = [PLUGINS_DIR, '.agents/plugins', '.codex/plugins'];
 const MCP_DIR_CANDIDATES = [MCPS_DIR, '.agents/mcps', '.codex/mcps'];
 const MCP_CONFIG_FILE_CANDIDATES = [
-  '.config/a2r-shell/a2r.json',
-  '.config/gizzi/a2r.json',
-  '.config/gizzi-code/a2r.json',
-  '.config/a2r-shell/opencode.json',
+  '.config/allternit-shell/allternit.json',
+  '.config/gizzi/allternit.json',
+  '.config/gizzi-code/allternit.json',
+  '.config/allternit-shell/opencode.json',
   '.config/gizzi/opencode.json',
   '.config/opencode/opencode.json',
   '.claude/settings.json',
@@ -68,7 +68,7 @@ const MCP_CONFIG_FILE_CANDIDATES = [
 const WEBHOOK_DIR_CANDIDATES = [WEBHOOKS_DIR, '.agents/webhooks', '.codex/webhooks'];
 const WEBHOOK_CONFIG_FILE_CANDIDATES = [
   '.codex/config.toml',
-  '.config/a2r-shell/opencode.json',
+  '.config/allternit-shell/opencode.json',
   '.config/opencode/opencode.json',
   '.claude/settings.json',
 ];
@@ -104,12 +104,12 @@ const INTERNAL_GIZZI_COMMAND_DIR_CANDIDATES = [
   '../../cmd/gizzi-code/src/cli/commands',
 ];
 const INTERNAL_ALLTERNIT_CLI_SWITCH_FILE_CANDIDATES = [
-  'Desktop/allternit-workspace/allternit/cmd/gizzi-code/src/cli/a2r.ts',
-  'cmd/gizzi-code/src/cli/a2r.ts',
-  '../cmd/gizzi-code/src/cli/a2r.ts',
-  '../../cmd/gizzi-code/src/cli/a2r.ts',
+  'Desktop/allternit-workspace/allternit/cmd/gizzi-code/src/cli/allternit.ts',
+  'cmd/gizzi-code/src/cli/allternit.ts',
+  '../cmd/gizzi-code/src/cli/allternit.ts',
+  '../../cmd/gizzi-code/src/cli/allternit.ts',
 ];
-const HOME_DIR_STORAGE_KEY = 'a2r:plugin-manager:home-dir:v1';
+const HOME_DIR_STORAGE_KEY = 'allternit:plugin-manager:home-dir:v1';
 
 const OH_MY_OPENCODE_BUILTIN_COMMANDS = [
   'init-deep',
@@ -305,7 +305,7 @@ export class ApiFileSystem implements FileSystemAPI {
   }
 
   private async pathLooksLikeHome(path: string): Promise<boolean> {
-    const dirs = ['.a2r', '.agents', '.codex'];
+    const dirs = ['.allternit', '.agents', '.codex'];
     for (const dir of dirs) {
       if (await this.directoryExists(this.join(path, dir))) return true;
     }
@@ -1237,7 +1237,7 @@ export class CapabilityScanner {
             this.fs.join(packageDir, pkg.bin),
             {
               description: `CLI binary from ${packageName}`,
-              author: 'A2R Internal CLI',
+              author: 'Allternit Internal CLI',
             }
           );
         } else {
@@ -1250,7 +1250,7 @@ export class CapabilityScanner {
                 this.fs.join(packageDir, binPathValue),
                 {
                   description: `CLI binary from ${packageName}`,
-                  author: 'A2R Internal CLI',
+                  author: 'Allternit Internal CLI',
                 }
               );
             }
@@ -1269,7 +1269,7 @@ export class CapabilityScanner {
               `pnpm --dir "${packageDir}" run ${trimmedScriptName}`,
               {
                 description: `Package script from ${packageName}`,
-                author: 'A2R Internal CLI',
+                author: 'Allternit Internal CLI',
               }
             );
           }
@@ -1293,7 +1293,7 @@ export class CapabilityScanner {
         if (entry.name.startsWith('.')) continue;
         addTool(entry.name, entry.path, {
           description: `Internal executable from ${executableDir}`,
-          author: 'A2R Internal CLI',
+          author: 'Allternit Internal CLI',
         });
       }
     }
@@ -1319,7 +1319,7 @@ export class CapabilityScanner {
           const commandLiterals = this.parseCliCommandLiterals(content);
           addTool(`gizzi:${normalizedTopLevel}`, `gizzi ${normalizedTopLevel}`, {
             description: `Internal Gizzi command from ${entry.name}`,
-            author: 'A2R Internal CLI',
+            author: 'Allternit Internal CLI',
           });
 
           for (const subcommand of commandLiterals) {
@@ -1327,7 +1327,7 @@ export class CapabilityScanner {
             if (!/^[A-Za-z][A-Za-z0-9._:@+-]*$/.test(subcommand)) continue;
             addTool(`gizzi:${normalizedTopLevel}:${subcommand}`, `gizzi ${normalizedTopLevel} ${subcommand}`, {
               description: `Internal Gizzi subcommand from ${entry.name}`,
-              author: 'A2R Internal CLI',
+              author: 'Allternit Internal CLI',
             });
           }
         } catch {
@@ -1342,13 +1342,13 @@ export class CapabilityScanner {
         const content = await this.fs.readFile(switchFile);
         const subcommands = this.parseA2rSwitchSubcommands(content);
         for (const subcommand of subcommands) {
-          addTool(`a2r:${subcommand}`, `a2r ${subcommand}`, {
-            description: `Internal a2r subcommand from ${switchFile}`,
-            author: 'A2R Internal CLI',
+          addTool(`allternit:${subcommand}`, `allternit ${subcommand}`, {
+            description: `Internal allternit subcommand from ${switchFile}`,
+            author: 'Allternit Internal CLI',
           });
         }
       } catch {
-        // Ignore missing a2r switch command source.
+        // Ignore missing allternit switch command source.
       }
     }
 

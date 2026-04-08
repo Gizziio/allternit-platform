@@ -2,7 +2,7 @@
  * PluginReviews Component
  * 
  * Displays rating summary, review list, and allows users to write reviews.
- * Integrated with the PluginManager UI using A2R dark theme.
+ * Integrated with the PluginManager UI using Allternit dark theme.
  */
 
 import React, { useState, useCallback, useMemo } from 'react';

@@ -68,7 +68,7 @@ export function AgentationPanel(): JSX.Element | null {
       <div className="h-64 overflow-y-auto p-4 space-y-3">
         {messages.length === 0 ? (
           <div className="text-center text-gray-400 text-sm py-8">
-            Start a conversation with the A2R agent...
+            Start a conversation with the Allternit agent...
           </div>
         ) : (
           messages.map((msg) => (

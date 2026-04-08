@@ -4,15 +4,15 @@ import { expect } from '@storybook/jest';
 import { Button } from './button';
 
 /**
- * A2R UI Component: Button
+ * Allternit UI Component: Button
  * 
  * Evidence for: UI_TEST, A11Y_COMPLIANCE
  */
 const meta: Meta<typeof Button> = {
-  title: 'A2R/UI/Button',
+  title: 'Allternit/UI/Button',
   component: Button,
   parameters: {
-    // A2R Evidence metadata
+    // Allternit Evidence metadata
     a2r: {
       componentId: 'ui-button',
       evidence: {

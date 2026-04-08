@@ -25,7 +25,7 @@ export const CloudDeployWizard: React.FC<CloudDeployWizardProps> = ({ onStartDep
     regionId: '',
     instanceTypeId: '',
     storageGb: 100,
-    instanceName: `a2r-instance-${Math.random().toString(36).substring(7)}`,
+    instanceName: `allternit-instance-${Math.random().toString(36).substring(7)}`,
   });
 
   const totalSteps = 5;

@@ -7,7 +7,7 @@
  * - Code Mode: Agent Development Environment (ADE)
  * - Browser Mode: Agent-driven browser sessions
  * 
- * All views use consistent A2R dark obsidian theming.
+ * All views use consistent Allternit dark obsidian theming.
  * 
  * @module agent-session-views
  */

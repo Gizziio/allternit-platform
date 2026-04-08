@@ -259,7 +259,7 @@ function AttachmentCard({ item, onRemove, onPreview, variant }: AttachmentCardPr
         {/* Hover Overlay with actions */}
         {isHovered && (
           <div
-            className="a2r-hover-overlay"
+            className="allternit-hover-overlay"
             style={{
               position: 'absolute',
               inset: 0,
@@ -271,7 +271,7 @@ function AttachmentCard({ item, onRemove, onPreview, variant }: AttachmentCardPr
               animation: 'fadeIn 0.15s ease',
             }}
           >
-            <style>{`@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } } @media (prefers-reduced-motion: reduce) { .a2r-hover-overlay { animation: none !important; } }`}</style>
+            <style>{`@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } } @media (prefers-reduced-motion: reduce) { .allternit-hover-overlay { animation: none !important; } }`}</style>
             
             {canPreview && onPreview && (
               <button

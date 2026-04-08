@@ -196,7 +196,7 @@ function TerminalInstance({ pane, isActive }: {
   );
 }
 
-export function UnifiedTerminal({ sessionId = 'a2r-session' }: UnifiedTerminalProps) {
+export function UnifiedTerminal({ sessionId = 'allternit-session' }: UnifiedTerminalProps) {
   const [mode, setMode] = useState<TerminalMode>('single');
   const [panes, setPanes] = useState<Pane[]>([]);
   const [activePaneId, setActivePaneId] = useState<string | null>(null);

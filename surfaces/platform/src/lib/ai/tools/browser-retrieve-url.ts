@@ -2,7 +2,7 @@
  * Browser-based URL retrieval using our own browser-use service
  * Replaces Firecrawl with our own browser automation
  * 
- * This uses the A2R Operator service with browser-use library
+ * This uses the Allternit Operator service with browser-use library
  * which provides agent-based browser automation with Chromium + CDP
  */
 
@@ -71,7 +71,7 @@ Advantages over external APIs:
     } catch (error) {
       log.error({ err: error, url }, "Browser retrieval error");
       return {
-        error: "Failed to retrieve content. Is the A2R Operator service running?",
+        error: "Failed to retrieve content. Is the Allternit Operator service running?",
         results: [],
       };
     }

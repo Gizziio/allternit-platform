@@ -564,7 +564,7 @@ export function ShareDialog({
                         img.onload = () => {
                           ctx.drawImage(img, 20, 20, 360, 360);
                           const link = document.createElement('a');
-                          link.download = `a2r-share-${chatId}.png`;
+                          link.download = `allternit-share-${chatId}.png`;
                           link.href = canvas.toDataURL('image/png');
                           link.click();
                         };

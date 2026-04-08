@@ -8,7 +8,7 @@ import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/allternit.tokens';
 // MATRIX LOGO BOOT - Phase 1 Technical Initialization
 // ============================================================================
 // Animated 3D block assembly representing system boot sequence
-// Blocks materialize from data streams, forming the A2R mark
+// Blocks materialize from data streams, forming the Allternit mark
 // ============================================================================
 
 interface MatrixLogoBootProps {
@@ -90,7 +90,7 @@ export function MatrixLogoBoot({ showContent }: MatrixLogoBootProps) {
           animate={{ opacity: [0.7, 1, 0.7] }}
           transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" as const }}
         >
-          A2R Platform
+          Allternit Platform
         </motion.h1>
         <motion.p style={subtitleStyle}>
           Initializing system core...

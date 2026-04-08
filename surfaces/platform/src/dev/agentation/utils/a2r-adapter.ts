@@ -1,16 +1,16 @@
 /**
- * A2R Adapter for Agentation Output
+ * Allternit Adapter for Agentation Output
  * 
- * Wraps Agentation clipboard output with A2R execution context
+ * Wraps Agentation clipboard output with Allternit execution context
  * for DAG-ready work items.
  */
 
 import type { AnnotationOutput, AllternitExecutionHeader, AllternitAnnotationOutput } from '../types';
 
 /**
- * Wrap Agentation output with A2R execution context
+ * Wrap Agentation output with Allternit execution context
  */
-export function formatForA2R(
+export function formatForAllternit(
   output: AnnotationOutput,
   header: AllternitExecutionHeader
 ): AllternitAnnotationOutput {
@@ -24,14 +24,14 @@ export function formatForA2R(
 }
 
 /**
- * Format as copy/paste ready instructions for A2R coding agent
+ * Format as copy/paste ready instructions for Allternit coding agent
  */
 function formatAgentInstructions(
   output: AnnotationOutput,
   header: AllternitExecutionHeader
 ): string {
   return `
-# A2R UI Annotation → Agent Instructions
+# Allternit UI Annotation → Agent Instructions
 
 ## Execution Context
 | Field | Value |
@@ -86,7 +86,7 @@ npm run build -w @repo/storybook
 }
 
 /**
- * Create default A2R header for Storybook context
+ * Create default Allternit header for Storybook context
  */
 export function createDefaultHeader(options?: Partial<AllternitExecutionHeader>): AllternitExecutionHeader {
   return {

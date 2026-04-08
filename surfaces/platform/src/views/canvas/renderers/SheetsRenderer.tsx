@@ -1,7 +1,7 @@
 /**
  * SheetsRenderer.tsx
  * 
- * Renders A2R Data artifacts.
+ * Renders Allternit Data artifacts.
  * Uses AllternitDataGrid (AG-Grid wrapper) for data visualization.
  */
 
@@ -17,7 +17,7 @@ interface SheetsRendererProps {
 }
 
 /**
- * SheetsRenderer - A2R Data Artifact Renderer
+ * SheetsRenderer - Allternit Data Artifact Renderer
  * 
  * Wraps AllternitDataGrid for use in the Canvas/sidecar.
  * Provides full data grid capabilities.

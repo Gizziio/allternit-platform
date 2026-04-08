@@ -16,7 +16,7 @@ import type {
   RoleHardBan,
 } from "./character.types";
 
-const STORAGE_PREFIX = "a2r:character";
+const STORAGE_PREFIX = "allternit:character";
 const MAX_TELEMETRY_EVENTS = 1000;
 
 const DEFAULT_SETUP: AgentSetup = "generalist";

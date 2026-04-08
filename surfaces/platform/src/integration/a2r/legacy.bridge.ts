@@ -1,5 +1,5 @@
 /**
- * @fileoverview DEPRECATED - A2R Legacy Bridge
+ * @fileoverview DEPRECATED - Allternit Legacy Bridge
  * 
  * This bridge was used for escaping to legacy services.
  * It is now deprecated in favor of the api-client.

@@ -4,7 +4,7 @@
  * Backend Integration Points:
  * 
  * 1. connectCoworkStream() - WebSocket/SSE connection to backend
- *    Endpoint: wss://api.a2r.local/v1/cowork/{sessionId}/stream
+ *    Endpoint: wss://api.allternit.local/v1/cowork/{sessionId}/stream
  *    
  * 2. Events from backend (AnyCoworkEvent):
  *    - cowork.session.start/end
@@ -590,7 +590,7 @@ export const useCoworkStore = create<CoworkState>()(
       },
     }),
     {
-      name: 'a2r-cowork-storage',
+      name: 'allternit-cowork-storage',
       partialize: (state) => ({
         sessionHistory: state.sessionHistory,
         viewportZoom: state.viewportZoom,

@@ -4,7 +4,7 @@
  * Ported from: 6-ui/shell-ui/src/views/browserview/src/lib.rs
  * 
  * Provides native browser view component types for ShellUI with agentic browsing capabilities.
- * Supports deterministic, policy-gated browser automation integrated with A2R DAG/WIH workflows.
+ * Supports deterministic, policy-gated browser automation integrated with Allternit DAG/WIH workflows.
  */
 
 // ============================================================================

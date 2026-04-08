@@ -1,7 +1,7 @@
 /**
  * PlaygroundView
  *
- * Live-rendering AI artifact workbench — A2R's equivalent of Claude.ai's Artifacts
+ * Live-rendering AI artifact workbench — Allternit's equivalent of Claude.ai's Artifacts
  * playground. Write a system prompt + messages, hit Run, and see generated
  * HTML / React / SVG / Mermaid outputs rendered live in a sandboxed preview pane.
  *

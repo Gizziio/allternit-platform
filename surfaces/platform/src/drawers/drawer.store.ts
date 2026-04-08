@@ -42,6 +42,6 @@ export const useDrawerStore = create<DrawerState>()(
         drawers: { ...state.drawers, console: { ...state.drawers.console, activeTab: tab } }
       })),
     }),
-    { name: 'a2r-drawer-storage' }
+    { name: 'allternit-drawer-storage' }
   )
 );

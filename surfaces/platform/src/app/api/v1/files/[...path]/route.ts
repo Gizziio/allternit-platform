@@ -1,7 +1,7 @@
 /**
  * /api/v1/files/[...path] — File system proxy
  *
- * Forwards file system requests from the browser to the A2R gateway
+ * Forwards file system requests from the browser to the Allternit gateway
  * (which runs on a different port and can't be hit directly due to CORS).
  * Falls back to the gizzi terminal server if the gateway is unavailable.
  */

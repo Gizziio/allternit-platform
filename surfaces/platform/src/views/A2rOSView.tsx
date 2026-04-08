@@ -179,7 +179,7 @@ export function A2rOSView({ context }: A2rOSViewProps) {
           <span className="text-muted-foreground">|</span>
           <span className="text-muted-foreground">{programsList.length} Programs Available</span>
           <div className="flex-1" />
-          <code className="text-muted-foreground">a2r://launch/{'{program}'}</code>
+          <code className="text-muted-foreground">allternit://launch/{'{program}'}</code>
         </footer>
       </div>
     </A2rOSProvider>
@@ -212,7 +212,7 @@ function ProgramLauncher({ onLaunch }: { onLaunch: (id: string) => void }) {
                 <h3 className="font-medium">{program.name}</h3>
                 <p className="text-sm text-muted-foreground">{program.desc}</p>
                 <code className="text-xs text-muted-foreground mt-2 block">
-                  a2r://launch/{program.id}
+                  allternit://launch/{program.id}
                 </code>
               </div>
             </button>

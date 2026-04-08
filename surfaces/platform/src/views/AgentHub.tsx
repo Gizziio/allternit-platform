@@ -89,12 +89,12 @@ export function AgentHub() {
           // Create agent record
           const agent = await createAgent({
             name: 'Gizzi',
-            description: 'Your personal A2R platform assistant. Always here to help.',
+            description: 'Your personal Allternit platform assistant. Always here to help.',
             type: 'worker',
             model: 'gpt-4o',
             provider: 'openai',
             capabilities: ['chat', 'help', 'navigation'],
-            systemPrompt: 'You are Gizzi, the friendly platform assistant for A2R. Help users navigate and use the platform effectively.',
+            systemPrompt: 'You are Gizzi, the friendly platform assistant for Allternit. Help users navigate and use the platform effectively.',
             tools: [],
             maxIterations: 10,
             temperature: 0.7,
@@ -103,12 +103,12 @@ export function AgentHub() {
           // Create workspace with Gizzi template
           await agentWorkspaceService.create({
             name: 'Gizzi',
-            description: 'Your personal A2R platform assistant. Always here to help.',
+            description: 'Your personal Allternit platform assistant. Always here to help.',
             type: 'worker',
             model: 'gpt-4o',
             provider: 'openai',
             capabilities: ['chat', 'help', 'navigation'],
-            systemPrompt: 'You are Gizzi, the friendly platform assistant for A2R. Help users navigate and use the platform effectively.',
+            systemPrompt: 'You are Gizzi, the friendly platform assistant for Allternit. Help users navigate and use the platform effectively.',
             tools: [],
             maxIterations: 10,
             temperature: 0.7,

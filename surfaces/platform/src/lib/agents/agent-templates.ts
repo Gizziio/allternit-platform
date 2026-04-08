@@ -222,7 +222,7 @@ export const TEMPLATE_VARIABLES: Record<string, TemplateVariable> = {
 export const GIZZI_TEMPLATE: WorkspaceTemplate = {
   id: 'gizzi-platform',
   name: 'Gizzi Platform Assistant',
-  description: 'A2R Platform Assistant with full 5-layer workspace',
+  description: 'Allternit Platform Assistant with full 5-layer workspace',
   layers: {
     cognitive: true,
     identity: true,
@@ -233,43 +233,43 @@ export const GIZZI_TEMPLATE: WorkspaceTemplate = {
   files: {
     // Config files
     'gizzi.config.json': '/5-agents/examples/gizzi-platform/gizzi.config.json',
-    '.a2r/manifest.json': '/5-agents/examples/gizzi-platform/.a2r/manifest.json',
+    '.allternit/manifest.json': '/5-agents/examples/gizzi-platform/.allternit/manifest.json',
     
     // Layer 1: Cognitive
-    '.a2r/brain/BRAIN.md': '/5-agents/examples/gizzi-platform/.a2r/brain/BRAIN.md',
-    '.a2r/memory/MEMORY.md': '/5-agents/examples/gizzi-platform/.a2r/memory/MEMORY.md',
-    '.a2r/memory/active-tasks.md': '/5-agents/examples/gizzi-platform/.a2r/memory/active-tasks.md',
-    '.a2r/memory/daily.md': '/5-agents/examples/gizzi-platform/.a2r/memory/daily.md',
-    '.a2r/memory/lessons.md': '/5-agents/examples/gizzi-platform/.a2r/memory/lessons.md',
-    '.a2r/memory/self-review.md': '/5-agents/examples/gizzi-platform/.a2r/memory/self-review.md',
+    '.allternit/brain/BRAIN.md': '/5-agents/examples/gizzi-platform/.allternit/brain/BRAIN.md',
+    '.allternit/memory/MEMORY.md': '/5-agents/examples/gizzi-platform/.allternit/memory/MEMORY.md',
+    '.allternit/memory/active-tasks.md': '/5-agents/examples/gizzi-platform/.allternit/memory/active-tasks.md',
+    '.allternit/memory/daily.md': '/5-agents/examples/gizzi-platform/.allternit/memory/daily.md',
+    '.allternit/memory/lessons.md': '/5-agents/examples/gizzi-platform/.allternit/memory/lessons.md',
+    '.allternit/memory/self-review.md': '/5-agents/examples/gizzi-platform/.allternit/memory/self-review.md',
     
     // Layer 2: Identity
-    '.a2r/identity/IDENTITY.md': '/5-agents/examples/gizzi-platform/.a2r/identity/IDENTITY.md',
-    '.a2r/identity/SOUL.md': '/5-agents/examples/gizzi-platform/.a2r/identity/SOUL.md',
-    '.a2r/identity/USER.md': '/5-agents/examples/gizzi-platform/.a2r/identity/USER.md',
-    '.a2r/identity/VOICE.md': '/5-agents/examples/gizzi-platform/.a2r/identity/VOICE.md',
-    '.a2r/identity/POLICY.md': '/5-agents/examples/gizzi-platform/.a2r/identity/POLICY.md',
+    '.allternit/identity/IDENTITY.md': '/5-agents/examples/gizzi-platform/.allternit/identity/IDENTITY.md',
+    '.allternit/identity/SOUL.md': '/5-agents/examples/gizzi-platform/.allternit/identity/SOUL.md',
+    '.allternit/identity/USER.md': '/5-agents/examples/gizzi-platform/.allternit/identity/USER.md',
+    '.allternit/identity/VOICE.md': '/5-agents/examples/gizzi-platform/.allternit/identity/VOICE.md',
+    '.allternit/identity/POLICY.md': '/5-agents/examples/gizzi-platform/.allternit/identity/POLICY.md',
     
     // Layer 3: Governance
-    '.a2r/governance/PLAYBOOK.md': '/5-agents/examples/gizzi-platform/.a2r/governance/PLAYBOOK.md',
-    '.a2r/governance/TOOLS.md': '/5-agents/examples/gizzi-platform/.a2r/governance/TOOLS.md',
-    '.a2r/governance/HEARTBEAT.md': '/5-agents/examples/gizzi-platform/.a2r/governance/HEARTBEAT.md',
-    '.a2r/governance/SYSTEM.md': '/5-agents/examples/gizzi-platform/.a2r/governance/SYSTEM.md',
-    '.a2r/governance/CHANNELS.md': '/5-agents/examples/gizzi-platform/.a2r/governance/CHANNELS.md',
+    '.allternit/governance/PLAYBOOK.md': '/5-agents/examples/gizzi-platform/.allternit/governance/PLAYBOOK.md',
+    '.allternit/governance/TOOLS.md': '/5-agents/examples/gizzi-platform/.allternit/governance/TOOLS.md',
+    '.allternit/governance/HEARTBEAT.md': '/5-agents/examples/gizzi-platform/.allternit/governance/HEARTBEAT.md',
+    '.allternit/governance/SYSTEM.md': '/5-agents/examples/gizzi-platform/.allternit/governance/SYSTEM.md',
+    '.allternit/governance/CHANNELS.md': '/5-agents/examples/gizzi-platform/.allternit/governance/CHANNELS.md',
     
     // Layer 4: Skills
-    '.a2r/skills/_template/SKILL.md': '/5-agents/examples/gizzi-platform/.a2r/skills/_template/SKILL.md',
-    '.a2r/skills/_template/contract.json': '/5-agents/examples/gizzi-platform/.a2r/skills/_template/contract.json',
+    '.allternit/skills/_template/SKILL.md': '/5-agents/examples/gizzi-platform/.allternit/skills/_template/SKILL.md',
+    '.allternit/skills/_template/contract.json': '/5-agents/examples/gizzi-platform/.allternit/skills/_template/contract.json',
     
     // Layer 5: Business
-    '.a2r/business/CLIENTS.md': '/5-agents/examples/gizzi-platform/.a2r/business/CLIENTS.md'
+    '.allternit/business/CLIENTS.md': '/5-agents/examples/gizzi-platform/.allternit/business/CLIENTS.md'
   }
 };
 
-// A2R Standard template (for user-created agents)
+// Allternit Standard template (for user-created agents)
 export const ALLTERNIT_STANDARD_TEMPLATE: WorkspaceTemplate = {
   id: 'allternit-standard',
-  name: 'A2R Standard Workspace',
+  name: 'Allternit Standard Workspace',
   description: 'Standard 5-layer workspace for custom agents',
   layers: {
     cognitive: true,
@@ -281,22 +281,22 @@ export const ALLTERNIT_STANDARD_TEMPLATE: WorkspaceTemplate = {
   files: {
     // Similar structure but with more placeholders
     'agent.config.json': 'template://agent.config.json',
-    '.a2r/manifest.json': 'template://manifest.json',
-    '.a2r/brain/BRAIN.md': 'template://brain/BRAIN.md',
-    '.a2r/memory/MEMORY.md': 'template://memory/MEMORY.md',
-    '.a2r/memory/active-tasks.md': 'template://memory/active-tasks.md',
-    '.a2r/identity/IDENTITY.md': 'template://identity/IDENTITY.md',
-    '.a2r/identity/SOUL.md': 'template://identity/SOUL.md',
-    '.a2r/governance/PLAYBOOK.md': 'template://governance/PLAYBOOK.md',
-    '.a2r/governance/TOOLS.md': 'template://governance/TOOLS.md',
-    '.a2r/governance/HEARTBEAT.md': 'template://governance/HEARTBEAT.md'
+    '.allternit/manifest.json': 'template://manifest.json',
+    '.allternit/brain/BRAIN.md': 'template://brain/BRAIN.md',
+    '.allternit/memory/MEMORY.md': 'template://memory/MEMORY.md',
+    '.allternit/memory/active-tasks.md': 'template://memory/active-tasks.md',
+    '.allternit/identity/IDENTITY.md': 'template://identity/IDENTITY.md',
+    '.allternit/identity/SOUL.md': 'template://identity/SOUL.md',
+    '.allternit/governance/PLAYBOOK.md': 'template://governance/PLAYBOOK.md',
+    '.allternit/governance/TOOLS.md': 'template://governance/TOOLS.md',
+    '.allternit/governance/HEARTBEAT.md': 'template://governance/HEARTBEAT.md'
   }
 };
 
 // Minimal template (lightweight agents)
 export const ALLTERNIT_MINIMAL_TEMPLATE: WorkspaceTemplate = {
   id: 'allternit-minimal',
-  name: 'A2R Minimal Workspace',
+  name: 'Allternit Minimal Workspace',
   description: 'Lightweight workspace with essential files only',
   layers: {
     cognitive: false,
@@ -307,7 +307,7 @@ export const ALLTERNIT_MINIMAL_TEMPLATE: WorkspaceTemplate = {
   },
   files: {
     'agent.config.json': 'template://minimal/agent.config.json',
-    '.a2r/identity/IDENTITY.md': 'template://identity/IDENTITY.md'
+    '.allternit/identity/IDENTITY.md': 'template://identity/IDENTITY.md'
   }
 };
 

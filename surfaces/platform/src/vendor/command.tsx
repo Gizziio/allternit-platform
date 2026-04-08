@@ -128,7 +128,7 @@ export const AllternitCommandPalette: React.FC = () => {
   );
 };
 
-// Hook to use A2R commands
+// Hook to use Allternit commands
 export const useAllternitCommand = (action: AllternitCommandAction) => {
   const transformedAction = useMemo(() => transformAction(action), [action]);
   useRegisterActions([transformedAction], [transformedAction]);

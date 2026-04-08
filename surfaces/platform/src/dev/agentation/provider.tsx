@@ -55,7 +55,7 @@ export function AgentationProvider({
     setIsProcessing(true);
 
     try {
-      // Simulate agent processing (replace with actual A2R adapter call)
+      // Simulate agent processing (replace with actual Allternit adapter call)
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       const assistantMessage: AgentMessage = {

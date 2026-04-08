@@ -1,5 +1,5 @@
 /**
- * WASM Wrapper for A2R Agent Workspace
+ * WASM Wrapper for Allternit Agent Workspace
  * 
  * This module provides a TypeScript wrapper around the WASM-compiled
  * a2r-agent-workspace crate for use in the Shell UI.
@@ -84,7 +84,7 @@ async function loadWasm(): Promise<WasmModule> {
   } catch (error) {
     console.error('[WASM] Failed to load WASM module:', error);
     throw new Error(
-      'Failed to load a2r-agent-workspace WASM module. ' +
+      'Failed to load allternit-agent-workspace WASM module. ' +
       'Make sure it is built with: wasm-pack build --target web'
     );
   }

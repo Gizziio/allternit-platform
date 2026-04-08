@@ -7,9 +7,9 @@
  * - Hybrid (cloud + VPS)
  * 
  * Integrates with 8-cloud crates:
- * - a2r-cloud-core
- * - a2r-cloud-api
- * - a2r-cloud-deploy
+ * - allternit-cloud-core
+ * - allternit-cloud-api
+ * - allternit-cloud-deploy
  */
 
 import { v4 as uuidv4 } from 'uuid';

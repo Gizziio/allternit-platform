@@ -425,7 +425,7 @@ export class PrometheusObservabilityStore extends InMemoryObservabilityStore {
     super();
     this.prometheusUrl = config.prometheusUrl || process.env.PROMETHEUS_URL;
     this.pushGatewayUrl = config.pushGatewayUrl || process.env.PROMETHEUS_PUSHGATEWAY_URL;
-    this.jobName = config.jobName || 'a2r-platform';
+    this.jobName = config.jobName || 'allternit-platform';
     this.instance = config.instance || 'localhost';
   }
 

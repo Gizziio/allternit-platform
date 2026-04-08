@@ -49,7 +49,7 @@ export interface SSHConnectionResponse {
   os?: string;
   architecture?: string;
   docker_installed?: boolean;
-  a2r_installed?: boolean;
+  allternit_installed?: boolean;
   error_message?: string;
   created_at: string;
   updated_at: string;
@@ -61,7 +61,7 @@ export interface TestConnectionResponse {
   os?: string;
   architecture?: string;
   docker_installed?: boolean;
-  a2r_installed?: boolean;
+  allternit_installed?: boolean;
 }
 
 export interface InstallAgentResponse {
@@ -312,7 +312,7 @@ class SSHConnectionsAPI {
   // ==========================================================================
 
   /**
-   * Install A2R agent on the remote server
+   * Install Allternit agent on the remote server
    */
   async installAgent(id: string): Promise<InstallAgentResponse> {
     const response = await fetch(`${this.baseUrl}/${id}/install-agent`, {
@@ -392,7 +392,7 @@ class SSHConnectionsAPI {
       os: response.os,
       architecture: response.architecture,
       dockerInstalled: response.docker_installed,
-      allternitInstalled: response.a2r_installed,
+      allternitInstalled: response.allternit_installed,
       errorMessage: response.error_message,
     };
   }
@@ -408,7 +408,7 @@ class SSHConnectionsAPI {
         os: response.os,
         architecture: response.architecture,
         dockerInstalled: response.docker_installed,
-        allternitInstalled: response.a2r_installed,
+        allternitInstalled: response.allternit_installed,
       },
     };
   }
@@ -558,7 +558,7 @@ export const sshApi = {
         os: response.os,
         architecture: response.architecture,
         dockerInstalled: response.docker_installed,
-        allternitInstalled: response.a2r_installed,
+        allternitInstalled: response.allternit_installed,
       };
     } catch (err) {
       return {

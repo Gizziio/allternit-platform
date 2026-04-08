@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * A2R Local Backend API Server
+ * Allternit Local Backend API Server
  * 
  * Replaces the Go backend with TypeScript/Node.js
  * Handles SSH connections and remote VPS installation
@@ -223,11 +223,11 @@ app.post('/api/v1/backend-install/test', async (req, res) => {
     info.hasSystemd = systemdResult.stdout.trim() === 'yes';
     
     // Check if the real remote runtime is installed
-    const allternitResult = await ssh.execCommand('test -x /opt/a2r/bin/gizzi-code && echo "yes" || echo "no"');
+    const allternitResult = await ssh.execCommand('test -x /opt/allternit/bin/gizzi-code && echo "yes" || echo "no"');
     info.isAllternitInstalled = allternitResult.stdout.trim() === 'yes';
     
     if (info.isAllternitInstalled) {
-      const versionResult = await ssh.execCommand('/opt/a2r/bin/gizzi-code --version 2>/dev/null || echo ""');
+      const versionResult = await ssh.execCommand('/opt/allternit/bin/gizzi-code --version 2>/dev/null || echo ""');
       info.allternitVersion = versionResult.stdout.trim();
     }
     
@@ -397,7 +397,7 @@ async function performInstallation(ws: WebSocket, req: InstallRequest) {
       message: 'Verifying installation...'
     });
     
-    const statusResult = await ssh.execCommand('systemctl is-active a2r-backend 2>/dev/null || echo "unknown"', { execOptions: { pty: true } });
+    const statusResult = await ssh.execCommand('systemctl is-active allternit-backend 2>/dev/null || echo "unknown"', { execOptions: { pty: true } });
     const isActive = ['active', 'unknown'].includes(statusResult.stdout.trim());
     const healthResult = await ssh.execCommand(
       `curl -fsS -u ${quoteShell(`${RUNTIME_AUTH_USER}:${runtimePassword}`)} http://127.0.0.1:4096/v1/global/health >/dev/null && echo "ok" || echo "fail"`,
@@ -435,7 +435,7 @@ async function performInstallation(ws: WebSocket, req: InstallRequest) {
 
 // Start server
 server.listen(PORT, () => {
-  console.log(`A2R Backend API v${VERSION} running on port ${PORT}`);
+  console.log(`Allternit Backend API v${VERSION} running on port ${PORT}`);
   console.log(`API Key: ${API_KEY.substring(0, 8)}...`);
   console.log('');
   console.log('Endpoints:');

@@ -18,7 +18,7 @@ export const Step3Configuration: React.FC<Step3ConfigurationProps> = ({ config, 
   const [regionId, setRegionId] = useState(config.regionId || '');
   const [instanceTypeId, setInstanceTypeId] = useState(config.instanceTypeId || '');
   const [storageGb, setStorageGb] = useState(config.storageGb || 100);
-  const [instanceName, setInstanceName] = useState(config.instanceName || `a2r-instance-${Math.random().toString(36).substring(7)}`);
+  const [instanceName, setInstanceName] = useState(config.instanceName || `allternit-instance-${Math.random().toString(36).substring(7)}`);
   
   const provider = config.providerId ? getProvider(config.providerId) : null;
   const selectedRegion = provider && regionId ? getProviderRegion(provider.id, regionId) : null;
@@ -67,7 +67,7 @@ export const Step3Configuration: React.FC<Step3ConfigurationProps> = ({ config, 
             type="text"
             value={instanceName}
             onChange={(e) => setInstanceName(e.target.value)}
-            placeholder="my-a2r-instance"
+            placeholder="my-allternit-instance"
             required
           />
         </div>
@@ -167,7 +167,7 @@ export const Step3Configuration: React.FC<Step3ConfigurationProps> = ({ config, 
             <span>${totalMonthly.toFixed(2)}/mo</span>
           </div>
           <p className="cost-note">
-            💡 You pay the cloud provider directly. A2R software is free.
+            💡 You pay the cloud provider directly. Allternit software is free.
           </p>
         </div>
 

@@ -1,5 +1,5 @@
 /**
- * A2R Design System - Component Exports
+ * Allternit Design System - Component Exports
  */
 
 export { StatusBar, statusBarStyles } from "./StatusBar"

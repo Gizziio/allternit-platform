@@ -197,7 +197,7 @@ export function useWorkspace(
             return [];
           }),
           ws.allternitNative?.getState().catch((err) => {
-            console.error("[useWorkspace] Failed to get A2R Native state:", err);
+            console.error("[useWorkspace] Failed to get Allternit Native state:", err);
             return null;
           }),
         ]);

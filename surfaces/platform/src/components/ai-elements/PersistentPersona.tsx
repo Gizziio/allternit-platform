@@ -15,7 +15,7 @@ interface PersistentPersonaProps {
 
 /**
  * PersistentPersona - A single persona that "flows" to its target position.
- * Uses the MatrixLogo monolith (gizzi variant) as the A2R brand identity.
+ * Uses the MatrixLogo monolith (gizzi variant) as the Allternit brand identity.
  * This avoids multiple persona instances in the chat list.
  */
 export const PersistentPersona = ({

@@ -48,8 +48,8 @@ export interface SubmitReviewInput {
 // Storage Keys
 // ============================================================================
 
-const REVIEWS_STORAGE_KEY = 'a2r:plugin-reviews:v1';
-const CURRENT_USER_ID_KEY = 'a2r:plugin-reviews:current-user-id';
+const REVIEWS_STORAGE_KEY = 'allternit:plugin-reviews:v1';
+const CURRENT_USER_ID_KEY = 'allternit:plugin-reviews:current-user-id';
 
 // ============================================================================
 // Utility Functions

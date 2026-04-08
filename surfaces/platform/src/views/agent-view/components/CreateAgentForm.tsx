@@ -525,7 +525,7 @@ export function CreateAgentForm({
           await agentWorkspaceService.create({
             ...payload,
             avatar: avatarConfig,
-          }, 'a2r-standard', undefined, workspaceLayers);
+          }, 'allternit-standard', undefined, workspaceLayers);
           workspaceCreated = true;
         } catch (workspaceError) {
           console.error('[CreateAgentForm] Workspace creation failed:', workspaceError);

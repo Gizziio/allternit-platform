@@ -6,7 +6,7 @@
  * - useAllternitStream for session management
  * - Workspace API integration
  * 
- * Pattern from terminal: ui/a2r/session-view.tsx
+ * Pattern from terminal: ui/allternit/session-view.tsx
  */
 
 import { useState, useCallback } from "react"
@@ -121,7 +121,7 @@ export function SessionView({ workspacePath, compact = false }: SessionViewProps
               }}
             >
               <h3 style={{ marginBottom: "0.5rem", color: "#888" }}>
-                A2R Terminal
+                Allternit Terminal
               </h3>
               <p style={{ fontSize: "0.875rem" }}>
                 Start a session to interact with your workspace

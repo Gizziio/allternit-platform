@@ -384,7 +384,7 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
     setError(null);
     try {
       const skillId = formData.id || generateSkillId(formData.name);
-      const skillPath = `.a2r/skills/${skillId}`;
+      const skillPath = `.allternit/skills/${skillId}`;
 
       // Generate and save SKILL.md
       const skillMarkdown = generateSkillMarkdown(formData);
@@ -944,7 +944,7 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                   <FileText style={{ width: 16, height: 16, color: theme.accent }} />
                   <span style={{ fontSize: '13px', color: theme.textPrimary, fontFamily: 'monospace' }}>
-                    .a2r/skills/{formData.id || generateSkillId(formData.name)}/SKILL.md
+                    .allternit/skills/{formData.id || generateSkillId(formData.name)}/SKILL.md
                   </span>
                 </div>
                 <pre style={{ 
@@ -965,7 +965,7 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                   <Code style={{ width: 16, height: 16, color: theme.accent }} />
                   <span style={{ fontSize: '13px', color: theme.textPrimary, fontFamily: 'monospace' }}>
-                    .a2r/skills/{formData.id || generateSkillId(formData.name)}/contract.json
+                    .allternit/skills/{formData.id || generateSkillId(formData.name)}/contract.json
                   </span>
                 </div>
                 <pre style={{ 

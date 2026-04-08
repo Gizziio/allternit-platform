@@ -1,5 +1,5 @@
 /**
- * A2R Design System
+ * Allternit Design System
  * 
  * Common patterns, themes, and components extracted from the terminal app
  * for use across the UI platform.

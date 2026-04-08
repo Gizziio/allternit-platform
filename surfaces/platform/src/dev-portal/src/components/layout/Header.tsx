@@ -53,11 +53,11 @@ export function Header() {
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-a2r-500 to-violet-500 flex items-center justify-center shadow-glow group-hover:shadow-glow-lg transition-shadow">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-allternit-500 to-violet-500 flex items-center justify-center shadow-glow group-hover:shadow-glow-lg transition-shadow">
               <Sparkle className="w-5 h-5 text-white" />
             </div>
             <span className="font-bold text-xl tracking-tight">
-              A2R <span className="text-a2r-500">Dev</span>
+              Allternit <span className="text-allternit-500">Dev</span>
             </span>
           </Link>
 
@@ -70,7 +70,7 @@ export function Header() {
                   className={cn(
                     'flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
                     isActive(item.href)
-                      ? 'text-a2r-600 dark:text-a2r-400 bg-a2r-50 dark:bg-a2r-900/20'
+                      ? 'text-allternit-600 dark:text-allternit-400 bg-allternit-50 dark:bg-allternit-900/20'
                       : 'text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-100 hover:bg-surface-100 dark:hover:bg-surface-800'
                   )}
                 >
@@ -143,7 +143,7 @@ export function Header() {
                       className={cn(
                         'w-full flex items-center gap-2 px-4 py-2 text-sm transition-colors',
                         mode === theme
-                          ? 'text-a2r-600 dark:text-a2r-400 bg-a2r-50 dark:bg-a2r-900/20'
+                          ? 'text-allternit-600 dark:text-allternit-400 bg-allternit-50 dark:bg-allternit-900/20'
                           : 'text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-100 hover:bg-surface-100 dark:hover:bg-surface-800'
                       )}
                     >
@@ -195,7 +195,7 @@ export function Header() {
                     className={cn(
                       'flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-colors',
                       isActive(item.href)
-                        ? 'text-a2r-600 dark:text-a2r-400 bg-a2r-50 dark:bg-a2r-900/20'
+                        ? 'text-allternit-600 dark:text-allternit-400 bg-allternit-50 dark:bg-allternit-900/20'
                         : 'text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-surface-100 hover:bg-surface-100 dark:hover:bg-surface-800'
                     )}
                   >

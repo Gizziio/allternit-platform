@@ -2,7 +2,7 @@
  * WorkspacePanel Component
  * 
  * An individual panel with tabs, collapse support, and glass styling.
- * Integrates with react-resizable-panels and A2R design system.
+ * Integrates with react-resizable-panels and Allternit design system.
  * 
  * @module @allternit/platform/shell/panels
  */

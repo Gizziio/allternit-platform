@@ -51,6 +51,6 @@ export const useDagState = create<DagState>()(
       
       reset: () => set({ nodes: [], activeNodeId: null })
     }),
-    { name: 'a2r-dag-storage-v2' }
+    { name: 'allternit-dag-storage-v2' }
   )
 );

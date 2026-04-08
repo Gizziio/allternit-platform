@@ -1,5 +1,5 @@
 /**
- * A2R Platform Onboarding Store
+ * Allternit Platform Onboarding Store
  * 
  * Manages first-time user onboarding state
  * - Tracks onboarding completion
@@ -117,7 +117,7 @@ export const useOnboardingStore = create<OnboardingState>()(
       resetOnboarding: () => {
         // Clear localStorage to ensure fresh start
         if (typeof window !== 'undefined') {
-          localStorage.removeItem('a2r-onboarding-storage');
+          localStorage.removeItem('allternit-onboarding-storage');
         }
         set({
           hasCompletedOnboarding: false,
@@ -128,7 +128,7 @@ export const useOnboardingStore = create<OnboardingState>()(
       },
     }),
     {
-      name: 'a2r-onboarding-storage',
+      name: 'allternit-onboarding-storage',
       partialize: (state) => ({
         hasCompletedOnboarding: state.hasCompletedOnboarding,
         preferences: state.preferences,

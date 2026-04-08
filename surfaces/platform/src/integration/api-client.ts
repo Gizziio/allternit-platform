@@ -1,5 +1,5 @@
 /**
- * A2R API Client - Canonical Enterprise Implementation
+ * Allternit API Client - Canonical Enterprise Implementation
  * 
  * This is the ONLY authorized way for the UI to communicate with the backend.
  * All requests MUST go through the Gateway (port 8013).
@@ -18,9 +18,9 @@
 // ============================================================================
 
 /**
- * A2R Gateway Base URL - Single Source of Truth
+ * Allternit Gateway Base URL - Single Source of Truth
  * 
- * Set via environment variable: VITE_A2R_GATEWAY_URL
+ * Set via environment variable: VITE_ALLTERNIT_GATEWAY_URL
  * Default: http://127.0.0.1:3210 (TypeScript gateway)
  * 
  * DO NOT use fallback logic. DO NOT use multiple ports.
@@ -65,7 +65,7 @@ const API_BASE = `${gatewayUrl()}/api`;
 // Export for debugging
 export const GATEWAY_BASE_URL = gatewayUrl();
 export const GATEWAY_URL = GATEWAY_BASE_URL; // Consistent export
-console.log('[A2R API Client] Using gateway URL:', GATEWAY_BASE_URL);
+console.log('[Allternit API Client] Using gateway URL:', GATEWAY_BASE_URL);
 
 // Legacy alias for backward compatibility
 export const ALLTERNIT_BASE_URL = GATEWAY_BASE_URL;

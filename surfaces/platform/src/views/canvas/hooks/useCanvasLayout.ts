@@ -18,7 +18,7 @@ interface UseCanvasLayoutOptions {
   defaultCanvasSize?: number;
 }
 
-const LAYOUT_STORAGE_KEY = 'a2r-canvas-layout';
+const LAYOUT_STORAGE_KEY = 'allternit-canvas-layout';
 
 export function useCanvasLayout({
   defaultChatSize = 30,

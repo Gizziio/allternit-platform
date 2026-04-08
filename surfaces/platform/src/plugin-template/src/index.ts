@@ -1,9 +1,9 @@
 /**
- * A2R Plugin - {{PLUGIN_NAME}}
+ * Allternit Plugin - {{PLUGIN_NAME}}
  * 
  * This is the main entry point for your plugin.
  * 
- * The A2R Platform provides a rich API for building plugins:
+ * The Allternit Platform provides a rich API for building plugins:
  * - UI Components: Panels, modals, notifications
  * - Commands: Register keyboard shortcuts and commands
  * - Storage: Persist plugin data
@@ -17,11 +17,11 @@
 // IMPORTS
 // ============================================================================
 
-// A2R Platform SDK (when available)
+// Allternit Platform SDK (when available)
 // import { A2RPlugin, Panel, Command, Storage } from '@allternit/platform';
 
-// Or use the global A2R object provided by the platform
-// declare const A2R: {
+// Or use the global Allternit object provided by the platform
+// declare const Allternit: {
 //   registerPlugin: (plugin: A2RPlugin) => void;
 //   // ... other APIs
 // };
@@ -103,7 +103,7 @@ export class MyAllternitPlugin {
 
     try {
       // Initialize storage
-      // this.storage = await A2R.storage.createStorage(this.id);
+      // replaced-with-Allternit.storage.createStorage(this.id);
       
       // Load settings
       await this.loadSettings();
@@ -222,7 +222,7 @@ export class MyAllternitPlugin {
    */
   private registerCommands(): void {
     // Example: Register a command to open the plugin panel
-    // const openCommand = A2R.commands.registerCommand({
+    // replaced-with-Allternit.commands.registerCommand({
     //   id: `${this.id}.open`,
     //   title: 'Open My Plugin',
     //   keybinding: 'Cmd+Shift+P',
@@ -231,7 +231,7 @@ export class MyAllternitPlugin {
     // this.disposables.push(() => openCommand.dispose());
 
     // Example: Register a command with arguments
-    // const runCommand = A2R.commands.registerCommand({
+    // replaced-with-Allternit.commands.registerCommand({
     //   id: `${this.id}.run`,
     //   title: 'Run Plugin Action',
     //   handler: (args: any) => this.handleAction(args),
@@ -250,7 +250,7 @@ export class MyAllternitPlugin {
    */
   private registerUI(): void {
     // Example: Register a sidebar panel
-    // const panel = A2R.ui.createPanel({
+    // replaced-with-Allternit.ui.createPanel({
     //   id: `${this.id}.panel`,
     //   title: this.name,
     //   icon: 'plugin-icon',
@@ -259,7 +259,7 @@ export class MyAllternitPlugin {
     // this.disposables.push(() => panel.dispose());
 
     // Example: Register a status bar item
-    // const statusBarItem = A2R.ui.createStatusBarItem({
+    // replaced-with-Allternit.ui.createStatusBarItem({
     //   id: `${this.id}.status`,
     //   text: '$(icon) Ready',
     //   tooltip: 'Click to open plugin',
@@ -287,13 +287,13 @@ export class MyAllternitPlugin {
    */
   private registerEventListeners(): void {
     // Example: Listen for workspace events
-    // const workspaceListener = A2R.events.on('workspace:changed', (data) => {
+    // replaced-with-Allternit.events.on('workspace:changed', (data) => {
     //   this.handleWorkspaceChange(data);
     // });
     // this.disposables.push(() => workspaceListener.dispose());
 
     // Example: Listen for configuration changes
-    // const configListener = A2R.events.on('config:changed', (key: string) => {
+    // replaced-with-Allternit.events.on('config:changed', (key: string) => {
     //   if (key.startsWith(this.id)) {
     //     this.handleConfigChange(key);
     //   }
@@ -335,7 +335,7 @@ export class MyAllternitPlugin {
    * Show a notification
    */
   public showNotification(message: string, type: 'info' | 'warning' | 'error' = 'info'): void {
-    // A2R.notifications.show({
+    // replaced-with-Allternit.notifications.show({
     //   message,
     //   type,
     //   source: this.name,
@@ -430,7 +430,7 @@ export interface IMyPluginEvents {
 /**
  * @fileoverview
  * 
- * This is a template for creating A2R Platform plugins.
+ * This is a template for creating Allternit Platform plugins.
  * 
  * ## Getting Started
  * 
@@ -438,7 +438,7 @@ export interface IMyPluginEvents {
  * 2. Implement the activate() method with your plugin logic
  * 3. Add commands, UI components, and event listeners as needed
  * 4. Build and test your plugin locally
- * 5. Publish to the A2R Marketplace
+ * 5. Publish to the Allternit Marketplace
  * 
  * ## Best Practices
  * 

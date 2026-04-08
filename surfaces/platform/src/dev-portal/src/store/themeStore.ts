@@ -58,7 +58,7 @@ export const useThemeStore = create<ThemeStore>()(
       },
     }),
     {
-      name: 'a2r-theme-storage',
+      name: 'allternit-theme-storage',
     }
   )
 );

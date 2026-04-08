@@ -51,7 +51,7 @@ export async function browserWebSearchStep({
     if (!healthRes.ok) {
       return {
         results: [],
-        error: "Browser service not available. Is A2R Operator running?",
+        error: "Browser service not available. Is Allternit Operator running?",
       };
     }
 

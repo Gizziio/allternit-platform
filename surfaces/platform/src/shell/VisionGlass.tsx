@@ -69,9 +69,9 @@ export function VisionGlass() {
       }, 3000);
     });
 
-    window.addEventListener("a2r:vision_action", handleAction);
+    window.addEventListener("allternit:vision_action", handleAction);
     return () => {
-      window.removeEventListener("a2r:vision_action", handleAction);
+      window.removeEventListener("allternit:vision_action", handleAction);
       unsubTool();
     };
   }, []);
@@ -88,7 +88,7 @@ export function VisionGlass() {
           borderRadius: "50%",
           border: "2px solid var(--shell-vision-target)",
           boxShadow: "0 0 20px var(--shell-vision-target)",
-          animation: "a2r-pulse 1.5s infinite"
+          animation: "allternit-pulse 1.5s infinite"
         }}>
           {action.label && (
             <div style={{
@@ -102,7 +102,7 @@ export function VisionGlass() {
         </div>
       ))}
       <style>{`
-        @keyframes a2r-pulse {
+        @keyframes allternit-pulse {
           0% { transform: scale(0.8); opacity: 0.8; }
           50% { transform: scale(1.2); opacity: 0.4; }
           100% { transform: scale(0.8); opacity: 0.8; }

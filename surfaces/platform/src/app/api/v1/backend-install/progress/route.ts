@@ -240,8 +240,8 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         success: true,
-        message: 'A2R backend is already installed on this server',
-        installation_log: ['A2R backend already installed, skipping reinstallation.'],
+        message: 'Allternit backend is already installed on this server',
+        installation_log: ['Allternit backend already installed, skipping reinstallation.'],
         version: connected.allternitVersion ?? backendInstaller.getBackendVersion(),
         api_url: defaultBackendUrl,
         backend_target_id: backendTarget.id,
@@ -347,8 +347,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: health.reachable
-        ? 'A2R backend installed and activated successfully'
-        : 'A2R backend installed, but it is not reachable from this shell yet',
+        ? 'Allternit backend installed and activated successfully'
+        : 'Allternit backend installed, but it is not reachable from this shell yet',
       installation_log: log,
       version: installed.allternitVersion,
       api_url: result.apiUrl ?? null,

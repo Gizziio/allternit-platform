@@ -1,7 +1,7 @@
 /**
  * Verification View
  * 
- * Visual verification dashboard for A2R Autoland.
+ * Visual verification dashboard for Allternit Autoland.
  */
 
 export { VerificationView } from './VerificationView';

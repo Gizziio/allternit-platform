@@ -13,7 +13,7 @@ interface MilestoneProgressProps {
 /**
  * MilestoneProgress - Literal 0--0---0 linear flight path
  * 
- * Provides a high-signal, minimalist visualization of the A2R Native protocol state.
+ * Provides a high-signal, minimalist visualization of the Allternit Native protocol state.
  */
 export function MilestoneProgress({ state, className }: MilestoneProgressProps) {
   if (!state) return null;

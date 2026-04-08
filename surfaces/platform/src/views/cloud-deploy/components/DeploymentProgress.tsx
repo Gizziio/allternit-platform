@@ -23,7 +23,7 @@ export const DeploymentProgress: React.FC<DeploymentProgressProps> = ({
     { progress: 10, label: 'Validating credentials' },
     { progress: 30, label: 'Provisioning VM' },
     { progress: 50, label: 'Instance ready' },
-    { progress: 60, label: 'Installing A2R' },
+    { progress: 60, label: 'Installing Allternit' },
     { progress: 75, label: 'Configuring network' },
     { progress: 90, label: 'Health checks' },
     { progress: 100, label: 'Complete' },
@@ -45,7 +45,7 @@ export const DeploymentProgress: React.FC<DeploymentProgressProps> = ({
         )}
       </div>
 
-      <h2>🚀 Deploying Your A2R Instance</h2>
+      <h2>🚀 Deploying Your Allternit Instance</h2>
       
       {mode === 'demo' && (
         <p className="demo-notice">

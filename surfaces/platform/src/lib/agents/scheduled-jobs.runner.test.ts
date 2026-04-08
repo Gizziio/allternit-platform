@@ -146,7 +146,7 @@ describe("Job Execution History", () => {
     };
 
     // Store via localStorage directly (simulating runner behavior)
-    mockLocalStorage["a2r-job-execution-history"] = JSON.stringify([execution]);
+    mockLocalStorage["allternit-job-execution-history"] = JSON.stringify([execution]);
 
     const history = getExecutionHistory();
     expect(history.length).toBe(1);
@@ -154,13 +154,13 @@ describe("Job Execution History", () => {
   });
 
   it("should clear execution history", () => {
-    mockLocalStorage["a2r-job-execution-history"] = JSON.stringify([
+    mockLocalStorage["allternit-job-execution-history"] = JSON.stringify([
       { executionId: "exec-1", jobId: "job-1", status: "completed", startedAt: new Date().toISOString() },
     ]);
 
     clearExecutionHistory();
 
-    expect(mockLocalStorage["a2r-job-execution-history"]).toBeUndefined();
+    expect(mockLocalStorage["allternit-job-execution-history"]).toBeUndefined();
     expect(getExecutionHistory()).toEqual([]);
   });
 
@@ -172,7 +172,7 @@ describe("Job Execution History", () => {
       startedAt: new Date().toISOString(),
     }));
 
-    mockLocalStorage["a2r-job-execution-history"] = JSON.stringify(executions);
+    mockLocalStorage["allternit-job-execution-history"] = JSON.stringify(executions);
 
     const history = getExecutionHistory();
     expect(history.length).toBe(100);
@@ -223,7 +223,7 @@ describe("Cron Expression Utilities", () => {
 });
 
 describe("Job Storage", () => {
-  const JOBS_STORAGE_KEY = "a2r-scheduled-jobs";
+  const JOBS_STORAGE_KEY = "allternit-scheduled-jobs";
 
   beforeEach(() => {
     Object.keys(mockLocalStorage).forEach((key) => delete mockLocalStorage[key]);
@@ -334,7 +334,7 @@ function calculateNextRun(schedule: string, lastRunAt?: string): Date | null {
 
 function getScheduledJobsFromStorage(): ScheduledJobConfig[] {
   try {
-    const data = localStorage.getItem("a2r-scheduled-jobs");
+    const data = localStorage.getItem("allternit-scheduled-jobs");
     return data ? JSON.parse(data) : [];
   } catch {
     return [];
@@ -347,7 +347,7 @@ function updateJobLastRun(jobId: string): void {
     const job = jobs.find((j) => j.id === jobId);
     if (job) {
       job.lastRunAt = new Date().toISOString();
-      localStorage.setItem("a2r-scheduled-jobs", JSON.stringify(jobs));
+      localStorage.setItem("allternit-scheduled-jobs", JSON.stringify(jobs));
     }
   } catch (error) {
     console.error("[JobRunner] Failed to update job last run:", error);

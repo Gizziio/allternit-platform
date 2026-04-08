@@ -1,7 +1,7 @@
 /**
  * DeckCard.tsx
  * 
- * Compact A2R Deck card for chat thread.
+ * Compact Allternit Deck card for chat thread.
  * Shows slide preview with "Open Full" option to expand to sidecar.
  */
 
@@ -50,9 +50,9 @@ interface DeckCardProps {
 }
 
 /**
- * A2R Deck Card
+ * Allternit Deck Card
  * 
- * Inline preview of an A2R Deck presentation in the chat thread.
+ * Inline preview of an Allternit Deck presentation in the chat thread.
  * Shows current slide thumbnail with navigation.
  * "Open Full" expands to full Reveal.js player in sidecar.
  */
@@ -99,7 +99,7 @@ export function DeckCard({
           </div>
           <div>
             <h3 className="text-sm font-semibold text-[#ECECEC]">
-              A2R Deck
+              Allternit Deck
             </h3>
             <div className="flex items-center gap-2 text-xs text-[#666]">
               <span className="flex items-center gap-1">

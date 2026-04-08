@@ -7,7 +7,7 @@
  * - Sub-agent management
  * - High-tier agentic schemes
  * 
- * Uses A2R code mode accent colors (soft mint green)
+ * Uses Allternit code mode accent colors (soft mint green)
  * 
  * @module CodeModeADE
  */

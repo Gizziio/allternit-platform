@@ -1,7 +1,7 @@
 /**
  * DocumentRenderer.tsx
  * 
- * Renders A2R Document artifacts.
+ * Renders Allternit Document artifacts.
  * Uses AllternitDocumentEditor (BlockNote wrapper) for rich document editing.
  */
 
@@ -17,7 +17,7 @@ interface DocumentRendererProps {
 }
 
 /**
- * DocumentRenderer - A2R Document Artifact Renderer
+ * DocumentRenderer - Allternit Document Artifact Renderer
  * 
  * Wraps AllternitDocumentEditor for use in the Canvas/sidecar.
  * Provides full document editing capabilities.
@@ -32,7 +32,7 @@ export function DocumentRenderer({
   // Handle document changes
   const handleChange = useCallback((content: any[]) => {
     // TODO: Save to backend
-    console.log('[A2R Document] Content changed:', content.length, 'blocks');
+    console.log('[Allternit Document] Content changed:', content.length, 'blocks');
   }, []);
 
   return (

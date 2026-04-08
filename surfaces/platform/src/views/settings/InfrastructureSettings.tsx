@@ -165,13 +165,13 @@ const LOCAL_TEMPLATES: EnvironmentTemplate[] = [
     },
   },
   {
-    id: 'a2r-platform',
-    name: 'A2R Platform',
+    id: 'allternit-platform',
+    name: 'Allternit Platform',
     type: 'devcontainer',
-    description: 'Complete A2R development platform with all services pre-configured.',
-    features: ['A2R Runtime', 'Agent Studio', 'Code Server', 'Vector DB', 'Redis'],
+    description: 'Complete Allternit development platform with all services pre-configured.',
+    features: ['Allternit Runtime', 'Agent Studio', 'Code Server', 'Vector DB', 'Redis'],
     setupTime: '8 min',
-    tags: ['a2r', 'platform', 'full-stack'],
+    tags: ['allternit', 'platform', 'full-stack'],
     config: {},
   },
 ];
@@ -498,7 +498,7 @@ export const InfrastructureSettings: React.FC = () => {
     setDeployingProvider(providerId);
     try {
       // Open cloud deploy modal with selected provider
-      window.dispatchEvent(new CustomEvent('a2r:open-cloud-deploy', { 
+      window.dispatchEvent(new CustomEvent('allternit:open-cloud-deploy', { 
         detail: { provider: providerId } 
       }));
       
@@ -800,7 +800,7 @@ export const InfrastructureSettings: React.FC = () => {
             Cloud Providers
           </h2>
           <p style={{ fontSize: '14px', color: '#888', margin: 0 }}>
-            Deploy A2R nodes to your preferred cloud provider
+            Deploy Allternit nodes to your preferred cloud provider
           </p>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
@@ -890,7 +890,7 @@ export const InfrastructureSettings: React.FC = () => {
               Bring Your Own Server
             </h3>
             <p style={{ fontSize: '14px', color: '#888', margin: 0 }}>
-              Already have a VPS? Connect it to A2R in minutes.
+              Already have a VPS? Connect it to Allternit in minutes.
             </p>
           </div>
         </div>
@@ -950,7 +950,7 @@ export const InfrastructureSettings: React.FC = () => {
           </button>
           <button
             onClick={() => {
-              window.dispatchEvent(new CustomEvent('a2r:open-vps-panel'));
+              window.dispatchEvent(new CustomEvent('allternit:open-vps-panel'));
             }}
             style={{
               padding: '10px 20px',
@@ -982,9 +982,9 @@ export const InfrastructureSettings: React.FC = () => {
         <EmptyState
           icon={<HardDrives size={64} color="#333" />}
           title="No VPS connections"
-          description="Connect your existing VPS to manage it through A2R."
+          description="Connect your existing VPS to manage it through Allternit."
           action="Connect VPS"
-          onAction={() => window.dispatchEvent(new CustomEvent('a2r:open-vps-panel'))}
+          onAction={() => window.dispatchEvent(new CustomEvent('allternit:open-vps-panel'))}
         />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1379,10 +1379,10 @@ export const InfrastructureSettings: React.FC = () => {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
           <h2 style={{ fontSize: '24px', fontWeight: '600', margin: '0 0 8px 0', color: '#fff' }}>
-            A2R Nodes
+            Allternit Nodes
           </h2>
           <p style={{ fontSize: '14px', color: '#888', margin: 0 }}>
-            Compute nodes running the A2R agent runtime ({instances.length} from cloud, {connections.length} from VPS)
+            Compute nodes running the Allternit agent runtime ({instances.length} from cloud, {connections.length} from VPS)
           </p>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
@@ -1406,7 +1406,7 @@ export const InfrastructureSettings: React.FC = () => {
             Refresh
           </button>
           <button
-            onClick={() => window.dispatchEvent(new CustomEvent('a2r:open-cloud-deploy'))}
+            onClick={() => window.dispatchEvent(new CustomEvent('allternit:open-cloud-deploy'))}
             style={{
               padding: '10px 20px',
               borderRadius: '8px',
@@ -1437,9 +1437,9 @@ export const InfrastructureSettings: React.FC = () => {
         <EmptyState
           icon={<Cpu size={64} color="#333" />}
           title="No nodes installed"
-          description="Deploy an A2R node to the cloud or install on your connected VPS."
+          description="Deploy an Allternit node to the cloud or install on your connected VPS."
           action="Deploy Node"
-          onAction={() => window.dispatchEvent(new CustomEvent('a2r:open-cloud-deploy'))}
+          onAction={() => window.dispatchEvent(new CustomEvent('allternit:open-cloud-deploy'))}
         />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

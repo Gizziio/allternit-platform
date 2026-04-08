@@ -1,7 +1,7 @@
 /**
  * Replay Test: Validate adapter against real SSE fixtures
  * 
- * This test reads recorded SSE from .a2r/fixtures/chat.sse
+ * This test reads recorded SSE from .allternit/fixtures/chat.sse
  * and validates the adapter produces correct UI parts.
  * 
  * If the fixture doesn't exist, the test is skipped.
@@ -12,7 +12,7 @@ import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 import type { RustStreamEvent, UIPart } from "./rust-stream-adapter";
 
-const FIXTURE_PATH = join(process.cwd(), ".a2r/fixtures/chat.sse");
+const FIXTURE_PATH = join(process.cwd(), ".allternit/fixtures/chat.sse");
 
 // Parse SSE format into events
 function parseSSE(content: string): RustStreamEvent[] {

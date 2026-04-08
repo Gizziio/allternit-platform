@@ -116,7 +116,7 @@ export const useBrowserChatPaneStore = create<BrowserChatPaneState>()(
       setExtensionSettings: (settings) => set(settings),
     }),
     {
-      name: "a2r.browser.chatPane",
+      name: "allternit.browser.chatPane",
       partialize: (state) => ({
         permissionMode: state.permissionMode,
         language: state.language,

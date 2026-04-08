@@ -279,7 +279,7 @@ export function A2rCanvasView({
       <div className="flex-1 overflow-hidden">
         <PanelGroup
           direction={layoutMode === 'horizontal' ? 'horizontal' : 'vertical'}
-          autoSaveId={`a2r-canvas-${sourceView}`}
+          autoSaveId={`allternit-canvas-${sourceView}`}
         >
           {/* Chat/Conversation Panel */}
           {showChat && (

@@ -2,7 +2,7 @@
  * PanelHeader Component
  * 
  * Panel header with drag handle, tabs, and action buttons.
- * Integrates with A2R design system for consistent styling.
+ * Integrates with Allternit design system for consistent styling.
  * 
  * @module @allternit/platform/shell/panels
  */

@@ -1,7 +1,7 @@
 /**
  * Infrastructure API Client - Base HTTP Client
  * 
- * Provides a robust HTTP client for communicating with the A2R infrastructure backend.
+ * Provides a robust HTTP client for communicating with the Allternit infrastructure backend.
  * Features include automatic retries, error handling, request/response interceptors,
  * and proper TypeScript typing.
  */
@@ -99,7 +99,7 @@ export interface RequestOptions {
 /**
  * Infrastructure API Client
  * 
- * A robust HTTP client for the A2R infrastructure backend with automatic retries,
+ * A robust HTTP client for the Allternit infrastructure backend with automatic retries,
  * error handling, and TypeScript support.
  */
 export class InfrastructureApiClient {

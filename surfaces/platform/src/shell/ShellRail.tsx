@@ -575,7 +575,7 @@ export function ShellRail({
               justifyContent: 'center',
               transition: 'all 0.2s',
             }}
-            title="A2R Products"
+            title="Allternit Products"
           >
             <Sparkle size={18} weight="bold" />
           </button>

@@ -254,7 +254,7 @@ export function VPSConnectionModal({
                     </li>
                     <li>
                       <span style={{ color: TEXT.tertiary, marginRight: '6px' }}>•</span>
-                      <strong style={{ color: TEXT.secondary }}>Connect Existing</strong> if you already have a VPS running and just want to add it to A2R
+                      <strong style={{ color: TEXT.secondary }}>Connect Existing</strong> if you already have a VPS running and just want to add it to Allternit
                     </li>
                   </ul>
                 </div>

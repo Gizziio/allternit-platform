@@ -1,5 +1,5 @@
 /**
- * A2R Browser Agent Event Stream Types
+ * Allternit Browser Agent Event Stream Types
  * 
  * Unified event model for agentic browser automation.
  * Aligns with:

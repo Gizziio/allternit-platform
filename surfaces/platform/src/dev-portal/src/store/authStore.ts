@@ -36,7 +36,7 @@ export const useAuthStore = create<AuthStore>()(
       },
     }),
     {
-      name: 'a2r-auth-storage',
+      name: 'allternit-auth-storage',
       partialize: (state) => ({ 
         isAuthenticated: state.isAuthenticated, 
         token: state.token,

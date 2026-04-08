@@ -3,7 +3,7 @@
  *
  * Routes agent-mode chat requests from the web client to the correct backend:
  *   1. OpenClaw gateway (if gatewayUrl is present in the request)
- *   2. A2R gateway at the configured GATEWAY_BASE_URL
+ *   2. Allternit gateway at the configured GATEWAY_BASE_URL
  *   3. Gizzi terminal server (fallback, port 4096) — converts to gizzi session format
  *
  * The client (rust-stream-adapter) sends a relative URL so this Next.js route
@@ -30,7 +30,7 @@ function getGizziAuthHeader(): string | undefined {
   return "Basic " + Buffer.from(`${user}:${pass}`).toString("base64");
 }
 
-// Only use the A2R gateway when explicitly configured via env var.
+// Only use the Allternit gateway when explicitly configured via env var.
 // Defaulting to a local port caused silent message swallowing when anything
 // else (e.g., a stale dev process) was listening there.
 const GATEWAY_BASE_URL =
@@ -516,7 +516,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     }
   }
 
-  // 2. Try the environment-configured A2R gateway (only when explicitly set)
+  // 2. Try the environment-configured Allternit gateway (only when explicitly set)
   if (GATEWAY_BASE_URL && GATEWAY_BASE_URL !== resolvedGatewayUrl) {
     const res = await proxyToGateway(
       `${GATEWAY_BASE_URL}/api/agent-chat`,
@@ -530,7 +530,7 @@ export async function POST(req: NextRequest): Promise<Response> {
           "Content-Type": res.headers.get("Content-Type") ?? "text/event-stream",
           "Cache-Control": "no-cache",
           Connection: "keep-alive",
-          "X-Agent-Backend": "a2r-gateway",
+          "X-Agent-Backend": "allternit-gateway",
         },
       });
     }

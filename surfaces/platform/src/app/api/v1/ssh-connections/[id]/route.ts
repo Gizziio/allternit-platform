@@ -69,8 +69,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       os: connection.os,
       architecture: connection.architecture,
       docker_installed: connection.dockerInstalled,
-      a2r_installed: connection.allternitInstalled,
-      a2r_version: connection.allternitVersion,
+      allternit_installed: connection.allternitInstalled,
+      allternit_version: connection.allternitVersion,
       last_connected: connection.lastConnectedAt?.toISOString(),
       created_at: connection.createdAt.toISOString(),
       updated_at: connection.updatedAt.toISOString(),
@@ -119,8 +119,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (body.os !== undefined) updateData.os = body.os;
     if (body.architecture !== undefined) updateData.architecture = body.architecture;
     if (body.docker_installed !== undefined) updateData.dockerInstalled = body.docker_installed;
-    if (body.a2r_installed !== undefined) updateData.allternitInstalled = body.a2r_installed;
-    if (body.a2r_version !== undefined) updateData.allternitVersion = body.a2r_version;
+    if (body.allternit_installed !== undefined) updateData.allternitInstalled = body.allternit_installed;
+    if (body.allternit_version !== undefined) updateData.allternitVersion = body.allternit_version;
     if (body.last_connected !== undefined) updateData.lastConnectedAt = new Date(body.last_connected);
 
     // Handle credential updates
@@ -170,8 +170,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       os: connection.os,
       architecture: connection.architecture,
       docker_installed: connection.dockerInstalled,
-      a2r_installed: connection.allternitInstalled,
-      a2r_version: connection.allternitVersion,
+      allternit_installed: connection.allternitInstalled,
+      allternit_version: connection.allternitVersion,
       last_connected: connection.lastConnectedAt?.toISOString(),
       created_at: connection.createdAt.toISOString(),
       updated_at: connection.updatedAt.toISOString(),

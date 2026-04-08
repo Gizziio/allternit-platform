@@ -246,7 +246,7 @@ export const ProductsDiscoveryView: React.FC = () => {
     }}>
       {/* Close button */}
       <button 
-        onClick={() => window.dispatchEvent(new CustomEvent('a2r:close-products'))}
+        onClick={() => window.dispatchEvent(new CustomEvent('allternit:close-products'))}
         style={{
           position: 'fixed',
           top: 24,
@@ -287,14 +287,14 @@ export const ProductsDiscoveryView: React.FC = () => {
           margin: '0 0 12px 0',
           letterSpacing: '-0.02em'
         }}>
-          A2R Platform
+          Allternit Platform
         </h1>
         <p style={{
           fontSize: '18px',
           color: '#666',
           margin: 0,
         }}>
-          Do more with A2R, everywhere you work
+          Do more with Allternit, everywhere you work
         </p>
       </div>
 
@@ -349,12 +349,12 @@ export const ProductsDiscoveryView: React.FC = () => {
           gap: '32px',
           marginBottom: '32px'
         }}>
-          {/* Desktop App - A2R Brand Colors */}
+          {/* Desktop App - Allternit Brand Colors */}
           <ProductCard
             type="desktop"
-            title="A2R Desktop"
+            title="Allternit Desktop"
             subtitle="Native Application"
-            description="The full A2R experience on your computer. Chat, Cowork, and Code modes all in one native application."
+            description="The full Allternit experience on your computer. Chat, Cowork, and Code modes all in one native application."
             gradient="linear-gradient(135deg, #D4B08C 0%, #B08D6E 100%)"
             accentColor="#D4B08C"
             icon={<div style={{ transform: 'scale(0.5)' }}><MatrixLogo state="idle" size={64} /></div>}
@@ -370,7 +370,7 @@ export const ProductsDiscoveryView: React.FC = () => {
             type="browser"
             title="Gizzi for Browsers"
             subtitle="Browser Extension"
-            description="Bring A2R into your browser. Access AI assistance on any webpage with powerful browser automation capabilities."
+            description="Bring Allternit into your browser. Access AI assistance on any webpage with powerful browser automation capabilities."
             gradient="linear-gradient(135deg, #4285F4 0%, #34A853 100%)"
             accentColor="#4285F4"
             icon={<Puzzle size={32} color="#fff" />}
@@ -394,19 +394,19 @@ export const ProductsDiscoveryView: React.FC = () => {
           />
         </div>
 
-        {/* Row 3: A2R Dev + Marketplace */}
+        {/* Row 3: Allternit Dev + Marketplace */}
         <div style={{ 
           display: 'grid',
           gridTemplateColumns: '1fr 1fr',
           gap: '32px',
           marginBottom: '32px'
         }}>
-          {/* A2R Dev Portal */}
+          {/* Allternit Dev Portal */}
           <ProductCard
             type="code"
-            title="A2R Dev"
+            title="Allternit Dev"
             subtitle="Developer Portal"
-            description="Build plugins, extensions, and integrations for the A2R ecosystem. Access APIs, SDKs, and documentation."
+            description="Build plugins, extensions, and integrations for the Allternit ecosystem. Access APIs, SDKs, and documentation."
             gradient="linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)"
             accentColor="#6366f1"
             icon={<Code size={32} color="#fff" />}
@@ -435,12 +435,12 @@ export const ProductsDiscoveryView: React.FC = () => {
             ]}
           />
 
-          {/* A2R Marketplace */}
+          {/* Allternit Marketplace */}
           <ProductCard
             type="cloud"
-            title="A2R Marketplace"
+            title="Allternit Marketplace"
             subtitle="Plugin Directory"
-            description="Discover and install plugins, skills, and extensions built by the A2R community. Extend your A2R experience."
+            description="Discover and install plugins, skills, and extensions built by the Allternit community. Extend your Allternit experience."
             gradient="linear-gradient(135deg, #10b981 0%, #06b6d4 100%)"
             accentColor="#10b981"
             icon={<ShoppingBag size={32} color="#fff" />}
@@ -542,7 +542,7 @@ export const ProductsDiscoveryView: React.FC = () => {
                   color: '#ffffff',
                   margin: '0 0 6px 0'
                 }}>
-                  A2R Browser Capsule
+                  Allternit Browser Capsule
                 </h3>
                 <p style={{ 
                   fontSize: '15px', 
@@ -695,7 +695,7 @@ export const ProductsDiscoveryView: React.FC = () => {
               {/* Cloud Deploy */}
               <button
                 onClick={() => {
-                  window.dispatchEvent(new CustomEvent('a2r:open-settings', { 
+                  window.dispatchEvent(new CustomEvent('allternit:open-settings', { 
                     detail: { section: 'infrastructure', tab: 'providers' } 
                   }));
                 }}
@@ -745,7 +745,7 @@ export const ProductsDiscoveryView: React.FC = () => {
                   margin: '0 0 16px 0',
                   lineHeight: '1.5',
                 }}>
-                  Deploy A2R nodes to Hetzner, AWS, DigitalOcean in minutes.
+                  Deploy Allternit nodes to Hetzner, AWS, DigitalOcean in minutes.
                 </p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#22c55e', fontSize: '13px', fontWeight: 500 }}>
                   Get Started <ArrowRight size={14} />
@@ -755,7 +755,7 @@ export const ProductsDiscoveryView: React.FC = () => {
               {/* Connect VPS */}
               <button
                 onClick={() => {
-                  window.dispatchEvent(new CustomEvent('a2r:open-settings', { 
+                  window.dispatchEvent(new CustomEvent('allternit:open-settings', { 
                     detail: { section: 'infrastructure', tab: 'connections' } 
                   }));
                 }}
@@ -814,7 +814,7 @@ export const ProductsDiscoveryView: React.FC = () => {
               {/* Environments */}
               <button
                 onClick={() => {
-                  window.dispatchEvent(new CustomEvent('a2r:open-settings', { 
+                  window.dispatchEvent(new CustomEvent('allternit:open-settings', { 
                     detail: { section: 'infrastructure', tab: 'environments' } 
                   }));
                 }}
@@ -893,7 +893,7 @@ export const ProductsDiscoveryView: React.FC = () => {
               </div>
               <div style={{ flex: 1 }} />
               <button
-                onClick={() => window.dispatchEvent(new CustomEvent('a2r:open-settings', { detail: { section: 'infrastructure' } }))}
+                onClick={() => window.dispatchEvent(new CustomEvent('allternit:open-settings', { detail: { section: 'infrastructure' } }))}
                 style={{
                   padding: '8px 16px',
                   borderRadius: '8px',
@@ -1094,7 +1094,7 @@ function ExtensionDetailSection({ onClose }: { onClose: () => void }) {
           </div>
           <div>
             <h3 style={{ fontSize: '24px', fontWeight: '600', color: '#fff', margin: '0 0 4px 0' }}>
-              A2R Browser Capsule
+              Allternit Browser Capsule
             </h3>
             <p style={{ fontSize: '14px', color: '#888', margin: 0 }}>
               Version 1.0.0 • Free • Open Source

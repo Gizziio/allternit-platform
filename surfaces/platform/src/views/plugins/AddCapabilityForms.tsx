@@ -850,7 +850,7 @@ function AddPluginWizardForm({
   const [scaffoldMcpFiles, setScaffoldMcpFiles] = useState(true);
   const [scaffoldWebhookFiles, setScaffoldWebhookFiles] = useState(true);
   const [includeMarketplaceTemplate, setIncludeMarketplaceTemplate] = useState(true);
-  const [marketplaceOwnerName, setMarketplaceOwnerName] = useState('A2R Team');
+  const [marketplaceOwnerName, setMarketplaceOwnerName] = useState('Allternit Team');
   const [marketplaceOwnerEmail, setMarketplaceOwnerEmail] = useState('');
   const [marketplaceSourceType, setMarketplaceSourceType] = useState<'local' | 'github' | 'url'>('local');
   const [marketplaceSourceValue, setMarketplaceSourceValue] = useState('');
@@ -921,10 +921,10 @@ function AddPluginWizardForm({
   })();
 
   const marketplaceManifest = buildMarketplaceManifestForPlugin(pluginManifest, {
-    ownerName: marketplaceOwnerName || authorName || 'A2R Team',
+    ownerName: marketplaceOwnerName || authorName || 'Allternit Team',
     ownerEmail: marketplaceOwnerEmail || undefined,
     source: marketplaceSource,
-    name: 'a2r-plugin-marketplace',
+    name: 'allternit-plugin-marketplace',
   });
 
   const pluginValidation = validatePluginManifestV1(pluginManifest);
@@ -934,7 +934,7 @@ function AddPluginWizardForm({
     const lines = [
       `# ${name || pluginManifest.name}`,
       '',
-      description || 'Plugin generated with the A2R Plugin Wizard.',
+      description || 'Plugin generated with the Allternit Plugin Wizard.',
       '',
       '## Manifest',
       '- Standard: `.claude-plugin/plugin.json`',
@@ -1122,10 +1122,10 @@ function AddPluginWizardForm({
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <FormField label="Author Name">
-              <TextInput value={authorName} onChange={setAuthorName} placeholder="A2R Team" />
+              <TextInput value={authorName} onChange={setAuthorName} placeholder="Allternit Team" />
             </FormField>
             <FormField label="Author Email">
-              <TextInput value={authorEmail} onChange={setAuthorEmail} placeholder="plugins@a2r.dev" />
+              <TextInput value={authorEmail} onChange={setAuthorEmail} placeholder="plugins@allternit.dev" />
             </FormField>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -1214,10 +1214,10 @@ function AddPluginWizardForm({
             <>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <FormField label="Marketplace Owner">
-                  <TextInput value={marketplaceOwnerName} onChange={setMarketplaceOwnerName} placeholder="A2R Team" />
+                  <TextInput value={marketplaceOwnerName} onChange={setMarketplaceOwnerName} placeholder="Allternit Team" />
                 </FormField>
                 <FormField label="Owner Email">
-                  <TextInput value={marketplaceOwnerEmail} onChange={setMarketplaceOwnerEmail} placeholder="plugins@a2r.dev" />
+                  <TextInput value={marketplaceOwnerEmail} onChange={setMarketplaceOwnerEmail} placeholder="plugins@allternit.dev" />
                 </FormField>
               </div>
 

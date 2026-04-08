@@ -143,7 +143,7 @@ export const useAgentSurfaceModeStore = create<AgentSurfaceModeState>()(
       },
     }),
     {
-      name: 'a2r-surface-mode-v1',
+      name: 'allternit-surface-mode-v1',
       partialize: (state) => ({
         currentSurface: state.currentSurface,
       }),

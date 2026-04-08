@@ -1,12 +1,12 @@
 /**
- * A2R Status Bar Component
+ * Allternit Status Bar Component
  * 
  * Ported from terminal app status-bar.tsx
  * Provides real-time session status display
  */
 
 import { useState, useEffect, useMemo } from "react"
-import { useAllternitTheme, AllternitRuntimeState, getStatusColor } from "../theme/a2r-theme.tsx"
+import { useAllternitTheme, AllternitRuntimeState, getStatusColor } from "../theme/allternit-theme.tsx"
 
 export interface StatusBarProps {
   /** Current runtime state */

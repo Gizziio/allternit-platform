@@ -49,7 +49,7 @@ const mockEndpoints: PairedEndpoint[] = [
   {
     id: 'endpoint_1',
     type: 'extension',
-    name: 'Chrome Extension (A2R-1234)',
+    name: 'Chrome Extension (Allternit-1234)',
     pairedAt: new Date(Date.now() - 86400000).toISOString(),
     status: 'connected',
     tabId: 42,

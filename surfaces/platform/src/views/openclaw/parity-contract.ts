@@ -52,7 +52,7 @@ export const OPENCLAW_PARITY_RPC_METHODS = [
 ] as const;
 
 /**
- * DAG critical-path milestones for native A2R parity execution.
+ * DAG critical-path milestones for native Allternit parity execution.
  * Kept in-code so UI/backend work can validate against a single source.
  */
 export const OPENCLAW_PARITY_CRITICAL_PATH = [

@@ -145,7 +145,7 @@ const CATEGORY_EMOTIONS: Record<string, { hover: GizziEmotion; select: GizziEmot
   create: { hover: 'curious', select: 'pleased' },
   write: { hover: 'pleased', select: 'proud' },
   learn: { hover: 'alert', select: 'focused' },
-  a2r: { hover: 'mischief', select: 'mischief' },
+  allternit: { hover: 'mischief', select: 'mischief' },
 };
 
 interface ComposerMenuSubItem {
@@ -216,8 +216,8 @@ const ACTION_CATEGORIES = [
     ]
   },
   {
-    id: 'a2r',
-    label: "A2R's choice",
+    id: 'allternit',
+    label: "Allternit's choice",
     icon: <Sparkle size={14} />,
     options: [
       "Surprise me with a fun fact",
@@ -237,7 +237,7 @@ const PLUS_MENU_ITEMS: ComposerMenuItem[] = [
     hasSubmenu: true,
     submenuItems: [
       { id: 'new-project', label: 'Start a new project', icon: <Plus size={14} /> },
-      { id: 'existing-project', label: 'How to use A2R', icon: <FileText size={14} /> },
+      { id: 'existing-project', label: 'How to use Allternit', icon: <FileText size={14} /> },
     ]
   },
   { id: 'github', label: 'Add from GitHub', icon: <Github size={16} /> },
@@ -441,7 +441,7 @@ const ProviderLogos: Record<string, React.FC<{ size?: number }>> = {
       <path d="M2 9h2M2 15h2M20 9h2M20 15h2M9 2v2M15 2v2M9 20v2M15 20v2" stroke="url(#localGrad)" strokeWidth="1.5" strokeLinecap="round"/>
     </svg>
   ),
-  'a2r': ({ size = 20 }) => (
+  "allternit": ({ size = 20 }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <circle cx="12" cy="12" r="4" stroke="#d4966a" strokeWidth="2" fill="none"/>
       <circle cx="12" cy="12" r="8" stroke="#d4966a" strokeWidth="2" strokeDasharray="4 2" fill="none"/>
@@ -475,7 +475,7 @@ const ProviderLogos: Record<string, React.FC<{ size?: number }>> = {
 
 function getProviderLogo(providerId: string): React.FC<{ size?: number }> {
   const normalized = providerId.toLowerCase();
-  return ProviderLogos[normalized] || ProviderLogos['a2r'];
+  return ProviderLogos[normalized] || ProviderLogos['allternit'];
 }
 
 // ============================================================================
@@ -820,7 +820,7 @@ export function ChatComposer({
 
     const hasSelectedAgent = Boolean(selectedSurfaceAgentId);
     const hasRegistryAgents = agents.length > 0;
-    const dismissKey = `a2r-openclaw-import-dismissed:${agentModeSurface}`;
+    const dismissKey = `allternit-openclaw-import-dismissed:${agentModeSurface}`;
     const dismissed = window.sessionStorage.getItem(dismissKey) === 'true';
 
     const requestId = openClawDiscoveryRequestRef.current + 1;
@@ -1016,7 +1016,7 @@ export function ChatComposer({
 
   const dismissOpenClawPrompt = useCallback(() => {
     if (typeof window !== 'undefined' && agentModeSurface) {
-      window.sessionStorage.setItem(`a2r-openclaw-import-dismissed:${agentModeSurface}`, 'true');
+      window.sessionStorage.setItem(`allternit-openclaw-import-dismissed:${agentModeSurface}`, 'true');
     }
     closeOpenClawPrompt();
   }, [agentModeSurface, closeOpenClawPrompt]);
@@ -1298,7 +1298,7 @@ export function ChatComposer({
 
   const handleModelSelect = (model: any) => {
     if (onSelectModel) {
-      const providerId = model.providerId || 'a2r';
+      const providerId = model.providerId || 'allternit';
       onSelectModel({
         providerId: providerId,
         profileId: `${providerId}-acp`,
@@ -1313,7 +1313,7 @@ export function ChatComposer({
   
   // Get provider info for branding
   const selectedProviderMeta = useMemo(() => {
-    if (!selectedModel) return getProviderMeta('a2r');
+    if (!selectedModel) return getProviderMeta('allternit');
     
     // Try to find model in allModels to get provider info
     const model = allModels.find(m => m.id === selectedModel);
@@ -1326,7 +1326,7 @@ export function ChatComposer({
     const parts = selectedModel.split('/');
     if (parts.length > 1) return getProviderMeta(parts[0]);
     
-    return getProviderMeta('a2r');
+    return getProviderMeta('allternit');
   }, [selectedModel, allModels]);
   
   const setTrackingAttention = useCallback((x: number, y: number, state: GizziAttention['state'] = 'tracking') => {
@@ -1349,18 +1349,18 @@ export function ChatComposer({
         boxSizing: 'border-box',
         position: 'relative',
         paddingTop: 0,
-        animation: agentModeSurface && agentModeEnabled && agentModePulse ? 'a2r-agent-mode-flash 560ms ease' : undefined,
+        animation: agentModeSurface && agentModeEnabled && agentModePulse ? 'allternit-agent-mode-flash 560ms ease' : undefined,
       }}
       onMouseLeave={() => {
         clearAttention();
         onInteractionSignal?.('steady');
       }}>
       <style>{`
-        @keyframes a2r-agent-mode-sweep {
+        @keyframes allternit-agent-mode-sweep {
           0% { background-position: 0% 50%; }
           100% { background-position: 200% 50%; }
         }
-        @keyframes a2r-agent-mode-flash {
+        @keyframes allternit-agent-mode-flash {
           0% { transform: scale(0.996); }
           45% { transform: scale(1); }
           100% { transform: scale(1); }
@@ -1405,7 +1405,7 @@ export function ChatComposer({
                     'create': 'slides',
                     'write': 'slides',
                     'learn': 'research',
-                    'a2r': 'flow',
+                    'allternit': 'flow',
                   };
                   const targetMode = modeMapping[cat.id];
                   if (targetMode) {
@@ -1587,7 +1587,7 @@ export function ChatComposer({
               pointerEvents: 'none',
               background: `linear-gradient(120deg, transparent 0%, ${agentModeTheme.soft} 20%, ${agentModeTheme.glow} 50%, ${agentModeTheme.soft} 80%, transparent 100%)`,
               backgroundSize: '200% 200%',
-              animation: 'a2r-agent-mode-sweep 3.2s linear infinite',
+              animation: 'allternit-agent-mode-sweep 3.2s linear infinite',
               mixBlendMode: 'screen',
               opacity: 0.36,
             }}
@@ -2129,7 +2129,7 @@ export function ChatComposer({
                         background: THEME.accent,
                         animationDelay: `${i * 0.18}s`,
                       }}
-                      className="a2r-waveform-bar"
+                      className="allternit-waveform-bar"
                     />
                   ))}
                 </div>

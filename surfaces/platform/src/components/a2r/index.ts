@@ -1,8 +1,8 @@
 /**
- * A2R Component Library
+ * Allternit Component Library
  * 
- * A2R-native components wrapping third-party libraries.
- * All components are themed to match the A2R design system.
+ * Allternit-native components wrapping third-party libraries.
+ * All components are themed to match the Allternit design system.
  */
 
 export { AllternitDocumentEditor } from './A2RDocumentEditor';
@@ -15,6 +15,6 @@ export { DataCard } from './cards/DataCard';
 export { DeckCard } from './cards/DeckCard';
 
 // Import themes
-import './a2r-document-theme.css';
-import './a2r-data-theme.css';
-import './a2r-deck-theme.css';
+import './allternit-document-theme.css';
+import './allternit-data-theme.css';
+import './allternit-deck-theme.css';

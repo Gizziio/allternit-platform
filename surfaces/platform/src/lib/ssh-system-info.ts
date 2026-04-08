@@ -90,9 +90,9 @@ export async function gatherSSHSystemInfo(ssh: NodeSSH): Promise<SSHSystemInfo> 
     ssh,
     '(\n' +
       'command -v gizzi-code 2>/dev/null || true;\n' +
-      '[ -x /opt/a2r/bin/gizzi-code ] && echo /opt/a2r/bin/gizzi-code || true;\n' +
-      'command -v a2r-node 2>/dev/null || true;\n' +
-      '[ -x /opt/a2r/bin/a2r-node ] && echo /opt/a2r/bin/a2r-node || true\n' +
+      '[ -x /opt/allternit/bin/gizzi-code ] && echo /opt/allternit/bin/gizzi-code || true;\n' +
+      'command -v allternit-node 2>/dev/null || true;\n' +
+      '[ -x /opt/allternit/bin/allternit-node ] && echo /opt/allternit/bin/allternit-node || true\n' +
       ') | head -n 1',
   );
   const allternitPath = allternitPathResult.stdout

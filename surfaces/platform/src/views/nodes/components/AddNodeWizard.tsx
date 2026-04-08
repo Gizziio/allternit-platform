@@ -70,7 +70,7 @@ export function AddNodeWizard({ open, onClose }: AddNodeWizardProps) {
             Add New Node
           </DialogTitle>
           <DialogDescription>
-            Generate an installation token to connect a new node to your A2R control plane.
+            Generate an installation token to connect a new node to your Allternit control plane.
           </DialogDescription>
         </DialogHeader>
 

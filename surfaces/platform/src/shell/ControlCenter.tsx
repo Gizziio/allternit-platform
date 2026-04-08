@@ -499,7 +499,7 @@ function BrowserPairingSection({
                 type="text"
                 value={pairingCode}
                 onChange={(e) => setPairingCode(e.target.value)}
-                placeholder="e.g., A2R-XXXX"
+                placeholder="e.g., Allternit-XXXX"
                 className="w-full px-3 py-2 rounded-lg bg-primary border border-border focus:border-accent/50 focus:outline-none text-sm"
               />
             </div>
@@ -573,7 +573,7 @@ function BrowserPairingSection({
           <div className="text-sm">
             <p className="font-medium text-blue-500 mb-1">Extension Setup</p>
             <p className="text-muted-foreground">
-              Install the A2R Browser Extension from the Chrome Web Store.
+              Install the Allternit Browser Extension from the Chrome Web Store.
               Open the extension and enter the pairing code shown in your ShellUI.
             </p>
           </div>

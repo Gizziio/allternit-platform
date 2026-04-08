@@ -1,5 +1,5 @@
 /**
- * A2R Mark Component
+ * Allternit Mark Component
  * 
  * Compact logo mark without wordmark.
  */

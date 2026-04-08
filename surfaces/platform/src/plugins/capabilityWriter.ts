@@ -18,7 +18,7 @@ import {
 } from './pluginStandards';
 
 // Base directories
-const ALLTERNIT_DIR = '.a2r';
+const ALLTERNIT_DIR = '.allternit';
 const SKILLS_DIR = `${ALLTERNIT_DIR}/skills`;
 const COMMANDS_DIR = `${ALLTERNIT_DIR}/commands`;
 const PLUGINS_DIR = `${ALLTERNIT_DIR}/plugins`;
@@ -127,16 +127,16 @@ function scoreCandidatePath(path: string, idHint: string): number {
 
   if (normalizedId.includes('-agents-')) {
     if (normalizedPath.includes('/.agents/')) score += 100;
-    if (normalizedPath.includes('/.a2r/')) score -= 10;
+    if (normalizedPath.includes('/.allternit/')) score -= 10;
   }
 
   if (normalizedId.includes('-codex-')) {
     if (normalizedPath.includes('/.codex/')) score += 100;
-    if (normalizedPath.includes('/.a2r/')) score -= 10;
+    if (normalizedPath.includes('/.allternit/')) score -= 10;
   }
 
-  if (normalizedId.includes('-a2r-')) {
-    if (normalizedPath.includes('/.a2r/')) score += 100;
+  if (normalizedId.includes('-allternit-')) {
+    if (normalizedPath.includes('/.allternit/')) score += 100;
   }
 
   return score;

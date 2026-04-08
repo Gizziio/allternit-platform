@@ -92,7 +92,7 @@ export function ShellHeader({
           marginLeft: 8
         }}>
           <div style={{ width: 10, height: 10, borderRadius: '50%', background: currentModeColor, boxShadow: '0 0 10px ' + currentModeColor }} />
-          A2R
+          Allternit
         </div>
       </div>
 
@@ -122,7 +122,7 @@ export function ShellHeader({
           onOpenControlCenter={onOpenControlCenter}
         />
 
-        {/* A2R Operator Service Status */}
+        {/* Allternit Operator Service Status */}
         <AllternitOperatorStatus />
 
         {/* Artifact Sidecar Toggle */}

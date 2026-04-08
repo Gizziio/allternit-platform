@@ -3,7 +3,7 @@
  * 
  * Embeds OpenClaw's native Control UI in an iframe.
  * This is the QUARANTINE phase - we're hosting OpenClaw as-is
- * before gradually replacing components with native A2R implementations.
+ * before gradually replacing components with native Allternit implementations.
  * 
  * Architecture: OpenClaw runs separately on port 18789, we iframe it.
  */
@@ -176,7 +176,7 @@ export function OpenClawControlUI() {
       <div className="border-t px-4 py-2 bg-muted text-xs text-muted-foreground flex items-center justify-between">
         <span>
           Running in QUARANTINE mode - This is OpenClaw's native UI hosted via iframe.
-          Gradual migration to native A2R components in progress.
+          Gradual migration to native Allternit components in progress.
         </span>
         <a 
           href="/.migration/openclaw-absorption/INDEX.md" 

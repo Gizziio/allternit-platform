@@ -537,7 +537,7 @@ export class GatewayClient {
       maxProtocol: 3,
       client: {
         id: clientId,
-        version: this.options.clientVersion ?? 'a2r-native-dev',
+        version: this.options.clientVersion ?? 'allternit-native-dev',
         platform: navigator.platform ?? 'web',
         mode: clientMode,
         instanceId: this.options.instanceId,

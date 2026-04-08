@@ -206,7 +206,7 @@ describe('BrowserChatPane', () => {
     render(<BrowserChatPane />);
 
     expect(screen.getByTestId('browser-extension-pane')).toBeInTheDocument();
-    expect(screen.getAllByText('A2R Extension')).toHaveLength(2);
+    expect(screen.getAllByText('Allternit Extension')).toHaveLength(2);
     expect(screen.getAllByAltText('Page Agent')).toHaveLength(2);
     expect(screen.getByLabelText('Open history')).toBeInTheDocument();
     expect(screen.getByLabelText('Open settings')).toBeInTheDocument();

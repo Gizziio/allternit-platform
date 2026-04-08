@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
       const err = await res.json().catch(() => ({})) as { error?: string };
       if (err.error === 'page_agent_not_connected') {
         return NextResponse.json(
-          { error: 'Browser extension not connected. Open the A2R extension in Chrome.' },
+          { error: 'Browser extension not connected. Open the Allternit extension in Chrome.' },
           { status: 503 },
         );
       }
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ sessionId: data.sessionId });
   } catch {
     return NextResponse.json(
-      { error: 'Thin-client not reachable. Start the A2R desktop app.' },
+      { error: 'Thin-client not reachable. Start the Allternit desktop app.' },
       { status: 503 },
     );
   }

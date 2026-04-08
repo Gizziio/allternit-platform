@@ -86,9 +86,9 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     icon: 'open-code-logo.svg',
     textColor: '#FFFFFF',
   },
-  a2r: {
-    id: 'a2r',
-    name: 'A2R',
+  allternit: {
+    id: 'allternit',
+    name: 'Allternit',
     color: '#6366F1',
     icon: 'allternit-logo.svg',
     textColor: '#FFFFFF',
@@ -99,7 +99,7 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
  * Get provider metadata by ID
  */
 export function getProviderMeta(id: string | undefined): ProviderMeta {
-  if (!id) return PROVIDER_REGISTRY.a2r;
+  if (!id) return PROVIDER_REGISTRY.allternit;
   
   // Try direct match
   const meta = PROVIDER_REGISTRY[id.toLowerCase()];

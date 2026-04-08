@@ -24,20 +24,20 @@ import type {
 // ============================================================================
 
 const STORAGE_KEYS: Record<CapabilityType, string> = {
-  skill: 'a2r:capabilities:skills:v1',
-  command: 'a2r:capabilities:commands:v1',
-  connector: 'a2r:capabilities:connectors:v1',
-  mcp: 'a2r:capabilities:mcps:v1',
-  plugin: 'a2r:capabilities:plugins:v1',
-  'cli-tool': 'a2r:capabilities:cli-tools:v1',
-  webhook: 'a2r:capabilities:webhooks:v1',
+  skill: 'allternit:capabilities:skills:v1',
+  command: 'allternit:capabilities:commands:v1',
+  connector: 'allternit:capabilities:connectors:v1',
+  mcp: 'allternit:capabilities:mcps:v1',
+  plugin: 'allternit:capabilities:plugins:v1',
+  'cli-tool': 'allternit:capabilities:cli-tools:v1',
+  webhook: 'allternit:capabilities:webhooks:v1',
 };
 
 // Additional feature keys (not part of CapabilityType)
 const FEATURE_KEYS = {
-  plugin: 'a2r:feature-plugins:v1', // Keep existing key for backward compat
-  'cli-tool': 'a2r:capabilities:cli-tools:v1',
-  webhook: 'a2r:capabilities:webhooks:v1',
+  plugin: 'allternit:feature-plugins:v1', // Keep existing key for backward compat
+  'cli-tool': 'allternit:capabilities:cli-tools:v1',
+  webhook: 'allternit:capabilities:webhooks:v1',
 };
 
 // ============================================================================

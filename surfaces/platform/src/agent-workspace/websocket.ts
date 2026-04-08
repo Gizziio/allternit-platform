@@ -107,7 +107,7 @@ export class WorkspaceWebSocket {
   ) {
     this.url = url;
     // Create auth token (Basic auth format)
-    this.authToken = btoa(`a2r:${password}`);
+    this.authToken = btoa(`allternit:${password}`);
     
     this.options = {
       autoReconnect: true,

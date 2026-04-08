@@ -11,8 +11,8 @@ describe('pluginStandards schema validation', () => {
       description: 'Automation toolkit for agent rails flows.',
       version: '1.0.0',
       author: {
-        name: 'A2R Team',
-        email: 'plugins@a2r.dev',
+        name: 'Allternit Team',
+        email: 'plugins@allternit.dev',
       },
       tags: ['automation', 'rails'],
       commands: ['/rails-bootstrap'],

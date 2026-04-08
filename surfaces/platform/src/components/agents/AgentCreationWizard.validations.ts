@@ -66,7 +66,7 @@ export const isFileSizeExceeded = (fileSize: number): boolean => {
 // Agent Name Validation
 // ============================================================================
 
-const AGENT_NAMES_KEY = 'a2r-existing-agent-names';
+const AGENT_NAMES_KEY = 'allternit-existing-agent-names';
 
 /**
  * Get existing agent names from localStorage
@@ -161,7 +161,7 @@ export const validateAgentName = (name: string, checkDuplicate: boolean = true):
 // Workspace Path Validation
 // ============================================================================
 
-const WORKSPACE_PATHS_KEY = 'a2r-workspace-paths';
+const WORKSPACE_PATHS_KEY = 'allternit-workspace-paths';
 
 /**
  * Get registered workspace paths
@@ -233,7 +233,7 @@ export const registerWorkspacePath = (path: string): void => {
 // Plugin Conflict Detection
 // ============================================================================
 
-const PLUGINS_KEY = 'a2r-installed-plugins';
+const PLUGINS_KEY = 'allternit-installed-plugins';
 
 /**
  * Known plugin conflicts

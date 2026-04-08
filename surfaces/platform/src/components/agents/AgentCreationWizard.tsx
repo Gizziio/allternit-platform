@@ -1,7 +1,7 @@
 /**
  * Agent Creation Wizard
  * 
- * A2R-native step-by-step wizard for creating new agents.
+ * Allternit-native step-by-step wizard for creating new agents.
  * Features:
  * - 4-step guided creation (Identity, Character, Tools, Review)
  * - Glass morphism design with sand accents

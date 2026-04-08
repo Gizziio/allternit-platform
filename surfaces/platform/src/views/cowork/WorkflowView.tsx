@@ -9,7 +9,7 @@ export function WorkflowView() {
       <div style={{ marginBottom: 24 }}>
         <h2 style={{ fontSize: 20, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 10 }}>
           <Lightning size={24} weight="fill" color="#eab308" />
-          A2R Workflows
+          Allternit Workflows
         </h2>
         <p style={{ fontSize: 14, opacity: 0.6 }}>Execute multi-step governed agent actions.</p>
       </div>

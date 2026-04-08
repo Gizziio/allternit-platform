@@ -31,10 +31,10 @@ export function PublishTabView({ fs, onOpenCreateModal, onOpenValidateModal, onO
         }}
       >
         <h2 style={{ margin: '0 0 8px 0', fontSize: 22, color: THEME.textPrimary, fontWeight: 600 }}>
-          Publish Your Plugin to A2R Marketplace
+          Publish Your Plugin to Allternit Marketplace
         </h2>
         <p style={{ margin: 0, fontSize: 14, color: THEME.textSecondary, lineHeight: 1.6 }}>
-          Share your plugins with the A2R community. The publishing process involves creating a plugin from a template,
+          Share your plugins with the Allternit community. The publishing process involves creating a plugin from a template,
           validating your manifest, and submitting to the marketplace for review.
         </p>
       </div>
@@ -55,7 +55,7 @@ export function PublishTabView({ fs, onOpenCreateModal, onOpenValidateModal, onO
         <PublishActionCard
           icon={<Shield size={28} color="#22c55e" />}
           title="Validate Plugin"
-          description="Validate your plugin.json against the A2R schema. Check for required fields, proper formatting, and best practices before submitting."
+          description="Validate your plugin.json against the Allternit schema. Check for required fields, proper formatting, and best practices before submitting."
           buttonText="Validate Now"
           onClick={onOpenValidateModal}
           accentColor="#22c55e"
@@ -95,7 +95,7 @@ export function PublishTabView({ fs, onOpenCreateModal, onOpenValidateModal, onO
           <WorkflowStep
             number={2}
             title="Validate Your Manifest"
-            description="Run the validator to ensure your plugin.json follows the correct A2R schema."
+            description="Run the validator to ensure your plugin.json follows the correct Allternit schema."
             icon={<Shield size={16} />}
           />
           <WorkflowStep

@@ -112,7 +112,7 @@ export function AgentCapabilitiesPanel({
         name: 'Core Capabilities',
         version: '1.0.0',
         description: 'Enabled capabilities available to agents.',
-        author: { name: 'A2R System' },
+        author: { name: 'Allternit System' },
         source: { type: 'local' },
         tags: ['core'],
         category: 'internal',

@@ -1,7 +1,7 @@
 /**
  * WIH: T2-A2
  * Agent: T2-A2 (Navigation System)
- * Scope: 6-ui/a2r-platform/src/shell/navigation/useShortcuts.ts
+ * Scope: 6-ui/allternit-platform/src/shell/navigation/useShortcuts.ts
  * Acceptance: Keyboard shortcuts hook using react-hotkeys-hook, cross-platform support
  * Risk Tier: 2
  * Dependencies: react-hotkeys-hook, existing vendor/hotkeys.tsx

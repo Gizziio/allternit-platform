@@ -2,7 +2,7 @@
  * Visual Verification Components
  *
  * React components for visualizing verification evidence and confidence scores
- * in the A2R ShellUI.
+ * in the Allternit ShellUI.
  */
 
 export { ConfidenceMeter } from './ConfidenceMeter';

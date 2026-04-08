@@ -1,7 +1,7 @@
 /**
  * CanvasProtocolView
  *
- * UI for A2R Canvas Protocol - Declarative task surfaces.
+ * UI for Allternit Canvas Protocol - Declarative task surfaces.
  * Real canvas type catalog with active canvas state and hot-reload support.
  */
 

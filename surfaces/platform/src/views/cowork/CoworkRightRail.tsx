@@ -122,7 +122,7 @@ function summarizeProgressEvent(event: AnyCoworkEvent): string {
 function dispatchCompose(text: string, send = false): void {
   if (typeof window === 'undefined') return;
   const detail: ComposeEventDetail = { text, send };
-  window.dispatchEvent(new CustomEvent<ComposeEventDetail>('a2r:cowork-compose', { detail }));
+  window.dispatchEvent(new CustomEvent<ComposeEventDetail>('allternit:cowork-compose', { detail }));
 }
 
 function buildProgressSteps(session: NonNullable<ReturnType<typeof useCoworkStore.getState>['session']>): ProgressStep[] {
@@ -219,7 +219,7 @@ export const CoworkRightRail = memo(function CoworkRightRail() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const raw = window.localStorage.getItem('a2r-cowork-connectors');
+    const raw = window.localStorage.getItem('allternit-cowork-connectors');
     if (!raw) return;
     try {
       const parsed = JSON.parse(raw) as Partial<typeof enabledConnectors>;
@@ -231,7 +231,7 @@ export const CoworkRightRail = memo(function CoworkRightRail() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    window.localStorage.setItem('a2r-cowork-connectors', JSON.stringify(enabledConnectors));
+    window.localStorage.setItem('allternit-cowork-connectors', JSON.stringify(enabledConnectors));
   }, [enabledConnectors]);
 
   const toggleCard = useCallback((id: keyof typeof openCards) => {

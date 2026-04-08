@@ -6,7 +6,7 @@
  *
  * Routing priority:
  *   1. Gizzi (primary inference engine, port 4096) — always tried first
- *   2. A2R gateway (port 8013) — fallback if gizzi is unreachable
+ *   2. Allternit gateway (port 8013) — fallback if gizzi is unreachable
  *
  * OpenClaw is NOT in this chain — it's agent infrastructure, not LLM inference.
  */
@@ -147,7 +147,7 @@ async function routeViaGizzi(
 }
 
 /**
- * Fallback: forward to the A2R gateway, which internally routes to gizzi.
+ * Fallback: forward to the Allternit gateway, which internally routes to gizzi.
  * Used when gizzi is not directly reachable (e.g. remote deploy).
  */
 async function routeViaGateway(body: PlaygroundRequest): Promise<Response | null> {
@@ -165,7 +165,7 @@ async function routeViaGateway(body: PlaygroundRequest): Promise<Response | null
         "Content-Type": res.headers.get("Content-Type") ?? "text/event-stream",
         "Cache-Control": "no-cache",
         "Connection": "keep-alive",
-        "X-Playground-Backend": "a2r-gateway",
+        "X-Playground-Backend": "allternit-gateway",
       },
     });
   } catch {
@@ -194,7 +194,7 @@ export async function POST(req: NextRequest): Promise<Response> {
   const gizziRes = await routeViaGizzi(prompt, providerID, modelID, temperature, maxTokens);
   if (gizziRes) return gizziRes;
 
-  // 2. Fall back to the A2R gateway if gizzi is unreachable
+  // 2. Fall back to the Allternit gateway if gizzi is unreachable
   const gatewayRes = await routeViaGateway(body);
   if (gatewayRes) return gatewayRes;
 
