@@ -40,6 +40,15 @@ jobs:
         working-directory: surfaces/platform
         run: rm -rf src/app/api
         
+      - name: Debug - verify shell pages exist
+        working-directory: surfaces/platform
+        run: |
+          echo "Checking shell/pair/[code]/page.tsx:"
+          cat src/app/shell/pair/\[code\]/page.tsx
+          echo ""
+          echo "Checking shell/session/[id]/page.tsx:"
+          cat src/app/shell/session/\[id\]/page.tsx
+        
       - name: Build static export
         working-directory: surfaces/platform
         run: pnpm next build
