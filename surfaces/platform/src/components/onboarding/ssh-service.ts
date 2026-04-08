@@ -83,7 +83,7 @@ export const STEP_DESCRIPTIONS: Record<InstallStep, string> = {
   connecting: 'Connecting to your VPS over SSH...',
   detecting_os: 'Probing the server and confirming compatibility...',
   preparing: 'Saving this VPS as your backend target...',
-  downloading: 'Installing or verifying the A2R backend...',
+  downloading: 'Installing or verifying the Allternit backend...',
   configuring: 'Configuring the backend runtime...',
   starting: 'Starting backend services...',
   verifying: 'Activating this VPS as your runtime backend...',
@@ -112,7 +112,7 @@ export const STEP_DETAILS: Record<InstallStep, string[]> = {
   ],
   downloading: [
     'Checking remote backend state...',
-    'Installing the versioned backend bundle if needed...',
+    'Installing the Allternit backend bundle if needed...',
     'Validating the remote binary...',
     'Backend install check complete.',
   ],
@@ -180,7 +180,7 @@ export const VPS_PROVIDERS: VPSProvider[] = [
 function getApiUrl(): string {
   if (typeof window === 'undefined') return '';
 
-  return process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') || window.location.origin;
+  return process.env.NEXT_PUBLIC_ALLTERNIT_API_URL?.replace(/\/$/, '') || window.location.origin;
 }
 
 function normalizeSSHConfig(config: SSHConnectionConfig) {
@@ -300,7 +300,7 @@ export function installBackend(
 
       const installResult = await sshApi.installAgent(connection.id);
       if (!installResult.success) {
-        throw new Error(installResult.message || 'Failed to install the A2R backend');
+        throw new Error(installResult.message || 'Failed to install the Allternit backend');
       }
 
       emit('configuring', 72, 'Synchronizing backend configuration...');
@@ -375,14 +375,14 @@ export function savePurchaseIntent(providerId: string, purchaseData: {
   expectedIp?: string;
   rootPassword?: string;
 }): void {
-  const intents = JSON.parse(localStorage.getItem('a2r-vps-purchases') || '[]');
+  const intents = JSON.parse(localStorage.getItem('allternit-vps-purchases') || '[]');
   intents.push({
     providerId,
     ...purchaseData,
     createdAt: new Date().toISOString(),
     status: 'pending',
   });
-  localStorage.setItem('a2r-vps-purchases', JSON.stringify(intents));
+  localStorage.setItem('allternit-vps-purchases', JSON.stringify(intents));
 }
 
 /**
@@ -396,7 +396,7 @@ export function getPendingPurchases(): Array<{
   createdAt: string;
   status: string;
 }> {
-  return JSON.parse(localStorage.getItem('a2r-vps-purchases') || '[]');
+  return JSON.parse(localStorage.getItem('allternit-vps-purchases') || '[]');
 }
 
 /**
@@ -429,6 +429,6 @@ export function checkCompletedPurchases(): Array<{
     }
   });
   
-  localStorage.setItem('a2r-vps-purchases', JSON.stringify(purchases));
+  localStorage.setItem('allternit-vps-purchases', JSON.stringify(purchases));
   return completed;
 }

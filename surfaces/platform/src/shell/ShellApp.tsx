@@ -13,6 +13,8 @@ import { type AppMode } from './ShellHeader';
 import { ModeSwitcher } from './ModeSwitcher';
 import { ModeProvider, useMode } from '../providers/mode-provider';
 import { GlobalDropzoneProvider } from '../components/GlobalDropzone';
+import { OnboardingPortal } from '../components/onboarding';
+import { useOnboardingStore } from '../stores/onboarding-store';
 import { ShellCanvas } from './ShellCanvas';
 import { ShellOverlayLayer } from './ShellOverlayLayer';
 import { VisionGlass } from './VisionGlass';
@@ -2274,10 +2276,17 @@ function ShellAppInner() {
 }
 
 // Main ShellApp that provides Mode context
+function OnboardingGate() {
+  const hasCompleted = useOnboardingStore((s) => s.hasCompletedOnboarding);
+  if (hasCompleted) return null;
+  return <OnboardingPortal />;
+}
+
 export function ShellApp() {
   return (
     <ModeProvider>
       <GlobalDropzoneProvider>
+        <OnboardingGate />
         <ShellAppInner />
       </GlobalDropzoneProvider>
     </ModeProvider>
