@@ -78,6 +78,43 @@ export function InfrastructureStep({ data, onUpdate, onStatusChange }: Props) {
     gatewayToken: '',
   });
   const [currentStep, setCurrentStep] = useState<InstallStep>('connecting');
+  
+  // Local backend auto-detection
+  const [localBackendStatus, setLocalBackendStatus] = useState<'checking' | 'found' | 'not-found'>('checking');
+  const [localBackendUrl, setLocalBackendUrl] = useState<string | null>(null);
+
+  // Check for local backend on mount
+  useEffect(() => {
+    const probeLocalBackends = async () => {
+      const ports = [8013, 4096, 3001, 8080];
+      
+      for (const port of ports) {
+        try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 2000);
+          
+          const response = await fetch(`http://localhost:${port}/v1/global/health`, {
+            method: 'GET',
+            signal: controller.signal,
+          });
+          
+          clearTimeout(timeout);
+          
+          if (response.ok) {
+            setLocalBackendStatus('found');
+            setLocalBackendUrl(`http://localhost:${port}`);
+            return;
+          }
+        } catch {
+          // Continue to next port
+        }
+      }
+      
+      setLocalBackendStatus('not-found');
+    };
+    
+    probeLocalBackends();
+  }, []);
 
   // Check for completed VPS purchases
   useEffect(() => {
@@ -489,16 +526,77 @@ export function InfrastructureStep({ data, onUpdate, onStatusChange }: Props) {
         </div>
       )}
 
-      {/* Local Ready */}
+      {/* Local Backend Status */}
       {data.infraType === 'local' && (
-        <div className="mt-4 p-4 rounded-2xl bg-green-500/5 border border-green-500/20 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-500">
-            <CheckCircle size={20} />
-          </div>
-          <div>
-            <div className="font-medium text-white">Local backend is ready</div>
-            <div className="text-sm text-white/50">A2R is already running on your computer</div>
-          </div>
+        <div className="mt-4 space-y-3">
+          {localBackendStatus === 'checking' && (
+            <div className="p-4 rounded-2xl bg-[#5B8DEF]/5 border border-[#5B8DEF]/20 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#5B8DEF]/10 flex items-center justify-center">
+                <CircleNotch className="w-5 h-5 animate-spin text-[#5B8DEF]" />
+              </div>
+              <div>
+                <div className="font-medium text-white">Checking for local backend...</div>
+                <div className="text-sm text-white/50">Probing localhost ports 8013, 4096, 3001, 8080</div>
+              </div>
+            </div>
+          )}
+          
+          {localBackendStatus === 'found' && (
+            <div className="p-4 rounded-2xl bg-green-500/5 border border-green-500/20 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-500">
+                <CheckCircle size={20} />
+              </div>
+              <div className="flex-1">
+                <div className="font-medium text-white">Local backend detected!</div>
+                <div className="text-sm text-white/50">Running at {localBackendUrl}</div>
+              </div>
+              <button
+                onClick={() => {
+                  if (localBackendUrl) {
+                    runtimeBackendApi.registerManualBackend({
+                      name: 'Local Backend',
+                      gatewayUrl: localBackendUrl,
+                    }).then(() => {
+                      setStatus('ready');
+                      setStatusMessage('Local backend activated!');
+                    }).catch((err) => {
+                      setStatus('error');
+                      setStatusMessage(err.message || 'Failed to activate');
+                    });
+                  }
+                }}
+                className="px-4 py-2 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-lg text-sm font-medium transition-colors"
+              >
+                Activate
+              </button>
+            </div>
+          )}
+          
+          {localBackendStatus === 'not-found' && (
+            <div className="p-4 rounded-2xl bg-yellow-500/5 border border-yellow-500/20 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-500">
+                  <Warning size={20} />
+                </div>
+                <div>
+                  <div className="font-medium text-white">No local backend found</div>
+                  <div className="text-sm text-white/50">Start the backend on your machine</div>
+                </div>
+              </div>
+              
+              <div className="bg-black/30 rounded-lg p-3 font-mono text-xs text-white/70 space-y-2">
+                <p className="text-white/40 text-[10px] uppercase tracking-wider">Quick start:</p>
+                <code className="block text-[#D4B08C]">
+                  ./gizzi-code serve --port 8013
+                </code>
+                <p className="text-white/40 text-[10px] uppercase tracking-wider mt-2">Or with tunnel:</p>
+                <code className="block text-[#D4B08C]">
+                  cloudflared tunnel --url http://localhost:4096
+                </code>
+                <p className="text-white/40 text-[10px] mt-1">Then use "Enter Backend URL" option</p>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
