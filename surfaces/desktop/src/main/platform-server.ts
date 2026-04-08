@@ -24,10 +24,14 @@ const PORT_MAX = 3200;
 const HEALTH_TIMEOUT_MS = 30_000;
 
 export interface PlatformServerConfig {
-  /** URL of the Rust allternit-api backend */
+  /** URL of the Rust allternit-api backend (port 4097) */
   apiUrl: string;
   /** Bearer token for the Rust API */
   apiKey: string;
+  /** URL of the gizzi-code terminal server (port 4096) */
+  gizziUrl?: string;
+  /** Basic-auth password for gizzi-code (username: gizzi) */
+  gizziPassword?: string;
 }
 
 export class PlatformServerManager {
@@ -67,12 +71,15 @@ export class PlatformServerManager {
       PORT: String(this.port),
       HOSTNAME: '127.0.0.1',
       NODE_ENV: 'production',
-      // Rust API backend — Next.js API routes proxy to this
+      // Rust operator API (vm-session, rails, terminal routes)
       ALLTERNIT_API_URL: config.apiUrl,
       ALLTERNIT_OPERATOR_API_KEY: config.apiKey,
-      // Point Next.js public env at the local API
       NEXT_PUBLIC_API_BASE_URL: config.apiUrl,
       NEXT_PUBLIC_ALLTERNIT_BASE_URL: config.apiUrl,
+      // Gizzi-code AI runtime (agent sessions, conversations, tools)
+      TERMINAL_SERVER_URL: config.gizziUrl ?? 'http://127.0.0.1:4096',
+      GIZZI_USERNAME: 'gizzi',
+      GIZZI_PASSWORD: config.gizziPassword ?? '',
     };
 
     this.proc = spawn(process.execPath, [serverPath], {

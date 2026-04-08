@@ -15,6 +15,7 @@ import log from 'electron-log';
 import { updateElectronApp } from 'update-electron-app';
 import fixPath from 'fix-path';
 import { backendManager } from './backend-manager';
+import { gizziManager } from './gizzi-manager';
 import { platformServerManager } from './platform-server';
 import { PLATFORM_MANIFEST, shouldUpdateBackend } from './manifest';
 
@@ -242,37 +243,42 @@ async function initializeBundledMode(): Promise<void> {
   };
   
   try {
-    // Step 1 — Rust execution API
-    const apiStatus = await backendManager.getStatus();
+    // Step 1 — gizzi-code (AI runtime, port 4096)
+    // All agent sessions, conversations, tool calls and provider routing go through here.
+    updateSplash('Starting AI runtime…', 10);
+    const gizziUrl = await gizziManager.start();
+    activeBackendUrl = gizziUrl;
 
-    if (apiStatus.running) {
-      if (apiStatus.version && shouldUpdateBackend(apiStatus.version)) {
-        updateSplash('Updating Allternit…', 20);
-      } else {
-        updateSplash('Connecting to local backend…', 30);
-      }
-    } else if (!apiStatus.installed) {
-      updateSplash('Setting up Allternit for the first time…', 5);
+    // Step 2 — allternit-api (Rust operator API, port 4097 — VM, rails, terminal)
+    const apiStatus = await backendManager.getStatus();
+    if (!apiStatus.installed) {
+      updateSplash('Setting up Allternit for the first time…', 25);
+    } else if (apiStatus.version && shouldUpdateBackend(apiStatus.version)) {
+      updateSplash('Updating Allternit…', 25);
     } else {
-      updateSplash('Starting Allternit Backend…', 20);
+      updateSplash('Starting operator backend…', 30);
     }
 
     const apiUrl = await backendManager.ensureBackend();
-    activeBackendUrl = apiUrl;
     store.set('backend.lastLocalVersion', PLATFORM_MANIFEST.backend.version);
 
     updateSplash('Starting platform UI…', 60);
 
-    // Step 2 — Next.js standalone platform server
+    // Step 3 — Next.js standalone platform server
     // In dev, the Next.js dev server runs separately on port 3000.
     // In production, the standalone server is bundled in resources/platform-server/.
     let platformUrl: string;
     if (isDev) {
       platformUrl = 'http://localhost:3000';
     } else {
-      // Generate a per-session API key for the Rust backend (matches what BackendManager set)
       const apiKey = process.env.ALLTERNIT_OPERATOR_API_KEY ?? '';
-      platformUrl = await platformServerManager.start({ apiUrl, apiKey });
+      platformUrl = await platformServerManager.start({
+        apiUrl,
+        apiKey,
+        // Pass gizzi-code credentials so the Next.js server can reach the AI runtime
+        gizziUrl,
+        gizziPassword: gizziManager.getPassword() ?? '',
+      });
     }
 
     // Complete
@@ -469,9 +475,9 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', async () => {
-  // Stop local backend on quit
   await backendManager.stopBackend();
   platformServerManager.stop();
+  gizziManager.stop();
 });
 
 // ============================================================================

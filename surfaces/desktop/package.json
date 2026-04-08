@@ -72,6 +72,9 @@
         "to": "bin/vm-manager-cli"
       }
     ],
+    "asarUnpack": [
+      "resources/bin/**"
+    ],
     "mac": {
       "target": [
         { "target": "dmg", "arch": ["arm64", "x64"] },

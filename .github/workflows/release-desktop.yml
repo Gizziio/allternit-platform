@@ -75,7 +75,33 @@ jobs:
             cp -r surfaces/platform/public/. "$DEST/public/"
           fi
 
-      # ── Step 2: Build Rust allternit-api for both architectures ─────────────
+      # ── Step 2: Build gizzi-code (AI runtime — the brain) ───────────────────
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install gizzi-code dependencies
+        run: bun install
+        working-directory: cmd/gizzi-code
+
+      - name: Build gizzi-code (arm64)
+        run: bun run script/build-production.ts --target=darwin-arm64
+        working-directory: cmd/gizzi-code
+
+      - name: Build gizzi-code (x64)
+        run: bun run script/build-production.ts --target=darwin-x64
+        working-directory: cmd/gizzi-code
+
+      - name: Create universal gizzi-code binary
+        run: |
+          mkdir -p surfaces/desktop/resources/bin
+          lipo -create \
+            cmd/gizzi-code/dist/gizzi-code-darwin-arm64 \
+            cmd/gizzi-code/dist/gizzi-code-darwin-x64 \
+            -output surfaces/desktop/resources/bin/gizzi-code
+          chmod +x surfaces/desktop/resources/bin/gizzi-code
+          lipo -info surfaces/desktop/resources/bin/gizzi-code
+
+      # ── Step 3: Build Rust allternit-api for both architectures ─────────────
       - name: Build allternit-api (x86_64)
         run: cargo build --release --target x86_64-apple-darwin --manifest-path api/core/allternit-api/Cargo.toml
 
@@ -167,6 +193,24 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           key: allternit-api-windows
+
+      # ── Step 2: Build gizzi-code for Windows ─────────────────────────────────
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install gizzi-code dependencies
+        run: bun install
+        working-directory: cmd/gizzi-code
+
+      - name: Build gizzi-code (Windows x64)
+        run: bun run script/build-production.ts --target=windows-x64
+        working-directory: cmd/gizzi-code
+
+      - name: Copy gizzi-code binary
+        shell: bash
+        run: |
+          mkdir -p surfaces/desktop/resources/bin
+          cp cmd/gizzi-code/dist/gizzi-code.exe surfaces/desktop/resources/bin/gizzi-code.exe
 
       - name: Install platform dependencies
         run: pnpm install --frozen-lockfile

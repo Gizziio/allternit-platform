@@ -23,12 +23,14 @@ RESOURCES_DIR="$DESKTOP_DIR/resources"
 TARGET_DIR="$REPO_ROOT/target/release"
 
 SKIP_PLATFORM=false
+SKIP_GIZZI=false
 SKIP_API=false
 SKIP_ELECTRON=false
 
 for arg in "$@"; do
   case "$arg" in
     --skip-platform) SKIP_PLATFORM=true ;;
+    --skip-gizzi)    SKIP_GIZZI=true ;;
     --skip-api)      SKIP_API=true ;;
     --skip-electron) SKIP_ELECTRON=true ;;
   esac
@@ -88,7 +90,40 @@ if [ "$SKIP_PLATFORM" = false ]; then
   cd "$REPO_ROOT"
 fi
 
-# ── 2. Rust allternit-api binary ─────────────────────────────────────────────
+# ── 2. Gizzi-code binary (AI runtime — the brain) ────────────────────────────
+if [ "$SKIP_GIZZI" = false ]; then
+  step "Building gizzi-code binary…"
+
+  GIZZI_DIR="$REPO_ROOT/cmd/gizzi-code"
+  [ -d "$GIZZI_DIR" ] || die "gizzi-code not found at $GIZZI_DIR"
+
+  cd "$GIZZI_DIR"
+
+  # Install deps if needed
+  if [ ! -d node_modules ]; then
+    warn "gizzi-code node_modules missing — running bun install"
+    bun install
+  fi
+
+  # Detect target triple for this machine
+  ARCH=$(uname -m | sed 's/arm64/arm64/;s/x86_64/x64/')
+  OS=$(uname | tr '[:upper:]' '[:lower:]' | sed 's/darwin/darwin/')
+  GIZZI_TARGET="${OS}-${ARCH}"   # e.g. darwin-arm64
+
+  bun run script/build-production.ts --target="$GIZZI_TARGET"
+
+  GIZZI_BIN="$GIZZI_DIR/dist/gizzi-code"
+  [ -f "$GIZZI_BIN" ] || die "gizzi-code build failed — binary not found at $GIZZI_BIN"
+
+  mkdir -p "$RESOURCES_DIR/bin"
+  cp "$GIZZI_BIN" "$RESOURCES_DIR/bin/gizzi-code"
+  chmod +x "$RESOURCES_DIR/bin/gizzi-code"
+
+  ok "gizzi-code → $RESOURCES_DIR/bin/gizzi-code"
+  cd "$REPO_ROOT"
+fi
+
+# ── 3. Rust allternit-api binary (operator API — VM, rails, terminal) ─────────
 if [ "$SKIP_API" = false ]; then
   step "Building Rust allternit-api binary…"
 
