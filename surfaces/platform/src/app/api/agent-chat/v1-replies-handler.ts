@@ -16,6 +16,7 @@ import {
   toGatewayAuthorizationHeader,
 } from "@/lib/runtime-backend";
 import type { ReplyEvent } from '@/types/replies-contract';
+import { markReplyActive, markReplyDone, isCancelled } from "@/lib/reply-cancellation";
 
 export const runtime = "nodejs";
 export const maxDuration = 800;
@@ -158,6 +159,7 @@ async function routeViaGizzi(
   message: string,
   modelId: string | undefined,
   runtimeModelId: string | undefined,
+  replyId: string,
   clientSignal?: AbortSignal,
 ): Promise<Response> {
   const { providerID, modelID } = parseModelId(runtimeModelId ?? modelId);
@@ -218,6 +220,8 @@ async function routeViaGizzi(
   const decoder = new TextDecoder();
   const eventsReader = eventRes.body.getReader();
 
+  await markReplyActive(replyId);
+
   const stream = new ReadableStream({
     async start(controller) {
       let evtBuffer = "";
@@ -227,20 +231,23 @@ async function routeViaGizzi(
       const reasoningPartIds = new Set<string>();
       const openedTextPartIds = new Set<string>();
       const emittedToolCallIds = new Set<string>();
-      let currentMessageId: string | null = null;
+      let currentMessageId: string = replyId;
 
       const enqueue = (data: object) => {
         if (!closed)
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
       };
 
-      function ensureMessageStart(msgId: string): void {
-        if (!currentMessageId && msgId) {
-          currentMessageId = msgId;
+      // Emit reply.started once with our pre-generated replyId so the client
+      // has a stable cancellation handle before the first Gizzi event arrives.
+      let replyStarted = false;
+      function ensureMessageStart(_msgId?: string): void {
+        if (!replyStarted) {
+          replyStarted = true;
           enqueue({
             type: "reply.started",
-            replyId: msgId,
-            runId: `run_${msgId}`,
+            replyId: currentMessageId,
+            runId: `run_${currentMessageId}`,
             conversationId: gizziSessionId,
             ts: Date.now(),
           } satisfies ReplyEvent);
@@ -249,6 +256,17 @@ async function routeViaGizzi(
 
       try {
         while (!closed) {
+          if (await isCancelled(currentMessageId)) {
+            enqueue({
+              type: "reply.failed",
+              replyId: currentMessageId,
+              runId: `run_${currentMessageId}`,
+              error: "Cancelled by client",
+              ts: Date.now(),
+            } satisfies ReplyEvent);
+            closed = true;
+            break;
+          }
           const { value, done } = await eventsReader.read();
           if (done) break;
           evtBuffer += decoder.decode(value, { stream: true });
@@ -446,13 +464,10 @@ async function routeViaGizzi(
           } satisfies ReplyEvent);
         }
       } finally {
-        try {
-          eventsReader.cancel();
-        } catch {}
+        try { eventsReader.cancel(); } catch {}
         closed = true;
-        try {
-          controller.close();
-        } catch {}
+        try { controller.close(); } catch {}
+        markReplyDone(currentMessageId).catch(() => {});
       }
 
       // Ensure postPromise doesn't hang
@@ -547,5 +562,6 @@ export async function POST(req: NextRequest): Promise<Response> {
   }
 
   // 3. Gizzi terminal server
-  return routeViaGizzi(chatId, message, modelId, runtimeModelId, req.signal);
+  const replyId = `reply_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  return routeViaGizzi(chatId, message, modelId, runtimeModelId, replyId, req.signal);
 }
