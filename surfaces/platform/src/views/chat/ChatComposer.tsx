@@ -48,7 +48,6 @@ import {
 } from "@/components/ui/dialog";
 import { useModelDiscovery } from '@/integration/api-client';
 import { useAgentSurfaceModeStore, type AgentModeSurface, type AgentModeId } from '@/stores/agent-surface-mode.store';
-import ConsolidatedModeSelector from '@/components/chat/ConsolidatedModeSelector';
 import { getProviderMeta } from '@/lib/providers/provider-registry';
 import { useRuntimeExecutionMode } from '@/hooks/useRuntimeExecutionMode';
 import type { RuntimeExecutionMode } from '@/lib/agents/native-agent-api';
@@ -2249,18 +2248,14 @@ export function ChatComposer({
           flexDirection: 'column',
           alignItems: 'center',
         }}>
-          <ConsolidatedModeSelector
-            selectedMode={selectedModeId ? {
-              groupId: (selectedModeId === 'code' || selectedModeId === 'agents' || selectedModeId === 'assets' || selectedModeId === 'flow') 
-                ? (selectedModeId === 'code' || selectedModeId === 'agents' ? 'build' : 'automate')
-                : (selectedModeId === 'research' || selectedModeId === 'data' ? 'analyze' : 'create'),
-              subModeId: selectedModeId
-            } : null}
-            onSelectMode={(mode) => {
-              if (agentModeSurface && mode) {
-                setSelectedMode(agentModeSurface, mode.subModeId as AgentModeId);
+          <ModeDock
+            selectedMode={selectedModeId}
+            onSelectMode={(modeId) => {
+              if (agentModeSurface) {
+                setSelectedMode(agentModeSurface, modeId as AgentModeId);
               }
             }}
+            agentModeSurface={agentModeSurface}
             onSelectTemplate={(prompt) => {
               // Set input value with the template prompt
               setInput(prompt);
@@ -2270,7 +2265,6 @@ export function ChatComposer({
                 textarea.focus();
               }
             }}
-            showTemplates={true}
           />
         </div>
       )}
@@ -2891,6 +2885,7 @@ interface ModeDockProps {
   selectedMode: string | null;
   onSelectMode: (modeId: string) => void;
   agentModeSurface: AgentModeSurface;
+  onSelectTemplate?: (prompt: string) => void;
 }
 
 const MODES = [
@@ -3061,6 +3056,14 @@ const MODE_TEMPLATES: Record<string, Array<{ title: string; description: string;
     { title: 'Interactive App', description: 'Single-page web application', prompt: 'Build a single-page [type] app (e.g. calculator, todo list, form). Output self-contained HTML/CSS/JS that runs in a preview panel.' },
     { title: 'Portfolio Site', description: 'Personal or project showcase', prompt: 'Create a portfolio website for [name/project]. Include a bio, project gallery, and contact section. Output full HTML/CSS/JS.' },
   ],
+  code: [
+    { title: 'React Component', description: 'Build UI with TypeScript', prompt: 'Build a React component for [describe functionality]. Use TypeScript, Tailwind CSS, and include props interface, state management, and error handling. Make it production-ready with accessibility support.' },
+    { title: 'API Endpoint', description: 'Backend route handler', prompt: 'Create an API endpoint for [describe functionality]. Include request validation, error handling, authentication checks, and response formatting. Use Express/Fastify style with TypeScript.' },
+    { title: 'Database Schema', description: 'Design data models', prompt: 'Design a database schema for [describe application]. Include table definitions, relationships, indexes, and constraints. Provide SQL for PostgreSQL or MongoDB documents depending on use case.' },
+    { title: 'Python Script', description: 'Automation & tooling', prompt: 'Write a Python script to [describe task]. Include argument parsing, logging, error handling, and make it executable as a CLI tool with proper documentation.' },
+    { title: 'Test Suite', description: 'Unit & integration tests', prompt: 'Write comprehensive tests for [describe code/functionality]. Include unit tests, integration tests, and edge cases. Use Jest/Vitest for JS or pytest for Python with proper mocking.' },
+    { title: 'Refactor Code', description: 'Improve existing code', prompt: 'Refactor this code to improve [performance/readability/maintainability]: [paste code]. Explain the changes made and why they improve the codebase.' },
+  ],
   'computer-use': [
     { title: 'Browse & Extract', description: 'Navigate a site and pull structured data', prompt: 'Go to [URL] and extract [data/information]. Organise the results into a structured format.' },
     { title: 'Automate a Task', description: 'Complete a multi-step web workflow', prompt: 'Automate the following web task for me: [describe the task, e.g. fill in a form, submit a report, scrape a table].' },
@@ -3073,12 +3076,13 @@ const MODE_TABS = [
   { id: 'research', label: 'Research', color: '#3b82f6' },
   { id: 'data', label: 'Data', color: '#10b981' },
   { id: 'slides', label: 'Slides', color: '#f59e0b' },
+  { id: 'code', label: 'Code', color: '#f97316' },
   { id: 'flow', label: 'Flow', color: '#06b6d4' },
   { id: 'web', label: 'Websites', color: '#6366f1' },
   { id: 'computer-use', label: 'Computer Use', color: '#a855f7' },
 ] as const;
 
-function ModeDock({ selectedMode, onSelectMode, agentModeSurface }: ModeDockProps) {
+function ModeDock({ selectedMode, onSelectMode, agentModeSurface, onSelectTemplate }: ModeDockProps) {
   const modeData = selectedMode ? MODE_TEMPLATES[selectedMode] : null;
   const modeColors = selectedMode ? MODE_TABS.find(m => m.id === selectedMode) : null;
   
@@ -3188,8 +3192,10 @@ function ModeDock({ selectedMode, onSelectMode, agentModeSurface }: ModeDockProp
                 key={index}
                 title={template.title}
                 description={template.description}
+                prompt={template.prompt}
                 color={modeColors?.color || THEME.accent}
                 gradientIndex={index}
+                onClick={onSelectTemplate}
               />
             ))}
           </div>
@@ -3202,14 +3208,18 @@ function ModeDock({ selectedMode, onSelectMode, agentModeSurface }: ModeDockProp
 // Template Card Component
 function TemplateCard({ 
   title, 
-  description, 
+  description,
+  prompt,
   color,
-  gradientIndex 
+  gradientIndex,
+  onClick
 }: { 
   title: string; 
-  description: string; 
+  description: string;
+  prompt: string;
   color: string;
   gradientIndex: number;
+  onClick?: (prompt: string) => void;
 }) {
   // Generate gradient based on color and index
   const gradients = [
@@ -3220,6 +3230,7 @@ function TemplateCard({
   
   return (
     <button
+      onClick={() => onClick?.(prompt)}
       style={{
         display: 'flex',
         flexDirection: 'column',
