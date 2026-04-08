@@ -38,7 +38,7 @@ jobs:
       # API routes are not supported in static export - they run on user's backend (BYOC)
       - name: Temporarily exclude API routes for static export
         working-directory: surfaces/platform
-        run: mv src/app/api src/app/api.disabled
+        run: rm -rf src/app/api
         
       - name: Build static export
         working-directory: surfaces/platform
@@ -49,11 +49,6 @@ jobs:
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          
-      - name: Restore API routes
-        working-directory: surfaces/platform
-        run: mv src/app/api.disabled src/app/api
-        if: always()
           
       # Create project if it doesn't exist (ignore error if already exists)
       - name: Create Pages Project if needed
