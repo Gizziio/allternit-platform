@@ -304,8 +304,8 @@ async function routeViaGizzi(
                   reasoningPartIds.add(partId);
                   enqueue({
                     type: "reply.item.added",
-                    replyId: currentMessageId ?? gizziSessionId,
-                    runId: `run_${currentMessageId ?? gizziSessionId}`,
+                    replyId: currentMessageId,
+                    runId: `run_${currentMessageId}`,
                     itemId: partId,
                     kind: "reasoning",
                     ts: Date.now(),
@@ -326,16 +326,16 @@ async function routeViaGizzi(
                   emittedToolCallIds.add(partId);
                   enqueue({
                     type: "reply.item.added",
-                    replyId: currentMessageId ?? gizziSessionId,
-                    runId: `run_${currentMessageId ?? gizziSessionId}`,
+                    replyId: currentMessageId,
+                    runId: `run_${currentMessageId}`,
                     itemId: partId,
                     kind: "tool_call",
                     ts: Date.now(),
                   } satisfies ReplyEvent);
                   enqueue({
                     type: "tool_call.started",
-                    replyId: currentMessageId ?? gizziSessionId,
-                    runId: `run_${currentMessageId ?? gizziSessionId}`,
+                    replyId: currentMessageId,
+                    runId: `run_${currentMessageId}`,
                     itemId: partId,
                     toolCallId: partId,
                     toolName,
@@ -347,8 +347,8 @@ async function routeViaGizzi(
                 if (toolStatus === "completed" && toolOutput !== undefined) {
                   enqueue({
                     type: "tool_call.completed",
-                    replyId: currentMessageId ?? gizziSessionId,
-                    runId: `run_${currentMessageId ?? gizziSessionId}`,
+                    replyId: currentMessageId,
+                    runId: `run_${currentMessageId}`,
                     itemId: partId,
                     toolCallId: partId,
                     output: toolOutput,
@@ -357,8 +357,8 @@ async function routeViaGizzi(
                 } else if (toolStatus === "error") {
                   enqueue({
                     type: "tool_call.failed",
-                    replyId: currentMessageId ?? gizziSessionId,
-                    runId: `run_${currentMessageId ?? gizziSessionId}`,
+                    replyId: currentMessageId,
+                    runId: `run_${currentMessageId}`,
                     itemId: partId,
                     toolCallId: partId,
                     error: String(partState?.error ?? "Tool failed"),
@@ -380,8 +380,8 @@ async function routeViaGizzi(
               if (reasoningPartIds.has(partId)) {
                 enqueue({
                   type: "reply.reasoning.delta",
-                  replyId: currentMessageId ?? gizziSessionId,
-                  runId: `run_${currentMessageId ?? gizziSessionId}`,
+                  replyId: currentMessageId,
+                  runId: `run_${currentMessageId}`,
                   itemId: partId,
                   delta: text,
                   ts: Date.now(),
@@ -391,8 +391,8 @@ async function routeViaGizzi(
                   openedTextPartIds.add(partId);
                   enqueue({
                     type: "reply.item.added",
-                    replyId: currentMessageId ?? gizziSessionId,
-                    runId: `run_${currentMessageId ?? gizziSessionId}`,
+                    replyId: currentMessageId,
+                    runId: `run_${currentMessageId}`,
                     itemId: partId,
                     kind: "text",
                     ts: Date.now(),
@@ -400,8 +400,8 @@ async function routeViaGizzi(
                 }
                 enqueue({
                   type: "reply.text.delta",
-                  replyId: currentMessageId ?? gizziSessionId,
-                  runId: `run_${currentMessageId ?? gizziSessionId}`,
+                  replyId: currentMessageId,
+                  runId: `run_${currentMessageId}`,
                   itemId: partId,
                   delta: text,
                   ts: Date.now(),
@@ -414,8 +414,8 @@ async function routeViaGizzi(
               if (msgId) ensureMessageStart(msgId);
               enqueue({
                 type: "reply.completed",
-                replyId: currentMessageId ?? gizziSessionId,
-                runId: `run_${currentMessageId ?? gizziSessionId}`,
+                replyId: currentMessageId,
+                runId: `run_${currentMessageId}`,
                 ts: Date.now(),
                 ...(stepTokens ? { usage: stepTokens } : {}),
                 ...(typeof stepCost === "number" ? { cost: stepCost } : {}),
@@ -429,8 +429,8 @@ async function routeViaGizzi(
               if (msgId) ensureMessageStart(msgId);
               enqueue({
                 type: "reply.failed",
-                replyId: currentMessageId ?? gizziSessionId,
-                runId: `run_${currentMessageId ?? gizziSessionId}`,
+                replyId: currentMessageId,
+                runId: `run_${currentMessageId}`,
                 error: String(evt.error ?? evt.message ?? "Unknown error"),
                 ts: Date.now(),
               } satisfies ReplyEvent);
@@ -443,8 +443,8 @@ async function routeViaGizzi(
         if (!closed) {
           enqueue({
             type: "reply.failed",
-            replyId: currentMessageId ?? gizziSessionId,
-            runId: `run_${currentMessageId ?? gizziSessionId}`,
+            replyId: currentMessageId,
+            runId: `run_${currentMessageId}`,
             error: err instanceof Error ? err.message : "Stream error",
             ts: Date.now(),
           } satisfies ReplyEvent);
