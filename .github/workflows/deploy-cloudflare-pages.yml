@@ -6,7 +6,6 @@ on:
     paths:
       - 'surfaces/platform/**'
       - '.github/workflows/deploy-cloudflare-pages.yml'
-      - 'wrangler.toml'
 
 jobs:
   deploy:
@@ -35,38 +34,22 @@ jobs:
         working-directory: surfaces/platform
         run: pnpm prisma generate
         
-      # API routes are not supported in static export - they run on user's backend (BYOC)
-      - name: Temporarily exclude API routes for static export
+      - name: Install @cloudflare/next-on-pages
         working-directory: surfaces/platform
-        run: mv src/app/api src/app/api.disabled
+        run: pnpm add -D @cloudflare/next-on-pages
         
-      - name: Build static export
+      - name: Build with @cloudflare/next-on-pages
         working-directory: surfaces/platform
-        run: pnpm next build
+        run: pnpm exec next-on-pages
         env:
-          CLOUDFLARE_PAGES: '1'
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          
-      - name: Restore API routes
-        working-directory: surfaces/platform
-        run: mv src/app/api.disabled src/app/api
-        if: always()
-          
-      # Create project if it doesn't exist (ignore error if already exists)
-      - name: Create Pages Project if needed
-        uses: cloudflare/wrangler-action@v3
-        continue-on-error: true
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages project create allternit-platform --production-branch=main
           
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy --commit-dirty=true
+          command: pages deploy surfaces/platform/.vercel/output/static --project-name=allternit-platform --branch=main
