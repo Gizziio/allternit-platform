@@ -44,9 +44,11 @@ jobs:
           ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           
+      # NOTE: Create the project first in Cloudflare dashboard:
+      # https://dash.cloudflare.com/ → Pages → Create a project → Direct upload
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy surfaces/platform/dist --project-name=allternit-platform
+          command: pages deploy --commit-dirty=true

@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/dialog";
 import { useModelDiscovery } from '@/integration/api-client';
 import { useAgentSurfaceModeStore, type AgentModeSurface, type AgentModeId } from '@/stores/agent-surface-mode.store';
+import { MODE_TEMPLATES as ALL_TEMPLATES } from '@/components/chat/TemplatePreviewCards';
 import { getProviderMeta } from '@/lib/providers/provider-registry';
 import { useRuntimeExecutionMode } from '@/hooks/useRuntimeExecutionMode';
 import type { RuntimeExecutionMode } from '@/lib/agents/native-agent-api';
@@ -3029,61 +3030,46 @@ function BottomDock({
   );
 }
 
-// Template data for each mode
-const MODE_TEMPLATES: Record<string, Array<{ title: string; description: string; prompt: string }>> = {
-  research: [
-    { title: 'Market Analysis', description: 'Analyze market trends and opportunities', prompt: 'Conduct a comprehensive market analysis for [industry/product]. Include market size, growth trends, key players, and emerging opportunities.' },
-    { title: 'Competitor Report', description: 'Deep dive into competitor strategies', prompt: 'Create a detailed competitor analysis report for [company/product]. Include their strengths, weaknesses, market position, and strategic initiatives.' },
-    { title: 'Industry Overview', description: 'Broad industry landscape analysis', prompt: 'Provide an overview of the [industry] industry, including current state, key trends, challenges, and future outlook.' },
-  ],
-  data: [
-    { title: 'Data Analysis', description: 'Analyze datasets for insights', prompt: 'Analyze this dataset and provide key insights, trends, and recommendations: [describe your data]' },
-    { title: 'Visualization', description: 'Create charts and dashboards', prompt: 'Help me visualize this data effectively. Suggest the best chart types and create a dashboard mockup for: [describe data]' },
-    { title: 'Predictive Model', description: 'Build forecasting models', prompt: 'Build a predictive model for [outcome] based on [variables]. Explain the approach and expected accuracy.' },
-  ],
-  slides: [
-    { title: 'Pitch Deck', description: 'Investor presentation', prompt: 'Create a pitch deck outline for [company/idea]. Include key slides, messaging, and visual recommendations.' },
-    { title: 'Quarterly Review', description: 'Business performance slides', prompt: 'Design a quarterly business review presentation covering: [metrics/achievements/challenges]' },
-    { title: 'Product Launch', description: 'Go-to-market deck', prompt: 'Create a product launch presentation for [product]. Include positioning, features, target audience, and go-to-market strategy.' },
-  ],
-  flow: [
-    { title: 'Workflow Design', description: 'Process automation', prompt: 'Design a workflow for [process]. Include steps, decision points, and automation opportunities.' },
-    { title: 'Integration Flow', description: 'Connect systems', prompt: 'Create an integration flow between [system A] and [system B]. Include data mapping and error handling.' },
-    { title: 'Approval Process', description: 'Review and sign-off flows', prompt: 'Design an approval workflow for [process]. Include roles, escalation rules, and notification logic.' },
-  ],
-  web: [
-    { title: 'Landing Page', description: 'Build a complete landing page', prompt: 'Build a modern landing page for [product/company]. Include hero, features, testimonials, and CTA sections. Output full HTML/CSS/JS.' },
-    { title: 'Interactive App', description: 'Single-page web application', prompt: 'Build a single-page [type] app (e.g. calculator, todo list, form). Output self-contained HTML/CSS/JS that runs in a preview panel.' },
-    { title: 'Portfolio Site', description: 'Personal or project showcase', prompt: 'Create a portfolio website for [name/project]. Include a bio, project gallery, and contact section. Output full HTML/CSS/JS.' },
-  ],
-  code: [
-    { title: 'React Component', description: 'Build UI with TypeScript', prompt: 'Build a React component for [describe functionality]. Use TypeScript, Tailwind CSS, and include props interface, state management, and error handling. Make it production-ready with accessibility support.' },
-    { title: 'API Endpoint', description: 'Backend route handler', prompt: 'Create an API endpoint for [describe functionality]. Include request validation, error handling, authentication checks, and response formatting. Use Express/Fastify style with TypeScript.' },
-    { title: 'Database Schema', description: 'Design data models', prompt: 'Design a database schema for [describe application]. Include table definitions, relationships, indexes, and constraints. Provide SQL for PostgreSQL or MongoDB documents depending on use case.' },
-    { title: 'Python Script', description: 'Automation & tooling', prompt: 'Write a Python script to [describe task]. Include argument parsing, logging, error handling, and make it executable as a CLI tool with proper documentation.' },
-    { title: 'Test Suite', description: 'Unit & integration tests', prompt: 'Write comprehensive tests for [describe code/functionality]. Include unit tests, integration tests, and edge cases. Use Jest/Vitest for JS or pytest for Python with proper mocking.' },
-    { title: 'Refactor Code', description: 'Improve existing code', prompt: 'Refactor this code to improve [performance/readability/maintainability]: [paste code]. Explain the changes made and why they improve the codebase.' },
-  ],
-  'computer-use': [
-    { title: 'Browse & Extract', description: 'Navigate a site and pull structured data', prompt: 'Go to [URL] and extract [data/information]. Organise the results into a structured format.' },
-    { title: 'Automate a Task', description: 'Complete a multi-step web workflow', prompt: 'Automate the following web task for me: [describe the task, e.g. fill in a form, submit a report, scrape a table].' },
-    { title: 'Research a Topic', description: 'Open-ended web research via real browsing', prompt: 'Use the browser to research [topic]. Visit multiple sources, cross-reference facts, and summarise your findings.' },
-  ],
+// Template data mapping from TemplatePreviewCards
+// Maps ALL 76 templates to the mode dock structure
+const getModeTemplates = (modeId: string): Array<{ title: string; description: string; prompt: string }> => {
+  const templates = ALL_TEMPLATES[modeId];
+  if (!templates) return [];
+  return templates.map(t => ({
+    title: t.name,
+    description: t.description,
+    prompt: t.prompt
+  }));
 };
 
 // Mode tabs configuration - pill style like the reference
+// All 9 modes from TemplatePreviewCards
 const MODE_TABS = [
-  { id: 'research', label: 'Research', color: '#3b82f6' },
-  { id: 'data', label: 'Data', color: '#10b981' },
-  { id: 'slides', label: 'Slides', color: '#f59e0b' },
-  { id: 'code', label: 'Code', color: '#f97316' },
-  { id: 'flow', label: 'Flow', color: '#06b6d4' },
-  { id: 'web', label: 'Websites', color: '#6366f1' },
-  { id: 'computer-use', label: 'Computer Use', color: '#a855f7' },
+  { id: 'image', label: 'Image', color: '#8b5cf6' },      // Violet
+  { id: 'video', label: 'Video', color: '#ec4899' },      // Pink
+  { id: 'slides', label: 'Slides', color: '#f59e0b' },    // Amber
+  { id: 'website', label: 'Web', color: '#6366f1' },      // Indigo
+  { id: 'research', label: 'Research', color: '#3b82f6' }, // Blue
+  { id: 'data', label: 'Data', color: '#10b981' },        // Emerald
+  { id: 'code', label: 'Code', color: '#f97316' },        // Orange
+  { id: 'swarms', label: 'Swarms', color: '#14b8a6' },    // Teal
+  { id: 'flow', label: 'Flow', color: '#06b6d4' },        // Cyan
 ] as const;
 
+// Surface-specific mode filtering
+const SURFACE_MODES: Record<AgentModeSurface, string[]> = {
+  chat: ['image', 'video', 'slides', 'website', 'research', 'data', 'code', 'swarms', 'flow'],
+  cowork: ['image', 'video', 'slides', 'website', 'research', 'data', 'code', 'swarms', 'flow'],
+  code: ['code', 'website', 'swarms', 'flow'],  // Code-focused modes
+  browser: ['website', 'research', 'data'],     // Browser-focused modes
+};
+
 function ModeDock({ selectedMode, onSelectMode, agentModeSurface, onSelectTemplate }: ModeDockProps) {
-  const modeData = selectedMode ? MODE_TEMPLATES[selectedMode] : null;
+  // Get surface-specific modes
+  const allowedModes = agentModeSurface ? SURFACE_MODES[agentModeSurface] : MODE_TABS.map(m => m.id);
+  const visibleTabs = MODE_TABS.filter(tab => allowedModes.includes(tab.id));
+  
+  const modeData = selectedMode ? getModeTemplates(selectedMode) : null;
   const modeColors = selectedMode ? MODE_TABS.find(m => m.id === selectedMode) : null;
   
   return (
@@ -3103,8 +3089,9 @@ function ModeDock({ selectedMode, onSelectMode, agentModeSurface, onSelectTempla
         width: '100%',
         gap: '8px',
         justifyContent: 'center',
+        flexWrap: 'wrap',
       }}>
-        {MODE_TABS.map((mode) => {
+        {visibleTabs.map((mode) => {
           const isSelected = selectedMode === mode.id;
           return (
             <button
