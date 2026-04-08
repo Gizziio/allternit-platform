@@ -1,67 +1,104 @@
 /**
- * Redis client for resumable streams and caching
- * Uses ioredis for Redis connectivity
+ * Redis client — Upstash REST backend.
+ *
+ * Uses @upstash/redis which speaks HTTP instead of TCP.
+ * No persistent connections, no pool exhaustion, works in every
+ * Vercel serverless function invocation.
+ *
+ * Auto-reads KV_REST_API_URL + KV_REST_API_TOKEN (provisioned by the
+ * Vercel / Upstash marketplace integration).
+ *
+ * Returns a thin wrapper whose API matches the ioredis subset used
+ * throughout this codebase so existing callers need no changes:
+ *   set(key, value, 'EX', ttl)
+ *   get(key)
+ *   del(...keys)
+ *   exists(...keys)
+ *   sadd(key, ...members)
+ *   smembers(key)
+ *   srem(key, ...members)
+ *   expire(key, ttl)
  */
 
-import Redis from 'ioredis';
-import { createModuleLogger } from '@/lib/logger';
+import { Redis } from '@upstash/redis';
 
-const log = createModuleLogger('redis');
+// ─── Client singleton ──────────────────────────────────────────────────────────
 
-// Redis client singleton
-let redisClient: Redis | null = null;
+export type RedisClient = ReturnType<typeof buildClient>;
 
-/**
- * Get or create Redis client
- */
-export function getRedisClient(): Redis | null {
-  if (redisClient) return redisClient;
+let _client: RedisClient | null = null;
 
-  const redisUrl = process.env.REDIS_URL || process.env.UPSTASH_REDIS_REST_URL;
-  
-  if (!redisUrl) {
-    log.warn('REDIS_URL not configured, resumable streams will not be available');
-    return null;
-  }
+function buildClient() {
+  const url   = process.env.KV_REST_API_URL;
+  const token = process.env.KV_REST_API_TOKEN;
 
-  try {
-    redisClient = new Redis(redisUrl, {
-      retryStrategy: (times) => {
-        const delay = Math.min(times * 50, 2000);
-        return delay;
-      },
-      maxRetriesPerRequest: 3,
-    });
+  if (!url || !token) return null;
 
-    redisClient.on('error', (err) => {
-      log.error({ error: err.message }, 'Redis error');
-    });
+  const upstash = new Redis({ url, token });
 
-    redisClient.on('connect', () => {
-      log.info('Redis connected');
-    });
+  return {
+    // ── String ops ──────────────────────────────────────────────────────────
+    async get(key: string): Promise<string | null> {
+      const v = await upstash.get<string>(key);
+      return v ?? null;
+    },
 
-    return redisClient;
-  } catch (error) {
-    log.error({ error }, 'Failed to connect to Redis');
-    return null;
-  }
+    /** Accepts both ioredis positional style (key, value, 'EX', ttl)
+     *  and options style (key, value, { ex: ttl }).                   */
+    async set(
+      key: string,
+      value: string,
+      exOrOpts?: 'EX' | 'PX' | { ex?: number; px?: number },
+      ttl?: number,
+    ): Promise<void> {
+      if (typeof exOrOpts === 'string' && typeof ttl === 'number') {
+        const opts = exOrOpts === 'EX' ? { ex: ttl } : { px: ttl };
+        await upstash.set(key, value, opts);
+      } else if (exOrOpts && typeof exOrOpts === 'object') {
+        await upstash.set(key, value, exOrOpts);
+      } else {
+        await upstash.set(key, value);
+      }
+    },
+
+    async del(...keys: string[]): Promise<number> {
+      if (!keys.length) return 0;
+      return upstash.del(...keys as [string, ...string[]]);
+    },
+
+    async exists(...keys: string[]): Promise<number> {
+      if (!keys.length) return 0;
+      return upstash.exists(...keys as [string, ...string[]]);
+    },
+
+    async expire(key: string, seconds: number): Promise<number> {
+      return upstash.expire(key, seconds);
+    },
+
+    // ── Set ops ─────────────────────────────────────────────────────────────
+    async sadd(key: string, ...members: string[]): Promise<number> {
+      return upstash.sadd(key, ...members);
+    },
+
+    async smembers(key: string): Promise<string[]> {
+      return upstash.smembers(key);
+    },
+
+    async srem(key: string, ...members: string[]): Promise<number> {
+      return upstash.srem(key, ...members);
+    },
+  };
 }
 
-/**
- * Check if Redis is available
- */
+export function getRedisClient(): RedisClient | null {
+  if (_client) return _client;
+  _client = buildClient();
+  if (!_client) {
+    console.warn('[redis] KV_REST_API_URL / KV_REST_API_TOKEN not set — falling back to in-memory stores');
+  }
+  return _client;
+}
+
 export function isRedisAvailable(): boolean {
-  return !!process.env.REDIS_URL || !!process.env.UPSTASH_REDIS_REST_URL;
-}
-
-/**
- * Close Redis connection
- */
-export async function closeRedisConnection(): Promise<void> {
-  if (redisClient) {
-    await redisClient.quit();
-    redisClient = null;
-    log.info('Redis connection closed');
-  }
+  return !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
 }
