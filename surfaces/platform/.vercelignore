@@ -26,9 +26,11 @@ vitest.config.ts.timestamp-*
 out
 
 # Rust API source (separate from Next.js frontend)
-api
+# Only ignore api/ at root level, not src/app/api/
+/api
+../../api
 
-# Ignore conflicting Rust files
-*.rs
-Cargo.toml
-Cargo.lock
+# Ignore conflicting Rust files at root level
+/*.rs
+/Cargo.toml
+/Cargo.lock

@@ -5,11 +5,20 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { spawn } from 'node-pty';
 import os from 'os';
 
+// Dynamically import node-pty to handle missing native module
+let spawn: typeof import('node-pty').spawn | undefined;
+try {
+  const nodePty = require('node-pty');
+  spawn = nodePty.spawn;
+} catch {
+  // node-pty not available (e.g., in Vercel build environment)
+  spawn = undefined;
+}
+
 // Store active sessions (in production, use Redis or database)
-const sessions = new Map<string, ReturnType<typeof spawn>>();
+const sessions = new Map<string, any>();
 
 function generateSessionId(): string {
   return `term-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -19,6 +28,14 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  // Check if node-pty is available
+  if (!spawn) {
+    return NextResponse.json(
+      { error: 'Terminal sessions are not available in this environment' },
+      { status: 503 }
+    );
+  }
+
   try {
     const nodeId = params.id;
     const body = await request.json();

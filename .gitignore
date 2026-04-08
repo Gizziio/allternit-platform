@@ -25,6 +25,8 @@ coverage/
 build/
 out/
 .vercel
+.next/
+*.tsbuildinfo
 !cmd/gizzi-code/packages/sdk/dist/
 
 # SDK dist is needed for CI builds
