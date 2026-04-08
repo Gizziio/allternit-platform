@@ -15,6 +15,7 @@ import log from 'electron-log';
 import { updateElectronApp } from 'update-electron-app';
 import fixPath from 'fix-path';
 import { backendManager } from './backend-manager';
+import { platformServerManager } from './platform-server';
 import { PLATFORM_MANIFEST, shouldUpdateBackend } from './manifest';
 
 // Fix PATH for macOS
@@ -241,49 +242,53 @@ async function initializeBundledMode(): Promise<void> {
   };
   
   try {
-    // Check current backend status
-    const status = await backendManager.getStatus();
-    
-    if (status.running) {
-      // Already running - check version
-      if (status.version && shouldUpdateBackend(status.version)) {
-        updateSplash('Updating Allternit Backend...', 50);
-        // Backend manager will handle update
-      } else {
-        updateSplash('Connecting...', 100);
-      }
-    } else if (!status.installed) {
-      // First run - extract backend
-      updateSplash('Setting up Allternit for the first time...', 10);
-    } else {
-      updateSplash('Starting Allternit Backend...', 50);
-    }
-    
-    // Ensure backend is ready
-    const backendUrl = await backendManager.ensureBackend();
-    activeBackendUrl = backendUrl;
+    // Step 1 — Rust execution API
+    const apiStatus = await backendManager.getStatus();
 
-    // Update stored version
+    if (apiStatus.running) {
+      if (apiStatus.version && shouldUpdateBackend(apiStatus.version)) {
+        updateSplash('Updating Allternit…', 20);
+      } else {
+        updateSplash('Connecting to local backend…', 30);
+      }
+    } else if (!apiStatus.installed) {
+      updateSplash('Setting up Allternit for the first time…', 5);
+    } else {
+      updateSplash('Starting Allternit Backend…', 20);
+    }
+
+    const apiUrl = await backendManager.ensureBackend();
+    activeBackendUrl = apiUrl;
     store.set('backend.lastLocalVersion', PLATFORM_MANIFEST.backend.version);
-    
+
+    updateSplash('Starting platform UI…', 60);
+
+    // Step 2 — Next.js standalone platform server
+    // In dev, the Next.js dev server runs separately on port 3000.
+    // In production, the standalone server is bundled in resources/platform-server/.
+    let platformUrl: string;
+    if (isDev) {
+      platformUrl = 'http://localhost:3000';
+    } else {
+      // Generate a per-session API key for the Rust backend (matches what BackendManager set)
+      const apiKey = process.env.ALLTERNIT_OPERATOR_API_KEY ?? '';
+      platformUrl = await platformServerManager.start({ apiUrl, apiKey });
+    }
+
     // Complete
     splashWindow?.webContents.send('complete');
-    await new Promise(r => setTimeout(r, 500)); // Show checkmark briefly
-    
-    // Close splash, open main
+    await new Promise(r => setTimeout(r, 400));
+
     splashWindow?.close();
     splashWindow = null;
-    
+
     mainWindow = createMainWindow();
-    
-    // Load from local backend
+    mainWindow.loadURL(platformUrl);
+
     if (isDev) {
-      mainWindow.loadURL('http://localhost:3000');
       mainWindow.webContents.openDevTools();
-    } else {
-      mainWindow.loadURL(`${backendUrl}/platform`);
     }
-    
+
     mainWindow.once('ready-to-show', () => {
       mainWindow?.show();
     });
@@ -466,6 +471,7 @@ app.on('window-all-closed', () => {
 app.on('before-quit', async () => {
   // Stop local backend on quit
   await backendManager.stopBackend();
+  platformServerManager.stop();
 });
 
 // ============================================================================
@@ -479,6 +485,7 @@ ipcMain.handle('sdk:get-backend-url', () => activeBackendUrl);
 ipcMain.handle('backend:get-status', () => backendManager.getStatus());
 ipcMain.handle('backend:restart', async () => {
   await backendManager.stopBackend();
+  platformServerManager.stop();
   return backendManager.ensureBackend();
 });
 
