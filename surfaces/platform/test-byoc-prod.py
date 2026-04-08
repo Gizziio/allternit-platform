@@ -8,7 +8,7 @@ import asyncio
 from playwright.async_api import async_playwright
 
 # PRODUCTION backend configuration
-PLATFORM_URL = "https://platform.allternit.com"
+PLATFORM_URL = "https://platform-pcmmvd220-gizzi-io-6138s-projects.vercel.app"
 BACKEND_URL = "https://mainly-earn-considers-fossil.trycloudflare.com"
 TEST_BACKEND_NAME = "Cloudflare Production Backend"
 

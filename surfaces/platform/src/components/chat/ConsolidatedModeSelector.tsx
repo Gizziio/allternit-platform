@@ -18,6 +18,7 @@ import {
   getAllModeSelectorEntries,
   VendorPlugin 
 } from '@/lib/plugins/vendor-integration';
+import { TemplatePreviewCards } from './TemplatePreviewCards';
 
 // Sub-mode definitions with color grades
 interface SubMode {
@@ -133,6 +134,8 @@ interface ConsolidatedModeSelectorProps {
   onSelectMode: (mode: SelectedMode | null) => void;
   disabled?: boolean;
   showVendorPlugins?: boolean;
+  onSelectTemplate?: (prompt: string) => void;
+  showTemplates?: boolean;
 }
 
 // Build complete mode groups with vendor plugins
@@ -409,6 +412,8 @@ export const ConsolidatedModeSelector: React.FC<ConsolidatedModeSelectorProps> =
   onSelectMode,
   disabled,
   showVendorPlugins = true,
+  onSelectTemplate,
+  showTemplates = true,
 }) => {
   const groups = useMemo(() => buildModeGroups(showVendorPlugins), [showVendorPlugins]);
   
@@ -441,6 +446,9 @@ export const ConsolidatedModeSelector: React.FC<ConsolidatedModeSelectorProps> =
   };
 
   const currentGroup = selectedMode ? groups.find(g => g.id === selectedMode.groupId) : null;
+  const currentSubMode = selectedMode && currentGroup 
+    ? currentGroup.subModes.find(m => m.id === selectedMode.subModeId)
+    : null;
 
   return (
     <div className="flex flex-col gap-2">
@@ -476,6 +484,19 @@ export const ConsolidatedModeSelector: React.FC<ConsolidatedModeSelectorProps> =
           </motion.div>
         )}
       </AnimatePresence>
+      
+      {/* Template Preview Cards */}
+      {showTemplates && onSelectTemplate && selectedMode && currentGroup && currentSubMode && (
+        <div className="mt-4">
+          <TemplatePreviewCards
+            modeId={selectedMode.subModeId}
+            modeName={currentSubMode.name}
+            modeColor={currentGroup.color.base as 'violet' | 'blue' | 'emerald' | 'amber'}
+            onSelectTemplate={onSelectTemplate}
+            isVisible={true}
+          />
+        </div>
+      )}
     </div>
   );
 };
