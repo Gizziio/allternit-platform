@@ -26,7 +26,7 @@ jobs:
         with:
           version: 8
           
-      - name: Install dependencies
+      - name: Install dependencies (no scripts)
         working-directory: surfaces/platform
         run: pnpm install --ignore-scripts
         
@@ -36,7 +36,7 @@ jobs:
         
       - name: Build for Cloudflare Pages
         working-directory: surfaces/platform
-        run: pnpm exec next-on-pages
+        run: pnpm exec next-on-pages --skip-vercel-install
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
