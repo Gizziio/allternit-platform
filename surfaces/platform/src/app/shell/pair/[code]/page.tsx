@@ -1,9 +1,10 @@
 import PairPageClient from './PairPageClient'
 
-// Server component for static export
-export function generateStaticParams() {
-  // Return empty array - this page is client-side rendered
-  // The actual pairing codes are dynamic and handled at runtime
+// Generate static params for Cloudflare Pages static export
+// This is required for dynamic routes when using output: 'export'
+export async function generateStaticParams(): Promise<{ code: string }[]> {
+  // Return empty array - this page is client-side rendered with dynamic data
+  // The actual pairing codes are determined at runtime by the client
   return []
 }
 
