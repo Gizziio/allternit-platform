@@ -8,7 +8,7 @@ import React, { useCallback, useMemo } from 'react';
 import { MagnifyingGlass } from '@phosphor-icons/react';
 import { AgentRole, AgentStatus } from '../types';
 import { useFilters, useSwarmMonitorStore } from '../SwarmMonitor.store';
-import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/a2r.tokens';
+import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/allternit.tokens';
 
 const ACCENT = '#c17817';
 const BG_SURFACE = '#121110';

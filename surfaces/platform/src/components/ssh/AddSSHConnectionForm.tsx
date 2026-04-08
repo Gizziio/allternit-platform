@@ -20,7 +20,7 @@ import {
   UploadSimple,
   Shield,
 } from '@phosphor-icons/react';
-import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/a2r.tokens';
+import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/allternit.tokens';
 
 export interface SSHConnectionFormData {
   name: string;
@@ -40,7 +40,7 @@ export interface SSHConnectionTestResult {
     os?: string;
     architecture?: string;
     dockerInstalled?: boolean;
-    a2rInstalled?: boolean;
+    allternitInstalled?: boolean;
   };
 }
 

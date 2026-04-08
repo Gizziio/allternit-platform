@@ -3,7 +3,7 @@
  * 
  * Integrated view showing terminal patterns ported to React:
  * - StatusBar from terminal app
- * - useA2RStream for session management
+ * - useAllternitStream for session management
  * - Workspace API integration
  * 
  * Pattern from terminal: ui/a2r/session-view.tsx
@@ -11,9 +11,9 @@
 
 import { useState, useCallback } from "react"
 import { useWorkspace } from "../../agent-workspace/useWorkspace"
-import { useA2RStream } from "../../agent-workspace/useA2RStream"
+import { useAllternitStream } from "../../agent-workspace/useAllternitStream"
 import { StatusBar } from "../../design/components/StatusBar"
-import { A2RThemeProvider, defaultTheme } from "../../design/theme"
+import { AllternitThemeProvider, defaultTheme } from "../../design/theme"
 import { GlassSurface } from "../../design/GlassSurface"
 
 interface SessionViewProps {
@@ -39,7 +39,7 @@ export function SessionView({ workspacePath, compact = false }: SessionViewProps
     startSession,
     sendMessage,
     reconnect,
-  } = useA2RStream({ workspace, autoConnect: true })
+  } = useAllternitStream({ workspace, autoConnect: true })
   
   // Handle form submission
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
@@ -89,7 +89,7 @@ export function SessionView({ workspacePath, compact = false }: SessionViewProps
   }
   
   return (
-    <A2RThemeProvider theme={defaultTheme}>
+    <AllternitThemeProvider theme={defaultTheme}>
       <div
         style={{
           display: "flex",
@@ -203,7 +203,7 @@ export function SessionView({ workspacePath, compact = false }: SessionViewProps
           interruptPending={interrupt.pending}
         />
       </div>
-    </A2RThemeProvider>
+    </AllternitThemeProvider>
   )
 }
 

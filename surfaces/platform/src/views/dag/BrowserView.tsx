@@ -34,7 +34,7 @@ import {
 import { GlassSurface } from '@/design/glass/GlassSurface';
 import { GlassButton, GlassIconButton } from '@/design/glass/GlassButton';
 import { GlassInput } from '@/design/glass/GlassInput';
-import { A2RLogo } from '@/components/A2RLogo';
+import { AllternitLogo } from '@/components/AllternitLogo';
 import { ArchitectLogo } from '@/components/ai-elements/ArchitectLogo';
 import { cn } from '@/lib/utils';
 
@@ -233,7 +233,7 @@ export function BrowserView() {
             <div className="absolute inset-0 opacity-[0.02] pointer-events-none" 
               style={{ backgroundImage: 'linear-gradient(#D4B08C 1px, transparent 1px), linear-gradient(90deg, #D4B08C 1px, transparent 1px)', backgroundSize: '60px 60px' }} 
             />
-            <A2RLogo size="lg" variant="stacked" />
+            <AllternitLogo size="lg" variant="stacked" />
             <div className="mt-12 w-full max-w-md p-2 rounded-xl bg-[#1A1612] border border-[#D4B08C]/20 shadow-2xl">
               <form onSubmit={handleNavigate} className="flex items-center gap-2">
                 <input

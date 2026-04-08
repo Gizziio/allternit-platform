@@ -39,7 +39,7 @@ type ClerkRuntimeBackendMetadata = {
   availableBackends: ClerkRuntimeBackendTargetMetadata[];
 };
 
-const CLERK_RUNTIME_METADATA_KEY = "a2rRuntimeBackend";
+const CLERK_RUNTIME_METADATA_KEY = "allternitRuntimeBackend";
 const HYDRATION_TTL_MS = 60_000;
 const lastHydratedAtByAuthUserId = new Map<string, number>();
 
@@ -311,10 +311,10 @@ export async function hydrateRuntimeBackendPreferenceFromClerk(
             : "disconnected"),
         os: backend.os,
         architecture: backend.architecture,
-        a2rInstalled:
+        allternitInstalled:
           backend.installState === "installed" ||
           Boolean(backend.backendUrl || backend.gatewayUrl),
-        a2rVersion: backend.installedVersion,
+        allternitVersion: backend.installedVersion,
         lastConnectedAt: backend.lastConnectedAt
           ? new Date(backend.lastConnectedAt)
           : metadata.mode === "byoc-vps" &&
@@ -338,10 +338,10 @@ export async function hydrateRuntimeBackendPreferenceFromClerk(
             : "disconnected"),
         os: backend.os,
         architecture: backend.architecture,
-        a2rInstalled:
+        allternitInstalled:
           backend.installState === "installed" ||
           Boolean(backend.backendUrl || backend.gatewayUrl),
-        a2rVersion: backend.installedVersion,
+        allternitVersion: backend.installedVersion,
         lastConnectedAt: backend.lastConnectedAt
           ? new Date(backend.lastConnectedAt)
           : metadata.mode === "byoc-vps" &&

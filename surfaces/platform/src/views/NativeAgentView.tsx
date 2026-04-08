@@ -161,7 +161,7 @@ export function NativeAgentView({
   } = useNativeAgentStore();
 
   // A2R Native Context Integration
-  const { a2rNativeState } = useWorkspace(activeSessionId || "");
+  const { allternitNativeState } = useWorkspace(activeSessionId || "");
 
   const { isStreaming } = useSessionStreamingState(activeSessionId ?? '');
   const { isConnected: isSessionSyncConnected, error: sessionSyncError } = useSessionSyncState();
@@ -249,7 +249,7 @@ export function NativeAgentView({
           isSessionSyncConnected={isSessionSyncConnected}
           sessionSyncError={sessionSyncError}
           onOpenRuntimeOps={onOpenRuntimeOps}
-          a2rNativeState={a2rNativeState}
+          allternitNativeState={allternitNativeState}
         />
 
         <div className="flex-1 min-h-0 overflow-hidden p-4 pt-0">
@@ -309,7 +309,7 @@ interface WorkspaceHeaderProps {
   isSessionSyncConnected: boolean;
   sessionSyncError: string | null;
   onOpenRuntimeOps?: () => void;
-  a2rNativeState: any | null; // Use real type from workspace
+  allternitNativeState: any | null; // Use real type from workspace
 }
 
 function WorkspaceHeader({
@@ -321,7 +321,7 @@ function WorkspaceHeader({
   isStreaming,
   isSessionSyncConnected,
   onOpenRuntimeOps,
-  a2rNativeState,
+  allternitNativeState,
 }: WorkspaceHeaderProps) {
   const messages = useActiveMessages();
   const canvases = useSessionCanvases(activeSessionId || "");
@@ -360,9 +360,9 @@ function WorkspaceHeader({
           </div>
 
           {/* A2R Native Milestone Progress - The "Layer" */}
-          {a2rNativeState && (
+          {allternitNativeState && (
             <div className="flex-1 lg:max-w-xl mx-4">
-              <MilestoneProgress state={a2rNativeState} />
+              <MilestoneProgress state={allternitNativeState} />
             </div>
           )}
 

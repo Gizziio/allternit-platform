@@ -7,7 +7,7 @@
 
 import type { AgentTemplate, AgentRole } from '../types';
 
-const STORAGE_KEY = 'a2r_agent_templates';
+const STORAGE_KEY = 'allternit_agent_templates';
 
 interface StoredTemplates {
   version: number;

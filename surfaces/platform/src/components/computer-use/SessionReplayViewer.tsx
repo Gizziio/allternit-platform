@@ -14,7 +14,7 @@ import {
   XCircle,
   Globe,
 } from '@phosphor-icons/react';
-import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/a2r.tokens';
+import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/allternit.tokens';
 
 // ============================================================================
 // Types

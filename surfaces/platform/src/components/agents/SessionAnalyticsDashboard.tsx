@@ -57,7 +57,7 @@ import {
   TEXT,
   SHADOW,
   type AgentMode,
-} from '@/design/a2r.tokens';
+} from '@/design/allternit.tokens';
 
 import type { NativeSession } from '@/lib/agents';
 

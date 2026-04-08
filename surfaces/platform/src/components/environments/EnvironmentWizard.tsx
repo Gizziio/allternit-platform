@@ -310,7 +310,7 @@ const templateVariables: Record<string, TemplateVariable[]> = {
 };
 
 // A2R official template IDs
-const a2rOfficialIds = ['allternit-platform-dev', 'a2r-agent-workspace'];
+const allternitOfficialIds = ['allternit-platform-dev', 'a2r-agent-workspace'];
 
 // Cloud providers
 const cloudProviders = [
@@ -493,7 +493,7 @@ export function EnvironmentWizard({ isOpen, onClose, initialTemplateId, onSucces
     const matchesSearch = template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          template.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === 'all' ||
-                           (selectedCategory === 'a2r' && a2rOfficialIds.includes(template.id)) ||
+                           (selectedCategory === 'allternit' && allternitOfficialIds.includes(template.id)) ||
                            (selectedCategory === 'web' && ['fullstack-web', 'nodejs-typescript'].includes(template.id)) ||
                            (selectedCategory === 'ml' && template.id === 'python-ml') ||
                            (selectedCategory === 'systems' && template.id === 'rust-systems');
@@ -727,7 +727,7 @@ function TemplateSelectionStep({
 }) {
   const categories = [
     { id: 'all', label: 'All', count: templates.length },
-    { id: 'a2r', label: 'A2R Official', count: templates.filter(t => a2rOfficialIds.includes(t.id)).length },
+    { id: 'allternit', label: 'Allternit Official', count: templates.filter(t => allternitOfficialIds.includes(t.id)).length },
     { id: 'web', label: 'Web', count: templates.filter(t => ['fullstack-web', 'nodejs-typescript'].includes(t.id)).length },
     { id: 'ml', label: 'ML', count: templates.filter(t => t.id === 'python-ml').length },
     { id: 'systems', label: 'Systems', count: templates.filter(t => t.id === 'rust-systems').length },
@@ -813,7 +813,7 @@ function TemplateCard({
   };
 
   const Icon = (template.icon && iconMap[template.icon]) || Box;
-  const isOfficial = a2rOfficialIds.includes(template.id);
+  const isOfficial = allternitOfficialIds.includes(template.id);
 
   return (
     <Card

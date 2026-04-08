@@ -21,10 +21,10 @@ import type {
 async function sendToExtension(type: string, payload: unknown): Promise<boolean> {
   if (!isElectronShell()) return false;
   
-  const extension = (window as unknown as { a2rExtension?: {
+  const extension = (window as unknown as { allternitExtension?: {
     sendMessage: (msg: { type: string; payload?: unknown }) => Promise<boolean>;
     getStatus: () => Promise<{ connected: boolean }>;
-  } }).a2rExtension;
+  } }).allternitExtension;
   
   if (!extension) return false;
   

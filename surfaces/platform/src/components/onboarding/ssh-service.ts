@@ -22,8 +22,8 @@ export interface SystemInfo {
   distro: string;
   version: string;
   architecture: string;
-  isA2RInstalled: boolean;
-  a2rVersion?: string;
+  isAllternitInstalled: boolean;
+  allternitVersion?: string;
   hasSystemd: boolean;
   glibcVersion?: string;
 }
@@ -202,7 +202,7 @@ function toSystemInfo(details?: {
   os?: string;
   architecture?: string;
   dockerInstalled?: boolean;
-  a2rInstalled?: boolean;
+  allternitInstalled?: boolean;
 }): SystemInfo | undefined {
   if (!details) return undefined;
 
@@ -211,9 +211,9 @@ function toSystemInfo(details?: {
     distro: details.os || 'unknown',
     version: 'unknown',
     architecture: details.architecture || 'unknown',
-    isA2RInstalled: Boolean(details.a2rInstalled),
+    isAllternitInstalled: Boolean(details.allternitInstalled),
     hasSystemd: true,
-    a2rVersion: undefined,
+    allternitVersion: undefined,
     glibcVersion: undefined,
   };
 }
@@ -292,11 +292,11 @@ export function installBackend(
         os: connected.os,
         architecture: connected.architecture,
         dockerInstalled: connected.dockerInstalled,
-        a2rInstalled: connected.a2rInstalled,
+        allternitInstalled: connected.allternitInstalled,
       });
 
       emit('detecting_os', 34, `Connected to ${connected.os || 'server'} (${connected.architecture || 'unknown'})`);
-      emit('downloading', 54, connected.a2rInstalled ? 'Verifying existing A2R backend...' : 'Installing the A2R backend...');
+      emit('downloading', 54, connected.allternitInstalled ? 'Verifying existing A2R backend...' : 'Installing the A2R backend...');
 
       const installResult = await sshApi.installAgent(connection.id);
       if (!installResult.success) {
@@ -306,7 +306,7 @@ export function installBackend(
       emit('configuring', 72, 'Synchronizing backend configuration...');
       emit('starting', 84, 'Starting and checking the remote backend...');
 
-      if (!latestSystemInfo || !latestSystemInfo.isA2RInstalled) {
+      if (!latestSystemInfo || !latestSystemInfo.isAllternitInstalled) {
         latestSystemInfo = {
           ...(latestSystemInfo ?? {
             os: connected.os || 'Unknown',
@@ -316,13 +316,13 @@ export function installBackend(
             hasSystemd: true,
             glibcVersion: undefined,
           }),
-          isA2RInstalled: true,
-          a2rVersion: installResult.version,
+          isAllternitInstalled: true,
+          allternitVersion: installResult.version,
         };
       } else {
         latestSystemInfo = {
           ...latestSystemInfo,
-          a2rVersion: installResult.version ?? latestSystemInfo.a2rVersion,
+          allternitVersion: installResult.version ?? latestSystemInfo.allternitVersion,
         };
       }
 

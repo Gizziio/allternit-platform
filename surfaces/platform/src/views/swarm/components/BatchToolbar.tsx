@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { CheckSquare, ArrowsClockwise, Stop, X } from '@phosphor-icons/react';
-import { TEXT, BACKGROUND, BORDER, STATUS } from '@/design/a2r.tokens';
+import { TEXT, BACKGROUND, BORDER, STATUS } from '@/design/allternit.tokens';
 import { useBatchSelection, useAgents } from '../SwarmMonitor.store';
 
 interface BatchToolbarProps {

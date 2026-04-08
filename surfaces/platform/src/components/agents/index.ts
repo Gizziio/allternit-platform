@@ -31,11 +31,11 @@ export {
   createGlassStyle,
   createGlowStyle,
   type AgentMode,
-} from '@/design/a2r.tokens';
+} from '@/design/allternit.tokens';
 
 // Agent Management
 export { AgentCreationWizard } from './AgentCreationWizard';
-export { A2RSystemPromptEditor } from './A2RSystemPromptEditor';
+export { AllternitSystemPromptEditor } from './A2RSystemPromptEditor';
 export { AgentCreationWizardWithTemplates } from './AgentCreationWizardWithTemplates';
 export { AgentHubModal } from './AgentHubModal';
 export { AgentSelectorWizard } from './AgentSelectorWizard';

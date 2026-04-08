@@ -267,8 +267,8 @@ export const GIZZI_TEMPLATE: WorkspaceTemplate = {
 };
 
 // A2R Standard template (for user-created agents)
-export const A2R_STANDARD_TEMPLATE: WorkspaceTemplate = {
-  id: 'a2r-standard',
+export const ALLTERNIT_STANDARD_TEMPLATE: WorkspaceTemplate = {
+  id: 'allternit-standard',
   name: 'A2R Standard Workspace',
   description: 'Standard 5-layer workspace for custom agents',
   layers: {
@@ -294,8 +294,8 @@ export const A2R_STANDARD_TEMPLATE: WorkspaceTemplate = {
 };
 
 // Minimal template (lightweight agents)
-export const A2R_MINIMAL_TEMPLATE: WorkspaceTemplate = {
-  id: 'a2r-minimal',
+export const ALLTERNIT_MINIMAL_TEMPLATE: WorkspaceTemplate = {
+  id: 'allternit-minimal',
   name: 'A2R Minimal Workspace',
   description: 'Lightweight workspace with essential files only',
   layers: {
@@ -314,8 +314,8 @@ export const A2R_MINIMAL_TEMPLATE: WorkspaceTemplate = {
 // All available templates
 export const WORKSPACE_TEMPLATES: Record<string, WorkspaceTemplate> = {
   'gizzi-platform': GIZZI_TEMPLATE,
-  'a2r-standard': A2R_STANDARD_TEMPLATE,
-  'a2r-minimal': A2R_MINIMAL_TEMPLATE
+  'allternit-standard': ALLTERNIT_STANDARD_TEMPLATE,
+  'allternit-minimal': ALLTERNIT_MINIMAL_TEMPLATE
 };
 
 /**

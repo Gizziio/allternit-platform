@@ -66,7 +66,7 @@ import {
   RADIUS,
   SPACE,
   SHADOW,
-} from '@/design/a2r.tokens';
+} from '@/design/allternit.tokens';
 
 // ============================================================================
 // Types

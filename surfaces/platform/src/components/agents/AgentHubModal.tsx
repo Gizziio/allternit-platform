@@ -25,7 +25,7 @@ import {
   Check,
 } from '@phosphor-icons/react';
 
-import { SAND, MODE_COLORS, GLASS, TEXT } from '@/design/a2r.tokens';
+import { SAND, MODE_COLORS, GLASS, TEXT } from '@/design/allternit.tokens';
 import type { SpecialistTemplate, AgentCategory } from '@/lib/agents/agent-templates.specialist';
 import { SPECIALIST_TEMPLATES, getTemplatesByCategory } from '@/lib/agents/agent-templates.specialist';
 

@@ -19,8 +19,8 @@ export interface PluginManifest {
   settings?: PluginSetting[];
   hooks?: PluginHook[];
   commands?: PluginCommand[];
-  minA2RVersion?: string;
-  maxA2RVersion?: string;
+  minAllternitVersion?: string;
+  maxAllternitVersion?: string;
 }
 
 export type PluginCategory =

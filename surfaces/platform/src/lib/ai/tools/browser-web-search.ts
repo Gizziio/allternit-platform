@@ -13,7 +13,7 @@ import { createModuleLogger } from "@/lib/logger";
 
 const log = createModuleLogger("tools/browser-web-search");
 
-const A2R_OPERATOR_URL = process.env.A2R_OPERATOR_URL || "http://127.0.0.1:3000";
+const ALLTERNIT_OPERATOR_URL = process.env.ALLTERNIT_OPERATOR_URL || "http://127.0.0.1:3000";
 
 export type SearchProviderOptions = {
   provider: "browser-use" | "playwright" | "computer-use";
@@ -47,7 +47,7 @@ export async function browserWebSearchStep({
 }): Promise<WebSearchResponse> {
   try {
     // Check if browser-use is available
-    const healthRes = await fetch(`${A2R_OPERATOR_URL}/browser/health`);
+    const healthRes = await fetch(`${ALLTERNIT_OPERATOR_URL}/browser/health`);
     if (!healthRes.ok) {
       return {
         results: [],
@@ -64,7 +64,7 @@ export async function browserWebSearchStep({
     }
 
     // Use browser search endpoint
-    const response = await fetch(`${A2R_OPERATOR_URL}/browser/search`, {
+    const response = await fetch(`${ALLTERNIT_OPERATOR_URL}/browser/search`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

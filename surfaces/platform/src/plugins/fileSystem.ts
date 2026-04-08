@@ -151,7 +151,7 @@ export class ApiFileSystem implements FileSystemAPI {
     const candidates = new Set<string>();
 
     if (typeof window !== 'undefined') {
-      const sidecar = (window as any).a2rSidecar;
+      const sidecar = (window as any).allternitSidecar;
       if (sidecar?.getApiUrl) {
         try {
           const apiUrl = await sidecar.getApiUrl();
@@ -1336,8 +1336,8 @@ export class CapabilityScanner {
       }
     }
 
-    const a2rSwitchFiles = await this.resolveCandidateFiles(INTERNAL_ALLTERNIT_CLI_SWITCH_FILE_CANDIDATES);
-    for (const switchFile of a2rSwitchFiles) {
+    const allternitSwitchFiles = await this.resolveCandidateFiles(INTERNAL_ALLTERNIT_CLI_SWITCH_FILE_CANDIDATES);
+    for (const switchFile of allternitSwitchFiles) {
       try {
         const content = await this.fs.readFile(switchFile);
         const subcommands = this.parseA2rSwitchSubcommands(content);
@@ -1989,7 +1989,7 @@ export function useFileSystem(): UseFileSystemReturn {
   const [isFsReady, setIsFsReady] = useState(false);
   const isElectronRuntime = useMemo(() => {
     if (typeof window === 'undefined') return false;
-    return Boolean((window as any).a2rSidecar || (window as any).process?.versions?.electron);
+    return Boolean((window as any).allternitSidecar || (window as any).process?.versions?.electron);
   }, []);
 
   // Prefer RealFileSystem, then ApiFileSystem.

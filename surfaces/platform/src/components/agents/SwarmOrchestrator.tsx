@@ -111,7 +111,7 @@ import {
   TEXT,
   SHADOW,
   type AgentMode,
-} from '@/design/a2r.tokens';
+} from '@/design/allternit.tokens';
 
 import type { Agent } from '@/lib/agents/agent.types';
 

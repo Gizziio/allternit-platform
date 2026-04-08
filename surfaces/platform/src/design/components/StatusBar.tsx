@@ -6,11 +6,11 @@
  */
 
 import { useState, useEffect, useMemo } from "react"
-import { useA2RTheme, A2RRuntimeState, getStatusColor } from "../theme/a2r-theme.tsx"
+import { useAllternitTheme, AllternitRuntimeState, getStatusColor } from "../theme/a2r-theme.tsx"
 
 export interface StatusBarProps {
   /** Current runtime state */
-  state: A2RRuntimeState
+  state: AllternitRuntimeState
   /** Whether connection is being established */
   isConnecting?: boolean
   /** Number of pending/executing tools */
@@ -39,7 +39,7 @@ export function StatusBar({
   onInterrupt,
   interruptPending,
 }: StatusBarProps) {
-  const theme = useA2RTheme()
+  const theme = useAllternitTheme()
   const [now, setNow] = useState(Date.now())
   
   // Update elapsed time every second
@@ -189,10 +189,10 @@ function StatusIndicator({ color }: { color: string }) {
 }
 
 /** Get human-readable status label */
-function getStatusLabel(state: A2RRuntimeState, isConnecting?: boolean): string {
+function getStatusLabel(state: AllternitRuntimeState, isConnecting?: boolean): string {
   if (isConnecting) return "Connecting"
   
-  const labels: Record<A2RRuntimeState, string> = {
+  const labels: Record<AllternitRuntimeState, string> = {
     idle: "Idle",
     connecting: "Connecting",
     hydrating: "Hydrating",
@@ -207,10 +207,10 @@ function getStatusLabel(state: A2RRuntimeState, isConnecting?: boolean): string 
 }
 
 /** Get status hint/description */
-function getStatusHint(state: A2RRuntimeState, isConnecting?: boolean): string | undefined {
+function getStatusHint(state: AllternitRuntimeState, isConnecting?: boolean): string | undefined {
   if (isConnecting) return "Establishing connection..."
   
-  const hints: Record<A2RRuntimeState, string | undefined> = {
+  const hints: Record<AllternitRuntimeState, string | undefined> = {
     idle: undefined,
     connecting: "Connecting to server...",
     hydrating: "Loading context...",

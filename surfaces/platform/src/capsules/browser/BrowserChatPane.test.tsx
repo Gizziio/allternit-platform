@@ -26,7 +26,7 @@ const browserPaneState = vi.hoisted(() => ({
   extensionMaxSteps: 40,
   extensionSystemInstruction: '',
   extensionExperimentalLlmsTxt: false,
-  browserBridgeToken: 'a2r_browser_bridge_token_1234',
+  browserBridgeToken: 'allternit_browser_bridge_token_1234',
   setPermissionMode: vi.fn((mode: 'ask' | 'act') => {
     browserPaneState.permissionMode = mode;
   }),
@@ -191,7 +191,7 @@ describe('BrowserChatPane', () => {
     browserPaneState.extensionMaxSteps = 40;
     browserPaneState.extensionSystemInstruction = '';
     browserPaneState.extensionExperimentalLlmsTxt = false;
-    browserPaneState.browserBridgeToken = 'a2r_browser_bridge_token_1234';
+    browserPaneState.browserBridgeToken = 'allternit_browser_bridge_token_1234';
     browserPaneState.setPermissionMode.mockClear();
     browserPaneState.setLanguage.mockClear();
     browserPaneState.setExtensionSettings.mockClear();

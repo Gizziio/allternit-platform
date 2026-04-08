@@ -132,8 +132,8 @@ export async function POST(request: NextRequest) {
         name: true,
         host: true,
         status: true,
-        a2rInstalled: true,
-        a2rVersion: true,
+        allternitInstalled: true,
+        allternitVersion: true,
       },
     });
 
@@ -147,9 +147,9 @@ export async function POST(request: NextRequest) {
       name: connection.name,
       host: connection.host,
       connectionStatus: connection.status,
-      a2rInstalled: connection.a2rInstalled ?? false,
-      a2rVersion: connection.a2rVersion,
-      markVerified: connection.a2rInstalled ?? false,
+      allternitInstalled: connection.allternitInstalled ?? false,
+      allternitVersion: connection.allternitVersion,
+      markVerified: connection.allternitInstalled ?? false,
     });
 
     resolvedBackendTargetId = target.id;

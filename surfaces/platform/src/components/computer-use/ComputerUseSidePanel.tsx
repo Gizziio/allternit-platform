@@ -12,7 +12,7 @@ import {
 } from '@phosphor-icons/react';
 import { useBrowserAgentStore } from '@/capsules/browser/browserAgent.store';
 import { type AgentModeSurface } from '@/stores/agent-surface-mode.store';
-import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/a2r.tokens';
+import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/allternit.tokens';
 
 // ============================================================================
 // Types

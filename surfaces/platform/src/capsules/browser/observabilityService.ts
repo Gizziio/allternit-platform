@@ -358,47 +358,47 @@ export class InMemoryObservabilityStore implements ObservabilityStore {
     // Add response time metrics
     if (this.responseTimes.length > 0) {
       const sorted = [...this.responseTimes].sort((a, b) => a - b);
-      lines.push('# HELP a2r_response_time_ms Response time in milliseconds');
-      lines.push('# TYPE a2r_response_time_ms histogram');
-      lines.push(`a2r_response_time_ms_count ${sorted.length}`);
-      lines.push(`a2r_response_time_ms_sum ${sorted.reduce((a, b) => a + b, 0)}`);
+      lines.push('# HELP allternit_response_time_ms Response time in milliseconds');
+      lines.push('# TYPE allternit_response_time_ms histogram');
+      lines.push(`allternit_response_time_ms_count ${sorted.length}`);
+      lines.push(`allternit_response_time_ms_sum ${sorted.reduce((a, b) => a + b, 0)}`);
       
       // Add bucket counts for standard percentiles
       const buckets = [10, 50, 100, 250, 500, 1000, 2500, 5000, 10000];
       for (const bucket of buckets) {
         const count = sorted.filter(v => v <= bucket).length;
-        lines.push(`a2r_response_time_ms_bucket{le="${bucket}"} ${count}`);
+        lines.push(`allternit_response_time_ms_bucket{le="${bucket}"} ${count}`);
       }
-      lines.push(`a2r_response_time_ms_bucket{le="+Inf"} ${sorted.length}`);
+      lines.push(`allternit_response_time_ms_bucket{le="+Inf"} ${sorted.length}`);
     }
 
     // Add error count
-    lines.push('# HELP a2r_errors_total Total number of errors');
-    lines.push('# TYPE a2r_errors_total counter');
-    lines.push(`a2r_errors_total ${this.errorCount}`);
+    lines.push('# HELP allternit_errors_total Total number of errors');
+    lines.push('# TYPE allternit_errors_total counter');
+    lines.push(`allternit_errors_total ${this.errorCount}`);
 
     // Add log counts by severity
     const severityCounts = new Map<string, number>();
     for (const log of this.logs) {
       severityCounts.set(log.severity, (severityCounts.get(log.severity) || 0) + 1);
     }
-    lines.push('# HELP a2r_logs_total Total number of log events');
-    lines.push('# TYPE a2r_logs_total counter');
+    lines.push('# HELP allternit_logs_total Total number of log events');
+    lines.push('# TYPE allternit_logs_total counter');
     for (const [severity, count] of severityCounts) {
-      lines.push(`a2r_logs_total{severity="${severity}"} ${count}`);
+      lines.push(`allternit_logs_total{severity="${severity}"} ${count}`);
     }
 
     // Add custom metrics
     for (const [name, points] of this.metrics.entries()) {
       const sanitizedName = name.replace(/[^a-zA-Z0-9_]/g, '_');
-      lines.push(`# HELP a2r_${sanitizedName} Metric ${name}`);
-      lines.push(`# TYPE a2r_${sanitizedName} gauge`);
+      lines.push(`# HELP allternit_${sanitizedName} Metric ${name}`);
+      lines.push(`# TYPE allternit_${sanitizedName} gauge`);
       const latest = points[points.length - 1];
       if (latest) {
         const labels = latest.labels ? 
           Object.entries(latest.labels).map(([k, v]) => `${k}="${v}"`).join(',') : '';
         const labelStr = labels ? `{${labels}}` : '';
-        lines.push(`a2r_${sanitizedName}${labelStr} ${latest.value}`);
+        lines.push(`allternit_${sanitizedName}${labelStr} ${latest.value}`);
       }
     }
 
@@ -455,8 +455,8 @@ export class PrometheusObservabilityStore extends InMemoryObservabilityStore {
       .map(([k, v]) => `${k}="${v}"`)
       .join(',');
 
-    const metricData = `# TYPE a2r_${sanitizedName} gauge
-a2r_${sanitizedName}{${labelStr}} ${value}
+    const metricData = `# TYPE allternit_${sanitizedName} gauge
+allternit_${sanitizedName}{${labelStr}} ${value}
 `;
 
     const url = `${this.pushGatewayUrl}/metrics/job/${this.jobName}/instance/${this.instance}`;

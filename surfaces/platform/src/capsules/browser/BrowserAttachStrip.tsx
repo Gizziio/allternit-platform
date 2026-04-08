@@ -18,7 +18,7 @@ import {
 } from '@phosphor-icons/react';
 import { useBrowserAgentStore } from './browserAgent.store';
 import { getComputerUsePortLabel } from '@/integration/computer-use-engine';
-import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/a2r.tokens';
+import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/allternit.tokens';
 
 function toneForStatus(status: string): { bg: string; border: string; text: string } {
   switch (status) {

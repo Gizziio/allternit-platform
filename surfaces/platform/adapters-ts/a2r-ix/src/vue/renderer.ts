@@ -54,7 +54,7 @@ export function createVueRenderer(config: VueRendererConfig): VueRenderer {
    * Generate component definition
    */
   function generateComponent(root: UIRoot): VueComponentDefinition {
-    const name = 'A2RIXRoot';
+    const name = 'AllternitIXRoot';
     
     // Generate props from state variables
     const props: Record<string, unknown> = {};

@@ -839,7 +839,7 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
       sessionDescription={embeddedAgentSession.session?.description}
       agentName={embeddedAgentDescriptor.agentName || selectedAgent?.name || undefined}
       statusLabel={
-        embeddedAgentSession.session?.metadata?.a2r_local_draft === true
+        embeddedAgentSession.session?.metadata?.allternit_local_draft === true
           ? 'Local Draft'
           : embeddedAgentSession.session?.isActive
             ? 'Live'
@@ -849,7 +849,7 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
       workspaceScope={embeddedAgentDescriptor.workspaceScope}
       canvasCount={embeddedCanvasIds.length}
       tags={embeddedAgentSession.session?.tags}
-      localDraft={embeddedAgentSession.session?.metadata?.a2r_local_draft === true}
+      localDraft={embeddedAgentSession.session?.metadata?.allternit_local_draft === true}
       toolsEnabled={embeddedAgentDescriptor.agentFeatures?.tools === true}
       automationEnabled={embeddedAgentDescriptor.agentFeatures?.automation === true}
       onDismiss={() => clearEmbeddedAgentSession('cowork')}
@@ -1013,7 +1013,7 @@ function EmbeddedCoworkAgentRail() {
         title="Session"
         icon={<Sparkle size={15} />}
         rows={[
-          ['Mode', embeddedAgentSession.session?.metadata?.a2r_local_draft === true ? 'Local Draft' : embeddedAgentSession.session?.isActive ? 'Live' : 'Paused'],
+          ['Mode', embeddedAgentSession.session?.metadata?.allternit_local_draft === true ? 'Local Draft' : embeddedAgentSession.session?.isActive ? 'Live' : 'Paused'],
           ['Messages', `${embeddedAgentSession.session?.messageCount ?? 0}`],
           ['Agent', descriptor.agentName || 'Unbound'],
         ]}

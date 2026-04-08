@@ -5,7 +5,7 @@
  * This allows incremental migration without breaking existing code.
  */
 
-import { ALLTERNIT_BASE_URL, get, post, type A2RResponse } from '../index';
+import { ALLTERNIT_BASE_URL, get, post, type AllternitResponse } from '../index';
 
 // Re-export types from original service
 export interface TTSRequest {

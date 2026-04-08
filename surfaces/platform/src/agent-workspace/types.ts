@@ -294,7 +294,7 @@ export interface IdentityConfig {
 }
 
 /** A2R Native Project State (GSD-inspired context engineering) */
-export interface A2RNativeState {
+export interface AllternitNativeState {
   project?: {
     name: string;
     description: string;
@@ -345,9 +345,9 @@ export interface WorkspaceAPI {
   };
 
   // A2R Native Context State (Protocol Layer)
-  a2rNative?: {
-    getState(): Promise<A2RNativeState>;
-    refreshState(): Promise<A2RNativeState>;
+  allternitNative?: {
+    getState(): Promise<AllternitNativeState>;
+    refreshState(): Promise<AllternitNativeState>;
   };
   
   // Task operations (available with HTTP backend)

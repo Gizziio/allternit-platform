@@ -46,7 +46,7 @@ import {
   SHADOW,
   ANIMATION,
   type AgentMode,
-} from '@/design/a2r.tokens';
+} from '@/design/allternit.tokens';
 
 import type { Agent, AgentRun, AgentTask } from '@/lib/agents/agent.types';
 

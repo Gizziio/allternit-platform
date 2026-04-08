@@ -14,7 +14,7 @@ import {
   Brain, Robot, Cpu, ClipboardText,
   MagnifyingGlass, Upload, Export, Plus, Stack, PencilSimple, Copy, Trash,
 } from '@phosphor-icons/react';
-import { TEXT, MODE_COLORS, STATUS, BACKGROUND } from '@/design/a2r.tokens';
+import { TEXT, MODE_COLORS, STATUS, BACKGROUND } from '@/design/allternit.tokens';
 
 const ROLE_ICON_MAP: Record<string, React.ElementType> = {
   brain: Brain, robot: Robot, microchip: Cpu, 'clipboard-check': ClipboardText,

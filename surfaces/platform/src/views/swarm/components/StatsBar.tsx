@@ -12,7 +12,7 @@ import {
   Clock,
   ArrowsClockwise,
 } from '@phosphor-icons/react';
-import { TEXT, BACKGROUND, BORDER, STATUS } from '@/design/a2r.tokens';
+import { TEXT, BACKGROUND, BORDER, STATUS } from '@/design/allternit.tokens';
 import { SwarmMetrics } from '../types';
 
 interface StatsBarProps {

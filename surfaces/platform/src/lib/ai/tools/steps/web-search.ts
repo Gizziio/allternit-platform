@@ -12,7 +12,7 @@ import { createModuleLogger } from "@/lib/logger";
 
 const log = createModuleLogger("tools/steps/web-search");
 
-const A2R_OPERATOR_URL = process.env.A2R_OPERATOR_URL || "http://127.0.0.1:3000";
+const ALLTERNIT_OPERATOR_URL = process.env.ALLTERNIT_OPERATOR_URL || "http://127.0.0.1:3000";
 
 export type SearchProviderOptions = {
   provider: "browser-use" | "playwright" | "computer-use";
@@ -45,7 +45,7 @@ export async function webSearchStep({
 }): Promise<WebSearchResponse> {
   try {
     // Check browser-use health
-    const healthRes = await fetch(`${A2R_OPERATOR_URL}/browser/health`);
+    const healthRes = await fetch(`${ALLTERNIT_OPERATOR_URL}/browser/health`);
     if (!healthRes.ok) {
       return {
         results: [],
@@ -62,7 +62,7 @@ export async function webSearchStep({
     }
 
     // Create browser task for search
-    const taskRes = await fetch(`${A2R_OPERATOR_URL}/browser/tasks`, {
+    const taskRes = await fetch(`${ALLTERNIT_OPERATOR_URL}/browser/tasks`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -79,7 +79,7 @@ export async function webSearchStep({
     const task = await taskRes.json();
 
     // Execute the task
-    const execRes = await fetch(`${A2R_OPERATOR_URL}/browser/tasks/${task.task_id}/execute`, {
+    const execRes = await fetch(`${ALLTERNIT_OPERATOR_URL}/browser/tasks/${task.task_id}/execute`, {
       method: "POST",
     });
 

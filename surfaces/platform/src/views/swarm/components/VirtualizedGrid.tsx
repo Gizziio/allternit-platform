@@ -6,7 +6,7 @@
  */
 
 import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
-import { TEXT } from '@/design/a2r.tokens';
+import { TEXT } from '@/design/allternit.tokens';
 import type { SwarmAgent } from '../types';
 import { AgentCard } from './AgentCard';
 import { useBatchSelection } from '../SwarmMonitor.store';

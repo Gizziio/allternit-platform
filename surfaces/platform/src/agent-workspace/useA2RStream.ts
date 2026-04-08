@@ -8,10 +8,10 @@
 import { useState, useCallback, useRef, useEffect } from "react"
 import { useInterrupt } from "../design/useInterrupt"
 import { WorkspaceAPI, SessionStatus } from "./types"
-import { A2RRuntimeState } from "../design/theme"
+import { AllternitRuntimeState } from "../design/theme"
 
 export type StreamState = {
-  runtimeState: A2RRuntimeState
+  runtimeState: AllternitRuntimeState
   status: SessionStatus
   pendingTools: string[]
   retryInfo?: {
@@ -21,12 +21,12 @@ export type StreamState = {
   startedAt?: number
 }
 
-export interface UseA2RStreamOptions {
+export interface UseAllternitStreamOptions {
   workspace: WorkspaceAPI | null
   autoConnect?: boolean
 }
 
-export interface UseA2RStreamReturn {
+export interface UseAllternitStreamReturn {
   /** Current stream state for UI */
   state: StreamState
   
@@ -50,11 +50,11 @@ export interface UseA2RStreamReturn {
   reconnect: () => void
 }
 
-export function useA2RStream({ 
+export function useAllternitStream({ 
   workspace, 
   autoConnect = true 
-}: UseA2RStreamOptions): UseA2RStreamReturn {
-  const [runtimeState, setRuntimeState] = useState<A2RRuntimeState>("idle")
+}: UseAllternitStreamOptions): UseAllternitStreamReturn {
+  const [runtimeState, setRuntimeState] = useState<AllternitRuntimeState>("idle")
   const [sessionStatus, setSessionStatus] = useState<SessionStatus>("idle")
   const [pendingTools, setPendingTools] = useState<string[]>([])
   const [retryInfo, setRetryInfo] = useState<{ attempt: number; delay: number }>()
@@ -67,7 +67,7 @@ export function useA2RStream({
   const { pending: interruptPending, trigger: triggerInterrupt, reset: resetInterrupt } = useInterrupt()
   
   // Map session status to runtime state
-  const mapStatusToRuntime = useCallback((status: SessionStatus): A2RRuntimeState => {
+  const mapStatusToRuntime = useCallback((status: SessionStatus): AllternitRuntimeState => {
     switch (status) {
       case "connecting": return "connecting"
       case "hydrating": return "hydrating"

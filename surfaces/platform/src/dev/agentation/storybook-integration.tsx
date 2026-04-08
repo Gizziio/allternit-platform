@@ -11,7 +11,7 @@ import { AgentationOverlay } from './index';
 
 // DEV-ONLY: Agentation integration
 // This code is automatically excluded from production builds via NODE_ENV check
-if (process.env.NODE_ENV !== 'production' && process.env.A2R_AGENTATION !== 'false') {
+if (process.env.NODE_ENV !== 'production' && process.env.ALLTERNIT_AGENTATION !== 'false') {
   // Dynamically import to avoid bundling in production
   import('./index').then(({ AgentationOverlay }) => {
     // Add global decorator for all stories

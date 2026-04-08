@@ -5,8 +5,8 @@ import { execFacade } from "../integration/execution/exec.facade";
  */
 
 import { PLATFORM_SHORTCUTS, HOTKEY_SCOPES } from '../vendor/hotkeys';
-import { A2RCommandProvider, useA2RCommand, A2RCommandPalette } from '../vendor/command';
-import { A2RPanelGroup, A2RPanel, A2RResizeHandle } from '../vendor/panels';
+import { AllternitCommandProvider, useAllternitCommand, AllternitCommandPalette } from '../vendor/command';
+import { AllternitPanelGroup, AllternitPanel, AllternitResizeHandle } from '../vendor/panels';
 import { FlexLayoutHost, useFlexLayoutModel, ensureSingletonTab } from '../vendor/flexlayout';
 import * as Radix from '../vendor/radix';
 import { navReducer, createInitialNavState } from '../nav/nav.store';
@@ -48,14 +48,14 @@ export function smokeHotkeys(): boolean {
  */
 export function smokeCommand(): boolean {
   try {
-    if (!A2RCommandProvider) {
-      throw new Error('A2RCommandProvider not exported');
+    if (!AllternitCommandProvider) {
+      throw new Error('AllternitCommandProvider not exported');
     }
-    if (!useA2RCommand) {
-      throw new Error('useA2RCommand not exported');
+    if (!useAllternitCommand) {
+      throw new Error('useAllternitCommand not exported');
     }
-    if (!A2RCommandPalette) {
-      throw new Error('A2RCommandPalette not exported');
+    if (!AllternitCommandPalette) {
+      throw new Error('AllternitCommandPalette not exported');
     }
     
     console.log('[smoke] command: exports verified');
@@ -71,14 +71,14 @@ export function smokeCommand(): boolean {
  */
 export function smokePanels(): boolean {
   try {
-    if (!A2RPanelGroup) {
-      throw new Error('A2RPanelGroup not exported');
+    if (!AllternitPanelGroup) {
+      throw new Error('AllternitPanelGroup not exported');
     }
-    if (!A2RPanel) {
-      throw new Error('A2RPanel not exported');
+    if (!AllternitPanel) {
+      throw new Error('AllternitPanel not exported');
     }
-    if (!A2RResizeHandle) {
-      throw new Error('A2RResizeHandle not exported');
+    if (!AllternitResizeHandle) {
+      throw new Error('AllternitResizeHandle not exported');
     }
     
     console.log('[smoke] panels: exports verified');

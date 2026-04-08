@@ -199,8 +199,8 @@ import {
 
 import type { IconName } from './types';
 import {
-  A2RLogo,
-  A2RMark,
+  AllternitLogo,
+  AllternitMark,
   ShellIcon,
   CapsuleIcon,
   BeadIcon,
@@ -474,8 +474,8 @@ export const iconMapping: Record<IconName, LucideIcon | CustomIconComponent> = {
   // ==========================================================================
   // Custom A2rchitect Brand Icons (8 icons)
   // ==========================================================================
-  'a2r-logo': A2RLogo,
-  'a2r-mark': A2RMark,
+  'allternit-logo': AllternitLogo,
+  'allternit-mark': AllternitMark,
   'shell': ShellIcon,
   'capsule': CapsuleIcon,
   'bead': BeadIcon,

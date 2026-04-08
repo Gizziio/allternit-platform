@@ -2,12 +2,12 @@
  * SheetsRenderer.tsx
  * 
  * Renders A2R Data artifacts.
- * Uses A2RDataGrid (AG-Grid wrapper) for data visualization.
+ * Uses AllternitDataGrid (AG-Grid wrapper) for data visualization.
  */
 
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { A2RDataGrid } from '@/components/a2r/A2RDataGrid';
+import { AllternitDataGrid } from '@/components/a2r';
 import type { ArtifactUIPart } from '@/lib/ai/ui-parts.types';
 
 interface SheetsRendererProps {
@@ -19,7 +19,7 @@ interface SheetsRendererProps {
 /**
  * SheetsRenderer - A2R Data Artifact Renderer
  * 
- * Wraps A2RDataGrid for use in the Canvas/sidecar.
+ * Wraps AllternitDataGrid for use in the Canvas/sidecar.
  * Provides full data grid capabilities.
  */
 export function SheetsRenderer({
@@ -77,7 +77,7 @@ export function SheetsRenderer({
       transition={{ duration: 0.3 }}
       className="h-full"
     >
-      <A2RDataGrid
+      <AllternitDataGrid
         columns={columns}
         data={data}
         title={artifact.title}

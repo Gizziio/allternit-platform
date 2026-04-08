@@ -15,7 +15,7 @@ import { NextRequest } from 'next/server';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-const THIN_CLIENT_BASE = process.env.A2R_THIN_CLIENT_URL ?? 'http://127.0.0.1:3014';
+const THIN_CLIENT_BASE = process.env.ALLTERNIT_THIN_CLIENT_URL ?? 'http://127.0.0.1:3014';
 
 export async function GET(
   req: NextRequest,

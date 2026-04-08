@@ -17,7 +17,7 @@ const TERMINAL_SERVER_URL =
   process.env.TERMINAL_SERVER_URL ?? "http://127.0.0.1:4096";
 
 const GATEWAY_BASE_URL =
-  process.env.VITE_A2R_GATEWAY_URL?.replace(/\/api\/v1\/?$/, "").replace(/\/+$/, "") ??
+  process.env.VITE_ALLTERNIT_GATEWAY_URL?.replace(/\/api\/v1\/?$/, "").replace(/\/+$/, "") ??
   "http://127.0.0.1:8013";
 
 interface PlaygroundMessage {

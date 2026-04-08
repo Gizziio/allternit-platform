@@ -231,7 +231,7 @@ export interface StreamingState {
   streamBuffer: string;
 }
 
-const LOCAL_DRAFT_SESSION_FLAG = "a2r_local_draft";
+const LOCAL_DRAFT_SESSION_FLAG = "allternit_local_draft";
 
 function isNetworkRequestError(error: unknown): boolean {
   if (error instanceof TypeError) {
@@ -964,11 +964,11 @@ export const useNativeAgentStore = create<
                 tags: updates.tags,
                 metadata: updates.metadata,
                 // Send agent session fields directly for proper backend persistence
-                origin_surface: (updates.metadata?.['a2r_origin_surface'] as any) || undefined,
-                session_mode: (updates.metadata?.['a2r_session_mode'] as any) || undefined,
-                project_id: (updates.metadata?.['a2r_project_id'] as any) || undefined,
-                workspace_scope: (updates.metadata?.['a2r_workspace_scope'] as any) || undefined,
-                agent_features: (updates.metadata?.['a2r_agent_features'] as any) || undefined,
+                origin_surface: (updates.metadata?.['allternit_origin_surface'] as any) || undefined,
+                session_mode: (updates.metadata?.['allternit_session_mode'] as any) || undefined,
+                project_id: (updates.metadata?.['allternit_project_id'] as any) || undefined,
+                workspace_scope: (updates.metadata?.['allternit_workspace_scope'] as any) || undefined,
+                agent_features: (updates.metadata?.['allternit_agent_features'] as any) || undefined,
               },
             );
             const updated = transformBackendSession(backendSession);

@@ -37,7 +37,7 @@ import {
   ChartBar,
 } from '@phosphor-icons/react';
 
-import { TEXT, MODE_COLORS } from '@/design/a2r.tokens';
+import { TEXT, MODE_COLORS } from '@/design/allternit.tokens';
 import { useTranslation, getAvailableLanguages, getLanguageInfo, type LanguageCode } from '@/lib/i18n';
 import { useWizardShortcuts, formatShortcutForDisplay, WIZARD_SHORTCUTS } from '@/hooks/use-wizard-shortcuts';
 import {
@@ -695,20 +695,20 @@ export function ApiHealthIndicator({ modeColors, onClick }: ApiHealthIndicatorPr
 export function AnalyticsConsentBanner({ onAccept, onDecline, modeColors }: AnalyticsConsentBannerProps) {
   const [isVisible, setIsVisible] = useState(() => {
     if (typeof window === 'undefined') return false;
-    return !localStorage.getItem('a2r_analytics_consent');
+    return !localStorage.getItem('allternit_analytics_consent');
   });
 
   if (!isVisible) return null;
 
   const handleAccept = () => {
-    localStorage.setItem('a2r_analytics_consent', 'accepted');
+    localStorage.setItem('allternit_analytics_consent', 'accepted');
     wizardAnalytics.setEnabled(true);
     setIsVisible(false);
     onAccept();
   };
 
   const handleDecline = () => {
-    localStorage.setItem('a2r_analytics_consent', 'declined');
+    localStorage.setItem('allternit_analytics_consent', 'declined');
     wizardAnalytics.setEnabled(false);
     setIsVisible(false);
     onDecline();
@@ -804,7 +804,7 @@ export function useWizardFeatures(props: WizardFeaturesProps) {
 
   // Initialize analytics on mount
   useEffect(() => {
-    const consent = typeof window !== 'undefined' ? localStorage.getItem('a2r_analytics_consent') : null;
+    const consent = typeof window !== 'undefined' ? localStorage.getItem('allternit_analytics_consent') : null;
     if (consent === 'accepted') {
       wizardAnalytics.initialize({ enabled: true });
     } else if (consent === 'declined') {

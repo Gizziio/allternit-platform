@@ -90,7 +90,7 @@ export const PROVIDER_REGISTRY: Record<string, ProviderMeta> = {
     id: 'a2r',
     name: 'A2R',
     color: '#6366F1',
-    icon: 'a2r-logo.svg',
+    icon: 'allternit-logo.svg',
     textColor: '#FFFFFF',
   },
 };

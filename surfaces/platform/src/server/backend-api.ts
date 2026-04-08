@@ -59,9 +59,9 @@ interface SystemInfo {
   distro: string;
   version: string;
   architecture: string;
-  isA2RInstalled: boolean;
+  isAllternitInstalled: boolean;
   hasSystemd: boolean;
-  a2rVersion?: string;
+  allternitVersion?: string;
 }
 
 interface SSHTestResponse {
@@ -195,7 +195,7 @@ app.post('/api/v1/backend-install/test', async (req, res) => {
       distro: '',
       version: '',
       architecture: '',
-      isA2RInstalled: false,
+      isAllternitInstalled: false,
       hasSystemd: false
     };
     
@@ -223,12 +223,12 @@ app.post('/api/v1/backend-install/test', async (req, res) => {
     info.hasSystemd = systemdResult.stdout.trim() === 'yes';
     
     // Check if the real remote runtime is installed
-    const a2rResult = await ssh.execCommand('test -x /opt/a2r/bin/gizzi-code && echo "yes" || echo "no"');
-    info.isA2RInstalled = a2rResult.stdout.trim() === 'yes';
+    const allternitResult = await ssh.execCommand('test -x /opt/a2r/bin/gizzi-code && echo "yes" || echo "no"');
+    info.isAllternitInstalled = allternitResult.stdout.trim() === 'yes';
     
-    if (info.isA2RInstalled) {
+    if (info.isAllternitInstalled) {
       const versionResult = await ssh.execCommand('/opt/a2r/bin/gizzi-code --version 2>/dev/null || echo ""');
-      info.a2rVersion = versionResult.stdout.trim();
+      info.allternitVersion = versionResult.stdout.trim();
     }
     
     ssh.dispose();

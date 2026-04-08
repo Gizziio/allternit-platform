@@ -36,11 +36,11 @@ exports.Prisma = Prisma
 exports.$Enums = {}
 
 /**
- * Prisma Client JS version: 6.19.2
+ * Prisma Client JS version: 6.19.3
  * Query Engine version: c2990dca591cba766e3b7ef5d9e8a84796e47ab7
  */
 Prisma.prismaVersion = {
-  client: "6.19.2",
+  client: "6.19.3",
   engine: "c2990dca591cba766e3b7ef5d9e8a84796e47ab7"
 }
 
@@ -190,7 +190,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "/Users/macbook/Desktop/allternit-workspace/allternit/surfaces/platform/src/generated/prisma",
+      "value": "/private/tmp/allternit-platform-push/surfaces/platform/src/generated/prisma",
       "fromEnvVar": null
     },
     "config": {
@@ -201,23 +201,26 @@ const config = {
         "fromEnvVar": null,
         "value": "darwin-arm64",
         "native": true
+      },
+      {
+        "fromEnvVar": null,
+        "value": "debian-openssl-3.0.x"
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "/Users/macbook/Desktop/allternit-workspace/allternit/surfaces/platform/prisma/schema.prisma",
+    "sourceFilePath": "/private/tmp/allternit-platform-push/surfaces/platform/prisma/schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
     "rootEnvPath": null
   },
   "relativePath": "../../../prisma",
-  "clientVersion": "6.19.2",
+  "clientVersion": "6.19.3",
   "engineVersion": "c2990dca591cba766e3b7ef5d9e8a84796e47ab7",
   "datasourceNames": [
     "db"
   ],
   "activeProvider": "postgresql",
-  "postinstall": false,
   "inlineDatasources": {
     "db": {
       "url": {
@@ -226,8 +229,8 @@ const config = {
       }
     }
   },
-  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\ngenerator client {\n  provider = \"prisma-client-js\"\n  output   = \"../src/generated/prisma\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\n// ============================================================================\n// User Model (assuming Clerk integration)\n// ============================================================================\n\nmodel User {\n  id        String   @id @default(cuid())\n  clerkId   String   @unique\n  email     String   @unique\n  name      String?\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  // Relations\n  sshConnections       SshConnection[]\n  remoteBackendTargets RemoteBackendTarget[]\n  backendPreference    UserBackendPreference?\n\n  @@map(\"users\")\n}\n\n// ============================================================================\n// SSH Connection Model\n// ============================================================================\n\nmodel SshConnection {\n  id                  String    @id @default(cuid())\n  userId              String\n  name                String\n  host                String\n  port                Int       @default(22)\n  username            String\n  authType            String    @map(\"auth_type\") // 'key' or 'password'\n  encryptedPrivateKey String?   @map(\"encrypted_private_key\")\n  encryptedPassword   String?   @map(\"encrypted_password\")\n  status              String    @default(\"disconnected\") // 'connected', 'disconnected', 'connecting', 'error'\n  os                  String?\n  architecture        String?\n  dockerInstalled     Boolean?  @map(\"docker_installed\")\n  a2rInstalled        Boolean?  @map(\"a2r_installed\")\n  a2rVersion          String?   @map(\"a2r_version\")\n  lastConnectedAt     DateTime? @map(\"last_connected_at\")\n  createdAt           DateTime  @default(now()) @map(\"created_at\")\n  updatedAt           DateTime  @updatedAt @map(\"updated_at\")\n\n  // Relations\n  user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)\n  backendTarget RemoteBackendTarget?\n\n  @@index([userId])\n  @@index([status])\n  @@map(\"ssh_connections\")\n}\n\nmodel RemoteBackendTarget {\n  id                    String    @id @default(cuid())\n  userId                String\n  sshConnectionId       String    @unique @map(\"ssh_connection_id\")\n  name                  String\n  status                String    @default(\"disconnected\")\n  installState          String    @default(\"unknown\") @map(\"install_state\")\n  backendUrl            String?   @map(\"backend_url\")\n  gatewayUrl            String?   @map(\"gateway_url\")\n  gatewayWsUrl          String?   @map(\"gateway_ws_url\")\n  encryptedGatewayToken String?   @map(\"encrypted_gateway_token\")\n  installedVersion      String?   @map(\"installed_version\")\n  supportedClientRange  String?   @map(\"supported_client_range\")\n  lastVerifiedAt        DateTime? @map(\"last_verified_at\")\n  lastHeartbeatAt       DateTime? @map(\"last_heartbeat_at\")\n  lastError             String?   @map(\"last_error\")\n  createdAt             DateTime  @default(now()) @map(\"created_at\")\n  updatedAt             DateTime  @updatedAt @map(\"updated_at\")\n\n  user           User                    @relation(fields: [userId], references: [id], onDelete: Cascade)\n  sshConnection  SshConnection           @relation(fields: [sshConnectionId], references: [id], onDelete: Cascade)\n  activeForUsers UserBackendPreference[] @relation(\"ActiveRemoteBackendTarget\")\n\n  @@index([userId])\n  @@index([status])\n  @@map(\"remote_backend_targets\")\n}\n\nmodel UserBackendPreference {\n  id                          String   @id @default(cuid())\n  userId                      String   @unique\n  orgId                       String?  @map(\"org_id\")\n  mode                        String   @default(\"local\")\n  fallbackMode                String   @default(\"local\") @map(\"fallback_mode\")\n  executionMode               String   @default(\"auto\") @map(\"execution_mode\")\n  executionModeUpdatedAt      DateTime @default(now()) @map(\"execution_mode_updated_at\")\n  activeRemoteBackendTargetId String?  @map(\"active_remote_backend_target_id\")\n  createdAt                   DateTime @default(now()) @map(\"created_at\")\n  updatedAt                   DateTime @updatedAt @map(\"updated_at\")\n\n  user                      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)\n  activeRemoteBackendTarget RemoteBackendTarget? @relation(\"ActiveRemoteBackendTarget\", fields: [activeRemoteBackendTargetId], references: [id], onDelete: SetNull)\n\n  @@index([activeRemoteBackendTargetId])\n  @@map(\"user_backend_preferences\")\n}\n",
-  "inlineSchemaHash": "8ead6e94c1c8358e40f07737c9e7a33cbced229af70f8fdb162cf0f9222dfad2",
+  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\ngenerator client {\n  provider      = \"prisma-client-js\"\n  output        = \"../src/generated/prisma\"\n  binaryTargets = [\"native\", \"debian-openssl-3.0.x\"]\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\n// ============================================================================\n// User Model (assuming Clerk integration)\n// ============================================================================\n\nmodel User {\n  id        String   @id @default(cuid())\n  clerkId   String   @unique\n  email     String   @unique\n  name      String?\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  // Relations\n  sshConnections       SshConnection[]\n  remoteBackendTargets RemoteBackendTarget[]\n  backendPreference    UserBackendPreference?\n\n  @@map(\"users\")\n}\n\n// ============================================================================\n// SSH Connection Model\n// ============================================================================\n\nmodel SshConnection {\n  id                  String    @id @default(cuid())\n  userId              String\n  name                String\n  host                String\n  port                Int       @default(22)\n  username            String\n  authType            String    @map(\"auth_type\") // 'key' or 'password'\n  encryptedPrivateKey String?   @map(\"encrypted_private_key\")\n  encryptedPassword   String?   @map(\"encrypted_password\")\n  status              String    @default(\"disconnected\") // 'connected', 'disconnected', 'connecting', 'error'\n  os                  String?\n  architecture        String?\n  dockerInstalled     Boolean?  @map(\"docker_installed\")\n  a2rInstalled        Boolean?  @map(\"a2r_installed\")\n  a2rVersion          String?   @map(\"a2r_version\")\n  lastConnectedAt     DateTime? @map(\"last_connected_at\")\n  createdAt           DateTime  @default(now()) @map(\"created_at\")\n  updatedAt           DateTime  @updatedAt @map(\"updated_at\")\n\n  // Relations\n  user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)\n  backendTarget RemoteBackendTarget?\n\n  @@index([userId])\n  @@index([status])\n  @@map(\"ssh_connections\")\n}\n\nmodel RemoteBackendTarget {\n  id                    String    @id @default(cuid())\n  userId                String\n  sshConnectionId       String    @unique @map(\"ssh_connection_id\")\n  name                  String\n  status                String    @default(\"disconnected\")\n  installState          String    @default(\"unknown\") @map(\"install_state\")\n  backendUrl            String?   @map(\"backend_url\")\n  gatewayUrl            String?   @map(\"gateway_url\")\n  gatewayWsUrl          String?   @map(\"gateway_ws_url\")\n  encryptedGatewayToken String?   @map(\"encrypted_gateway_token\")\n  installedVersion      String?   @map(\"installed_version\")\n  supportedClientRange  String?   @map(\"supported_client_range\")\n  lastVerifiedAt        DateTime? @map(\"last_verified_at\")\n  lastHeartbeatAt       DateTime? @map(\"last_heartbeat_at\")\n  lastError             String?   @map(\"last_error\")\n  createdAt             DateTime  @default(now()) @map(\"created_at\")\n  updatedAt             DateTime  @updatedAt @map(\"updated_at\")\n\n  user           User                    @relation(fields: [userId], references: [id], onDelete: Cascade)\n  sshConnection  SshConnection           @relation(fields: [sshConnectionId], references: [id], onDelete: Cascade)\n  activeForUsers UserBackendPreference[] @relation(\"ActiveRemoteBackendTarget\")\n\n  @@index([userId])\n  @@index([status])\n  @@map(\"remote_backend_targets\")\n}\n\nmodel UserBackendPreference {\n  id                          String   @id @default(cuid())\n  userId                      String   @unique\n  orgId                       String?  @map(\"org_id\")\n  mode                        String   @default(\"local\")\n  fallbackMode                String   @default(\"local\") @map(\"fallback_mode\")\n  executionMode               String   @default(\"auto\") @map(\"execution_mode\")\n  executionModeUpdatedAt      DateTime @default(now()) @map(\"execution_mode_updated_at\")\n  activeRemoteBackendTargetId String?  @map(\"active_remote_backend_target_id\")\n  createdAt                   DateTime @default(now()) @map(\"created_at\")\n  updatedAt                   DateTime @updatedAt @map(\"updated_at\")\n\n  user                      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)\n  activeRemoteBackendTarget RemoteBackendTarget? @relation(\"ActiveRemoteBackendTarget\", fields: [activeRemoteBackendTargetId], references: [id], onDelete: SetNull)\n\n  @@index([activeRemoteBackendTargetId])\n  @@map(\"user_backend_preferences\")\n}\n",
+  "inlineSchemaHash": "87f3c3558af8111cb1b1cdf2140b5906d197f50554fa7fef5a8e20ce61872d65",
   "copyEngine": true
 }
 
@@ -268,6 +271,10 @@ Object.assign(exports, Prisma)
 // file annotations for bundling tools to include these files
 path.join(__dirname, "libquery_engine-darwin-arm64.dylib.node");
 path.join(process.cwd(), "src/generated/prisma/libquery_engine-darwin-arm64.dylib.node")
+
+// file annotations for bundling tools to include these files
+path.join(__dirname, "libquery_engine-debian-openssl-3.0.x.so.node");
+path.join(process.cwd(), "src/generated/prisma/libquery_engine-debian-openssl-3.0.x.so.node")
 // file annotations for bundling tools to include these files
 path.join(__dirname, "schema.prisma");
 path.join(process.cwd(), "src/generated/prisma/schema.prisma")

@@ -7,8 +7,8 @@
  * @module @allternit/platform/icons/custom
  */
 
-export { A2RLogo } from './Logo';
-export { A2RMark } from './Mark';
+export { AllternitLogo } from './Logo';
+export { AllternitMark } from './Mark';
 export { ShellIcon } from './Shell';
 export { CapsuleIcon } from './Capsule';
 export { BeadIcon } from './Bead';

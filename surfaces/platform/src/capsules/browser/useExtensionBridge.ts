@@ -21,15 +21,15 @@ export function useExtensionBridge() {
       if (!isElectronShell()) return;
       if (isSetup.current) return;
       
-      const extension = (window as unknown as { a2rExtension?: {
+      const extension = (window as unknown as { allternitExtension?: {
         sendMessage: (msg: { type: string; payload?: unknown }) => Promise<boolean>;
         getStatus: () => Promise<{ connected: boolean }>;
         onMessage: (handler: (data: { connectionId: string; message: { type: string; payload?: unknown } }) => void) => () => void;
         onStatusChange: (handler: (data: { connected: boolean; connectionId: string }) => void) => () => void;
-      } }).a2rExtension;
+      } }).allternitExtension;
       
       if (!extension) {
-        console.warn('[ExtensionBridge] a2rExtension API not available');
+        console.warn('[ExtensionBridge] allternitExtension API not available');
         return;
       }
 
@@ -128,7 +128,7 @@ export function useExtensionBridge() {
 export async function isExtensionConnected(): Promise<boolean> {
   if (!isElectronShell()) return false;
   
-  const extension = (window as unknown as { a2rExtension?: { getStatus: () => Promise<{ connected: boolean }> } }).a2rExtension;
+  const extension = (window as unknown as { allternitExtension?: { getStatus: () => Promise<{ connected: boolean }> } }).allternitExtension;
   if (!extension) return false;
   
   const status = await extension.getStatus();

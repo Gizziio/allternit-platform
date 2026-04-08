@@ -12,7 +12,7 @@ import { MagnifyingGlass, Plus } from '@phosphor-icons/react';
 import { SwarmViewMode, SwarmAgent } from '../types';
 import { ViewToggle } from './ViewToggle';
 import { useSwarmMonitorStore } from '../SwarmMonitor.store';
-import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/a2r.tokens';
+import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/allternit.tokens';
 
 // Amber/orange accent from demo-v3/v4/v5
 const ACCENT = '#c17817';

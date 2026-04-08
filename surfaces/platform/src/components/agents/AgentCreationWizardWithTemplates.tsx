@@ -18,7 +18,7 @@ import React, { useState, useCallback } from 'react';
 import { AgentCreationWizard, type AgentCreationWizardProps } from './AgentCreationWizard';
 import { AgentHubModal } from './AgentHubModal';
 import type { SpecialistTemplate } from '@/lib/agents/agent-templates.specialist';
-import type { AgentMode } from '@/design/a2r.tokens';
+import type { AgentMode } from '@/design/allternit.tokens';
 
 export interface AgentCreationWizardWithTemplatesProps extends Omit<AgentCreationWizardProps, 'onCreate'> {
   /**

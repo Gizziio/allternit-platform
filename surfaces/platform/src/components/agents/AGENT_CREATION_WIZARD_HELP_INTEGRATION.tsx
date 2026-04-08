@@ -67,7 +67,7 @@ import {
 } from '@/lib/agents/wizard-help.constants';
 
 // Import design tokens
-import { MODE_COLORS, TEXT } from '@/design/a2r.tokens';
+import { MODE_COLORS, TEXT } from '@/design/allternit.tokens';
 
 // ============================================================================
 // MAIN WIZARD COMPONENT - HELP INTEGRATION

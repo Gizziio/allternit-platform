@@ -1,5 +1,5 @@
 /**
- * A2RDocumentEditor.tsx
+ * AllternitDocumentEditor.tsx
  * 
  * A2R-native document editor wrapping BlockNote.
  * Rich, Notion-style block editor with A2R theming.
@@ -21,7 +21,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-interface A2RDocumentEditorProps {
+interface AllternitDocumentEditorProps {
   /** Initial content as markdown or BlockNote blocks */
   initialContent?: string | PartialBlock[];
   /** Document title */
@@ -51,7 +51,7 @@ interface A2RDocumentEditorProps {
  * Wraps BlockNote with A2R-native theming and branding.
  * All user-facing labels say "A2R Document" not "BlockNote".
  */
-export function A2RDocumentEditor({
+export function AllternitDocumentEditor({
   initialContent,
   title = 'Untitled Document',
   readOnly = false,
@@ -60,7 +60,7 @@ export function A2RDocumentEditor({
   className,
   showToolbar = true,
   metadata,
-}: A2RDocumentEditorProps) {
+}: AllternitDocumentEditorProps) {
   const [documentTitle, setDocumentTitle] = useState(title);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [wordCount, setWordCount] = useState(0);
@@ -87,7 +87,7 @@ export function A2RDocumentEditor({
         const blocks = parseMarkdownToBlocks(initialContent);
         editor.replaceBlocks(editor.document, blocks);
       } catch (e) {
-        console.warn('[A2RDocument] Failed to parse markdown:', e);
+        console.warn('[AllternitDocument] Failed to parse markdown:', e);
       }
     }
   }, [editor, initialContent]);
@@ -390,4 +390,4 @@ function formatTime(date: Date): string {
   return `${days}d ago`;
 }
 
-export default A2RDocumentEditor;
+export default AllternitDocumentEditor;

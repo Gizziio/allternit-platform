@@ -13,7 +13,7 @@ import { createModuleLogger } from "@/lib/logger";
 const log = createModuleLogger("tools/browser-retrieve-url");
 
 // Superconductor service URL (local browser-use)
-const A2R_OPERATOR_URL = process.env.A2R_OPERATOR_URL || "http://127.0.0.1:3000";
+const ALLTERNIT_OPERATOR_URL = process.env.ALLTERNIT_OPERATOR_URL || "http://127.0.0.1:3000";
 
 export const browserRetrieveUrl = tool({
   description: `Fetch content from a URL using our browser automation service.
@@ -37,7 +37,7 @@ Advantages over external APIs:
   execute: async ({ url }: { url: string }) => {
     try {
       // Call superconductor browser-use service
-      const response = await fetch(`${A2R_OPERATOR_URL}/browser/retrieve`, {
+      const response = await fetch(`${ALLTERNIT_OPERATOR_URL}/browser/retrieve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url }),

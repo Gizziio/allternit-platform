@@ -46,8 +46,8 @@ function toLegacySystemInfo(systemInfo: SSHSystemInfo) {
     distro: systemInfo.distro,
     version: systemInfo.version,
     architecture: systemInfo.architecture,
-    isA2RInstalled: systemInfo.a2rInstalled,
-    a2rVersion: systemInfo.a2rVersion,
+    isAllternitInstalled: systemInfo.allternitInstalled,
+    allternitVersion: systemInfo.allternitVersion,
     hasSystemd: systemInfo.hasSystemd,
   };
 }
@@ -183,8 +183,8 @@ export async function POST(request: NextRequest) {
         os: systemInfo.os,
         architecture: systemInfo.architecture,
         dockerInstalled: systemInfo.dockerInstalled,
-        a2rInstalled: systemInfo.a2rInstalled,
-        a2rVersion: systemInfo.a2rVersion ?? null,
+        allternitInstalled: systemInfo.allternitInstalled,
+        allternitVersion: systemInfo.allternitVersion ?? null,
         lastConnectedAt: new Date(),
       },
       select: {
@@ -192,8 +192,8 @@ export async function POST(request: NextRequest) {
         name: true,
         host: true,
         status: true,
-        a2rInstalled: true,
-        a2rVersion: true,
+        allternitInstalled: true,
+        allternitVersion: true,
       },
     });
 
@@ -207,21 +207,21 @@ export async function POST(request: NextRequest) {
         ? decrypt(existingBackendTarget.encryptedGatewayToken)
         : null,
     );
-    const existingHealth = connected.a2rInstalled
+    const existingHealth = connected.allternitInstalled
       ? await verifyRuntimeBackendHealth(defaultBackendUrl, {
           authorizationHeader: existingAuthorization,
         })
       : { reachable: false, healthUrl: null };
 
-    if (connected.a2rInstalled && existingHealth.reachable) {
+    if (connected.allternitInstalled && existingHealth.reachable) {
       const backendTarget = await upsertRuntimeBackendTargetFromConnection({
         userId,
         sshConnectionId: connected.id,
         name: connected.name,
         host: connected.host,
         connectionStatus: connected.status,
-        a2rInstalled: true,
-        a2rVersion: connected.a2rVersion,
+        allternitInstalled: true,
+        allternitVersion: connected.allternitVersion,
         backendUrl: defaultBackendUrl,
         gatewayUrl: defaultBackendUrl,
         gatewayToken: existingAuthorization,
@@ -242,7 +242,7 @@ export async function POST(request: NextRequest) {
         success: true,
         message: 'A2R backend is already installed on this server',
         installation_log: ['A2R backend already installed, skipping reinstallation.'],
-        version: connected.a2rVersion ?? backendInstaller.getBackendVersion(),
+        version: connected.allternitVersion ?? backendInstaller.getBackendVersion(),
         api_url: defaultBackendUrl,
         backend_target_id: backendTarget.id,
         reachable_from_shell: true,
@@ -279,8 +279,8 @@ export async function POST(request: NextRequest) {
         name: connection.name,
         host: connection.host,
         connectionStatus: 'error',
-        a2rInstalled: false,
-        a2rVersion: null,
+        allternitInstalled: false,
+        allternitVersion: null,
         lastError: result.error ?? 'Installation failed',
       });
 
@@ -295,8 +295,8 @@ export async function POST(request: NextRequest) {
       where: { id: connection.id },
       data: {
         status: 'connected',
-        a2rInstalled: true,
-        a2rVersion: backendInstaller.getBackendVersion(),
+        allternitInstalled: true,
+        allternitVersion: backendInstaller.getBackendVersion(),
         lastConnectedAt: new Date(),
       },
       select: {
@@ -304,8 +304,8 @@ export async function POST(request: NextRequest) {
         name: true,
         host: true,
         status: true,
-        a2rInstalled: true,
-        a2rVersion: true,
+        allternitInstalled: true,
+        allternitVersion: true,
       },
     });
 
@@ -321,8 +321,8 @@ export async function POST(request: NextRequest) {
       name: installed.name,
       host: installed.host,
       connectionStatus: installed.status,
-      a2rInstalled: installed.a2rInstalled ?? false,
-      a2rVersion: installed.a2rVersion,
+      allternitInstalled: installed.allternitInstalled ?? false,
+      allternitVersion: installed.allternitVersion,
       backendUrl: result.apiUrl ?? null,
       gatewayUrl: result.apiUrl ?? null,
       gatewayToken: result.gatewayAuthHeader ?? null,
@@ -350,14 +350,14 @@ export async function POST(request: NextRequest) {
         ? 'A2R backend installed and activated successfully'
         : 'A2R backend installed, but it is not reachable from this shell yet',
       installation_log: log,
-      version: installed.a2rVersion,
+      version: installed.allternitVersion,
       api_url: result.apiUrl ?? null,
       backend_target_id: backendTarget.id,
       reachable_from_shell: health.reachable,
       system_info: toLegacySystemInfo({
         ...systemInfo,
-        a2rInstalled: true,
-        a2rVersion: installed.a2rVersion ?? systemInfo.a2rVersion,
+        allternitInstalled: true,
+        allternitVersion: installed.allternitVersion ?? systemInfo.allternitVersion,
       }),
     });
   } catch (error) {

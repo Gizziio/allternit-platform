@@ -51,12 +51,12 @@ interface HotkeysContextType {
 const HotkeysContext = createContext<HotkeysContextType | undefined>(undefined);
 
 // Provider component for hotkey scopes
-interface A2RHotkeysProviderProps {
+interface AllternitHotkeysProviderProps {
   children: React.ReactNode;
   initiallyActiveScopes?: string[];
 }
 
-export const A2RHotkeysProvider: React.FC<A2RHotkeysProviderProps> = ({ 
+export const AllternitHotkeysProvider: React.FC<AllternitHotkeysProviderProps> = ({ 
   children, 
   initiallyActiveScopes = [HOTKEY_SCOPES.GLOBAL] 
 }) => {
@@ -209,7 +209,7 @@ function matchesHotkey(event: KeyboardEvent, combo: ParsedHotkey): boolean {
 }
 
 // Hook to use platform hotkeys
-export const useA2RHotkeys = (
+export const useAllternitHotkeys = (
   keys: string | undefined | null,
   callback: (e: KeyboardEvent) => void,
   deps?: any[],
@@ -253,7 +253,7 @@ export const useA2RHotkeys = (
 export const useHotkeyScopes = () => {
   const context = useContext(HotkeysContext);
   if (!context) {
-    throw new Error('useHotkeyScopes must be used within A2RHotkeysProvider');
+    throw new Error('useHotkeyScopes must be used within AllternitHotkeysProvider');
   }
   return context;
 };

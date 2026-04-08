@@ -11,8 +11,8 @@ import {
   getRuntimeGatewayWsBaseUrl,
 } from '@/lib/runtime-backend-client';
 
-const TERMINAL_SESSIONS_STORAGE_KEY = 'a2r_terminal_sessions';
-const TERMINAL_SNAPSHOTS_STORAGE_KEY = 'a2r_terminal_snapshots';
+const TERMINAL_SESSIONS_STORAGE_KEY = 'allternit_terminal_sessions';
+const TERMINAL_SNAPSHOTS_STORAGE_KEY = 'allternit_terminal_snapshots';
 
 export interface VolumeMount {
   source: string;

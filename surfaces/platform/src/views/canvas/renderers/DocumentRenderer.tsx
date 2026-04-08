@@ -2,12 +2,12 @@
  * DocumentRenderer.tsx
  * 
  * Renders A2R Document artifacts.
- * Uses A2RDocumentEditor (BlockNote wrapper) for rich document editing.
+ * Uses AllternitDocumentEditor (BlockNote wrapper) for rich document editing.
  */
 
 import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { A2RDocumentEditor } from '@/components/a2r/A2RDocumentEditor';
+import { AllternitDocumentEditor } from '@/components/a2r';
 import type { ArtifactUIPart } from '@/lib/ai/ui-parts.types';
 
 interface DocumentRendererProps {
@@ -19,7 +19,7 @@ interface DocumentRendererProps {
 /**
  * DocumentRenderer - A2R Document Artifact Renderer
  * 
- * Wraps A2RDocumentEditor for use in the Canvas/sidecar.
+ * Wraps AllternitDocumentEditor for use in the Canvas/sidecar.
  * Provides full document editing capabilities.
  */
 export function DocumentRenderer({
@@ -42,7 +42,7 @@ export function DocumentRenderer({
       transition={{ duration: 0.3 }}
       className="h-full"
     >
-      <A2RDocumentEditor
+      <AllternitDocumentEditor
         initialContent={artifact.content || ''}
         title={artifact.title}
         readOnly={!editMode}

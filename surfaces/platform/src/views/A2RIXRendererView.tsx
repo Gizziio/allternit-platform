@@ -1,5 +1,5 @@
 /**
- * A2RIXRendererView
+ * AllternitIXRendererView
  *
  * UI for A2R-IX JSON Renderer / Interface eXecution.
  * Real JSON → UI renderer demo with specification editor and live preview.
@@ -135,7 +135,7 @@ function MockRenderedOutput({ spec }: { spec: RenderedComponent }) {
   );
 }
 
-export function A2RIXRendererView() {
+export function AllternitIXRendererView() {
   const [jsonText, setJsonText] = useState(DEFAULT_SPEC);
   const [renderTime, setRenderTime] = useState(0);
   const [catalogOpen, setCatalogOpen] = useState(true);
@@ -314,4 +314,4 @@ export function A2RIXRendererView() {
   );
 }
 
-export default A2RIXRendererView;
+export default AllternitIXRendererView;

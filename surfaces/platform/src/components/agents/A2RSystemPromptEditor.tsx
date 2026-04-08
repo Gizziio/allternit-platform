@@ -1,5 +1,5 @@
 /**
- * A2RSystemPromptEditor.tsx
+ * AllternitSystemPromptEditor.tsx
  * 
  * Professional system prompt editor with:
  * - Monospace font
@@ -20,10 +20,10 @@ import {
   Question as HelpCircle,
   Code,
 } from '@phosphor-icons/react';
-import { TEXT, GLASS, SAND } from '@/design/a2r.tokens';
+import { TEXT, GLASS, SAND } from '@/design/allternit.tokens';
 import { api } from '@/integration/api-client';
 
-interface A2RSystemPromptEditorProps {
+interface AllternitSystemPromptEditorProps {
   value: string;
   onChange: (value: string) => void;
   modeColors: any;
@@ -31,13 +31,13 @@ interface A2RSystemPromptEditorProps {
   variables?: Array<{ name: string; description: string }>;
 }
 
-export function A2RSystemPromptEditor({
+export function AllternitSystemPromptEditor({
   value,
   onChange,
   modeColors,
   placeholder = "Enter system prompt instructions...",
   variables = [],
-}: A2RSystemPromptEditorProps) {
+}: AllternitSystemPromptEditorProps) {
   const [testOutput, setTestTestOutput] = useState<string | null>(null);
   const [isTesting, setIsTesting] = useState(false);
   const [copied, setCopied] = useState(false);

@@ -25,7 +25,7 @@ import {
   Legend,
 } from 'recharts';
 import { ChartLine, FileCsv, FileCode } from '@phosphor-icons/react';
-import { TEXT, MODE_COLORS, BACKGROUND, BORDER, STATUS } from '@/design/a2r.tokens';
+import { TEXT, MODE_COLORS, BACKGROUND, BORDER, STATUS } from '@/design/allternit.tokens';
 import type { MetricsDataPoint } from '../types';
 import { exportAndDownloadMetrics, copyToClipboard } from '../lib/export-utils';
 

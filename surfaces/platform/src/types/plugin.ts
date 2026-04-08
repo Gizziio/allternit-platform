@@ -8,7 +8,7 @@ export interface MCPConfig {
   }>;
 }
 
-export interface A2RPlugin {
+export interface AllternitPlugin {
   id: string;
   name: string;
   version: string;

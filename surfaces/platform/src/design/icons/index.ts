@@ -21,8 +21,8 @@
  * <NotificationBell count={5} />
  * 
  * // Custom brand icons
- * import { A2RLogoIcon, ShellIconComponent } from '@allternit/platform/icons';
- * <A2RLogoIcon size={32} />
+ * import { AllternitLogoIcon, ShellIconComponent } from '@allternit/platform/icons';
+ * <AllternitLogoIcon size={32} />
  * ```
  * 
  * @module @allternit/platform/icons
@@ -111,8 +111,8 @@ export {
   ProfileIcon,
   
   // Brand
-  A2RLogoIcon,
-  A2RMarkIcon,
+  AllternitLogoIcon,
+  AllternitMarkIcon,
   ShellIconComponent,
   CapsuleIconComponent,
   BeadIconComponent,
@@ -156,8 +156,8 @@ export { iconMapping, hasIcon, getIconComponent, getAllIconNames } from './lucid
 // ============================================================================
 
 export {
-  A2RLogo,
-  A2RMark,
+  AllternitLogo,
+  AllternitMark,
   ShellIcon,
   CapsuleIcon,
   BeadIcon,

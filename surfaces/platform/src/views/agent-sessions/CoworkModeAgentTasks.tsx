@@ -31,7 +31,7 @@ import {
 import {
   MODE_COLORS,
   TEXT,
-} from '@/design/a2r.tokens';
+} from '@/design/allternit.tokens';
 
 import { AgentSessionLayout } from './AgentSessionLayout';
 import type { CoworkModeAgentTasksProps } from './types';

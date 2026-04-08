@@ -11,7 +11,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { Plus, Brain, Robot, Cpu, ClipboardText, UserPlus, DotsThree, Tray, X } from '@phosphor-icons/react';
-import { TEXT, MODE_COLORS, STATUS, BACKGROUND } from '@/design/a2r.tokens';
+import { TEXT, MODE_COLORS, STATUS, BACKGROUND } from '@/design/allternit.tokens';
 import { useSwarmMonitorStore, useAgents } from '../SwarmMonitor.store';
 import { SwarmAgent, Task } from '../types';
 import { toast } from '@/hooks/use-toast';

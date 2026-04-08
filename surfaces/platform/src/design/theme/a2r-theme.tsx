@@ -7,7 +7,7 @@
 
 import { useContext, createContext } from "react"
 
-export type A2RRuntimeState = 
+export type AllternitRuntimeState = 
   | "idle"
   | "connecting" 
   | "hydrating"
@@ -17,7 +17,7 @@ export type A2RRuntimeState =
   | "responding"
   | "compacting"
 
-export interface A2RTheme {
+export interface AllternitTheme {
   /** Foreground colors */
   fg: string
   bg: string
@@ -25,7 +25,7 @@ export interface A2RTheme {
   accent: string
   
   /** Status colors */
-  status: Record<A2RRuntimeState, string>
+  status: Record<AllternitRuntimeState, string>
   
   /** Glyphs/symbols */
   glyph: {
@@ -36,7 +36,7 @@ export interface A2RTheme {
 }
 
 /** Default dark theme (matches terminal) */
-export const defaultTheme: A2RTheme = {
+export const defaultTheme: AllternitTheme = {
   fg: "#e0e0e0",
   bg: "#0f0f0f",
   muted: "#666666",
@@ -61,7 +61,7 @@ export const defaultTheme: A2RTheme = {
 }
 
 /** Light theme variant */
-export const lightTheme: A2RTheme = {
+export const lightTheme: AllternitTheme = {
   fg: "#1a1a1a",
   bg: "#ffffff",
   muted: "#888888",
@@ -86,25 +86,25 @@ export const lightTheme: A2RTheme = {
 }
 
 /** Get color for runtime state */
-export function getStatusColor(state: A2RRuntimeState, theme: A2RTheme = defaultTheme): string {
+export function getStatusColor(state: AllternitRuntimeState, theme: AllternitTheme = defaultTheme): string {
   return theme.status[state] || theme.status.idle
 }
 
 /** Theme context */
-export const ThemeContext = createContext<A2RTheme>(defaultTheme)
+export const ThemeContext = createContext<AllternitTheme>(defaultTheme)
 
 /** Theme hook for React components */
-export function useA2RTheme(): A2RTheme {
+export function useAllternitTheme(): AllternitTheme {
   return useContext(ThemeContext)
 }
 
 /** Theme provider */
-export function A2RThemeProvider({ 
+export function AllternitThemeProvider({ 
   children, 
   theme = defaultTheme 
 }: { 
   children: React.ReactNode
-  theme?: A2RTheme 
+  theme?: AllternitTheme 
 }) {
   return (
     <ThemeContext.Provider value={theme}>

@@ -547,7 +547,7 @@ function CodeSessionSurface({
       sessionDescription={embeddedAgentSession.session?.description}
       agentName={embeddedAgentSession.descriptor.agentName || selectedAgent?.name || undefined}
       statusLabel={
-        embeddedAgentSession.session?.metadata?.a2r_local_draft === true
+        embeddedAgentSession.session?.metadata?.allternit_local_draft === true
           ? 'Local Draft'
           : embeddedAgentSession.session?.isActive
             ? 'Live'
@@ -557,7 +557,7 @@ function CodeSessionSurface({
       workspaceScope={embeddedAgentSession.descriptor.workspaceScope}
       canvasCount={embeddedCanvasCount}
       tags={embeddedAgentSession.session?.tags}
-      localDraft={embeddedAgentSession.session?.metadata?.a2r_local_draft === true}
+      localDraft={embeddedAgentSession.session?.metadata?.allternit_local_draft === true}
       toolsEnabled={embeddedAgentSession.descriptor.agentFeatures?.tools === true}
       automationEnabled={embeddedAgentSession.descriptor.agentFeatures?.automation === true}
       onDismiss={onDismissEmbeddedAgentSession}

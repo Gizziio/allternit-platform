@@ -20,7 +20,7 @@ import {
   DotsThreeVertical,
   Power,
 } from '@phosphor-icons/react';
-import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/a2r.tokens';
+import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/allternit.tokens';
 
 export interface SSHConnection {
   id: string;
@@ -33,7 +33,7 @@ export interface SSHConnection {
   os?: string;
   architecture?: string;
   dockerInstalled?: boolean;
-  a2rInstalled?: boolean;
+  allternitInstalled?: boolean;
   errorMessage?: string;
 }
 
@@ -396,14 +396,14 @@ export function SSHConnectionsList({
                           </span>
                         </div>
                       )}
-                      {connection.a2rInstalled !== undefined && (
+                      {connection.allternitInstalled !== undefined && (
                         <div>
                           <span style={{ color: TEXT.secondary }}>A2R Agent:</span>
                           <span 
                             className="ml-2"
-                            style={{ color: connection.a2rInstalled ? STATUS.success : STATUS.warning }}
+                            style={{ color: connection.allternitInstalled ? STATUS.success : STATUS.warning }}
                           >
-                            {connection.a2rInstalled ? 'Installed' : 'Not installed'}
+                            {connection.allternitInstalled ? 'Installed' : 'Not installed'}
                           </span>
                         </div>
                       )}

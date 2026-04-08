@@ -14,7 +14,7 @@ interface MarkdownProps {
 export const Markdown = memo(function Markdown({ children, className, isStreaming }: MarkdownProps) {
   return (
     <MessageResponse
-      className={cn("a2r-markdown", isStreaming && "is-streaming", className)}
+      className={cn("allternit-markdown", isStreaming && "is-streaming", className)}
     >
       {children}
     </MessageResponse>

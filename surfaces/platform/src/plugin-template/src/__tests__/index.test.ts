@@ -4,13 +4,13 @@
  * Example test suite for the plugin.
  */
 
-import { MyA2RPlugin } from '../index';
+import { MyAllternitPlugin } from '../index';
 
-describe('MyA2RPlugin', () => {
-  let plugin: MyA2RPlugin;
+describe('MyAllternitPlugin', () => {
+  let plugin: MyAllternitPlugin;
 
   beforeEach(() => {
-    plugin = new MyA2RPlugin();
+    plugin = new MyAllternitPlugin();
   });
 
   afterEach(async () => {

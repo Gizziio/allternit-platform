@@ -20,7 +20,7 @@ import { ShellOverlayLayer } from './ShellOverlayLayer';
 import { VisionGlass } from './VisionGlass';
 import { LegacyWidgetsLayer } from './LegacyWidgets';
 import { initBrowserSurfaceBridge } from '../integration/execution/browser.bridge';
-import { useA2RHotkeys, PLATFORM_SHORTCUTS } from '../vendor/hotkeys';
+import { useAllternitHotkeys, PLATFORM_SHORTCUTS } from '../vendor/hotkeys';
 import { createInitialNavState, navReducer } from '../nav/nav.store';
 import { selectActiveView } from '../nav/nav.selectors';
 import { createViewRegistry } from '../views/registry';
@@ -82,7 +82,7 @@ import { CapsuleManagerView } from '../views/CapsuleManagerView';
 // Operator Browser Control View (P3.10/P3.12)
 import { OperatorBrowserView } from '../views/OperatorBrowserView';
 // P3 UI Views (JSON Render, Form Surfaces, Canvas, Hooks)
-import { A2RIXRendererView } from '../views/A2RIXRendererView';
+import { AllternitIXRendererView } from '../views/A2RIXRendererView';
 import { FormSurfacesView } from '../views/FormSurfacesView';
 import { CanvasProtocolView } from '../views/CanvasProtocolView';
 import { HooksSystemView } from '../views/HooksSystemView';
@@ -1107,7 +1107,7 @@ function ShellAppInner() {
     return () => window.removeEventListener("keydown", handleKeydown);
   }, []);
 
-  useA2RHotkeys(PLATFORM_SHORTCUTS.GLOBAL.TOGGLE_AGENT_RUNNER.keys, () => {
+  useAllternitHotkeys(PLATFORM_SHORTCUTS.GLOBAL.TOGGLE_AGENT_RUNNER.keys, () => {
     runner.openCompact();
   });
 
@@ -1444,7 +1444,7 @@ function ShellAppInner() {
     // P3 UI Views
     "a2r-ix": ({ context }: { context: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load A2R-IX Renderer</div>}>
-        <A2RIXRendererView />
+        <AllternitIXRendererView />
       </ErrorBoundary>
     ),
     "form-surfaces": ({ context }: { context: ViewContext }) => (
@@ -2061,7 +2061,7 @@ function ShellAppInner() {
 
   const runner = useRunnerStore();
   
-  useA2RHotkeys(PLATFORM_SHORTCUTS.GLOBAL.TOGGLE_AGENT_RUNNER.keys, () => {
+  useAllternitHotkeys(PLATFORM_SHORTCUTS.GLOBAL.TOGGLE_AGENT_RUNNER.keys, () => {
     runner.openCompact();
   });
 

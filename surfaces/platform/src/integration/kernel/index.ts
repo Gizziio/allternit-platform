@@ -21,7 +21,7 @@
 
 import { createRuntimeBridge, RuntimeBridge } from '@allternit/runtime';
 import type {
-  A2RKernel,
+  AllternitKernel,
   WihItem,
   WihFilters,
   Receipt,
@@ -39,7 +39,7 @@ import type {
 // This is the SINGLE entrypoint for kernel communication
 let bridge: RuntimeBridge | null = null;
 
-function createKernelStub(): A2RKernel {
+function createKernelStub(): AllternitKernel {
   const wihStore = new Map<string, WihItem>();
   const receiptStore = new Map<string, Receipt>();
   const preToolUse = new Map<string, PreToolUseFunction>();
@@ -52,7 +52,7 @@ function createKernelStub(): A2RKernel {
 
   const routeList = async <TContext>(
     context: TContext,
-    routers: Map<string, (ctx: TContext, kernel: A2RKernel) => Promise<RoutingResult> | RoutingResult>
+    routers: Map<string, (ctx: TContext, kernel: AllternitKernel) => Promise<RoutingResult> | RoutingResult>
   ): Promise<RoutingResult> => {
     for (const fn of routers.values()) {
       const result = await fn(context as any, kernel);
@@ -61,7 +61,7 @@ function createKernelStub(): A2RKernel {
     return { decision: "allow" };
   };
 
-  const kernel: A2RKernel = {
+  const kernel: AllternitKernel = {
     version: "0.1.0-dev",
 
     async createWih(item: Omit<WihItem, "id" | "createdAt" | "version">): Promise<WihItem> {
@@ -208,7 +208,7 @@ export type KernelToolResult = {
 const DEFAULT_KERNEL_URL = "http://localhost:3004";
 
 function kernelUrl() {
-  return (window as any).__A2R_KERNEL_URL__ || DEFAULT_KERNEL_URL;
+  return (window as any).__ALLTERNIT_KERNEL_URL__ || DEFAULT_KERNEL_URL;
 }
 
 function randomId(): string {

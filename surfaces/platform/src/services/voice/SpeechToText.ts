@@ -9,7 +9,7 @@ const DEFAULT_VOICE_SERVICE_URL = 'http://127.0.0.1:8001';
 const resolveVoiceServiceUrl = (): string => {
   const envUrl = (import.meta as any).env?.VITE_VOICE_URL;
   const injectedUrl = typeof window !== 'undefined'
-    ? (window as unknown as { __A2R_VOICE_URL__?: string }).__A2R_VOICE_URL__
+    ? (window as unknown as { __ALLTERNIT_VOICE_URL__?: string }).__ALLTERNIT_VOICE_URL__
     : undefined;
   const candidate = [envUrl, injectedUrl, DEFAULT_VOICE_SERVICE_URL]
     .find((value) => typeof value === 'string' && value.trim().length > 0) as string;

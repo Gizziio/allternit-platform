@@ -33,8 +33,8 @@ export interface SystemInfo {
   distro: string;
   version: string;
   architecture: string;
-  isA2RInstalled: boolean;
-  a2rVersion?: string;
+  isAllternitInstalled: boolean;
+  allternitVersion?: string;
   hasSystemd: boolean;
   glibcVersion?: string;
 }
@@ -120,8 +120,8 @@ class BackendInstallerService {
       distro: baseInfo.distro,
       version: baseInfo.version,
       architecture: baseInfo.architecture,
-      isA2RInstalled: baseInfo.a2rInstalled,
-      a2rVersion: baseInfo.a2rVersion,
+      isAllternitInstalled: baseInfo.allternitInstalled,
+      allternitVersion: baseInfo.allternitVersion,
       hasSystemd: baseInfo.hasSystemd,
       glibcVersion,
     };

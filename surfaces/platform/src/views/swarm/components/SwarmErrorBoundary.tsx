@@ -7,7 +7,7 @@
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { Warning as WarningTriangle } from '@phosphor-icons/react';
-import { TEXT, MODE_COLORS, STATUS, BACKGROUND } from '@/design/a2r.tokens';
+import { TEXT, MODE_COLORS, STATUS, BACKGROUND } from '@/design/allternit.tokens';
 
 interface Props {
   children: ReactNode;

@@ -13,7 +13,7 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Plus } from '@phosphor-icons/react';
-import { TEXT, MODE_COLORS, STATUS } from '@/design/a2r.tokens';
+import { TEXT, MODE_COLORS, STATUS } from '@/design/allternit.tokens';
 import { SwarmAgent } from '../types';
 import { useBatchSelection } from '../SwarmMonitor.store';
 

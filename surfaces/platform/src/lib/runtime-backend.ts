@@ -82,8 +82,8 @@ type UpsertTargetInput = {
   name: string;
   host: string;
   connectionStatus: string;
-  a2rInstalled: boolean;
-  a2rVersion?: string | null;
+  allternitInstalled: boolean;
+  allternitVersion?: string | null;
   backendUrl?: string | null;
   gatewayUrl?: string | null;
   gatewayWsUrl?: string | null;
@@ -97,19 +97,19 @@ export async function upsertRuntimeBackendTargetFromConnection(
   input: UpsertTargetInput,
 ) {
   const backendUrl = normalizeHttpUrl(
-    input.backendUrl ?? (input.a2rInstalled ? defaultBackendUrlForHost(input.host) : null),
+    input.backendUrl ?? (input.allternitInstalled ? defaultBackendUrlForHost(input.host) : null),
   );
   const gatewayUrl = normalizeHttpUrl(
-    input.gatewayUrl ?? (input.a2rInstalled ? defaultGatewayUrlForHost(input.host) : backendUrl),
+    input.gatewayUrl ?? (input.allternitInstalled ? defaultGatewayUrlForHost(input.host) : backendUrl),
   );
   const gatewayWsUrl =
     normalizeHttpUrl(input.gatewayWsUrl) ??
     toWsUrl(gatewayUrl ?? backendUrl) ??
-    (input.a2rInstalled ? defaultGatewayWsUrlForHost(input.host) : null);
+    (input.allternitInstalled ? defaultGatewayWsUrlForHost(input.host) : null);
 
-  const installState = input.a2rInstalled ? 'installed' : 'not_installed';
+  const installState = input.allternitInstalled ? 'installed' : 'not_installed';
   const status = input.connectionStatus === 'connected'
-    ? input.a2rInstalled
+    ? input.allternitInstalled
       ? input.backendReachable ? 'ready' : 'installed'
       : 'connected'
     : input.connectionStatus;
@@ -129,7 +129,7 @@ export async function upsertRuntimeBackendTargetFromConnection(
       backendUrl,
       gatewayUrl,
       gatewayWsUrl,
-      installedVersion: input.a2rVersion ?? undefined,
+      installedVersion: input.allternitVersion ?? undefined,
       lastVerifiedAt: input.markVerified ? new Date() : undefined,
       lastError: input.lastError ?? null,
       ...(encryptedGatewayToken !== undefined
@@ -145,7 +145,7 @@ export async function upsertRuntimeBackendTargetFromConnection(
       backendUrl,
       gatewayUrl,
       gatewayWsUrl,
-      installedVersion: input.a2rVersion ?? undefined,
+      installedVersion: input.allternitVersion ?? undefined,
       lastVerifiedAt: input.markVerified ? new Date() : undefined,
       lastError: input.lastError ?? null,
       ...(encryptedGatewayToken !== undefined

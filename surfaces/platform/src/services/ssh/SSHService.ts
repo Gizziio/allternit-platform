@@ -114,8 +114,8 @@ class SSHService {
     os: string;
     architecture: string;
     dockerInstalled: boolean;
-    a2rInstalled: boolean;
-    a2rVersion?: string;
+    allternitInstalled: boolean;
+    allternitVersion?: string;
   }> {
     const session = this.sessions.get(sessionId);
     if (!session) {
@@ -130,8 +130,8 @@ class SSHService {
       os: systemInfo.os,
       architecture: systemInfo.architecture,
       dockerInstalled: systemInfo.dockerInstalled,
-      a2rInstalled: systemInfo.a2rInstalled,
-      a2rVersion: systemInfo.a2rVersion,
+      allternitInstalled: systemInfo.allternitInstalled,
+      allternitVersion: systemInfo.allternitVersion,
     };
   }
 

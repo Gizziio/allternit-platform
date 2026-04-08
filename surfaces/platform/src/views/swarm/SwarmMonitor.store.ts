@@ -6,7 +6,7 @@
 import { create } from 'zustand';
 import { useNativeAgentStore, type NativeSession, type NativeMessage } from '@/lib/agents/native-agent.store';
 import { nativeAgentApi } from '@/lib/agents/native-agent-api';
-import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/a2r.tokens';
+import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/allternit.tokens';
 import {
   SwarmAgent,
   SwarmMetrics, 

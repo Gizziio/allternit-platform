@@ -2,12 +2,12 @@
  * SlidesRenderer.tsx
  * 
  * Renders A2R Deck artifacts.
- * Uses A2RDeckPlayer (Reveal.js wrapper) for presentations.
+ * Uses AllternitDeckPlayer (Reveal.js wrapper) for presentations.
  */
 
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { A2RDeckPlayer } from '@/components/a2r/A2RDeckPlayer';
+import { AllternitDeckPlayer } from '@/components/a2r';
 import type { ArtifactUIPart } from '@/lib/ai/ui-parts.types';
 
 interface SlidesRendererProps {
@@ -19,7 +19,7 @@ interface SlidesRendererProps {
 /**
  * SlidesRenderer - A2R Deck Artifact Renderer
  * 
- * Wraps A2RDeckPlayer for use in the Canvas/sidecar.
+ * Wraps AllternitDeckPlayer for use in the Canvas/sidecar.
  * Provides full presentation capabilities.
  */
 export function SlidesRenderer({
@@ -76,7 +76,7 @@ export function SlidesRenderer({
       transition={{ duration: 0.3 }}
       className="h-full"
     >
-      <A2RDeckPlayer
+      <AllternitDeckPlayer
         slides={slides}
         title={artifact.title}
         showToolbar={true}

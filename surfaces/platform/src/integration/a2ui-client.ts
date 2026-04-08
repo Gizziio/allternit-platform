@@ -5,7 +5,7 @@
 // All A2UI backend communication goes through this client
 // ============================================================================
 
-import { api, A2RApiError } from './api-client';
+import { api, AllternitApiError } from './api-client';
 import type { A2UIPayload } from '@/capsules/a2ui/a2ui.types';
 
 // ============================================================================
@@ -277,7 +277,7 @@ export function useA2UIApi() {
 export function useA2UISession(sessionId: string | null) {
   const [session, setSession] = useState<A2UISession | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<A2RApiError | null>(null);
+  const [error, setError] = useState<AllternitApiError | null>(null);
 
   const fetchSession = useCallback(async () => {
     if (!sessionId) return;
@@ -287,7 +287,7 @@ export function useA2UISession(sessionId: string | null) {
       const data = await a2uiApi.getSession(sessionId);
       setSession(data);
     } catch (err) {
-      setError(err instanceof A2RApiError ? err : new A2RApiError('Unknown error', 500));
+      setError(err instanceof AllternitApiError ? err : new AllternitApiError('Unknown error', 500));
     } finally {
       setLoading(false);
     }
@@ -302,7 +302,7 @@ export function useA2UISession(sessionId: string | null) {
 
 export function useA2UIAction() {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<A2RApiError | null>(null);
+  const [error, setError] = useState<AllternitApiError | null>(null);
 
   const executeAction = useCallback(async (request: A2UIActionRequest) => {
     try {
@@ -311,7 +311,7 @@ export function useA2UIAction() {
       const result = await a2uiApi.executeAction(request);
       return result;
     } catch (err) {
-      const apiError = err instanceof A2RApiError ? err : new A2RApiError('Action failed', 500);
+      const apiError = err instanceof AllternitApiError ? err : new AllternitApiError('Action failed', 500);
       setError(apiError);
       throw apiError;
     } finally {

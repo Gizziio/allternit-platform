@@ -6,7 +6,7 @@
 
 import type { FormAnswer, AnswerEdit, AnswerMetadata } from '../schema/FormSchema';
 
-const STORAGE_KEY = 'a2r_form_answers';
+const STORAGE_KEY = 'allternit_form_answers';
 
 /**
  * Answer Store interface

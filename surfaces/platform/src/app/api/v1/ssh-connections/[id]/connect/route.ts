@@ -92,8 +92,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         os: systemInfo.os,
         architecture: systemInfo.architecture,
         dockerInstalled: systemInfo.dockerInstalled,
-        a2rInstalled: systemInfo.a2rInstalled,
-        a2rVersion: systemInfo.a2rVersion ?? null,
+        allternitInstalled: systemInfo.allternitInstalled,
+        allternitVersion: systemInfo.allternitVersion ?? null,
         lastConnectedAt: new Date(),
       },
       select: {
@@ -106,8 +106,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         os: true,
         architecture: true,
         dockerInstalled: true,
-        a2rInstalled: true,
-        a2rVersion: true,
+        allternitInstalled: true,
+        allternitVersion: true,
         lastConnectedAt: true,
         createdAt: true,
         updatedAt: true,
@@ -120,8 +120,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       name: updated.name,
       host: updated.host,
       connectionStatus: updated.status,
-      a2rInstalled: updated.a2rInstalled ?? false,
-      a2rVersion: updated.a2rVersion,
+      allternitInstalled: updated.allternitInstalled ?? false,
+      allternitVersion: updated.allternitVersion,
       markVerified: true,
     });
 
@@ -139,8 +139,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       os: updated.os,
       architecture: updated.architecture,
       docker_installed: updated.dockerInstalled,
-      a2r_installed: updated.a2rInstalled,
-      a2r_version: updated.a2rVersion,
+      a2r_installed: updated.allternitInstalled,
+      a2r_version: updated.allternitVersion,
       backend_target_id: backendTarget.id,
       last_connected: updated.lastConnectedAt?.toISOString(),
       created_at: updated.createdAt.toISOString(),
@@ -164,8 +164,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         name: true,
         host: true,
         status: true,
-        a2rInstalled: true,
-        a2rVersion: true,
+        allternitInstalled: true,
+        allternitVersion: true,
       },
     });
 
@@ -175,8 +175,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       name: updated.name,
       host: updated.host,
       connectionStatus: updated.status,
-      a2rInstalled: updated.a2rInstalled ?? false,
-      a2rVersion: updated.a2rVersion,
+      allternitInstalled: updated.allternitInstalled ?? false,
+      allternitVersion: updated.allternitVersion,
       lastError: errorMessage,
     }).catch(() => {
       // Best effort status propagation for inventory sync.

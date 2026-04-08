@@ -80,7 +80,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TagInput } from "@/components/ui/tag-input";
 import { WorkspaceLayerConfigurator } from "@/components/WorkspaceLayerConfigurator";
-import { A2RSystemPromptEditor } from "@/components/agents/A2RSystemPromptEditor";
+import { AllternitSystemPromptEditor } from "@/components/agents/A2RSystemPromptEditor";
 import { BrowserCompatibilityWarning as BrowserCompatibilityWarningComponent } from "@/components/BrowserCompatibilityWarning";
 import { DuplicateNameWarning } from "@/components/DuplicateNameWarning";
 import { DraftSavedIndicator } from "@/components/agents/AgentCreationWizard.persistence";
@@ -2575,7 +2575,7 @@ export function CreateAgentForm({
                   </div>
                 </div>
                 <div style={{ marginTop: '16px' }}>
-                  <A2RSystemPromptEditor
+                  <AllternitSystemPromptEditor
                     value={formData.systemPrompt || ''}
                     onChange={(value) => setFormData((prev) => ({ ...prev, systemPrompt: value }))}
                     modeColors={{

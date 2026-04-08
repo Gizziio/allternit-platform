@@ -6,8 +6,8 @@ export interface SSHSystemInfo {
   version: string;
   architecture: string;
   dockerInstalled: boolean;
-  a2rInstalled: boolean;
-  a2rVersion?: string;
+  allternitInstalled: boolean;
+  allternitVersion?: string;
   hasSystemd: boolean;
 }
 
@@ -86,7 +86,7 @@ export async function gatherSSHSystemInfo(ssh: NodeSSH): Promise<SSHSystemInfo> 
   );
   const hasSystemd = systemdResult.stdout.trim() === 'yes';
 
-  const a2rPathResult = await execCompat(
+  const allternitPathResult = await execCompat(
     ssh,
     '(\n' +
       'command -v gizzi-code 2>/dev/null || true;\n' +
@@ -95,27 +95,27 @@ export async function gatherSSHSystemInfo(ssh: NodeSSH): Promise<SSHSystemInfo> 
       '[ -x /opt/a2r/bin/a2r-node ] && echo /opt/a2r/bin/a2r-node || true\n' +
       ') | head -n 1',
   );
-  const a2rPath = a2rPathResult.stdout
+  const allternitPath = allternitPathResult.stdout
     .split(/\r?\n/)
     .map((line) => line.trim())
     .find(Boolean);
-  const a2rInstalled = Boolean(a2rPath);
+  const allternitInstalled = Boolean(allternitPath);
 
-  let a2rVersion: string | undefined;
-  if (a2rPath) {
+  let allternitVersion: string | undefined;
+  if (allternitPath) {
     const versionResult = await execCompat(
       ssh,
-      `${a2rPath} --version 2>/dev/null || echo ""`,
+      `${allternitPath} --version 2>/dev/null || echo ""`,
     );
-    a2rVersion = versionResult.stdout.trim() || undefined;
+    allternitVersion = versionResult.stdout.trim() || undefined;
   }
 
   return {
     ...osInfo,
     architecture,
     dockerInstalled,
-    a2rInstalled,
-    a2rVersion,
+    allternitInstalled,
+    allternitVersion,
     hasSystemd,
   };
 }

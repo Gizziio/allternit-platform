@@ -25,9 +25,9 @@ function ensureApiV1Suffix(value: string): string {
 function resolveGatewayBaseUrl(): string {
   const win = typeof window !== 'undefined' ? (window as any) : {};
   const configured =
-    win.__A2R_GATEWAY_URL__ ||
-    win.__A2R_GATEWAY_URL ||
-    (import.meta as any).env?.VITE_A2R_GATEWAY_URL ||
+    win.__ALLTERNIT_GATEWAY_URL__ ||
+    win.__ALLTERNIT_GATEWAY_URL ||
+    (import.meta as any).env?.VITE_ALLTERNIT_GATEWAY_URL ||
     DEFAULT_GATEWAY_URL;
 
   const normalized = stripTrailingSlash(stripApiV1Suffix(String(configured)));
@@ -55,7 +55,7 @@ function resolveGatewayBaseUrl(): string {
 
 function resolveApiBaseUrl(): string {
   const win = typeof window !== 'undefined' ? (window as any) : {};
-  const explicitApiUrl = win.__A2R_API_URL || (import.meta as any).env?.VITE_A2R_API_URL;
+  const explicitApiUrl = win.___ALLTERNIT_API_URL || (import.meta as any).env?.VITE_ALLTERNIT_API_URL;
 
   if (explicitApiUrl) {
     return ensureApiV1Suffix(String(explicitApiUrl));

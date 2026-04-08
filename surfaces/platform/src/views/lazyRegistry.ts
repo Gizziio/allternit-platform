@@ -84,7 +84,7 @@ export const CapsuleManagerView = lazy(() => import('./CapsuleManagerView').then
 export const OperatorBrowserView = lazy(() => import('./OperatorBrowserView').then(m => ({ default: m.OperatorBrowserView })));
 
 // P3 UI Views
-export const A2RIXRendererView = lazy(() => import('./A2RIXRendererView').then(m => ({ default: m.A2RIXRendererView })));
+export const AllternitIXRendererView = lazy(() => import('./A2RIXRendererView').then(m => ({ default: m.AllternitIXRendererView })));
 export const FormSurfacesView = lazy(() => import('./FormSurfacesView').then(m => ({ default: m.FormSurfacesView })));
 export const CanvasProtocolView = lazy(() => import('./CanvasProtocolView').then(m => ({ default: m.CanvasProtocolView })));
 export const HooksSystemView = lazy(() => import('./HooksSystemView').then(m => ({ default: m.HooksSystemView })));

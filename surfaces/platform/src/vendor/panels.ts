@@ -2,9 +2,9 @@ import { PanelGroup as RNPPanelGroup, Panel as RNPPanel, PanelResizeHandle as RN
 
 // Re-export react-resizable-panels components
 export {
-  RNPPanelGroup as A2RPanelGroup,
-  RNPPanel as A2RPanel,
-  RNPResizeHandle as A2RResizeHandle,
+  RNPPanelGroup as AllternitPanelGroup,
+  RNPPanel as AllternitPanel,
+  RNPResizeHandle as AllternitResizeHandle,
 };
 
 // Export default if needed

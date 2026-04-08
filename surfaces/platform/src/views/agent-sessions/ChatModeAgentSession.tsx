@@ -37,7 +37,7 @@ import {
   MODE_COLORS,
   createGlassStyle,
   TEXT,
-} from '@/design/a2r.tokens';
+} from '@/design/allternit.tokens';
 
 import {
   ToolCallVisualization,

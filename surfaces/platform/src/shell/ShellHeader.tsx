@@ -1,7 +1,7 @@
 import React from 'react';
 import { GlassSurface } from '../design/GlassSurface';
 import { tokens } from '../design/tokens';
-import { A2ROperatorStatus } from '../components/A2ROperatorStatus';
+import { AllternitOperatorStatus } from '../components/AllternitOperatorStatus';
 import { EnvironmentSelector, EnvironmentType } from './EnvironmentSelector';
 import {
   ChatText,
@@ -123,7 +123,7 @@ export function ShellHeader({
         />
 
         {/* A2R Operator Service Status */}
-        <A2ROperatorStatus />
+        <AllternitOperatorStatus />
 
         {/* Artifact Sidecar Toggle */}
         <button

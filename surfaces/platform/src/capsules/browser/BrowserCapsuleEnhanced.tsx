@@ -36,7 +36,7 @@ import {
   ArrowLeft,
 } from '@phosphor-icons/react';
 
-import { A2RLogo } from '@/components/A2RLogo';
+import { AllternitLogo } from '@/components/AllternitLogo';
 import { ArchitectLogo } from '@/components/ai-elements/ArchitectLogo';
 import { MatrixLogo } from '@/components/ai-elements/MatrixLogo';
 import { cn } from '@/lib/utils';
@@ -2039,7 +2039,7 @@ export function BrowserCapsuleEnhanced({
           ) : showHomePage || tabs.length === 0 ? (
             /* HOME PAGE - Show Chrome embed option */
             <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0A0908' }}>
-              <div style={{ marginBottom: 48, opacity: 0.4, transform: 'scale(0.9)' }}><A2RLogo size="lg" variant="stacked" /></div>
+              <div style={{ marginBottom: 48, opacity: 0.4, transform: 'scale(0.9)' }}><AllternitLogo size="lg" variant="stacked" /></div>
               {isElectronShell() && window.chromeEmbed?.launch ? (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
                   <button
@@ -2074,7 +2074,7 @@ export function BrowserCapsuleEnhanced({
             </div>
           ) : (
             <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ marginBottom: 80, opacity: 0.4, transform: 'scale(0.9)' }}><A2RLogo size="lg" variant="stacked" /></div>
+              <div style={{ marginBottom: 80, opacity: 0.4, transform: 'scale(0.9)' }}><AllternitLogo size="lg" variant="stacked" /></div>
               <p style={{ fontSize: 10, fontFamily: 'monospace', color: 'rgba(212,176,140,0.2)', textTransform: 'uppercase', letterSpacing: '0.5em' }}>INITIALIZING_KERNEL...</p>
             </div>
           )

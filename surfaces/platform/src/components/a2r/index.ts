@@ -5,9 +5,9 @@
  * All components are themed to match the A2R design system.
  */
 
-export { A2RDocumentEditor } from './A2RDocumentEditor';
-export { A2RDataGrid } from './A2RDataGrid';
-export { A2RDeckPlayer } from './A2RDeckPlayer';
+export { AllternitDocumentEditor } from './A2RDocumentEditor';
+export { AllternitDataGrid } from './A2RDataGrid';
+export { AllternitDeckPlayer } from './A2RDeckPlayer';
 
 // Inline cards for chat thread
 export { DocumentCard } from './cards/DocumentCard';

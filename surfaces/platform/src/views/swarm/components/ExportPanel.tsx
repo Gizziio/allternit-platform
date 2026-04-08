@@ -10,7 +10,7 @@
 
 import React, { useState } from 'react';
 import { X, FileCsv, FileCode, FileText, Clipboard } from '@phosphor-icons/react';
-import { TEXT, BACKGROUND } from '@/design/a2r.tokens';
+import { TEXT, BACKGROUND } from '@/design/allternit.tokens';
 import { useAgents, useMetrics } from '../SwarmMonitor.store';
 import { exportAndDownloadAgents, copyToClipboard, ExportFormat } from '../lib/export-utils';
 import { metricsHistory } from '../lib/metrics-history';

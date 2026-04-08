@@ -42,9 +42,9 @@ function normalizeGatewayCandidate(value: string): string {
 
 function configuredGatewayUrl(): string {
   // SSR-safe: check for window existence before accessing
-  const windowUrl = typeof window !== 'undefined' ? (window as any).__A2R_GATEWAY_URL__ : undefined;
+  const windowUrl = typeof window !== 'undefined' ? (window as any).__ALLTERNIT_GATEWAY_URL__ : undefined;
   const configured = windowUrl
-    || (import.meta as any).env?.VITE_A2R_GATEWAY_URL
+    || (import.meta as any).env?.VITE_ALLTERNIT_GATEWAY_URL
     || DEFAULT_GATEWAY_URL;
 
   const normalized = normalizeGatewayCandidate(String(configured).trim());
@@ -68,7 +68,7 @@ export const GATEWAY_URL = GATEWAY_BASE_URL; // Consistent export
 console.log('[A2R API Client] Using gateway URL:', GATEWAY_BASE_URL);
 
 // Legacy alias for backward compatibility
-export const A2R_BASE_URL = GATEWAY_BASE_URL;
+export const ALLTERNIT_BASE_URL = GATEWAY_BASE_URL;
 
 // ============================================================================
 // Types
@@ -157,7 +157,7 @@ export interface ApiErrorDetails {
 // Error Handling
 // ============================================================================
 
-export class A2RApiError extends Error {
+export class AllternitApiError extends Error {
   constructor(
     message: string,
     public statusCode: number,
@@ -165,7 +165,7 @@ export class A2RApiError extends Error {
     public details?: Record<string, unknown>
   ) {
     super(message);
-    this.name = 'A2RApiError';
+    this.name = 'AllternitApiError';
   }
 
   isAuthError(): boolean {
@@ -209,7 +209,7 @@ export type ErrorHandler = (error: Error) => void;
 // Main API Client
 // ============================================================================
 
-class A2RApiClient {
+class AllternitApiClient {
   private baseUrl: string;
   private token: string | null = null;
   private requestInterceptors: Array<(config: RequestInit) => RequestInit> = [];
@@ -218,9 +218,9 @@ class A2RApiClient {
   constructor() {
     this.baseUrl = gatewayUrl();
     // SSR-safe: only access localStorage in browser
-    this.token = typeof window !== 'undefined' ? localStorage.getItem('a2r_token') : null;
+    this.token = typeof window !== 'undefined' ? localStorage.getItem('allternit_token') : null;
     
-    console.log('[A2RApiClient] Initialized with gateway:', this.baseUrl);
+    console.log('[AllternitApiClient] Initialized with gateway:', this.baseUrl);
   }
 
   private candidateBaseUrls(): string[] {
@@ -261,14 +261,14 @@ class A2RApiClient {
   setToken(token: string): void {
     this.token = token;
     if (typeof window !== 'undefined') {
-      localStorage.setItem('a2r_token', token);
+      localStorage.setItem('allternit_token', token);
     }
   }
 
   clearToken(): void {
     this.token = null;
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('a2r_token');
+      localStorage.removeItem('allternit_token');
     }
   }
 
@@ -376,7 +376,7 @@ class A2RApiClient {
           response = candidateResponse;
           if (base !== this.baseUrl) {
             if (import.meta.env.DEV) {
-              console.debug(`[A2RApiClient] Falling back to API base: ${base}`);
+              console.debug(`[AllternitApiClient] Falling back to API base: ${base}`);
             }
             this.baseUrl = base;
           }
@@ -391,7 +391,7 @@ class A2RApiClient {
         // Continue to next candidate base if this one fails entirely (offline or network error)
         // Silent fail - expected when backend isn't running
         if (import.meta.env.DEV) {
-          console.debug(`[A2RApiClient] Base ${base} unreachable, trying next candidate...`);
+          console.debug(`[AllternitApiClient] Base ${base} unreachable, trying next candidate...`);
         }
       }
     }
@@ -399,9 +399,9 @@ class A2RApiClient {
     if (!response) {
       // Only log error if not in development (in dev, this is expected)
       if (import.meta.env.PROD) {
-        console.error('[A2RApiClient] All API bases failed:', lastNetworkError);
+        console.error('[AllternitApiClient] All API bases failed:', lastNetworkError);
       }
-      throw new A2RApiError(
+      throw new AllternitApiError(
         `Network error - unable to reach API after multiple attempts (${lastAttemptedUrl || this.baseUrl})`,
         0,
         'NETWORK_ERROR'
@@ -416,7 +416,7 @@ class A2RApiClient {
     // Handle errors
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new A2RApiError(
+      throw new AllternitApiError(
         errorData.message || `HTTP ${response.status}`,
         response.status,
         errorData.code,
@@ -549,11 +549,11 @@ class A2RApiClient {
     });
 
     if (!response.ok) {
-      throw new A2RApiError(`Chat request failed: ${response.statusText}`, response.status);
+      throw new AllternitApiError(`Chat request failed: ${response.statusText}`, response.status);
     }
 
     if (!response.body) {
-      throw new A2RApiError('No response body', 500);
+      throw new AllternitApiError('No response body', 500);
     }
 
     // Handle SSE stream with contract validation
@@ -625,7 +625,7 @@ class A2RApiClient {
     const eventSource = new EventSource(url);
     
     eventSource.onerror = (error) => {
-      console.error('[A2RApiClient] EventSource error:', error);
+      console.error('[AllternitApiClient] EventSource error:', error);
     };
 
     return eventSource;
@@ -789,7 +789,7 @@ class A2RApiClient {
     const eventSource = new EventSource(url);
 
     eventSource.onerror = (error) => {
-      console.error('[A2RApiClient] Agent EventSource error:', error);
+      console.error('[AllternitApiClient] Agent EventSource error:', error);
     };
 
     return eventSource;
@@ -945,7 +945,7 @@ class A2RApiClient {
     const eventSource = new EventSource(url);
 
     eventSource.onerror = (error) => {
-      console.error('[A2RApiClient] Operator EventSource error:', error);
+      console.error('[AllternitApiClient] Operator EventSource error:', error);
     };
 
     return eventSource;
@@ -979,7 +979,7 @@ class A2RApiClient {
 // Singleton Export
 // =============================================================================
 
-export const api = new A2RApiClient();
+export const api = new AllternitApiClient();
 
 // =============================================================================
 // React Hooks
@@ -994,7 +994,7 @@ export function useApi() {
 export function useSessions() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<A2RApiError | null>(null);
+  const [error, setError] = useState<AllternitApiError | null>(null);
 
   const fetchSessions = useCallback(async () => {
     try {
@@ -1003,7 +1003,7 @@ export function useSessions() {
       const { sessions } = await api.listSessions();
       setSessions(sessions);
     } catch (err) {
-      setError(err as A2RApiError);
+      setError(err as AllternitApiError);
     } finally {
       setLoading(false);
     }
@@ -1038,7 +1038,7 @@ export function useSession(sessionId: string | null) {
   const [session, setSession] = useState<Session | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<A2RApiError | null>(null);
+  const [error, setError] = useState<AllternitApiError | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
@@ -1050,7 +1050,7 @@ export function useSession(sessionId: string | null) {
         const data = await api.getSession(sessionId);
         setSession(data);
       } catch (err) {
-        setError(err as A2RApiError);
+        setError(err as AllternitApiError);
       } finally {
         setLoading(false);
       }
@@ -1100,7 +1100,7 @@ export function useSession(sessionId: string | null) {
             break;
           
           case 'error':
-            setError(new A2RApiError(data.data.message, 500));
+            setError(new AllternitApiError(data.data.message, 500));
             break;
         }
       } catch (err) {
@@ -1140,7 +1140,7 @@ export function useSession(sessionId: string | null) {
 export function useSkills() {
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<A2RApiError | null>(null);
+  const [error, setError] = useState<AllternitApiError | null>(null);
 
   const fetchSkills = useCallback(async () => {
     try {
@@ -1148,7 +1148,7 @@ export function useSkills() {
       const { skills } = await api.listSkills();
       setSkills(skills);
     } catch (err) {
-      setError(err as A2RApiError);
+      setError(err as AllternitApiError);
     } finally {
       setLoading(false);
     }
@@ -1224,11 +1224,11 @@ export function useModelDiscovery() {
     [providers]
   );
   const [providersLoading, setProvidersLoading] = useState(false);
-  const [providersError, setProvidersError] = useState<A2RApiError | null>(null);
+  const [providersError, setProvidersError] = useState<AllternitApiError | null>(null);
 
   const [discoveryResult, setDiscoveryResult] = useState<ModelDiscoveryResult | null>(null);
   const [discoveryLoading, setDiscoveryLoading] = useState(false);
-  const [discoveryError, setDiscoveryError] = useState<A2RApiError | null>(null);
+  const [discoveryError, setDiscoveryError] = useState<AllternitApiError | null>(null);
 
   const [validationResult, setValidationResult] = useState<ModelValidationResult | null>(null);
   const [validationLoading, setValidationLoading] = useState(false);
@@ -1250,7 +1250,7 @@ export function useModelDiscovery() {
       
       return authResponse.providers;
     } catch (err) {
-      setProvidersError(err as A2RApiError);
+      setProvidersError(err as AllternitApiError);
       return [];
     } finally {
       setProvidersLoading(false);
@@ -1266,7 +1266,7 @@ export function useModelDiscovery() {
       setDiscoveryResult(result);
       return result;
     } catch (err) {
-      setDiscoveryError(err as A2RApiError);
+      setDiscoveryError(err as AllternitApiError);
       return null;
     } finally {
       setDiscoveryLoading(false);
@@ -1283,7 +1283,7 @@ export function useModelDiscovery() {
     } catch (err) {
       const errorResult: ModelValidationResult = {
         valid: false,
-        message: (err as A2RApiError).message || 'Validation failed'
+        message: (err as AllternitApiError).message || 'Validation failed'
       };
       setValidationResult(errorResult);
       return errorResult;

@@ -16,18 +16,18 @@ export {
 };
 
 // Define types for command actions
-export interface A2RCommandAction {
+export interface AllternitCommandAction {
   id: string;
   name: string;
   shortcut?: string[];
   keywords?: string[];
   section?: string;
   perform?: () => void;
-  children?: A2RCommandAction[];
+  children?: AllternitCommandAction[];
 }
 
-// Helper function to transform A2RCommandAction to kbar's Action
-const transformAction = (action: A2RCommandAction): Action => ({
+// Helper function to transform AllternitCommandAction to kbar's Action
+const transformAction = (action: AllternitCommandAction): Action => ({
   id: action.id,
   name: action.name,
   shortcut: action.shortcut,
@@ -37,9 +37,9 @@ const transformAction = (action: A2RCommandAction): Action => ({
 });
 
 // Command provider component
-export const A2RCommandProvider: React.FC<{
+export const AllternitCommandProvider: React.FC<{
   children: React.ReactNode;
-  actions?: A2RCommandAction[];
+  actions?: AllternitCommandAction[];
   options?: {
     disableDefaultShortcut?: boolean;
   };
@@ -107,7 +107,7 @@ const renderResult = ({ item, active }: { item: any; active: boolean }) => {
 };
 
 // Command palette component
-export const A2RCommandPalette: React.FC = () => {
+export const AllternitCommandPalette: React.FC = () => {
   const { results } = useMatches();
 
   return (
@@ -129,7 +129,7 @@ export const A2RCommandPalette: React.FC = () => {
 };
 
 // Hook to use A2R commands
-export const useA2RCommand = (action: A2RCommandAction) => {
+export const useAllternitCommand = (action: AllternitCommandAction) => {
   const transformedAction = useMemo(() => transformAction(action), [action]);
   useRegisterActions([transformedAction], [transformedAction]);
   
@@ -142,4 +142,4 @@ export const useA2RCommand = (action: A2RCommandAction) => {
   return { execute };
 };
 
-export default A2RCommandProvider;
+export default AllternitCommandProvider;

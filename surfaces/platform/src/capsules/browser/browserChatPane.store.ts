@@ -66,7 +66,7 @@ function createBrowserBridgeToken() {
       ? globalThis.crypto.randomUUID().replace(/-/g, "")
       : `${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`;
 
-  return `a2r_${random.slice(0, 24)}`;
+  return `allternit_${random.slice(0, 24)}`;
 }
 
 export const useBrowserChatPaneStore = create<BrowserChatPaneState>()(

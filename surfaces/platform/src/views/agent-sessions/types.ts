@@ -4,7 +4,7 @@
  * @module agent-session-types
  */
 
-import type { AgentMode } from '@/design/a2r.tokens';
+import type { AgentMode } from '@/design/allternit.tokens';
 
 export type AgentSessionMode = 'chat' | 'cowork' | 'code' | 'browser';
 

@@ -44,8 +44,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         os: true,
         architecture: true,
         dockerInstalled: true,
-        a2rInstalled: true,
-        a2rVersion: true,
+        allternitInstalled: true,
+        allternitVersion: true,
         lastConnectedAt: true,
         createdAt: true,
         updatedAt: true,
@@ -69,8 +69,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       os: connection.os,
       architecture: connection.architecture,
       docker_installed: connection.dockerInstalled,
-      a2r_installed: connection.a2rInstalled,
-      a2r_version: connection.a2rVersion,
+      a2r_installed: connection.allternitInstalled,
+      a2r_version: connection.allternitVersion,
       last_connected: connection.lastConnectedAt?.toISOString(),
       created_at: connection.createdAt.toISOString(),
       updated_at: connection.updatedAt.toISOString(),
@@ -119,8 +119,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (body.os !== undefined) updateData.os = body.os;
     if (body.architecture !== undefined) updateData.architecture = body.architecture;
     if (body.docker_installed !== undefined) updateData.dockerInstalled = body.docker_installed;
-    if (body.a2r_installed !== undefined) updateData.a2rInstalled = body.a2r_installed;
-    if (body.a2r_version !== undefined) updateData.a2rVersion = body.a2r_version;
+    if (body.a2r_installed !== undefined) updateData.allternitInstalled = body.a2r_installed;
+    if (body.a2r_version !== undefined) updateData.allternitVersion = body.a2r_version;
     if (body.last_connected !== undefined) updateData.lastConnectedAt = new Date(body.last_connected);
 
     // Handle credential updates
@@ -148,8 +148,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         os: true,
         architecture: true,
         dockerInstalled: true,
-        a2rInstalled: true,
-        a2rVersion: true,
+        allternitInstalled: true,
+        allternitVersion: true,
         lastConnectedAt: true,
         createdAt: true,
         updatedAt: true,
@@ -170,8 +170,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       os: connection.os,
       architecture: connection.architecture,
       docker_installed: connection.dockerInstalled,
-      a2r_installed: connection.a2rInstalled,
-      a2r_version: connection.a2rVersion,
+      a2r_installed: connection.allternitInstalled,
+      a2r_version: connection.allternitVersion,
       last_connected: connection.lastConnectedAt?.toISOString(),
       created_at: connection.createdAt.toISOString(),
       updated_at: connection.updatedAt.toISOString(),

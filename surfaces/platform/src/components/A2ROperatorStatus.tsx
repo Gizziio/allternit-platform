@@ -15,9 +15,9 @@ import {
   Spinner,
   Robot
 } from '@phosphor-icons/react';
-import { useA2ROperatorStatus } from '@/lib/services/useA2ROperatorStatus';
+import { useAllternitOperatorStatus } from '@/lib/services/useAllternitOperatorStatus';
 
-export function A2ROperatorStatus() {
+export function AllternitOperatorStatus() {
   const {
     status,
     capabilities,
@@ -29,7 +29,7 @@ export function A2ROperatorStatus() {
     hasDesktop,
     hasVision,
     hasParallel,
-  } = useA2ROperatorStatus(30000); // Check every 30 seconds
+  } = useAllternitOperatorStatus(30000); // Check every 30 seconds
 
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -231,4 +231,4 @@ function CapabilityItem({ icon: Icon, label, available, sublabel }: CapabilityIt
   );
 }
 
-export default A2ROperatorStatus;
+export default AllternitOperatorStatus;

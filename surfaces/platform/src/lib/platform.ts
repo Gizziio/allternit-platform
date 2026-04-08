@@ -9,13 +9,13 @@
 /**
  * Detect whether the current page is running inside the A2R Electron shell.
  *
- * Checks for the preload-exposed `window.a2rSidecar` bridge first, then
+ * Checks for the preload-exposed `window.allternitSidecar` bridge first, then
  * falls back to the classic `process.versions.electron` check.
  */
 export function isElectronShell(): boolean {
   if (typeof window === 'undefined') return false;
   return (
-    window.a2rSidecar !== undefined ||
+    window.allternitSidecar !== undefined ||
     (window as any).process?.versions?.electron !== undefined
   );
 }

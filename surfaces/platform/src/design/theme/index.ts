@@ -6,12 +6,12 @@ export {
   defaultTheme,
   lightTheme,
   getStatusColor,
-  useA2RTheme,
+  useAllternitTheme,
   ThemeContext,
-  A2RThemeProvider,
+  AllternitThemeProvider,
 } from "./a2r-theme.tsx"
 
 export type {
-  A2RTheme,
-  A2RRuntimeState,
+  AllternitTheme,
+  AllternitRuntimeState,
 } from "./a2r-theme.tsx"

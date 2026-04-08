@@ -392,7 +392,7 @@ class SSHConnectionsAPI {
       os: response.os,
       architecture: response.architecture,
       dockerInstalled: response.docker_installed,
-      a2rInstalled: response.a2r_installed,
+      allternitInstalled: response.a2r_installed,
       errorMessage: response.error_message,
     };
   }
@@ -408,7 +408,7 @@ class SSHConnectionsAPI {
         os: response.os,
         architecture: response.architecture,
         dockerInstalled: response.docker_installed,
-        a2rInstalled: response.a2r_installed,
+        allternitInstalled: response.a2r_installed,
       },
     };
   }
@@ -549,7 +549,7 @@ export const sshApi = {
     os?: string;
     architecture?: string;
     dockerInstalled?: boolean;
-    a2rInstalled?: boolean;
+    allternitInstalled?: boolean;
   }> => {
     try {
       const response = await sshConnectionsApi.connect(id);
@@ -558,7 +558,7 @@ export const sshApi = {
         os: response.os,
         architecture: response.architecture,
         dockerInstalled: response.docker_installed,
-        a2rInstalled: response.a2r_installed,
+        allternitInstalled: response.a2r_installed,
       };
     } catch (err) {
       return {

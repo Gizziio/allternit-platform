@@ -3,10 +3,10 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { A2RNativeState } from "@/agent-workspace/types";
+import { AllternitNativeState } from "@/agent-workspace/types";
 
 interface MilestoneProgressProps {
-  state: A2RNativeState | null;
+  state: AllternitNativeState | null;
   className?: string;
 }
 

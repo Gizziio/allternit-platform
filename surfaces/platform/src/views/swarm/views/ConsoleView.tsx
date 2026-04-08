@@ -11,7 +11,7 @@
 
 import React from 'react';
 import { Play, Check, X, ArrowsLeftRight, Warning, ChatText } from '@phosphor-icons/react';
-import { TEXT, BACKGROUND, BORDER, STATUS } from '@/design/a2r.tokens';
+import { TEXT, BACKGROUND, BORDER, STATUS } from '@/design/allternit.tokens';
 import { SwarmAgent, SwarmMetrics, ActivityEvent } from '../types';
 
 interface ConsoleViewProps {

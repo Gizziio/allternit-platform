@@ -1,5 +1,5 @@
 /**
- * A2RDataGrid.tsx
+ * AllternitDataGrid.tsx
  * 
  * A2R-native data grid wrapping AG-Grid.
  * Excel-like spreadsheet interface with A2R theming.
@@ -47,7 +47,7 @@ interface Column {
   width?: number;
 }
 
-interface A2RDataGridProps {
+interface AllternitDataGridProps {
   /** Column definitions */
   columns: Column[];
   /** Row data */
@@ -76,7 +76,7 @@ interface A2RDataGridProps {
  * Wraps AG-Grid with A2R-native theming and branding.
  * All user-facing labels say "A2R Data" not "AG-Grid".
  */
-export function A2RDataGrid({
+export function AllternitDataGrid({
   columns,
   data,
   title = 'Untitled Data',
@@ -87,7 +87,7 @@ export function A2RDataGrid({
   showToolbar = true,
   enableCharts = true,
   height = '100%',
-}: A2RDataGridProps) {
+}: AllternitDataGridProps) {
   const [gridApi, setGridApi] = useState<any>(null);
   const [selectedRows, setSelectedRows] = useState<number>(0);
   const [filterEnabled, setFilterEnabled] = useState(false);
@@ -317,4 +317,4 @@ export function A2RDataGrid({
   );
 }
 
-export default A2RDataGrid;
+export default AllternitDataGrid;

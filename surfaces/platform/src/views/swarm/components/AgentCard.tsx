@@ -7,7 +7,7 @@
 import React from 'react';
 import { Brain, Robot, Cpu, ClipboardText } from '@phosphor-icons/react';
 import { SwarmAgent } from '../types';
-import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/a2r.tokens';
+import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/allternit.tokens';
 
 const ACCENT = '#c17817';
 const BG_SURFACE = '#121110';

@@ -17,7 +17,7 @@ import {
   FileCode,
 } from '@phosphor-icons/react';
 import { createModuleLogger } from '@/lib/logger';
-import { TEXT } from '@/design/a2r.tokens';
+import { TEXT } from '@/design/allternit.tokens';
 
 // ============================================================================
 // Logger

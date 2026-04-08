@@ -12,7 +12,7 @@ vi.mock("@/integration/a2ui-client", () => ({
     getSession: vi.fn(),
     executeAction: vi.fn(),
   },
-  A2RApiError: class A2RApiError extends Error {
+  AllternitApiError: class AllternitApiError extends Error {
     constructor(message: string, public status: number) {
       super(message);
     }

@@ -30,7 +30,7 @@ import {
   MODE_COLORS,
   TEXT,
   type AgentMode,
-} from '@/design/a2r.tokens';
+} from '@/design/allternit.tokens';
 
 import type { AgentSessionMode } from './types';
 

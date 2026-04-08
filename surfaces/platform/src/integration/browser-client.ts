@@ -294,7 +294,7 @@ class CanvasGatewayClient {
   }
 
   getA2UIUrl(): string {
-    return `${this.getHostUrl()}/__a2r__/a2ui`;
+    return `${this.getHostUrl()}/__allternit__/a2ui`;
   }
 }
 

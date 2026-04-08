@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import { TEXT, BACKGROUND } from '@/design/a2r.tokens';
+import { TEXT, BACKGROUND } from '@/design/allternit.tokens';
 import { SwarmMetrics as SwarmMetricsType } from '../types';
 
 interface SwarmMetricsProps {

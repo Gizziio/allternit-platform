@@ -5,7 +5,7 @@ import {
   Lightning,
 } from '@phosphor-icons/react';
 
-interface A2RLogoProps {
+interface AllternitLogoProps {
   size?: 'sm' | 'md' | 'lg';
   variant?: 'horizontal' | 'stacked' | 'icon-only';
   showText?: boolean;
@@ -18,7 +18,7 @@ interface A2RLogoProps {
  * using the sand/nude color palette from the design system.
  * Optimized for dark theme backgrounds.
  */
-export function A2RLogo({ size = 'md', variant = 'horizontal', showText = true }: A2RLogoProps) {
+export function AllternitLogo({ size = 'md', variant = 'horizontal', showText = true }: AllternitLogoProps) {
   const sizeConfig = {
     sm: { icon: 20, text: 'text-sm', gap: 'gap-1.5' },
     md: { icon: 28, text: 'text-base', gap: 'gap-2' },
@@ -116,7 +116,7 @@ export function A2RLogo({ size = 'md', variant = 'horizontal', showText = true }
 /**
  * Animated Orb Component for Agent Studio branding
  */
-export function A2ROrb({ className = '' }: { className?: string }) {
+export function AllternitOrb({ className = '' }: { className?: string }) {
   const brandColors = {
     primary: '#B08D6E',
     secondary: '#D4B08C',

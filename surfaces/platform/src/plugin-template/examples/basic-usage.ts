@@ -10,7 +10,7 @@
 // ============================================================================
 
 // Import types from the plugin
-import { MyA2RPlugin, IMyPluginAPI, IMyPluginEvents } from '../src/index';
+import { MyAllternitPlugin, IMyPluginAPI, IMyPluginEvents } from '../src/index';
 
 // Import A2R Platform types (when available)
 // import { A2RPlugin, PluginContext, EventEmitter } from '@allternit/platform';
@@ -38,15 +38,15 @@ interface ProcessResult {
 /**
  * Initialize and configure the plugin
  */
-async function initializePlugin(): Promise<MyA2RPlugin | null> {
+async function initializePlugin(): Promise<MyAllternitPlugin | null> {
   console.log('Initializing {{PLUGIN_NAME}}...');
 
   try {
     // In a real scenario, you'd get the plugin from the platform
-    // const plugin = A2R.plugins.get('{{PLUGIN_ID}}') as MyA2RPlugin;
+    // const plugin = A2R.plugins.get('{{PLUGIN_ID}}') as MyAllternitPlugin;
     
     // For this example, we'll create a mock instance
-    const plugin = new MyA2RPlugin();
+    const plugin = new MyAllternitPlugin();
 
     // Check plugin info
     console.log('Plugin Info:', plugin.info);
@@ -70,7 +70,7 @@ async function initializePlugin(): Promise<MyA2RPlugin | null> {
 /**
  * Demonstrates how to read and write plugin settings
  */
-async function settingsExample(plugin: MyA2RPlugin): Promise<void> {
+async function settingsExample(plugin: MyAllternitPlugin): Promise<void> {
   console.log('\n--- Settings Example ---\n');
 
   // Define typed settings
@@ -101,7 +101,7 @@ async function settingsExample(plugin: MyA2RPlugin): Promise<void> {
 /**
  * Demonstrates different types of notifications
  */
-function notificationsExample(plugin: MyA2RPlugin): void {
+function notificationsExample(plugin: MyAllternitPlugin): void {
   console.log('\n--- Notifications Example ---\n');
 
   type NotificationType = 'info' | 'warning' | 'error';
@@ -125,7 +125,7 @@ function notificationsExample(plugin: MyA2RPlugin): void {
 /**
  * Demonstrates panel operations
  */
-async function panelExample(plugin: MyA2RPlugin): Promise<void> {
+async function panelExample(plugin: MyAllternitPlugin): Promise<void> {
   console.log('\n--- Panel Example ---\n');
 
   if (!plugin.active) {
@@ -196,7 +196,7 @@ class PluginOperationError extends Error {
 /**
  * Demonstrates robust error handling
  */
-async function errorHandlingExample(plugin: MyA2RPlugin): Promise<void> {
+async function errorHandlingExample(plugin: MyAllternitPlugin): Promise<void> {
   console.log('\n--- Error Handling Example ---\n');
 
   const performRiskyOperation = async (): Promise<ProcessResult> => {
@@ -254,7 +254,7 @@ type ProgressCallback = (current: number, total: number, item: string) => void;
  * Demonstrates async batch operations with progress tracking
  */
 async function batchOperationWithProgress(
-  plugin: MyA2RPlugin,
+  plugin: MyAllternitPlugin,
   onProgress?: ProgressCallback
 ): Promise<ProcessResult[]> {
   console.log('\n--- Batch Operation with Progress ---\n');
@@ -305,7 +305,7 @@ async function batchOperationWithProgress(
 /**
  * Demonstrates using the plugin's public API
  */
-async function apiUsageExample(plugin: MyA2RPlugin): Promise<void> {
+async function apiUsageExample(plugin: MyAllternitPlugin): Promise<void> {
   console.log('\n--- API Usage Example ---\n');
 
   // Cast to the API interface for type safety
@@ -390,7 +390,7 @@ async function completeWorkflow(): Promise<void> {
  * Utility function to safely execute plugin operations
  */
 async function safeExecute<T>(
-  plugin: MyA2RPlugin,
+  plugin: MyAllternitPlugin,
   operation: () => Promise<T>,
   errorMessage: string
 ): Promise<T | null> {

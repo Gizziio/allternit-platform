@@ -76,8 +76,8 @@ export type {
 // Note: TemplateVariable is also exported from unified.store.ts - using that one
 export {
   GIZZI_TEMPLATE,
-  A2R_STANDARD_TEMPLATE,
-  A2R_MINIMAL_TEMPLATE,
+  ALLTERNIT_STANDARD_TEMPLATE,
+  ALLTERNIT_MINIMAL_TEMPLATE,
   WORKSPACE_TEMPLATES,
   listTemplates,
   getTemplate,

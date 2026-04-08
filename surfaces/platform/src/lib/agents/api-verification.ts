@@ -402,7 +402,7 @@ export class ApiWithFallback {
       () => {
         // Store in localStorage as fallback
         try {
-          const key = `a2r_workspace_${path}`;
+          const key = `allternit_workspace_${path}`;
           localStorage.setItem(key, content);
           return { success: true, path };
         } catch {
@@ -419,7 +419,7 @@ export class ApiWithFallback {
     return this.request<string | null>(`/workspace/files?path=${encodeURIComponent(path)}`, 'GET', undefined, () => {
       // Try to get from localStorage
       try {
-        const key = `a2r_workspace_${path}`;
+        const key = `allternit_workspace_${path}`;
         return localStorage.getItem(key);
       } catch {
         return null;

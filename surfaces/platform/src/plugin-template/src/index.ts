@@ -44,7 +44,7 @@ const PLUGIN_VERSION = '1.0.0';
  * Implement the A2RPlugin interface to create a fully functional plugin.
  * This template provides stubs for all lifecycle methods and common features.
  */
-export class MyA2RPlugin {
+export class MyAllternitPlugin {
   /**
    * Plugin ID (from plugin.json)
    */
@@ -375,7 +375,7 @@ export class MyA2RPlugin {
  * 
  * The platform will import this and call activate() when the plugin is loaded.
  */
-const plugin = new MyA2RPlugin();
+const plugin = new MyAllternitPlugin();
 
 export default plugin;
 

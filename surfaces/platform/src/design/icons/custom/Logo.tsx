@@ -20,7 +20,7 @@ export interface CustomIconProps {
 /**
  * A2rchitect full logo with mark and wordmark
  */
-export const A2RLogo = React.forwardRef<SVGSVGElement, CustomIconProps>(
+export const AllternitLogo = React.forwardRef<SVGSVGElement, CustomIconProps>(
   ({ size = 32, className, ...props }, ref) => {
     return (
       <svg
@@ -187,4 +187,4 @@ export const A2RLogo = React.forwardRef<SVGSVGElement, CustomIconProps>(
   }
 );
 
-A2RLogo.displayName = 'A2RLogo';
+AllternitLogo.displayName = 'AllternitLogo';

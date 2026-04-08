@@ -31,14 +31,14 @@ export interface DiscoveredServer {
  */
 function isElectron(): boolean {
   return typeof window !== 'undefined' && 
-    (window.a2rSidecar !== undefined || 
+    (window.allternitSidecar !== undefined || 
      (window.process?.versions?.electron !== undefined));
 }
 
-type SidecarApi = NonNullable<Window['a2rSidecar']>;
+type SidecarApi = NonNullable<Window['allternitSidecar']>;
 
 function hasSidecarMethods(
-  sidecar: Window['a2rSidecar'],
+  sidecar: Window['allternitSidecar'],
   methods: Array<keyof SidecarApi>,
 ): sidecar is SidecarApi {
   return Boolean(
@@ -55,7 +55,7 @@ async function discoverFromElectron(): Promise<DiscoveredServer | null> {
     return null;
   }
 
-  const sidecar = window.a2rSidecar;
+  const sidecar = window.allternitSidecar;
   if (!hasSidecarMethods(sidecar, ['getStatus', 'getApiUrl', 'getBasicAuth'])) {
     console.log('[Discovery] Electron sidecar API unavailable in this shell');
     return null;
@@ -108,7 +108,7 @@ async function discoverFromPersisted(): Promise<DiscoveredServer | null> {
     return null;
   }
 
-  const sidecar = window.a2rSidecar;
+  const sidecar = window.allternitSidecar;
   if (!hasSidecarMethods(sidecar, ['getPersistedConfig'])) {
     console.log('[Discovery] Persisted sidecar config API unavailable in this shell');
     return null;
@@ -236,7 +236,7 @@ export function getWebSocketUrl(httpUrl: string): string {
 // Extend Window interface for TypeScript
 declare global {
   interface Window {
-    a2rSidecar?: {
+    allternitSidecar?: {
       getStatus?: () => Promise<'stopped' | 'starting' | 'running' | 'error' | 'crashed'>;
       getApiUrl?: () => Promise<string | undefined>;
       getBasicAuth?: () => Promise<{ username: string; password: string; header: string } | undefined>;

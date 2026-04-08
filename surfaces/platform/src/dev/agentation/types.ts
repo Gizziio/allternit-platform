@@ -48,7 +48,7 @@ export interface Annotation {
 /**
  * Viewport information for A2R execution header
  */
-export interface A2RViewport {
+export interface AllternitViewport {
   width: number;
   height: number;
   device?: string;
@@ -57,13 +57,13 @@ export interface A2RViewport {
 /**
  * A2R Execution Header for DAG-ready work items
  */
-export interface A2RExecutionHeader {
+export interface AllternitExecutionHeader {
   uiSurface: string;
   storyId?: string;
   storyName?: string;
   componentPath?: string;
   renderer: string;
-  viewport: A2RViewport;
+  viewport: AllternitViewport;
   acceptance: string;
   wihId?: string;
   dagNodeId?: string;
@@ -82,8 +82,8 @@ export interface AnnotationOutput {
 /**
  * A2R-formatted annotation output
  */
-export interface A2RAnnotationOutput extends AnnotationOutput {
-  header: A2RExecutionHeader;
+export interface AllternitAnnotationOutput extends AnnotationOutput {
+  header: AllternitExecutionHeader;
   formattedForAgent: string;
 }
 

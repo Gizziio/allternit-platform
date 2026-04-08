@@ -63,8 +63,8 @@ export const pluginManifestSchema = z.object({
     handler: z.string(),
   })).optional(),
   
-  minA2RVersion: z.string().optional(),
-  maxA2RVersion: z.string().optional(),
+  minAllternitVersion: z.string().optional(),
+  maxAllternitVersion: z.string().optional(),
 });
 
 export interface ValidationResult {

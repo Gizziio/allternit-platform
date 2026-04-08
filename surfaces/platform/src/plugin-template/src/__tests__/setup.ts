@@ -6,8 +6,8 @@
 
 export {};
 
-// Mock A2R Platform APIs
-interface A2RGlobal {
+// Mock Allternit Platform APIs
+interface AllternitGlobal {
   plugins: {
     get: jest.Mock;
     register: jest.Mock;
@@ -32,17 +32,17 @@ interface A2RGlobal {
 
 declare global {
   // eslint-disable-next-line no-var
-  var A2R: A2RGlobal;
+  var Allternit: AllternitGlobal;
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace NodeJS {
     interface Global {
-      A2R: A2RGlobal;
+      Allternit: AllternitGlobal;
     }
   }
 }
 
 // @ts-ignore - Global augmentation for test mocks
-global.A2R = {
+global.Allternit = {
   plugins: {
     // @ts-ignore - Mock function
     get: jest.fn(),

@@ -8,7 +8,7 @@
 
 import type { SwarmMetrics, MetricsDataPoint } from '../types';
 
-const STORAGE_KEY = 'a2r_swarm_metrics_history';
+const STORAGE_KEY = 'allternit_swarm_metrics_history';
 const MAX_HISTORY_DAYS = 7;
 const SAMPLE_INTERVAL_MS = 30000; // 30 seconds
 

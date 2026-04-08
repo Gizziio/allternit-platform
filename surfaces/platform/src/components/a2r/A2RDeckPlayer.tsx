@@ -1,5 +1,5 @@
 /**
- * A2RDeckPlayer.tsx
+ * AllternitDeckPlayer.tsx
  * 
  * A2R-native presentation deck wrapping Reveal.js.
  * PowerPoint-style slides with A2R theming.
@@ -35,7 +35,7 @@ interface Slide {
   background?: string;
 }
 
-interface A2RDeckPlayerProps {
+interface AllternitDeckPlayerProps {
   /** Array of slides */
   slides: Slide[];
   /** Deck title */
@@ -60,7 +60,7 @@ interface A2RDeckPlayerProps {
  * Wraps Reveal.js with A2R-native theming and branding.
  * All user-facing labels say "A2R Deck" not "Reveal.js".
  */
-export function A2RDeckPlayer({
+export function AllternitDeckPlayer({
   slides,
   title = 'Untitled Presentation',
   currentSlide: controlledSlide,
@@ -69,7 +69,7 @@ export function A2RDeckPlayer({
   theme = 'a2r-dark',
   showToolbar = true,
   enablePresenterMode = true,
-}: A2RDeckPlayerProps) {
+}: AllternitDeckPlayerProps) {
   const deckRef = useRef<HTMLDivElement>(null);
   const revealRef = useRef<any>(null);
   const [currentIndex, setCurrentIndex] = useState(controlledSlide || 0);
@@ -498,4 +498,4 @@ function renderSlideContent(slide: Slide) {
   }
 }
 
-export default A2RDeckPlayer;
+export default AllternitDeckPlayer;

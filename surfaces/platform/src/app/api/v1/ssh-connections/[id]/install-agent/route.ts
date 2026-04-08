@@ -59,21 +59,21 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         : null,
     );
     const existingHealth =
-      connection.a2rInstalled && connection.status === 'connected'
+      connection.allternitInstalled && connection.status === 'connected'
         ? await verifyRuntimeBackendHealth(existingBackendUrl, {
             authorizationHeader: existingAuthorization,
           })
         : { reachable: false, healthUrl: null };
 
-    if (connection.a2rInstalled && connection.status === 'connected' && existingHealth.reachable) {
+    if (connection.allternitInstalled && connection.status === 'connected' && existingHealth.reachable) {
       const backendTarget = await upsertRuntimeBackendTargetFromConnection({
         userId,
         sshConnectionId: connection.id,
         name: connection.name,
         host: connection.host,
         connectionStatus: connection.status,
-        a2rInstalled: true,
-        a2rVersion: connection.a2rVersion,
+        allternitInstalled: true,
+        allternitVersion: connection.allternitVersion,
         markVerified: true,
         backendUrl: existingBackendUrl,
         gatewayUrl: existingBackendUrl,
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         success: true,
         message: 'A2R backend is already installed on this server',
         installation_log: ['A2R backend already installed, skipping reinstallation.'],
-        version: connection.a2rVersion ?? backendInstaller.getBackendVersion(),
+        version: connection.allternitVersion ?? backendInstaller.getBackendVersion(),
         api_url: existingBackendUrl,
         backend_target_id: backendTarget.id,
       });
@@ -140,8 +140,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         name: connection.name,
         host: connection.host,
         connectionStatus: 'error',
-        a2rInstalled: false,
-        a2rVersion: null,
+        allternitInstalled: false,
+        allternitVersion: null,
         lastError: result.error ?? 'Installation failed',
       });
 
@@ -160,8 +160,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       where: { id: connection.id },
       data: {
         status: 'connected',
-        a2rInstalled: true,
-        a2rVersion: backendInstaller.getBackendVersion(),
+        allternitInstalled: true,
+        allternitVersion: backendInstaller.getBackendVersion(),
         lastConnectedAt: new Date(),
       },
       select: {
@@ -169,8 +169,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         name: true,
         host: true,
         status: true,
-        a2rInstalled: true,
-        a2rVersion: true,
+        allternitInstalled: true,
+        allternitVersion: true,
       },
     });
 
@@ -186,8 +186,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       name: updated.name,
       host: updated.host,
       connectionStatus: updated.status,
-      a2rInstalled: updated.a2rInstalled ?? false,
-      a2rVersion: updated.a2rVersion,
+      allternitInstalled: updated.allternitInstalled ?? false,
+      allternitVersion: updated.allternitVersion,
       backendUrl: result.apiUrl ?? null,
       gatewayUrl: result.apiUrl ?? null,
       gatewayToken: result.gatewayAuthHeader ?? null,
@@ -208,7 +208,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         ? 'A2R backend installed and started successfully'
         : 'A2R backend installed, but it is not reachable from this shell yet',
       installation_log: log,
-      version: updated.a2rVersion,
+      version: updated.allternitVersion,
       api_url: result.apiUrl ?? null,
       backend_target_id: backendTarget.id,
       reachable_from_shell: externalHealth.reachable,

@@ -22,7 +22,7 @@ import {
 } from '@phosphor-icons/react';
 import { VPSMarketplace } from './VPSMarketplace';
 import { AddSSHConnectionForm, type SSHConnectionFormData, type SSHConnectionTestResult } from '@/components/ssh';
-import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/a2r.tokens';
+import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/allternit.tokens';
 
 export interface VPSConnectionModalProps {
   isOpen: boolean;

@@ -43,7 +43,7 @@ import {
   ANIMATION,
   createGlassStyle,
   type AgentMode,
-} from '@/design/a2r.tokens';
+} from '@/design/allternit.tokens';
 
 import { CHARACTER_SETUPS } from '@/lib/agents/character.service';
 import type { AgentSetup } from '@/lib/agents/character.types';

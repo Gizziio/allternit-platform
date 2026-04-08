@@ -5,7 +5,7 @@ const DEFAULT_RUNTIME_URL = "http://localhost:8001";
 const sessionsByRun = new Map<string, string>();
 
 function runtimeUrl() {
-  return (window as any).__A2R_BROWSER_RUNTIME_URL__ || DEFAULT_RUNTIME_URL;
+  return (window as any).__ALLTERNIT_BROWSER_RUNTIME_URL__ || DEFAULT_RUNTIME_URL;
 }
 
 async function postJson(path: string, body?: any) {

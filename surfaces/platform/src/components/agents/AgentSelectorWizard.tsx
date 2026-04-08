@@ -31,7 +31,7 @@ import {
   Sparkle,
 } from '@phosphor-icons/react';
 
-import { SAND, MODE_COLORS, GLASS, TEXT, createGlassStyle } from '@/design/a2r.tokens';
+import { SAND, MODE_COLORS, GLASS, TEXT, createGlassStyle } from '@/design/allternit.tokens';
 import { SPECIALIST_TEMPLATES, getTemplatesByCategory } from '@/lib/agents/agent-templates.specialist';
 import type { SpecialistTemplate, AgentCategory } from '@/lib/agents/agent-templates.specialist';
 import { Button } from '@/components/ui/button';

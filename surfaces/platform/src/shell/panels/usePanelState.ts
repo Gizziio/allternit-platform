@@ -13,7 +13,7 @@ interface PanelState {
   collapsed: boolean;
 }
 
-const STORAGE_KEY = 'a2r_panel_states';
+const STORAGE_KEY = 'allternit_panel_states';
 
 function getStoredStates(): Record<string, PanelState> {
   if (typeof window === 'undefined') return {};

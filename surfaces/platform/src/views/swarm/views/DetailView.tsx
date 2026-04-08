@@ -14,7 +14,7 @@ import {
   Stop,
   CursorClick,
 } from '@phosphor-icons/react';
-import { TEXT, BACKGROUND, BORDER, STATUS } from '@/design/a2r.tokens';
+import { TEXT, BACKGROUND, BORDER, STATUS } from '@/design/allternit.tokens';
 import { SwarmAgent } from '../types';
 
 interface DetailViewProps {

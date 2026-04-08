@@ -10,7 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasPageAgentBridgeConfig, type PageAgentBridgeConfig } from '@/lib/page-agent/config';
 
-const THIN_CLIENT_BASE = process.env.A2R_THIN_CLIENT_URL ?? 'http://127.0.0.1:3014';
+const THIN_CLIENT_BASE = process.env.ALLTERNIT_THIN_CLIENT_URL ?? 'http://127.0.0.1:3014';
 
 export async function POST(req: NextRequest) {
   let body: { task?: string; config?: PageAgentBridgeConfig };

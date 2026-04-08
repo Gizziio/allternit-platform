@@ -10,7 +10,7 @@ import { createModuleLogger } from "@/lib/logger";
 
 const log = createModuleLogger("tools/retrieve-url");
 
-const A2R_OPERATOR_URL = process.env.A2R_OPERATOR_URL || "http://127.0.0.1:3000";
+const ALLTERNIT_OPERATOR_URL = process.env.ALLTERNIT_OPERATOR_URL || "http://127.0.0.1:3000";
 
 export const retrieveUrl = tool({
   description: `Fetch structured information from a URL using browser automation.
@@ -33,7 +33,7 @@ Three modes available via superconductor:
   execute: async ({ url }: { url: string }) => {
     try {
       // Try browser-use service first (free, local)
-      const response = await fetch(`${A2R_OPERATOR_URL}/browser/retrieve`, {
+      const response = await fetch(`${ALLTERNIT_OPERATOR_URL}/browser/retrieve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url }),

@@ -53,7 +53,7 @@ console.log(`[A2R Network] Using base URL: ${ALLTERNIT_BASE_URL}`);
 // Types
 // =============================================================================
 
-export interface A2RRequestInit extends RequestInit {
+export interface AllternitRequestInit extends RequestInit {
   /**
    * Skip authentication header injection
    */
@@ -74,7 +74,7 @@ export interface A2RRequestInit extends RequestInit {
   };
 }
 
-export interface A2RResponse<T = unknown> {
+export interface AllternitResponse<T = unknown> {
   /**
    * HTTP status code
    */
@@ -101,7 +101,7 @@ export interface A2RResponse<T = unknown> {
   requestId?: string;
 }
 
-export interface A2RError {
+export interface AllternitError {
   /**
    * Error code
    */
@@ -210,10 +210,10 @@ const getAuthToken = (): string | null => {
 /**
  * Make an HTTP request through the A2R Gateway
  */
-export async function a2rFetch<T = unknown>(
+export async function allternitFetch<T = unknown>(
   path: string,
-  options: A2RRequestInit = {}
-): Promise<A2RResponse<T>> {
+  options: AllternitRequestInit = {}
+): Promise<AllternitResponse<T>> {
   const {
     skipAuth = false,
     timeout = DEFAULT_TIMEOUT,
@@ -279,8 +279,8 @@ export async function a2rFetch<T = unknown>(
 
       // Handle error responses
       if (!response.ok) {
-        const errorData = data as { error?: A2RError };
-        throw new A2RHttpError(
+        const errorData = data as { error?: AllternitError };
+        throw new AllternitHttpError(
           errorData.error?.code || 'HTTP_ERROR',
           errorData.error?.message || `HTTP ${response.status}`,
           errorData.error?.details,
@@ -300,7 +300,7 @@ export async function a2rFetch<T = unknown>(
       lastError = error as Error;
 
       // Don't retry on certain errors
-      if (error instanceof A2RHttpError && error.status !== undefined && [400, 401, 403, 404].includes(error.status)) {
+      if (error instanceof AllternitHttpError && error.status !== undefined && [400, 401, 403, 404].includes(error.status)) {
         throw error;
       }
 
@@ -313,7 +313,7 @@ export async function a2rFetch<T = unknown>(
   }
 
   // All retries exhausted
-  throw new A2RHttpError(
+  throw new AllternitHttpError(
     'MAX_RETRIES_EXCEEDED',
     `Request failed after ${maxAttempts} attempts: ${lastError?.message}`,
     undefined,
@@ -324,7 +324,7 @@ export async function a2rFetch<T = unknown>(
 /**
  * HTTP Error class
  */
-export class A2RHttpError extends Error {
+export class AllternitHttpError extends Error {
   constructor(
     public code: string,
     message: string,
@@ -333,7 +333,7 @@ export class A2RHttpError extends Error {
     public traceId?: string
   ) {
     super(message);
-    this.name = 'A2RHttpError';
+    this.name = 'AllternitHttpError';
   }
 }
 
@@ -533,9 +533,9 @@ export function createSSEConnection(): SSEConnection {
  */
 export async function get<T = unknown>(
   path: string,
-  options?: Omit<A2RRequestInit, 'method'>
-): Promise<A2RResponse<T>> {
-  return a2rFetch<T>(path, { ...options, method: 'GET' });
+  options?: Omit<AllternitRequestInit, 'method'>
+): Promise<AllternitResponse<T>> {
+  return allternitFetch<T>(path, { ...options, method: 'GET' });
 }
 
 /**
@@ -544,9 +544,9 @@ export async function get<T = unknown>(
 export async function post<T = unknown>(
   path: string,
   body?: unknown,
-  options?: Omit<A2RRequestInit, 'method' | 'body'>
-): Promise<A2RResponse<T>> {
-  return a2rFetch<T>(path, {
+  options?: Omit<AllternitRequestInit, 'method' | 'body'>
+): Promise<AllternitResponse<T>> {
+  return allternitFetch<T>(path, {
     ...options,
     method: 'POST',
     body: body ? JSON.stringify(body) : undefined,
@@ -559,9 +559,9 @@ export async function post<T = unknown>(
 export async function put<T = unknown>(
   path: string,
   body?: unknown,
-  options?: Omit<A2RRequestInit, 'method' | 'body'>
-): Promise<A2RResponse<T>> {
-  return a2rFetch<T>(path, {
+  options?: Omit<AllternitRequestInit, 'method' | 'body'>
+): Promise<AllternitResponse<T>> {
+  return allternitFetch<T>(path, {
     ...options,
     method: 'PUT',
     body: body ? JSON.stringify(body) : undefined,
@@ -574,9 +574,9 @@ export async function put<T = unknown>(
 export async function patch<T = unknown>(
   path: string,
   body?: unknown,
-  options?: Omit<A2RRequestInit, 'method' | 'body'>
-): Promise<A2RResponse<T>> {
-  return a2rFetch<T>(path, {
+  options?: Omit<AllternitRequestInit, 'method' | 'body'>
+): Promise<AllternitResponse<T>> {
+  return allternitFetch<T>(path, {
     ...options,
     method: 'PATCH',
     body: body ? JSON.stringify(body) : undefined,
@@ -588,9 +588,9 @@ export async function patch<T = unknown>(
  */
 export async function del<T = unknown>(
   path: string,
-  options?: Omit<A2RRequestInit, 'method'>
-): Promise<A2RResponse<T>> {
-  return a2rFetch<T>(path, { ...options, method: 'DELETE' });
+  options?: Omit<AllternitRequestInit, 'method'>
+): Promise<AllternitResponse<T>> {
+  return allternitFetch<T>(path, { ...options, method: 'DELETE' });
 }
 
 // =============================================================================
@@ -636,7 +636,7 @@ export async function getDiscovery(): Promise<{
 export default {
   ALLTERNIT_BASE_URL,
   API_VERSION,
-  fetch: a2rFetch,
+  fetch: allternitFetch,
   get,
   post,
   put,
@@ -645,7 +645,7 @@ export default {
   createSSEConnection,
   checkHealth,
   getDiscovery,
-  A2RHttpError,
+  AllternitHttpError,
 };
 
 // Tambo client for UI generation with determinism modes

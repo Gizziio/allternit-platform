@@ -11,7 +11,7 @@
 
 import React, { useMemo } from 'react';
 import { Minus, Plus } from '@phosphor-icons/react';
-import { TEXT } from '@/design/a2r.tokens';
+import { TEXT } from '@/design/allternit.tokens';
 import { TimelineTask, TimelineMetrics } from '../types';
 
 interface TimelineViewProps {

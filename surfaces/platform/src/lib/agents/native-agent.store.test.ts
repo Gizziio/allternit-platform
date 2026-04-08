@@ -131,10 +131,10 @@ describe("Native Agent Store", () => {
             id: "chat-agent-session",
             name: "Research Session",
             metadata: {
-              a2r_origin_surface: "chat",
-              a2r_session_mode: "agent",
-              a2r_agent_id: "agent-007",
-              a2r_agent_name: "Research Operator",
+              allternit_origin_surface: "chat",
+              allternit_session_mode: "agent",
+              allternit_agent_id: "agent-007",
+              allternit_agent_name: "Research Operator",
             },
             tags: ["research"],
           }),
@@ -155,10 +155,10 @@ describe("Native Agent Store", () => {
       const request = JSON.parse(String(mockFetch.mock.calls[0][1]?.body));
       assert.equal(request.agent_id, "agent-007");
       assert.equal(request.tags[0], "research");
-      assert.equal(request.metadata.a2r_origin_surface, "chat");
-      assert.equal(request.metadata.a2r_session_mode, "agent");
-      assert.equal(request.metadata.a2r_agent_name, "Research Operator");
-      assert.equal(result.metadata?.["a2r_origin_surface"], "chat");
+      assert.equal(request.metadata.allternit_origin_surface, "chat");
+      assert.equal(request.metadata.allternit_session_mode, "agent");
+      assert.equal(request.metadata.allternit_agent_name, "Research Operator");
+      assert.equal(result.metadata?.["allternit_origin_surface"], "chat");
     });
 
     it("throws error when agent services are unavailable", async () => {

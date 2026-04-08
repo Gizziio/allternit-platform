@@ -9,7 +9,7 @@ import { defaultAdapterSettings } from './types';
 import { clawdAdapter } from './adapters/ClawdAdapter';
 import { emojiAdapter } from './adapters/EmojiAdapter';
 
-const STORAGE_KEY = 'a2r_avatar_settings';
+const STORAGE_KEY = 'allternit_avatar_settings';
 
 /**
  * Create adapter registry

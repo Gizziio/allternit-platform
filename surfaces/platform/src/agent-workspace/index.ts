@@ -256,7 +256,7 @@ export { createWasmWorkspace } from './wasm-wrapper';
 export type { WasmWorkspaceAPI } from './wasm-wrapper';
 export { WorkspaceWebSocket, createWebSocketUrl } from './websocket';
 export { useWorkspaceWebSocket } from './useWorkspaceWebSocket';
-export { useA2RStream } from './useA2RStream';
+export { useAllternitStream } from './useAllternitStream';
 
 // Types
 export * from './types';

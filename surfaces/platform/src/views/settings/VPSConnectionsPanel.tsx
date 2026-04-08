@@ -9,7 +9,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, ArrowClockwise, Warning } from '@phosphor-icons/react';
-import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/a2r.tokens';
+import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/allternit.tokens';
 import { VPSConnectionModal } from '@/components/vps';
 import { SSHConnectionsList, type SSHConnection } from '@/components/ssh';
 import type { SSHConnectionFormData, SSHConnectionTestResult } from '@/components/ssh';
@@ -89,7 +89,7 @@ export function VPSConnectionsPanel() {
                   os: connectResult.os,
                   architecture: connectResult.architecture,
                   dockerInstalled: connectResult.dockerInstalled,
-                  a2rInstalled: connectResult.a2rInstalled,
+                  allternitInstalled: connectResult.allternitInstalled,
                   lastConnected: new Date().toISOString(),
                 }
               : c
@@ -97,7 +97,7 @@ export function VPSConnectionsPanel() {
         );
 
         // Install backend if not present
-        if (!connectResult.a2rInstalled) {
+        if (!connectResult.allternitInstalled) {
           const installResult = await sshApi.installAgent(newConnection.id);
           if (!installResult.success) {
             throw new Error(installResult.message || 'Failed to install remote backend');
@@ -162,13 +162,13 @@ export function VPSConnectionsPanel() {
               os: result.os,
               architecture: result.architecture,
               dockerInstalled: result.dockerInstalled,
-              a2rInstalled: result.a2rInstalled,
+              allternitInstalled: result.allternitInstalled,
               lastConnected: new Date().toISOString(),
             } : c
           )
         );
 
-        if (!result.a2rInstalled) {
+        if (!result.allternitInstalled) {
           const installResult = await sshApi.installAgent(id);
           if (!installResult.success) {
             throw new Error(installResult.message || 'Failed to install remote backend');
@@ -248,7 +248,7 @@ export function VPSConnectionsPanel() {
               os: result.details?.os,
               architecture: result.details?.architecture,
               dockerInstalled: result.details?.dockerInstalled,
-              a2rInstalled: result.details?.a2rInstalled,
+              allternitInstalled: result.details?.allternitInstalled,
             } : c
           )
         );

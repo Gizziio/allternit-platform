@@ -10,7 +10,7 @@ import type { CustomIconProps } from './Logo';
 /**
  * A2rchitect logo mark (icon only, no text)
  */
-export const A2RMark = React.forwardRef<SVGSVGElement, CustomIconProps>(
+export const AllternitMark = React.forwardRef<SVGSVGElement, CustomIconProps>(
   ({ size = 32, className, ...props }, ref) => {
     return (
       <svg
@@ -59,4 +59,4 @@ export const A2RMark = React.forwardRef<SVGSVGElement, CustomIconProps>(
   }
 );
 
-A2RMark.displayName = 'A2RMark';
+AllternitMark.displayName = 'AllternitMark';

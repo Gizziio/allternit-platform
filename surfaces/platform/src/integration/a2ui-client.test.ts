@@ -28,7 +28,7 @@ vi.mock('./api-client', async () => {
       patch: vi.fn(),
       delete: vi.fn(),
     },
-    A2RApiError: class MockA2RApiError extends Error {
+    AllternitApiError: class MockAllternitApiError extends Error {
       status: number;
       constructor(message: string, status = 500) {
         super(message);

@@ -64,7 +64,7 @@ type BrainEvent =
 const DEFAULT_KERNEL_URL = "http://127.0.0.1:3004";
 
 function kernelUrl() {
-  return (window as any).__A2R_KERNEL_URL__ || DEFAULT_KERNEL_URL;
+  return (window as any).__ALLTERNIT_KERNEL_URL__ || DEFAULT_KERNEL_URL;
 }
 
 function buildBrainConfig(modelId: string): BrainConfig {

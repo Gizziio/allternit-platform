@@ -8,7 +8,7 @@
 import { NextResponse } from 'next/server';
 
 // Version is set at build time to ensure Desktop == Backend
-const VERSION = process.env.A2R_VERSION || '1.0.0';
+const VERSION = process.env.ALLTERNIT_VERSION || '1.0.0';
 const BUILD_DATE = process.env.BUILD_DATE || new Date().toISOString();
 
 export async function GET() {

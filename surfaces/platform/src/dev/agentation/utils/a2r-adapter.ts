@@ -5,15 +5,15 @@
  * for DAG-ready work items.
  */
 
-import type { AnnotationOutput, A2RExecutionHeader, A2RAnnotationOutput } from '../types';
+import type { AnnotationOutput, AllternitExecutionHeader, AllternitAnnotationOutput } from '../types';
 
 /**
  * Wrap Agentation output with A2R execution context
  */
 export function formatForA2R(
   output: AnnotationOutput,
-  header: A2RExecutionHeader
-): A2RAnnotationOutput {
+  header: AllternitExecutionHeader
+): AllternitAnnotationOutput {
   const formattedForAgent = formatAgentInstructions(output, header);
   
   return {
@@ -28,7 +28,7 @@ export function formatForA2R(
  */
 function formatAgentInstructions(
   output: AnnotationOutput,
-  header: A2RExecutionHeader
+  header: AllternitExecutionHeader
 ): string {
   return `
 # A2R UI Annotation → Agent Instructions
@@ -88,7 +88,7 @@ npm run build -w @repo/storybook
 /**
  * Create default A2R header for Storybook context
  */
-export function createDefaultHeader(options?: Partial<A2RExecutionHeader>): A2RExecutionHeader {
+export function createDefaultHeader(options?: Partial<AllternitExecutionHeader>): AllternitExecutionHeader {
   return {
     uiSurface: 'primitives',
     storyId: undefined,
@@ -110,7 +110,7 @@ export function createDefaultHeader(options?: Partial<A2RExecutionHeader>): A2RE
 /**
  * Parse Storybook context from URL
  */
-export function parseStorybookContext(url: string): Partial<A2RExecutionHeader> {
+export function parseStorybookContext(url: string): Partial<AllternitExecutionHeader> {
   try {
     const urlObj = new URL(url);
     const pathParams = urlObj.searchParams.get('path');

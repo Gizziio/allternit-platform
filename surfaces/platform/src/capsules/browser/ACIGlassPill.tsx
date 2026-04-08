@@ -22,7 +22,7 @@ import {
   Monitor,
 } from '@phosphor-icons/react';
 import { useBrowserAgentStore } from './browserAgent.store';
-import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/a2r.tokens';
+import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/allternit.tokens';
 
 // ─────────────────────────────────────────────────────────
 // Helpers

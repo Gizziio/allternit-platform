@@ -20,7 +20,7 @@
 
 import React, { useEffect, useCallback, useState } from 'react';
 import { DownloadSimple } from '@phosphor-icons/react';
-import { TEXT, STATUS } from '@/design/a2r.tokens';
+import { TEXT, STATUS } from '@/design/allternit.tokens';
 import { 
   useSwarmMonitorStore, 
   useAgents, 

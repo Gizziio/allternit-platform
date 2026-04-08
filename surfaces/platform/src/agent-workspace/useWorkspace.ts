@@ -40,7 +40,7 @@ import {
   Skill,
   Identity,
   PolicyRule,
-  A2RNativeState,
+  AllternitNativeState,
 } from './index';
 
 export interface UseWorkspaceOptions {
@@ -95,7 +95,7 @@ export interface UseWorkspaceReturn {
   skills: Skill[];
   identity: Identity | null;
   policyRules: PolicyRule[];
-  a2rNativeState: A2RNativeState | null;
+  allternitNativeState: AllternitNativeState | null;
   
   // Actions
   refreshInfo: () => Promise<void>;
@@ -103,7 +103,7 @@ export interface UseWorkspaceReturn {
   refreshMemory: () => Promise<void>;
   refreshSkills: () => Promise<void>;
   refreshIdentity: () => Promise<void>;
-  refreshA2RNative: () => Promise<void>;
+  refreshAllternitNative: () => Promise<void>;
   refreshAll: () => Promise<void>;
   
   // Mutations
@@ -144,7 +144,7 @@ export function useWorkspace(
   const [skills, setSkills] = useState<Skill[]>([]);
   const [identity, setIdentity] = useState<Identity | null>(null);
   const [policyRules, setPolicyRules] = useState<PolicyRule[]>([]);
-  const [a2rNativeState, setA2RNativeState] = useState<A2RNativeState | null>(null);
+  const [allternitNativeState, setAllternitNativeState] = useState<AllternitNativeState | null>(null);
 
   // Initialize workspace
   useEffect(() => {
@@ -175,7 +175,7 @@ export function useWorkspace(
         setIsConnected(ws.isConnected());
 
         // Load initial data
-        const [wsInfo, wsTasks, wsSkills, wsIdentity, wsPolicy, wsA2R] = await Promise.all([
+        const [wsInfo, wsTasks, wsSkills, wsIdentity, wsPolicy, wsAllternit] = await Promise.all([
           ws.getInfo().catch((err) => {
             console.error("[useWorkspace] Failed to get workspace info:", err);
             return null;
@@ -196,7 +196,7 @@ export function useWorkspace(
             console.error("[useWorkspace] Failed to list policy rules:", err);
             return [];
           }),
-          ws.a2rNative?.getState().catch((err) => {
+          ws.allternitNative?.getState().catch((err) => {
             console.error("[useWorkspace] Failed to get A2R Native state:", err);
             return null;
           }),
@@ -209,7 +209,7 @@ export function useWorkspace(
         setSkills(wsSkills);
         setIdentity(wsIdentity);
         setPolicyRules(wsPolicy);
-        if (wsA2R) setA2RNativeState(wsA2R);
+        if (wsAllternit) setAllternitNativeState(wsAllternit);
       } catch (err) {
         if (cancelled) return;
         setError(err instanceof Error ? err : new Error(String(err)));
@@ -258,10 +258,10 @@ export function useWorkspace(
     setIdentity(wsIdentity);
   }, [workspace]);
 
-  const refreshA2RNative = useCallback(async () => {
-    if (!workspace || !workspace.a2rNative) return;
-    const wsA2R = await workspace.a2rNative.getState();
-    setA2RNativeState(wsA2R);
+  const refreshAllternitNative = useCallback(async () => {
+    if (!workspace || !workspace.allternitNative) return;
+    const wsAllternit = await workspace.allternitNative.getState();
+    setAllternitNativeState(wsAllternit);
   }, [workspace]);
 
   const refreshAll = useCallback(async () => {
@@ -271,9 +271,9 @@ export function useWorkspace(
       refreshMemory(),
       refreshSkills(),
       refreshIdentity(),
-      refreshA2RNative(),
+      refreshAllternitNative(),
     ]);
-  }, [refreshInfo, refreshTasks, refreshMemory, refreshSkills, refreshIdentity, refreshA2RNative]);
+  }, [refreshInfo, refreshTasks, refreshMemory, refreshSkills, refreshIdentity, refreshAllternitNative]);
 
   // Mutations
   const createTask = useCallback(async (input: { title: string; description?: string; priority?: 'low' | 'medium' | 'high' }) => {
@@ -405,14 +405,14 @@ export function useWorkspace(
     skills,
     identity,
     policyRules,
-    a2rNativeState,
+    allternitNativeState,
     
     refreshInfo,
     refreshTasks,
     refreshMemory,
     refreshSkills,
     refreshIdentity,
-    refreshA2RNative,
+    refreshAllternitNative,
     refreshAll,
     
     createTask,

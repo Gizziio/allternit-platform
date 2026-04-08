@@ -1,7 +1,7 @@
 import {
   createComputerUseClient,
   resolveComputerUseBaseUrl,
-  type A2RComputerUseClient,
+  type AllternitComputerUseClient,
   type EngineEventBatch,
   type EngineEventRecord,
   type EngineExecutionRequestInput,
@@ -134,7 +134,7 @@ export async function getPlatformComputerUseRuntime(): Promise<PlatformComputerU
 }
 
 export type PlatformComputerUseClient = Pick<
-  A2RComputerUseClient,
+  AllternitComputerUseClient,
   | 'health'
   | 'execute'
   | 'getRun'

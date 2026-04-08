@@ -10,9 +10,9 @@ const log = createModuleLogger('services/a2r-operator-status');
 
 const ALLTERNIT_OPERATOR_URL = process.env.ALLTERNIT_OPERATOR_URL || 'http://127.0.0.1:3000';
 
-export type A2RServiceStatus = 'online' | 'offline' | 'checking' | 'error';
+export type AllternitServiceStatus = 'online' | 'offline' | 'checking' | 'error';
 
-export interface A2RServiceCapabilities {
+export interface AllternitServiceCapabilities {
   browserUse: boolean;
   playwright: boolean;
   computerUse: boolean;
@@ -21,16 +21,16 @@ export interface A2RServiceCapabilities {
   parallel: boolean;
 }
 
-export interface A2ROperatorStatus {
-  status: A2RServiceStatus;
+export interface AllternitOperatorStatus {
+  status: AllternitServiceStatus;
   url: string;
   version?: string;
-  capabilities: A2RServiceCapabilities;
+  capabilities: AllternitServiceCapabilities;
   lastChecked: Date | null;
   error?: string;
 }
 
-const initialStatus: A2ROperatorStatus = {
+const initialStatus: AllternitOperatorStatus = {
   status: 'checking',
   url: ALLTERNIT_OPERATOR_URL,
   capabilities: {
@@ -47,7 +47,7 @@ const initialStatus: A2ROperatorStatus = {
 /**
  * Check A2R Operator health and capabilities
  */
-async function checkA2ROperatorHealth(): Promise<Partial<A2ROperatorStatus>> {
+async function checkAllternitOperatorHealth(): Promise<Partial<AllternitOperatorStatus>> {
   try {
     // Check main health endpoint
     const healthRes = await fetch(`${ALLTERNIT_OPERATOR_URL}/health`, {
@@ -115,12 +115,12 @@ async function checkA2ROperatorHealth(): Promise<Partial<A2ROperatorStatus>> {
 /**
  * Hook to monitor A2R Operator service status
  */
-export function useA2ROperatorStatus(pollInterval = 30000) {
-  const [status, setStatus] = useState<A2ROperatorStatus>(initialStatus);
+export function useAllternitOperatorStatus(pollInterval = 30000) {
+  const [status, setStatus] = useState<AllternitOperatorStatus>(initialStatus);
 
   const checkStatus = useCallback(async () => {
     setStatus(prev => ({ ...prev, status: 'checking' }));
-    const health = await checkA2ROperatorHealth();
+    const health = await checkAllternitOperatorHealth();
     setStatus(prev => ({ ...prev, ...health }));
   }, []);
 
@@ -145,4 +145,4 @@ export function useA2ROperatorStatus(pollInterval = 30000) {
   };
 }
 
-export default useA2ROperatorStatus;
+export default useAllternitOperatorStatus;

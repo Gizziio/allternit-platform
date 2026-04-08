@@ -34,8 +34,8 @@ function getGizziAuthHeader(): string | undefined {
 // Defaulting to a local port caused silent message swallowing when anything
 // else (e.g., a stale dev process) was listening there.
 const GATEWAY_BASE_URL =
-  process.env.VITE_A2R_GATEWAY_URL
-    ? process.env.VITE_A2R_GATEWAY_URL.replace(/\/api\/v1\/?$/, "").replace(/\/+$/, "")
+  process.env.VITE_ALLTERNIT_GATEWAY_URL
+    ? process.env.VITE_ALLTERNIT_GATEWAY_URL.replace(/\/api\/v1\/?$/, "").replace(/\/+$/, "")
     : null;
 
 // ---------------------------------------------------------------------------

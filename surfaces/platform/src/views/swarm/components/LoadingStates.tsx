@@ -10,7 +10,7 @@
 
 import React from 'react';
 import { Robot, MagnifyingGlass, WarningCircle, ArrowsClockwise } from '@phosphor-icons/react';
-import { TEXT, MODE_COLORS, BACKGROUND, BORDER } from '@/design/a2r.tokens';
+import { TEXT, MODE_COLORS, BACKGROUND, BORDER } from '@/design/allternit.tokens';
 
 // ============================================================================
 // Card Skeleton for Grid View

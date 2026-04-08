@@ -241,8 +241,8 @@ export const UsersIcon = (props: Omit<IconProps, 'name'>) => <Icon name="users" 
 export const ProfileIcon = (props: Omit<IconProps, 'name'>) => <Icon name="profile" {...props} />;
 
 // Brand icons
-export const A2RLogoIcon = (props: Omit<IconProps, 'name'>) => <Icon name="a2r-logo" {...props} />;
-export const A2RMarkIcon = (props: Omit<IconProps, 'name'>) => <Icon name="a2r-mark" {...props} />;
+export const AllternitLogoIcon = (props: Omit<IconProps, 'name'>) => <Icon name="allternit-logo" {...props} />;
+export const AllternitMarkIcon = (props: Omit<IconProps, 'name'>) => <Icon name="allternit-mark" {...props} />;
 export const ShellIconComponent = (props: Omit<IconProps, 'name'>) => <Icon name="shell" {...props} />;
 export const CapsuleIconComponent = (props: Omit<IconProps, 'name'>) => <Icon name="capsule" {...props} />;
 export const BeadIconComponent = (props: Omit<IconProps, 'name'>) => <Icon name="bead" {...props} />;

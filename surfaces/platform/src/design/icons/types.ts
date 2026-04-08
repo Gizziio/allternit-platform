@@ -237,8 +237,8 @@ export type IconName =
   | 'thumbs-up'
   
   // Custom A2rchitect brand icons (8 icons)
-  | 'a2r-logo' 
-  | 'a2r-mark' 
+  | 'allternit-logo' 
+  | 'allternit-mark' 
   | 'shell' 
   | 'capsule' 
   | 'bead'
@@ -312,7 +312,7 @@ export const ICON_CATEGORIES = {
   ] as IconName[],
   
   brand: [
-    'a2r-logo', 'a2r-mark', 'shell', 'capsule', 'bead',
+    'allternit-logo', 'allternit-mark', 'shell', 'capsule', 'bead',
     'substrate', 'kernel', 'archon',
   ] as IconName[],
 } as const;

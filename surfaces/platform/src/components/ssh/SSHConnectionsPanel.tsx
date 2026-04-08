@@ -33,7 +33,7 @@ export function SSHConnectionsPanel() {
         os: 'Ubuntu 22.04 LTS',
         architecture: 'x86_64',
         dockerInstalled: true,
-        a2rInstalled: false,
+        allternitInstalled: false,
       },
     };
   }, []);
@@ -53,7 +53,7 @@ export function SSHConnectionsPanel() {
       os: 'Ubuntu 22.04 LTS',
       architecture: 'x86_64',
       dockerInstalled: true,
-      a2rInstalled: true,
+      allternitInstalled: true,
     };
     
     setConnections(prev => [...prev, newConnection]);

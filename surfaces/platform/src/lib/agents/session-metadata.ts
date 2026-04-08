@@ -21,14 +21,14 @@ export interface AgentSessionDescriptor {
 }
 
 const METADATA_KEYS = {
-  originSurface: "a2r_origin_surface",
-  sessionMode: "a2r_session_mode",
-  agentId: "a2r_agent_id",
-  agentName: "a2r_agent_name",
-  projectId: "a2r_project_id",
-  workspaceScope: "a2r_workspace_scope",
-  runtimeModel: "a2r_runtime_model",
-  agentFeatures: "a2r_agent_features",
+  originSurface: "allternit_origin_surface",
+  sessionMode: "allternit_session_mode",
+  agentId: "allternit_agent_id",
+  agentName: "allternit_agent_name",
+  projectId: "allternit_project_id",
+  workspaceScope: "allternit_workspace_scope",
+  runtimeModel: "allternit_runtime_model",
+  agentFeatures: "allternit_agent_features",
 } as const;
 
 function readString(value: unknown): string | undefined {
