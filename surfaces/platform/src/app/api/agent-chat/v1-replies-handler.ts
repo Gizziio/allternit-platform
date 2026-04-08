@@ -16,7 +16,6 @@ import {
   toGatewayAuthorizationHeader,
 } from "@/lib/runtime-backend";
 import type { ReplyEvent } from '@/types/replies-contract';
-import { markReplyActive, markReplyDone, isCancelled } from "@/lib/reply-cancellation";
 
 export const runtime = "nodejs";
 export const maxDuration = 800;
@@ -220,8 +219,6 @@ async function routeViaGizzi(
   const decoder = new TextDecoder();
   const eventsReader = eventRes.body.getReader();
 
-  await markReplyActive(replyId);
-
   const stream = new ReadableStream({
     async start(controller) {
       let evtBuffer = "";
@@ -256,17 +253,6 @@ async function routeViaGizzi(
 
       try {
         while (!closed) {
-          if (await isCancelled(currentMessageId)) {
-            enqueue({
-              type: "reply.failed",
-              replyId: currentMessageId,
-              runId: `run_${currentMessageId}`,
-              error: "Cancelled by client",
-              ts: Date.now(),
-            } satisfies ReplyEvent);
-            closed = true;
-            break;
-          }
           const { value, done } = await eventsReader.read();
           if (done) break;
           evtBuffer += decoder.decode(value, { stream: true });
@@ -467,7 +453,6 @@ async function routeViaGizzi(
         try { eventsReader.cancel(); } catch {}
         closed = true;
         try { controller.close(); } catch {}
-        markReplyDone(currentMessageId).catch(() => {});
       }
 
       // Ensure postPromise doesn't hang
