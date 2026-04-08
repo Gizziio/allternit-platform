@@ -1,0 +1,5 @@
+name = "allternit-platform"
+compatibility_date = "2024-04-08"
+
+[site]
+bucket = "./surfaces/platform/dist"

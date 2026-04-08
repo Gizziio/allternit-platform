@@ -161,8 +161,8 @@ const nextConfig: NextConfig = {
   // standalone: generates .next/standalone/ — a minimal Node.js server that can be
   // shipped inside the Electron app without a separate node_modules directory.
   // The desktop spawns `node .next/standalone/server.js` as a subprocess.
-  output: process.env.ALLTERNIT_BUILD_MODE === 'desktop' ? 'standalone' : undefined,
-  distDir: '.next',
+  output: process.env.ALLTERNIT_BUILD_MODE === 'desktop' ? 'standalone' : 'export',
+  distDir: process.env.ALLTERNIT_BUILD_MODE === 'desktop' ? '.next' : 'dist',
 
   // Fix standalone output path in monorepo — ensures all local package deps are traced
   outputFileTracingRoot: path.join(__dirname, '../../'),
@@ -177,11 +177,3 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
-
-// Cloudflare Pages compatibility
-if (process.env.CLOUDFLARE_PAGES === '1') {
-  // @ts-ignore
-  nextConfig.output = 'export';
-  // @ts-ignore  
-  nextConfig.distDir = 'dist';
-}

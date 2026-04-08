@@ -6,6 +6,7 @@ on:
     paths:
       - 'surfaces/platform/**'
       - '.github/workflows/deploy-cloudflare-pages.yml'
+      - 'wrangler.toml'
 
 jobs:
   deploy:
@@ -26,7 +27,7 @@ jobs:
         with:
           version: 8
           
-      - name: Install dependencies (no scripts)
+      - name: Install dependencies
         working-directory: surfaces/platform
         run: pnpm install --ignore-scripts
         
@@ -34,9 +35,9 @@ jobs:
         working-directory: surfaces/platform
         run: pnpm prisma generate
         
-      - name: Build for Cloudflare Pages
+      - name: Build static export
         working-directory: surfaces/platform
-        run: pnpm exec next-on-pages --skip-vercel-install
+        run: pnpm next build
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
@@ -44,10 +45,8 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/pages-action@v1
+        uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: allternit-platform
-          directory: surfaces/platform/.vercel/output/static
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          command: pages deploy surfaces/platform/dist --project-name=allternit-platform
