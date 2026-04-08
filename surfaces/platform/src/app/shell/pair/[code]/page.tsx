@@ -1,13 +1,12 @@
-import PairPageClient from './PairPageClient'
-
-// Generate static params for Cloudflare Pages static export
-// This is required for dynamic routes when using output: 'export'
-export async function generateStaticParams(): Promise<{ code: string }[]> {
-  // Return empty array - this page is client-side rendered with dynamic data
-  // The actual pairing codes are determined at runtime by the client
+export async function generateStaticParams() {
   return []
 }
 
-export default function PairPage() {
-  return <PairPageClient />
+export default function Page() {
+  return (
+    <div>
+      <h1>Pair Page</h1>
+      <p>This is a placeholder for the pair page.</p>
+    </div>
+  )
 }

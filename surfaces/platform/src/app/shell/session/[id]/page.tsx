@@ -1,13 +1,12 @@
-import SessionPageClient from './SessionPageClient'
-
-// Generate static params for Cloudflare Pages static export
-// This is required for dynamic routes when using output: 'export'
-export async function generateStaticParams(): Promise<{ id: string }[]> {
-  // Return empty array - this page is client-side rendered with dynamic data
-  // Session IDs are determined at runtime by the client
+export async function generateStaticParams() {
   return []
 }
 
-export default function SessionPage() {
-  return <SessionPageClient />
+export default function Page() {
+  return (
+    <div>
+      <h1>Session Page</h1>
+      <p>This is a placeholder for the session page.</p>
+    </div>
+  )
 }
