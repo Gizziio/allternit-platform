@@ -88,24 +88,57 @@
     "dmg": {
       "title": "Allternit ${version}",
       "icon": "build/icon.icns",
+      "background": "build/dmg-background.png",
+      "backgroundColor": "#0a0a14",
       "window": { "width": 540, "height": 380 },
       "contents": [
-        { "x": 130, "y": 220 },
-        { "x": 410, "y": 220, "type": "link", "path": "/Applications" }
-      ]
+        { "x": 130, "y": 200, "name": "Allternit" },
+        { "x": 410, "y": 200, "type": "link", "path": "/Applications" }
+      ],
+      "internetEnabled": false
     },
     "linux": {
       "target": ["AppImage", "deb"],
       "icon": "build/icon.png",
-      "category": "Development"
+      "category": "Development",
+      "synopsis": "Your AI Platform",
+      "description": "Allternit Desktop — fully offline AI platform with local VM execution."
+    },
+    "appImage": {
+      "artifactName": "Allternit-${version}.AppImage"
+    },
+    "deb": {
+      "packageCategory": "utils",
+      "priority": "optional",
+      "compression": "xz"
     },
     "win": {
-      "target": ["nsis"],
-      "icon": "build/icon.ico"
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ],
+      "icon": "build/icon.ico",
+      "signingHashAlgorithms": ["sha256"],
+      "publisherName": "Allternit"
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeader": "build/installer-header.bmp",
+      "installerSidebar": "build/installer-sidebar.bmp",
+      "uninstallerSidebar": "build/installer-sidebar.bmp",
+      "include": "build/installer.nsh",
+      "shortcutName": "Allternit",
+      "menuCategory": "Allternit",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "deleteAppDataOnUninstall": false,
+      "differentialPackage": true,
+      "artifactName": "Allternit-Setup-${version}.exe",
+      "license": "LICENSE"
     },
     "publish": [
       {
