@@ -1,0 +1,153 @@
+name: Release Gizzi Code
+
+on:
+  push:
+    tags:
+      - 'gizzi-code/v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 0.1.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-binaries:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux-x64
+            ext: tar.gz
+          - os: ubuntu-latest
+            target: linux-arm64
+            ext: tar.gz
+          - os: macos-latest
+            target: darwin-arm64
+            ext: tar.gz
+          - os: macos-13
+            target: darwin-x64
+            ext: tar.gz
+          - os: windows-latest
+            target: windows-x64
+            ext: zip
+
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      
+      - name: Extract version
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "VERSION=${{ inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            VERSION=${GITHUB_REF_NAME#gizzi-code/v}
+            echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Install dependencies
+        working-directory: cmd/gizzi-code
+        run: bun install
+      
+      - name: Build binary
+        working-directory: cmd/gizzi-code
+        run: bun run script/build-production.ts --target=${{ matrix.target }}
+      
+      - name: Package (Unix)
+        if: matrix.os != 'windows-latest'
+        working-directory: cmd/gizzi-code
+        run: |
+          mkdir -p dist/pkg
+          cp dist/gizzi-code dist/pkg/
+          cd dist/pkg
+          tar -czf "../../../gizzi-code-v${{ steps.version.outputs.VERSION }}-${{ matrix.target }}.tar.gz" gizzi-code
+      
+      - name: Package (Windows)
+        if: matrix.os == 'windows-latest'
+        working-directory: cmd/gizzi-code
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist/pkg | Out-Null
+          Copy-Item dist/gizzi-code.exe dist/pkg/
+          cd dist/pkg
+          Compress-Archive -Path gizzi-code.exe -DestinationPath "../../../gizzi-code-v${{ steps.version.outputs.VERSION }}-windows-x64.zip"
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gizzi-code-${{ matrix.target }}
+          path: |
+            gizzi-code-v*.tar.gz
+            gizzi-code-v*.zip
+
+  create-release:
+    needs: build-binaries
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Extract version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "VERSION=${{ inputs.version }}" >> $GITHUB_OUTPUT
+            echo "TAG_NAME=gizzi-code/${{ inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            VERSION=${GITHUB_REF_NAME#gizzi-code/v}
+            echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+            echo "TAG_NAME=$GITHUB_REF_NAME" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: gizzi-code-*
+          merge-multiple: true
+      
+      - name: List artifacts
+        run: ls -la artifacts/
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.TAG_NAME }}
+          name: "Gizzi Code v${{ steps.version.outputs.VERSION }}"
+          files: artifacts/*
+          generate_release_notes: true
+          body: |
+            ## Gizzi Code v${{ steps.version.outputs.VERSION }}
+            
+            ### Install
+            
+            **macOS/Linux:**
+            ```bash
+            curl -fsSL https://install.gizziio.com/install | bash
+            ```
+            
+            **Windows:**
+            ```powershell
+            irm https://install.gizziio.com/install.ps1 | iex
+            ```
+            
+            ### Binaries
+            
+            | Platform | Architecture | File |
+            |----------|-------------|------|
+            | macOS | Apple Silicon | `gizzi-code-v${{ steps.version.outputs.VERSION }}-darwin-arm64.tar.gz` |
+            | macOS | Intel | `gizzi-code-v${{ steps.version.outputs.VERSION }}-darwin-x64.tar.gz` |
+            | Linux | ARM64 | `gizzi-code-v${{ steps.version.outputs.VERSION }}-linux-arm64.tar.gz` |
+            | Linux | x64 | `gizzi-code-v${{ steps.version.outputs.VERSION }}-linux-x64.tar.gz` |
+            | Windows | x64 | `gizzi-code-v${{ steps.version.outputs.VERSION }}-windows-x64.zip` |

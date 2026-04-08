@@ -1,0 +1,58 @@
+name: Publish Gizzi Code to NPM
+
+on:
+  push:
+    tags:
+      - 'gizzi-code/v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g., 0.1.0)'
+        required: true
+        type: string
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+      
+      - name: Extract version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "VERSION=${{ inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            VERSION=${GITHUB_REF_NAME#gizzi-code/v}
+            echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Install dependencies
+        working-directory: cmd/gizzi-code
+        run: bun install
+      
+      - name: Build
+        working-directory: cmd/gizzi-code
+        run: bun run build
+      
+      - name: Setup Node for NPM
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+      
+      - name: Update version in package.json
+        working-directory: cmd/gizzi-code
+        run: |
+          npm version ${{ steps.version.outputs.VERSION }} --no-git-tag-version
+      
+      - name: Publish to NPM
+        working-directory: cmd/gizzi-code
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

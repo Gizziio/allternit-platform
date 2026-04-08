@@ -1,12 +1,19 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "name": "@a2r/gizzi-code",
-  "description": "Gizzi Code - Terminal UI (TUI).",
+  "description": "AI-powered terminal interface for the Allternit ecosystem",
   "type": "module",
   "license": "MIT",
-  "private": true,
-  "workspaces": ["packages/*"],
+  "homepage": "https://docs.gizziio.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Gizziio/allternit-platform.git",
+    "directory": "cmd/gizzi-code"
+  },
+  "bugs": {
+    "url": "https://github.com/Gizziio/allternit-platform/issues"
+  },
   "keywords": [
     "a2rchitect",
     "shell",
@@ -34,10 +41,10 @@
     "db": "bun drizzle-kit"
   },
   "bin": {
-    "gizzi": "./bin/gizzi",
-    "gizzi-code": "./bin/gizzi"
+    "gizzi": "./dist/gizzi-code",
+    "gizzi-code": "./dist/gizzi-code"
   },
-  "randomField": "this-is-a-random-value-12345",
+  
   "exports": {
     "./*": "./src/*.ts"
   },
