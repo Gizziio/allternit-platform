@@ -42,3 +42,4 @@ const ShellApp = dynamic(
 export default function Home() {
   return <ShellApp />;
 }
+// Trigger rebuild
