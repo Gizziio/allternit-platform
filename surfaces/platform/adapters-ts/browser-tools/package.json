@@ -1,5 +1,5 @@
 {
-  "name": "@a2r/browser-tools",
+  "name": "@allternit/browser-tools",
   "version": "0.1.0",
   "description": "Browser automation toolkit for A2R agent task execution",
   "type": "module",
@@ -35,6 +35,6 @@
     "eslint": "^8.55.0"
   },
   "peerDependencies": {
-    "@a2r/mcp-apps-adapter": "workspace:*"
+    "@allternit/mcp-apps-adapter": "workspace:*"
   }
 }

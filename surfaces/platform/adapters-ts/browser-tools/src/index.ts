@@ -11,7 +11,7 @@
  *   navigate, 
  *   takeScreenshot,
  *   quarantineManager 
- * } from '@a2r/browser-tools';
+ * } from '@allternit/browser-tools';
  * 
  * // Create isolated browser session
  * const session = await createSession({

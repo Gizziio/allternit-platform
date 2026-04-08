@@ -5,7 +5,7 @@
  * 
  * @example
  * ```tsx
- * import { FormRenderer, projectSpecSchema } from '@a2r/form-surfaces';
+ * import { FormRenderer, projectSpecSchema } from '@allternit/form-surfaces';
  * 
  * <FormRenderer
  *   schema={projectSpecSchema}

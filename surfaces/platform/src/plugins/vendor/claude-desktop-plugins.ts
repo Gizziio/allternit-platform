@@ -2,7 +2,7 @@
  * Claude Desktop Bundled Plugins
  * 
  * These are the official plugins that ship with the Claude Desktop application.
- * They are stored in: ~/Library/Application Support/Claude/local-agent-mode-sessions/*/cowork_plugins/marketplaces/knowledge-work-plugins/
+ * They are stored in: ~/Library/Application Support/Claude/local-agent-mode-sessions/{id}/cowork_plugins/marketplaces/knowledge-work-plugins/
  * 
  * All plugins are authored by Anthropic and include comprehensive skills.
  */

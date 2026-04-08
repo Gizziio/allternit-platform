@@ -496,16 +496,16 @@ user:
 
 ## 1. Deploy Headscale Server
 
-Save this as docker-compose.yml and run:\\n\\n\\`\\`\\`bash
+Save this as docker-compose.yml and run:\n\n\`\`\`bash
 curl -fsSL https://setup.allternit.com/headscale-compose > docker-compose.yml
 docker-compose up -d
-\\`\\`\\`
+\`\`\`
 
 ## 2. Create API Key
 
-\\`\\`\\`bash
+\`\`\`bash
 docker exec headscale headscale apikeys create --expiration 90d
-\\`\\`\\`
+\`\`\`
 
 Save this key - you'll need it to connect Allternit.
 
@@ -523,9 +523,9 @@ In your Allternit dashboard:
 ## 4. Add Your VPS
 
 On each VPS you want to connect:
-\\`\\`\\`bash
+\`\`\`bash
 curl -fsSL https://install.allternit.com/${invitation.id} | bash
-\\`\\`\\`
+\`\`\`
 
 ## Security Notes
 

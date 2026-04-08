@@ -1,0 +1,41 @@
+{
+  "name": "@allternit/viz",
+  "version": "0.1.0",
+  "description": "A2R Data Visualization - Charts, graphs, and dashboards",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./charts": {
+      "import": "./dist/charts/index.js",
+      "types": "./dist/charts/index.d.ts"
+    },
+    "./components": {
+      "import": "./dist/components/index.js",
+      "types": "./dist/components/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  },
+  "keywords": [
+    "a2r",
+    "visualization",
+    "charts",
+    "dashboards",
+    "data"
+  ],
+  "license": "MIT"
+}
