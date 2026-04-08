@@ -158,11 +158,13 @@ const nextConfig: NextConfig = {
     '@allternit/kernel',
   ],
   
-  // Output to 'out/' to match Vercel project setting outputDirectory: "out"
-  // Note: this is NOT a static export — it's a full Next.js SSR build in a custom distDir
+  // standalone: generates .next/standalone/ — a minimal Node.js server that can be
+  // shipped inside the Electron app without a separate node_modules directory.
+  // The desktop spawns `node .next/standalone/server.js` as a subprocess.
+  output: process.env.ALLTERNIT_BUILD_MODE === 'desktop' ? 'standalone' : undefined,
   distDir: '.next',
 
-  // Fix standalone output path in monorepo
+  // Fix standalone output path in monorepo — ensures all local package deps are traced
   outputFileTracingRoot: path.join(__dirname, '../../'),
 
   typescript: {

@@ -1,7 +1,16 @@
 //! Authentication helpers for API route authorization.
+//!
+//! `require_bearer` is an axum middleware that validates the `Authorization: Bearer <key>`
+//! header against `ALLTERNIT_OPERATOR_API_KEY`. Used to protect all `/api/*` routes while
+//! leaving `/health` and `/platform` open.
 
 use anyhow::{bail, Result};
-use axum::http::HeaderMap;
+use axum::{
+    body::Body,
+    http::{HeaderMap, Request, StatusCode},
+    middleware::Next,
+    response::Response,
+};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
@@ -27,6 +36,22 @@ pub struct AuthClaims {
 #[derive(Debug, Clone)]
 pub struct AuthContext {
     pub user_id: String,
+}
+
+/// Axum middleware: validates `Authorization: Bearer <key>` against the provided key.
+/// Returns 401 if the header is missing or the key does not match.
+pub async fn require_bearer(key: String, req: Request<Body>, next: Next) -> Result<Response, StatusCode> {
+    let provided = req
+        .headers()
+        .get(axum::http::header::AUTHORIZATION)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.strip_prefix("Bearer "))
+        .map(|v| v.trim().to_string());
+
+    match provided {
+        Some(token) if token == key => Ok(next.run(req).await),
+        _ => Err(StatusCode::UNAUTHORIZED),
+    }
 }
 
 pub fn authorize_request(headers: &HeaderMap) -> Result<AuthContext> {

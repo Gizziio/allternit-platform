@@ -63,6 +63,11 @@
         "filter": ["**/*"]
       },
       {
+        "from": "resources/platform-server/",
+        "to": "platform-server/",
+        "filter": ["**/*"]
+      },
+      {
         "from": "native/vm-manager/.build/release/vm-manager-cli",
         "to": "bin/vm-manager-cli"
       }
