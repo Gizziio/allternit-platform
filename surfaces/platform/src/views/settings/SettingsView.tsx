@@ -90,13 +90,13 @@ function ClerkAuthPanel() {
   if (!isSignedIn) {
     return (
       <div style={{ padding: 24 }}>
-        <div style={{ ...label, marginBottom: 16 }}>Sign in to your A2R account</div>
+        <div style={{ ...label, marginBottom: 16 }}>Sign in to your Allternit account</div>
         <PlatformSignIn />
       </div>
     );
   }
 
-  const name = [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'A2R User';
+  const name = [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'Allternit User';
   const email = user?.emailAddresses?.[0]?.emailAddress ?? '';
   const initials = name.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase();
 
@@ -392,6 +392,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [bypassPermissions, setBypassPermissions] = useState(false);
   const [drawAttentionNotifications, setDrawAttentionNotifications] = useState(true);
   const [worktreeLocation, setWorktreeLocation] = useState('Inside project (.claude/)');
+  const [gizziRevokeState, setGizziRevokeState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [branchPrefix, setBranchPrefix] = useState('gizziio');
   const [previewEnabled, setPreviewEnabled] = useState(true);
   const [persistPreviewSessions, setPersistPreviewSessions] = useState(false);
@@ -1530,11 +1531,72 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     </div>
   );
 
+  const handleRevokeGizziAccess = async () => {
+    setGizziRevokeState('loading');
+    try {
+      const res = await fetch('/api/oauth/revoke-user', { method: 'POST' });
+      if (!res.ok) throw new Error(`Server error (${res.status})`);
+      setGizziRevokeState('done');
+    } catch {
+      setGizziRevokeState('error');
+    }
+  };
+
   const renderGizziioCodePanel = () => (
     <div style={{ maxWidth: '600px' }}>
       <section style={{ marginBottom: '32px' }}>
         <ToggleItem label="Allow bypass permissions mode" value={bypassPermissions} onChange={setBypassPermissions} description="Bypass all permission checks" />
         <ToggleItem label="Draw attention on notifications" value={drawAttentionNotifications} onChange={setDrawAttentionNotifications} description="Bounce dock icon on notifications" />
+      </section>
+
+      {/* Authorized Apps */}
+      <section style={{ marginBottom: '32px' }}>
+        <div style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16 }}>
+          Authorized Apps
+        </div>
+        <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 10, overflow: 'hidden' }}>
+          <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 8, background: '#1a1a1a', border: '1px solid #333', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Code size={18} color="#d4b08c" />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Gizzi Code</div>
+              <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2 }}>
+                CLI access — reads and writes on your behalf
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {gizziRevokeState === 'done' && (
+                <span style={{ fontSize: 12, color: '#22c55e' }}>Access revoked</span>
+              )}
+              {gizziRevokeState === 'error' && (
+                <span style={{ fontSize: 12, color: '#ef4444' }}>Failed — try again</span>
+              )}
+              <button
+                onClick={handleRevokeGizziAccess}
+                disabled={gizziRevokeState === 'loading' || gizziRevokeState === 'done'}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: 6,
+                  border: '1px solid rgba(239,68,68,0.35)',
+                  background: 'rgba(239,68,68,0.08)',
+                  color: gizziRevokeState === 'done' ? '#666' : '#f87171',
+                  fontSize: 13,
+                  cursor: (gizziRevokeState === 'loading' || gizziRevokeState === 'done') ? 'not-allowed' : 'pointer',
+                  opacity: (gizziRevokeState === 'loading' || gizziRevokeState === 'done') ? 0.6 : 1,
+                  fontFamily: 'inherit',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {gizziRevokeState === 'loading' ? 'Revoking…' : 'Revoke Access'}
+              </button>
+            </div>
+          </div>
+        </div>
+        <p style={{ fontSize: 12, color: 'var(--text-tertiary)', margin: '10px 0 0', lineHeight: 1.5 }}>
+          Revoking access signs Gizzi Code out on all machines. Re-authorize by running{' '}
+          <code style={{ fontFamily: 'monospace', background: 'var(--bg-secondary)', padding: '1px 5px', borderRadius: 3 }}>gizzi login</code>.
+        </p>
       </section>
     </div>
   );

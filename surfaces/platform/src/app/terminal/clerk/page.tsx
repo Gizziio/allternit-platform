@@ -14,12 +14,12 @@ export default function TerminalClerkPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const cb = params.get("callback_url")
-    if (cb) sessionStorage.setItem("a2r_callback_url", cb)
+    if (cb) sessionStorage.setItem("allternit_callback_url", cb)
   }, [])
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn || posted.current) return
-    const callbackUrl = sessionStorage.getItem("a2r_callback_url")
+    const callbackUrl = sessionStorage.getItem("allternit_callback_url")
     if (!callbackUrl) return
     posted.current = true
     setStatus("connecting")
@@ -35,7 +35,7 @@ export default function TerminalClerkPage() {
       })
       .then((res) => {
         if (!res.ok) throw new Error(`Callback error (${res.status})`)
-        sessionStorage.removeItem("a2r_callback_url")
+        sessionStorage.removeItem("allternit_callback_url")
         setStatus("done")
         setTimeout(() => window.close(), 2000)
       })

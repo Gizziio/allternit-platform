@@ -20,6 +20,7 @@ const REFRESH_TTL = 30 * 86_400;  // 30 days
 
 const KEY_AT = 'oauth:at:';
 const KEY_RT = 'oauth:rt:';
+const KEY_NBF = 'oauth:user:nbf:'; // not-before timestamp per user (for bulk revocation)
 
 // ─── Shared payload shape ──────────────────────────────────────────────────────
 
@@ -44,8 +45,9 @@ interface MemEntry extends TokenPayload {
   expiresAt: number;
 }
 
-const atStore = new Map<string, MemEntry>(); // jti → entry
-const rtStore = new Map<string, MemEntry>(); // refresh token → entry
+const atStore = new Map<string, MemEntry>();          // jti → entry
+const rtStore = new Map<string, MemEntry>();          // refresh token → entry
+const nbfStore = new Map<string, number>();           // userId → not-before epoch (seconds)
 
 if (typeof setInterval !== 'undefined') {
   setInterval(() => {
@@ -148,15 +150,27 @@ export async function validateAccessToken(token: string): Promise<TokenPayload |
 
   const jti = claims.jti as string | undefined;
   const exp = claims.exp as number | undefined;
-  if (!jti || !exp || Math.floor(Date.now() / 1000) > exp) return null;
+  const iat = claims.iat as number | undefined;
+  const sub = claims.sub as string | undefined;
+  if (!jti || !exp || !iat || Math.floor(Date.now() / 1000) > exp) return null;
 
   const redis = getRedisClient();
   if (redis) {
+    // Check user-level not-before (bulk revocation)
+    if (sub) {
+      const nbfRaw = await redis.get(`${KEY_NBF}${sub}`);
+      if (nbfRaw && iat < Number(nbfRaw)) return null;
+    }
     const raw = await redis.get(`${KEY_AT}${jti}`);
     if (!raw) return null;
     try { return JSON.parse(raw) as TokenPayload; } catch { return null; }
   }
 
+  // In-memory path
+  if (sub) {
+    const nbf = nbfStore.get(sub);
+    if (nbf && iat < nbf) return null;
+  }
   const entry = atStore.get(jti);
   if (!entry || entry.expiresAt < Date.now()) {
     atStore.delete(jti);
@@ -224,5 +238,22 @@ export async function revokeToken(token: string, hint?: 'access_token' | 'refres
     await redis.del(`${KEY_AT}${jti}`).catch(() => {});
   } else {
     atStore.delete(jti);
+  }
+}
+
+/**
+ * Invalidate all tokens previously issued for a user by recording the current
+ * timestamp as a "not-before" marker.  Any token with iat < this value will
+ * fail validation on the next request.  Does not require enumerating keys.
+ *
+ * TTL is set to REFRESH_TTL (30 days) — the maximum lifetime of a token pair.
+ */
+export async function revokeAllTokensForUser(userId: string): Promise<void> {
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const redis = getRedisClient();
+  if (redis) {
+    await redis.set(`${KEY_NBF}${userId}`, String(nowSeconds), 'EX', REFRESH_TTL).catch(() => {});
+  } else {
+    nbfStore.set(userId, nowSeconds);
   }
 }
