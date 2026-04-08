@@ -1,0 +1,28 @@
+{
+  "mcpServers": {
+    "microsoft-graph": {
+      "type": "http",
+      "url": "https://mcp.microsoft.com/graph/mcp"
+    },
+    "notion": {
+      "type": "http",
+      "url": "https://mcp.notion.com/mcp"
+    },
+    "unsplash": {
+      "type": "http",
+      "url": "https://mcp.unsplash.com/mcp"
+    },
+    "google-slides": {
+      "type": "http",
+      "url": "https://slides.mcp.google.com/mcp"
+    },
+    "slack": {
+      "type": "http",
+      "url": "https://mcp.slack.com/mcp"
+    },
+    "linear": {
+      "type": "http",
+      "url": "https://mcp.linear.app/mcp"
+    }
+  }
+}

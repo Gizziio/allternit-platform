@@ -1,0 +1,29 @@
+{
+  "mcpServers": {
+    "microsoft-graph": {
+      "type": "http",
+      "url": "https://mcp.microsoft.com/graph/mcp"
+    },
+    "notion": {
+      "type": "http",
+      "url": "https://mcp.notion.com/mcp"
+    },
+    "airtable": {
+      "type": "http",
+      "url": "https://mcp.airtable.com/mcp"
+    },
+    "postgres": {
+      "type": "stdio",
+      "command": "mcp-server-postgres",
+      "args": ["--connection-string", "${POSTGRES_CONNECTION_STRING}"]
+    },
+    "google-sheets": {
+      "type": "http",
+      "url": "https://sheets.mcp.google.com/mcp"
+    },
+    "slack": {
+      "type": "http",
+      "url": "https://mcp.slack.com/mcp"
+    }
+  }
+}

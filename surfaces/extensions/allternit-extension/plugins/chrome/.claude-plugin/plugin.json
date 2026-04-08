@@ -1,0 +1,59 @@
+{
+  "name": "allternit-chrome",
+  "version": "1.0.0",
+  "displayName": "Allternit for Chrome",
+  "description": "AI-powered browser companion — summarize pages, extract structured data, research across tabs, automate repetitive tasks, and save content to your connected tools. Works on any webpage.",
+  "author": { "name": "Allternit" },
+  "host": "chrome",
+  "families": ["browser", "knowledge"],
+  "modes": ["assist", "extract", "automate"],
+  "permissions": [
+    "page.read",
+    "page.extract",
+    "page.screenshot",
+    "tabs.read",
+    "tabs.navigate",
+    "clipboard.write",
+    "storage.read",
+    "storage.write"
+  ],
+  "policy_profile": {
+    "max_destructive_actions": 2,
+    "requires_approval": true,
+    "allowed_domains": ["*"],
+    "blocked_actions": [
+      "delete_account",
+      "submit_payment",
+      "send_email_without_confirmation",
+      "post_social_without_confirmation"
+    ]
+  },
+  "systemPrompt": "system-prompt.md",
+  "skills": [
+    "skills/page-reading.md",
+    "skills/web-extraction.md",
+    "skills/browser-context.md",
+    "skills/content-actions.md",
+    "skills/research-workflow.md"
+  ],
+  "commands": [
+    { "name": "chrome:summarize",  "description": "Summarize the current page",                          "file": "commands/chrome-summarize.md" },
+    { "name": "chrome:extract",    "description": "Extract structured data from the page",               "file": "commands/chrome-extract.md" },
+    { "name": "chrome:research",   "description": "Deep-research a topic using the current page + web",  "file": "commands/chrome-research.md" },
+    { "name": "chrome:automate",   "description": "Automate a repetitive task on this page",             "file": "commands/chrome-automate.md" },
+    { "name": "chrome:save",       "description": "Save this page or its content to a connected tool",   "file": "commands/chrome-save.md" }
+  ],
+  "cookbooks": [
+    { "name": "Deep Research",       "file": "cookbooks/deep-research.md" },
+    { "name": "Content Extraction",  "file": "cookbooks/content-extraction.md" },
+    { "name": "Page Automation",     "file": "cookbooks/page-automation.md" }
+  ],
+  "tools": "tools/tool-definitions.ts",
+  "executionPattern": "browser-assist",
+  "errorRecovery": {
+    "maxRetries": 2,
+    "feedErrorToAgent": true
+  },
+  "conformance_suite": "plugin-chrome-v1",
+  "production_status": "beta"
+}

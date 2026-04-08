@@ -90,6 +90,34 @@ class RuntimeBackendAPI {
       fallbackMode: 'local',
     });
   }
+
+  async registerManualBackend(input: {
+    name: string;
+    gatewayUrl: string;
+    gatewayWsUrl?: string;
+    gatewayToken?: string;
+  }): Promise<{ success: boolean; message: string; backend_target?: RuntimeBackendTargetResponse }> {
+    const response = await fetch(`${this.baseUrl}/manual`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        name: input.name,
+        gatewayUrl: input.gatewayUrl,
+        gatewayWsUrl: input.gatewayWsUrl,
+        gatewayToken: input.gatewayToken,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Failed to register backend' }));
+      throw new Error(error?.error || 'Failed to register backend');
+    }
+
+    return response.json();
+  }
 }
 
 export const runtimeBackendApi = new RuntimeBackendAPI();
