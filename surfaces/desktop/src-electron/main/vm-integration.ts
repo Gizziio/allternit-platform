@@ -1,7 +1,7 @@
 /**
  * VM Integration Module
  * 
- * Manages the lifecycle of A2R VMs using Apple Virtualization.framework (macOS)
+ * Manages the lifecycle of Allternit VMs using Apple Virtualization.framework (macOS)
  * or KVM/QEMU (Linux). Provides IPC handlers for the renderer process.
  */
 
@@ -49,7 +49,7 @@ let vmSocketPath: string = '';
 let statusCallbacks: Array<(status: VMStatus) => void> = [];
 
 const DEFAULT_IMAGE_VERSION = '1.1.0';
-const VM_IMAGES_DIR = path.join(os.homedir(), '.a2r/vm-images');
+const VM_IMAGES_DIR = path.join(os.homedir(), '.allternit/vm-images');
 
 /**
  * Get current VM status
@@ -67,9 +67,9 @@ export function getVMStatus(): VMInfo {
  */
 export async function checkVMImages(): Promise<boolean> {
   const requiredFiles = [
-    'vmlinux-6.5.0-a2r',
-    'initrd.img-6.5.0-a2r',
-    'ubuntu-22.04-a2r-v1.1.0.ext4',
+    'vmlinux-6.5.0-allternit',
+    'initrd.img-6.5.0-allternit',
+    'ubuntu-22.04-allternit-v1.1.0.ext4',
     'version.json',
   ];
 
@@ -85,7 +85,7 @@ export async function checkVMImages(): Promise<boolean> {
 }
 
 /**
- * Download VM images using a2r-vm-image-builder
+ * Download VM images using allternit-vm-image-builder
  */
 export async function downloadVMImages(options: VMSetupOptions = {}): Promise<boolean> {
   const version = options.version || DEFAULT_IMAGE_VERSION;
@@ -94,11 +94,11 @@ export async function downloadVMImages(options: VMSetupOptions = {}): Promise<bo
   return new Promise((resolve, reject) => {
     console.log(`[VM] Downloading images version ${version}...`);
 
-    // Find a2r-vm-image-builder
+    // Find allternit-vm-image-builder
     const possiblePaths = [
-      path.join(process.resourcesPath || '', 'bin/a2r-vm-image-builder'),
-      path.join(os.homedir(), '.cargo/bin/a2r-vm-image-builder'),
-      'a2r-vm-image-builder',
+      path.join(process.resourcesPath || '', 'bin/allternit-vm-image-builder'),
+      path.join(os.homedir(), '.cargo/bin/allternit-vm-image-builder'),
+      'allternit-vm-image-builder',
     ];
 
     let builderPath = possiblePaths.find(p => {
@@ -116,7 +116,7 @@ export async function downloadVMImages(options: VMSetupOptions = {}): Promise<bo
     }
 
     const args = builderPath === 'cargo'
-      ? ['run', '-p', 'a2r-vm-image-builder', '--', 'download', '--version', version]
+      ? ['run', '-p', 'allternit-vm-image-builder', '--', 'download', '--version', version]
       : ['download', '--version', version];
 
     if (forceFlag) {
@@ -227,7 +227,7 @@ async function startMacOSVM(): Promise<void> {
   // TODO: Implement actual VM start using Virtualization.framework
   
   // Create a mock socket path
-  vmSocketPath = path.join(os.tmpdir(), `a2r-vm-${Date.now()}.sock`);
+  vmSocketPath = path.join(os.tmpdir(), `allternit-vm-${Date.now()}.sock`);
   
   // This would be replaced with actual VM process management
   console.log('[VM] VM started (mock)');
@@ -243,7 +243,7 @@ async function startLinuxVM(): Promise<void> {
   // This would use firecracker or qemu
   // For now, placeholder implementation
   
-  vmSocketPath = path.join(os.tmpdir(), `a2r-vm-${Date.now()}.sock`);
+  vmSocketPath = path.join(os.tmpdir(), `allternit-vm-${Date.now()}.sock`);
   console.log('[VM] VM started (mock)');
 }
 

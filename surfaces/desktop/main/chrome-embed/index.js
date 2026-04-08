@@ -32,7 +32,7 @@ async function launchChromeApp(url, hostWindow) {
   const chromePath = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
   const userDataDir = path.join(
     require('os').homedir(),
-    '.a2r',
+    '.allternit',
     'chrome-embed-profile',
   );
 

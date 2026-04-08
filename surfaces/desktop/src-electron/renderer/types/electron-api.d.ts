@@ -103,7 +103,7 @@ export interface ElectronAPI {
 declare global {
   interface Window {
     electronAPI?: ElectronAPI;
-    a2rSidecar?: {
+    allternitSidecar?: {
       start: () => Promise<boolean>;
       stop: () => Promise<boolean>;
       restart: () => Promise<boolean>;

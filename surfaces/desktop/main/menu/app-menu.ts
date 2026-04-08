@@ -54,7 +54,7 @@ function openWorkflow(): void {
   dialog.showOpenDialog(focusedWindow, {
     title: 'Open Workflow',
     filters: [
-      { name: 'Workflow Files', extensions: ['json', 'yaml', 'yml', 'a2r'] },
+      { name: 'Workflow Files', extensions: ['json', 'yaml', 'yml', 'allternit'] },
       { name: 'All Files', extensions: ['*'] }
     ],
     properties: ['openFile']

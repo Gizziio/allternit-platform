@@ -26,9 +26,9 @@ export type NotificationCategory =
   | 'update';
 
 /**
- * Extended notification options with A2R-specific metadata
+ * Extended notification options with Allternit-specific metadata
  */
-export interface A2RNotificationOptions {
+export interface AllternitNotificationOptions {
   title: string;
   body: string;
   icon?: string;
@@ -75,7 +75,7 @@ const store = new Store<NotificationStore>({
 });
 
 let badgeCount = 0;
-const notificationQueue: A2RNotificationOptions[] = [];
+const notificationQueue: AllternitNotificationOptions[] = [];
 let isProcessingQueue = false;
 
 /**
@@ -230,7 +230,7 @@ export function getBadgeCount(): number {
 /**
  * Handle notification click - focus window and navigate
  */
-function handleNotificationClick(options: A2RNotificationOptions): void {
+function handleNotificationClick(options: AllternitNotificationOptions): void {
   const windowManager = getWindowManager();
   const mainWindow = windowManager?.getMainWindow();
 
@@ -269,7 +269,7 @@ function decrementBadgeCount(): void {
 /**
  * Show a notification
  */
-export function showNotification(options: A2RNotificationOptions): void {
+export function showNotification(options: AllternitNotificationOptions): void {
   if (!store.get('notifications.enabled') || store.get('notifications.doNotDisturb')) {
     queueNotification(options);
     return;
@@ -303,7 +303,7 @@ export function showNotification(options: A2RNotificationOptions): void {
 /**
  * Queue a notification for later display (during DnD)
  */
-function queueNotification(options: A2RNotificationOptions): void {
+function queueNotification(options: AllternitNotificationOptions): void {
   if (options.category === 'system' || options.category === 'update') {
     notificationQueue.push(options);
   }
@@ -340,7 +340,7 @@ export function clearNotificationQueue(): void {
  * Register IPC handlers for notifications
  */
 export function registerNotificationIpcHandlers(): void {
-  ipcMain.handle('notification:show', (_, options: A2RNotificationOptions) => {
+  ipcMain.handle('notification:show', (_, options: AllternitNotificationOptions) => {
     showNotification(options);
   });
 
@@ -376,18 +376,18 @@ export function registerNotificationIpcHandlers(): void {
  * Notify with specific category helper functions
  */
 export const notify = {
-  message: (title: string, body: string, data?: A2RNotificationOptions['data']) =>
+  message: (title: string, body: string, data?: AllternitNotificationOptions['data']) =>
     showNotification({ title, body, category: 'message', data: { ...data, mode: 'chat' } }),
 
-  workflow: (title: string, body: string, data?: A2RNotificationOptions['data']) =>
+  workflow: (title: string, body: string, data?: AllternitNotificationOptions['data']) =>
     showNotification({ title, body, category: 'workflow', data: { ...data, mode: 'workflows' } }),
 
-  agentMail: (title: string, body: string, data?: A2RNotificationOptions['data']) =>
+  agentMail: (title: string, body: string, data?: AllternitNotificationOptions['data']) =>
     showNotification({ title, body, category: 'agent-mail', data: { ...data, mode: 'agent-mail' } }),
 
-  system: (title: string, body: string, data?: A2RNotificationOptions['data']) =>
+  system: (title: string, body: string, data?: AllternitNotificationOptions['data']) =>
     showNotification({ title, body, category: 'system', data }),
 
-  update: (title: string, body: string, data?: A2RNotificationOptions['data']) =>
+  update: (title: string, body: string, data?: AllternitNotificationOptions['data']) =>
     showNotification({ title, body, category: 'update', data }),
 };

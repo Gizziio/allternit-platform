@@ -1,11 +1,11 @@
 /**
- * A2R Desktop - Cloud-Connected Edition
+ * Allternit Desktop
  * 
  * Self-hosted architecture: Users run backend on their VPS or locally.
- * Desktop app is the UI that connects to user's personal A2R instance.
+ * Desktop app is the UI that connects to the user's personal Allternit instance.
  * 
  * Connection Modes:
- * 1. VPS Mode: Connect to user's cloud instance (https://a2r.userdomain.com)
+ * 1. VPS Mode: Connect to user's cloud instance (https://allternit.userdomain.com)
  * 2. Local Mode: Connect to localhost services
  * 3. Discovery Mode: Auto-find running local services
  */
@@ -155,7 +155,7 @@ function createWindow(): void {
     y: bounds.y,
     minWidth: 1024,
     minHeight: 768,
-    title: 'A2R Desktop',
+    title: 'Allternit',
     titleBarStyle: isMac ? 'hiddenInset' : 'default',
     trafficLightPosition: { x: 16, y: 16 },
     webPreferences: {
@@ -230,7 +230,7 @@ function createTray(): void {
   if (!require('fs').existsSync(iconPath)) return;
 
   tray = new Tray(iconPath);
-  tray.setToolTip('A2R Desktop');
+  tray.setToolTip('Allternit');
   updateTrayMenu();
 }
 
@@ -248,7 +248,7 @@ async function updateTrayMenu(): Promise<void> {
   }[conn.status];
 
   const contextMenu = Menu.buildFromTemplate([
-    { label: 'A2R Desktop', enabled: false },
+    { label: 'Allternit', enabled: false },
     { type: 'separator' },
     { 
       label: `${statusIcon} ${conn.status.toUpperCase()}`, 

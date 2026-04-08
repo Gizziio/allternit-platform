@@ -48,10 +48,10 @@ import {
 } from './vm-integration';
 
 // Import Node.js VM Manager bridge if available
-let A2RVMManager: any = null;
+let AllternitVMManager: any = null;
 try {
-  const { A2RVMManager: VMManagerClass } = require('../native/vm-manager-node/dist/index');
-  A2RVMManager = VMManagerClass;
+  const { AllternitVMManager: VMManagerClass } = require('../native/vm-manager-node/dist/index');
+  AllternitVMManager = VMManagerClass;
 } catch (e) {
   console.log('[IPC] VM Manager Node bridge not available, using fallback implementation');
 }
@@ -509,8 +509,8 @@ function registerVMHandlers(): void {
 
   // Initialize VM Manager if available
   const getVMManager = () => {
-    if (!vmManager && A2RVMManager) {
-      vmManager = new A2RVMManager();
+    if (!vmManager && AllternitVMManager) {
+      vmManager = new AllternitVMManager();
       
       // Forward status changes
       vmManager.on('statusChanged', (status: any) => {

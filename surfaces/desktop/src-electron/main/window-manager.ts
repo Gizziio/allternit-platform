@@ -138,7 +138,7 @@ export class WindowManager {
 
     const window = this.windowPool.acquire({
       ...options,
-      title: options.title || 'A2R Shell',
+      title: options.title || 'Allternit',
     });
 
     if (route) {

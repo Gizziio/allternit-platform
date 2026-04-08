@@ -17,11 +17,11 @@ import { getWindowManager } from './window-manager';
 import { getNotificationSettings, toggleDoNotDisturb } from './notifications';
 
 let tray: Tray | null = null;
-let trayTooltip = 'A2R';
+let trayTooltip = 'Allternit';
 let isQuitting = false;
 
 // Windows GUID for taskbar pinning (static per app)
-const WINDOWS_APP_GUID = 'A2R-Desktop-App-2024';
+const WINDOWS_APP_GUID = 'Allternit-Desktop-App-2026';
 
 /**
  * Get tray icon based on platform and theme
@@ -89,7 +89,7 @@ function buildTrayMenu(): Menu {
 
   const template: Electron.MenuItemConstructorOptions[] = [
     {
-      label: isVisible ? 'Hide A2R' : 'Show A2R',
+      label: isVisible ? 'Hide Allternit' : 'Show Allternit',
       click: () => {
         if (isVisible) {
           mainWindow?.hide();
@@ -160,7 +160,7 @@ export function updateTrayTooltip(status?: string): void {
   const connectionStatus = status || getConnectionStatus();
   const settings = getNotificationSettings();
 
-  let tooltip = `A2R\nStatus: ${connectionStatus}`;
+  let tooltip = `Allternit\nStatus: ${connectionStatus}`;
 
   if (settings.doNotDisturb) {
     tooltip += '\n🔕 Do Not Disturb';

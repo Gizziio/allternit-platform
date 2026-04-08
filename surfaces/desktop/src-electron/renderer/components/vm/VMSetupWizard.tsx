@@ -74,9 +74,9 @@ export const VMSetupWizard: React.FC<VMSetupWizardProps> = ({
       {step === 'intro' && (
         <div className="setup-intro">
           <span className="icon">🖥️</span>
-          <h3>Setup A2R Virtual Machine</h3>
+          <h3>Setup Allternit Virtual Machine</h3>
           <p>
-            A2R uses a Linux virtual machine to run commands in a sandboxed environment.
+            Allternit uses a Linux virtual machine to run commands in a sandboxed environment.
             You need to download the VM images to get started.
           </p>
           

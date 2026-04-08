@@ -2,14 +2,14 @@
 import PackageDescription
 
 let package = Package(
-    name: "A2RVMManager",
+    name: "AllternitVMManager",
     platforms: [
         .macOS(.v13)
     ],
     products: [
         .library(
-            name: "A2RVMManager",
-            targets: ["A2RVMManager"]
+            name: "AllternitVMManager",
+            targets: ["AllternitVMManager"]
         ),
         .executable(
             name: "vm-manager-cli",
@@ -21,18 +21,18 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "A2RVMManager",
+            name: "AllternitVMManager",
             swiftSettings: [
                 .enableExperimentalFeature("StrictConcurrency")
             ]
         ),
         .executableTarget(
             name: "VMManagerCLI",
-            dependencies: ["A2RVMManager"]
+            dependencies: ["AllternitVMManager"]
         ),
         .testTarget(
-            name: "A2RVMManagerTests",
-            dependencies: ["A2RVMManager"]
+            name: "AllternitVMManagerTests",
+            dependencies: ["AllternitVMManager"]
         )
     ]
 )

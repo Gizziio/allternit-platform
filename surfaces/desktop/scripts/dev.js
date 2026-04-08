@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Development script for A2R Desktop
+ * Development script for Allternit Desktop
  * Runs Electron in dev mode with hot reload
  */
 

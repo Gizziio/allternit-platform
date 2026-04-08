@@ -27,7 +27,7 @@ let authPassword: string | null = null;
 let statusCallback: ((status: SidecarStatus) => void) | null = null;
 
 // Configuration
-const API_HOST = process.env.A2R_API_HOST || '127.0.0.1';
+const API_HOST = process.env.ALLTERNIT_API_HOST || '127.0.0.1';
 const MIN_PORT = 3000;
 const MAX_PORT = 3100;
 const HEALTH_CHECK_INTERVAL = 1000; // ms
@@ -86,14 +86,14 @@ function getSidecarPath(): string {
 
   if (isDev) {
     // In development, use cargo-built binary (try debug first, then release)
-    // Check for a2rchitech-api first (the API server), then a2r (CLI)
+    // Check for allternit-api first (the API server), then allternit (CLI)
     const debugPaths = [
-      join(__dirname, '../../../../target/debug/a2rchitech-api'),
-      join(__dirname, '../../../../target/debug/a2r'),
+      join(__dirname, '../../../../target/debug/allternit-api'),
+      join(__dirname, '../../../../target/debug/allternit'),
     ];
     const releasePaths = [
-      join(__dirname, '../../../../target/release/a2rchitech-api'),
-      join(__dirname, '../../../../target/release/a2r'),
+      join(__dirname, '../../../../target/release/allternit-api'),
+      join(__dirname, '../../../../target/release/allternit'),
     ];
     
     // Try debug first (faster to build)
@@ -117,8 +117,8 @@ function getSidecarPath(): string {
   // In production, binary is in app resources
   const platform = process.platform;
   const binaryNames = [
-    platform === 'win32' ? 'a2rchitech-api.exe' : 'a2rchitech-api',
-    platform === 'win32' ? 'a2r.exe' : 'a2r',
+    platform === 'win32' ? 'allternit-api.exe' : 'allternit-api',
+    platform === 'win32' ? 'allternit.exe' : 'allternit',
   ];
   
   for (const binaryName of binaryNames) {
@@ -210,9 +210,9 @@ function spawnSidecar(binaryPath: string, args: string[], env: Record<string, st
   // Unix (macOS/Linux): Use process groups for clean termination
   options.detached = false;
   
-  // Check if binary is a2r CLI (needs 'serve' command) or a2rchitech-api (no args)
+  // Check if binary is allternit CLI (needs 'serve' command) or allternit-api (no args)
   const binaryName = binaryPath.split('/').pop();
-  if (binaryName === 'a2r' || binaryName === 'a2r.exe') {
+  if (binaryName === 'allternit' || binaryName === 'allternit.exe') {
     return spawn(binaryPath, ['serve', ...args], options);
   }
   
@@ -268,11 +268,11 @@ export async function startSidecar(): Promise<{ port: number; password: string }
   // Spawn the API process with auth
   apiProcess = spawnSidecar(binaryPath, [`--port`, currentPort.toString()], {
     RUST_LOG: process.env.RUST_LOG || 'info',
-    A2R_OPERATOR_URL: `http://${API_HOST}:${currentPort}`,
-    A2R_OPERATOR_API_KEY: password,
-    A2R_DATA_DIR: join(app.getPath('userData'), 'a2r-data'),
-    A2R_API_PORT: currentPort.toString(),
-    A2R_API_HOST: API_HOST,
+    ALLTERNIT_OPERATOR_URL: `http://${API_HOST}:${currentPort}`,
+    ALLTERNIT_OPERATOR_API_KEY: password,
+    ALLTERNIT_DATA_DIR: join(app.getPath('userData'), 'allternit-data'),
+    ALLTERNIT_API_PORT: currentPort.toString(),
+    ALLTERNIT_API_HOST: API_HOST,
   });
   
   // Handle stdout

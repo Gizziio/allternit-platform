@@ -1,5 +1,5 @@
 {
-  "name": "a2r-chrome-embed",
+  "name": "allternit-chrome-embed",
   "version": "1.0.0",
   "description": "Native module for embedding Chrome browser window in Electron",
   "main": "index.js",

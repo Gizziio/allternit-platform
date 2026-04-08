@@ -21,7 +21,7 @@ import {
   showNotification,
   updateBadgeCount,
   clearBadgeCount,
-  type A2RNotificationOptions,
+  type AllternitNotificationOptions,
   type NotificationCategory,
 } from './notifications';
 
@@ -107,7 +107,7 @@ import {
 } from './cowork-controller';
 
 // Re-export types
-export type { A2RNotificationOptions, NotificationCategory };
+export type { AllternitNotificationOptions, NotificationCategory };
 export type { UpdaterConfig, UpdateChannel, UpdateStrategy };
 export type { SidecarStatus };
 

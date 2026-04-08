@@ -19,7 +19,7 @@ export type NotificationCategory =
   | 'update';
 
 /**
- * Extended notification options with A2R-specific metadata
+ * Extended notification options with Allternit-specific metadata
  */
 export interface NotificationOptions {
   title: string;

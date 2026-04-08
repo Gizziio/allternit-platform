@@ -1,8 +1,8 @@
 import Foundation
-import A2RVMManager
+import AllternitVMManager
 import Virtualization
 
-/// CLI tool for managing A2R VMs
+/// CLI tool for managing Allternit VMs
 @available(macOS 13.0, *)
 @main
 struct VMManagerCLI {
@@ -43,7 +43,7 @@ struct VMManagerCLI {
     
     static func printUsage() {
         print("""
-        A2R VM Manager - Manage Linux VMs on macOS
+        Allternit VM Manager - Manage Linux VMs on macOS
         
         Usage: vm-manager-cli <command> [options]
         
@@ -60,17 +60,17 @@ struct VMManagerCLI {
             help     Show this help message
         
         Environment Variables:
-            A2R_VM_KERNEL    Path to kernel (default: ~/.a2r/vm-images/vmlinux-6.5.0-a2r)
-            A2R_VM_INITRD    Path to initrd (default: ~/.a2r/vm-images/initrd.img-6.5.0-a2r)
-            A2R_VM_ROOTFS    Path to rootfs (default: ~/.a2r/vm-images/ubuntu-22.04-a2r-v1.1.0.ext4)
-            A2R_VM_SOCKET    Path to socket (default: ~/.a2r/desktop-vm.sock)
+            ALLTERNIT_VM_KERNEL    Path to kernel (default: ~/.allternit/vm-images/vmlinux-6.5.0-allternit)
+            ALLTERNIT_VM_INITRD    Path to initrd (default: ~/.allternit/vm-images/initrd.img-6.5.0-allternit)
+            ALLTERNIT_VM_ROOTFS    Path to rootfs (default: ~/.allternit/vm-images/ubuntu-22.04-allternit-v1.1.0.ext4)
+            ALLTERNIT_VM_SOCKET    Path to socket (default: ~/.allternit/desktop-vm.sock)
         """)
     }
     
     static func startVM(args: [String]) async throws {
         let config = try parseConfiguration(args: args)
         
-        print("Starting A2R VM...")
+        print("Starting Allternit VM...")
         print("  Kernel: \(config.kernelPath)")
         print("  Initrd: \(config.initrdPath)")
         print("  Rootfs: \(config.rootfsPath)")
@@ -113,7 +113,7 @@ struct VMManagerCLI {
     }
     
     static func stopVM() async throws {
-        print("Stopping A2R VM...")
+        print("Stopping Allternit VM...")
         
         // Load existing configuration
         let config = try loadDefaultConfiguration()
@@ -129,7 +129,7 @@ struct VMManagerCLI {
         
         let status = manager.currentStatus
         
-        print("A2R VM Status:")
+        print("Allternit VM Status:")
         print("  State: \(status.state.rawValue)")
         print("  Name: \(status.vmName)")
         if let pid = status.pid {
@@ -179,16 +179,16 @@ struct VMManagerCLI {
     }
     
     static func setupVM() async throws {
-        print("Setting up A2R VM...")
+        print("Setting up Allternit VM...")
         
         let home = FileManager.default.homeDirectoryForCurrentUser.path
-        let vmImagesDir = "\(home)/.a2r/vm-images"
+        let vmImagesDir = "\(home)/.allternit/vm-images"
         
         // Check if images exist
         let requiredFiles = [
-            "vmlinux-6.5.0-a2r",
-            "initrd.img-6.5.0-a2r",
-            "ubuntu-22.04-a2r-v1.1.0.ext4"
+            "vmlinux-6.5.0-allternit",
+            "initrd.img-6.5.0-allternit",
+            "ubuntu-22.04-allternit-v1.1.0.ext4"
         ]
         
         var allExist = true
@@ -206,14 +206,14 @@ struct VMManagerCLI {
             print("\n✅ All VM images are present")
         } else {
             print("\n⚠️  Some VM images are missing")
-            print("   Run 'a2r-vm-image-builder download' to download them")
+            print("   Run 'allternit-vm-image-builder download' to download them")
             exit(1)
         }
     }
     
     // MARK: - Helpers
     
-    static func parseConfiguration(args: [String]) throws -> A2RVMConfiguration {
+    static func parseConfiguration(args: [String]) throws -> AllternitVMConfiguration {
         var kernelPath: String?
         var initrdPath: String?
         var rootfsPath: String?
@@ -256,22 +256,22 @@ struct VMManagerCLI {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         
         let finalKernelPath = kernelPath
-            ?? ProcessInfo.processInfo.environment["A2R_VM_KERNEL"]
-            ?? "\(home)/.a2r/vm-images/vmlinux-6.5.0-a2r"
+            ?? ProcessInfo.processInfo.environment["ALLTERNIT_VM_KERNEL"]
+            ?? "\(home)/.allternit/vm-images/vmlinux-6.5.0-allternit"
         
         let finalInitrdPath = initrdPath
-            ?? ProcessInfo.processInfo.environment["A2R_VM_INITRD"]
-            ?? "\(home)/.a2r/vm-images/initrd.img-6.5.0-a2r"
+            ?? ProcessInfo.processInfo.environment["ALLTERNIT_VM_INITRD"]
+            ?? "\(home)/.allternit/vm-images/initrd.img-6.5.0-allternit"
         
         let finalRootfsPath = rootfsPath
-            ?? ProcessInfo.processInfo.environment["A2R_VM_ROOTFS"]
-            ?? "\(home)/.a2r/vm-images/ubuntu-22.04-a2r-v1.1.0.ext4"
+            ?? ProcessInfo.processInfo.environment["ALLTERNIT_VM_ROOTFS"]
+            ?? "\(home)/.allternit/vm-images/ubuntu-22.04-allternit-v1.1.0.ext4"
         
         let finalSocketPath = socketPath
-            ?? ProcessInfo.processInfo.environment["A2R_VM_SOCKET"]
-            ?? "\(home)/.a2r/desktop-vm.sock"
+            ?? ProcessInfo.processInfo.environment["ALLTERNIT_VM_SOCKET"]
+            ?? "\(home)/.allternit/desktop-vm.sock"
         
-        return A2RVMConfiguration(
+        return AllternitVMConfiguration(
             kernelPath: finalKernelPath,
             initrdPath: finalInitrdPath,
             rootfsPath: finalRootfsPath,
@@ -281,7 +281,7 @@ struct VMManagerCLI {
         )
     }
     
-    static func loadDefaultConfiguration() throws -> A2RVMConfiguration {
+    static func loadDefaultConfiguration() throws -> AllternitVMConfiguration {
         try parseConfiguration(args: [])
     }
     

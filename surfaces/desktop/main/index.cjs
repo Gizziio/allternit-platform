@@ -78,15 +78,15 @@ try {
 function getSidecarConfig() {
   if (sidecar && sidecar.getApiUrl && sidecar.getAuthPassword) {
     return {
-      baseUrl: sidecar.getApiUrl() || process.env.A2R_OPERATOR_URL || 'http://127.0.0.1:3000',
-      apiKey: sidecar.getAuthPassword() || process.env.A2R_OPERATOR_API_KEY || 'a2r-operator-key',
-      username: sidecar.SIDECAR_USERNAME || 'a2r',
+      baseUrl: sidecar.getApiUrl() || process.env.ALLTERNIT_OPERATOR_URL || 'http://127.0.0.1:3000',
+      apiKey: sidecar.getAuthPassword() || process.env.ALLTERNIT_OPERATOR_API_KEY || 'allternit-operator-key',
+      username: sidecar.SIDECAR_USERNAME || 'allternit',
     };
   }
   return {
-    baseUrl: process.env.A2R_OPERATOR_URL || 'http://127.0.0.1:3000',
-    apiKey: process.env.A2R_OPERATOR_API_KEY || 'a2r-operator-key',
-    username: 'a2r',
+    baseUrl: process.env.ALLTERNIT_OPERATOR_URL || 'http://127.0.0.1:3000',
+    apiKey: process.env.ALLTERNIT_OPERATOR_API_KEY || 'allternit-operator-key',
+    username: 'allternit',
   };
 }
 
@@ -107,7 +107,7 @@ async function operatorFetch(path) {
 }
 
 function broadcastTelemetryEvent(payload) {
-  const eventName = 'a2r-usage:probe:event';
+  const eventName = 'allternit-host:probe:event';
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send(eventName, payload);
   }
@@ -693,7 +693,7 @@ ipcMain.handle('agent-runner:getContext', async () => {
     }
 
     if (targetWindow && targetWindow !== agentRunnerWindow) {
-      context.target_app = 'A2R Shell';
+      context.target_app = 'Allternit';
       context.target_window = targetWindow.getTitle();
       
       // If it's the main window, it might be showing a webview
@@ -749,33 +749,33 @@ ipcMain.handle('agent-runner:getContext', async () => {
   return context;
 });
 
-// A2R Usage IPC handlers
-ipcMain.handle('a2r-usage:telemetry:providers', async () => {
+// Allternit Host IPC handlers
+ipcMain.handle('allternit-host:telemetry:providers', async () => {
   return operatorFetch('/providers');
 });
 
-ipcMain.handle('a2r-usage:telemetry:snapshot', async (_event, sessionId) => {
+ipcMain.handle('allternit-host:telemetry:snapshot', async (_event, sessionId) => {
   const encoded = encodeURIComponent(sessionId);
   return operatorFetch(`/sessions/${encoded}`);
 });
 
-ipcMain.on('a2r-usage:telemetry:refresh', async () => {
+ipcMain.on('allternit-host:telemetry:refresh', async () => {
   try {
     const providers = await operatorFetch('/providers');
     broadcastTelemetryEvent({ type: 'refresh', providers, timestamp: Date.now() });
   } catch (error) {
-    console.error('[a2r-usage]', 'refresh failed', error);
+    console.error('[allternit-host]', 'refresh failed', error);
   }
 });
 
-ipcMain.handle('a2r-usage:invoke', async (_event, command, ...args) => {
+ipcMain.handle('allternit-host:invoke', async (_event, command, ...args) => {
   switch (command) {
     case 'init_panel':
-      console.log('[a2r-usage] Initializing panel');
+      console.log('[allternit-host] Initializing panel');
       return { success: true };
     
     case 'hide_panel':
-      console.log('[a2r-usage] Hiding panel');
+      console.log('[allternit-host] Hiding panel');
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.hide();
       }
@@ -791,48 +791,48 @@ ipcMain.handle('a2r-usage:invoke', async (_event, command, ...args) => {
           brandColor: provider.brandColor || '#6366f1'
         }));
       } catch (error) {
-        console.error('[a2r-usage] Failed to list plugins:', error);
+        console.error('[allternit-host] Failed to list plugins:', error);
         return [];
       }
       
     default:
-      console.warn(`[a2r-usage] Unknown command: ${command}`);
+      console.warn(`[allternit-host] Unknown command: ${command}`);
       return { error: `Unknown command: ${command}` };
   }
 });
 
-ipcMain.handle('a2r-usage:setWindowSize', async (_event, { width, height }) => {
+ipcMain.handle('allternit-host:setWindowSize', async (_event, { width, height }) => {
   if (mainWindow && !mainWindow.isDestroyed()) {
     try {
       mainWindow.setSize(width, height);
       return { success: true };
     } catch (error) {
-      console.error('[a2r-usage] Failed to set window size:', error);
+      console.error('[allternit-host] Failed to set window size:', error);
       return { success: false, error: error.message };
     }
   }
   return { success: false, error: 'Main window not available' };
 });
 
-ipcMain.handle('a2r-usage:getVersion', async () => {
+ipcMain.handle('allternit-host:getVersion', async () => {
   return app.getVersion();
 });
 
-ipcMain.handle('a2r-usage:resolveResource', async (_event, resourcePath) => {
+ipcMain.handle('allternit-host:resolveResource', async (_event, resourcePath) => {
   return join(app.getAppPath(), 'resources', resourcePath);
 });
 
-ipcMain.handle('a2r-usage:setTrayIcon', async (_event, iconData) => {
-  console.log('[a2r-usage] Setting tray icon:', typeof iconData === 'string' ? iconData.substring(0, 50) + '...' : iconData);
+ipcMain.handle('allternit-host:setTrayIcon', async (_event, iconData) => {
+  console.log('[allternit-host] Setting tray icon:', typeof iconData === 'string' ? iconData.substring(0, 50) + '...' : iconData);
   return { success: true };
 });
 
-ipcMain.handle('a2r-usage:setTrayIconAsTemplate', async (_event, value) => {
-  console.log('[a2r-usage] Setting tray icon as template:', value);
+ipcMain.handle('allternit-host:setTrayIconAsTemplate', async (_event, value) => {
+  console.log('[allternit-host] Setting tray icon as template:', value);
   return { success: true };
 });
 
-ipcMain.handle('a2r-usage:currentMonitor', async () => {
+ipcMain.handle('allternit-host:currentMonitor', async () => {
   const primaryDisplay = screen.getPrimaryDisplay();
   return { size: { width: primaryDisplay.size.width, height: primaryDisplay.size.height } };
 });
@@ -845,14 +845,14 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 
-const VM_IMAGES_DIR = path.join(os.homedir(), '.a2r', 'vm-images');
+const VM_IMAGES_DIR = path.join(os.homedir(), '.allternit', 'vm-images');
 const SOCKET_PATH = process.platform === 'darwin' 
-  ? path.join(os.homedir(), '.a2r', 'desktop-vm.sock')
-  : '/var/run/a2r/desktop-vm.sock';
+  ? path.join(os.homedir(), '.allternit', 'desktop-vm.sock')
+  : '/var/run/allternit/desktop-vm.sock';
 
 /** Check internet connectivity */
 ipcMain.handle('vm-setup:check-connectivity', async () => {
-  const result = { internet: false, github: false, a2rServices: false };
+  const result = { internet: false, github: false, allternitServices: false };
   
   try {
     // Check internet
@@ -876,8 +876,8 @@ ipcMain.handle('vm-setup:check-connectivity', async () => {
     console.log('[VM Setup] GitHub check failed:', e.message);
   }
   
-  // A2R services check (placeholder)
-  result.a2rServices = result.internet;
+  // Allternit services check (placeholder)
+  result.allternitServices = result.internet;
   
   console.log('[VM Setup] Connectivity check:', result);
   return result;
@@ -887,7 +887,7 @@ ipcMain.handle('vm-setup:check-connectivity', async () => {
 ipcMain.handle('vm-setup:check-images-exist', async () => {
   try {
     const files = fs.readdirSync(VM_IMAGES_DIR);
-    const hasRootfs = files.some(f => f.includes('ubuntu-22.04-a2r') && f.endsWith('.ext4'));
+    const hasRootfs = files.some(f => f.includes('ubuntu-22.04-allternit') && f.endsWith('.ext4'));
     const hasKernel = files.some(f => f.startsWith('vmlinux-'));
     console.log('[VM Setup] Images exist:', hasRootfs && hasKernel);
     return hasRootfs && hasKernel;
@@ -902,8 +902,8 @@ ipcMain.handle('vm-setup:download-images', async (event) => {
   console.log('[VM Setup] Starting image download...');
   
   return new Promise((resolve, reject) => {
-    // Run a2r-vm-image-builder download
-    const builderPath = path.join(app.getAppPath(), '..', '..', 'target', 'release', 'a2r-vm-image-builder');
+    // Run allternit-vm-image-builder download
+    const builderPath = path.join(app.getAppPath(), '..', '..', 'target', 'release', 'allternit-vm-image-builder');
     const args = ['download'];
     
     console.log('[VM Setup] Running:', builderPath, args.join(' '));
@@ -922,7 +922,7 @@ ipcMain.handle('vm-setup:download-images', async (event) => {
       // This is a simplified version - real implementation would parse actual progress
       event.sender.send('vm-setup:download-progress', {
         stage: 'downloading',
-        fileName: 'ubuntu-22.04-a2r-v1.1.0.ext4.zst',
+        fileName: 'ubuntu-22.04-allternit-v1.1.0.ext4.zst',
         bytesDownloaded: output.length,
         totalBytes: 500 * 1024 * 1024,
         speed: 1024 * 1024,
@@ -939,7 +939,7 @@ ipcMain.handle('vm-setup:download-images', async (event) => {
       if (code === 0) {
         event.sender.send('vm-setup:download-progress', {
           stage: 'complete',
-          fileName: 'ubuntu-22.04-a2r-v1.1.0.ext4.zst',
+          fileName: 'ubuntu-22.04-allternit-v1.1.0.ext4.zst',
           bytesDownloaded: 500 * 1024 * 1024,
           totalBytes: 500 * 1024 * 1024,
           speed: 0,
@@ -967,7 +967,7 @@ ipcMain.handle('vm-setup:build-images', async (event) => {
   }
   
   return new Promise((resolve, reject) => {
-    const builderPath = path.join(app.getAppPath(), '..', '..', 'target', 'release', 'a2r-vm-image-builder');
+    const builderPath = path.join(app.getAppPath(), '..', '..', 'target', 'release', 'allternit-vm-image-builder');
     const proc = spawn(builderPath, ['build'], {
       stdio: ['ignore', 'pipe', 'pipe']
     });
@@ -977,7 +977,7 @@ ipcMain.handle('vm-setup:build-images', async (event) => {
       // Emit progress events
       event.sender.send('vm-setup:build-progress', {
         stage: 'building',
-        fileName: 'ubuntu-22.04-a2r.ext4',
+        fileName: 'ubuntu-22.04-allternit.ext4',
         bytesDownloaded: 0,
         totalBytes: 100
       });
@@ -1030,7 +1030,7 @@ ipcMain.handle('vm-setup:initialize-vm', async (event) => {
   
   event.sender.send('vm-setup:init-progress', {
     stage: 'connecting',
-    message: 'Connecting to a2r-vm-executor...',
+    message: 'Connecting to allternit-vm-executor...',
     progress: 75
   });
   

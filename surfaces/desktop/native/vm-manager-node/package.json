@@ -1,7 +1,7 @@
 {
-  "name": "@a2r/vm-manager",
+  "name": "@allternit/vm-manager",
   "version": "1.0.0",
-  "description": "Node.js wrapper for A2R VM Manager",
+  "description": "Node.js wrapper for Allternit VM Manager",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {

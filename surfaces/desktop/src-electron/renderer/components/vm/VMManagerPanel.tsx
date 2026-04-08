@@ -1,7 +1,7 @@
 /**
  * VM Manager Panel
  * 
- * React component for managing A2R VMs in the desktop app.
+ * React component for managing Allternit VMs in the desktop app.
  * Provides UI for starting/stopping VMs, viewing status, and executing commands.
  */
 
@@ -91,7 +91,7 @@ export const VMManagerPanel: React.FC<VMManagerPanelProps> = ({ className }) => 
   return (
     <div className={`vm-manager-panel ${className || ''}`}>
       <div className="vm-manager-header">
-        <h2>A2R Virtual Machine</h2>
+        <h2>Allternit Virtual Machine</h2>
         <div className="vm-status-badge">
           <span className={`status-dot ${status?.state || 'stopped'}`} />
           <span className="status-text">

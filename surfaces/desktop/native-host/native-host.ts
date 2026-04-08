@@ -2,7 +2,7 @@
 /**
  * Native Messaging Host
  * 
- * Standalone process that bridges Chrome Extension and A2R Desktop.
+ * Standalone process that bridges Chrome Extension and Allternit Desktop.
  * Communicates via stdin/stdout using Chrome's native messaging protocol.
  */
 

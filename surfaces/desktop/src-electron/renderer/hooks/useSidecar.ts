@@ -68,7 +68,7 @@ export function useSidecar(): UseSidecarReturn {
   const [basicAuth, setBasicAuth] = useState<BasicAuthCredentials | undefined>(undefined);
 
   // Get the sidecar API from window
-  const sidecar = typeof window !== 'undefined' ? window.a2rSidecar : undefined;
+  const sidecar = typeof window !== 'undefined' ? window.allternit.backend.sidecar : undefined;
 
   const refreshStatus = useCallback(async () => {
     if (!sidecar) return;

@@ -1,7 +1,7 @@
 /**
- * A2R Backend Manager
+ * Allternit Backend Manager
  * 
- * Manages the lifecycle of A2R Backend instances:
+ * Manages the lifecycle of Allternit Backend instances:
  * - Extracts bundled backend on first run
  * - Starts/stops local backend
  * - Checks version compatibility
@@ -69,7 +69,7 @@ export class BackendManager {
       dataDir: this.dataDir,
       logDir: this.logDir,
       configPath: this.configPath,
-      binaryPath: path.join(this.backendDir, 'bin', this.getBinaryName('a2r-api')),
+      binaryPath: path.join(this.backendDir, 'bin', this.getBinaryName('allternit-api')),
     };
   }
   
@@ -116,7 +116,7 @@ export class BackendManager {
    * Check backend status
    */
   async getStatus(): Promise<BackendStatus> {
-    const binaryPath = path.join(this.backendDir, 'bin', this.getBinaryName('a2r-api'));
+    const binaryPath = path.join(this.backendDir, 'bin', this.getBinaryName('allternit-api'));
     const installed = fs.existsSync(binaryPath);
     
     let running = false;
@@ -196,7 +196,7 @@ export class BackendManager {
    * Start the backend process
    */
   private async startBackend(): Promise<void> {
-    const binaryPath = path.join(this.backendDir, 'bin', this.getBinaryName('a2r-api'));
+    const binaryPath = path.join(this.backendDir, 'bin', this.getBinaryName('allternit-api'));
     
     if (!fs.existsSync(binaryPath)) {
       throw new Error(`Backend binary not found at ${binaryPath}`);
@@ -207,10 +207,10 @@ export class BackendManager {
     const proc = spawn(binaryPath, [], {
       env: {
         ...process.env,
-        A2R_CONFIG: this.configPath,
+        ALLTERNIT_CONFIG: this.configPath,
         RUST_LOG: 'info',
-        A2R_DATA_DIR: this.dataDir,
-        A2R_LOG_DIR: this.logDir,
+        ALLTERNIT_DATA_DIR: this.dataDir,
+        ALLTERNIT_LOG_DIR: this.logDir,
       },
       detached: false,
       windowsHide: true,
@@ -277,7 +277,7 @@ export class BackendManager {
    * Get installed backend version
    */
   private async getInstalledVersion(): Promise<string | null> {
-    const binaryPath = path.join(this.backendDir, 'bin', this.getBinaryName('a2r-api'));
+    const binaryPath = path.join(this.backendDir, 'bin', this.getBinaryName('allternit-api'));
     
     if (!fs.existsSync(binaryPath)) {
       return null;
@@ -315,7 +315,7 @@ export class BackendManager {
   private async createDefaultConfig(): Promise<void> {
     const jwtSecret = this.generateSecret(64);
     
-    const config = `# A2R Backend Configuration
+    const config = `# Allternit Backend Configuration
 # Generated: ${new Date().toISOString()}
 
 server:
@@ -332,7 +332,7 @@ security:
 
 database:
   type: sqlite
-  path: ${this.dataDir.replace(/\\/g, '/')}/a2r.db
+  path: ${this.dataDir.replace(/\\/g, '/')}/allternit.db
 
 storage:
   data_dir: ${this.dataDir.replace(/\\/g, '/')}
@@ -340,7 +340,7 @@ storage:
 
 logging:
   level: info
-  file: ${this.logDir.replace(/\\/g, '/')}/a2r.log
+  file: ${this.logDir.replace(/\\/g, '/')}/allternit.log
 `;
     
     fs.mkdirSync(path.dirname(this.configPath), { recursive: true });

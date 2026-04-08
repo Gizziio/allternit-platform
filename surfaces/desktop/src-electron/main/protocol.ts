@@ -1,14 +1,14 @@
 /**
  * Protocol Handler
  *
- * Handles custom protocol (a2r://) and deep links.
+ * Handles custom protocol (allternit://) and deep links.
  * Routes incoming URLs to appropriate handlers and window navigation.
  */
 
 import { app, ipcMain } from 'electron';
 import { getWindowManager } from './window-manager';
 
-const PROTOCOL_SCHEME = 'a2r';
+const PROTOCOL_SCHEME = 'allternit';
 
 interface ParsedDeepLink {
   protocol: string;

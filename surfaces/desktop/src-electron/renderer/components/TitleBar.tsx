@@ -91,7 +91,7 @@ function XIcon({ size = 14 }: { size?: number }): JSX.Element {
 }
 
 export function TitleBar({
-  title = 'A2R Shell',
+  title = 'Allternit',
   showIcon = true,
   className = '',
   children,
@@ -212,7 +212,7 @@ export function TitleBar({
 }
 
 export function MacOSTitleBar({
-  title = 'A2R Shell',
+  title = 'Allternit',
   showIcon = true,
   className = '',
   children,

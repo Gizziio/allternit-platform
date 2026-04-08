@@ -279,33 +279,33 @@ const windowAPI = {
 };
 
 // ============================================================================
-// A2R Usage Host API (Legacy compatibility)
+// Allternit Host API
 // ============================================================================
 
 const a2rUsageHost = {
   async invoke(command: string, ...args: unknown[]) {
-    return ipcRenderer.invoke('a2r-usage:invoke', command, ...args);
+    return ipcRenderer.invoke('allternit-host:invoke', command, ...args);
   },
   async setWindowSize(width: number, height: number) {
-    return ipcRenderer.invoke('a2r-usage:setWindowSize', { width, height });
+    return ipcRenderer.invoke('allternit-host:setWindowSize', { width, height });
   },
   async getVersion() {
-    return ipcRenderer.invoke('a2r-usage:getVersion');
+    return ipcRenderer.invoke('allternit-host:getVersion');
   },
   async resolveResource(resource: string) {
-    return ipcRenderer.invoke('a2r-usage:resolveResource', resource);
+    return ipcRenderer.invoke('allternit-host:resolveResource', resource);
   },
   async setTrayIcon(data: string) {
-    return ipcRenderer.invoke('a2r-usage:setTrayIcon', data);
+    return ipcRenderer.invoke('allternit-host:setTrayIcon', data);
   },
   async setTrayIconAsTemplate(value: boolean) {
-    return ipcRenderer.invoke('a2r-usage:setTrayIconAsTemplate', value);
+    return ipcRenderer.invoke('allternit-host:setTrayIconAsTemplate', value);
   },
   async currentMonitor() {
-    return ipcRenderer.invoke('a2r-usage:currentMonitor');
+    return ipcRenderer.invoke('allternit-host:currentMonitor');
   },
   listen(event: string, handler: (payload: unknown) => void) {
-    const channel = `a2r-usage:event:${event}`;
+    const channel = `allternit-host:event:${event}`;
     const listener = (_event: Electron.IpcRendererEvent, payload: unknown) => handler(payload);
     ipcRenderer.on(channel, listener);
     return () => ipcRenderer.removeListener(channel, listener);

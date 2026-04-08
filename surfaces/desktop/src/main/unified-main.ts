@@ -1,5 +1,5 @@
 /**
- * A2R Desktop - Unified Main Process
+ * Allternit Desktop — Unified Main Process
  * 
  * Unified architecture: Desktop is the control plane.
  * - Manages local backend (bundled, auto-extracted)
@@ -98,7 +98,7 @@ function createSplashWindow(): BrowserWindow {
       padding: 40px;
       border-radius: 12px;
     }
-    .logo { font-size: 56px; font-weight: 800; margin-bottom: 8px; letter-spacing: -2px; }
+    .logo { font-size: 42px; font-weight: 800; margin-bottom: 8px; letter-spacing: -1px; }
     .tagline { font-size: 14px; opacity: 0.9; margin-bottom: 40px; }
     .status { font-size: 15px; margin-bottom: 20px; text-align: center; min-height: 22px; }
     .progress-container {
@@ -120,8 +120,8 @@ function createSplashWindow(): BrowserWindow {
   </style>
 </head>
 <body>
-  <div class="logo">A2R</div>
-  <div class="tagline">AI Runtime Platform</div>
+  <div class="logo">Allternit</div>
+  <div class="tagline">Your AI Platform</div>
   
   <div id="loading">
     <div class="spinner"></div>
@@ -177,7 +177,7 @@ function createMainWindow(): BrowserWindow {
     y: bounds.y,
     minWidth: 1024,
     minHeight: 768,
-    title: 'A2R Platform',
+    title: 'Allternit',
     titleBarStyle: isMac ? 'hiddenInset' : 'default',
     trafficLightPosition: { x: 16, y: 16 },
     show: false, // Don't show until loaded
@@ -211,7 +211,7 @@ function createMainWindow(): BrowserWindow {
 // ============================================================================
 
 async function initializeApp(): Promise<void> {
-  log.info('[Main] Initializing A2R Desktop v' + PLATFORM_MANIFEST.version);
+  log.info('[Main] Initializing Allternit Desktop v' + PLATFORM_MANIFEST.version);
   
   const backendConfig = store.get('backend');
   
@@ -247,16 +247,16 @@ async function initializeBundledMode(): Promise<void> {
     if (status.running) {
       // Already running - check version
       if (status.version && shouldUpdateBackend(status.version)) {
-        updateSplash('Updating A2R Backend...', 50);
+        updateSplash('Updating Allternit Backend...', 50);
         // Backend manager will handle update
       } else {
         updateSplash('Connecting...', 100);
       }
     } else if (!status.installed) {
       // First run - extract backend
-      updateSplash('Setting up A2R for the first time...', 10);
+      updateSplash('Setting up Allternit for the first time...', 10);
     } else {
-      updateSplash('Starting A2R Backend...', 50);
+      updateSplash('Starting Allternit Backend...', 50);
     }
     
     // Ensure backend is ready
@@ -293,8 +293,8 @@ async function initializeBundledMode(): Promise<void> {
     splashWindow?.webContents.send('error', (error as Error).message);
     
     dialog.showErrorBox(
-      'A2R Initialization Error',
-      `Failed to start A2R Backend:\n${(error as Error).message}\n\nPlease try again or contact support.`
+      'Allternit Initialization Error',
+      `Failed to start Allternit Backend:\n${(error as Error).message}\n\nPlease try again or contact support.`
     );
     
     app.quit();
@@ -322,7 +322,7 @@ async function initializeRemoteMode(remoteUrl: string): Promise<void> {
       // Show update dialog
       const result = await dialog.showMessageBox({
         type: 'info',
-        title: 'Backend Update Required',
+        title: 'Allternit Backend Update Required',
         message: `Your VPS backend (${version}) needs to be updated to ${PLATFORM_MANIFEST.backend.version}.`,
         buttons: ['Update Now', 'Continue Anyway', 'Switch to Local'],
         defaultId: 0,
@@ -354,7 +354,7 @@ async function initializeRemoteMode(remoteUrl: string): Promise<void> {
     const result = await dialog.showMessageBox({
       type: 'error',
       title: 'Connection Failed',
-      message: `Cannot connect to A2R Backend at ${remoteUrl}.`,
+      message: `Cannot connect to Allternit Backend at ${remoteUrl}.`,
       buttons: ['Try Again', 'Switch to Local Mode', 'Quit'],
       defaultId: 0,
     });
@@ -390,7 +390,7 @@ function createTray(): void {
   if (!require('fs').existsSync(iconPath)) return;
 
   tray = new Tray(iconPath);
-  tray.setToolTip('A2R Platform');
+  tray.setToolTip('Allternit');
   updateTrayMenu();
 }
 
@@ -405,7 +405,7 @@ async function updateTrayMenu(): Promise<void> {
                     backend.mode === 'remote' ? 'VPS' : 'Dev';
 
   const contextMenu = Menu.buildFromTemplate([
-    { label: 'A2R Platform', enabled: false },
+    { label: 'Allternit', enabled: false },
     { type: 'separator' },
     { label: `${statusIcon} ${status.running ? 'Running' : 'Stopped'}`, enabled: false },
     { label: `Mode: ${modeLabel}`, enabled: false },

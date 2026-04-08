@@ -116,14 +116,14 @@ function buildMacOSMenu(): Menu {
       label: app.getName(),
       submenu: [
         {
-          label: 'About A2R',
+          label: 'About Allternit',
           click: () => {
             const windowManager = getWindowManager();
             const mainWindow = windowManager?.getMainWindow();
             dialog.showMessageBox(mainWindow || undefined, {
               type: 'info',
-              title: 'About A2R',
-              message: 'A2R',
+              title: 'About Allternit',
+              message: 'Allternit',
               detail: `Version: ${app.getVersion()}\n\nAI-to-Reasoning interface for agent collaboration.`,
               buttons: ['OK'],
             });
@@ -286,9 +286,9 @@ function buildMacOSMenu(): Menu {
       label: 'Help',
       submenu: [
         {
-          label: 'A2R Help',
+          label: 'Allternit Help',
           click: () => {
-            shell.openExternal('https://docs.a2r.dev');
+            shell.openExternal('https://docs.allternit.com');
           },
         },
         {
@@ -306,7 +306,7 @@ function buildMacOSMenu(): Menu {
         {
           label: 'Report Issue',
           click: () => {
-            shell.openExternal('https://github.com/a2r/issues');
+            shell.openExternal('https://github.com/allternit/platform/issues');
           },
         },
       ],
@@ -404,12 +404,12 @@ function buildWindowsLinuxMenu(): Menu {
       label: 'Help',
       submenu: [
         {
-          label: 'About A2R',
+          label: 'About Allternit',
           click: () => {
             dialog.showMessageBox({
               type: 'info',
-              title: 'About A2R',
-              message: 'A2R',
+              title: 'About Allternit',
+              message: 'Allternit',
               detail: `Version: ${app.getVersion()}`,
               buttons: ['OK'],
             });

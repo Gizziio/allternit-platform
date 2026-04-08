@@ -31,7 +31,7 @@ const MIN_PORT = 3000;
 const MAX_PORT = 3100;
 const HEALTH_CHECK_INTERVAL = 1000; // ms
 const MAX_HEALTH_CHECK_ATTEMPTS = 30;
-const SIDECAR_USERNAME = 'a2r';  // Basic auth username (was 'opencode' in agent-shell)
+const SIDECAR_USERNAME = 'allternit';  // Basic auth username (was 'opencode' in agent-shell)
 
 // Store keys for persistence
 const STORE_KEYS = {
@@ -93,14 +93,14 @@ function getSidecarPath() {
 
   if (isDev) {
     // In development, use cargo-built binary (try debug first, then release)
-    // Check for a2rchitech-api first (the API server), then a2r (CLI)
+    // Check for allternit-api first (the API server), then allternit (CLI)
     const debugPaths = [
-      join(__dirname, '../../../../target/debug/a2rchitech-api'),
-      join(__dirname, '../../../../target/debug/a2r'),
+      join(__dirname, '../../../../target/debug/allternit-api'),
+      join(__dirname, '../../../../target/debug/allternit'),
     ];
     const releasePaths = [
-      join(__dirname, '../../../../target/release/a2rchitech-api'),
-      join(__dirname, '../../../../target/release/a2r'),
+      join(__dirname, '../../../../target/release/allternit-api'),
+      join(__dirname, '../../../../target/release/allternit'),
     ];
     
     // Try debug first (faster to build)
@@ -124,8 +124,8 @@ function getSidecarPath() {
   // In production, binary is in app resources
   const platform = process.platform;
   const binaryNames = [
-    platform === 'win32' ? 'a2rchitech-api.exe' : 'a2rchitech-api',
-    platform === 'win32' ? 'a2r.exe' : 'a2r',
+    platform === 'win32' ? 'allternit-api.exe' : 'allternit-api',
+    platform === 'win32' ? 'allternit.exe' : 'allternit',
   ];
   
   for (const binaryName of binaryNames) {
@@ -139,11 +139,11 @@ function getSidecarPath() {
 }
 
 function getSidecarDataPaths() {
-  const dataDir = join(app.getPath('userData'), 'a2r-data');
+  const dataDir = join(app.getPath('userData'), 'allternit-data');
   return {
     dataDir,
-    dbPath: join(dataDir, 'a2rchitech.db'),
-    ledgerPath: join(dataDir, 'a2rchitech.jsonl'),
+    dbPath: join(dataDir, 'allternit.db'),
+    ledgerPath: join(dataDir, 'allternit.jsonl'),
   };
 }
 
@@ -230,9 +230,9 @@ function spawnSidecar(binaryPath, args, env) {
   // Unix (macOS/Linux): Use process groups for clean termination
   options.detached = false;
   
-  // Check if binary is a2r CLI (needs 'serve' command) or a2rchitech-api (no args)
+  // Check if binary is allternit CLI (needs 'serve' command) or allternit-api (no args)
   const binaryName = binaryPath.split('/').pop();
-  if (binaryName === 'a2r' || binaryName === 'a2r.exe') {
+  if (binaryName === 'allternit' || binaryName === 'allternit.exe') {
     return spawn(binaryPath, ['serve', ...args], options);
   }
   
@@ -291,7 +291,7 @@ async function startSidecar() {
   // Spawn the API process with auth
   const binaryName = binaryPath.split('/').pop();
   const sidecarArgs =
-    binaryName === 'a2r' || binaryName === 'a2r.exe'
+    binaryName === 'allternit' || binaryName === 'allternit.exe'
       ? ['--port', currentPort.toString()]
       : [];
 

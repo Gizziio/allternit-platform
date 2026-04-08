@@ -1,5 +1,5 @@
 /**
- * A2R VM Manager - Node.js Bridge
+ * Allternit VM Manager — Node.js Bridge
  * 
  * Provides a TypeScript/JavaScript interface to the Swift VM Manager
  * by spawning the CLI tool and communicating via IPC.
@@ -50,9 +50,9 @@ export interface ExecuteOptions {
 }
 
 /**
- * A2R VM Manager - Manages Linux VMs on macOS
+ * Allternit VM Manager — Manages Linux VMs on macOS
  */
-export class A2RVMManager extends EventEmitter {
+export class AllternitVMManager extends EventEmitter {
   private vmProcess?: ChildProcess;
   private config: Required<VMConfiguration>;
   private status: VMStatus;
@@ -64,14 +64,14 @@ export class A2RVMManager extends EventEmitter {
     const home = os.homedir();
     
     this.config = {
-      vmName: config.vmName ?? 'a2r-vm',
-      kernelPath: config.kernelPath ?? path.join(home, '.a2r/vm-images/vmlinux-6.5.0-a2r'),
-      initrdPath: config.initrdPath ?? path.join(home, '.a2r/vm-images/initrd.img-6.5.0-a2r'),
-      rootfsPath: config.rootfsPath ?? path.join(home, '.a2r/vm-images/ubuntu-22.04-a2r-v1.1.0.ext4'),
+      vmName: config.vmName ?? 'allternit-vm',
+      kernelPath: config.kernelPath ?? path.join(home, '.allternit/vm-images/vmlinux-6.5.0-allternit'),
+      initrdPath: config.initrdPath ?? path.join(home, '.allternit/vm-images/initrd.img-6.5.0-allternit'),
+      rootfsPath: config.rootfsPath ?? path.join(home, '.allternit/vm-images/ubuntu-22.04-allternit-v1.1.0.ext4'),
       cpuCount: config.cpuCount ?? 4,
       memorySizeMB: config.memorySizeMB ?? 4096,
       vsockPort: config.vsockPort ?? 8080,
-      socketPath: config.socketPath ?? path.join(home, '.a2r/desktop-vm.sock'),
+      socketPath: config.socketPath ?? path.join(home, '.allternit/desktop-vm.sock'),
     };
 
     this.status = {
@@ -410,9 +410,9 @@ export class A2RVMManager extends EventEmitter {
 }
 
 // Export singleton instance factory
-export function createVMManager(config?: VMConfiguration): A2RVMManager {
-  return new A2RVMManager(config);
+export function createVMManager(config?: VMConfiguration): AllternitVMManager {
+  return new AllternitVMManager(config);
 }
 
 // Default export
-export default A2RVMManager;
+export default AllternitVMManager;
