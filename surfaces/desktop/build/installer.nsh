@@ -27,7 +27,7 @@
 !define MUI_ABORTWARNING_CANCEL_DEFAULT
 
 ; ── Welcome page ──────────────────────────────────────────────────────────────
-!define MUI_WELCOMEPAGE_TITLE          "Welcome to Allternit"
+!define MUI_WELCOMEPAGE_TITLE          "Welcome to Allternit  |  A://"
 !define MUI_WELCOMEPAGE_TEXT           "This wizard will guide you through the installation of Allternit Desktop.$\r$\n$\r$\nAllternit is a fully offline AI platform that runs entirely on your machine — no subscription, no cloud.$\r$\n$\r$\nClick Next to continue."
 
 ; ── Directory page ────────────────────────────────────────────────────────────
@@ -35,8 +35,8 @@
 !define MUI_DIRECTORYPAGE_TEXT_DESTINATION "Installation Folder"
 
 ; ── Finish page ───────────────────────────────────────────────────────────────
-!define MUI_FINISHPAGE_TITLE           "Allternit Installed"
-!define MUI_FINISHPAGE_TEXT            "Allternit Desktop has been installed on your computer.$\r$\n$\r$\nClick Finish to close this wizard."
+!define MUI_FINISHPAGE_TITLE           "Allternit Installed  |  A://"
+!define MUI_FINISHPAGE_TEXT            "Allternit Desktop has been installed on your computer.$\r$\n$\r$\nType A:// in any supported browser or launcher to open your platform.$\r$\n$\r$\nClick Finish to close this wizard."
 !define MUI_FINISHPAGE_RUN             "$INSTDIR\${APP_EXECUTABLE_FILENAME}"
 !define MUI_FINISHPAGE_RUN_TEXT        "Launch Allternit"
 !define MUI_FINISHPAGE_LINK            "Visit allternit.com"
