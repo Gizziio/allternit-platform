@@ -13,6 +13,9 @@ jobs:
     permissions:
       contents: read
       deployments: write
+    defaults:
+      run:
+        working-directory: surfaces/platform
     steps:
       - uses: actions/checkout@v4
       
@@ -27,16 +30,13 @@ jobs:
           version: 8
           
       - name: Install dependencies
-        working-directory: surfaces/platform
         run: pnpm install --ignore-scripts
         
       - name: Generate Prisma Client
-        working-directory: surfaces/platform
         run: pnpm prisma generate
         
       - name: Build with @cloudflare/next-on-pages
-        working-directory: .
-        run: pnpm dlx @cloudflare/next-on-pages@latest --path surfaces/platform
+        run: pnpm dlx @cloudflare/next-on-pages@latest
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
@@ -49,4 +49,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy .vercel/output/static --project-name=allternit-platform --branch=main
+          command: pages deploy surfaces/platform/.vercel/output/static --project-name=allternit-platform --branch=main

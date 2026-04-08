@@ -591,8 +591,6 @@ export function ChatComposer({
     const newMode: RuntimeExecutionMode = optimisticMode === 'plan' ? 'auto' : 'plan';
     const newUiMode = newMode === 'plan' ? 'plan' : 'build';
     
-    console.log('[ChatComposer] Toggling mode:', optimisticMode, '->', newMode);
-    
     // Optimistically update UI immediately
     setOptimisticMode(newUiMode);
     
