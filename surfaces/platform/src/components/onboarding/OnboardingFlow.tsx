@@ -59,6 +59,7 @@ import {
   VPS_PROVIDERS,
   savePurchaseIntent,
 } from './ssh-service';
+import { runtimeBackendApi } from '@/api/infrastructure/runtime-backend';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -473,7 +474,8 @@ function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
 
   const options: { id: WizardData['infraType']; Icon: React.ElementType; label: string; desc: string }[] = [
     { id: 'local',    Icon: HardDrive, label: 'Use this computer',   desc: 'Easiest — runs right here, no extra cost' },
-    { id: 'connect',  Icon: WifiHigh,  label: 'I have a server',     desc: 'Connect your VPS, NAS, or cloud box' },
+    { id: 'manual',   Icon: Globe,     label: 'Enter backend URL',   desc: 'I have a backend running with a public URL' },
+    { id: 'connect',  Icon: WifiHigh,  label: 'I have a server',     desc: 'Connect your VPS, NAS, or cloud box via SSH' },
     { id: 'purchase', Icon: Cloud,     label: 'Get a cloud server',  desc: 'We\'ll help you rent one from $4/mo' },
     { id: 'remote',   Icon: Desktop,   label: 'Remote desktop',      desc: 'Control a remote computer via the browser' },
   ];
@@ -590,6 +592,96 @@ function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
               <div style={{ fontSize: 11, color: 'var(--ui-text-muted)' }}>
                 Allternit is running on this machine — no setup needed.
               </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Manual Backend URL form */}
+      <AnimatePresence>
+        {data.infraType === 'manual' && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            style={{
+              overflow: 'hidden',
+              borderRadius: 14,
+              background: 'var(--surface-panel)',
+              border: '1px solid var(--ui-border-subtle)',
+              padding: 16,
+            }}
+          >
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--accent-primary)', marginBottom: 12 }}>
+              Backend Connection
+            </div>
+
+            <input
+              type="text"
+              value={data.sshConfig.host}
+              onChange={e => onUpdate({ sshConfig: { ...data.sshConfig, host: e.target.value } })}
+              placeholder="Backend URL (e.g., https://your-tunnel.trycloudflare.com)"
+              style={{ ...inputStyle, width: '100%', marginBottom: 8 }}
+            />
+
+            <input
+              type="text"
+              value={data.sshConfig.username}
+              onChange={e => onUpdate({ sshConfig: { ...data.sshConfig, username: e.target.value } })}
+              placeholder="Connection name (e.g., My MacBook)"
+              style={{ ...inputStyle, width: '100%', marginBottom: 8 }}
+            />
+
+            <input
+              type="text"
+              value={data.sshConfig.password || ''}
+              onChange={e => onUpdate({ sshConfig: { ...data.sshConfig, password: e.target.value } })}
+              placeholder="Auth token (optional, e.g., Basic dXNlcjpwYXNz)"
+              style={{ ...inputStyle, width: '100%', marginBottom: 12 }}
+            />
+
+            <button
+              onClick={() => {
+                if (data.sshConfig.host) {
+                  runtimeBackendApi.registerManualBackend({
+                    name: data.sshConfig.username || 'Manual Backend',
+                    gatewayUrl: data.sshConfig.host,
+                    gatewayToken: data.sshConfig.password || undefined,
+                  }).then(() => {
+                    setConnStatus('ok');
+                    setConnMsg('Backend connected successfully!');
+                  }).catch((err) => {
+                    setConnStatus('err');
+                    setConnMsg(err.message || 'Failed to connect');
+                  });
+                }
+              }}
+              disabled={!data.sshConfig.host || connStatus === 'testing'}
+              style={{
+                width: '100%', padding: '9px 0', borderRadius: 10, fontSize: 13, fontWeight: 700,
+                border: 'none',
+                background: data.sshConfig.host ? 'var(--accent-primary)' : 'var(--surface-panel-muted)',
+                color: data.sshConfig.host ? 'var(--text-inverse)' : 'var(--ui-text-muted)',
+                cursor: data.sshConfig.host ? 'pointer' : 'not-allowed',
+                transition: 'background 200ms, color 200ms',
+              }}
+            >
+              {connStatus === 'testing' ? 'Connecting…' : 'Connect to Backend'}
+            </button>
+
+            {connMsg && (
+              <div style={{
+                marginTop: 8,
+                fontSize: 12, padding: '9px 12px', borderRadius: 10,
+                background: connStatus === 'err' ? 'var(--status-error-bg)' : connStatus === 'ok' ? 'var(--status-success-bg)' : 'var(--surface-hover)',
+                color: connStatus === 'err' ? 'var(--status-error)' : connStatus === 'ok' ? 'var(--status-success)' : 'var(--ui-text-secondary)',
+              }}>
+                {connMsg}
+              </div>
+            )}
+
+            <div style={{ marginTop: 12, fontSize: 11, color: 'var(--ui-text-muted)', background: 'var(--surface-canvas)', padding: '10px 12px', borderRadius: 8 }}>
+              <strong>Tip:</strong> Run <code style={{ background: 'var(--surface-panel)', padding: '2px 5px', borderRadius: 4 }}>cloudflared tunnel --url http://localhost:4096</code> to expose your local backend.
             </div>
           </motion.div>
         )}

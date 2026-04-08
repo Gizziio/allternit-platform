@@ -7,6 +7,7 @@
 
 import type { FeaturePlugin, PluginCategory, RailSection, PluginViewEntry } from './feature.types';
 import { OFFICE_PLUGINS } from './office-plugins';
+import { CHROME_PLUGIN } from './chrome-plugin';
 
 // Re-export types for convenience
 export type { FeaturePlugin, PluginCategory, RailSection, PluginViewEntry };
@@ -315,6 +316,7 @@ export const FEATURE_PLUGIN_REGISTRY: FeaturePlugin[] = [
     views: [],
   },
   ...OFFICE_PLUGINS,
+  CHROME_PLUGIN,
 ];
 
 /**
