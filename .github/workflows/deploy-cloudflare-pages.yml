@@ -30,13 +30,17 @@ jobs:
         working-directory: surfaces/platform
         run: pnpm install --ignore-scripts
         
+      - name: Install Cloudflare adapter
+        working-directory: surfaces/platform
+        run: pnpm add -D @cloudflare/next-on-pages
+        
       - name: Generate Prisma Client
         working-directory: surfaces/platform
         run: pnpm prisma generate
         
       - name: Build for Cloudflare Pages
         working-directory: surfaces/platform
-        run: pnpm exec @cloudflare/next-on-pages
+        run: npx @cloudflare/next-on-pages
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
