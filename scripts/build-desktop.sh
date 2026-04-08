@@ -6,19 +6,19 @@
 #   ./scripts/build-desktop.sh [--skip-platform] [--skip-api] [--skip-electron]
 #
 # What it does:
-#   1. Build Next.js platform as standalone server  →  surfaces/platform/.next/standalone/
-#   2. Copy standalone server to                    →  surfaces/desktop/resources/platform-server/
+#   1. Build Next.js platform as standalone server  →  surfaces/allternit-platform/.next/standalone/
+#   2. Copy standalone server to                    →  surfaces/allternit-desktop/resources/platform-server/
 #   3. Build Rust allternit-api binary              →  target/release/allternit-api
-#   4. Copy binary to                               →  surfaces/desktop/resources/bin/allternit-api
-#   5. Build Electron (TypeScript + electron-builder) → surfaces/desktop/release/
+#   4. Copy binary to                               →  surfaces/allternit-desktop/resources/bin/allternit-api
+#   5. Build Electron (TypeScript + electron-builder) → surfaces/allternit-desktop/release/
 #   6. Print SHA256 checksums for manifest.ts
 # ─────────────────────────────────────────────────────────────────────────────
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PLATFORM_DIR="$REPO_ROOT/surfaces/platform"
-DESKTOP_DIR="$REPO_ROOT/surfaces/desktop"
+PLATFORM_DIR="$REPO_ROOT/surfaces/allternit-platform"
+DESKTOP_DIR="$REPO_ROOT/surfaces/allternit-desktop"
 RESOURCES_DIR="$DESKTOP_DIR/resources"
 TARGET_DIR="$REPO_ROOT/target/release"
 

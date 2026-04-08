@@ -4,14 +4,14 @@ on:
   push:
     branches: [main]
     paths:
-      - 'surfaces/platform/**'
+      - 'surfaces/allternit-platform/**'
       - '.github/workflows/deploy-platform.yml'
       - 'pnpm-workspace.yaml'
       - 'pnpm-lock.yaml'
   pull_request:
     branches: [main]
     paths:
-      - 'surfaces/platform/**'
+      - 'surfaces/allternit-platform/**'
       - 'pnpm-workspace.yaml'
       - 'pnpm-lock.yaml'
 
@@ -36,15 +36,15 @@ jobs:
           version: 8
           
       - name: Install dependencies
-        working-directory: surfaces/platform
+        working-directory: surfaces/allternit-platform
         run: pnpm install --ignore-scripts
         
       - name: Generate Prisma Client
-        working-directory: surfaces/platform
+        working-directory: surfaces/allternit-platform
         run: pnpm prisma generate
         
       - name: Build Next.js App
-        working-directory: surfaces/platform
+        working-directory: surfaces/allternit-platform
         run: pnpm next build
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
@@ -53,7 +53,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       - name: Verify Build Output
-        working-directory: surfaces/platform
+        working-directory: surfaces/allternit-platform
         run: |
           echo "=== Build Output Structure ==="
           ls -la .next/
@@ -74,7 +74,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: next-build
-          path: surfaces/platform/.next/
+          path: surfaces/allternit-platform/.next/
           retention-days: 1
 
   deploy:
@@ -96,25 +96,25 @@ jobs:
           version: 8
           
       - name: Install dependencies
-        working-directory: surfaces/platform
+        working-directory: surfaces/allternit-platform
         run: pnpm install --ignore-scripts
         
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
         
       # VERCEL PROJECT SETTINGS (as of 2026-04-07):
-      # ✓ Root Directory: "surfaces/platform"
+      # ✓ Root Directory: "surfaces/allternit-platform"
       # ✓ Build Command: "next build"
       # ✓ Output Directory: ".next"
       # ✓ Install Command: "pnpm install --no-frozen-lockfile --ignore-scripts"
       
       - name: Pull Vercel Environment Information
-        # Run from repo root - Vercel will use Root Directory: surfaces/platform
+        # Run from repo root - Vercel will use Root Directory: surfaces/allternit-platform
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
         
       - name: Generate Prisma Client (for Linux)
         # Generate Prisma client for the correct binary target (debian-openssl-3.0.x)
-        working-directory: surfaces/platform
+        working-directory: surfaces/allternit-platform
         run: |
           # Remove any cached Prisma client
           rm -rf src/generated/prisma
@@ -122,7 +122,7 @@ jobs:
           pnpm prisma generate
         
       - name: Build with Vercel
-        # Run from repo root - Vercel will use Root Directory: surfaces/platform
+        # Run from repo root - Vercel will use Root Directory: surfaces/allternit-platform
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
@@ -131,7 +131,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         
       - name: Deploy to Vercel
-        # Run from repo root - Vercel will use Root Directory: surfaces/platform
+        # Run from repo root - Vercel will use Root Directory: surfaces/allternit-platform
         run: |
           # Attempt deployment but don't fail on rate limiting
           set +e

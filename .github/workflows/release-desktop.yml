@@ -54,25 +54,25 @@ jobs:
       # ── Step 1: Build Next.js platform as standalone server ──────────────────
       - name: Install platform dependencies
         run: pnpm install --frozen-lockfile
-        working-directory: surfaces/platform
+        working-directory: surfaces/allternit-platform
 
       - name: Build Next.js platform (standalone)
         run: ALLTERNIT_BUILD_MODE=desktop pnpm build
-        working-directory: surfaces/platform
+        working-directory: surfaces/allternit-platform
 
       - name: Copy standalone server to desktop resources
         run: |
-          DEST=surfaces/desktop/resources/platform-server
+          DEST=surfaces/allternit-desktop/resources/platform-server
           rm -rf "$DEST"
           mkdir -p "$DEST"
-          cp -r surfaces/platform/.next/standalone/. "$DEST/"
-          if [ -d surfaces/platform/.next/static ]; then
+          cp -r surfaces/allternit-platform/.next/standalone/. "$DEST/"
+          if [ -d surfaces/allternit-platform/.next/static ]; then
             mkdir -p "$DEST/.next/static"
-            cp -r surfaces/platform/.next/static/. "$DEST/.next/static/"
+            cp -r surfaces/allternit-platform/.next/static/. "$DEST/.next/static/"
           fi
-          if [ -d surfaces/platform/public ]; then
+          if [ -d surfaces/allternit-platform/public ]; then
             mkdir -p "$DEST/public"
-            cp -r surfaces/platform/public/. "$DEST/public/"
+            cp -r surfaces/allternit-platform/public/. "$DEST/public/"
           fi
 
       # ── Step 2: Build gizzi-code (AI runtime — the brain) ───────────────────
@@ -93,13 +93,13 @@ jobs:
 
       - name: Create universal gizzi-code binary
         run: |
-          mkdir -p surfaces/desktop/resources/bin
+          mkdir -p surfaces/allternit-desktop/resources/bin
           lipo -create \
             cmd/gizzi-code/dist/gizzi-code-darwin-arm64 \
             cmd/gizzi-code/dist/gizzi-code-darwin-x64 \
-            -output surfaces/desktop/resources/bin/gizzi-code
-          chmod +x surfaces/desktop/resources/bin/gizzi-code
-          lipo -info surfaces/desktop/resources/bin/gizzi-code
+            -output surfaces/allternit-desktop/resources/bin/gizzi-code
+          chmod +x surfaces/allternit-desktop/resources/bin/gizzi-code
+          lipo -info surfaces/allternit-desktop/resources/bin/gizzi-code
 
       # ── Step 3: Build Rust allternit-api for both architectures ─────────────
       - name: Build allternit-api (x86_64)
@@ -110,29 +110,29 @@ jobs:
 
       - name: Create universal allternit-api binary
         run: |
-          mkdir -p surfaces/desktop/resources/bin
+          mkdir -p surfaces/allternit-desktop/resources/bin
           lipo -create \
             target/x86_64-apple-darwin/release/allternit-api \
             target/aarch64-apple-darwin/release/allternit-api \
-            -output surfaces/desktop/resources/bin/allternit-api
-          chmod +x surfaces/desktop/resources/bin/allternit-api
-          lipo -info surfaces/desktop/resources/bin/allternit-api
+            -output surfaces/allternit-desktop/resources/bin/allternit-api
+          chmod +x surfaces/allternit-desktop/resources/bin/allternit-api
+          lipo -info surfaces/allternit-desktop/resources/bin/allternit-api
 
       # ── Step 3: Build Swift VM manager CLI ───────────────────────────────────
       - name: Build Swift VM manager CLI
-        run: swift build -c release --package-path surfaces/desktop/native/vm-manager
+        run: swift build -c release --package-path surfaces/allternit-desktop/native/vm-manager
 
       - name: Copy vm-manager-cli
         run: |
-          cp surfaces/desktop/native/vm-manager/.build/release/vm-manager-cli \
-             surfaces/desktop/resources/bin/vm-manager-cli
-          chmod +x surfaces/desktop/resources/bin/vm-manager-cli
+          cp surfaces/allternit-desktop/native/vm-manager/.build/release/vm-manager-cli \
+             surfaces/allternit-desktop/resources/bin/vm-manager-cli
+          chmod +x surfaces/allternit-desktop/resources/bin/vm-manager-cli
 
       # ── Step 4: Patch checksums into manifest.ts ─────────────────────────────
       - name: Patch manifest.ts checksums
         run: |
-          BINARY=surfaces/desktop/resources/bin/allternit-api
-          MANIFEST=surfaces/desktop/src/main/manifest.ts
+          BINARY=surfaces/allternit-desktop/resources/bin/allternit-api
+          MANIFEST=surfaces/allternit-desktop/src/main/manifest.ts
           # Compute separate checksums for each arch target
           X64_SHA=$(shasum -a 256 target/x86_64-apple-darwin/release/allternit-api | awk '{print $1}')
           ARM64_SHA=$(shasum -a 256 target/aarch64-apple-darwin/release/allternit-api | awk '{print $1}')
@@ -142,15 +142,15 @@ jobs:
       # ── Step 5: Build and package Electron app ────────────────────────────────
       - name: Install desktop dependencies
         run: npm install
-        working-directory: surfaces/desktop
+        working-directory: surfaces/allternit-desktop
 
       - name: Build TypeScript
         run: npm run build
-        working-directory: surfaces/desktop
+        working-directory: surfaces/allternit-desktop
 
       - name: Package with electron-builder
         run: npm run build:electron
-        working-directory: surfaces/desktop
+        working-directory: surfaces/allternit-desktop
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -159,10 +159,10 @@ jobs:
         with:
           name: allternit-desktop-macos
           path: |
-            surfaces/desktop/release/*.dmg
-            surfaces/desktop/release/*.zip
-            surfaces/desktop/release/*.blockmap
-            surfaces/desktop/release/latest-mac.yml
+            surfaces/allternit-desktop/release/*.dmg
+            surfaces/allternit-desktop/release/*.zip
+            surfaces/allternit-desktop/release/*.blockmap
+            surfaces/allternit-desktop/release/latest-mac.yml
           retention-days: 14
 
   # Build Windows NSIS installer
@@ -209,28 +209,28 @@ jobs:
       - name: Copy gizzi-code binary
         shell: bash
         run: |
-          mkdir -p surfaces/desktop/resources/bin
-          cp cmd/gizzi-code/dist/gizzi-code.exe surfaces/desktop/resources/bin/gizzi-code.exe
+          mkdir -p surfaces/allternit-desktop/resources/bin
+          cp cmd/gizzi-code/dist/gizzi-code.exe surfaces/allternit-desktop/resources/bin/gizzi-code.exe
 
       - name: Install platform dependencies
         run: pnpm install --frozen-lockfile
-        working-directory: surfaces/platform
+        working-directory: surfaces/allternit-platform
 
       - name: Build Next.js platform (standalone)
         shell: bash
         run: ALLTERNIT_BUILD_MODE=desktop pnpm build
-        working-directory: surfaces/platform
+        working-directory: surfaces/allternit-platform
 
       - name: Copy standalone server to desktop resources
         shell: bash
         run: |
-          DEST=surfaces/desktop/resources/platform-server
+          DEST=surfaces/allternit-desktop/resources/platform-server
           rm -rf "$DEST"
           mkdir -p "$DEST"
-          cp -r surfaces/platform/.next/standalone/. "$DEST/"
-          if [ -d surfaces/platform/.next/static ]; then
+          cp -r surfaces/allternit-platform/.next/standalone/. "$DEST/"
+          if [ -d surfaces/allternit-platform/.next/static ]; then
             mkdir -p "$DEST/.next/static"
-            cp -r surfaces/platform/.next/static/. "$DEST/.next/static/"
+            cp -r surfaces/allternit-platform/.next/static/. "$DEST/.next/static/"
           fi
 
       - name: Build allternit-api (Windows)
@@ -239,21 +239,21 @@ jobs:
       - name: Copy allternit-api binary
         shell: bash
         run: |
-          mkdir -p surfaces/desktop/resources/bin
+          mkdir -p surfaces/allternit-desktop/resources/bin
           cp target/x86_64-pc-windows-msvc/release/allternit-api.exe \
-             surfaces/desktop/resources/bin/allternit-api.exe
+             surfaces/allternit-desktop/resources/bin/allternit-api.exe
 
       - name: Install desktop dependencies
         run: npm install
-        working-directory: surfaces/desktop
+        working-directory: surfaces/allternit-desktop
 
       - name: Build TypeScript
         run: npm run build
-        working-directory: surfaces/desktop
+        working-directory: surfaces/allternit-desktop
 
       - name: Package with electron-builder
         run: npm run dist
-        working-directory: surfaces/desktop
+        working-directory: surfaces/allternit-desktop
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -262,9 +262,9 @@ jobs:
         with:
           name: allternit-desktop-windows
           path: |
-            surfaces/desktop/release/*.exe
-            surfaces/desktop/release/*.blockmap
-            surfaces/desktop/release/latest.yml
+            surfaces/allternit-desktop/release/*.exe
+            surfaces/allternit-desktop/release/*.blockmap
+            surfaces/allternit-desktop/release/latest.yml
           retention-days: 14
 
   # Publish GitHub Release

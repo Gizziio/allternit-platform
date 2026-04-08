@@ -23,8 +23,8 @@ const GITHUB_REPO = process.env.ALLTERNIT_GITHUB_REPO || 'Gizziio/allternit';
 const INSTALLER_URLS = [
   process.env.ALLTERNIT_INSTALLER_URL,
   'https://install.allternit.com',
-  'https://raw.githubusercontent.com/Gizziio/allternit/main/surfaces/platform/install.sh',
-  'https://github.com/Gizziio/allternit/raw/main/surfaces/platform/install.sh',
+  'https://raw.githubusercontent.com/Gizziio/allternit/main/surfaces/allternit-platform/install.sh',
+  'https://github.com/Gizziio/allternit/raw/main/surfaces/allternit-platform/install.sh',
 ].filter((value): value is string => Boolean(value && value.trim()));
 
 // Parse arguments

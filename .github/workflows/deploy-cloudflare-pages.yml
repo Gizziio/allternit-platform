@@ -50,9 +50,13 @@ jobs:
         working-directory: surfaces/allternit-platform
         run: |
           # Clean any cached build files
-          rm -rf .next dist
+          rm -rf .next dist node_modules/.cache
           # Remove API routes for static export - they run on user's VPS
           rm -rf src/app/api
+          # Verify files are correct
+          echo "=== Final verification ==="
+          head -5 src/app/shell/pair/\[code\]/page.tsx
+          head -5 src/app/shell/session/\[id\]/page.tsx
           # Build static export
           pnpm next build
         env:

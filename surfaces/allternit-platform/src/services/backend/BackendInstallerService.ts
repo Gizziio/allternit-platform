@@ -237,8 +237,8 @@ class BackendInstallerService {
     const urls = [
       process.env.ALLTERNIT_INSTALLER_URL?.trim(),
       'https://install.allternit.com',
-      'https://raw.githubusercontent.com/Gizziio/allternit/main/surfaces/platform/install.sh',
-      'https://github.com/Gizziio/allternit/raw/main/surfaces/platform/install.sh',
+      'https://raw.githubusercontent.com/Gizziio/allternit/main/surfaces/allternit-platform/install.sh',
+      'https://github.com/Gizziio/allternit/raw/main/surfaces/allternit-platform/install.sh',
     ];
 
     return urls.filter((value): value is string => Boolean(value));
