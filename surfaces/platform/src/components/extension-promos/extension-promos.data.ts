@@ -50,7 +50,7 @@ export const EXTENSION_PROMOS: ExtensionPromo[] = [
     ],
     ctaLabel: 'Get Allternit for Excel',
     ctaHref: '/extensions/excel',
-    visual: '/assets/promos/excel-preview.png',
+    visual: '/assets/promos/excel-preview.svg',
     visualAlt: 'Allternit running inside Microsoft Excel',
   },
   {
@@ -67,7 +67,7 @@ export const EXTENSION_PROMOS: ExtensionPromo[] = [
     ],
     ctaLabel: 'Get Allternit for Word',
     ctaHref: '/extensions/word',
-    visual: '/assets/promos/word-preview.png',
+    visual: '/assets/promos/word-preview.svg',
     visualAlt: 'Allternit running inside Microsoft Word',
   },
   {
@@ -84,7 +84,7 @@ export const EXTENSION_PROMOS: ExtensionPromo[] = [
     ],
     ctaLabel: 'Get Allternit for PowerPoint',
     ctaHref: '/extensions/powerpoint',
-    visual: '/assets/promos/powerpoint-preview.png',
+    visual: '/assets/promos/powerpoint-preview.svg',
     visualAlt: 'Allternit running inside Microsoft PowerPoint',
   },
   {
@@ -101,7 +101,7 @@ export const EXTENSION_PROMOS: ExtensionPromo[] = [
     ],
     ctaLabel: 'Get the Chrome Extension',
     ctaHref: '/extensions/chrome',
-    visual: '/assets/promos/chrome-preview.png',
+    visual: '/assets/promos/chrome-preview.svg',
     visualAlt: 'Allternit Chrome extension in the browser',
   },
 ]
