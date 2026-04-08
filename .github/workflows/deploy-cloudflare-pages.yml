@@ -36,7 +36,7 @@ jobs:
         
       - name: Install @cloudflare/next-on-pages
         working-directory: surfaces/platform
-        run: pnpm add -D @cloudflare/next-on-pages
+        run: pnpm add -D @cloudflare/next-on-pages --ignore-scripts
         
       - name: Build with @cloudflare/next-on-pages
         working-directory: surfaces/platform
