@@ -161,20 +161,8 @@ const nextConfig: NextConfig = {
   // standalone: generates .next/standalone/ — a minimal Node.js server that can be
   // shipped inside the Electron app without a separate node_modules directory.
   // The desktop spawns `node .next/standalone/server.js` as a subprocess.
-  output: process.env.ALLTERNIT_BUILD_MODE === 'desktop' ? 'standalone' : 'export',
-  distDir: process.env.ALLTERNIT_BUILD_MODE === 'desktop' ? '.next' : 'dist',
-  
-  // Exclude API routes from static export (they run on backend VPS)
-  exportPathMap: async function(defaultPathMap, { dev, dir, outDir, distDir, buildId }) {
-    // Filter out API routes for static export
-    const pathMap: Record<string, { page: string }> = {};
-    for (const [path, config] of Object.entries(defaultPathMap)) {
-      if (!path.startsWith('/api/')) {
-        pathMap[path] = config as { page: string };
-      }
-    }
-    return pathMap;
-  },
+  output: process.env.ALLTERNIT_BUILD_MODE === 'desktop' ? 'standalone' : undefined,
+  distDir: process.env.ALLTERNIT_BUILD_MODE === 'desktop' ? '.next' : '.next',
 
   // Fix standalone output path in monorepo — ensures all local package deps are traced
   outputFileTracingRoot: path.join(__dirname, '../../'),
