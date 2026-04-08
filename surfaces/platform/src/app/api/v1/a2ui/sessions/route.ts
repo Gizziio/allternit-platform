@@ -1,47 +1,11 @@
 // ============================================================================
 // GET|POST /api/v1/a2ui/sessions
 // ============================================================================
-// Session store is module-level (per-process).
-// TODO: Replace with Prisma persistence once schema migration is run.
-// ============================================================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuth } from '@/lib/server-auth';
+import { saveSession, listSessions } from '@/lib/a2ui-sessions';
 import type { A2UIPayload } from '@/capsules/a2ui/a2ui.types';
-
-// ============================================================================
-// In-process store (shared across this module's exports)
-// ============================================================================
-
-interface StoredSession {
-  id: string;
-  chatId: string;
-  userId: string;
-  messageId?: string;
-  agentId?: string;
-  payload: A2UIPayload;
-  dataModel: Record<string, unknown>;
-  status: 'active' | 'completed' | 'error';
-  createdAt: string;
-  updatedAt: string;
-}
-
-// Exported so [id] routes can access the same Map instance
-export const sessionStore = new Map<string, StoredSession>();
-
-function toResponse(s: StoredSession) {
-  return {
-    id: s.id,
-    chatId: s.chatId,
-    messageId: s.messageId,
-    agentId: s.agentId,
-    payload: s.payload,
-    dataModel: s.dataModel,
-    status: s.status,
-    createdAt: s.createdAt,
-    updatedAt: s.updatedAt,
-  };
-}
 
 // ============================================================================
 // POST /api/v1/a2ui/sessions
@@ -72,7 +36,7 @@ export async function POST(request: NextRequest) {
     const id = `sess-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     const now = new Date().toISOString();
 
-    const session: StoredSession = {
+    const session = {
       id,
       chatId: chat_id,
       userId,
@@ -80,13 +44,13 @@ export async function POST(request: NextRequest) {
       agentId: agent_id,
       payload,
       dataModel: payload.dataModel ?? {},
-      status: 'active',
+      status: 'active' as const,
       createdAt: now,
       updatedAt: now,
     };
 
-    sessionStore.set(id, session);
-    return NextResponse.json(toResponse(session), { status: 201 });
+    await saveSession(session);
+    return NextResponse.json(session, { status: 201 });
   } catch (error) {
     console.error('[A2UI:sessions:POST]', error);
     return NextResponse.json({ error: 'Failed to create session' }, { status: 500 });
@@ -104,13 +68,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const chatId = request.nextUrl.searchParams.get('chat_id');
+    const chatId = request.nextUrl.searchParams.get('chat_id') ?? undefined;
+    const sessions = await listSessions(userId, chatId);
 
-    const results = [...sessionStore.values()].filter(
-      (s) => s.userId === userId && (!chatId || s.chatId === chatId)
-    );
-
-    return NextResponse.json({ sessions: results.map(toResponse) });
+    return NextResponse.json({ sessions });
   } catch (error) {
     console.error('[A2UI:sessions:GET]', error);
     return NextResponse.json({ error: 'Failed to list sessions' }, { status: 500 });

@@ -4,7 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuth } from '@/lib/server-auth';
-import { sessionStore } from '../route';
+import { getSession, deleteSession } from '@/lib/a2ui-sessions';
 
 export async function GET(
   _request: NextRequest,
@@ -17,23 +17,13 @@ export async function GET(
     }
 
     const { id } = await params;
-    const session = sessionStore.get(id);
+    const session = await getSession(id);
 
     if (!session || session.userId !== userId) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
 
-    return NextResponse.json({
-      id: session.id,
-      chatId: session.chatId,
-      messageId: session.messageId,
-      agentId: session.agentId,
-      payload: session.payload,
-      dataModel: session.dataModel,
-      status: session.status,
-      createdAt: session.createdAt,
-      updatedAt: session.updatedAt,
-    });
+    return NextResponse.json(session);
   } catch (error) {
     console.error('[A2UI:sessions:GET:id]', error);
     return NextResponse.json({ error: 'Failed to get session' }, { status: 500 });
@@ -51,13 +41,13 @@ export async function DELETE(
     }
 
     const { id } = await params;
-    const session = sessionStore.get(id);
+    const session = await getSession(id);
 
     if (!session || session.userId !== userId) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
 
-    sessionStore.delete(id);
+    await deleteSession(id, userId);
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     console.error('[A2UI:sessions:DELETE:id]', error);

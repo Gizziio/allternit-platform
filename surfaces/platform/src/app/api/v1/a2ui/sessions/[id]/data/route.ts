@@ -4,7 +4,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuth } from '@/lib/server-auth';
-import { sessionStore } from '../../route';
+import { getSession, saveSession } from '@/lib/a2ui-sessions';
 
 export async function PATCH(
   request: NextRequest,
@@ -17,7 +17,7 @@ export async function PATCH(
     }
 
     const { id } = await params;
-    const session = sessionStore.get(id);
+    const session = await getSession(id);
 
     if (!session || session.userId !== userId) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
@@ -28,19 +28,15 @@ export async function PATCH(
       return NextResponse.json({ error: 'data_model is required' }, { status: 400 });
     }
 
-    session.dataModel = { ...session.dataModel, ...data_model };
-    session.updatedAt = new Date().toISOString();
-    sessionStore.set(id, session);
+    const updated = {
+      ...session,
+      dataModel: { ...session.dataModel, ...data_model },
+      updatedAt: new Date().toISOString(),
+    };
 
-    return NextResponse.json({
-      id: session.id,
-      chatId: session.chatId,
-      payload: session.payload,
-      dataModel: session.dataModel,
-      status: session.status,
-      createdAt: session.createdAt,
-      updatedAt: session.updatedAt,
-    });
+    await saveSession(updated);
+
+    return NextResponse.json(updated);
   } catch (error) {
     console.error('[A2UI:sessions:PATCH:data]', error);
     return NextResponse.json({ error: 'Failed to update data model' }, { status: 500 });
