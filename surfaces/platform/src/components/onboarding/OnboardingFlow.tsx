@@ -64,7 +64,7 @@ import {
 
 interface WizardData {
   theme: 'light' | 'dark' | 'system';
-  infraType: 'local' | 'connect' | 'purchase' | 'remote';
+  infraType: 'local' | 'manual' | 'connect' | 'purchase' | 'remote';
   sshConfig: SSHConnectionConfig;
   selectedModes: string[];
   workspacePath: string;
