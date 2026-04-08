@@ -177,3 +177,11 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
+
+// Cloudflare Pages compatibility
+if (process.env.CLOUDFLARE_PAGES === '1') {
+  // @ts-ignore
+  nextConfig.output = 'export';
+  // @ts-ignore  
+  nextConfig.distDir = 'dist';
+}

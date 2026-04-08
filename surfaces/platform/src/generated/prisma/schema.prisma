@@ -50,8 +50,8 @@ model SshConnection {
   os                  String?
   architecture        String?
   dockerInstalled     Boolean?  @map("docker_installed")
-  allternitInstalled  Boolean?  @map("a2r_installed")
-  allternitVersion    String?   @map("a2r_version")
+  a2rInstalled        Boolean?  @map("a2r_installed")
+  a2rVersion          String?   @map("a2r_version")
   lastConnectedAt     DateTime? @map("last_connected_at")
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")
