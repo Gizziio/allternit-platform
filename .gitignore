@@ -31,3 +31,5 @@ out/
 
 # SDK dist is needed for CI builds
 !sdk/allternit-sdk/dist/
+.env*.local
+.env.local
