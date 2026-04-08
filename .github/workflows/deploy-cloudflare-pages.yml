@@ -13,9 +13,6 @@ jobs:
     permissions:
       contents: read
       deployments: write
-    defaults:
-      run:
-        working-directory: surfaces/platform
     steps:
       - uses: actions/checkout@v4
       
@@ -30,19 +27,25 @@ jobs:
           version: 8
           
       - name: Install dependencies
+        working-directory: surfaces/platform
         run: pnpm install --ignore-scripts
         
       - name: Generate Prisma Client
+        working-directory: surfaces/platform
         run: pnpm prisma generate
         
       - name: Build with @cloudflare/next-on-pages
-        run: pnpm dlx @cloudflare/next-on-pages@latest
+        # Run from repo root but specify the app directory
+        run: |
+          cd surfaces/platform && pnpm dlx @cloudflare/next-on-pages@latest
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           NPM_CONFIG_IGNORE_SCRIPTS: true
+          # Tell next-on-pages where the app is
+          CWD: surfaces/platform
           
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3

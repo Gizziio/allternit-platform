@@ -584,7 +584,7 @@ export function ChatComposer({
   
   const handleToggleMode = useCallback(async () => {
     if (isSavingExecMode) {
-      console.log('[ChatComposer] Mode toggle blocked - currently saving');
+      // Mode toggle blocked - currently saving
       return;
     }
     
@@ -798,7 +798,7 @@ export function ChatComposer({
     // Only update if changed to avoid loops
     if (unregistered.length !== openClawCandidates.length) {
       // eslint-disable-next-line no-console
-      console.log('[ChatComposer] Re-resolved OpenClaw candidates after agents change:', unregistered.length);
+      // Re-resolved OpenClaw candidates
       setOpenClawCandidates(unregistered);
     }
   }, [agents, agentModeEnabled, agentModeSurface, openClawCandidates]);
@@ -1025,7 +1025,7 @@ export function ChatComposer({
       return;
     }
 
-    console.log('[ChatComposer] Starting OpenClaw agent import:', candidate.display_name);
+    // Starting OpenClaw agent import
     const importStart = Date.now();
     
     setImportingOpenClawAgentId(candidate.agent_id);
@@ -1033,9 +1033,9 @@ export function ChatComposer({
 
     try {
       const input = buildOpenClawImportInput(candidate);
-      console.log('[ChatComposer] Creating agent with input:', input.name);
+      // Creating agent
       const created = await createAgent(input);
-      console.log(`[ChatComposer] Agent created in ${Date.now() - importStart}ms, ID:`, created.id);
+      // Agent created successfully
       setSelectedSurfaceAgent(agentModeSurface, created.id);
       void loadCharacterLayer(created.id)
         .then(() => compileCharacterLayer(created.id))
@@ -1045,7 +1045,7 @@ export function ChatComposer({
           (item) => getRegisteredOpenClawAgentId(item, [created]) !== created.id,
         ),
       );
-      console.log(`[ChatComposer] Import completed successfully in ${Date.now() - importStart}ms`);
+      // Import completed
       closeOpenClawPrompt();
       setShowAgentMenu(false);
     } catch (error) {
@@ -1075,7 +1075,7 @@ export function ChatComposer({
       
       setOpenClawError(errorMessage);
     } finally {
-      console.log(`[ChatComposer] Import handler finished in ${Date.now() - importStart}ms`);
+      // Import handler finished
       setImportingOpenClawAgentId(null);
     }
   }, [
