@@ -1,81 +1,82 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  pluginMarketplace, 
-  type MarketplacePlugin, 
-  type InstalledPlugin,
-  CATEGORY_METADATA,
-  BUILTIN_MODES,
-  COLOR_GRADES,
-  formatAgentDisplayName,
-  getModeColorClasses,
-  type PluginCategory 
-} from '@/lib/plugins/marketplace';
+  Search, 
+  Package, 
+  AlertCircle, 
+  Download, 
+  Check, 
+  HardDrive, 
+  Wifi, 
+  Sparkles,
+  ExternalLink,
+  Filter,
+  ChevronDown,
+  ChevronUp
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
-import { Star, Download, Check, Search, Package, AlertCircle } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { 
+  getBundledPlugins, 
+  getDownloadablePlugins,
+  getBundledBySource,
+  searchPlugins,
+  EXTERNAL_MARKETPLACE_SOURCES,
+  MARKETPLACE_STATS,
+  type BundledPlugin,
+  type DownloadablePlugin,
+  type UnifiedMarketplacePlugin
+} from '@/lib/plugins/marketplace-integration';
+import { CATEGORY_METADATA, formatAgentDisplayName, type PluginCategory } from '@/lib/plugins/marketplace';
+
+// =============================================================================
+// PLUGIN CARD COMPONENT
+// =============================================================================
 
 interface PluginCardProps {
-  plugin: MarketplacePlugin;
-  installed: boolean;
+  plugin: UnifiedMarketplacePlugin;
+  installed?: boolean;
   enabled?: boolean;
-  onInstall: () => void;
-  onUninstall: () => void;
+  onInstall?: () => void;
+  onUninstall?: () => void;
   onToggle?: () => void;
 }
 
 function PluginCard({ plugin, installed, enabled, onInstall, onUninstall, onToggle }: PluginCardProps) {
   const categoryMeta = CATEGORY_METADATA[plugin.category];
+  const isBundled = plugin.sourceType === 'bundled';
+  const isDownloadable = plugin.sourceType === 'downloadable';
   
-  // Get shade for color gradient (default to 0 if not specified)
-  const shade = plugin.shade ?? 0;
-  const bgClass = categoryMeta.color.bg[shade];
-  const textClass = categoryMeta.color.text[shade];
-  const borderClass = categoryMeta.color.border[shade];
-  const dotClass = categoryMeta.color.dot[shade];
-  
-  // Format name as "Agent | Group-Mode" for built-in modes
-  const displayName = plugin.isBuiltIn 
-    ? formatAgentDisplayName(plugin.id)
-    : plugin.name;
-  
-  const formatPrice = () => {
-    switch (plugin.price?.type) {
-      case 'free':
-        return 'Free';
-      case 'paid':
-        return `$${plugin.price.amount}`;
-      case 'subscription':
-        return `$${plugin.price.amount}/mo`;
-      default:
-        return 'Free';
-    }
-  };
+  // Determine shade for color (default to 0 if not specified)
+  const shade = 'shade' in plugin ? plugin.shade ?? 0 : 0;
+  const bgClass = categoryMeta.color.bg[Math.min(shade, 3)];
+  const textClass = categoryMeta.color.text[Math.min(shade, 3)];
+  const borderClass = categoryMeta.color.border[Math.min(shade, 3)];
+  const dotClass = categoryMeta.color.dot[Math.min(shade, 3)];
 
   return (
-    <Card className="flex flex-col h-full bg-zinc-900 border-zinc-800 hover:border-zinc-700 transition-colors">
+    <Card className="flex flex-col h-full bg-zinc-900 border-zinc-800 hover:border-zinc-700 transition-all group">
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-zinc-100 truncate flex items-center gap-2">
-              {plugin.isBuiltIn && (
-                <span className={cn("w-2 h-2 rounded-full", dotClass)} />
-              )}
-              {plugin.isBuiltIn ? displayName.split(' | ')[1] : plugin.name}
+              <span className={cn("w-2 h-2 rounded-full", dotClass)} />
+              {plugin.name}
             </h3>
-            <p className="text-xs text-zinc-500">
-              {plugin.isBuiltIn ? 'Built-in' : `by ${plugin.author.name}`}
-              {plugin.author.verified && !plugin.isBuiltIn && (
-                <Badge variant="outline" className="ml-2 border-blue-500 text-blue-400 text-[10px] py-0">
+            <div className="flex items-center gap-2 mt-1">
+              <p className="text-xs text-zinc-500">by {plugin.author.name}</p>
+              {plugin.author.verified && (
+                <Badge variant="outline" className="border-blue-500/50 text-blue-400 text-[10px] py-0 h-4">
+                  <Sparkles className="w-3 h-3 mr-1" />
                   Verified
                 </Badge>
               )}
-            </p>
+            </div>
           </div>
           {installed && (
             <Badge 
@@ -93,58 +94,84 @@ function PluginCard({ plugin, installed, enabled, onInstall, onUninstall, onTogg
           )}
         </div>
       </CardHeader>
+      
       <CardContent className="flex-1">
         <p className="text-sm text-zinc-400 line-clamp-2">{plugin.description}</p>
+        
         <div className="flex flex-wrap items-center gap-2 mt-3">
-          {/* Category badge with gradient color */}
+          {/* Category badge */}
           <Badge 
             variant="secondary" 
             className={cn("text-xs border", bgClass, textClass, borderClass)}
           >
-            {plugin.isBuiltIn 
-              ? displayName.split(' | ')[0].replace('Agent | ', '')
-              : categoryMeta.label
-            }
+            {categoryMeta.label}
           </Badge>
-          {plugin.isBuiltIn && (
-            <Badge variant="outline" className="text-xs border-zinc-700 text-zinc-500">
-              Built-in
+          
+          {/* Source badge */}
+          {isBundled && (
+            <Badge variant="outline" className="text-xs border-emerald-500/50 text-emerald-400">
+              <HardDrive className="w-3 h-3 mr-1" />
+              Bundled
             </Badge>
           )}
-          {plugin.permissions && plugin.permissions.length > 0 && (
-            <Badge variant="outline" className="text-xs border-yellow-500/50 text-yellow-500">
-              <AlertCircle className="w-3 h-3 mr-1" />
-              Permissions
+          {isDownloadable && (
+            <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-400">
+              <Wifi className="w-3 h-3 mr-1" />
+              Download
             </Badge>
           )}
+          
+          {/* Price badge */}
+          <Badge variant="outline" className="text-xs border-zinc-700 text-zinc-500">
+            {plugin.price.type === 'free' ? 'Free' : `$${plugin.price.amount}`}
+          </Badge>
         </div>
+        
+        {/* Stats row */}
         <div className="flex items-center gap-4 mt-4 text-xs text-zinc-500">
-          {plugin.rating ? (
+          {plugin.rating && plugin.rating.count > 0 && (
             <span className="flex items-center gap-1">
-              <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+              <span className="text-amber-500">★</span>
               {plugin.rating.average} ({plugin.rating.count})
             </span>
-          ) : !plugin.isBuiltIn && (
-            <span className="flex items-center gap-1">
-              <Star className="w-3 h-3 text-zinc-700" />
-              No ratings
-            </span>
           )}
-          {!plugin.isBuiltIn && (
+          {plugin.downloads > 0 && (
             <span className="flex items-center gap-1">
               <Download className="w-3 h-3" />
               {plugin.downloads.toLocaleString()}
             </span>
           )}
-          <span className={cn(
-            plugin.price?.type === 'free' ? 'text-emerald-400' : 'text-zinc-300'
-          )}>
-            {formatPrice()}
-          </span>
+          {isBundled && (
+            <span className="text-emerald-500/70">
+              Ready to use
+            </span>
+          )}
+          {isDownloadable && 'vendoredDate' in plugin && (
+            <span className="text-amber-500/70">
+              Available offline
+            </span>
+          )}
         </div>
       </CardContent>
+      
       <CardFooter className="pt-0 gap-2">
-        {installed ? (
+        {isBundled ? (
+          // Bundled plugins can be enabled/disabled
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className={cn(
+              "w-full",
+              enabled 
+                ? "border-amber-500/50 text-amber-400 hover:bg-amber-500/10" 
+                : "border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10"
+            )}
+            onClick={onToggle}
+          >
+            {enabled ? 'Disable' : 'Enable'}
+          </Button>
+        ) : installed ? (
+          // Installed downloadable plugins
           <>
             <Button 
               variant="outline" 
@@ -159,18 +186,19 @@ function PluginCard({ plugin, installed, enabled, onInstall, onUninstall, onTogg
             >
               {enabled ? 'Disable' : 'Enable'}
             </Button>
-            {!plugin.isBuiltIn && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="border-red-500/50 text-red-400 hover:bg-red-500/10"
-                onClick={onUninstall}
-              >
-                <TrashIcon />
-              </Button>
-            )}
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="border-red-500/50 text-red-400 hover:bg-red-500/10 px-3"
+              onClick={onUninstall}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+              </svg>
+            </Button>
           </>
         ) : (
+          // Downloadable plugins
           <Button 
             size="sm" 
             className={cn(
@@ -183,6 +211,7 @@ function PluginCard({ plugin, installed, enabled, onInstall, onUninstall, onTogg
             )}
             onClick={onInstall}
           >
+            <Download className="w-4 h-4 mr-2" />
             Install
           </Button>
         )}
@@ -191,194 +220,129 @@ function PluginCard({ plugin, installed, enabled, onInstall, onUninstall, onTogg
   );
 }
 
-function TrashIcon() {
+// =============================================================================
+// SECTION COMPONENTS
+// =============================================================================
+
+function SectionHeader({ 
+  title, 
+  subtitle, 
+  icon: Icon, 
+  color,
+  count,
+  expanded,
+  onToggle 
+}: { 
+  title: string; 
+  subtitle: string; 
+  icon: React.ElementType;
+  color: string;
+  count: number;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-    </svg>
+    <div 
+      className="flex items-center justify-between gap-3 mb-4 pb-2 border-b border-zinc-800 cursor-pointer group"
+      onClick={onToggle}
+    >
+      <div className="flex items-center gap-3">
+        <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", color)}>
+          <Icon className="w-5 h-5 text-white" />
+        </div>
+        <div>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-zinc-100">{title}</h2>
+            <Badge variant="secondary" className="text-xs bg-zinc-800 text-zinc-400">
+              {count}
+            </Badge>
+          </div>
+          <p className="text-sm text-zinc-500">{subtitle}</p>
+        </div>
+      </div>
+      <Button variant="ghost" size="sm" className="text-zinc-500 hover:text-zinc-300">
+        {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+      </Button>
+    </div>
   );
 }
 
-// Group plugins by the 4 main categories
-function groupByCategory(plugins: MarketplacePlugin[]): { 
-  create: MarketplacePlugin[]; 
-  analyze: MarketplacePlugin[]; 
-  build: MarketplacePlugin[]; 
-  automate: MarketplacePlugin[]; 
-  other: MarketplacePlugin[]; 
-} {
-  const grouped = {
-    create: [] as MarketplacePlugin[],
-    analyze: [] as MarketplacePlugin[],
-    build: [] as MarketplacePlugin[],
-    automate: [] as MarketplacePlugin[],
-    other: [] as MarketplacePlugin[],
-  };
-  
-  for (const plugin of plugins) {
-    if (plugin.category === 'create') {
-      grouped.create.push(plugin);
-    } else if (plugin.category === 'analyze') {
-      grouped.analyze.push(plugin);
-    } else if (plugin.category === 'build') {
-      grouped.build.push(plugin);
-    } else if (plugin.category === 'automate') {
-      grouped.automate.push(plugin);
-    } else {
-      grouped.other.push(plugin);
-    }
-  }
-  
-  // Sort each group by shade (built-in modes first, then alphabetically)
-  for (const key of Object.keys(grouped)) {
-    grouped[key as keyof typeof grouped].sort((a, b) => {
-      if (a.isBuiltIn && !b.isBuiltIn) return -1;
-      if (!a.isBuiltIn && b.isBuiltIn) return 1;
-      return (a.shade ?? 0) - (b.shade ?? 0);
-    });
-  }
-  
-  return grouped;
-}
-
-export function PluginMarketplace() {
-  const [activeTab, setActiveTab] = useState('browse');
-  const [plugins, setPlugins] = useState<MarketplacePlugin[]>([]);
-  const [installed, setInstalled] = useState<InstalledPlugin[]>([]);
-  const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadData = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [marketplacePlugins, installedPlugins] = await Promise.all([
-        pluginMarketplace.browse({ sort: 'popular' }),
-        Promise.resolve(pluginMarketplace.getInstalled()),
-      ]);
-      
-      // Add built-in modes as "plugins" for display (in production, these come from API)
-      const builtInPlugins: MarketplacePlugin[] = Object.entries(BUILTIN_MODES).map(([id, config]) => ({
-        id,
-        name: id.charAt(0).toUpperCase() + id.slice(1),
-        description: config.description,
-        version: '1.0.0',
-        author: { name: 'Allternit' },
-        category: config.category,
-        capabilities: [],
-        license: 'Proprietary',
-        price: { type: 'free' as const },
-        downloads: 0,
-        publishedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        isBuiltIn: true,
-        shade: config.shade,
-      }));
-      
-      setPlugins([...builtInPlugins, ...marketplacePlugins]);
-      setInstalled(installedPlugins);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load plugins');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const handleSearch = async () => {
-    setLoading(true);
-    try {
-      const results = await pluginMarketplace.browse({ search, sort: 'popular' });
-      // Re-add built-ins on search
-      const builtInPlugins: MarketplacePlugin[] = Object.entries(BUILTIN_MODES).map(([id, config]) => ({
-        id,
-        name: id.charAt(0).toUpperCase() + id.slice(1),
-        description: config.description,
-        version: '1.0.0',
-        author: { name: 'Allternit' },
-        category: config.category,
-        capabilities: [],
-        license: 'Proprietary',
-        price: { type: 'free' as const },
-        downloads: 0,
-        publishedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        isBuiltIn: true,
-        shade: config.shade,
-      }));
-      setPlugins([...builtInPlugins, ...results]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Search failed');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleInstall = async (pluginId: string) => {
-    try {
-      await pluginMarketplace.install(pluginId);
-      await loadData();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Install failed');
-    }
-  };
-
-  const handleUninstall = async (pluginId: string) => {
-    await pluginMarketplace.uninstall(pluginId);
-    await loadData();
-  };
-
-  const handleToggle = async (pluginId: string) => {
-    await pluginMarketplace.toggleEnabled(pluginId);
-    await loadData();
-  };
-
-  const isInstalled = (pluginId: string) => {
-    // Built-in modes are always "installed"
-    if (BUILTIN_MODES[pluginId]) return true;
-    return installed.some(p => p.id === pluginId);
-  };
-  
-  const isEnabled = (pluginId: string) => {
-    // Built-in modes are always "enabled"
-    if (BUILTIN_MODES[pluginId]) return true;
-    return installed.find(p => p.id === pluginId)?.enabled ?? false;
-  };
-
-  const groupedPlugins = groupByCategory(plugins);
-
-  const renderPluginGrid = (pluginList: MarketplacePlugin[]) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {pluginList.map(plugin => (
+function PluginGrid({ plugins }: { plugins: UnifiedMarketplacePlugin[] }) {
+  const safePlugins = plugins || [];
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {safePlugins.map(plugin => (
         <PluginCard
           key={plugin.id}
           plugin={plugin}
-          installed={isInstalled(plugin.id)}
-          enabled={isEnabled(plugin.id)}
-          onInstall={() => handleInstall(plugin.id)}
-          onUninstall={() => handleUninstall(plugin.id)}
-          onToggle={() => handleToggle(plugin.id)}
+          onInstall={() => console.log('Install', plugin.id)}
+          onUninstall={() => console.log('Uninstall', plugin.id)}
+          onToggle={() => console.log('Toggle', plugin.id)}
         />
       ))}
     </div>
   );
+}
+
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
+
+export function PluginMarketplace() {
+  const [activeTab, setActiveTab] = useState('all');
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [expandedSections, setExpandedSections] = useState({
+    builtin: true,
+    vendor: true,
+    downloadable: true,
+    external: false,
+  });
+
+  // Get all plugins (with fallbacks for SSR safety)
+  const bundledPlugins = useMemo(() => getBundledPlugins() || [], []);
+  const builtInPlugins = useMemo(() => getBundledBySource('built-in') || [], []);
+  const vendorPlugins = useMemo(() => getBundledBySource('vendor') || [], []);
+  const downloadablePlugins = useMemo(() => getDownloadablePlugins() || [], []);
+
+  // Filter by search
+  const filteredBuiltIn = useMemo(() => 
+    search ? searchPlugins(search).filter(p => p.sourceType === 'bundled' && p.bundledSource === 'built-in') : builtInPlugins,
+    [search, builtInPlugins]
+  );
+  const filteredVendor = useMemo(() => 
+    search ? searchPlugins(search).filter(p => p.sourceType === 'bundled' && p.bundledSource === 'vendor') : vendorPlugins,
+    [search, vendorPlugins]
+  );
+  const filteredDownloadable = useMemo(() => 
+    search ? searchPlugins(search).filter(p => p.sourceType === 'downloadable') : downloadablePlugins,
+    [search, downloadablePlugins]
+  );
+
+  const toggleSection = (section: keyof typeof expandedSections) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
 
   return (
-    <div className="w-full max-w-6xl mx-auto p-6">
+    <div className="w-full max-w-7xl mx-auto p-6">
+      {/* Header */}
       <div className="flex items-center gap-4 mb-8">
-        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-600 to-violet-800 flex items-center justify-center">
-          <Package className="w-6 h-6 text-white" />
+        <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-violet-600 via-blue-600 to-emerald-600 flex items-center justify-center shadow-lg shadow-violet-900/20">
+          <Package className="w-7 h-7 text-white" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-zinc-100">Plugin Marketplace</h1>
-          <p className="text-zinc-500">Extend Allternit with powerful plugins</p>
+          <h1 className="text-3xl font-bold text-zinc-100">Plugin Marketplace</h1>
+          <p className="text-zinc-500 flex items-center gap-2">
+            <HardDrive className="w-4 h-4" />
+            {MARKETPLACE_STATS.bundled.total} bundled • 
+            <Wifi className="w-4 h-4 ml-1" />
+            {MARKETPLACE_STATS.downloadable.vendored + MARKETPLACE_STATS.downloadable.external}+ available
+          </p>
         </div>
       </div>
 
+      {/* Error display */}
       {error && (
         <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">
           <div className="flex items-center gap-2">
@@ -388,140 +352,164 @@ export function PluginMarketplace() {
         </div>
       )}
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="bg-zinc-900 border border-zinc-800">
-          <TabsTrigger value="browse">Browse</TabsTrigger>
-          <TabsTrigger value="installed">
-            Installed ({installed.length})
-          </TabsTrigger>
-        </TabsList>
+      {/* Search and filters */}
+      <div className="flex flex-col sm:flex-row gap-4 mb-8">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+          <Input
+            placeholder="Search all plugins..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10 bg-zinc-900 border-zinc-800 h-11"
+          />
+        </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="bg-zinc-900 border border-zinc-800 h-11">
+            <TabsTrigger value="all">All</TabsTrigger>
+            <TabsTrigger value="bundled">Bundled</TabsTrigger>
+            <TabsTrigger value="downloadable">Downloadable</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
 
-        <TabsContent value="browse" className="mt-6 space-y-10">
-          {/* Search */}
-          <div className="flex gap-2">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-              <Input
-                placeholder="Search plugins..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                className="pl-10 bg-zinc-900 border-zinc-800"
-              />
-            </div>
-            <Button onClick={handleSearch} variant="outline" className="border-zinc-800">
-              Search
-            </Button>
-          </div>
-
-          {loading ? (
-            <div className="text-center py-12 text-zinc-500">Loading plugins...</div>
-          ) : (
+      {/* Content */}
+      {loading ? (
+        <div className="text-center py-20 text-zinc-500">
+          <div className="w-8 h-8 border-2 border-violet-500/30 border-t-violet-500 rounded-full animate-spin mx-auto mb-4" />
+          Loading plugins...
+        </div>
+      ) : (
+        <div className="space-y-8">
+          {/* === BUNDLED PLUGINS SECTION === */}
+          {(activeTab === 'all' || activeTab === 'bundled') && (
             <>
-              {/* Create Group (Violet gradient) */}
-              {groupedPlugins.create.length > 0 && (
-                <section>
-                  <div className="flex items-center gap-3 mb-4 pb-2 border-b border-zinc-800">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-violet-500" />
-                      <h2 className="text-lg font-semibold text-zinc-100">Create</h2>
-                    </div>
-                    <span className="text-sm text-zinc-500">Generate images, videos, slides, websites</span>
-                  </div>
-                  {renderPluginGrid(groupedPlugins.create)}
+              {/* Built-in Plugins */}
+              {(search === '' || filteredBuiltIn.length > 0) && (
+                <section className="bg-zinc-900/50 rounded-xl p-6 border border-zinc-800/50">
+                  <SectionHeader
+                    title="Built-in Agent Modes"
+                    subtitle="Core Allternit capabilities — always available offline"
+                    icon={Package}
+                    color="bg-gradient-to-br from-violet-600 to-violet-700"
+                    count={filteredBuiltIn.length}
+                    expanded={expandedSections.builtin}
+                    onToggle={() => toggleSection('builtin')}
+                  />
+                  {expandedSections.builtin && <PluginGrid plugins={filteredBuiltIn} />}
                 </section>
               )}
 
-              {/* Analyze Group (Blue gradient) */}
-              {groupedPlugins.analyze.length > 0 && (
-                <section>
-                  <div className="flex items-center gap-3 mb-4 pb-2 border-b border-zinc-800">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-blue-500" />
-                      <h2 className="text-lg font-semibold text-zinc-100">Analyze</h2>
-                    </div>
-                    <span className="text-sm text-zinc-500">Research and data analysis</span>
-                  </div>
-                  {renderPluginGrid(groupedPlugins.analyze)}
-                </section>
-              )}
-
-              {/* Build Group (Emerald gradient) */}
-              {groupedPlugins.build.length > 0 && (
-                <section>
-                  <div className="flex items-center gap-3 mb-4 pb-2 border-b border-zinc-800">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-emerald-500" />
-                      <h2 className="text-lg font-semibold text-zinc-100">Build</h2>
-                    </div>
-                    <span className="text-sm text-zinc-500">Code generation and assets</span>
-                  </div>
-                  {renderPluginGrid(groupedPlugins.build)}
-                </section>
-              )}
-
-              {/* Automate Group (Amber gradient) */}
-              {groupedPlugins.automate.length > 0 && (
-                <section>
-                  <div className="flex items-center gap-3 mb-4 pb-2 border-b border-zinc-800">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-amber-500" />
-                      <h2 className="text-lg font-semibold text-zinc-100">Automate</h2>
-                    </div>
-                    <span className="text-sm text-zinc-500">Multi-agent swarms and workflows</span>
-                  </div>
-                  {renderPluginGrid(groupedPlugins.automate)}
-                </section>
-              )}
-
-              {/* Other Categories */}
-              {groupedPlugins.other.length > 0 && (
-                <section>
-                  <div className="flex items-center gap-3 mb-4 pb-2 border-b border-zinc-800">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-zinc-500" />
-                      <h2 className="text-lg font-semibold text-zinc-100">Other</h2>
-                    </div>
-                    <span className="text-sm text-zinc-500">Productivity, integrations, custom</span>
-                  </div>
-                  {renderPluginGrid(groupedPlugins.other)}
+              {/* Vendor Plugins */}
+              {(search === '' || filteredVendor.length > 0) && (
+                <section className="bg-zinc-900/50 rounded-xl p-6 border border-zinc-800/50">
+                  <SectionHeader
+                    title="Claude Desktop Plugins"
+                    subtitle="Professional workflows from Anthropic — available offline"
+                    icon={Sparkles}
+                    color="bg-gradient-to-br from-blue-600 to-blue-700"
+                    count={filteredVendor.length}
+                    expanded={expandedSections.vendor}
+                    onToggle={() => toggleSection('vendor')}
+                  />
+                  {expandedSections.vendor && <PluginGrid plugins={filteredVendor} />}
                 </section>
               )}
             </>
           )}
-        </TabsContent>
 
-        <TabsContent value="installed" className="mt-6">
-          {installed.length === 0 ? (
-            <div className="text-center py-16 text-zinc-500">
-              <Package className="w-16 h-16 mx-auto mb-4 text-zinc-700" />
-              <p className="text-lg font-medium text-zinc-400">No plugins installed</p>
-              <p className="text-sm mt-1">Browse the marketplace to find plugins</p>
+          {/* === DOWNLOADABLE PLUGINS SECTION === */}
+          {(activeTab === 'all' || activeTab === 'downloadable') && (
+            <>
+              {/* Vendored Plugins (Available in repo) */}
+              {(search === '' || filteredDownloadable.length > 0) && (
+                <section className="bg-zinc-900/50 rounded-xl p-6 border border-zinc-800/50">
+                  <SectionHeader
+                    title="Available for Download"
+                    subtitle="Ready-to-install plugins from verified sources"
+                    icon={Download}
+                    color="bg-gradient-to-br from-amber-600 to-amber-700"
+                    count={filteredDownloadable.length}
+                    expanded={expandedSections.downloadable}
+                    onToggle={() => toggleSection('downloadable')}
+                  />
+                  {expandedSections.downloadable && <PluginGrid plugins={filteredDownloadable} />}
+                </section>
+              )}
+
+              {/* External Sources */}
+              <section className="bg-zinc-900/30 rounded-xl p-6 border border-zinc-800/30">
+                <SectionHeader
+                  title="External Marketplaces"
+                  subtitle="Discover more plugins from official sources"
+                  icon={ExternalLink}
+                  color="bg-gradient-to-br from-emerald-600 to-emerald-700"
+                  count={EXTERNAL_MARKETPLACE_SOURCES.length}
+                  expanded={expandedSections.external}
+                  onToggle={() => toggleSection('external')}
+                />
+                {expandedSections.external && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {EXTERNAL_MARKETPLACE_SOURCES.map(source => (
+                      <Card key={source.id} className="bg-zinc-900 border-zinc-800 hover:border-zinc-700 transition-colors">
+                        <CardContent className="pt-6">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h3 className="font-semibold text-zinc-100">{source.name}</h3>
+                              <p className="text-sm text-zinc-500 mt-1">
+                                ~{source.estimatedPlugins} plugins available
+                              </p>
+                              <Badge 
+                                variant="outline" 
+                                className={cn(
+                                  "mt-2 text-xs",
+                                  source.trust === 'official' 
+                                    ? "border-blue-500/50 text-blue-400" 
+                                    : "border-emerald-500/50 text-emerald-400"
+                                )}
+                              >
+                                {source.trust === 'official' ? 'Official' : 'Verified'}
+                              </Badge>
+                            </div>
+                            <ExternalLink className="w-5 h-5 text-zinc-600" />
+                          </div>
+                        </CardContent>
+                        <CardFooter className="pt-0">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="w-full border-zinc-700 text-zinc-400 hover:text-zinc-200"
+                            onClick={() => window.open(source.url.replace('/marketplace.json', ''), '_blank')}
+                          >
+                            Browse Source
+                          </Button>
+                        </CardFooter>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </section>
+            </>
+          )}
+
+          {/* Empty state */}
+          {search && filteredBuiltIn.length === 0 && filteredVendor.length === 0 && filteredDownloadable.length === 0 && (
+            <div className="text-center py-20 text-zinc-500">
+              <Search className="w-16 h-16 mx-auto mb-4 text-zinc-700" />
+              <p className="text-lg font-medium text-zinc-400">No plugins found</p>
+              <p className="text-sm mt-1">Try a different search term</p>
               <Button 
                 variant="outline" 
                 className="mt-4 border-zinc-800"
-                onClick={() => setActiveTab('browse')}
+                onClick={() => setSearch('')}
               >
-                Browse Marketplace
+                Clear Search
               </Button>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {installed.map(plugin => (
-                <PluginCard
-                  key={plugin.id}
-                  plugin={plugin}
-                  installed={true}
-                  enabled={plugin.enabled}
-                  onInstall={() => {}}
-                  onUninstall={() => handleUninstall(plugin.id)}
-                  onToggle={() => handleToggle(plugin.id)}
-                />
-              ))}
-            </div>
           )}
-        </TabsContent>
-      </Tabs>
+        </div>
+      )}
     </div>
   );
 }
+
+export default PluginMarketplace;

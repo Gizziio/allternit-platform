@@ -1,12 +1,19 @@
 {
   "version": "1.0.0",
+  "description": "Allternit Chrome extension plugin registry. Plugin content lives canonically at surfaces/platform/src/plugins/vendor/chrome/",
+  "surface": "chrome-extension",
+  "canonical_path": "surfaces/platform/src/plugins/vendor/chrome/",
   "plugins": [
     {
       "id": "allternit-chrome",
-      "path": "chrome",
-      "manifest": "chrome/.claude-plugin/plugin.json",
+      "name": "Allternit for Chrome",
+      "description": "AI-powered browser companion — summarize pages, extract data, research, automate tasks",
+      "version": "1.0.0",
       "host": "chrome",
-      "status": "beta"
+      "icon": "🌐",
+      "path": "surfaces/platform/src/plugins/vendor/chrome",
+      "tags": ["chrome", "browser", "web", "summarize", "extract", "research"],
+      "bundled": true
     }
   ]
 }

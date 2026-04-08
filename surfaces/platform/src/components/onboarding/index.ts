@@ -7,7 +7,7 @@ export { OnboardingPortal } from './OnboardingPortal';
 export { GuidedTourPortal } from './GuidedTourPortal';
 export { InfrastructureStep } from './InfrastructureStep';
 export { GuidedTour } from './GuidedTour';
-export { GizziMascot, GizziGlow } from '../ai-elements/GizziMascot';
+export { GizziMascot } from '../ai-elements/GizziMascot';
 
 // Services
 export {

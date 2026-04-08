@@ -501,6 +501,117 @@ export const VENDORED_ADDITIONAL_PLUGINS: VendoredPlugin[] = [
 ];
 
 // =============================================================================
+// ALLTERNIT EXTENSION PLUGINS
+// =============================================================================
+
+export const ALLTERNIT_EXTENSION_PLUGINS: VendoredPlugin[] = [
+  {
+    id: 'allternit-office-excel',
+    name: 'Allternit for Excel',
+    description: 'AI-powered Excel automation — formulas, charts, tables, financial modeling, and data validation. Generates and executes Office.js code directly in the workbook.',
+    version: '1.0.0',
+    source: 'marketplace',
+    status: 'not-installed',
+    category: 'productivity',
+    author: { name: 'Allternit', verified: true },
+    capabilities: ['formula-generation', 'chart-creation', 'financial-modeling', 'data-validation', 'table-operations'],
+    deterministicActions: [
+      'Generate Excel formulas from natural language',
+      'Build financial models (DCF, P&L, 3-statement)',
+      'Create charts and pivot tables',
+      'Clean and validate data ranges',
+      'Apply professional formatting',
+    ],
+    icon: 'Table',
+    tags: ['office', 'excel', 'spreadsheet', 'microsoft', 'financial-modeling', 'formulas'],
+    vendored: {
+      date: '2026-04-08',
+      sourceRepo: 'allternit/allternit-extensions',
+      sourceRef: 'main',
+      vendorPath: 'office-excel/',
+    },
+  },
+  {
+    id: 'allternit-office-word',
+    name: 'Allternit for Word',
+    description: 'AI-powered document drafting, editing, redlining, style application and structured content. Generates and executes Office.js code directly in the document.',
+    version: '1.0.0',
+    source: 'marketplace',
+    status: 'not-installed',
+    category: 'productivity',
+    author: { name: 'Allternit', verified: true },
+    capabilities: ['document-rewriting', 'tracked-changes', 'summarization', 'template-filling', 'table-creation'],
+    deterministicActions: [
+      'Rewrite and improve document sections with tracked changes',
+      'Summarize contracts, reports, and long documents',
+      'Fill document templates and content controls',
+      'Apply consistent heading structure',
+      'Insert and format tables',
+    ],
+    icon: 'FileText',
+    tags: ['office', 'word', 'documents', 'microsoft', 'writing', 'redline', 'tracked-changes'],
+    vendored: {
+      date: '2026-04-08',
+      sourceRepo: 'allternit/allternit-extensions',
+      sourceRef: 'main',
+      vendorPath: 'office-word/',
+    },
+  },
+  {
+    id: 'allternit-office-powerpoint',
+    name: 'Allternit for PowerPoint',
+    description: 'AI-powered slide creation, deck design, content generation and presentation automation. Generates and executes Office.js code directly in the presentation.',
+    version: '1.0.0',
+    source: 'marketplace',
+    status: 'not-installed',
+    category: 'productivity',
+    author: { name: 'Allternit', verified: true },
+    capabilities: ['slide-generation', 'deck-design', 'content-rewriting', 'speaker-notes', 'presentation-summary'],
+    deterministicActions: [
+      'Generate full presentation outlines and populate slides',
+      'Rewrite slide content and apply design themes',
+      'Write and edit speaker notes',
+      'Create data-driven slides from tables',
+      'Build executive briefing and pitch decks',
+    ],
+    icon: 'Presentation',
+    tags: ['office', 'powerpoint', 'slides', 'microsoft', 'presentations', 'deck'],
+    vendored: {
+      date: '2026-04-08',
+      sourceRepo: 'allternit/allternit-extensions',
+      sourceRef: 'main',
+      vendorPath: 'office-powerpoint/',
+    },
+  },
+  {
+    id: 'allternit-chrome',
+    name: 'Allternit for Chrome',
+    description: 'AI-powered browser companion — summarize pages, extract structured data, research across tabs, automate repetitive tasks, and save content to your connected tools.',
+    version: '1.0.0',
+    source: 'marketplace',
+    status: 'not-installed',
+    category: 'productivity',
+    author: { name: 'Allternit', verified: true },
+    capabilities: ['page-summarization', 'data-extraction', 'web-research', 'browser-automation', 'content-saving'],
+    deterministicActions: [
+      'Summarize any webpage in TL;DR, bullets, or detailed format',
+      'Extract tables, contacts, prices, and dates from pages',
+      'Research topics using the current page as a starting point',
+      'Automate repetitive tasks on any webpage',
+      'Save page content to Notion, Linear, Slack, or clipboard',
+    ],
+    icon: 'Globe',
+    tags: ['chrome', 'browser', 'web', 'summarize', 'extract', 'research', 'automation'],
+    vendored: {
+      date: '2026-04-08',
+      sourceRepo: 'allternit/allternit-extensions',
+      sourceRef: 'main',
+      vendorPath: 'chrome/',
+    },
+  },
+];
+
+// =============================================================================
 // ALL VENDORED PLUGINS
 // =============================================================================
 
@@ -508,6 +619,7 @@ export const ALL_VENDORED_PLUGINS: VendoredPlugin[] = [
   ...VENDORED_ANTHROPIC_PLUGINS,
   ...VENDORED_DOCKER_PLUGINS,
   ...VENDORED_ADDITIONAL_PLUGINS,
+  ...ALLTERNIT_EXTENSION_PLUGINS,
 ];
 
 // =============================================================================
@@ -521,7 +633,7 @@ export interface VendorMetadata {
 }
 
 export const VENDOR_METADATA: VendorMetadata = {
-  lastSyncDate: '2024-01-15',
+  lastSyncDate: '2026-04-08',
   totalPlugins: ALL_VENDORED_PLUGINS.length,
   bySource: {
     'anthropics/claude-plugins-official': 4,
@@ -531,6 +643,7 @@ export const VENDOR_METADATA: VendorMetadata = {
     'legaltech-ai/claude-legal-plugin': 1,
     'designcode/figma-to-code': 1,
     'zapier/claude-connector': 1,
+    'allternit/allternit-extensions': 4,
   },
 };
 

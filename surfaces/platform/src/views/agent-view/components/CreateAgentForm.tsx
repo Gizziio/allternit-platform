@@ -49,15 +49,17 @@ import {
 import { 
   setupSeedDefaults, 
   createDefaultAvatarConfig, 
-  getDefaultCharacterLayer, 
-  computeCharacterStats, 
-  getSetupStatDefinitions,
   buildSeedTelemetryEvents,
   splitLines,
   detectPluginConflicts,
   generateEnhancedWorkspaceDocuments,
-  getSpecialtyOptions
 } from "@/lib/agents/agent.service";
+import {
+  getDefaultCharacterLayer, 
+  computeCharacterStats, 
+  getSetupStatDefinitions,
+  getSpecialtyOptions
+} from "@/lib/agents/character.service";
 import { useWizardPersistence } from "@/components/agents/AgentCreationWizard.persistence";
 import { useAvatarCreatorStore } from "@/stores/avatar-creator.store";
 import { AvatarCreatorStep } from "@/views/agent-creation/AvatarCreatorStep";

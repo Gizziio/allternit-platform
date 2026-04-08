@@ -10,7 +10,7 @@ import { generateText, Output } from 'ai';
 import { gateway } from '@ai-sdk/gateway';
 import { z } from 'zod';
 import { getAuth } from '@/lib/server-auth';
-import { sessionStore } from '../sessions/route';
+import { getSession, saveSession } from '@/lib/a2ui-sessions';
 
 const ActionResultSchema = z.object({
   dataModelUpdates: z.record(z.unknown()).optional().describe(
@@ -46,8 +46,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch session payload for context if available
-    const session = sessionStore.get(session_id);
-    const currentPayload = session?.payload;
+    const session = await getSession(session_id);
+    const currentPayload = session?.payload ?? null;
 
     const result = await generateText({
       model: gateway('anthropic/claude-sonnet-4.6'),
@@ -74,7 +74,7 @@ Be conservative: only update what the action logically changes.`,
     if (session && result.output?.dataModelUpdates) {
       session.dataModel = { ...session.dataModel, ...result.output.dataModelUpdates };
       session.updatedAt = new Date().toISOString();
-      sessionStore.set(session_id, session);
+      await saveSession(session);
     }
 
     return NextResponse.json({

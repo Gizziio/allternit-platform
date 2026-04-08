@@ -1135,7 +1135,3 @@ export function detectPluginConflicts() { return { hasConflicts: false, conflict
 export function splitLines(text: string): string[] { return text.split('\n'); }
 export function generateEnhancedWorkspaceDocuments() { return []; }
 export function buildSeedTelemetryEvents() { return []; }
-export function getSetupStatDefinitions() { return []; }
-export function getDefaultCharacterLayer() { return {}; }
-export function computeCharacterStats() { return {}; }
-export function getSpecialtyOptions() { return []; }
