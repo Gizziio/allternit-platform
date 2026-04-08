@@ -13,8 +13,6 @@
  *   config    — org-level Gizzi config merged as the lowest-precedence layer.
  */
 
-export const dynamic = 'force-dynamic';
-
 export function GET() {
   return Response.json(
     {
