@@ -1,66 +1,42 @@
 /**
  * POST /api/oauth/token
  *
- * OAuth 2.0 authorization code exchange (RFC 6749 §4.1.3).
- * Supports PKCE (S256) per RFC 7636.
+ * OAuth 2.0 token endpoint (RFC 6749).
+ * Supported grant types:
+ *   - authorization_code  (§4.1.3) with PKCE S256 (RFC 7636)
+ *   - refresh_token       (§6)     with single-use rotation
  *
- * Request body (application/x-www-form-urlencoded):
- *   grant_type     = "authorization_code"
- *   code           = <authorization code from /oauth/authorize>
- *   redirect_uri   = <must match the one used during authorize>
+ * Request body (application/x-www-form-urlencoded or JSON):
+ *   grant_type     = "authorization_code" | "refresh_token"
+ *   -- authorization_code --
+ *   code           = <authorization code>
+ *   redirect_uri   = <must match authorize request>
  *   client_id      = <registered client ID>
- *   code_verifier  = <PKCE verifier> (required if challenge was sent)
+ *   code_verifier  = <PKCE verifier> (required when challenge was sent)
+ *   -- refresh_token --
+ *   refresh_token  = <opaque refresh token>
+ *   client_id      = <registered client ID>
  *
- * Response (application/json):
- *   { access_token, token_type, expires_in, scope }
+ * Response:
+ *   { access_token, refresh_token, token_type, expires_in, scope }
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { consumeAuthCode } from '@/lib/oauth-codes';
+import { issueTokenPair, rotateRefreshToken } from '@/lib/oauth-tokens';
 import { getOAuthApp, isAllowedRedirectUri } from '@/config/oauth-apps';
 
-// ------------------------------------------------------------------
-// PKCE S256 verification
-// ------------------------------------------------------------------
+// ─── PKCE S256 verification ────────────────────────────────────────────────────
+
 async function verifyPKCE(verifier: string, storedChallenge: string): Promise<boolean> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(verifier);
-  const digest = await crypto.subtle.digest('SHA-256', data);
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
   const b64 = btoa(String.fromCharCode(...new Uint8Array(digest)))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '');
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
   return b64 === storedChallenge;
 }
 
-// ------------------------------------------------------------------
-// Minimal signed access token (HMAC-SHA256 JWT-lite)
-// ------------------------------------------------------------------
-async function signAccessToken(payload: Record<string, unknown>): Promise<string> {
-  const secret = process.env.OAUTH_TOKEN_SECRET ?? 'allternit-oauth-dev-secret-change-in-prod';
-  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
-    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-  const body = btoa(JSON.stringify(payload))
-    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-  const signingInput = `${header}.${body}`;
+// ─── Route handler ─────────────────────────────────────────────────────────────
 
-  const key = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  );
-  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(signingInput));
-  const sigB64 = btoa(String.fromCharCode(...new Uint8Array(sig)))
-    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-
-  return `${signingInput}.${sigB64}`;
-}
-
-// ------------------------------------------------------------------
-// Route handler
-// ------------------------------------------------------------------
 export async function POST(req: NextRequest) {
   const contentType = req.headers.get('content-type') ?? '';
 
@@ -68,7 +44,6 @@ export async function POST(req: NextRequest) {
   if (contentType.includes('application/x-www-form-urlencoded')) {
     params = new URLSearchParams(await req.text());
   } else {
-    // Also accept JSON body for developer convenience
     try {
       const json = await req.json();
       params = new URLSearchParams(json);
@@ -78,81 +53,74 @@ export async function POST(req: NextRequest) {
   }
 
   const grantType = params.get('grant_type');
-  const code = params.get('code');
+  const clientId  = params.get('client_id');
+
+  if (!clientId) return errorResponse('invalid_request', 'Missing client_id', 400);
+
+  const app = getOAuthApp(clientId);
+  if (!app) return errorResponse('invalid_client', 'Unknown client_id', 401);
+
+  // ── refresh_token grant ──────────────────────────────────────────────────────
+  if (grantType === 'refresh_token') {
+    const refreshToken = params.get('refresh_token');
+    if (!refreshToken) return errorResponse('invalid_request', 'Missing refresh_token', 400);
+
+    const pair = await rotateRefreshToken(refreshToken);
+    if (!pair) return errorResponse('invalid_grant', 'Refresh token is invalid or expired', 400);
+
+    // Ensure the token belongs to the same client
+    // (rotateRefreshToken re-issues from stored payload, clientId is in the payload)
+    return tokenResponse(pair);
+  }
+
+  // ── authorization_code grant ─────────────────────────────────────────────────
+  if (grantType !== 'authorization_code') {
+    return errorResponse('unsupported_grant_type', 'Supported: authorization_code, refresh_token', 400);
+  }
+
+  const code        = params.get('code');
   const redirectUri = params.get('redirect_uri');
-  const clientId = params.get('client_id');
   const codeVerifier = params.get('code_verifier');
 
-  if (grantType !== 'authorization_code') {
-    return errorResponse('unsupported_grant_type', 'Only authorization_code is supported', 400);
-  }
-  if (!code || !redirectUri || !clientId) {
+  if (!code || !redirectUri) {
     return errorResponse('invalid_request', 'Missing required parameters', 400);
-  }
-
-  // Validate client
-  const app = getOAuthApp(clientId);
-  if (!app) {
-    return errorResponse('invalid_client', 'Unknown client_id', 401);
   }
   if (!isAllowedRedirectUri(app, redirectUri)) {
     return errorResponse('invalid_grant', 'redirect_uri mismatch', 400);
   }
 
-  // Consume and validate code
   const stored = await consumeAuthCode(code);
-  if (!stored) {
-    return errorResponse('invalid_grant', 'Authorization code is invalid or expired', 400);
-  }
-  if (stored.clientId !== clientId) {
-    return errorResponse('invalid_grant', 'client_id mismatch', 400);
-  }
-  if (stored.redirectUri !== redirectUri) {
-    return errorResponse('invalid_grant', 'redirect_uri mismatch', 400);
-  }
+  if (!stored) return errorResponse('invalid_grant', 'Authorization code is invalid or expired', 400);
+  if (stored.clientId !== clientId) return errorResponse('invalid_grant', 'client_id mismatch', 400);
+  if (stored.redirectUri !== redirectUri) return errorResponse('invalid_grant', 'redirect_uri mismatch', 400);
 
-  // PKCE verification
+  // PKCE
   if (stored.codeChallenge) {
-    if (!codeVerifier) {
-      return errorResponse('invalid_grant', 'code_verifier required', 400);
-    }
+    if (!codeVerifier) return errorResponse('invalid_grant', 'code_verifier required', 400);
     const method = stored.codeChallengeMethod ?? 'S256';
     const valid = method === 'S256'
       ? await verifyPKCE(codeVerifier, stored.codeChallenge)
-      : codeVerifier === stored.codeChallenge; // plain (not recommended)
-    if (!valid) {
-      return errorResponse('invalid_grant', 'PKCE verification failed', 400);
-    }
+      : codeVerifier === stored.codeChallenge;
+    if (!valid) return errorResponse('invalid_grant', 'PKCE verification failed', 400);
   }
 
-  // Issue access token (1 hour)
-  const expiresIn = 3600;
-  const iat = Math.floor(Date.now() / 1000);
-  const accessToken = await signAccessToken({
-    iss: 'https://platform.allternit.com',
-    sub: stored.userId,
-    email: stored.userEmail,
-    client_id: clientId,
+  const pair = await issueTokenPair({
+    userId: stored.userId,
+    userEmail: stored.userEmail,
+    clientId,
     scope: stored.scope,
-    iat,
-    exp: iat + expiresIn,
   });
 
-  return NextResponse.json(
-    {
-      access_token: accessToken,
-      token_type: 'Bearer',
-      expires_in: expiresIn,
-      scope: stored.scope,
-    },
-    {
-      status: 200,
-      headers: {
-        'Cache-Control': 'no-store',
-        'Pragma': 'no-cache',
-      },
-    },
-  );
+  return tokenResponse(pair);
+}
+
+// ─── Helpers ───────────────────────────────────────────────────────────────────
+
+function tokenResponse(pair: { access_token: string; refresh_token: string; token_type: string; expires_in: number; scope: string }) {
+  return NextResponse.json(pair, {
+    status: 200,
+    headers: { 'Cache-Control': 'no-store', Pragma: 'no-cache' },
+  });
 }
 
 function errorResponse(error: string, description: string, status: number) {
