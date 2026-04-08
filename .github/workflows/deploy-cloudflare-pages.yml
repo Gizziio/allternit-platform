@@ -42,6 +42,8 @@ jobs:
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          # Skip postinstall scripts in monorepo packages during build
+          NPM_CONFIG_IGNORE_SCRIPTS: true
           
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
