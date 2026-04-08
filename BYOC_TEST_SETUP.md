@@ -1,80 +1,52 @@
-# BYOC Test Configuration
+# BYOC Test Setup - Manual Backend Registration
 
-## Current Test Environment
+## What We Built
 
-### Backend Running on MacBook
-```
-Local URL:  http://localhost:4096
-Public URL: https://molecules-dsc-specifications-dangerous.trycloudflare.com
-Username:   gizzi
-Password:   c5d4656e7f3753bc0d8996d4dbebf48cecbd7362be06e60f
-```
+Added `POST /api/v1/runtime/backend/manual` endpoint to register a backend by URL without SSH.
 
-### SSH Tunnel for MacBook
-```
-SSH Host:   earrings-arrested-renewal-harry.trycloudflare.com
-SSH Port:   22 (HTTPS endpoint - requires cloudflared access)
-Username:   Your Mac username
-Password:   Your Mac password
-```
+## API Usage
 
-## The Problem
-
-**Cloudflare quick tunnels don't support raw TCP/SSH** - they only proxy HTTP. The Vercel backend can't SSH through an HTTPS endpoint.
-
-## How This SHOULD Work (Proper VPS)
-
-### For a Real VPS (Hetzner, DO, etc.):
-```
-1. User goes to platform.allternit.com
-2. Clicks "Add VPS Connection"
-3. Enters: host=5.189.170.23, user=root, password=12345678
-4. Frontend calls Vercel API: POST /api/v1/ssh-connections/test
-5. Vercel SSHs to VPS, gathers system info
-6. User clicks "Install Backend"
-7. Vercel SSHs and runs install script
-8. Backend starts on VPS port 4096
-9. Frontend connects directly to VPS:4096
+```bash
+curl -X POST https://platform.allternit.com/api/v1/runtime/backend/manual \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_CLERK_TOKEN" \
+  -d '{
+    "name": "My MacBook Backend",
+    "gatewayUrl": "https://your-tunnel.trycloudflare.com",
+    "gatewayWsUrl": "wss://your-tunnel.trycloudflare.com",
+    "gatewayToken": "Basic BASE64(username:password)"
+  }'
 ```
 
-### For Local Development:
-```
-1. User runs backend locally: ./gizzi-code serve --port 4096
-2. User goes to platform.allternit.com  
-3. Frontend detects local backend OR user selects "Local Mode"
-4. Frontend connects directly to localhost:4096
-```
+## Current Backend Status
 
-## Missing for Local Testing
+| Component | Status |
+|-----------|--------|
+| Backend on MacBook | ✅ Running on port 4096 |
+| Tunnel URL | ✅ https://molecules-dsc-specifications-dangerous.trycloudflare.com |
+| Auth | Username: `gizzi`, Password: `c5d4656e7f3753bc0d8996d4dbebf48cecbd7362be06e60f` |
+| Health Check | ✅ Pass |
 
-The platform needs a **"Local Backend"** option in the UI that:
-1. Skips SSH entirely
-2. Sets backend URL to `http://localhost:4096`
-3. Uses the local tunnel URL for internet access
+## What's Missing
 
-## Current Status
+The **UI component** for manual backend entry. Currently only the API exists.
 
-| Component | Working? | Notes |
-|-----------|----------|-------|
-| Backend binary | ✅ | Running locally |
-| Backend tunnel | ✅ | Accessible from internet |
-| SSH access | ❌ | MacBook not reachable via SSH from internet |
-| Frontend deploy | ✅ | On Vercel |
+## Testing Options
 
-## To Test NOW
+### Option 1: Test via API (Now)
+Use the curl command above with your Clerk session token (get from browser dev tools) to register the backend manually.
 
-**Option 1: Add "Local Mode" to UI**
-Need to implement a button that bypasses SSH and connects directly to local backend.
+### Option 2: Add UI Component
+Add a "Manual Backend URL" option in the InfrastructureStep alongside "Use Local Backend", "Connect Existing VPS", etc.
 
-**Option 2: Get a Real VPS**
-Use Hetzner/DigitalOcean with public IP and working SSH.
+## Next Steps
 
-**Option 3: Enable SSH on MacBook with Public Access**
-Requires router port forwarding or ngrok with auth token.
+To complete E2E testing, we need either:
+
+1. **A working VPS** with public IP for full SSH flow test
+2. **UI for manual backend entry** (API exists, need React component)
+3. **Use the existing tunnel** via API call
 
 ---
 
-**What do you want to do?**
-1. I can add a "Use Local Backend" button to skip SSH
-2. We can fix the VPS at 5.189.170.23
-3. You can provide a different VPS
+**Status**: Backend ready, API deployed, need UI or manual API call to test.

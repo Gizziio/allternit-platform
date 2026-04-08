@@ -27,6 +27,7 @@ import {
   GearSix,
   RocketLaunch,
   Shield,
+  Globe,
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/a2r.tokens';
@@ -42,6 +43,7 @@ import {
   type SystemInfo,
   savePurchaseIntent
 } from './ssh-service';
+import { runtimeBackendApi } from '@/api/infrastructure/runtime-backend';
 
 interface Props {
   data: {
@@ -54,6 +56,7 @@ interface Props {
 
 const options = [
   { id: 'local', label: 'Use Local Backend', desc: 'Run everything on this computer (already set up)', icon: HardDrive, color: '#5B8DEF' },
+  { id: 'manual', label: 'Enter Backend URL', desc: 'I have a backend running with a public URL', icon: Globe, color: '#9C6ADE' },
   { id: 'connect', label: 'Connect Existing VPS', desc: 'I have a server - connect via SSH', icon: HardDrives, color: SAND[500] },
   { id: 'purchase', label: 'Purchase VPS', desc: 'Buy a new server from recommended providers', icon: Cloud, color: STATUS.success },
   { id: 'remote', label: 'Remote Desktop Control', desc: 'Control machines via WebRTC', icon: WifiHigh, color: STATUS.warning },
@@ -67,6 +70,13 @@ export function InfrastructureStep({ data, onUpdate, onStatusChange }: Props) {
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
   const [abortFn, setAbortFn] = useState<(() => void) | null>(null);
   const [installLog, setInstallLog] = useState<string[]>([]);
+  
+  // Manual backend form state
+  const [manualBackend, setManualBackend] = useState({
+    name: '',
+    gatewayUrl: '',
+    gatewayToken: '',
+  });
   const [currentStep, setCurrentStep] = useState<InstallStep>('connecting');
 
   // Check for completed VPS purchases
@@ -156,6 +166,42 @@ export function InfrastructureStep({ data, onUpdate, onStatusChange }: Props) {
     // Save purchase intent so we can help connect after they buy
     savePurchaseIntent(provider.id, {});
     window.open(provider.url, '_blank');
+  };
+
+  const handleManualBackendSubmit = async () => {
+    if (!manualBackend.name.trim() || !manualBackend.gatewayUrl.trim()) {
+      setStatus('error');
+      setStatusMessage('Name and Backend URL are required');
+      onStatusChange('error', 'Name and Backend URL are required');
+      return;
+    }
+
+    setStatus('connecting');
+    setStatusMessage('Connecting to backend...');
+    onStatusChange('connecting');
+
+    try {
+      const result = await runtimeBackendApi.registerManualBackend({
+        name: manualBackend.name,
+        gatewayUrl: manualBackend.gatewayUrl,
+        gatewayToken: manualBackend.gatewayToken || undefined,
+      });
+
+      if (result.success) {
+        setStatus('ready');
+        setStatusMessage(result.message || 'Backend registered successfully');
+        onStatusChange('ready', result.message || 'Backend registered successfully');
+      } else {
+        setStatus('error');
+        setStatusMessage(result.message || 'Failed to register backend');
+        onStatusChange('error', result.message || 'Failed to register backend');
+      }
+    } catch (error) {
+      setStatus('error');
+      const message = error instanceof Error ? error.message : 'Failed to register backend';
+      setStatusMessage(message);
+      onStatusChange('error', message);
+    }
   };
 
   return (
@@ -452,6 +498,77 @@ export function InfrastructureStep({ data, onUpdate, onStatusChange }: Props) {
           <div>
             <div className="font-medium text-white">Local backend is ready</div>
             <div className="text-sm text-white/50">A2R is already running on your computer</div>
+          </div>
+        </div>
+      )}
+
+      {/* Manual Backend URL Form */}
+      {data.infraType === 'manual' && (
+        <div className="mt-4 p-4 rounded-2xl bg-[rgba(255,255,255,0.02)] border border-[`${SAND[500]}1a`] space-y-3">
+          <div className="flex items-center gap-2 mb-3 text-[#9C6ADE] text-sm font-medium">
+            <Globe size={16} />
+            Backend Connection Details
+          </div>
+          
+          <div className="space-y-3">
+            <input
+              type="text"
+              value={manualBackend.name}
+              onChange={(e) => setManualBackend({ ...manualBackend, name: e.target.value })}
+              placeholder="Connection name (e.g., My MacBook)"
+              className="w-full px-3 py-2.5 bg-[rgba(255,255,255,0.03)] border border-[`${SAND[500]}26`] rounded-xl text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-[#9C6ADE]"
+            />
+            
+            <input
+              type="text"
+              value={manualBackend.gatewayUrl}
+              onChange={(e) => setManualBackend({ ...manualBackend, gatewayUrl: e.target.value })}
+              placeholder="Backend URL (e.g., https://your-tunnel.trycloudflare.com)"
+              className="w-full px-3 py-2.5 bg-[rgba(255,255,255,0.03)] border border-[`${SAND[500]}26`] rounded-xl text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-[#9C6ADE]"
+            />
+            
+            <input
+              type="text"
+              value={manualBackend.gatewayToken}
+              onChange={(e) => setManualBackend({ ...manualBackend, gatewayToken: e.target.value })}
+              placeholder="Auth token (optional, e.g., Basic dXNlcjpwYXNz)"
+              className="w-full px-3 py-2.5 bg-[rgba(255,255,255,0.03)] border border-[`${SAND[500]}26`] rounded-xl text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-[#9C6ADE]"
+            />
+          </div>
+
+          {/* Action Button */}
+          <button
+            onClick={handleManualBackendSubmit}
+            disabled={status === 'connecting'}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#9C6ADE] rounded-xl text-sm text-white font-medium hover:bg-[#8b5bc7] disabled:opacity-50"
+          >
+            {status === 'connecting' ? (
+              <CircleNotch className="w-4 h-4 animate-spin" />
+            ) : (
+              <Globe size={16} />
+            )}
+            {status === 'connecting' ? 'Connecting...' : 'Connect to Backend'}
+          </button>
+
+          {/* Status */}
+          {status !== 'idle' && statusMessage && (
+            <div className={cn('flex items-center gap-2 px-3 py-2 rounded-lg text-sm',
+              status === 'error' ? 'bg-red-500/10 text-red-400' : 
+              status === 'ready' ? 'bg-green-500/10 text-green-400' :
+              'bg-[#9C6ADE]/10 text-[#9C6ADE]')}>
+              {status === 'error' ? <Warning size={16} /> :
+               status === 'ready' ? <CheckCircle size={16} /> :
+               <CircleNotch className="w-4 h-4 animate-spin" />}
+              {statusMessage}
+            </div>
+          )}
+
+          {/* Help Text */}
+          <div className="text-xs text-white/40 bg-black/20 rounded-lg p-3">
+            <p className="mb-1">For local development with a tunnel:</p>
+            <code className="text-[#9C6ADE] text-[10px] block bg-black/30 p-2 rounded">
+              cloudflared tunnel --url http://localhost:4096
+            </code>
           </div>
         </div>
       )}
