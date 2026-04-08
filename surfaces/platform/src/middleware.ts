@@ -3,11 +3,14 @@ import { NextResponse } from "next/server"
 
 const isPublic = createRouteMatcher([
   "/",
-  "/shell(.*)",
   "/.well-known/gizzi",
   "/terminal/clerk",
   "/sign-in(.*)",
   "/sign-up(.*)",
+  "/oauth(.*)",
+  "/terms(.*)",
+  "/privacy(.*)",
+  "/status(.*)",
 ])
 
 const clerkHandler = clerkMiddleware(async (auth, req) => {
