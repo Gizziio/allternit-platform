@@ -14,6 +14,7 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import { getAuditTrailService } from './auditTrailService';
+import { getRedisClient } from '@/lib/redis/client';
 
 // ============================================================================
 // Types
@@ -81,7 +82,7 @@ export class InMemoryEnvironmentStore implements EnvironmentStore {
     this.targets.set('cloud-default', {
       id: 'cloud-default',
       type: 'cloud',
-      name: 'A2R Cloud',
+      name: 'Allternit Cloud',
       description: 'Hosted execution plane',
       status: 'active',
       region: 'us-east-1',
@@ -292,7 +293,14 @@ let _environmentManager: EnvironmentManager | null = null;
 
 export function getEnvironmentStore(): EnvironmentStore {
   if (!_environmentStore) {
-    _environmentStore = new InMemoryEnvironmentStore();
+    const redis = getRedisClient();
+    if (redis) {
+      // Lazy import to avoid circular deps at module load time
+      const { RedisEnvironmentStore } = require('./redisStores') as typeof import('./redisStores');
+      _environmentStore = new RedisEnvironmentStore(redis);
+    } else {
+      _environmentStore = new InMemoryEnvironmentStore();
+    }
   }
   return _environmentStore;
 }

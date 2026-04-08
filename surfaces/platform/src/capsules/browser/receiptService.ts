@@ -10,6 +10,7 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import { getAuditTrailService } from './auditTrailService';
+import { getRedisClient } from '@/lib/redis/client';
 import {
   BrowserReceipt,
   BrowserAction,
@@ -372,7 +373,13 @@ let _receiptGenerator: ReceiptGenerator | null = null;
 
 export function getReceiptStore(): ReceiptStore {
   if (!_receiptStore) {
-    _receiptStore = new InMemoryReceiptStore();
+    const redis = getRedisClient();
+    if (redis) {
+      const { RedisReceiptStore } = require('./redisStores') as typeof import('./redisStores');
+      _receiptStore = new RedisReceiptStore(redis);
+    } else {
+      _receiptStore = new InMemoryReceiptStore();
+    }
   }
   return _receiptStore;
 }

@@ -17,6 +17,7 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import { getAuditTrailService } from './auditTrailService';
+import { getRedisClient } from '@/lib/redis/client';
 
 // ============================================================================
 // Types
@@ -333,7 +334,13 @@ let _policyEngine: PolicyEngine | null = null;
 
 export function getPolicyStore(): PolicyStore {
   if (!_policyStore) {
-    _policyStore = new InMemoryPolicyStore();
+    const redis = getRedisClient();
+    if (redis) {
+      const { RedisPolicyStore } = require('./redisStores') as typeof import('./redisStores');
+      _policyStore = new RedisPolicyStore(redis);
+    } else {
+      _policyStore = new InMemoryPolicyStore();
+    }
   }
   return _policyStore;
 }
