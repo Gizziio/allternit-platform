@@ -39,6 +39,7 @@ jobs:
         working-directory: surfaces/platform
         run: pnpm next build
         env:
+          CLOUDFLARE_PAGES: '1'
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}

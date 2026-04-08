@@ -158,11 +158,14 @@ const nextConfig: NextConfig = {
     '@allternit/kernel',
   ],
   
-  // standalone: generates .next/standalone/ — a minimal Node.js server that can be
-  // shipped inside the Electron app without a separate node_modules directory.
-  // The desktop spawns `node .next/standalone/server.js` as a subprocess.
-  output: process.env.ALLTERNIT_BUILD_MODE === 'desktop' ? 'standalone' : undefined,
-  distDir: process.env.ALLTERNIT_BUILD_MODE === 'desktop' ? '.next' : '.next',
+  // Build mode configuration:
+  // - desktop: standalone output to .next/ for Electron
+  // - cloudflare: static export to dist/ for Cloudflare Pages
+  // - default: standard Next.js build for Vercel
+  output: process.env.ALLTERNIT_BUILD_MODE === 'desktop' ? 'standalone' : 
+          process.env.CLOUDFLARE_PAGES === '1' ? 'export' : undefined,
+  distDir: process.env.ALLTERNIT_BUILD_MODE === 'desktop' ? '.next' : 
+           process.env.CLOUDFLARE_PAGES === '1' ? 'dist' : '.next',
 
   // Fix standalone output path in monorepo — ensures all local package deps are traced
   outputFileTracingRoot: path.join(__dirname, '../../'),
