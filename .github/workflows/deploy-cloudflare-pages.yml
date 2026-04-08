@@ -34,22 +34,25 @@ jobs:
         working-directory: surfaces/platform
         run: pnpm prisma generate
         
-      - name: Build with @cloudflare/next-on-pages
-        # Run from repo root but specify the app directory
+      # Build static export for Cloudflare Pages
+      # API routes run on user's backend (BYOC), not on Cloudflare
+      - name: Build static export
+        working-directory: surfaces/platform
         run: |
-          cd surfaces/platform && pnpm dlx @cloudflare/next-on-pages@latest
+          # Remove API routes for static export - they run on user's VPS
+          rm -rf src/app/api
+          # Build static export
+          pnpm next build
         env:
+          CLOUDFLARE_PAGES: '1'
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          NPM_CONFIG_IGNORE_SCRIPTS: true
-          # Tell next-on-pages where the app is
-          CWD: surfaces/platform
           
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy surfaces/platform/.vercel/output/static --project-name=allternit-platform --branch=main
+          command: pages deploy surfaces/platform/dist --project-name=allternit-platform --branch=main

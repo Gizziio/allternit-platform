@@ -1,3 +1,8 @@
+// Generate static params for Cloudflare Pages static export
+export function generateStaticParams() {
+  return []
+}
+
 'use client'
 
 import { useRouter, useParams } from 'next/navigation'

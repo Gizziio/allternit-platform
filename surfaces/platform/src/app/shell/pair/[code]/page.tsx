@@ -1,3 +1,8 @@
+// Generate static params for Cloudflare Pages static export
+export function generateStaticParams() {
+  return []
+}
+
 'use client'
 
 import { usePlatformUser } from '@/lib/platform-auth-client'
