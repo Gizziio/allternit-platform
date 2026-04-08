@@ -139,28 +139,42 @@ if [ "$SKIP_ELECTRON" = false ]; then
   ok "Electron app built → $DESKTOP_DIR/release/"
 fi
 
-# ── 4. Print SHA256 checksums for manifest.ts ─────────────────────────────────
-step "SHA256 checksums (copy into surfaces/desktop/src/main/manifest.ts):"
-echo ""
+# ── 4. Patch SHA256 checksums into manifest.ts ───────────────────────────────
+MANIFEST_FILE="$DESKTOP_DIR/src/main/manifest.ts"
+
+patch_checksum() {
+  local platform_key="$1"
+  local binary_path="$2"
+
+  [ -f "$binary_path" ] || { warn "Binary not found for $platform_key: $binary_path"; return; }
+
+  if command -v sha256sum &>/dev/null; then
+    local checksum
+    checksum=$(sha256sum "$binary_path" | awk '{print $1}')
+  else
+    local checksum
+    checksum=$(shasum -a 256 "$binary_path" | awk '{print $1}')
+  fi
+
+  # Replace the empty-string value for this key in the checksums block
+  # Pattern: '<platform_key>':   '' → '<platform_key>':   '<sha256>'
+  # Uses a delimiter that won't appear in keys or hashes (#)
+  sed -i.bak "s#'${platform_key}':   *''#'${platform_key}':   '${checksum}'#g" "$MANIFEST_FILE"
+  ok "Checksum patched → $platform_key: $checksum"
+}
+
+step "Patching SHA256 checksums into $MANIFEST_FILE…"
 
 BINARY_PATH="$RESOURCES_DIR/bin/allternit-api"
 if [ -f "$BINARY_PATH" ]; then
-  if command -v sha256sum &>/dev/null; then
-    CHECKSUM=$(sha256sum "$BINARY_PATH" | awk '{print $1}')
-  else
-    CHECKSUM=$(shasum -a 256 "$BINARY_PATH" | awk '{print $1}')
-  fi
-
-  ARCH=$(uname -m | sed 's/arm64/aarch64/;s/x86_64/x86_64/')
+  ARCH=$(uname -m | sed 's/arm64/aarch64/')
   OS=$(uname | tr '[:upper:]' '[:lower:]' | sed 's/darwin/macos/')
   PLATFORM_KEY="${ARCH}-${OS}"
-
-  echo "  '$PLATFORM_KEY': '$CHECKSUM',"
-  echo ""
-  warn "Update the checksums map in surfaces/desktop/src/main/manifest.ts with the above."
+  patch_checksum "$PLATFORM_KEY" "$BINARY_PATH"
+  rm -f "${MANIFEST_FILE}.bak"
 else
-  warn "Binary not found — skipping checksum computation."
+  warn "Binary not found at $BINARY_PATH — checksums not patched."
 fi
 
 echo ""
-ok "Build complete!"
+ok "Build complete! App: $DESKTOP_DIR/release/"

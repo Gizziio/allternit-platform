@@ -1,0 +1,282 @@
+name: Release Allternit Desktop
+
+on:
+  push:
+    tags: ['desktop-v*']
+  workflow_dispatch:
+    inputs:
+      draft:
+        description: 'Publish as draft'
+        required: false
+        type: boolean
+        default: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  # Build macOS .dmg (arm64 + x64, universal)
+  build-macos:
+    name: Build macOS
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    env:
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin,aarch64-apple-darwin
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: allternit-api-macos
+
+      # ── Step 1: Build Next.js platform as standalone server ──────────────────
+      - name: Install platform dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: surfaces/platform
+
+      - name: Build Next.js platform (standalone)
+        run: ALLTERNIT_BUILD_MODE=desktop pnpm build
+        working-directory: surfaces/platform
+
+      - name: Copy standalone server to desktop resources
+        run: |
+          DEST=surfaces/desktop/resources/platform-server
+          rm -rf "$DEST"
+          mkdir -p "$DEST"
+          cp -r surfaces/platform/.next/standalone/. "$DEST/"
+          if [ -d surfaces/platform/.next/static ]; then
+            mkdir -p "$DEST/.next/static"
+            cp -r surfaces/platform/.next/static/. "$DEST/.next/static/"
+          fi
+          if [ -d surfaces/platform/public ]; then
+            mkdir -p "$DEST/public"
+            cp -r surfaces/platform/public/. "$DEST/public/"
+          fi
+
+      # ── Step 2: Build Rust allternit-api for both architectures ─────────────
+      - name: Build allternit-api (x86_64)
+        run: cargo build --release --target x86_64-apple-darwin --manifest-path api/core/allternit-api/Cargo.toml
+
+      - name: Build allternit-api (aarch64)
+        run: cargo build --release --target aarch64-apple-darwin --manifest-path api/core/allternit-api/Cargo.toml
+
+      - name: Create universal allternit-api binary
+        run: |
+          mkdir -p surfaces/desktop/resources/bin
+          lipo -create \
+            target/x86_64-apple-darwin/release/allternit-api \
+            target/aarch64-apple-darwin/release/allternit-api \
+            -output surfaces/desktop/resources/bin/allternit-api
+          chmod +x surfaces/desktop/resources/bin/allternit-api
+          lipo -info surfaces/desktop/resources/bin/allternit-api
+
+      # ── Step 3: Build Swift VM manager CLI ───────────────────────────────────
+      - name: Build Swift VM manager CLI
+        run: swift build -c release --package-path surfaces/desktop/native/vm-manager
+
+      - name: Copy vm-manager-cli
+        run: |
+          cp surfaces/desktop/native/vm-manager/.build/release/vm-manager-cli \
+             surfaces/desktop/resources/bin/vm-manager-cli
+          chmod +x surfaces/desktop/resources/bin/vm-manager-cli
+
+      # ── Step 4: Patch checksums into manifest.ts ─────────────────────────────
+      - name: Patch manifest.ts checksums
+        run: |
+          BINARY=surfaces/desktop/resources/bin/allternit-api
+          MANIFEST=surfaces/desktop/src/main/manifest.ts
+          # Compute separate checksums for each arch target
+          X64_SHA=$(shasum -a 256 target/x86_64-apple-darwin/release/allternit-api | awk '{print $1}')
+          ARM64_SHA=$(shasum -a 256 target/aarch64-apple-darwin/release/allternit-api | awk '{print $1}')
+          sed -i '' "s|'x86_64-macos':   *''|'x86_64-macos':   '${X64_SHA}'|g" "$MANIFEST"
+          sed -i '' "s|'aarch64-macos':  *''|'aarch64-macos':  '${ARM64_SHA}'|g" "$MANIFEST"
+
+      # ── Step 5: Build and package Electron app ────────────────────────────────
+      - name: Install desktop dependencies
+        run: npm install
+        working-directory: surfaces/desktop
+
+      - name: Build TypeScript
+        run: npm run build
+        working-directory: surfaces/desktop
+
+      - name: Package with electron-builder
+        run: npm run build:electron
+        working-directory: surfaces/desktop
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        with:
+          name: allternit-desktop-macos
+          path: |
+            surfaces/desktop/release/*.dmg
+            surfaces/desktop/release/*.zip
+            surfaces/desktop/release/*.blockmap
+            surfaces/desktop/release/latest-mac.yml
+          retention-days: 14
+
+  # Build Windows NSIS installer
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: allternit-api-windows
+
+      - name: Install platform dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: surfaces/platform
+
+      - name: Build Next.js platform (standalone)
+        shell: bash
+        run: ALLTERNIT_BUILD_MODE=desktop pnpm build
+        working-directory: surfaces/platform
+
+      - name: Copy standalone server to desktop resources
+        shell: bash
+        run: |
+          DEST=surfaces/desktop/resources/platform-server
+          rm -rf "$DEST"
+          mkdir -p "$DEST"
+          cp -r surfaces/platform/.next/standalone/. "$DEST/"
+          if [ -d surfaces/platform/.next/static ]; then
+            mkdir -p "$DEST/.next/static"
+            cp -r surfaces/platform/.next/static/. "$DEST/.next/static/"
+          fi
+
+      - name: Build allternit-api (Windows)
+        run: cargo build --release --target x86_64-pc-windows-msvc --manifest-path api/core/allternit-api/Cargo.toml
+
+      - name: Copy allternit-api binary
+        shell: bash
+        run: |
+          mkdir -p surfaces/desktop/resources/bin
+          cp target/x86_64-pc-windows-msvc/release/allternit-api.exe \
+             surfaces/desktop/resources/bin/allternit-api.exe
+
+      - name: Install desktop dependencies
+        run: npm install
+        working-directory: surfaces/desktop
+
+      - name: Build TypeScript
+        run: npm run build
+        working-directory: surfaces/desktop
+
+      - name: Package with electron-builder
+        run: npm run dist
+        working-directory: surfaces/desktop
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        with:
+          name: allternit-desktop-windows
+          path: |
+            surfaces/desktop/release/*.exe
+            surfaces/desktop/release/*.blockmap
+            surfaces/desktop/release/latest.yml
+          retention-days: 14
+
+  # Publish GitHub Release
+  release:
+    name: Create GitHub Release
+    needs: [build-macos, build-windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Resolve version
+        id: version
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/desktop-v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/desktop-v}"
+          else
+            VERSION="dev"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@c95fe1489396fe8a9eb87c0abf8aa5b2ef267fda # v2.2.1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          tag_name: desktop-v${{ steps.version.outputs.version }}
+          name: Allternit Desktop v${{ steps.version.outputs.version }}
+          body: |
+            ## Allternit Desktop v${{ steps.version.outputs.version }}
+
+            Fully bundled desktop app — no internet required after install.
+
+            ### What's included
+            - Allternit Platform UI (Next.js standalone server)
+            - Allternit API backend (Rust)
+            - VM Manager for Apple Virtualization.framework (macOS)
+
+            ### Downloads
+            | Platform | File |
+            |----------|------|
+            | macOS (arm64 + x64) | `Allternit-*.dmg` |
+            | Windows | `Allternit Setup *.exe` |
+
+            Auto-updates are enabled — the app will notify you when a new version is available.
+          files: artifacts/*
+          draft: ${{ github.event.inputs.draft == 'true' }}
+          prerelease: ${{ contains(github.ref, '-alpha') || contains(github.ref, '-beta') || contains(github.ref, '-rc') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
