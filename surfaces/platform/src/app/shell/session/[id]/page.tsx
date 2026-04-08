@@ -1,3 +1,10 @@
+// Generate static params for Cloudflare Pages export
+export function generateStaticParams() {
+  // Return empty array - this page is client-side rendered
+  // Session IDs are dynamic and handled at runtime
+  return []
+}
+
 'use client'
 
 import { useRouter, useParams } from 'next/navigation'

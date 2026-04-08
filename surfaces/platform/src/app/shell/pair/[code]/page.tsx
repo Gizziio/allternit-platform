@@ -1,3 +1,10 @@
+// Generate static params for Cloudflare Pages export
+export function generateStaticParams() {
+  // Return empty array - this page is client-side rendered
+  // The actual pairing codes are dynamic and handled at runtime
+  return []
+}
+
 'use client'
 
 import { usePlatformUser } from '@/lib/platform-auth-client'
