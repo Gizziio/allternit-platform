@@ -1,3 +1,7 @@
+export async function generateStaticParams() {
+  return []
+}
+
 'use client';
 
 import { PlatformSignUp } from "@/lib/platform-auth-client"
