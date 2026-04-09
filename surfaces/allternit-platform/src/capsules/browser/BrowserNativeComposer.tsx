@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useCallback, useEffect } from "react";
 
-import type { ExtensionSidepanelComposerProps } from "../../../../shared/extension-sidepanel/ExtensionSidepanelShell.types";
+import type { ExtensionSidepanelComposerProps } from "./extension-sidepanel/ExtensionSidepanelShell.types";
 import { useMention, MENTION_OPTIONS, type MentionOption } from "./allternit-extension/html-to-figma/ui/MentionAutocomplete";
 import { CaptureCard } from "./allternit-extension/html-to-figma/ui/CaptureCard";
 import type { CaptureResult } from "./allternit-extension/html-to-figma/types";

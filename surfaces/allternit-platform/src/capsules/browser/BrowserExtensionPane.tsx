@@ -9,7 +9,7 @@ import {
   BrowserExtensionHistoryDetailView,
   BrowserExtensionHistoryListView,
 } from "./BrowserExtensionViews";
-import { ExtensionSidepanelShell } from "../../../../shared/extension-sidepanel/ExtensionSidepanelShell";
+import { ExtensionSidepanelShell } from "./extension-sidepanel/ExtensionSidepanelShell";
 
 const BROWSER_EXTENSION_COPY = {
   title: "Allternit Extension",

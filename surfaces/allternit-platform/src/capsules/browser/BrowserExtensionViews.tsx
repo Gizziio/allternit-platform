@@ -6,12 +6,12 @@ import { cn } from "@/lib/utils";
 
 import {
   EventCard,
-} from "../../../../shared/extension-sidepanel/ExtensionSidepanelShell";
+} from "./extension-sidepanel/ExtensionSidepanelShell";
 import type {
   ExtensionSidepanelConfigViewProps,
   ExtensionSidepanelHistoryDetailViewProps,
   ExtensionSidepanelHistoryListViewProps,
-} from "../../../../shared/extension-sidepanel/ExtensionSidepanelShell.types";
+} from "./extension-sidepanel/ExtensionSidepanelShell.types";
 import { useBrowserChatPaneStore } from "./browserChatPane.store";
 
 const GITHUB_ICON_PATH =

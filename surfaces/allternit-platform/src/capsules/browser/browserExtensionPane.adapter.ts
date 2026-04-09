@@ -10,7 +10,7 @@ import { useBrowserStore } from "./browser.store";
 import type { BrowserTab } from "./browser.types";
 import type {
   ExtensionSidepanelAdapter as BrowserExtensionPaneAdapter,
-} from "../../../../shared/extension-sidepanel/ExtensionSidepanelShell.types";
+} from "./extension-sidepanel/ExtensionSidepanelShell.types";
 
 /**
  * Send a task to the Chrome Extension via native messaging bridge
