@@ -271,11 +271,11 @@ async function initializeBundledMode(): Promise<void> {
     if (isDev) {
       platformUrl = 'http://localhost:3000';
     } else {
-      const apiKey = process.env.ALLTERNIT_OPERATOR_API_KEY ?? '';
       platformUrl = await platformServerManager.start({
         apiUrl,
-        apiKey,
-        // Pass gizzi-code credentials so the Next.js server can reach the AI runtime
+        // API key generated per-session by backendManager
+        apiKey: backendManager.getApiKey() ?? '',
+        // gizzi-code credentials — password generated per-session by gizziManager
         gizziUrl,
         gizziPassword: gizziManager.getPassword() ?? '',
       });

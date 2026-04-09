@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { saveSession } from '@/lib/db'
 
-import { ExtensionSidepanelShell } from '../../../../shared/extension-sidepanel/ExtensionSidepanelShell'
+import { ExtensionSidepanelShell } from '../../../../extension-shared/extension-sidepanel/ExtensionSidepanelShell'
 
 import { ConfigPanel } from './components/ConfigPanel'
 import { HistoryDetail } from './components/HistoryDetail'

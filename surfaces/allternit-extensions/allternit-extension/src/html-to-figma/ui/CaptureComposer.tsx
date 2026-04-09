@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
-import type { ExtensionSidepanelComposerProps } from '../../../../shared/extension-sidepanel/ExtensionSidepanelShell.types'
+import type { ExtensionSidepanelComposerProps } from '../../../../extension-shared/extension-sidepanel/ExtensionSidepanelShell.types'
 import { QuickActionOverlay } from './QuickActionOverlay'
 import { MentionAutocomplete, useMention, MENTION_OPTIONS, type MentionOption } from './MentionAutocomplete'
 import { CaptureCard } from './CaptureCard'

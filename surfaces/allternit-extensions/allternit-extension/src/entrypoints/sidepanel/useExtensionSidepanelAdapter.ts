@@ -2,7 +2,7 @@ import type {
 	ExtensionSidepanelActivity,
 	ExtensionSidepanelAdapter,
 	ExtensionSidepanelHistoricalEvent,
-} from '../../../../shared/extension-sidepanel/ExtensionSidepanelShell.types'
+} from '../../../../extension-shared/extension-sidepanel/ExtensionSidepanelShell.types'
 import { useEffect, useState } from 'react'
 
 import { useAgent } from '../../agent/useAgent'
