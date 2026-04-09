@@ -34,16 +34,6 @@ jobs:
         working-directory: surfaces/allternit-platform
         run: pnpm prisma generate
         
-      # Debug: verify dynamic routes have generateStaticParams
-      - name: Verify dynamic routes
-        working-directory: surfaces/allternit-platform
-        run: |
-          echo "=== shell/pair/[code]/page.tsx ==="
-          cat src/app/shell/pair/\[code\]/page.tsx
-          echo ""
-          echo "=== shell/session/[id]/page.tsx ==="
-          cat src/app/shell/session/\[id\]/page.tsx
-        
       # Build static export for Cloudflare Pages
       # API routes run on user's backend (BYOC), not on Cloudflare
       - name: Build static export
@@ -53,10 +43,6 @@ jobs:
           rm -rf .next dist node_modules/.cache
           # Remove API routes for static export - they run on user's VPS
           rm -rf src/app/api
-          # Verify files are correct
-          echo "=== Final verification ==="
-          head -5 src/app/shell/pair/\[code\]/page.tsx
-          head -5 src/app/shell/session/\[id\]/page.tsx
           # Build static export
           pnpm next build
         env:
