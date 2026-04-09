@@ -1,4 +1,3 @@
-// Required for static export of dynamic routes
 export async function generateStaticParams() {
   return []
 }
