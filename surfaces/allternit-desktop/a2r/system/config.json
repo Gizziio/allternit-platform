@@ -1,0 +1,17 @@
+{
+  "logging.retention_days": 7.0,
+  "workspace.auto_save": true,
+  "agent.timeout_seconds": 120.0,
+  "api.cors_enabled": true,
+  "workspace.backup_interval_minutes": 5.0,
+  "kernel.retry_attempts": 3.0,
+  "api.rate_limit_requests": 100.0,
+  "kernel.url": "http://127.0.0.1:3004",
+  "logging.file_enabled": true,
+  "logging.level": "info",
+  "kernel.timeout_seconds": 30.0,
+  "api.bind_address": "127.0.0.1:3000",
+  "agent.default_model": "claude-3-5-sonnet",
+  "logging.stdout": true,
+  "agent.max_iterations": 10.0
+}

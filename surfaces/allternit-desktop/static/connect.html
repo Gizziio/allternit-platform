@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connect to A2R - A2R Desktop</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+    }
+
+    .container {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 48px;
+      width: 100%;
+      max-width: 480px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .logo h1 {
+      font-size: 32px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .logo p {
+      color: rgba(255, 255, 255, 0.6);
+      margin-top: 8px;
+    }
+
+    .mode-selector {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .mode-btn {
+      flex: 1;
+      padding: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      color: #fff;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .mode-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .mode-btn.active {
+      border-color: #667eea;
+      background: rgba(102, 126, 234, 0.2);
+    }
+
+    .mode-btn .icon {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+
+    .mode-btn .label {
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+    }
+
+    .input-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .input-group input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      color: #fff;
+      font-size: 15px;
+      transition: border-color 0.2s;
+    }
+
+    .input-group input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .input-group input::placeholder {
+      color: rgba(255, 255, 255, 0.3);
+    }
+
+    .status {
+      padding: 12px 16px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      display: none;
+    }
+
+    .status.show {
+      display: block;
+    }
+
+    .status.success {
+      background: rgba(34, 197, 94, 0.2);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      color: #4ade80;
+    }
+
+    .status.error {
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #f87171;
+    }
+
+    .status.loading {
+      background: rgba(251, 191, 36, 0.2);
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      color: #fbbf24;
+    }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 14px 24px;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .help {
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .help h3 {
+      font-size: 14px;
+      margin-bottom: 12px;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .help p {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.5);
+      line-height: 1.6;
+    }
+
+    .help a {
+      color: #667eea;
+      text-decoration: none;
+    }
+
+    .help a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">
+      <h1>A2R Desktop</h1>
+      <p>Connect to your A2R instance</p>
+    </div>
+
+    <div class="mode-selector">
+      <button class="mode-btn active" data-mode="local">
+        <div class="icon">💻</div>
+        <div class="label">Local</div>
+      </button>
+      <button class="mode-btn" data-mode="vps">
+        <div class="icon">☁️</div>
+        <div class="label">VPS</div>
+      </button>
+    </div>
+
+    <div id="local-inputs">
+      <div class="input-group">
+        <label>Local Port</label>
+        <input type="number" id="local-port" value="4096" placeholder="4096">
+      </div>
+    </div>
+
+    <div id="vps-inputs" style="display: none;">
+      <div class="input-group">
+        <label>VPS URL</label>
+        <input type="url" id="vps-url" placeholder="https://a2r.yourdomain.com">
+      </div>
+    </div>
+
+    <div id="status" class="status"></div>
+
+    <div class="actions">
+      <button class="btn btn-secondary" id="test-btn">Test</button>
+      <button class="btn btn-primary" id="connect-btn">Connect</button>
+    </div>
+
+    <div class="help">
+      <h3>Don't have A2R running?</h3>
+      <p>
+        Install the A2R backend on your VPS or locally:<br>
+        <code>curl -fsSL https://a2r.io/install.sh | bash</code><br><br>
+        <a href="#" id="docs-link">View Documentation →</a>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    let currentMode = 'local';
+    let isConnecting = false;
+
+    const modeBtns = document.querySelectorAll('.mode-btn');
+    const localInputs = document.getElementById('local-inputs');
+    const vpsInputs = document.getElementById('vps-inputs');
+    const testBtn = document.getElementById('test-btn');
+    const connectBtn = document.getElementById('connect-btn');
+    const statusEl = document.getElementById('status');
+
+    // Mode switching
+    modeBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        modeBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentMode = btn.dataset.mode;
+        
+        if (currentMode === 'local') {
+          localInputs.style.display = 'block';
+          vpsInputs.style.display = 'none';
+        } else {
+          localInputs.style.display = 'none';
+          vpsInputs.style.display = 'block';
+        }
+      });
+    });
+
+    function showStatus(message, type) {
+      statusEl.textContent = message;
+      statusEl.className = `status ${type} show`;
+    }
+
+    function hideStatus() {
+      statusEl.className = 'status';
+    }
+
+    async function testConnection() {
+      showStatus('Testing connection...', 'loading');
+      testBtn.disabled = true;
+
+      try {
+        const result = await window.a2rDesktop.connection.test();
+        
+        if (result.status === 'connected') {
+          showStatus(`✓ Connected to ${result.url}`, 'success');
+        } else {
+          showStatus(`✗ Could not connect to ${result.url}`, 'error');
+        }
+      } catch (err) {
+        showStatus(`✗ Error: ${err.message}`, 'error');
+      } finally {
+        testBtn.disabled = false;
+      }
+    }
+
+    async function connect() {
+      if (isConnecting) return;
+      isConnecting = true;
+      connectBtn.disabled = true;
+      showStatus('Connecting...', 'loading');
+
+      try {
+        const config = currentMode === 'local' 
+          ? {
+              mode: 'local',
+              localPort: parseInt(document.getElementById('local-port').value),
+              vpsUrl: ''
+            }
+          : {
+              mode: 'vps',
+              localPort: 4096,
+              vpsUrl: document.getElementById('vps-url').value
+            };
+
+        const result = await window.a2rDesktop.connection.setBackend(config);
+        
+        if (result.status === 'connected') {
+          showStatus('Connected! Loading A2R...', 'success');
+          // Main process will reload the window to the platform UI
+        } else {
+          showStatus(`Failed to connect: ${result.lastError || 'Unknown error'}`, 'error');
+          isConnecting = false;
+          connectBtn.disabled = false;
+        }
+      } catch (err) {
+        showStatus(`Error: ${err.message}`, 'error');
+        isConnecting = false;
+        connectBtn.disabled = false;
+      }
+    }
+
+    // Auto-discover on load
+    async function autoDiscover() {
+      try {
+        const discovered = await window.a2rDesktop.connection.discover();
+        if (discovered) {
+          const port = new URL(discovered).port;
+          document.getElementById('local-port').value = port;
+          showStatus(`Found A2R running on port ${port}`, 'success');
+        }
+      } catch (err) {
+        console.log('No local A2R found');
+      }
+    }
+
+    testBtn.addEventListener('click', testConnection);
+    connectBtn.addEventListener('click', connect);
+    document.getElementById('docs-link').addEventListener('click', (e) => {
+      e.preventDefault();
+      window.a2rDesktop.shell.openExternal('https://docs.a2r.io/setup');
+    });
+
+    // Load saved config
+    async function loadConfig() {
+      try {
+        const backend = await window.a2rDesktop.connection.getBackend();
+        if (backend.mode === 'vps' && backend.vpsUrl) {
+          modeBtns[1].click();
+          document.getElementById('vps-url').value = backend.vpsUrl;
+        } else {
+          document.getElementById('local-port').value = backend.localPort;
+        }
+      } catch (err) {
+        console.error('Failed to load config:', err);
+      }
+    }
+
+    // Initialize
+    loadConfig();
+    autoDiscover();
+  </script>
+</body>
+</html>
