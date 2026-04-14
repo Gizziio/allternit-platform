@@ -1,4 +1,4 @@
-# A2rchitect Platform
+# allternit Platform
 
 > **Enterprise Agentic Operating System**
 > A comprehensive backend infrastructure for AI agents with a layered microservices architecture.
@@ -16,7 +16,7 @@ make dev
 
 # Or start individual services
 cd 7-apps/shell && pnpm dev      # Shell web app
-cd 6-ui/a2r-platform && pnpm dev  # UI component library
+cd 6-ui/allternit-platform && pnpm dev  # UI component library
 ```
 
 ---
@@ -29,8 +29,8 @@ cd 6-ui/a2r-platform && pnpm dev  # UI component library
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  0-substrate/           # Layer 0: Foundational infrastructure              │
-│  ├── a2r-substrate/     # Core runtime and helper utilities                 │
-│  ├── a2r-intent-graph-kernel/  # Persistent graph of intent nodes          │
+│  ├── allternit-substrate/     # Core runtime and helper utilities                 │
+│  ├── allternit-intent-graph-kernel/  # Persistent graph of intent nodes          │
 │  └── types/             # Shared TypeScript interfaces                      │
 │                                                                             │
 │  1-kernel/              # Layer 1: Execution engine, sandboxing             │
@@ -48,7 +48,7 @@ cd 6-ui/a2r-platform && pnpm dev  # UI component library
 │  5-agents/              # Layer 5: Agent implementations                    │
 │                                                                             │
 │  6-ui/                  # Layer 6: UI components and platform               │
-│  ├── a2r-platform/      # React component library (main)                    │
+│  ├── allternit-platform/      # React component library (main)                    │
 │  │   ├── src/types/     # TypeScript types (browser, runtime, workflow)     │
 │  │   ├── src/services/  # Business logic services                           │
 │  │   ├── src/hooks/     # React hooks (useBudget, usePrewarm, useWorkflow)  │
@@ -58,8 +58,8 @@ cd 6-ui/a2r-platform && pnpm dev  # UI component library
 │                                                                             │
 │  7-apps/                # Layer 7: Applications and entrypoints             │
 │  ├── shell/             # Shell product family                              │
-│  │   ├── web/           # Browser shell (@a2rchitech/shell-ui)              │
-│  │   ├── desktop/       # Electron wrapper (@a2rchitech/shell)              │
+│  │   ├── web/           # Browser shell (@allternit/shell-ui)              │
+│  │   ├── desktop/       # Electron wrapper (@allternit/shell)              │
 │  │   └── terminal/      # TUI (terminal interface)                          │
 │  ├── api/               # Rust API server (port 3000)                       │
 │  ├── chrome-extension/  # Browser extension                                 │
@@ -76,12 +76,12 @@ cd 6-ui/a2r-platform && pnpm dev  # UI component library
 
 ## New Services (TypeScript)
 
-The following services have been ported from the original Rust implementation in `6-ui/shell-ui` to TypeScript in `6-ui/a2r-platform/src/services/`:
+The following services have been ported from the original Rust implementation in `6-ui/shell-ui` to TypeScript in `6-ui/allternit-platform/src/services/`:
 
 ### browserEngine
 Browser automation service using Playwright via backend API.
 
-**Location**: `6-ui/a2r-platform/src/services/browserEngine.ts`
+**Location**: `6-ui/allternit-platform/src/services/browserEngine.ts`
 
 ```typescript
 import { createBrowserEngine } from '@/services/browserEngine';
@@ -99,7 +99,7 @@ const screenshot = await engine.screenshot(true);
 ### budgetCalculator
 Budget metering and quota management.
 
-**Location**: `6-ui/a2r-platform/src/services/budgetCalculator.ts`
+**Location**: `6-ui/allternit-platform/src/services/budgetCalculator.ts`
 
 ```typescript
 import { createBudgetCalculator } from '@/services/budgetCalculator';
@@ -112,7 +112,7 @@ const percentages = calculator.calculatePercentages('tenant-123');
 ### poolManager
 Prewarm pool lifecycle management.
 
-**Location**: `6-ui/a2r-platform/src/services/poolManager.ts`
+**Location**: `6-ui/allternit-platform/src/services/poolManager.ts`
 
 ```typescript
 import { createPoolManager } from '@/services/poolManager';
@@ -125,7 +125,7 @@ const health = manager.calculateHealth(pool);
 ### workflowEngine
 Workflow validation, auto-layout, and compilation.
 
-**Location**: `6-ui/a2r-platform/src/services/workflowEngine.ts`
+**Location**: `6-ui/allternit-platform/src/services/workflowEngine.ts`
 
 ```typescript
 import { createWorkflowEngine } from '@/services/workflowEngine';
@@ -137,9 +137,9 @@ const executable = engine.compileToExecutable(draft);
 ```
 
 ### visualVerificationApi
-Visual verification for A2R Autoland quality gates.
+Visual verification for Allternit Autoland quality gates.
 
-**Location**: `6-ui/a2r-platform/src/services/visualVerificationApi.ts`
+**Location**: `6-ui/allternit-platform/src/services/visualVerificationApi.ts`
 
 ```typescript
 import { visualVerificationApi, useVisualVerification } from '@/services';
@@ -252,7 +252,7 @@ pnpm dev
 
 ### UI Platform (Component Library)
 ```bash
-cd 6-ui/a2r-platform
+cd 6-ui/allternit-platform
 pnpm install
 pnpm build
 ```
@@ -263,7 +263,7 @@ pnpm build
 cargo build --release
 
 # Run specific service
-cargo run -p a2r-api
+cargo run -p allternit-api
 ```
 
 ---
