@@ -4,7 +4,7 @@
  * Provides hook points for runtime integration.
  */
 
-import type { A2RKernel, WihItem } from '@allternit/governor';
+import type { A2RKernel, WihItem } from '@a2r/governor';
 import type { HookRegistry, HookFunction, HookManager } from '../types.js';
 
 /**

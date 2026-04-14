@@ -6,12 +6,12 @@
  * 
  * @example
  * ```typescript
- * import { A2RKernelImpl } from '@allternit/governor';
+ * import { A2RKernelImpl } from '@a2r/governor';
  * import { 
  *   RuntimeBridge,
  *   wrapGatewayClient,
  *   createWrappedToolExecutor 
- * } from '@allternit/runtime';
+ * } from '@a2r/runtime';
  * 
  * const kernel = new A2RKernelImpl(storage);
  * const bridge = new RuntimeBridge({ kernel });
@@ -30,7 +30,7 @@ export type {
   FileContext,
   RoutingResult,
   RoutingDecision,
-} from '@allternit/governor';
+} from '@a2r/governor';
 
 // Types
 export type {
@@ -128,7 +128,7 @@ export {
 // Runtime Bridge Class
 // ============================================================================
 
-import type { A2RKernel } from '@allternit/governor';
+import type { A2RKernel } from '@a2r/governor';
 import type { RuntimeBridgeConfig, AuditLogEntry } from './types.js';
 import { A2RHookManager } from './hooks/index.js';
 import { PluginAdapter } from './adapters/plugin-adapter.js';
@@ -316,31 +316,31 @@ export function createRuntimeBridge(
  * Check if running in A2R-governed environment
  */
 export function isA2RGoverned(): boolean {
-  return process.env.ALLTERNIT_GOVERNED === 'true' ||
-         !!process.env.ALLTERNIT_WIH_ID;
+  return process.env.A2R_GOVERNED === 'true' ||
+         !!process.env.A2R_WIH_ID;
 }
 
 /**
  * Get current WIH ID from environment
  */
 export function getCurrentWihId(): string | undefined {
-  return process.env.ALLTERNIT_WIH_ID;
+  return process.env.A2R_WIH_ID;
 }
 
 /**
  * Set current WIH ID in environment
  */
 export function setCurrentWihId(wihId: string): void {
-  process.env.ALLTERNIT_WIH_ID = wihId;
-  process.env.ALLTERNIT_GOVERNED = 'true';
+  process.env.A2R_WIH_ID = wihId;
+  process.env.A2R_GOVERNED = 'true';
 }
 
 /**
  * Clear current WIH ID from environment
  */
 export function clearCurrentWihId(): void {
-  delete process.env.ALLTERNIT_WIH_ID;
-  delete process.env.ALLTERNIT_GOVERNED;
+  delete process.env.A2R_WIH_ID;
+  delete process.env.A2R_GOVERNED;
 }
 
 export * from "./client.js";

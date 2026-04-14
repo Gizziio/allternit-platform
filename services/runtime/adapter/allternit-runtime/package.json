@@ -1,5 +1,5 @@
 {
-  "name": "@allternit/runtime",
+  "name": "@a2r/runtime",
   "version": "1.0.0",
   "description": "A2R Runtime Bridge for AI Agent Integration",
   "type": "module",
@@ -44,8 +44,8 @@
   "author": "A2rchitect Team",
   "license": "MIT",
   "dependencies": {
-    "@allternit/governor": "workspace:*",
-    "@allternit/engine": "workspace:*"
+    "@a2r/governor": "workspace:*",
+    "@a2r/engine": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

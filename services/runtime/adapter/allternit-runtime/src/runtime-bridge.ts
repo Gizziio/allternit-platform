@@ -1,5 +1,5 @@
 import { NativeBridge } from '../bridges/a2r-native-bridge/index.js'; // Assumes compiled bindings
-import { OrchestrationContext } from '@allternit/orchestrator';
+import { OrchestrationContext } from '@a2r/orchestrator';
 
 export class A2RRuntimeBridge {
   private native: any;

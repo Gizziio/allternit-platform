@@ -1,4 +1,4 @@
-import type { A2RKernel } from '@allternit/governor';
+import type { A2RKernel } from '@a2r/governor';
 
 export interface AdapterContext {
   kernel: A2RKernel;

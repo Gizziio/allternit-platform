@@ -11,7 +11,7 @@ import type {
   A2RKernel,
   WihItem,
   // RoutingDeniedError,
-} from '@allternit/governor';
+} from '@a2r/governor';
 import {
   type AdapterContext,
   type SessionInitResult,
@@ -263,7 +263,7 @@ export function createA2RGatewayOptions(
  * 
  * Usage:
  * ```typescript
- * import { wrapGatewayClient } from '@allternit/runtime';
+ * import { wrapGatewayClient } from '@a2r/runtime';
  * 
  * const A2RGatewayClient = wrapGatewayClient(GatewayClient, kernel);
  * const client = new A2RGatewayClient({
