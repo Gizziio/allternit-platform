@@ -103,6 +103,11 @@ jobs:
           sed -i 's|path = \"../../infrastructure/allternit-guest-agent-protocol\"|path = \"../../drivers/allternit-guest-agent-protocol\"|' \
             "$TMP_WS/domains/kernel/service/allternit-vm-executor/Cargo.toml"
 
+          # Debug: verify the workspace structure
+          echo "=== Workspace structure ==="
+          find "$TMP_WS" -name "Cargo.toml" -exec echo "File: {}" \; -exec cat {} \;
+          echo "==========================="
+
           cd "$TMP_WS"
           if [ "${{ matrix.arch }}" = "amd64" ]; then
             cargo build --release -p allternit-vm-executor
