@@ -136,38 +136,38 @@ jobs:
 
           # Configuration directory and config file
           sudo mkdir -p /mnt/rootfs/etc/allternit
-          sudo tee /mnt/rootfs/etc/allternit/vm-executor.toml > /dev/null << 'EOF'
-vsock_port = 8080
-log_level = "info"
-max_sessions = 50
-workspace_path = "/workspace"
-
-[sandbox]
-use_bubblewrap = true
-network = "host"
-max_memory_mb = 2048
-EOF
+          printf '%s\n' \
+            'vsock_port = 8080' \
+            'log_level = "info"' \
+            'max_sessions = 50' \
+            'workspace_path = "/workspace"' \
+            '' \
+            '[sandbox]' \
+            'use_bubblewrap = true' \
+            'network = "host"' \
+            'max_memory_mb = 2048' \
+            | sudo tee /mnt/rootfs/etc/allternit/vm-executor.toml > /dev/null
 
           # Workspace directory
           sudo mkdir -p /mnt/rootfs/workspace
 
           # systemd service
-          sudo tee /mnt/rootfs/etc/systemd/system/allternit-vm-executor.service > /dev/null << 'EOF'
-[Unit]
-Description=Allternit VM Executor
-After=network.target
-
-[Service]
-Type=simple
-ExecStart=/usr/bin/allternit-vm-executor
-Restart=always
-RestartSec=5
-StandardOutput=journal
-StandardError=journal
-
-[Install]
-WantedBy=multi-user.target
-EOF
+          printf '%s\n' \
+            '[Unit]' \
+            'Description=Allternit VM Executor' \
+            'After=network.target' \
+            '' \
+            '[Service]' \
+            'Type=simple' \
+            'ExecStart=/usr/bin/allternit-vm-executor' \
+            'Restart=always' \
+            'RestartSec=5' \
+            'StandardOutput=journal' \
+            'StandardError=journal' \
+            '' \
+            '[Install]' \
+            'WantedBy=multi-user.target' \
+            | sudo tee /mnt/rootfs/etc/systemd/system/allternit-vm-executor.service > /dev/null
 
           sudo chroot /mnt/rootfs systemctl enable allternit-vm-executor.service
 
@@ -187,20 +187,25 @@ EOF
           INITRD_SHA=$(sha256sum initrd.img-6.5.0-allternit-${{ matrix.arch }} | cut -d' ' -f1)
           ROOTFS_SHA=$(sha256sum ubuntu-22.04-allternit-v${IMAGE_VERSION}-${{ matrix.arch }}.ext4 | cut -d' ' -f1)
 
-          cat > version-${IMAGE_VERSION}-${{ matrix.arch }}.json << EOF
-{
-  "version": "${IMAGE_VERSION}",
-  "build_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "architecture": "${{ matrix.arch }}",
-  "kernel_version": "6.5.0",
-  "rootfs_size_mb": 3072,
-  "checksums": {
-    "vmlinux_sha256": "${VMLINUX_SHA}",
-    "initrd_sha256": "${INITRD_SHA}",
-    "rootfs_sha256": "${ROOTFS_SHA}"
-  }
-}
-EOF
+          jq -n \
+            --arg version "${IMAGE_VERSION}" \
+            --arg build_date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg arch "${{ matrix.arch }}" \
+            --arg vmlinux "${VMLINUX_SHA}" \
+            --arg initrd "${INITRD_SHA}" \
+            --arg rootfs "${ROOTFS_SHA}" \
+            '{
+              version: $version,
+              build_date: $build_date,
+              architecture: $arch,
+              kernel_version: "6.5.0",
+              rootfs_size_mb: 3072,
+              checksums: {
+                vmlinux_sha256: $vmlinux,
+                initrd_sha256: $initrd,
+                rootfs_sha256: $rootfs
+              }
+            }' > version-${IMAGE_VERSION}-${{ matrix.arch }}.json
 
       - name: Compress images
         run: |
