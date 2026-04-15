@@ -4,7 +4,7 @@
 //! Multiple commands can be executed within the same session, sharing
 /// state like environment variables and working directory.
 
-use a2r_guest_agent_protocol::{SessionId, SpawnSpec};
+use allternit_guest_agent_protocol::{SessionId, SpawnSpec};
 use anyhow::{Context, Result};
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -65,8 +65,8 @@ impl Session {
             "/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin".to_string(),
         );
         environment.insert("TERM".to_string(), "xterm-256color".to_string());
-        environment.insert("A2R_SESSION_ID".to_string(), id.0.to_string());
-        environment.insert("A2R_TENANT_ID".to_string(), tenant_id.clone());
+        environment.insert("Allternit_SESSION_ID".to_string(), id.0.to_string());
+        environment.insert("Allternit_TENANT_ID".to_string(), tenant_id.clone());
         
         // Add user-specified environment
         for (key, value) in &spec.environment {

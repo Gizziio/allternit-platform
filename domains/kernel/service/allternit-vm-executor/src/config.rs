@@ -1,9 +1,9 @@
-//! Configuration for A2R VM Executor
+//! Configuration for Allternit VM Executor
 //!
 //! Configuration is loaded from:
-//! 1. /etc/a2r/vm-executor.toml (system-wide)
-//! 2. ~/.config/a2r/vm-executor.toml (user-specific, overrides system)
-//! 3. Environment variables (A2R_* prefix, overrides files)
+//! 1. /etc/allternit/vm-executor.toml (system-wide)
+//! 2. ~/.config/allternit/vm-executor.toml (user-specific, overrides system)
+//! 3. Environment variables (Allternit_* prefix, overrides files)
 
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -64,14 +64,14 @@ impl ExecutorConfig {
         let mut config = Self::default();
 
         // Try to load system config
-        if let Ok(system_config) = std::fs::read_to_string("/etc/a2r/vm-executor.toml") {
+        if let Ok(system_config) = std::fs::read_to_string("/etc/allternit/vm-executor.toml") {
             let parsed: ExecutorConfig = toml::from_str(&system_config)?;
             config = merge_config(config, parsed);
         }
 
         // Try to load user config
         if let Some(home) = dirs::home_dir() {
-            let user_config_path = home.join(".config/a2r/vm-executor.toml");
+            let user_config_path = home.join(".config/allternit/vm-executor.toml");
             if let Ok(user_config) = std::fs::read_to_string(&user_config_path) {
                 let parsed: ExecutorConfig = toml::from_str(&user_config)?;
                 config = merge_config(config, parsed);
@@ -255,27 +255,27 @@ fn merge_config(base: ExecutorConfig, override_: ExecutorConfig) -> ExecutorConf
 
 /// Apply environment variable overrides
 fn config_from_env(mut config: ExecutorConfig) -> anyhow::Result<ExecutorConfig> {
-    if let Ok(port) = std::env::var("A2R_VSOCK_PORT") {
+    if let Ok(port) = std::env::var("Allternit_VSOCK_PORT") {
         config.vsock_port = port.parse()?;
     }
 
-    if let Ok(port) = std::env::var("A2R_TCP_PORT") {
+    if let Ok(port) = std::env::var("Allternit_TCP_PORT") {
         config.tcp_port = Some(port.parse()?);
     }
 
-    if let Ok(level) = std::env::var("A2R_LOG_LEVEL") {
+    if let Ok(level) = std::env::var("Allternit_LOG_LEVEL") {
         config.log_level = level;
     }
 
-    if let Ok(sessions) = std::env::var("A2R_MAX_SESSIONS") {
+    if let Ok(sessions) = std::env::var("Allternit_MAX_SESSIONS") {
         config.max_sessions = sessions.parse()?;
     }
 
-    if let Ok(timeout) = std::env::var("A2R_SESSION_TIMEOUT") {
+    if let Ok(timeout) = std::env::var("Allternit_SESSION_TIMEOUT") {
         config.session_timeout_secs = timeout.parse()?;
     }
 
-    if let Ok(workspace) = std::env::var("A2R_WORKSPACE_PATH") {
+    if let Ok(workspace) = std::env::var("Allternit_WORKSPACE_PATH") {
         config.workspace_path = workspace.into();
     }
 

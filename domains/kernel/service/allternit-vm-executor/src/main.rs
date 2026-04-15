@@ -1,25 +1,25 @@
-//! A2R VM Executor
+//! Allternit VM Executor
 //! 
 //! This binary runs INSIDE the Linux VM (Firecracker on Linux host, Apple VF on macOS host).
 //! It receives commands from the host via VSOCK, executes them in isolated bubblewrap sessions,
 //! and returns results.
 //!
 //! # Naming Distinction
-//! - A2RCHITECH: The AI agent system that runs on the host
-//! - a2r-vm-executor: This binary (runs inside VM as a daemon)
-//! - a2r-guest-agent-protocol: The protocol shared between host and VM
+//! - Allternit: The AI agent system that runs on the host
+//! - allternit-vm-executor: This binary (runs inside VM as a daemon)
+//! - allternit-guest-agent-protocol: The protocol shared between host and VM
 //!
 //! # Architecture
 //! ```
 //! Host (macOS/Linux)
-//!   └── A2RCHITECH / A2R CLI
+//!   └── Allternit / Allternit CLI
 //!         └── VSOCK connection
 //!               └── VM (Linux)
-//!                     └── a2r-vm-executor (this binary)
+//!                     └── allternit-vm-executor (this binary)
 //!                           └── bubblewrap sessions
 //! ```
 
-use a2r_guest_agent_protocol::{
+use allternit_guest_agent_protocol::{
     CommandRequest, CommandResponse, ProtocolError, ProtocolMessage, SessionId,
 };
 use anyhow::{Context, Result};
@@ -64,12 +64,12 @@ async fn main() -> Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::from_default_env()
-                .add_directive("a2r_vm_executor=info".parse()?),
+                .add_directive("allternit_vm_executor=info".parse()?),
         )
         .init();
 
     info!("╔══════════════════════════════════════════════════════════╗");
-    info!("║     A2R VM Executor v{}                              ║", env!("CARGO_PKG_VERSION"));
+    info!("║     Allternit VM Executor v{}                              ║", env!("CARGO_PKG_VERSION"));
     info!("║     Running inside VM - executing commands from host     ║");
     info!("╚══════════════════════════════════════════════════════════╝");
 
@@ -433,7 +433,7 @@ async fn handle_command(
 /// Handle session creation
 async fn handle_create_session(
     tenant_id: String,
-    spec: a2r_guest_agent_protocol::SpawnSpec,
+    spec: allternit_guest_agent_protocol::SpawnSpec,
     state: Arc<ExecutorState>,
 ) -> ProtocolMessage {
     info!("Creating session for tenant: {}", tenant_id);
@@ -502,7 +502,7 @@ async fn get_or_create_session(
     // Create new session
     let new_id = SessionId(Uuid::new_v4());
     let tenant_id = format!("auto-{}", new_id.0);
-    let spec = a2r_guest_agent_protocol::SpawnSpec::default();
+    let spec = allternit_guest_agent_protocol::SpawnSpec::default();
 
     let session = Session::new(new_id.clone(), tenant_id, spec, Arc::clone(&state.sandbox)).await?;
     let session = Arc::new(session);
