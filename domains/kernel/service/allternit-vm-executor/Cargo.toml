@@ -1,17 +1,17 @@
 [package]
-name = "a2r-vm-executor"
+name = "allternit-vm-executor"
 version = "1.1.0"
 edition = "2021"
-authors = ["A2R Team"]
-description = "A2R VM Executor - Runs inside the VM to execute commands from the host"
+authors = ["Allternit Team"]
+description = "Allternit VM Executor - Runs inside the VM to execute commands from the host"
 
 [[bin]]
-name = "a2r-vm-executor"
+name = "allternit-vm-executor"
 path = "src/main.rs"
 
 [dependencies]
 # Protocol (shared with host)
-a2r-guest-agent-protocol = { path = "../../infrastructure/a2r-guest-agent-protocol" }
+allternit-guest-agent-protocol = { path = "../../drivers/allternit-guest-agent-protocol" }
 
 # Async runtime
 tokio = { workspace = true, features = ["full", "process", "rt-multi-thread"] }

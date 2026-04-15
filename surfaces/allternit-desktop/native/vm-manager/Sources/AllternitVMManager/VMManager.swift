@@ -89,7 +89,6 @@ public final class VMManager: NSObject, ObservableObject {
             updateStatus(VMStatus(
                 state: .running,
                 vmName: configuration.vmName,
-                pid: Int(vm.processIdentifier),
                 socketPath: configuration.socketPath,
                 vsockPort: configuration.vsockPort,
                 uptime: 0
@@ -117,12 +116,14 @@ public final class VMManager: NSObject, ObservableObject {
         updateStatus(VMStatus(
             state: .stopping,
             vmName: configuration.vmName,
-            pid: Int(vm.processIdentifier),
             socketPath: configuration.socketPath,
             vsockPort: configuration.vsockPort
         ))
 
-        vsockListener?.stop()
+        if let vm = virtualMachine,
+           let vsockDevice = vm.socketDevices.first as? VZVirtioSocketDevice {
+            vsockDevice.removeSocketListener(forPort: configuration.vsockPort)
+        }
         vsockListener = nil
 
         // Disconnect all open channels cleanly
@@ -131,7 +132,7 @@ public final class VMManager: NSObject, ObservableObject {
         }
         activeChannels.removeAll()
 
-        await vm.stop()
+        try await vm.stop()
 
         self.startTime = nil
         updateStatus(VMStatus(
@@ -150,7 +151,6 @@ public final class VMManager: NSObject, ObservableObject {
         updateStatus(VMStatus(
             state: .paused,
             vmName: configuration.vmName,
-            pid: Int(vm.processIdentifier),
             socketPath: configuration.socketPath,
             vsockPort: configuration.vsockPort,
             uptime: calculateUptime()
@@ -165,7 +165,6 @@ public final class VMManager: NSObject, ObservableObject {
         updateStatus(VMStatus(
             state: .running,
             vmName: configuration.vmName,
-            pid: Int(vm.processIdentifier),
             socketPath: configuration.socketPath,
             vsockPort: configuration.vsockPort,
             uptime: calculateUptime()
@@ -223,7 +222,7 @@ public final class VMManager: NSObject, ObservableObject {
             args: args,
             workingDir: workingDir,
             env: env,
-            timeout: timeout
+            timeoutMs: UInt64(timeout * 1000)
         )
     }
 
@@ -238,7 +237,7 @@ public final class VMManager: NSObject, ObservableObject {
 
         let listener = VZVirtioSocketListener()
         listener.delegate = self
-        listener.listen(onPort: configuration.vsockPort, socketDevice: vsockDevice)
+        vsockDevice.setSocketListener(listener, forPort: configuration.vsockPort)
         self.vsockListener = listener
 
         print("[VMManager] VSOCK listening on port \(configuration.vsockPort)")
@@ -248,18 +247,19 @@ public final class VMManager: NSObject, ObservableObject {
 
     private func startUptimeTimer() {
         Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            guard let self = self, self.isRunning else { return }
-            let uptime = self.calculateUptime()
-            let s = self.currentStatus
-            self.updateStatus(VMStatus(
-                state: s.state,
-                vmName: s.vmName,
-                pid: s.pid,
-                socketPath: s.socketPath,
-                vsockPort: s.vsockPort,
-                errorMessage: s.errorMessage,
-                uptime: uptime
-            ))
+            Task { @MainActor [weak self] in
+                guard let self = self, self.isRunning else { return }
+                let uptime = self.calculateUptime()
+                let s = self.currentStatus
+                self.updateStatus(VMStatus(
+                    state: s.state,
+                    vmName: s.vmName,
+                    socketPath: s.socketPath,
+                    vsockPort: s.vsockPort,
+                    errorMessage: s.errorMessage,
+                    uptime: uptime
+                ))
+            }
         }
     }
 
@@ -272,7 +272,7 @@ public final class VMManager: NSObject, ObservableObject {
 // MARK: - VZVirtualMachineDelegate
 
 @available(macOS 13.0, *)
-extension VMManager: VZVirtualMachineDelegate {
+extension VMManager: @preconcurrency VZVirtualMachineDelegate {
 
     public func virtualMachine(_ virtualMachine: VZVirtualMachine, didStopWithError error: Error) {
         print("[VMManager] VM stopped with error: \(error)")

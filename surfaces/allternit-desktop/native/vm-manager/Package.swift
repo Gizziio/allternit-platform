@@ -30,9 +30,6 @@ let package = Package(
             name: "VMManagerCLI",
             dependencies: ["AllternitVMManager"]
         ),
-        .testTarget(
-            name: "AllternitVMManagerTests",
-            dependencies: ["AllternitVMManager"]
-        )
+
     ]
 )

@@ -47,7 +47,6 @@ public enum VMState: String, Codable, Sendable {
 public struct VMStatus: Codable, Sendable {
     public let state: VMState
     public let vmName: String
-    public let pid: Int?
     public let socketPath: String
     public let vsockPort: UInt32
     public let errorMessage: String?
@@ -56,7 +55,6 @@ public struct VMStatus: Codable, Sendable {
     public init(
         state: VMState,
         vmName: String,
-        pid: Int? = nil,
         socketPath: String,
         vsockPort: UInt32,
         errorMessage: String? = nil,
@@ -64,7 +62,6 @@ public struct VMStatus: Codable, Sendable {
     ) {
         self.state = state
         self.vmName = vmName
-        self.pid = pid
         self.socketPath = socketPath
         self.vsockPort = vsockPort
         self.errorMessage = errorMessage

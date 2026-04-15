@@ -4,10 +4,10 @@ on:
   push:
     branches: [main]
     paths:
-      - '1-kernel/execution/allternit-vm-executor/**'
-      - '1-kernel/execution/allternit-vm-image-builder/**'
-      - '1-kernel/infrastructure/allternit-guest-agent-protocol/**'
-      - '.github/workflows/vm-images.yml'
+      - 'domains/kernel/service/allternit-vm-executor/**'
+      - 'domains/kernel/service/allternit-vm-image-builder/**'
+      - 'domains/kernel/drivers/allternit-guest-agent-protocol/**'
+      - 'allternit/.github/workflows/vm-images.yml'
   workflow_dispatch:
     inputs:
       version:
@@ -25,7 +25,19 @@ env:
 
 jobs:
   build-images:
-    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-22.04
+            ubuntu_arch: amd64
+            rust_target: x86_64-unknown-linux-gnu
+          - arch: arm64
+            runner: ubuntu-22.04-arm
+            ubuntu_arch: arm64
+            rust_target: aarch64-unknown-linux-gnu
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: write
     steps:
@@ -34,6 +46,8 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_target }}
 
       - name: Install dependencies
         run: |
@@ -43,30 +57,38 @@ jobs:
       - name: Cache Rust build
         uses: Swatinem/rust-cache@v2
         with:
-          key: allternit-vm-executor-build
+          key: allternit-vm-executor-build-${{ matrix.arch }}
 
       - name: Build allternit-vm-executor
         run: |
-          cargo build --release -p allternit-vm-executor
+          if [ "${{ matrix.arch }}" = "amd64" ]; then
+            cargo build --release -p allternit-vm-executor
+          else
+            cargo build --release -p allternit-vm-executor --target ${{ matrix.rust_target }}
+          fi
 
       - name: Download Ubuntu kernel and initrd
         run: |
           mkdir -p vm-images
 
-          # Try the unpacked CDN path first, fall back to release path
-          wget -q "https://cloud-images.ubuntu.com/releases/22.04/release/unpacked/ubuntu-22.04-server-cloudimg-amd64-vmlinuz-generic" \
-            -O vm-images/vmlinux-6.5.0-allternit || \
-          wget -q "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64-vmlinuz-generic" \
-            -O vm-images/vmlinux-6.5.0-allternit
+          ARCH_SUFFIX="${{ matrix.ubuntu_arch }}"
+          VMLINUX_OUT="vm-images/vmlinux-6.5.0-allternit-${{ matrix.arch }}"
+          INITRD_OUT="vm-images/initrd.img-6.5.0-allternit-${{ matrix.arch }}"
 
-          wget -q "https://cloud-images.ubuntu.com/releases/22.04/release/unpacked/ubuntu-22.04-server-cloudimg-amd64-initrd-generic" \
-            -O vm-images/initrd.img-6.5.0-allternit || \
-          wget -q "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-amd64-initrd-generic" \
-            -O vm-images/initrd.img-6.5.0-allternit
+          # Try the unpacked CDN path first, fall back to release path
+          wget -q "https://cloud-images.ubuntu.com/releases/22.04/release/unpacked/ubuntu-22.04-server-cloudimg-${ARCH_SUFFIX}-vmlinuz-generic" \
+            -O "${VMLINUX_OUT}" || \
+          wget -q "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-${ARCH_SUFFIX}-vmlinuz-generic" \
+            -O "${VMLINUX_OUT}"
+
+          wget -q "https://cloud-images.ubuntu.com/releases/22.04/release/unpacked/ubuntu-22.04-server-cloudimg-${ARCH_SUFFIX}-initrd-generic" \
+            -O "${INITRD_OUT}" || \
+          wget -q "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-${ARCH_SUFFIX}-initrd-generic" \
+            -O "${INITRD_OUT}"
 
       - name: Create rootfs image
         run: |
-          ROOTFS="vm-images/ubuntu-22.04-allternit-v${IMAGE_VERSION}.ext4"
+          ROOTFS="vm-images/ubuntu-22.04-allternit-v${IMAGE_VERSION}-${{ matrix.arch }}.ext4"
 
           # 3 GB ext4 image (leaves headroom for packages + workspace)
           dd if=/dev/zero of="$ROOTFS" bs=1M count=3072 status=progress
@@ -76,7 +98,7 @@ jobs:
           sudo mount -o loop "$ROOTFS" /mnt/rootfs
 
           # Bootstrap Ubuntu 22.04 minimal base
-          sudo debootstrap --arch=amd64 --variant=minbase jammy /mnt/rootfs \
+          sudo debootstrap --arch=${{ matrix.ubuntu_arch }} --variant=minbase jammy /mnt/rootfs \
             http://archive.ubuntu.com/ubuntu/
 
           # Bind mounts for chroot
@@ -105,7 +127,11 @@ jobs:
           "
 
           # Copy allternit-vm-executor into the image
-          sudo cp target/release/allternit-vm-executor /mnt/rootfs/usr/bin/
+          if [ "${{ matrix.arch }}" = "amd64" ]; then
+            sudo cp target/release/allternit-vm-executor /mnt/rootfs/usr/bin/
+          else
+            sudo cp target/${{ matrix.rust_target }}/release/allternit-vm-executor /mnt/rootfs/usr/bin/
+          fi
           sudo chmod +x /mnt/rootfs/usr/bin/allternit-vm-executor
 
           # Configuration directory and config file
@@ -157,15 +183,15 @@ EOF
         run: |
           cd vm-images
 
-          VMLINUX_SHA=$(sha256sum vmlinux-6.5.0-allternit | cut -d' ' -f1)
-          INITRD_SHA=$(sha256sum initrd.img-6.5.0-allternit | cut -d' ' -f1)
-          ROOTFS_SHA=$(sha256sum ubuntu-22.04-allternit-v${IMAGE_VERSION}.ext4 | cut -d' ' -f1)
+          VMLINUX_SHA=$(sha256sum vmlinux-6.5.0-allternit-${{ matrix.arch }} | cut -d' ' -f1)
+          INITRD_SHA=$(sha256sum initrd.img-6.5.0-allternit-${{ matrix.arch }} | cut -d' ' -f1)
+          ROOTFS_SHA=$(sha256sum ubuntu-22.04-allternit-v${IMAGE_VERSION}-${{ matrix.arch }}.ext4 | cut -d' ' -f1)
 
-          cat > version-${IMAGE_VERSION}-amd64.json << EOF
+          cat > version-${IMAGE_VERSION}-${{ matrix.arch }}.json << EOF
 {
   "version": "${IMAGE_VERSION}",
   "build_date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "architecture": "x86_64",
+  "architecture": "${{ matrix.arch }}",
   "kernel_version": "6.5.0",
   "rootfs_size_mb": 3072,
   "checksums": {
@@ -181,10 +207,10 @@ EOF
           cd vm-images
 
           # Compress rootfs with zstd (level 19 = high compression, -T0 = all cores)
-          zstd -T0 -19 ubuntu-22.04-allternit-v${IMAGE_VERSION}.ext4 \
-            -o ubuntu-22.04-allternit-v${IMAGE_VERSION}.ext4.zst
+          zstd -T0 -19 ubuntu-22.04-allternit-v${IMAGE_VERSION}-${{ matrix.arch }}.ext4 \
+            -o ubuntu-22.04-allternit-v${IMAGE_VERSION}-${{ matrix.arch }}.ext4.zst
 
-          rm ubuntu-22.04-allternit-v${IMAGE_VERSION}.ext4
+          rm ubuntu-22.04-allternit-v${IMAGE_VERSION}-${{ matrix.arch }}.ext4
 
           ls -lh
 
@@ -199,14 +225,18 @@ EOF
 
             Linux VM images for Allternit Desktop (Apple Virtualization.framework).
 
-            ### Contents
+            ### Available Architectures
+            - `amd64` (x86_64)
+            - `arm64` (aarch64)
+
+            ### Contents per Architecture
 
             | File | Description |
             |------|-------------|
-            | `vmlinux-6.5.0-allternit` | Linux kernel |
-            | `initrd.img-6.5.0-allternit` | Initial ramdisk |
-            | `ubuntu-22.04-allternit-v${{ env.IMAGE_VERSION }}.ext4.zst` | Root filesystem (zstd-compressed) |
-            | `version-${{ env.IMAGE_VERSION }}-amd64.json` | Metadata and SHA256 checksums |
+            | `vmlinux-6.5.0-allternit-<arch>` | Linux kernel |
+            | `initrd.img-6.5.0-allternit-<arch>` | Initial ramdisk |
+            | `ubuntu-22.04-allternit-v${{ env.IMAGE_VERSION }}-<arch>.ext4.zst` | Root filesystem (zstd-compressed) |
+            | `version-${{ env.IMAGE_VERSION }}-<arch>.json` | Metadata and SHA256 checksums |
 
             ### Pre-installed
             - Ubuntu 22.04 LTS base
@@ -230,6 +260,6 @@ EOF
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: vm-images-x86_64-v${{ env.IMAGE_VERSION }}
+          name: vm-images-${{ matrix.arch }}-v${{ env.IMAGE_VERSION }}
           path: vm-images/*
           retention-days: 30

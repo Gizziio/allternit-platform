@@ -6,6 +6,7 @@ import Virtualization
 @available(macOS 13.0, *)
 @main
 struct VMManagerCLI {
+    @MainActor
     static func main() async {
         let args = CommandLine.arguments
         
@@ -67,6 +68,7 @@ struct VMManagerCLI {
         """)
     }
     
+    @MainActor
     static func startVM(args: [String]) async throws {
         let config = try parseConfiguration(args: args)
         
@@ -91,60 +93,71 @@ struct VMManagerCLI {
         try await manager.start()
         
         print("✅ VM started successfully")
-        print("   PID: \(manager.currentStatus.pid ?? 0)")
         print("   Socket: \(config.socketPath)")
         
         // Keep running until interrupted
         print("\nPress Ctrl+C to stop...")
         
         // Set up signal handler
-        signal(SIGINT) { _ in
+        signal(SIGINT, SIG_IGN)
+        let sigintSource = DispatchSource.makeSignalSource(signal: SIGINT, queue: .main)
+        sigintSource.setEventHandler {
             print("\nStopping VM...")
             Task {
                 try? await manager.stop()
+                if FileManager.default.fileExists(atPath: config.socketPath) {
+                    try? FileManager.default.removeItem(atPath: config.socketPath)
+                }
                 exit(0)
             }
         }
+        sigintSource.resume()
         
-        // Run indefinitely
-        while manager.isRunning {
-            try await Task.sleep(nanoseconds: 1_000_000_000)
-        }
+        // Start Unix socket server for client commands
+        try await UnixSocketBridge.startServer(socketPath: config.socketPath, manager: manager)
     }
     
+    @MainActor
     static func stopVM() async throws {
         print("Stopping Allternit VM...")
         
-        // Load existing configuration
         let config = try loadDefaultConfiguration()
-        let manager = VMManager(configuration: config)
+        let response = try await UnixSocketBridge.sendRequest(
+            socketPath: config.socketPath,
+            request: ["type": "stop"]
+        )
         
-        try await manager.stop()
-        print("✅ VM stopped")
+        if let success = response["success"] as? Bool, success {
+            print("✅ VM stopped")
+        } else {
+            let message = response["message"] as? String ?? "Unknown error"
+            throw VMError.commandExecutionFailed(message)
+        }
     }
     
+    @MainActor
     static func showStatus() async throws {
         let config = try loadDefaultConfiguration()
-        let manager = VMManager(configuration: config)
         
-        let status = manager.currentStatus
+        let response = try await UnixSocketBridge.sendRequest(
+            socketPath: config.socketPath,
+            request: ["type": "status"]
+        )
         
         print("Allternit VM Status:")
-        print("  State: \(status.state.rawValue)")
-        print("  Name: \(status.vmName)")
-        if let pid = status.pid {
-            print("  PID: \(pid)")
-        }
-        print("  Socket: \(status.socketPath)")
-        print("  VSOCK Port: \(status.vsockPort)")
-        if let uptime = status.uptime {
+        print("  State: \(response["state"] as? String ?? "unknown")")
+        print("  Name: \(response["vm_name"] as? String ?? "unknown")")
+        print("  Socket: \(config.socketPath)")
+        print("  VSOCK Port: \(response["vsock_port"] as? UInt32 ?? 0)")
+        if let uptime = response["uptime"] as? TimeInterval, uptime > 0 {
             print("  Uptime: \(formatUptime(uptime))")
         }
-        if let error = status.errorMessage {
+        if let error = response["error_message"] as? String {
             print("  Error: \(error)")
         }
     }
     
+    @MainActor
     static func executeCommand(args: [String]) async throws {
         guard !args.isEmpty else {
             print("Usage: exec <command> [args...]")
@@ -157,52 +170,84 @@ struct VMManagerCLI {
         print("Executing: \(command) \(commandArgs.joined(separator: " "))")
         
         let config = try loadDefaultConfiguration()
-        let manager = VMManager(configuration: config)
+        let response = try await UnixSocketBridge.sendRequest(
+            socketPath: config.socketPath,
+            request: [
+                "type": "exec",
+                "command": command + " " + commandArgs.joined(separator: " "),
+                "args": commandArgs
+            ]
+        )
         
-        guard manager.isRunning else {
-            print("Error: VM is not running")
+        guard let success = response["success"] as? Bool else {
+            print("Error: Invalid response from VM daemon")
             exit(1)
         }
         
-        let result = try await manager.sendCommand(
-            command + " " + commandArgs.joined(separator: " ")
-        )
-        
-        if !result.stdout.isEmpty {
-            print(result.stdout)
+        if let stdout = response["stdout"] as? String, !stdout.isEmpty {
+            print(stdout)
         }
-        if !result.stderr.isEmpty {
-            print(result.stderr, to: &standardError)
+        if let stderr = response["stderr"] as? String, !stderr.isEmpty {
+            writeToStderr(stderr)
         }
         
-        exit(Int32(result.exitCode))
+        exit(Int32(response["exit_code"] as? Int ?? (success ? 0 : 1)))
     }
     
+    @MainActor
     static func setupVM() async throws {
         print("Setting up Allternit VM...")
         
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         let vmImagesDir = "\(home)/.allternit/vm-images"
         
-        // Check if images exist
-        let requiredFiles = [
-            "vmlinux-6.5.0-allternit",
-            "initrd.img-6.5.0-allternit",
-            "ubuntu-22.04-allternit-v1.1.0.ext4"
+        // Determine architecture suffix
+        let arch: String
+        #if arch(x86_64)
+        arch = "amd64"
+        #elseif arch(arm64)
+        arch = "arm64"
+        #else
+        arch = String(cString: __uname().machine)
+        #endif
+        let archSuffix = arch == "amd64" ? "" : "-\(arch)"
+        
+        // Check architecture-specific names first, then legacy fallback
+        let candidates = [
+            (
+                "vmlinux-6.5.0-allternit\(archSuffix)",
+                "vmlinux-6.5.0-allternit"
+            ),
+            (
+                "initrd.img-6.5.0-allternit\(archSuffix)",
+                "initrd.img-6.5.0-allternit"
+            ),
+            (
+                "ubuntu-22.04-allternit-v1.1.0\(archSuffix).ext4",
+                "ubuntu-22.04-allternit-v1.1.0.ext4"
+            )
         ]
         
-        var allExist = true
-        for file in requiredFiles {
-            let path = "\(vmImagesDir)/\(file)"
-            if FileManager.default.fileExists(atPath: path) {
-                print("  ✅ \(file)")
+        var foundFiles: [String] = []
+        var missingFiles: [String] = []
+        
+        for (archSpecific, legacy) in candidates {
+            let archPath = "\(vmImagesDir)/\(archSpecific)"
+            let legacyPath = "\(vmImagesDir)/\(legacy)"
+            
+            if FileManager.default.fileExists(atPath: archPath) {
+                print("  ✅ \(archSpecific)")
+                foundFiles.append(archSpecific)
+            } else if FileManager.default.fileExists(atPath: legacyPath) {
+                print("  ✅ \(legacy)")
+                foundFiles.append(legacy)
             } else {
-                print("  ❌ \(file) - NOT FOUND")
-                allExist = false
+                print("  ❌ \(archSpecific) - NOT FOUND")
+                missingFiles.append(archSpecific)
             }
         }
         
-        if allExist {
+        if missingFiles.isEmpty {
             print("\n✅ All VM images are present")
         } else {
             print("\n⚠️  Some VM images are missing")
@@ -213,6 +258,7 @@ struct VMManagerCLI {
     
     // MARK: - Helpers
     
+    @MainActor
     static func parseConfiguration(args: [String]) throws -> AllternitVMConfiguration {
         var kernelPath: String?
         var initrdPath: String?
@@ -255,17 +301,55 @@ struct VMManagerCLI {
         // Use environment variables or defaults
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         
+        // Determine architecture suffix for default image paths
+        let arch: String
+        #if arch(x86_64)
+        arch = "amd64"
+        #elseif arch(arm64)
+        arch = "arm64"
+        #else
+        arch = String(cString: __uname().machine)
+        #endif
+        let archSuffix = arch == "amd64" ? "" : "-\(arch)"
+        
+        let vmImagesDir = "\(home)/.allternit/vm-images"
+        
+        // Resolve default kernel path (arch-specific first, then legacy)
+        let defaultKernelPath: String = {
+            let archPath = "\(vmImagesDir)/vmlinux-6.5.0-allternit\(archSuffix)"
+            let legacyPath = "\(vmImagesDir)/vmlinux-6.5.0-allternit"
+            if FileManager.default.fileExists(atPath: archPath) { return archPath }
+            if FileManager.default.fileExists(atPath: legacyPath) { return legacyPath }
+            return archPath // prefer arch-specific as default even if not present yet
+        }()
+        
+        let defaultInitrdPath: String = {
+            let archPath = "\(vmImagesDir)/initrd.img-6.5.0-allternit\(archSuffix)"
+            let legacyPath = "\(vmImagesDir)/initrd.img-6.5.0-allternit"
+            if FileManager.default.fileExists(atPath: archPath) { return archPath }
+            if FileManager.default.fileExists(atPath: legacyPath) { return legacyPath }
+            return archPath
+        }()
+        
+        let defaultRootfsPath: String = {
+            let archPath = "\(vmImagesDir)/ubuntu-22.04-allternit-v1.1.0\(archSuffix).ext4"
+            let legacyPath = "\(vmImagesDir)/ubuntu-22.04-allternit-v1.1.0.ext4"
+            if FileManager.default.fileExists(atPath: archPath) { return archPath }
+            if FileManager.default.fileExists(atPath: legacyPath) { return legacyPath }
+            return archPath
+        }()
+        
         let finalKernelPath = kernelPath
             ?? ProcessInfo.processInfo.environment["ALLTERNIT_VM_KERNEL"]
-            ?? "\(home)/.allternit/vm-images/vmlinux-6.5.0-allternit"
+            ?? defaultKernelPath
         
         let finalInitrdPath = initrdPath
             ?? ProcessInfo.processInfo.environment["ALLTERNIT_VM_INITRD"]
-            ?? "\(home)/.allternit/vm-images/initrd.img-6.5.0-allternit"
+            ?? defaultInitrdPath
         
         let finalRootfsPath = rootfsPath
             ?? ProcessInfo.processInfo.environment["ALLTERNIT_VM_ROOTFS"]
-            ?? "\(home)/.allternit/vm-images/ubuntu-22.04-allternit-v1.1.0.ext4"
+            ?? defaultRootfsPath
         
         let finalSocketPath = socketPath
             ?? ProcessInfo.processInfo.environment["ALLTERNIT_VM_SOCKET"]
@@ -281,10 +365,12 @@ struct VMManagerCLI {
         )
     }
     
+    @MainActor
     static func loadDefaultConfiguration() throws -> AllternitVMConfiguration {
         try parseConfiguration(args: [])
     }
     
+    @MainActor
     static func formatUptime(_ uptime: TimeInterval) -> String {
         let hours = Int(uptime) / 3600
         let minutes = (Int(uptime) % 3600) / 60
@@ -300,18 +386,8 @@ struct VMManagerCLI {
 
 // MARK: - Standard Error Output
 
-var standardError = FileHandleOutputStream(FileHandle.standardError)
-
-struct FileHandleOutputStream: TextOutputStream {
-    let fileHandle: FileHandle
-    
-    init(_ fileHandle: FileHandle) {
-        self.fileHandle = fileHandle
-    }
-    
-    mutating func write(_ string: String) {
-        if let data = string.data(using: .utf8) {
-            fileHandle.write(data)
-        }
+func writeToStderr(_ string: String) {
+    if let data = string.data(using: .utf8) {
+        FileHandle.standardError.write(data)
     }
 }

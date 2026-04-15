@@ -1,6 +1,6 @@
-//! A2R VM Image Builder
+//! Allternit VM Image Builder
 //!
-//! Builds VM images for the A2R platform.
+//! Builds VM images for the Allternit platform.
 //!
 //! # Platform Support
 //!
@@ -15,30 +15,30 @@
 //!
 //! # Image Structure
 //! ```
-//! ~/.a2r/vm-images/
-//! ├── vmlinux-6.5.0-a2r              # Linux kernel
-//! ├── initrd.img-6.5.0-a2r           # Initial ramdisk
-//! ├── ubuntu-22.04-a2r-v1.1.0.ext4   # Root filesystem
+//! ~/.allternit/vm-images/
+//! ├── vmlinux-6.5.0-allternit              # Linux kernel
+//! ├── initrd.img-6.5.0-allternit           # Initial ramdisk
+//! ├── ubuntu-22.04-allternit-v1.1.0.ext4   # Root filesystem
 //! │   └── Contains:
-//! │       ├── /usr/bin/a2r-vm-executor
+//! │       ├── /usr/bin/allternit-vm-executor
 //! │       ├── /usr/bin/node, npm
 //! │       ├── /usr/bin/python3, pip3
 //! │       ├── /usr/bin/docker
 //! │       ├── /usr/bin/cargo
-//! │       └── /etc/a2r/vm-executor.toml
+//! │       └── /etc/allternit/vm-executor.toml
 //! └── version.json                   # Image metadata
 //! ```
 //!
 //! # Usage
 //! ```bash
 //! # Download pre-built images (all platforms)
-//! a2r-vm-image-builder download
+//! allternit-vm-image-builder download
 //!
 //! # Build locally from scratch (Linux ONLY)
-//! a2r-vm-image-builder build --ubuntu-version 22.04
+//! allternit-vm-image-builder build --ubuntu-version 22.04
 //!
 //! # Check for updates
-//! a2r-vm-image-builder check-update
+//! allternit-vm-image-builder check-update
 //! ```
 
 use anyhow::{bail, Context, Result};
@@ -56,8 +56,8 @@ use config::ImageConfig;
 use downloader::ImageDownloader;
 
 /// Default GitHub repository for pre-built images
-/// Uses the current repo's releases (Gizziio/a2rchitech)
-const DEFAULT_IMAGE_REPO: &str = "Gizziio/a2rchitech";
+/// Uses the current repo's releases (Gizziio/allternit)
+const DEFAULT_IMAGE_REPO: &str = "Gizziio/allternit-platform";
 
 /// Default image version
 const DEFAULT_IMAGE_VERSION: &str = "1.1.0";
@@ -65,13 +65,13 @@ const DEFAULT_IMAGE_VERSION: &str = "1.1.0";
 /// CLI arguments
 #[derive(Parser)]
 #[command(
-    name = "a2r-vm-image-builder",
-    about = "Build or download VM images for A2R",
+    name = "allternit-vm-image-builder",
+    about = "Build or download VM images for Allternit",
     version,
     long_about = r#"
-A2R VM Image Builder
+Allternit VM Image Builder
 
-Downloads or builds VM images for the A2R platform.
+Downloads or builds VM images for the Allternit platform.
 
 PLATFORM NOTES:
 - macOS: Download mode only (cannot build locally)
@@ -79,13 +79,13 @@ PLATFORM NOTES:
 
 EXAMPLES:
     # Download pre-built images (all platforms)
-    a2r-vm-image-builder download
+    allternit-vm-image-builder download
 
     # Build locally (Linux ONLY)
-    a2r-vm-image-builder build --ubuntu-version 22.04
+    allternit-vm-image-builder build --ubuntu-version 22.04
 
     # Check for updates
-    a2r-vm-image-builder check-update
+    allternit-vm-image-builder check-update
 "#
 )]
 struct Cli {
@@ -157,9 +157,9 @@ async fn main() -> Result<()> {
             tracing_subscriber::EnvFilter::from_default_env()
                 .add_directive(
                     if cli.verbose {
-                        "a2r_vm_image_builder=debug"
+                        "allternit_vm_image_builder=debug"
                     } else {
-                        "a2r_vm_image_builder=info"
+                        "allternit_vm_image_builder=info"
                     }
                     .parse()
                     .unwrap(),
@@ -168,7 +168,7 @@ async fn main() -> Result<()> {
         .init();
 
     info!("╔══════════════════════════════════════════════════════════╗");
-    info!("║     A2R VM Image Builder v{}                        ║", env!("CARGO_PKG_VERSION"));
+    info!("║     Allternit VM Image Builder v{}                        ║", env!("CARGO_PKG_VERSION"));
     info!("╚══════════════════════════════════════════════════════════╝");
 
     // Platform check
@@ -254,7 +254,7 @@ async fn main() -> Result<()> {
                     "Local image building is only supported on Linux.\n\
                      Your platform: {}\n\n\
                      On macOS, please use download mode instead:\n\
-                       a2r-vm-image-builder download\n\n\
+                       allternit-vm-image-builder download\n\n\
                      If you need custom images on macOS, you can:\n\
                      1. Build on a Linux machine/VM and copy the images\n\
                      2. Use the CI/CD pipeline to build custom images\n\
@@ -307,7 +307,7 @@ async fn main() -> Result<()> {
             match downloader.check_update().await {
                 Ok(Some(new_version)) => {
                     info!("Update available: {} -> {}", cli.version, new_version);
-                    info!("Run 'a2r-vm-image-builder download' to update");
+                    info!("Run 'allternit-vm-image-builder download' to update");
                 }
                 Ok(None) => {
                     info!("You have the latest version: {}", cli.version);
@@ -328,7 +328,7 @@ async fn main() -> Result<()> {
                 }
                 Ok(false) => {
                     warn!("⚠️  Some images failed verification");
-                    warn!("Run 'a2r-vm-image-builder --force' to re-download");
+                    warn!("Run 'allternit-vm-image-builder --force' to re-download");
                 }
                 Err(e) => {
                     warn!("Failed to verify images: {}", e);
@@ -351,5 +351,5 @@ async fn main() -> Result<()> {
 
 /// Get default image directory
 fn get_default_image_dir() -> Option<PathBuf> {
-    dirs::home_dir().map(|home| home.join(".a2r/vm-images"))
+    dirs::home_dir().map(|home| home.join(".allternit/vm-images"))
 }

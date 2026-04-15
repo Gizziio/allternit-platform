@@ -63,11 +63,14 @@ export class AllternitVMManager extends EventEmitter {
     
     const home = os.homedir();
     
+    const arch = process.arch === 'x64' ? 'amd64' : process.arch === 'arm64' ? 'arm64' : process.arch;
+    const archSuffix = arch === 'amd64' ? '' : `-${arch}`;
+    
     this.config = {
       vmName: config.vmName ?? 'allternit-vm',
-      kernelPath: config.kernelPath ?? path.join(home, '.allternit/vm-images/vmlinux-6.5.0-allternit'),
-      initrdPath: config.initrdPath ?? path.join(home, '.allternit/vm-images/initrd.img-6.5.0-allternit'),
-      rootfsPath: config.rootfsPath ?? path.join(home, '.allternit/vm-images/ubuntu-22.04-allternit-v1.1.0.ext4'),
+      kernelPath: config.kernelPath ?? path.join(home, `.allternit/vm-images/vmlinux-6.5.0-allternit${archSuffix}`),
+      initrdPath: config.initrdPath ?? path.join(home, `.allternit/vm-images/initrd.img-6.5.0-allternit${archSuffix}`),
+      rootfsPath: config.rootfsPath ?? path.join(home, `.allternit/vm-images/ubuntu-22.04-allternit-v1.1.0${archSuffix}.ext4`),
       cpuCount: config.cpuCount ?? 4,
       memorySizeMB: config.memorySizeMB ?? 4096,
       vsockPort: config.vsockPort ?? 8080,
@@ -86,11 +89,15 @@ export class AllternitVMManager extends EventEmitter {
    * Get the path to the Swift CLI binary
    */
   private getCliPath(): string {
-    // Check multiple locations
+    // Check multiple locations (in priority order)
+    // In Electron, process.resourcesPath is available; fallback to empty for testing
+    const resourcesPath = (process as any).resourcesPath ?? '';
     const possiblePaths = [
-      // Development path
+      // Packaged app - electron-builder extraResources
+      path.join(resourcesPath, 'bin/vm-manager-cli'),
+      // Development path - monorepo
       path.join(__dirname, '../../vm-manager/.build/release/vm-manager-cli'),
-      // Installed path
+      // Alternative dev path
       path.join(__dirname, '../bin/vm-manager-cli'),
       // System path
       '/usr/local/bin/vm-manager-cli',
@@ -102,7 +109,11 @@ export class AllternitVMManager extends EventEmitter {
       }
     }
 
-    throw new Error('vm-manager-cli not found. Please build the Swift package first.');
+    throw new Error(
+      'vm-manager-cli not found. Searched:\n' + 
+      possiblePaths.map(p => `  - ${p}`).join('\n') +
+      '\n\nPlease build the Swift package: cd native/vm-manager && swift build -c release'
+    );
   }
 
   /**

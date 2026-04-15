@@ -1,6 +1,179 @@
 import Foundation
 import Virtualization
 
+// MARK: - Protocol Types (matches allternit-guest-agent-protocol Rust crate)
+
+/// Top-level protocol message envelope
+public struct ProtocolMessage: Codable {
+    public let type: String
+    
+    // Connection & Health
+    public let version: String?
+    
+    // Session Management
+    public let tenantId: String?
+    public let spec: SpawnSpec?
+    public let sessionId: SessionId?
+    
+    // Command Execution
+    public let requestId: String?
+    public let command: String?
+    public let args: [String]?
+    public let workingDir: String?
+    public let env: [String: String]?
+    public let timeoutMs: UInt64?
+    
+    // Response fields
+    public let success: Bool?
+    public let stdout: String?
+    public let stderr: String?
+    public let exitCode: Int32?
+    public let executionTimeMs: UInt64?
+    
+    // Error fields
+    public let error: String?
+    public let message: String?
+    
+    public init(
+        type: String,
+        version: String? = nil,
+        tenantId: String? = nil,
+        spec: SpawnSpec? = nil,
+        sessionId: SessionId? = nil,
+        requestId: String? = nil,
+        command: String? = nil,
+        args: [String]? = nil,
+        workingDir: String? = nil,
+        env: [String: String]? = nil,
+        timeoutMs: UInt64? = nil,
+        success: Bool? = nil,
+        stdout: String? = nil,
+        stderr: String? = nil,
+        exitCode: Int32? = nil,
+        executionTimeMs: UInt64? = nil,
+        error: String? = nil,
+        message: String? = nil
+    ) {
+        self.type = type
+        self.version = version
+        self.tenantId = tenantId
+        self.spec = spec
+        self.sessionId = sessionId
+        self.requestId = requestId
+        self.command = command
+        self.args = args
+        self.workingDir = workingDir
+        self.env = env
+        self.timeoutMs = timeoutMs
+        self.success = success
+        self.stdout = stdout
+        self.stderr = stderr
+        self.exitCode = exitCode
+        self.executionTimeMs = executionTimeMs
+        self.error = error
+        self.message = message
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case type
+        case version
+        case tenantId = "tenant_id"
+        case spec
+        case sessionId = "session_id"
+        case requestId = "request_id"
+        case command
+        case args
+        case workingDir = "working_dir"
+        case env
+        case timeoutMs = "timeout_ms"
+        case success
+        case stdout
+        case stderr
+        case exitCode = "exit_code"
+        case executionTimeMs = "execution_time_ms"
+        case error
+        case message
+    }
+}
+
+public struct SessionId: Codable, Hashable {
+    public let uuid: String
+    
+    public init(uuid: String = UUID().uuidString.lowercased()) {
+        self.uuid = uuid
+    }
+}
+
+public struct SpawnSpec: Codable {
+    public let workingDir: String?
+    public let environment: [String: String]?
+    public let mounts: [MountSpec]?
+    public let limits: ResourceLimits?
+    
+    enum CodingKeys: String, CodingKey {
+        case workingDir = "working_dir"
+        case environment
+        case mounts
+        case limits
+    }
+    
+    public init(
+        workingDir: String? = nil,
+        environment: [String: String]? = nil,
+        mounts: [MountSpec]? = nil,
+        limits: ResourceLimits? = nil
+    ) {
+        self.workingDir = workingDir
+        self.environment = environment
+        self.mounts = mounts
+        self.limits = limits
+    }
+}
+
+public struct MountSpec: Codable {
+    public let source: String
+    public let destination: String
+    public let readOnly: Bool
+    
+    enum CodingKeys: String, CodingKey {
+        case source
+        case destination
+        case readOnly = "read_only"
+    }
+    
+    public init(source: String, destination: String, readOnly: Bool = false) {
+        self.source = source
+        self.destination = destination
+        self.readOnly = readOnly
+    }
+}
+
+public struct ResourceLimits: Codable {
+    public let maxMemoryMb: UInt64?
+    public let maxCpuPercent: UInt64?
+    public let maxExecutionTimeSecs: UInt64?
+    public let maxFileSizeMb: UInt64?
+    
+    enum CodingKeys: String, CodingKey {
+        case maxMemoryMb = "max_memory_mb"
+        case maxCpuPercent = "max_cpu_percent"
+        case maxExecutionTimeSecs = "max_execution_time_secs"
+        case maxFileSizeMb = "max_file_size_mb"
+    }
+    
+    public init(
+        maxMemoryMb: UInt64? = nil,
+        maxCpuPercent: UInt64? = nil,
+        maxExecutionTimeSecs: UInt64? = nil,
+        maxFileSizeMb: UInt64? = nil
+    ) {
+        self.maxMemoryMb = maxMemoryMb
+        self.maxCpuPercent = maxCpuPercent
+        self.maxExecutionTimeSecs = maxExecutionTimeSecs
+        self.maxFileSizeMb = maxFileSizeMb
+    }
+}
+
 /// VSOCK Channel for communication with VM
 @available(macOS 13.0, *)
 public actor VSOCKChannel {
@@ -9,9 +182,9 @@ public actor VSOCKChannel {
     
     private let port: UInt32
     private var connection: VZVirtioSocketConnection?
-    private var inputStream: InputStream?
-    private var outputStream: OutputStream?
+    private var fileHandle: FileHandle?
     
+    private var readBuffer = Data()
     private var pendingResponses: [String: CheckedContinuation<Data, Error>] = [:]
     private var requestCounter: UInt64 = 0
     
@@ -26,44 +199,77 @@ public actor VSOCKChannel {
     public func connect(to connection: VZVirtioSocketConnection) async throws {
         self.connection = connection
         
-        // Set up streams
-        let input = connection.inputStream
-        let output = connection.outputStream
-        
-        input.delegate = VSOCKStreamDelegate(channel: self)
-        output.delegate = VSOCKStreamDelegate(channel: self)
-        
-        input.schedule(in: .current, forMode: .default)
-        output.schedule(in: .current, forMode: .default)
-        
-        input.open()
-        output.open()
-        
-        self.inputStream = input
-        self.outputStream = output
-        
-        // Start reading
-        Task {
-            await readLoop()
+        let fd = connection.fileDescriptor
+        guard fd >= 0 else {
+            throw VSOCKError.notConnected
         }
+        
+        self.fileHandle = FileHandle(fileDescriptor: fd, closeOnDealloc: false)
+        startReading()
     }
     
     public func disconnect() {
-        inputStream?.close()
-        outputStream?.close()
-        inputStream = nil
-        outputStream = nil
+        fileHandle?.readabilityHandler = nil
+        fileHandle = nil
+        connection?.close()
         connection = nil
     }
     
     // MARK: - Communication
     
-    public func sendRequest(_ request: VSOCKRequest, timeout: TimeInterval = 60) async throws -> VSOCKResponse {
+    public func sendHeartbeat() async throws -> ProtocolMessage {
         let requestId = generateRequestId()
-        var requestWithId = request
-        requestWithId.id = requestId
+        let message = ProtocolMessage(type: "heartbeat")
+        return try await sendMessage(message, expectingResponseFor: requestId, timeout: 10)
+    }
+    
+    public func sendCommand(
+        command: String,
+        args: [String] = [],
+        workingDir: String? = nil,
+        env: [String: String]? = nil,
+        timeoutMs: UInt64 = 60000
+    ) async throws -> CommandResult {
+        let requestId = generateRequestId()
         
-        let data = try JSONEncoder().encode(requestWithId)
+        let message = ProtocolMessage(
+            type: "command_request",
+            requestId: requestId,
+            command: command,
+            args: args,
+            workingDir: workingDir,
+            env: env,
+            timeoutMs: timeoutMs
+        )
+        
+        let response = try await sendMessage(message, expectingResponseFor: requestId, timeout: TimeInterval(timeoutMs) / 1000.0)
+        
+        guard response.type == "command_response" else {
+            if response.type == "error" {
+                throw VSOCKError.commandFailed(response.message ?? "Unknown error")
+            }
+            throw VSOCKError.invalidResponse
+        }
+        
+        return CommandResult(
+            success: response.success ?? false,
+            stdout: response.stdout ?? "",
+            stderr: response.stderr ?? "",
+            exitCode: response.exitCode ?? -1,
+            executionTime: TimeInterval(response.executionTimeMs ?? 0) / 1000.0
+        )
+    }
+    
+    // MARK: - Private Methods
+    
+    private func generateRequestId() -> String {
+        requestCounter += 1
+        return UUID().uuidString.lowercased()
+    }
+    
+    @discardableResult
+    private func sendMessage(_ message: ProtocolMessage, expectingResponseFor requestId: String, timeout: TimeInterval) async throws -> ProtocolMessage {
+        let data = try JSONEncoder().encode(message)
         let lengthPrefix = UInt32(data.count).bigEndian
         
         // Send length prefix
@@ -74,49 +280,22 @@ public actor VSOCKChannel {
         try await write(data)
         
         // Wait for response
-        return try await withTimeout(timeout) {
-            await withCheckedContinuation { continuation in
+        let responseData = try await withTimeout(timeout) {
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Data, Error>) in
                 Task {
                     await self.registerPendingResponse(id: requestId, continuation: continuation)
                 }
             }
-        } transform: { data in
-            try JSONDecoder().decode(VSOCKResponse.self, from: data)
         }
-    }
-    
-    public func sendCommand(
-        command: String,
-        args: [String] = [],
-        workingDir: String? = nil,
-        env: [String: String]? = nil,
-        timeout: TimeInterval = 60
-    ) async throws -> CommandResult {
-        let request = VSOCKRequest(
-            type: .execute,
-            command: command,
-            args: args,
-            workingDir: workingDir,
-            env: env,
-            timeout: timeout
-        )
         
-        let response = try await sendRequest(request, timeout: timeout)
+        let response = try JSONDecoder().decode(ProtocolMessage.self, from: responseData)
         
-        return CommandResult(
-            success: response.success,
-            stdout: response.stdout ?? "",
-            stderr: response.stderr ?? "",
-            exitCode: response.exitCode ?? -1,
-            executionTime: response.executionTime ?? 0
-        )
-    }
-    
-    // MARK: - Private Methods
-    
-    private func generateRequestId() -> String {
-        requestCounter += 1
-        return "req-\(requestCounter)"
+        // Validate response request_id matches
+        guard response.requestId == requestId else {
+            throw VSOCKError.invalidResponse
+        }
+        
+        return response
     }
     
     private func registerPendingResponse(id: String, continuation: CheckedContinuation<Data, Error>) {
@@ -124,134 +303,61 @@ public actor VSOCKChannel {
     }
     
     private func write(_ data: Data) async throws {
-        guard let outputStream = outputStream else {
+        guard let fileHandle = fileHandle else {
             throw VSOCKError.notConnected
         }
+        fileHandle.write(data)
+    }
+    
+    private func startReading() {
+        guard let fileHandle = fileHandle else { return }
         
-        var remaining = data
-        while !remaining.isEmpty {
-            let written = remaining.withUnsafeBytes { bytes in
-                outputStream.write(bytes.bindMemory(to: UInt8.self).baseAddress!, maxLength: remaining.count)
+        fileHandle.readabilityHandler = { [weak self] handle in
+            let data = handle.availableData
+            guard !data.isEmpty else { return }
+            Task {
+                guard let self = self else { return }
+                await self.processIncomingData(data)
             }
-            
-            if written < 0 {
-                throw VSOCKError.writeFailed(outputStream.streamError?.localizedDescription ?? "Unknown error")
-            }
-            
-            remaining = remaining.dropFirst(written)
         }
     }
     
-    private func readLoop() async {
-        guard let inputStream = inputStream else { return }
+    private func processIncomingData(_ data: Data) async {
+        readBuffer.append(data)
         
-        var buffer = Data()
-        let readBuffer = UnsafeMutablePointer<UInt8>.allocate(capacity: 4096)
-        defer { readBuffer.deallocate() }
-        
-        while inputStream.hasBytesAvailable {
-            let read = inputStream.read(readBuffer, maxLength: 4096)
-            if read > 0 {
-                buffer.append(readBuffer, count: read)
+        // Process complete messages
+        while readBuffer.count >= 4 {
+            let length = readBuffer.prefix(4).withUnsafeBytes { $0.load(as: UInt32.self).bigEndian }
+            
+            if readBuffer.count >= 4 + Int(length) {
+                // We have a complete message
+                let messageData = readBuffer.subdata(in: 4..<(4 + Int(length)))
+                readBuffer = readBuffer.dropFirst(4 + Int(length))
                 
-                // Process complete messages
-                while buffer.count >= 4 {
-                    let length = buffer.prefix(4).withUnsafeBytes { $0.load(as: UInt32.self).bigEndian }
-                    
-                    if buffer.count >= 4 + Int(length) {
-                        // We have a complete message
-                        let messageData = buffer.subdata(in: 4..<(4 + Int(length)))
-                        buffer = buffer.dropFirst(4 + Int(length))
-                        
-                        await handleMessage(messageData)
-                    } else {
-                        break
-                    }
-                }
-            } else if read < 0 {
-                print("[VSOCK] Read error: \(inputStream.streamError?.localizedDescription ?? "Unknown")")
-                break
+                await handleMessage(messageData)
             } else {
-                // No data available, wait a bit
-                try? await Task.sleep(nanoseconds: 10_000_000) // 10ms
+                break
             }
         }
     }
     
     private func handleMessage(_ data: Data) async {
         do {
-            let response = try JSONDecoder().decode(VSOCKResponse.self, from: data)
+            let response = try JSONDecoder().decode(ProtocolMessage.self, from: data)
             
-            if let continuation = pendingResponses.removeValue(forKey: response.id) {
+            if let requestId = response.requestId,
+               let continuation = pendingResponses.removeValue(forKey: requestId) {
                 continuation.resume(returning: data)
+            } else if response.type == "heartbeat_response" {
+                // Handle heartbeat responses that might not have a registered continuation
+                // (future enhancement: track heartbeats separately)
+                print("[VSOCK] Received heartbeat response")
             } else {
-                print("[VSOCK] Received unexpected response: \(response.id)")
+                print("[VSOCK] Received unexpected response: \(response.type)")
             }
         } catch {
             print("[VSOCK] Failed to decode message: \(error)")
         }
-    }
-}
-
-// MARK: - VSOCK Types
-
-public struct VSOCKRequest: Codable {
-    public var id: String = ""
-    public let type: RequestType
-    public let command: String?
-    public let args: [String]?
-    public let workingDir: String?
-    public let env: [String: String]?
-    public let timeout: TimeInterval?
-    
-    public init(
-        type: RequestType,
-        command: String? = nil,
-        args: [String]? = nil,
-        workingDir: String? = nil,
-        env: [String: String]? = nil,
-        timeout: TimeInterval? = nil
-    ) {
-        self.type = type
-        self.command = command
-        self.args = args
-        self.workingDir = workingDir
-        self.env = env
-        self.timeout = timeout
-    }
-    
-    public enum RequestType: String, Codable {
-        case execute
-        case status
-        case ping
-    }
-}
-
-public struct VSOCKResponse: Codable {
-    public let id: String
-    public let success: Bool
-    public let stdout: String?
-    public let stderr: String?
-    public let exitCode: Int32?
-    public let executionTime: TimeInterval?
-    public let error: String?
-    
-    public init(
-        id: String,
-        success: Bool,
-        stdout: String? = nil,
-        stderr: String? = nil,
-        exitCode: Int32? = nil,
-        executionTime: TimeInterval? = nil,
-        error: String? = nil
-    ) {
-        self.id = id
-        self.success = success
-        self.stdout = stdout
-        self.stderr = stderr
-        self.exitCode = exitCode
-        self.executionTime = executionTime
-        self.error = error
     }
 }
 
@@ -262,61 +368,27 @@ public enum VSOCKError: Error {
     case writeFailed(String)
     case timeout
     case invalidResponse
+    case commandFailed(String)
 }
 
 // MARK: - Helpers
 
-private func withTimeout<T, R>(
+private func withTimeout<T: Sendable>(
     _ timeout: TimeInterval,
-    operation: @escaping () async throws -> T,
-    transform: (T) throws -> R
-) async throws -> R {
-    try await withThrowingTaskGroup(of: R.self) { group in
-        // Add the main operation
+    operation: @escaping () async throws -> T
+) async throws -> T {
+    try await withThrowingTaskGroup(of: T.self) { group in
         group.addTask {
-            let result = try await operation()
-            return try transform(result)
+            try await operation()
         }
         
-        // Add timeout
         group.addTask {
             try await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
             throw VSOCKError.timeout
         }
         
-        // Return the first to complete
         let result = try await group.next()!
         group.cancelAll()
         return result
-    }
-}
-
-// MARK: - Stream Delegate
-
-@available(macOS 13.0, *)
-private class VSOCKStreamDelegate: NSObject, StreamDelegate {
-    weak var channel: VSOCKChannel?
-    
-    init(channel: VSOCKChannel) {
-        self.channel = channel
-    }
-    
-    func stream(_ aStream: Stream, handle eventCode: Stream.Event) {
-        switch eventCode {
-        case .openCompleted:
-            print("[VSOCK] Stream opened")
-        case .hasBytesAvailable:
-            // Handled in readLoop
-            break
-        case .hasSpaceAvailable:
-            // Can write
-            break
-        case .errorOccurred:
-            print("[VSOCK] Stream error: \(aStream.streamError?.localizedDescription ?? "Unknown")")
-        case .endEncountered:
-            print("[VSOCK] Stream ended")
-        default:
-            break
-        }
     }
 }
