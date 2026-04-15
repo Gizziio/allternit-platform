@@ -189,6 +189,7 @@ jobs:
               git \
               bubblewrap \
               zstd \
+              kmod \
               python3 python3-pip
             # Install Node.js 20 LTS via NodeSource
             curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
@@ -204,6 +205,10 @@ jobs:
             sudo cp target/${{ matrix.rust_target }}/release/allternit-vm-executor /mnt/rootfs/usr/bin/
           fi
           sudo chmod +x /mnt/rootfs/usr/bin/allternit-vm-executor
+
+          # Ensure vsock module loads on boot for Apple Virtualization.framework
+          sudo mkdir -p /mnt/rootfs/etc/modules-load.d
+          echo 'vmw_vsock_virtio_transport' | sudo tee /mnt/rootfs/etc/modules-load.d/vsock.conf > /dev/null
 
           # Configuration directory and config file
           sudo mkdir -p /mnt/rootfs/etc/allternit

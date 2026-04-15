@@ -91,7 +91,7 @@ func createVZConfiguration(from config: AllternitVMConfiguration) throws -> VZVi
     
     let bootLoader = VZLinuxBootLoader(kernelURL: URL(fileURLWithPath: config.kernelPath))
     bootLoader.initialRamdiskURL = URL(fileURLWithPath: config.initrdPath)
-    bootLoader.commandLine = "console=hvc0 root=/dev/vda rw quiet"
+    bootLoader.commandLine = "console=hvc0 root=/dev/vda rw quiet modules_load=vmw_vsock_virtio_transport"
     vmConfig.bootLoader = bootLoader
     
     // Storage - Root filesystem
