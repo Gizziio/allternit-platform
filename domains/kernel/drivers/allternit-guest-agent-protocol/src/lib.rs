@@ -1,20 +1,20 @@
-//! A2R Guest Agent Protocol
+//! Allternit Guest Agent Protocol
 //!
-//! Protocol version 1.1.0 for communication between the A2R host (CLI/Desktop app)
+//! Protocol version 1.1.0 for communication between the Allternit host (CLI/Desktop app)
 //! and the VM executor running inside the Linux VM.
 //!
 //! # Naming Distinction
-//! - **A2RCHITECH**: The AI agent system running on the host
-//! - **a2r-vm-executor**: The daemon running INSIDE the VM (this protocol is for it)
-//! - **a2r-guest-agent-protocol**: This crate - shared protocol definitions
+//! - **Allternit**: The AI agent system running on the host
+//! - **allternit-vm-executor**: The daemon running INSIDE the VM (this protocol is for it)
+//! - **allternit-guest-agent-protocol**: This crate - shared protocol definitions
 //!
 //! # Architecture
 //! ```text
 //! Host (macOS/Linux)
-//!   └── A2RCHITECH / A2R CLI
+//!   └── Allternit / Allternit CLI
 //!         └── VSOCK connection (or Unix socket for testing)
 //!               └── Linux VM
-//!                     └── a2r-vm-executor
+//!                     └── allternit-vm-executor
 //!                           └── bubblewrap sessions
 //! ```
 
