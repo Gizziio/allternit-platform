@@ -45,8 +45,11 @@ use session::Session;
 /// Default VSOCK port for communication with host
 const DEFAULT_VSOCK_PORT: u32 = 8080;
 
-/// Default CID for the VM (VMADDR_CID_HOST = 2)
+/// Default CID for the host (VMADDR_CID_HOST = 2)
 const VMADDR_CID_HOST: u32 = 2;
+
+/// VMADDR_CID_ANY for binding listener inside VM
+const VMADDR_CID_ANY: u32 = 0xFFFFFFFF;
 
 /// Executor state shared across all connections
 struct ExecutorState {
@@ -115,7 +118,7 @@ async fn start_vsock_server(state: Arc<ExecutorState>) -> Result<()> {
     use vsock::{VsockAddr, VsockListener};
 
     let port = state.config.vsock_port;
-    let addr = VsockAddr::new(VMADDR_CID_HOST, port);
+    let addr = VsockAddr::new(VMADDR_CID_ANY, port);
 
     info!("Starting VSOCK server on port {}", port);
 

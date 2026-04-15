@@ -70,6 +70,11 @@ struct UnixSocketBridge {
             
             if clientFd >= 0 {
                 print("[Daemon] Client connected")
+                // Set client socket to blocking mode for FileHandle reads
+                var clientFlags = fcntl(clientFd, F_GETFL)
+                clientFlags &= ~O_NONBLOCK
+                _ = fcntl(clientFd, F_SETFL, clientFlags)
+                
                 Task {
                     do {
                         try await handleClientConnection(fd: clientFd, manager: manager)
@@ -96,18 +101,15 @@ struct UnixSocketBridge {
     
     @MainActor
     private static func handleClientConnection(fd: Int32, manager: VMManager) async throws {
-        let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: false)
-        defer { handle.closeFile() }
-        
         var buffer = Data()
         
         while true {
-            let data = handle.availableData
+            let data = readAllAvailable(fd: fd)
             if data.isEmpty {
                 // No more data, client might have closed connection
                 // Wait a bit and check again
                 try await Task.sleep(nanoseconds: 50_000_000)
-                let moreData = handle.availableData
+                let moreData = readAllAvailable(fd: fd)
                 if moreData.isEmpty {
                     break // Connection closed
                 }
@@ -122,17 +124,45 @@ struct UnixSocketBridge {
                 guard buffer.count >= 4 + Int(length) else { break }
                 
                 let messageData = buffer.subdata(in: 4..<(4 + Int(length)))
-                buffer = buffer.dropFirst(4 + Int(length))
+                buffer = buffer.subdata(in: (4 + Int(length))..<buffer.count)
                 
                 let responseData = try await processMessage(messageData, manager: manager)
                 
                 // Send length-prefixed response
                 let responseLength = UInt32(responseData.count).bigEndian
-                var lengthBytes = withUnsafeBytes(of: responseLength) { Array($0) }
-                handle.write(Data(lengthBytes))
-                handle.write(responseData)
+                let lengthBytes = withUnsafeBytes(of: responseLength) { Array($0) }
+                _ = write(fd, lengthBytes, lengthBytes.count)
+                _ = write(fd, [UInt8](responseData), responseData.count)
             }
         }
+        
+        close(fd)
+    }
+    
+    private static func readAllAvailable(fd: Int32) -> Data {
+        var result = Data()
+        let chunkSize = 4096
+        while true {
+            var chunk = Data(count: chunkSize)
+            let bytesRead = chunk.withUnsafeMutableBytes { ptr in
+                read(fd, ptr.baseAddress!, chunkSize)
+            }
+            if bytesRead > 0 {
+                result.append(chunk.prefix(bytesRead))
+                if bytesRead < chunkSize {
+                    break
+                }
+            } else if bytesRead == 0 {
+                break // EOF
+            } else {
+                if errno == EAGAIN || errno == EWOULDBLOCK {
+                    break
+                }
+                // Other read error, treat as EOF
+                break
+            }
+        }
+        return result
     }
     
     @MainActor
@@ -236,21 +266,19 @@ struct UnixSocketBridge {
             throw VMError.commandExecutionFailed("Failed to connect to VM daemon at \(socketPath)")
         }
         
-        let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: false)
-        
         // Send request
         let requestData = try JSONSerialization.data(withJSONObject: request)
         let lengthPrefix = UInt32(requestData.count).bigEndian
-        var lengthBytes = withUnsafeBytes(of: lengthPrefix) { Array($0) }
-        handle.write(Data(lengthBytes))
-        handle.write(requestData)
+        let lengthBytes = withUnsafeBytes(of: lengthPrefix) { Array($0) }
+        _ = write(fd, lengthBytes, lengthBytes.count)
+        _ = write(fd, [UInt8](requestData), requestData.count)
         
         // Read response with timeout
         let deadline = Date().addingTimeInterval(timeout)
         var buffer = Data()
         
         while Date() < deadline {
-            let data = handle.availableData
+            let data = readAllAvailable(fd: fd)
             if !data.isEmpty {
                 buffer.append(data)
                 

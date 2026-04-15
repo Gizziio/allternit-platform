@@ -113,9 +113,13 @@ func createVZConfiguration(from config: AllternitVMConfiguration) throws -> VZVi
     
     // Serial console
     let serialConfig = VZVirtioConsoleDeviceSerialPortConfiguration()
+    guard let serialRead = FileHandle(forReadingAtPath: "/dev/null"),
+          let serialWrite = FileHandle(forWritingAtPath: "/dev/null") else {
+        throw VMError.kernelNotFound("Unable to open /dev/null for serial console")
+    }
     let serialInput = VZFileHandleSerialPortAttachment(
-        fileHandleForReading: FileHandle.nullDevice,
-        fileHandleForWriting: FileHandle.nullDevice
+        fileHandleForReading: serialRead,
+        fileHandleForWriting: serialWrite
     )
     serialConfig.attachment = serialInput
     vmConfig.serialPorts = [serialConfig]
