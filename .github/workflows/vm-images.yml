@@ -59,6 +59,23 @@ jobs:
         with:
           key: allternit-vm-executor-build-${{ matrix.arch }}
 
+      - name: Fix workspace members
+        run: |
+          python3 -c "
+          import re, os
+          with open('Cargo.toml') as f:
+              content = f.read()
+          match = re.search(r'members = \[(.*?)\]', content, re.DOTALL)
+          if match:
+              items = [x.strip().strip(',').strip('\"').strip(\"'\") for x in match.group(1).split('\n') if x.strip()]
+              valid = [item for item in items if not item.startswith('#') and os.path.exists(item)]
+              new_members = ',\n    '.join(f'\"{v}\"' for v in valid)
+              content = re.sub(r'members = \[.*?\]', f'members = [\n    {new_members}\n]', content, count=1, flags=re.DOTALL)
+              with open('Cargo.toml', 'w') as f:
+                  f.write(content)
+              print(f'Workspace members filtered to {len(valid)} valid paths')
+          "
+
       - name: Build allternit-vm-executor
         run: |
           if [ "${{ matrix.arch }}" = "amd64" ]; then
