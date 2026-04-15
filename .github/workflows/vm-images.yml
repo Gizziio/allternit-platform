@@ -96,6 +96,8 @@ jobs:
           echo 'tokio-stream = { version = "0.1", features = ["sync"] }' >> "$TMP_WS/Cargo.toml"
           echo 'futures = "0.3"' >> "$TMP_WS/Cargo.toml"
           echo 'bytes = "1.5"' >> "$TMP_WS/Cargo.toml"
+          echo 'dirs = "5.0"' >> "$TMP_WS/Cargo.toml"
+          echo 'toml = "0.8"' >> "$TMP_WS/Cargo.toml"
 
           # Fix the local path dependency in the copied executor
           sed -i 's|path = \"../../infrastructure/allternit-guest-agent-protocol\"|path = \"../../drivers/allternit-guest-agent-protocol\"|' \
