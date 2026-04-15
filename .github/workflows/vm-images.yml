@@ -172,6 +172,14 @@ jobs:
           # Install runtime packages
           sudo chroot /mnt/rootfs /bin/bash -c "
             export DEBIAN_FRONTEND=noninteractive
+            # Enable universe repository for python3-pip
+            if [ '${{ matrix.arch }}' = 'arm64' ]; then
+              echo 'deb http://ports.ubuntu.com/ubuntu-ports/ jammy universe' >> /etc/apt/sources.list
+              echo 'deb http://ports.ubuntu.com/ubuntu-ports/ jammy-updates universe' >> /etc/apt/sources.list
+            else
+              echo 'deb http://archive.ubuntu.com/ubuntu/ jammy universe' >> /etc/apt/sources.list
+              echo 'deb http://archive.ubuntu.com/ubuntu/ jammy-updates universe' >> /etc/apt/sources.list
+            fi
             apt-get update
             apt-get install -y --no-install-recommends \
               systemd systemd-sysv udev \
