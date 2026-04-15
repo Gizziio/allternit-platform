@@ -59,30 +59,50 @@ jobs:
         with:
           key: allternit-vm-executor-build-${{ matrix.arch }}
 
-      - name: Fix workspace members
-        run: |
-          python3 -c "
-          import re, os
-          with open('Cargo.toml') as f:
-              content = f.read()
-          match = re.search(r'members = \[(.*?)\]', content, re.DOTALL)
-          if match:
-              items = [x.strip().strip(',').strip('\"').strip(\"'\") for x in match.group(1).split('\n') if x.strip()]
-              valid = [item for item in items if not item.startswith('#') and os.path.exists(item)]
-              new_members = ',\n    '.join(f'\"{v}\"' for v in valid)
-              content = re.sub(r'members = \[.*?\]', f'members = [\n    {new_members}\n]', content, count=1, flags=re.DOTALL)
-              with open('Cargo.toml', 'w') as f:
-                  f.write(content)
-              print(f'Workspace members filtered to {len(valid)} valid paths')
-          "
-
       - name: Build allternit-vm-executor
         run: |
+          # Create a temporary isolated workspace to avoid broken repo workspace members
+          TMP_WS="/tmp/vm-build"
+          mkdir -p "$TMP_WS/domains/kernel/service"
+          mkdir -p "$TMP_WS/domains/kernel/drivers"
+          cp -r domains/kernel/service/allternit-vm-executor "$TMP_WS/domains/kernel/service/"
+          cp -r domains/kernel/drivers/allternit-guest-agent-protocol "$TMP_WS/domains/kernel/drivers/"
+
+          # Create minimal workspace Cargo.toml with dependencies from original
+          python3 -c "
+          import re
+          with open('Cargo.toml') as f:
+              content = f.read()
+          deps = re.search(r'\[workspace\.dependencies\].*?(?=\n\[|$)', content, re.DOTALL)
+          deps = deps.group(0) if deps else ''
+          pkg = re.search(r'\[workspace\.package\].*?(?=\n\[|$)', content, re.DOTALL)
+          pkg = pkg.group(0) if pkg else ''
+          with open('$TMP_WS/Cargo.toml', 'w') as f:
+              f.write('[workspace]\nresolver = \"2\"\nmembers = [\n')
+              f.write('    \"domains/kernel/service/allternit-vm-executor\",\n')
+              f.write('    \"domains/kernel/drivers/allternit-guest-agent-protocol\",\n')
+              f.write(']\n\n')
+              if pkg:
+                  f.write(pkg + '\n\n')
+              if deps:
+                  f.write(deps + '\n')
+          "
+
+          # Fix the local path dependency in the copied executor
+          sed -i 's|path = \"../../infrastructure/allternit-guest-agent-protocol\"|path = \"../../drivers/allternit-guest-agent-protocol\"|' \
+            "$TMP_WS/domains/kernel/service/allternit-vm-executor/Cargo.toml"
+
+          cd "$TMP_WS"
           if [ "${{ matrix.arch }}" = "amd64" ]; then
             cargo build --release -p allternit-vm-executor
           else
             cargo build --release -p allternit-vm-executor --target ${{ matrix.rust_target }}
           fi
+
+          # Copy binary back to expected location for downstream steps
+          mkdir -p "$GITHUB_WORKSPACE/target/${{ matrix.rust_target }}/release"
+          cp "$TMP_WS/target/${{ matrix.rust_target }}/release/allternit-vm-executor" \
+             "$GITHUB_WORKSPACE/target/${{ matrix.rust_target }}/release/"
 
       - name: Download Ubuntu kernel and initrd
         run: |
