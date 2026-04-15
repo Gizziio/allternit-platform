@@ -116,9 +116,15 @@ jobs:
           fi
 
           # Copy binary back to expected location for downstream steps
-          mkdir -p "$GITHUB_WORKSPACE/target/${{ matrix.rust_target }}/release"
-          cp "$TMP_WS/target/${{ matrix.rust_target }}/release/allternit-vm-executor" \
-             "$GITHUB_WORKSPACE/target/${{ matrix.rust_target }}/release/"
+          if [ "${{ matrix.arch }}" = "amd64" ]; then
+            mkdir -p "$GITHUB_WORKSPACE/target/release"
+            cp "$TMP_WS/target/release/allternit-vm-executor" \
+               "$GITHUB_WORKSPACE/target/release/"
+          else
+            mkdir -p "$GITHUB_WORKSPACE/target/${{ matrix.rust_target }}/release"
+            cp "$TMP_WS/target/${{ matrix.rust_target }}/release/allternit-vm-executor" \
+               "$GITHUB_WORKSPACE/target/${{ matrix.rust_target }}/release/"
+          fi
 
       - name: Download Ubuntu kernel and initrd
         run: |
@@ -150,9 +156,13 @@ jobs:
           sudo mkdir -p /mnt/rootfs
           sudo mount -o loop "$ROOTFS" /mnt/rootfs
 
-          # Bootstrap Ubuntu 22.04 minimal base
-          sudo debootstrap --arch=${{ matrix.ubuntu_arch }} --variant=minbase jammy /mnt/rootfs \
-            http://archive.ubuntu.com/ubuntu/
+          # Bootstrap Ubuntu 22.04 minimal base (arm64 needs ports.ubuntu.com)
+          if [ "${{ matrix.arch }}" = "arm64" ]; then
+            MIRROR="http://ports.ubuntu.com/ubuntu-ports/"
+          else
+            MIRROR="http://archive.ubuntu.com/ubuntu/"
+          fi
+          sudo debootstrap --arch=${{ matrix.ubuntu_arch }} --variant=minbase jammy /mnt/rootfs "$MIRROR"
 
           # Bind mounts for chroot
           for fs in dev proc sys; do
