@@ -131,8 +131,8 @@ jobs:
           mkdir -p vm-images
           ROOTFS="vm-images/ubuntu-22.04-allternit-v${IMAGE_VERSION}-${{ matrix.arch }}.ext4"
 
-          # 3 GB ext4 image (leaves headroom for packages + workspace)
-          dd if=/dev/zero of="$ROOTFS" bs=1M count=3072 status=progress
+          # 5 GB ext4 image (leaves headroom for kernel modules + workspace)
+          dd if=/dev/zero of="$ROOTFS" bs=1M count=5120 status=progress
           mkfs.ext4 -L allternit-root "$ROOTFS"
 
           sudo mkdir -p /mnt/rootfs
@@ -329,7 +329,7 @@ jobs:
               build_date: $build_date,
               architecture: $arch,
               kernel_version: $kv,
-              rootfs_size_mb: 3072,
+              rootfs_size_mb: 5120,
               checksums: {
                 vmlinux_sha256: $vmlinux,
                 initrd_sha256: $initrd,
