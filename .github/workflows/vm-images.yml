@@ -391,6 +391,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Fix artifact permissions
+        run: |
+          # upload-artifact can't read files owned by root
+          sudo chown -R $(id -u):$(id -g) vm-images/
+          ls -lh vm-images/
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
