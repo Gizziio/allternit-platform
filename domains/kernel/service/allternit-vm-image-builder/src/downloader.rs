@@ -49,18 +49,36 @@ impl ImageDownloader {
             return Ok(false);
         }
 
-        // Check all files exist
-        let files = [
-            self.output_dir.join(format!("vmlinux-{}-a2r", metadata.kernel_version)),
-            self.output_dir.join(format!("initrd.img-{}-a2r", metadata.kernel_version)),
-            self.output_dir.join(format!("ubuntu-22.04-a2r-v{}.ext4", self.version)),
-        ];
+        // Determine architecture suffix
+        let arch = std::env::consts::ARCH;
+        let arch_str = match arch {
+            "x86_64" => "amd64",
+            "aarch64" => "arm64",
+            _ => arch,
+        };
 
-        for file in &files {
-            if !file.exists() {
-                info!("Missing file: {}", file.display());
-                return Ok(false);
-            }
+        // Check all files exist (try arch-specific names first)
+        let kernel_exists =
+            self.output_dir.join(format!("vmlinux-{}-allternit-{}", metadata.kernel_version, arch_str)).exists()
+            || self.output_dir.join(format!("vmlinux-{}-allternit", metadata.kernel_version)).exists();
+        let initrd_exists =
+            self.output_dir.join(format!("initrd.img-{}-allternit-{}", metadata.kernel_version, arch_str)).exists()
+            || self.output_dir.join(format!("initrd.img-{}-allternit", metadata.kernel_version)).exists();
+        let rootfs_exists =
+            self.output_dir.join(format!("ubuntu-22.04-allternit-v{}-{}.ext4", self.version, arch_str)).exists()
+            || self.output_dir.join(format!("ubuntu-22.04-allternit-v{}.ext4", self.version)).exists();
+
+        if !kernel_exists {
+            info!("Missing kernel file");
+            return Ok(false);
+        }
+        if !initrd_exists {
+            info!("Missing initrd file");
+            return Ok(false);
+        }
+        if !rootfs_exists {
+            info!("Missing rootfs file");
+            return Ok(false);
         }
 
         Ok(true)
@@ -103,10 +121,10 @@ impl ImageDownloader {
         };
 
         // Download kernel - try arch-specific first, then generic
-        let kernel_file = self.output_dir.join(format!("vmlinux-{}-a2r", metadata.kernel_version));
+        let kernel_file = self.output_dir.join(format!("vmlinux-{}-allternit", metadata.kernel_version));
         let kernel_urls = [
-            format!("{}/vmlinux-{}-a2r-{}", base_url, metadata.kernel_version, arch_str),
-            format!("{}/vmlinux-{}-a2r", base_url, metadata.kernel_version),
+            format!("{}/vmlinux-{}-allternit-{}", base_url, metadata.kernel_version, arch_str),
+            format!("{}/vmlinux-{}-allternit", base_url, metadata.kernel_version),
         ];
         self.download_file_with_fallback(&kernel_urls, &kernel_file, "Linux kernel").await?;
 
@@ -115,10 +133,10 @@ impl ImageDownloader {
         }
 
         // Download initrd
-        let initrd_file = self.output_dir.join(format!("initrd.img-{}-a2r", metadata.kernel_version));
+        let initrd_file = self.output_dir.join(format!("initrd.img-{}-allternit", metadata.kernel_version));
         let initrd_urls = [
-            format!("{}/initrd.img-{}-a2r-{}", base_url, metadata.kernel_version, arch_str),
-            format!("{}/initrd.img-{}-a2r", base_url, metadata.kernel_version),
+            format!("{}/initrd.img-{}-allternit-{}", base_url, metadata.kernel_version, arch_str),
+            format!("{}/initrd.img-{}-allternit", base_url, metadata.kernel_version),
         ];
         self.download_file_with_fallback(&initrd_urls, &initrd_file, "Initial ramdisk").await?;
 
@@ -127,15 +145,15 @@ impl ImageDownloader {
         }
 
         // Download rootfs
-        let rootfs_file = self.output_dir.join(format!("ubuntu-22.04-a2r-v{}.ext4.zst", self.version));
+        let rootfs_file = self.output_dir.join(format!("ubuntu-22.04-allternit-v{}.ext4.zst", self.version));
         let rootfs_urls = [
-            format!("{}/ubuntu-22.04-a2r-v{}-{}.ext4.zst", base_url, self.version, arch_str),
-            format!("{}/ubuntu-22.04-a2r-v{}.ext4.zst", base_url, self.version),
+            format!("{}/ubuntu-22.04-allternit-v{}-{}.ext4.zst", base_url, self.version, arch_str),
+            format!("{}/ubuntu-22.04-allternit-v{}.ext4.zst", base_url, self.version),
         ];
         self.download_file_with_fallback(&rootfs_urls, &rootfs_file, "Root filesystem").await?;
 
         // Decompress rootfs if needed
-        let final_rootfs = self.output_dir.join(format!("ubuntu-22.04-a2r-v{}.ext4", self.version));
+        let final_rootfs = self.output_dir.join(format!("ubuntu-22.04-allternit-v{}.ext4", self.version));
         if !final_rootfs.exists() {
             self.decompress_zstd(&rootfs_file, &final_rootfs).await?;
         }
@@ -195,7 +213,7 @@ impl ImageDownloader {
         
         let response = self.client
             .get(&url)
-            .header("User-Agent", "a2r-vm-image-builder")
+            .header("User-Agent", "allternit-vm-image-builder")
             .send()
             .await
             .context("Failed to fetch latest release info")?;
@@ -234,17 +252,17 @@ impl ImageDownloader {
 
         let files = [
             (
-                self.output_dir.join(format!("vmlinux-{}-a2r", metadata.kernel_version)),
+                self.output_dir.join(format!("vmlinux-{}-allternit", metadata.kernel_version)),
                 &metadata.checksums.vmlinux_sha256,
                 "kernel",
             ),
             (
-                self.output_dir.join(format!("initrd.img-{}-a2r", metadata.kernel_version)),
+                self.output_dir.join(format!("initrd.img-{}-allternit", metadata.kernel_version)),
                 &metadata.checksums.initrd_sha256,
                 "initrd",
             ),
             (
-                self.output_dir.join(format!("ubuntu-22.04-a2r-v{}.ext4", self.version)),
+                self.output_dir.join(format!("ubuntu-22.04-allternit-v{}.ext4", self.version)),
                 &metadata.checksums.rootfs_sha256,
                 "rootfs",
             ),

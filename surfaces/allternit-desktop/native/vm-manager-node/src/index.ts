@@ -62,15 +62,36 @@ export class AllternitVMManager extends EventEmitter {
     super();
     
     const home = os.homedir();
+    const vmImagesDir = path.join(home, '.allternit/vm-images');
     
     const arch = process.arch === 'x64' ? 'amd64' : process.arch === 'arm64' ? 'arm64' : process.arch;
     const archSuffix = arch === 'amd64' ? '' : `-${arch}`;
     
+    // Discover VM image files dynamically (kernel version is no longer hardcoded)
+    const discoverImage = (prefix: string, suffix: string): string | undefined => {
+      try {
+        const files = fs.readdirSync(vmImagesDir);
+        const match = files.find(f => f.startsWith(prefix) && f.endsWith(suffix));
+        if (match) return path.join(vmImagesDir, match);
+      } catch { /* directory may not exist yet */ }
+      return undefined;
+    };
+    
+    const defaultKernel =
+      discoverImage('vmlinux-', `-allternit${archSuffix}`) ??
+      discoverImage('vmlinux-', '-allternit');
+    const defaultInitrd =
+      discoverImage('initrd.img-', `-allternit${archSuffix}`) ??
+      discoverImage('initrd.img-', '-allternit');
+    const defaultRootfs =
+      discoverImage('ubuntu-22.04-allternit-', `${archSuffix}.ext4`) ??
+      discoverImage('ubuntu-22.04-allternit-', '.ext4');
+    
     this.config = {
       vmName: config.vmName ?? 'allternit-vm',
-      kernelPath: config.kernelPath ?? path.join(home, `.allternit/vm-images/vmlinux-6.5.0-allternit${archSuffix}`),
-      initrdPath: config.initrdPath ?? path.join(home, `.allternit/vm-images/initrd.img-6.5.0-allternit${archSuffix}`),
-      rootfsPath: config.rootfsPath ?? path.join(home, `.allternit/vm-images/ubuntu-22.04-allternit-v1.1.0${archSuffix}.ext4`),
+      kernelPath: config.kernelPath ?? defaultKernel ?? path.join(vmImagesDir, `vmlinux-UNKNOWN-allternit${archSuffix}`),
+      initrdPath: config.initrdPath ?? defaultInitrd ?? path.join(vmImagesDir, `initrd.img-UNKNOWN-allternit${archSuffix}`),
+      rootfsPath: config.rootfsPath ?? defaultRootfs ?? path.join(vmImagesDir, `ubuntu-22.04-allternit-UNKNOWN${archSuffix}.ext4`),
       cpuCount: config.cpuCount ?? 4,
       memorySizeMB: config.memorySizeMB ?? 4096,
       vsockPort: config.vsockPort ?? 8080,

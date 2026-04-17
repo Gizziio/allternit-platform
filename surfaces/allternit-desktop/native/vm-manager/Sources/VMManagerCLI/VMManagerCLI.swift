@@ -61,9 +61,9 @@ struct VMManagerCLI {
             help     Show this help message
         
         Environment Variables:
-            ALLTERNIT_VM_KERNEL    Path to kernel (default: ~/.allternit/vm-images/vmlinux-6.5.0-allternit)
-            ALLTERNIT_VM_INITRD    Path to initrd (default: ~/.allternit/vm-images/initrd.img-6.5.0-allternit)
-            ALLTERNIT_VM_ROOTFS    Path to rootfs (default: ~/.allternit/vm-images/ubuntu-22.04-allternit-v1.1.0.ext4)
+            ALLTERNIT_VM_KERNEL    Path to kernel (default: auto-discover in ~/.allternit/vm-images)
+            ALLTERNIT_VM_INITRD    Path to initrd (default: auto-discover in ~/.allternit/vm-images)
+            ALLTERNIT_VM_ROOTFS    Path to rootfs (default: auto-discover in ~/.allternit/vm-images)
             ALLTERNIT_VM_SOCKET    Path to socket (default: ~/.allternit/desktop-vm.sock)
         """)
     }
@@ -194,6 +194,18 @@ struct VMManagerCLI {
         exit(Int32(response["exit_code"] as? Int ?? (success ? 0 : 1)))
     }
     
+    /// Find a VM image file in the given directory matching a prefix and suffix.
+    /// Returns the first match (alphabetically) or nil if none found.
+    static func findVMImage(in directory: String, prefix: String, suffix: String) -> String? {
+        guard let entries = try? FileManager.default.contentsOfDirectory(atPath: directory) else {
+            return nil
+        }
+        let matches = entries
+            .filter { $0.hasPrefix(prefix) && $0.hasSuffix(suffix) }
+            .sorted()
+        return matches.first
+    }
+    
     @MainActor
     static func setupVM() async throws {
         print("Setting up Allternit VM...")
@@ -212,38 +224,30 @@ struct VMManagerCLI {
         #endif
         let archSuffix = arch == "amd64" ? "" : "-\(arch)"
         
-        // Check architecture-specific names first, then legacy fallback
+        // Discover files dynamically (kernel version is no longer hardcoded)
+        let kernelFile = findVMImage(in: vmImagesDir, prefix: "vmlinux-", suffix: "-allternit\(archSuffix)")
+            ?? findVMImage(in: vmImagesDir, prefix: "vmlinux-", suffix: "-allternit")
+        let initrdFile = findVMImage(in: vmImagesDir, prefix: "initrd.img-", suffix: "-allternit\(archSuffix)")
+            ?? findVMImage(in: vmImagesDir, prefix: "initrd.img-", suffix: "-allternit")
+        let rootfsFile = findVMImage(in: vmImagesDir, prefix: "ubuntu-22.04-allternit-", suffix: "\(archSuffix).ext4")
+            ?? findVMImage(in: vmImagesDir, prefix: "ubuntu-22.04-allternit-", suffix: ".ext4")
+        
         let candidates = [
-            (
-                "vmlinux-6.5.0-allternit\(archSuffix)",
-                "vmlinux-6.5.0-allternit"
-            ),
-            (
-                "initrd.img-6.5.0-allternit\(archSuffix)",
-                "initrd.img-6.5.0-allternit"
-            ),
-            (
-                "ubuntu-22.04-allternit-v1.1.0\(archSuffix).ext4",
-                "ubuntu-22.04-allternit-v1.1.0.ext4"
-            )
+            (name: "kernel", file: kernelFile),
+            (name: "initrd", file: initrdFile),
+            (name: "rootfs", file: rootfsFile)
         ]
         
         var foundFiles: [String] = []
         var missingFiles: [String] = []
         
-        for (archSpecific, legacy) in candidates {
-            let archPath = "\(vmImagesDir)/\(archSpecific)"
-            let legacyPath = "\(vmImagesDir)/\(legacy)"
-            
-            if FileManager.default.fileExists(atPath: archPath) {
-                print("  ✅ \(archSpecific)")
-                foundFiles.append(archSpecific)
-            } else if FileManager.default.fileExists(atPath: legacyPath) {
-                print("  ✅ \(legacy)")
-                foundFiles.append(legacy)
+        for (name, file) in candidates {
+            if let file = file {
+                print("  ✅ \(name): \(file)")
+                foundFiles.append(file)
             } else {
-                print("  ❌ \(archSpecific) - NOT FOUND")
-                missingFiles.append(archSpecific)
+                print("  ❌ \(name) - NOT FOUND")
+                missingFiles.append(name)
             }
         }
         
@@ -314,29 +318,35 @@ struct VMManagerCLI {
         
         let vmImagesDir = "\(home)/.allternit/vm-images"
         
-        // Resolve default kernel path (arch-specific first, then legacy)
+        // Resolve default paths by discovering files dynamically
         let defaultKernelPath: String = {
-            let archPath = "\(vmImagesDir)/vmlinux-6.5.0-allternit\(archSuffix)"
-            let legacyPath = "\(vmImagesDir)/vmlinux-6.5.0-allternit"
-            if FileManager.default.fileExists(atPath: archPath) { return archPath }
-            if FileManager.default.fileExists(atPath: legacyPath) { return legacyPath }
-            return archPath // prefer arch-specific as default even if not present yet
+            if let file = findVMImage(in: vmImagesDir, prefix: "vmlinux-", suffix: "-allternit\(archSuffix)") {
+                return "\(vmImagesDir)/\(file)"
+            }
+            if let file = findVMImage(in: vmImagesDir, prefix: "vmlinux-", suffix: "-allternit") {
+                return "\(vmImagesDir)/\(file)"
+            }
+            return "\(vmImagesDir)/vmlinux-UNKNOWN-allternit\(archSuffix)"
         }()
         
         let defaultInitrdPath: String = {
-            let archPath = "\(vmImagesDir)/initrd.img-6.5.0-allternit\(archSuffix)"
-            let legacyPath = "\(vmImagesDir)/initrd.img-6.5.0-allternit"
-            if FileManager.default.fileExists(atPath: archPath) { return archPath }
-            if FileManager.default.fileExists(atPath: legacyPath) { return legacyPath }
-            return archPath
+            if let file = findVMImage(in: vmImagesDir, prefix: "initrd.img-", suffix: "-allternit\(archSuffix)") {
+                return "\(vmImagesDir)/\(file)"
+            }
+            if let file = findVMImage(in: vmImagesDir, prefix: "initrd.img-", suffix: "-allternit") {
+                return "\(vmImagesDir)/\(file)"
+            }
+            return "\(vmImagesDir)/initrd.img-UNKNOWN-allternit\(archSuffix)"
         }()
         
         let defaultRootfsPath: String = {
-            let archPath = "\(vmImagesDir)/ubuntu-22.04-allternit-v1.1.0\(archSuffix).ext4"
-            let legacyPath = "\(vmImagesDir)/ubuntu-22.04-allternit-v1.1.0.ext4"
-            if FileManager.default.fileExists(atPath: archPath) { return archPath }
-            if FileManager.default.fileExists(atPath: legacyPath) { return legacyPath }
-            return archPath
+            if let file = findVMImage(in: vmImagesDir, prefix: "ubuntu-22.04-allternit-", suffix: "\(archSuffix).ext4") {
+                return "\(vmImagesDir)/\(file)"
+            }
+            if let file = findVMImage(in: vmImagesDir, prefix: "ubuntu-22.04-allternit-", suffix: ".ext4") {
+                return "\(vmImagesDir)/\(file)"
+            }
+            return "\(vmImagesDir)/ubuntu-22.04-allternit-UNKNOWN\(archSuffix).ext4"
         }()
         
         let finalKernelPath = kernelPath

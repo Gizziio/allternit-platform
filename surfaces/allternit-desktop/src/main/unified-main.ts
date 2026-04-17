@@ -998,12 +998,15 @@ function getVmImagePaths(): { kernel?: string; initrd?: string; rootfs?: string 
   const archSuffix = arch === 'amd64' ? '' : `-${arch}`;
   const files = fs.readdirSync(imagesPath);
   
-  // Try architecture-specific names first, then legacy fallback
-  const kernel = files.find(f => f === `vmlinux-6.5.0-allternit${archSuffix}`)
+  // Discover files dynamically (kernel version is no longer hardcoded)
+  const kernel = files.find(f => f.startsWith('vmlinux-') && f.endsWith(`-allternit${archSuffix}`))
+    || files.find(f => f.startsWith('vmlinux-') && f.endsWith('-allternit'))
     || files.find(f => f.startsWith('vmlinux') || f === 'kernel');
-  const initrd = files.find(f => f === `initrd.img-6.5.0-allternit${archSuffix}`)
+  const initrd = files.find(f => f.startsWith('initrd.img-') && f.endsWith(`-allternit${archSuffix}`))
+    || files.find(f => f.startsWith('initrd.img-') && f.endsWith('-allternit'))
     || files.find(f => f.startsWith('initrd') || f === 'initrd.img');
-  const rootfs = files.find(f => f === `ubuntu-22.04-allternit-v1.1.0${archSuffix}.ext4`)
+  const rootfs = files.find(f => f.startsWith('ubuntu-22.04-allternit-') && f.endsWith(`${archSuffix}.ext4`))
+    || files.find(f => f.startsWith('ubuntu-22.04-allternit-') && f.endsWith('.ext4'))
     || files.find(f => f.endsWith('.ext4') || f.endsWith('.raw') || f === 'rootfs.ext4');
   
   if (!kernel || !rootfs) return null;

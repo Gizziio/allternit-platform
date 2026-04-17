@@ -128,6 +128,7 @@ jobs:
 
       - name: Create rootfs image
         run: |
+          mkdir -p vm-images
           ROOTFS="vm-images/ubuntu-22.04-allternit-v${IMAGE_VERSION}-${{ matrix.arch }}.ext4"
 
           # 3 GB ext4 image (leaves headroom for packages + workspace)
@@ -230,17 +231,31 @@ jobs:
             'WantedBy=multi-user.target' \
             | sudo tee /mnt/rootfs/etc/systemd/system/allternit-vm-executor.service > /dev/null
 
-          sudo chroot /mnt/rootfs systemctl enable allternit-vm-executor.service
+          # systemctl enable doesn't work inside a chroot without running systemd;
+          # create the symlink manually.
+          sudo chroot /mnt/rootfs /bin/bash -c \
+            "mkdir -p /etc/systemd/system/multi-user.target.wants && ln -sf /etc/systemd/system/allternit-vm-executor.service /etc/systemd/system/multi-user.target.wants/allternit-vm-executor.service"
 
           # Rebuild initramfs to include all installed modules (including vsock)
           KERNEL_VERSION=$(ls /mnt/rootfs/lib/modules | head -1)
           echo "Rebuilding initramfs for kernel: $KERNEL_VERSION"
           sudo chroot /mnt/rootfs update-initramfs -c -k "$KERNEL_VERSION"
 
-          # Extract kernel and initrd from chroot for Apple Virtualization.framework
-          mkdir -p vm-images
-          sudo cp "/mnt/rootfs/boot/vmlinuz-$KERNEL_VERSION" "vm-images/vmlinux-6.5.0-allternit-${{ matrix.arch }}"
-          sudo cp "/mnt/rootfs/boot/initrd.img-$KERNEL_VERSION" "vm-images/initrd.img-6.5.0-allternit-${{ matrix.arch }}"
+          # Extract kernel and initrd from chroot for Apple Virtualization.framework.
+          # The vmlinuz file is gzip-compressed; Apple Virtualization.framework
+          # requires a raw, decompressed kernel image.
+          VMLINUX_SRC="/mnt/rootfs/boot/vmlinuz-$KERNEL_VERSION"
+          VMLINUX_DST="vm-images/vmlinux-$KERNEL_VERSION-allternit-${{ matrix.arch }}"
+          INITRD_SRC="/mnt/rootfs/boot/initrd.img-$KERNEL_VERSION"
+          INITRD_DST="vm-images/initrd.img-$KERNEL_VERSION-allternit-${{ matrix.arch }}"
+
+          if file "$VMLINUX_SRC" | grep -q "gzip"; then
+            echo "Decompressing gzip-compressed kernel..."
+            sudo gzip -dc "$VMLINUX_SRC" > "$VMLINUX_DST"
+          else
+            sudo cp "$VMLINUX_SRC" "$VMLINUX_DST"
+          fi
+          sudo cp "$INITRD_SRC" "$INITRD_DST"
 
           # Tear down bind mounts cleanly
           for fs in sys proc dev; do
@@ -254,14 +269,19 @@ jobs:
         run: |
           cd vm-images
 
-          VMLINUX_SHA=$(sha256sum vmlinux-6.5.0-allternit-${{ matrix.arch }} | cut -d' ' -f1)
-          INITRD_SHA=$(sha256sum initrd.img-6.5.0-allternit-${{ matrix.arch }} | cut -d' ' -f1)
+          # Discover actual kernel version from extracted files
+          KERNEL_VERSION=$(ls vmlinux-*-allternit-${{ matrix.arch }} | sed 's/vmlinux-//;s/-allternit-.*//')
+          echo "Kernel version: $KERNEL_VERSION"
+
+          VMLINUX_SHA=$(sha256sum vmlinux-${KERNEL_VERSION}-allternit-${{ matrix.arch }} | cut -d' ' -f1)
+          INITRD_SHA=$(sha256sum initrd.img-${KERNEL_VERSION}-allternit-${{ matrix.arch }} | cut -d' ' -f1)
           ROOTFS_SHA=$(sha256sum ubuntu-22.04-allternit-v${IMAGE_VERSION}-${{ matrix.arch }}.ext4 | cut -d' ' -f1)
 
           jq -n \
             --arg version "${IMAGE_VERSION}" \
             --arg build_date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             --arg arch "${{ matrix.arch }}" \
+            --arg kv "${KERNEL_VERSION}" \
             --arg vmlinux "${VMLINUX_SHA}" \
             --arg initrd "${INITRD_SHA}" \
             --arg rootfs "${ROOTFS_SHA}" \
@@ -269,7 +289,7 @@ jobs:
               version: $version,
               build_date: $build_date,
               architecture: $arch,
-              kernel_version: "6.5.0",
+              kernel_version: $kv,
               rootfs_size_mb: 3072,
               checksums: {
                 vmlinux_sha256: $vmlinux,
