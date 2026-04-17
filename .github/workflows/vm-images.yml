@@ -245,24 +245,33 @@ jobs:
           # into the chroot, and then rebuild the initramfs inside the chroot.
           # This avoids fragile grub post-install failures in chroot.
           # -------------------------------------------------------------------
-          echo "Downloading kernel package on host..."
+          echo "Downloading kernel packages on host..."
           sudo apt-get update
           sudo apt-get install -y --download-only --no-install-recommends linux-image-generic
-          KERNEL_DEB=$(find /var/cache/apt/archives -name 'linux-image-*-generic_*.deb' | grep -v signed | head -1)
+          # Find all downloaded kernel-related .debs (image, modules, extra)
+          KERNEL_DEB=$(sudo find /var/cache/apt/archives -maxdepth 1 -name 'linux-image-*-generic_*.deb' | grep -v signed | head -1)
+          MODULES_DEB=$(sudo find /var/cache/apt/archives -maxdepth 1 -name 'linux-modules-[0-9]*-generic_*.deb' | head -1)
+          EXTRA_DEB=$(sudo find /var/cache/apt/archives -maxdepth 1 -name 'linux-modules-extra-[0-9]*-generic_*.deb' | head -1)
           if [ -z "$KERNEL_DEB" ]; then
             echo "ERROR: Could not find kernel .deb package"
             exit 1
           fi
           echo "Found kernel package: $KERNEL_DEB"
+          echo "Found modules package: $MODULES_DEB"
+          echo "Found extra modules package: $EXTRA_DEB"
           mkdir -p /tmp/kernel-extract
           dpkg-deb -x "$KERNEL_DEB" /tmp/kernel-extract
+          [ -n "$MODULES_DEB" ] && dpkg-deb -x "$MODULES_DEB" /tmp/kernel-extract
+          [ -n "$EXTRA_DEB" ] && dpkg-deb -x "$EXTRA_DEB" /tmp/kernel-extract
           KERNEL_VERSION=$(ls /tmp/kernel-extract/boot/vmlinuz-* | head -1 | xargs basename | sed 's/vmlinuz-//')
           echo "Kernel version: $KERNEL_VERSION"
 
           # Copy kernel image and modules into the chroot
           sudo mkdir -p /mnt/rootfs/boot /mnt/rootfs/lib/modules
           sudo cp -r /tmp/kernel-extract/boot/* /mnt/rootfs/boot/
-          sudo cp -r /tmp/kernel-extract/lib/modules/* /mnt/rootfs/lib/modules/
+          if [ -d /tmp/kernel-extract/lib/modules ]; then
+            sudo cp -r /tmp/kernel-extract/lib/modules/* /mnt/rootfs/lib/modules/
+          fi
 
           # Ensure VSOCK module is included in initramfs for Apple Virtualization.framework
           echo 'vmw_vsock_virtio_transport' | sudo tee /mnt/rootfs/etc/initramfs-tools/modules > /dev/null
