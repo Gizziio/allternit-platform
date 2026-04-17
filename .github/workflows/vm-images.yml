@@ -126,25 +126,6 @@ jobs:
                "$GITHUB_WORKSPACE/target/${{ matrix.rust_target }}/release/"
           fi
 
-      - name: Download Ubuntu kernel and initrd
-        run: |
-          mkdir -p vm-images
-
-          ARCH_SUFFIX="${{ matrix.ubuntu_arch }}"
-          VMLINUX_OUT="vm-images/vmlinux-6.5.0-allternit-${{ matrix.arch }}"
-          INITRD_OUT="vm-images/initrd.img-6.5.0-allternit-${{ matrix.arch }}"
-
-          # Try the unpacked CDN path first, fall back to release path
-          wget -q "https://cloud-images.ubuntu.com/releases/22.04/release/unpacked/ubuntu-22.04-server-cloudimg-${ARCH_SUFFIX}-vmlinuz-generic" \
-            -O "${VMLINUX_OUT}" || \
-          wget -q "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-${ARCH_SUFFIX}-vmlinuz-generic" \
-            -O "${VMLINUX_OUT}"
-
-          wget -q "https://cloud-images.ubuntu.com/releases/22.04/release/unpacked/ubuntu-22.04-server-cloudimg-${ARCH_SUFFIX}-initrd-generic" \
-            -O "${INITRD_OUT}" || \
-          wget -q "https://cloud-images.ubuntu.com/releases/22.04/release/ubuntu-22.04-server-cloudimg-${ARCH_SUFFIX}-initrd-generic" \
-            -O "${INITRD_OUT}"
-
       - name: Create rootfs image
         run: |
           ROOTFS="vm-images/ubuntu-22.04-allternit-v${IMAGE_VERSION}-${{ matrix.arch }}.ext4"
@@ -190,6 +171,9 @@ jobs:
               bubblewrap \
               zstd \
               kmod \
+              initramfs-tools \
+              linux-image-generic \
+              linux-modules-extra-generic \
               python3 python3-pip
             # Install Node.js 20 LTS via NodeSource
             curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
@@ -227,11 +211,12 @@ jobs:
           # Workspace directory
           sudo mkdir -p /mnt/rootfs/workspace
 
-          # systemd service
+          # systemd service - depends on modules-load so vsock is available
           printf '%s\n' \
             '[Unit]' \
             'Description=Allternit VM Executor' \
-            'After=network.target' \
+            'After=network.target systemd-modules-load.service' \
+            'Wants=systemd-modules-load.service' \
             '' \
             '[Service]' \
             'Type=simple' \
@@ -246,6 +231,16 @@ jobs:
             | sudo tee /mnt/rootfs/etc/systemd/system/allternit-vm-executor.service > /dev/null
 
           sudo chroot /mnt/rootfs systemctl enable allternit-vm-executor.service
+
+          # Rebuild initramfs to include all installed modules (including vsock)
+          KERNEL_VERSION=$(ls /mnt/rootfs/lib/modules | head -1)
+          echo "Rebuilding initramfs for kernel: $KERNEL_VERSION"
+          sudo chroot /mnt/rootfs update-initramfs -c -k "$KERNEL_VERSION"
+
+          # Extract kernel and initrd from chroot for Apple Virtualization.framework
+          mkdir -p vm-images
+          sudo cp "/mnt/rootfs/boot/vmlinuz-$KERNEL_VERSION" "vm-images/vmlinux-6.5.0-allternit-${{ matrix.arch }}"
+          sudo cp "/mnt/rootfs/boot/initrd.img-$KERNEL_VERSION" "vm-images/initrd.img-6.5.0-allternit-${{ matrix.arch }}"
 
           # Tear down bind mounts cleanly
           for fs in sys proc dev; do
