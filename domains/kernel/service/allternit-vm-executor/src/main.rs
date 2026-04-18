@@ -118,7 +118,9 @@ async fn start_vsock_server(state: Arc<ExecutorState>) -> Result<()> {
     use vsock::{VsockAddr, VsockListener};
 
     let port = state.config.vsock_port;
-    let addr = VsockAddr::new(VMADDR_CID_ANY, port);
+    // Bind to VMADDR_CID_HOST (2) — Apple's Virtualization.framework may
+    // require this CID for host-initiated VSOCK connections.
+    let addr = VsockAddr::new(VMADDR_CID_HOST, port);
 
     info!("Starting VSOCK server on port {}", port);
 
