@@ -22,3 +22,12 @@
 [submodule ".references/tldraw"]
 	path = .references/tldraw
 	url = ./.references/tldraw
+[submodule "infrastructure/allternit-cloud-providers/vendor-integration/vendor/beads"]
+	path = infrastructure/allternit-cloud-providers/vendor-integration/vendor/beads
+	url = ./infrastructure/allternit-cloud-providers/vendor-integration/vendor/beads
+[submodule "infrastructure/allternit-cloud-providers/vendor-integration/vendor/mcp_agent_mail"]
+	path = infrastructure/allternit-cloud-providers/vendor-integration/vendor/mcp_agent_mail
+	url = ./infrastructure/allternit-cloud-providers/vendor-integration/vendor/mcp_agent_mail
+[submodule "tools/mcp-servers/superpowers"]
+	path = tools/mcp-servers/superpowers
+	url = ./tools/mcp-servers/superpowers
