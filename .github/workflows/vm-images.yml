@@ -287,13 +287,10 @@ jobs:
           INITRD_DST="vm-images/initrd.img-$KERNEL_VERSION-allternit-${{ matrix.arch }}"
 
           # The vmlinuz file is gzip-compressed; Apple Virtualization.framework
-          # requires a raw, decompressed kernel image.
-          if file "$VMLINUX_SRC" | grep -q "gzip"; then
-            echo "Decompressing gzip-compressed kernel..."
-            sudo gzip -dc "$VMLINUX_SRC" > "$VMLINUX_DST"
-          else
-            sudo cp "$VMLINUX_SRC" "$VMLINUX_DST"
-          fi
+          # requires a raw, decompressed kernel image. Always decompress —
+          # Ubuntu vmlinuz files are always gzip-compressed.
+          echo "Decompressing kernel..."
+          sudo gzip -dc "$VMLINUX_SRC" > "$VMLINUX_DST"
           sudo cp "$INITRD_SRC" "$INITRD_DST"
 
           # Fix permissions so subsequent steps (release, artifact upload) can read the files
