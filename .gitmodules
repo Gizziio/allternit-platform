@@ -1,0 +1,24 @@
+[submodule ".references/FlexLayout"]
+	path = .references/FlexLayout
+	url = ./.references/FlexLayout
+[submodule ".references/electron-react-boilerplate"]
+	path = .references/electron-react-boilerplate
+	url = ./.references/electron-react-boilerplate
+[submodule ".references/kbar"]
+	path = .references/kbar
+	url = ./.references/kbar
+[submodule ".references/primitives"]
+	path = .references/primitives
+	url = ./.references/primitives
+[submodule ".references/react-cmdk"]
+	path = .references/react-cmdk
+	url = ./.references/react-cmdk
+[submodule ".references/react-hotkeys-hook"]
+	path = .references/react-hotkeys-hook
+	url = ./.references/react-hotkeys-hook
+[submodule ".references/react-resizable-panels"]
+	path = .references/react-resizable-panels
+	url = ./.references/react-resizable-panels
+[submodule ".references/tldraw"]
+	path = .references/tldraw
+	url = ./.references/tldraw
