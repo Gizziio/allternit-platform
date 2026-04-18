@@ -296,6 +296,9 @@ jobs:
           fi
           sudo cp "$INITRD_SRC" "$INITRD_DST"
 
+          # Fix permissions so subsequent steps (release, artifact upload) can read the files
+          sudo chmod 644 "$VMLINUX_DST" "$INITRD_DST"
+
           # Tear down bind mounts cleanly
           for fs in sys proc dev; do
             sudo umount /mnt/rootfs/$fs 2>/dev/null || true
