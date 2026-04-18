@@ -1,5 +1,5 @@
 import Foundation
-import Virtualization
+@preconcurrency import Virtualization
 
 // MARK: - Protocol Types (reused from SerialChannel)
 
@@ -182,6 +182,7 @@ public struct ResourceLimits: Codable {
 public actor VsockChannel {
     
     private let connection: VZVirtioSocketConnection
+    private let fileHandle: FileHandle
     private var readBuffer = Data()
     private var pendingResponses: [String: CheckedContinuation<Data, Error>] = [:]
     private var requestCounter: UInt64 = 0
@@ -191,19 +192,17 @@ public actor VsockChannel {
     
     public init(connection: VZVirtioSocketConnection) {
         self.connection = connection
+        self.fileHandle = FileHandle(fileDescriptor: connection.fileDescriptor, closeOnDealloc: false)
     }
     
     public func connect() {
-        connection.inputStream.open()
-        connection.outputStream.open()
         shouldStopReading = false
         startReadingThread()
     }
     
     public func disconnect() {
         shouldStopReading = true
-        connection.inputStream.close()
-        connection.outputStream.close()
+        fileHandle.closeFile()
     }
     
     private func startReadingThread() {
@@ -213,14 +212,11 @@ public actor VsockChannel {
             let chunkSize = 4096
             
             while !self.shouldStopReading {
-                var chunk = Data(count: chunkSize)
-                let bytesRead = chunk.withUnsafeMutableBytes { ptr in
-                    self.connection.inputStream.read(ptr.bindMemory(to: UInt8.self).baseAddress!, maxLength: chunkSize)
-                }
+                let chunk = self.fileHandle.readData(ofLength: chunkSize)
+                let bytesRead = chunk.count
                 
                 if bytesRead > 0 {
-                    let actualData = chunk.prefix(bytesRead)
-                    buffer.append(actualData)
+                    buffer.append(chunk)
                     VMManager.logToFile("[VsockChannel] Read \(bytesRead) bytes")
                     
                     while buffer.count >= 4 {
@@ -234,11 +230,8 @@ public actor VsockChannel {
                             await self.handleMessage(messageData)
                         }
                     }
-                } else if bytesRead == 0 {
-                    VMManager.logToFile("[VsockChannel] EOF on input stream")
-                    break
                 } else {
-                    VMManager.logToFile("[VsockChannel] Read error")
+                    VMManager.logToFile("[VsockChannel] EOF on file handle")
                     break
                 }
             }
@@ -340,13 +333,9 @@ public actor VsockChannel {
         var totalWritten = 0
         let bytes = [UInt8](data)
         while totalWritten < bytes.count {
-            let written = bytes[totalWritten...].withUnsafeBytes { ptr in
-                connection.outputStream.write(ptr.bindMemory(to: UInt8.self).baseAddress!, maxLength: bytes.count - totalWritten)
-            }
-            if written < 0 {
-                throw VsockError.writeFailed("Output stream write failed")
-            }
-            totalWritten += written
+            let chunk = Data(bytes[totalWritten...])
+            fileHandle.write(chunk)
+            totalWritten += chunk.count
         }
         VMManager.logToFile("[VsockChannel] Wrote \(totalWritten) bytes")
     }

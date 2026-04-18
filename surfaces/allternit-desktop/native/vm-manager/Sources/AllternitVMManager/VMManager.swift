@@ -115,7 +115,7 @@ public final class VMManager: NSObject, ObservableObject {
             for socketDevice in vm.socketDevices {
                 guard let virtioSocket = socketDevice as? VZVirtioSocketDevice else { continue }
                 do {
-                    let connection = try virtioSocket.connect(toPort: configuration.vsockPort)
+                    let connection = try await virtioSocket.connect(toPort: configuration.vsockPort)
                     let channel = VsockChannel(connection: connection)
                     self.vsockChannel = channel
                     await channel.connect()
