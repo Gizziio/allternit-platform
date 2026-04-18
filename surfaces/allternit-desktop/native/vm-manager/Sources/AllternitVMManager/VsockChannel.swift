@@ -1,7 +1,7 @@
 import Foundation
-import Darwin
+import Virtualization
 
-// MARK: - Protocol Types (matches allternit-guest-agent-protocol Rust crate)
+// MARK: - Protocol Types (reused from SerialChannel)
 
 /// Top-level protocol message envelope
 public struct ProtocolMessage: Codable {
@@ -174,21 +174,14 @@ public struct ResourceLimits: Codable {
     }
 }
 
-// MARK: - Serial Channel
+// MARK: - VSOCK Channel
 
-/// Bidirectional serial channel using POSIX file descriptors.
-/// Communicates with the guest agent over a virtio-console serial port
-/// (e.g. /dev/hvc1 in the guest) using length-prefixed JSON frames.
+/// Bidirectional channel using VZVirtioSocketConnection.
+/// Communicates with the guest agent over VSOCK using length-prefixed JSON frames.
 @available(macOS 13.0, *)
-public actor SerialChannel {
+public actor VsockChannel {
     
-    // MARK: - Properties
-    
-    /// File descriptor for writing data TO the guest
-    private let writeFD: Int32
-    /// File descriptor for reading data FROM the guest
-    private let readFD: Int32
-    
+    private let connection: VZVirtioSocketConnection
     private var readBuffer = Data()
     private var pendingResponses: [String: CheckedContinuation<Data, Error>] = [:]
     private var requestCounter: UInt64 = 0
@@ -196,32 +189,22 @@ public actor SerialChannel {
     private var readThread: Thread?
     private var shouldStopReading = false
     
-    // MARK: - Initialization
-    
-    /// Initialize with pre-opened POSIX file descriptors.
-    /// - Parameters:
-    ///   - readFD: fd to read guest responses from
-    ///   - writeFD: fd to write host requests to
-    public init(readFD: Int32, writeFD: Int32) {
-        self.readFD = readFD
-        self.writeFD = writeFD
+    public init(connection: VZVirtioSocketConnection) {
+        self.connection = connection
     }
     
-    // MARK: - Lifecycle
-    
     public func connect() {
+        connection.inputStream.open()
+        connection.outputStream.open()
         shouldStopReading = false
         startReadingThread()
     }
     
     public func disconnect() {
         shouldStopReading = true
-        // Close FDs to unblock any pending reads
-        Darwin.close(readFD)
-        Darwin.close(writeFD)
+        connection.inputStream.close()
+        connection.outputStream.close()
     }
-    
-    // MARK: - Reading
     
     private func startReadingThread() {
         let thread = Thread { [weak self] in
@@ -232,15 +215,14 @@ public actor SerialChannel {
             while !self.shouldStopReading {
                 var chunk = Data(count: chunkSize)
                 let bytesRead = chunk.withUnsafeMutableBytes { ptr in
-                    Darwin.read(self.readFD, ptr.baseAddress!, chunkSize)
+                    self.connection.inputStream.read(ptr.bindMemory(to: UInt8.self).baseAddress!, maxLength: chunkSize)
                 }
                 
                 if bytesRead > 0 {
                     let actualData = chunk.prefix(bytesRead)
                     buffer.append(actualData)
-                    VMManager.logToFile("[SerialChannel] Read \(bytesRead) bytes")
+                    VMManager.logToFile("[VsockChannel] Read \(bytesRead) bytes")
                     
-                    // Process complete length-prefixed messages
                     while buffer.count >= 4 {
                         let length = buffer.prefix(4).withUnsafeBytes { $0.load(as: UInt32.self).bigEndian }
                         guard buffer.count >= 4 + Int(length) else { break }
@@ -253,25 +235,19 @@ public actor SerialChannel {
                         }
                     }
                 } else if bytesRead == 0 {
-                    VMManager.logToFile("[SerialChannel] EOF on read fd")
+                    VMManager.logToFile("[VsockChannel] EOF on input stream")
                     break
                 } else {
-                    let err = errno
-                    if err == EAGAIN || err == EINTR {
-                        continue
-                    }
-                    VMManager.logToFile("[SerialChannel] Read error: \(String(cString: strerror(err)))")
+                    VMManager.logToFile("[VsockChannel] Read error")
                     break
                 }
             }
             
-            VMManager.logToFile("[SerialChannel] Read thread exiting")
+            VMManager.logToFile("[VsockChannel] Read thread exiting")
         }
         thread.start()
         readThread = thread
     }
-    
-    // MARK: - Communication
     
     public func sendHeartbeat() async throws -> ProtocolMessage {
         let requestId = generateRequestId()
@@ -306,9 +282,9 @@ public actor SerialChannel {
         
         guard response.type == "command_response" else {
             if response.type == "error" {
-                throw SerialError.commandFailed(response.message ?? "Unknown error")
+                throw VsockError.commandFailed(response.message ?? "Unknown error")
             }
-            throw SerialError.invalidResponse
+            throw VsockError.invalidResponse
         }
         
         return CommandResult(
@@ -319,8 +295,6 @@ public actor SerialChannel {
             executionTime: TimeInterval(response.executionTimeMs ?? 0) / 1000.0
         )
     }
-    
-    // MARK: - Private Methods
     
     private func generateRequestId() -> String {
         requestCounter += 1
@@ -336,13 +310,11 @@ public actor SerialChannel {
         let data = try JSONEncoder().encode(message)
         let lengthPrefix = UInt32(data.count).bigEndian
         
-        // Send length prefix + data atomically
         var frame = Data()
         frame.append(contentsOf: withUnsafeBytes(of: lengthPrefix) { Array($0) })
         frame.append(data)
         try write(frame)
         
-        // Wait for response
         let responseData = try await withTimeout(timeout) {
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Data, Error>) in
                 Task {
@@ -354,7 +326,7 @@ public actor SerialChannel {
         let response = try JSONDecoder().decode(ProtocolMessage.self, from: responseData)
         
         guard response.requestId == requestId else {
-            throw SerialError.invalidResponse
+            throw VsockError.invalidResponse
         }
         
         return response
@@ -369,18 +341,14 @@ public actor SerialChannel {
         let bytes = [UInt8](data)
         while totalWritten < bytes.count {
             let written = bytes[totalWritten...].withUnsafeBytes { ptr in
-                Darwin.write(writeFD, ptr.baseAddress!, bytes.count - totalWritten)
+                connection.outputStream.write(ptr.bindMemory(to: UInt8.self).baseAddress!, maxLength: bytes.count - totalWritten)
             }
             if written < 0 {
-                let err = errno
-                if err == EAGAIN || err == EINTR {
-                    continue
-                }
-                throw SerialError.writeFailed(String(cString: strerror(err)))
+                throw VsockError.writeFailed("Output stream write failed")
             }
             totalWritten += written
         }
-        VMManager.logToFile("[SerialChannel] Wrote \(totalWritten) bytes")
+        VMManager.logToFile("[VsockChannel] Wrote \(totalWritten) bytes")
     }
     
     private func handleMessage(_ data: Data) async {
@@ -391,20 +359,20 @@ public actor SerialChannel {
                let continuation = pendingResponses.removeValue(forKey: requestId) {
                 continuation.resume(returning: data)
             } else if response.type == "heartbeat_response" {
-                VMManager.logToFile("[SerialChannel] Received heartbeat response")
+                VMManager.logToFile("[VsockChannel] Received heartbeat response")
             } else {
                 let jsonStr = String(data: data, encoding: .utf8) ?? "<invalid utf8>"
-                VMManager.logToFile("[SerialChannel] Received unexpected response: type=\(response.type), body=\(jsonStr)")
+                VMManager.logToFile("[VsockChannel] Received unexpected response: type=\(response.type), body=\(jsonStr)")
             }
         } catch {
-            VMManager.logToFile("[SerialChannel] Failed to decode message: \(error)")
+            VMManager.logToFile("[VsockChannel] Failed to decode message: \(error)")
         }
     }
 }
 
 // MARK: - Errors
 
-public enum SerialError: Error {
+public enum VsockError: Error {
     case notConnected
     case writeFailed(String)
     case timeout
@@ -425,7 +393,7 @@ private func withTimeout<T: Sendable>(
         
         group.addTask {
             try await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
-            throw SerialError.timeout
+            throw VsockError.timeout
         }
         
         let result = try await group.next()!

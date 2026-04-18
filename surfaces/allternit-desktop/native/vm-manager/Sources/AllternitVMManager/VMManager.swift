@@ -15,8 +15,7 @@ public final class VMManager: NSObject, ObservableObject {
     private var startTime: Date?
 
     private var stateChangeHandlers: [(VMStatus) -> Void] = []
-    private var serialPipePair: SerialPipePair?
-    private var serialChannel: SerialChannel?
+    private var vsockChannel: VsockChannel?
 
     private let statusLock = NSLock()
     
@@ -91,8 +90,7 @@ public final class VMManager: NSObject, ObservableObject {
         ))
 
         do {
-            let (vzConfig, pipePair) = try createVZConfiguration(from: configuration)
-            self.serialPipePair = pipePair
+            let vzConfig = try createVZConfiguration(from: configuration)
             
             let vm = VZVirtualMachine(configuration: vzConfig)
             vm.delegate = self
@@ -109,11 +107,29 @@ public final class VMManager: NSObject, ObservableObject {
                 uptime: 0
             ))
 
-            // Start the serial protocol channel
-            let channel = SerialChannel(readFD: pipePair.hostReadFD, writeFD: pipePair.hostWriteFD)
-            self.serialChannel = channel
-            await channel.connect()
-            VMManager.logToFile("Serial protocol channel connected (readFD=\(pipePair.hostReadFD), writeFD=\(pipePair.hostWriteFD))")
+            // Wait briefly for guest agent to start listening on VSOCK
+            try await Task.sleep(nanoseconds: 3 * 1_000_000_000)
+            
+            // Connect to guest agent via VSOCK
+            var connected = false
+            for socketDevice in vm.socketDevices {
+                guard let virtioSocket = socketDevice as? VZVirtioSocketDevice else { continue }
+                do {
+                    let connection = try virtioSocket.connect(toPort: configuration.vsockPort)
+                    let channel = VsockChannel(connection: connection)
+                    self.vsockChannel = channel
+                    await channel.connect()
+                    VMManager.logToFile("VSOCK connected on port \(configuration.vsockPort)")
+                    connected = true
+                    break
+                } catch {
+                    VMManager.logToFile("VSOCK connection attempt failed: \(error)")
+                }
+            }
+            
+            if !connected {
+                throw VMError.vsockConnectionFailed("Could not connect to guest agent on VSOCK port \(configuration.vsockPort)")
+            }
 
             startUptimeTimer()
 
@@ -141,12 +157,11 @@ public final class VMManager: NSObject, ObservableObject {
             vsockPort: configuration.vsockPort
         ))
 
-        // Disconnect serial channel cleanly
-        if let channel = serialChannel {
+        // Disconnect VSOCK channel cleanly
+        if let channel = vsockChannel {
             await channel.disconnect()
-            self.serialChannel = nil
+            self.vsockChannel = nil
         }
-        serialPipePair = nil
 
         try await vm.stop()
 
@@ -203,11 +218,11 @@ public final class VMManager: NSObject, ObservableObject {
             throw VMError.vmNotRunning
         }
 
-        guard let channel = serialChannel else {
-            throw VMError.invalidConfiguration("Serial channel not initialized")
+        guard let channel = vsockChannel else {
+            throw VMError.invalidConfiguration("VSOCK channel not initialized")
         }
 
-        VMManager.logToFile("Sending command over serial: \(command)")
+        VMManager.logToFile("Sending command over VSOCK: \(command)")
         
         return try await channel.sendCommand(
             command: command,

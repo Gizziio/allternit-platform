@@ -111,31 +111,9 @@ async fn main() -> Result<()> {
         sandbox,
     });
 
-    // On Linux inside VM: prefer serial port for Apple VF, fallback to VSOCK
+    // On Linux inside VM: use VSOCK for host-guest communication (Apple VF, Firecracker, etc.)
     #[cfg(target_os = "linux")]
     {
-        // Try serial port first (Apple Virtualization.framework)
-        if std::path::Path::new(SERIAL_DEVICE_PATH).exists() {
-            info!("Serial device {} detected, attempting serial communication", SERIAL_DEVICE_PATH);
-            let _ = std::fs::OpenOptions::new().write(true).open("/dev/kmsg")
-                .and_then(|mut f| std::io::Write::write_all(&mut f, format!("[EXECUTOR] Serial device {} detected\n", SERIAL_DEVICE_PATH).as_bytes()));
-            match start_serial_server(state.clone()).await {
-                Ok(()) => {
-                    info!("Serial server exited normally");
-                    return Ok(());
-                }
-                Err(e) => {
-                    warn!("Serial server failed: {}, falling back to VSOCK", e);
-                    let _ = std::fs::OpenOptions::new().write(true).open("/dev/kmsg")
-                        .and_then(|mut f| std::io::Write::write_all(&mut f, format!("[EXECUTOR] Serial server failed: {}\n", e).as_bytes()));
-                }
-            }
-        } else {
-            let _ = std::fs::OpenOptions::new().write(true).open("/dev/kmsg")
-                .and_then(|mut f| std::io::Write::write_all(&mut f, format!("[EXECUTOR] Serial device {} NOT found, using VSOCK\n", SERIAL_DEVICE_PATH).as_bytes()));
-        }
-        
-        // Fallback to VSOCK (Firecracker / other hypervisors)
         start_vsock_server(state).await?;
     }
 
@@ -368,9 +346,9 @@ async fn start_vsock_server(state: Arc<ExecutorState>) -> Result<()> {
     use vsock::{VsockAddr, VsockListener};
 
     let port = state.config.vsock_port;
-    // Bind to VMADDR_CID_HOST (2) — Apple's Virtualization.framework may
-    // require this CID for host-initiated VSOCK connections.
-    let addr = VsockAddr::new(VMADDR_CID_HOST, port);
+    // Bind to VMADDR_CID_ANY (0xFFFFFFFF) so the host (CID 2) can connect to us.
+    // The guest listens on ANY; the host initiates the connection.
+    let addr = VsockAddr::new(VMADDR_CID_ANY, port);
 
     info!("Starting VSOCK server on port {}", port);
 
