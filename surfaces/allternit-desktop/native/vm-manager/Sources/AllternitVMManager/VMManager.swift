@@ -15,10 +15,25 @@ public final class VMManager: NSObject, ObservableObject {
     private var startTime: Date?
 
     private var stateChangeHandlers: [(VMStatus) -> Void] = []
-    private var vsockListener: VZVirtioSocketListener?
-    private var activeChannels: [VSOCKChannel] = []
+    private var serialPipePair: SerialPipePair?
+    private var serialChannel: SerialChannel?
 
     private let statusLock = NSLock()
+    
+    public static let debugLogPath = "/tmp/vm-manager-debug.log"
+    
+    nonisolated public static func logToFile(_ message: String) {
+        let line = "[\(Date())] \(message)\n"
+        if let data = line.data(using: .utf8) {
+            if let fh = FileHandle(forWritingAtPath: debugLogPath) {
+                _ = fh.seekToEndOfFile()
+                fh.write(data)
+                fh.closeFile()
+            } else {
+                FileManager.default.createFile(atPath: debugLogPath, contents: data, attributes: nil)
+            }
+        }
+    }
 
     // MARK: - Public Properties
 
@@ -76,12 +91,12 @@ public final class VMManager: NSObject, ObservableObject {
         ))
 
         do {
-            let vzConfig = try createVZConfiguration(from: configuration)
+            let (vzConfig, pipePair) = try createVZConfiguration(from: configuration)
+            self.serialPipePair = pipePair
+            
             let vm = VZVirtualMachine(configuration: vzConfig)
             vm.delegate = self
             self.virtualMachine = vm
-
-            setupVSOCKListener()
 
             try await vm.start()
 
@@ -93,6 +108,12 @@ public final class VMManager: NSObject, ObservableObject {
                 vsockPort: configuration.vsockPort,
                 uptime: 0
             ))
+
+            // Start the serial protocol channel
+            let channel = SerialChannel(readFD: pipePair.hostReadFD, writeFD: pipePair.hostWriteFD)
+            self.serialChannel = channel
+            await channel.connect()
+            VMManager.logToFile("Serial protocol channel connected (readFD=\(pipePair.hostReadFD), writeFD=\(pipePair.hostWriteFD))")
 
             startUptimeTimer()
 
@@ -120,17 +141,12 @@ public final class VMManager: NSObject, ObservableObject {
             vsockPort: configuration.vsockPort
         ))
 
-        if let vm = virtualMachine,
-           let vsockDevice = vm.socketDevices.first as? VZVirtioSocketDevice {
-            vsockDevice.removeSocketListener(forPort: configuration.vsockPort)
-        }
-        vsockListener = nil
-
-        // Disconnect all open channels cleanly
-        for channel in activeChannels {
+        // Disconnect serial channel cleanly
+        if let channel = serialChannel {
             await channel.disconnect()
+            self.serialChannel = nil
         }
-        activeChannels.removeAll()
+        serialPipePair = nil
 
         try await vm.stop()
 
@@ -171,10 +187,10 @@ public final class VMManager: NSObject, ObservableObject {
         ))
     }
 
-    // MARK: - Command Execution via VSOCK
+    // MARK: - Command Execution via Serial Protocol
 
     /// Execute a shell command inside the VM.
-    /// Opens a dedicated VSOCK channel, sends the request as a length-prefixed JSON frame,
+    /// Sends the request as a length-prefixed JSON frame over the virtio-console serial port,
     /// waits for the response, and returns the result.
     public func sendCommand(
         _ command: String,
@@ -187,36 +203,12 @@ public final class VMManager: NSObject, ObservableObject {
             throw VMError.vmNotRunning
         }
 
-        guard let vm = virtualMachine,
-              let vsockDevice = vm.socketDevices.first as? VZVirtioSocketDevice else {
-            throw VMError.vsockConnectionFailed("No VSOCK device found on running VM")
+        guard let channel = serialChannel else {
+            throw VMError.invalidConfiguration("Serial channel not initialized")
         }
 
-        // Open a new connection on the command port
-        let connection = try await withCheckedThrowingContinuation { (cont: CheckedContinuation<VZVirtioSocketConnection, Error>) in
-            vsockDevice.connect(toPort: configuration.vsockPort) { result in
-                switch result {
-                case .success(let conn):
-                    cont.resume(returning: conn)
-                case .failure(let err):
-                    cont.resume(throwing: VMError.vsockConnectionFailed(err.localizedDescription))
-                }
-            }
-        }
-
-        let channel = VSOCKChannel(port: configuration.vsockPort)
-        try await channel.connect(to: connection)
-        activeChannels.append(channel)
-
-        defer {
-            Task { [weak self, channel] in
-                await channel.disconnect()
-                await MainActor.run {
-                    self?.activeChannels.removeAll { $0 === channel }
-                }
-            }
-        }
-
+        VMManager.logToFile("Sending command over serial: \(command)")
+        
         return try await channel.sendCommand(
             command: command,
             args: args,
@@ -224,23 +216,6 @@ public final class VMManager: NSObject, ObservableObject {
             env: env,
             timeoutMs: UInt64(timeout * 1000)
         )
-    }
-
-    // MARK: - VSOCK Listener (inbound connections from VM guest)
-
-    private func setupVSOCKListener() {
-        guard let vm = virtualMachine,
-              let vsockDevice = vm.socketDevices.first as? VZVirtioSocketDevice else {
-            print("[VMManager] No VSOCK device found")
-            return
-        }
-
-        let listener = VZVirtioSocketListener()
-        listener.delegate = self
-        vsockDevice.setSocketListener(listener, forPort: configuration.vsockPort)
-        self.vsockListener = listener
-
-        print("[VMManager] VSOCK listening on port \(configuration.vsockPort)")
     }
 
     // MARK: - Uptime
@@ -302,29 +277,7 @@ extension VMManager: @preconcurrency VZVirtualMachineDelegate {
     }
 }
 
-// MARK: - VZVirtioSocketListenerDelegate (inbound from guest)
 
-@available(macOS 13.0, *)
-extension VMManager: VZVirtioSocketListenerDelegate {
-
-    public func listener(
-        _ listener: VZVirtioSocketListener,
-        shouldAcceptConnectionFrom connection: VZVirtioSocketConnection,
-        socketDevice: VZVirtioSocketDevice
-    ) -> Bool {
-        print("[VMManager] Inbound VSOCK connection from guest port \(connection.destinationPort)")
-        // Accept inbound connections from the guest (e.g. event push)
-        Task { [weak self] in
-            guard let self = self else { return }
-            let channel = VSOCKChannel(port: connection.destinationPort)
-            try? await channel.connect(to: connection)
-            await MainActor.run {
-                self.activeChannels.append(channel)
-            }
-        }
-        return true
-    }
-}
 
 // MARK: - CommandResult
 

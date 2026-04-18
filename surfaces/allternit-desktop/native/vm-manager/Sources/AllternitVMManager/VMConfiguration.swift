@@ -69,9 +69,23 @@ public struct VMStatus: Codable, Sendable {
     }
 }
 
+/// Holds the file descriptors for the host side of a serial-port pipe pair.
+/// The framework end is attached to the VM's virtio-console device.
+public struct SerialPipePair {
+    /// Host writes to this fd; guest reads from its serial port
+    public let hostWriteFD: Int32
+    /// Host reads from this fd; guest writes to its serial port
+    public let hostReadFD: Int32
+    
+    public init(hostWriteFD: Int32, hostReadFD: Int32) {
+        self.hostWriteFD = hostWriteFD
+        self.hostReadFD = hostReadFD
+    }
+}
+
 /// Create VZVirtualMachineConfiguration from AllternitVMConfiguration
 @available(macOS 13.0, *)
-func createVZConfiguration(from config: AllternitVMConfiguration) throws -> VZVirtualMachineConfiguration {
+func createVZConfiguration(from config: AllternitVMConfiguration) throws -> (VZVirtualMachineConfiguration, SerialPipePair) {
     let vmConfig = VZVirtualMachineConfiguration()
     
     // CPU
@@ -91,9 +105,8 @@ func createVZConfiguration(from config: AllternitVMConfiguration) throws -> VZVi
     
     let bootLoader = VZLinuxBootLoader(kernelURL: URL(fileURLWithPath: config.kernelPath))
     bootLoader.initialRamdiskURL = URL(fileURLWithPath: config.initrdPath)
-    // Load VSOCK core and virtio transport modules early so AF_VSOCK is available
-    // before the guest agent tries to bind a VSOCK listener.
-    bootLoader.commandLine = "console=hvc0 root=/dev/vda rw quiet modules_load=vsock,vmw_vsock_virtio_transport_common,vmw_vsock_virtio_transport"
+    // console=hvc0 → first virtio-console port (console output)
+    bootLoader.commandLine = "console=hvc0 root=/dev/vda rw debug systemd.log_level=debug"
     vmConfig.bootLoader = bootLoader
     
     // Storage - Root filesystem
@@ -113,20 +126,52 @@ func createVZConfiguration(from config: AllternitVMConfiguration) throws -> VZVi
     networkDevice.attachment = VZNATNetworkDeviceAttachment()
     vmConfig.networkDevices = [networkDevice]
     
-    // Serial console
-    let serialConfig = VZVirtioConsoleDeviceSerialPortConfiguration()
+    // Serial ports
+    var serialPorts: [VZVirtioConsoleDeviceSerialPortConfiguration] = []
+    
+    // Serial 0: console output → log file
+    let consoleSerial = VZVirtioConsoleDeviceSerialPortConfiguration()
+    let serialLogPath = "/tmp/allternit-vm-serial.log"
+    FileManager.default.createFile(atPath: serialLogPath, contents: nil, attributes: nil)
     guard let serialRead = FileHandle(forReadingAtPath: "/dev/null"),
-          let serialWrite = FileHandle(forWritingAtPath: "/dev/null") else {
-        throw VMError.kernelNotFound("Unable to open /dev/null for serial console")
+          let serialWrite = FileHandle(forWritingAtPath: serialLogPath) else {
+        throw VMError.invalidConfiguration("Unable to open serial console files")
     }
-    let serialInput = VZFileHandleSerialPortAttachment(
+    consoleSerial.attachment = VZFileHandleSerialPortAttachment(
         fileHandleForReading: serialRead,
         fileHandleForWriting: serialWrite
     )
-    serialConfig.attachment = serialInput
-    vmConfig.serialPorts = [serialConfig]
+    serialPorts.append(consoleSerial)
     
-    // VSOCK for communication
+    // Serial 1: bidirectional protocol channel (host ↔ guest agent)
+    // We use two pipes:
+    //   - hostToVM: host writes → framework reads → guest serial port
+    //   - vmToHost: guest serial port → framework writes → host reads
+    var hostToVM: [Int32] = [-1, -1]
+    var vmToHost: [Int32] = [-1, -1]
+    
+    guard pipe(&hostToVM) == 0 else {
+        throw VMError.invalidConfiguration("Failed to create host→VM pipe: \(errno)")
+    }
+    guard pipe(&vmToHost) == 0 else {
+        Darwin.close(hostToVM[0]); Darwin.close(hostToVM[1])
+        throw VMError.invalidConfiguration("Failed to create VM→host pipe: \(errno)")
+    }
+    
+    let protocolSerial = VZVirtioConsoleDeviceSerialPortConfiguration()
+    // fileHandleForReading: framework reads FROM this to send data TO the VM
+    let protocolReadFH = FileHandle(fileDescriptor: hostToVM[0], closeOnDealloc: true)
+    // fileHandleForWriting: framework writes TO this with data FROM the VM
+    let protocolWriteFH = FileHandle(fileDescriptor: vmToHost[1], closeOnDealloc: true)
+    protocolSerial.attachment = VZFileHandleSerialPortAttachment(
+        fileHandleForReading: protocolReadFH,
+        fileHandleForWriting: protocolWriteFH
+    )
+    serialPorts.append(protocolSerial)
+    
+    vmConfig.serialPorts = serialPorts
+    
+    // VSOCK (kept for compatibility, but we use serial for communication)
     let vsockConfig = VZVirtioSocketDeviceConfiguration()
     vmConfig.socketDevices = [vsockConfig]
     
@@ -136,7 +181,12 @@ func createVZConfiguration(from config: AllternitVMConfiguration) throws -> VZVi
     // Validate
     try vmConfig.validate()
     
-    return vmConfig
+    let pipePair = SerialPipePair(
+        hostWriteFD: hostToVM[1],   // host writes here
+        hostReadFD: vmToHost[0]     // host reads from here
+    )
+    
+    return (vmConfig, pipePair)
 }
 
 /// VM Errors

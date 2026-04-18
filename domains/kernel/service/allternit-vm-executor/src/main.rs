@@ -1,8 +1,11 @@
 //! Allternit VM Executor
 //! 
 //! This binary runs INSIDE the Linux VM (Firecracker on Linux host, Apple VF on macOS host).
-//! It receives commands from the host via VSOCK, executes them in isolated bubblewrap sessions,
-//! and returns results.
+//! It receives commands from the host via either:
+//!   - Serial port (/dev/hvc1) on Apple Virtualization.framework (preferred)
+//!   - VSOCK on Firecracker / Linux hosts
+//!
+//! It executes commands in isolated bubblewrap sessions and returns results.
 //!
 //! # Naming Distinction
 //! - Allternit: The AI agent system that runs on the host
@@ -13,7 +16,7 @@
 //! ```
 //! Host (macOS/Linux)
 //!   └── Allternit / Allternit CLI
-//!         └── VSOCK connection
+//!         └── Serial port (/dev/hvc1) or VSOCK connection
 //!               └── VM (Linux)
 //!                     └── allternit-vm-executor (this binary)
 //!                           └── bubblewrap sessions
@@ -51,6 +54,15 @@ const VMADDR_CID_HOST: u32 = 2;
 /// VMADDR_CID_ANY for binding listener inside VM
 const VMADDR_CID_ANY: u32 = 0xFFFFFFFF;
 
+/// Serial device path for Apple Virtualization.framework communication
+const SERIAL_DEVICE_PATH: &str = "/dev/hvc1";
+
+/// Number of retries when opening the serial device
+const SERIAL_OPEN_RETRIES: u32 = 30;
+
+/// Delay between serial open retries (ms)
+const SERIAL_RETRY_DELAY_MS: u64 = 1000;
+
 /// Executor state shared across all connections
 struct ExecutorState {
     /// Active sessions by session ID
@@ -71,6 +83,10 @@ async fn main() -> Result<()> {
         )
         .init();
 
+    // Also write to /dev/kmsg for early boot debugging
+    let _ = std::fs::OpenOptions::new().write(true).open("/dev/kmsg")
+        .and_then(|mut f| std::io::Write::write_all(&mut f, b"[EXECUTOR] Guest agent starting\n"));
+    
     info!("╔══════════════════════════════════════════════════════════╗");
     info!("║     Allternit VM Executor v{}                              ║", env!("CARGO_PKG_VERSION"));
     info!("║     Running inside VM - executing commands from host     ║");
@@ -95,11 +111,31 @@ async fn main() -> Result<()> {
         sandbox,
     });
 
-    // Start listening for VSOCK connections
-    // On Linux in Firecracker: use vsock
-    // In development/testing: use TCP
+    // On Linux inside VM: prefer serial port for Apple VF, fallback to VSOCK
     #[cfg(target_os = "linux")]
     {
+        // Try serial port first (Apple Virtualization.framework)
+        if std::path::Path::new(SERIAL_DEVICE_PATH).exists() {
+            info!("Serial device {} detected, attempting serial communication", SERIAL_DEVICE_PATH);
+            let _ = std::fs::OpenOptions::new().write(true).open("/dev/kmsg")
+                .and_then(|mut f| std::io::Write::write_all(&mut f, format!("[EXECUTOR] Serial device {} detected\n", SERIAL_DEVICE_PATH).as_bytes()));
+            match start_serial_server(state.clone()).await {
+                Ok(()) => {
+                    info!("Serial server exited normally");
+                    return Ok(());
+                }
+                Err(e) => {
+                    warn!("Serial server failed: {}, falling back to VSOCK", e);
+                    let _ = std::fs::OpenOptions::new().write(true).open("/dev/kmsg")
+                        .and_then(|mut f| std::io::Write::write_all(&mut f, format!("[EXECUTOR] Serial server failed: {}\n", e).as_bytes()));
+                }
+            }
+        } else {
+            let _ = std::fs::OpenOptions::new().write(true).open("/dev/kmsg")
+                .and_then(|mut f| std::io::Write::write_all(&mut f, format!("[EXECUTOR] Serial device {} NOT found, using VSOCK\n", SERIAL_DEVICE_PATH).as_bytes()));
+        }
+        
+        // Fallback to VSOCK (Firecracker / other hypervisors)
         start_vsock_server(state).await?;
     }
 
@@ -112,7 +148,221 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-/// Start VSOCK server (Linux only, inside VM)
+/// Start serial server (Linux only, inside VM, for Apple Virtualization.framework)
+#[cfg(target_os = "linux")]
+async fn start_serial_server(state: Arc<ExecutorState>) -> Result<()> {
+    use std::fs::OpenOptions;
+    use std::os::unix::fs::OpenOptionsExt;
+    use std::os::unix::io::AsRawFd;
+    use std::io::{Read, Write};
+    use tokio::time::{sleep, Duration};
+
+    info!("Waiting for serial device {} to become available...", SERIAL_DEVICE_PATH);
+    
+    let mut file = None;
+    for attempt in 1..=SERIAL_OPEN_RETRIES {
+        match OpenOptions::new()
+            .read(true)
+            .write(true)
+            .custom_flags(libc::O_NOCTTY | libc::O_NONBLOCK)
+            .open(SERIAL_DEVICE_PATH)
+        {
+            Ok(f) => {
+                info!("Opened serial device {} on attempt {}", SERIAL_DEVICE_PATH, attempt);
+                file = Some(f);
+                break;
+            }
+            Err(e) => {
+                debug!("Attempt {}: failed to open {}: {}", attempt, SERIAL_DEVICE_PATH, e);
+                if attempt < SERIAL_OPEN_RETRIES {
+                    sleep(Duration::from_millis(SERIAL_RETRY_DELAY_MS)).await;
+                }
+            }
+        }
+    }
+    
+    let mut file = file.ok_or_else(|| {
+        anyhow::anyhow!("Failed to open serial device {} after {} retries", SERIAL_DEVICE_PATH, SERIAL_OPEN_RETRIES)
+    })?;
+    
+    // Set raw mode to disable any terminal processing
+    set_serial_raw_mode(&file)?;
+    
+    // Clear O_NONBLOCK now that we have the device
+    let fd = file.as_raw_fd();
+    let flags = unsafe { libc::fcntl(fd, libc::F_GETFL, 0) };
+    if flags >= 0 {
+        let _ = unsafe { libc::fcntl(fd, libc::F_SETFL, flags & !libc::O_NONBLOCK) };
+    }
+    
+    info!("Serial server listening on {}", SERIAL_DEVICE_PATH);
+    let _ = std::fs::OpenOptions::new().write(true).open("/dev/kmsg")
+        .and_then(|mut f| std::io::Write::write_all(&mut f, format!("[EXECUTOR] Serial server listening on {}\n", SERIAL_DEVICE_PATH).as_bytes()));
+
+    loop {
+        if let Err(e) = handle_serial_connection_sync(&mut file, state.clone()) {
+            error!("Serial connection handler error: {}", e);
+            let _ = std::fs::OpenOptions::new().write(true).open("/dev/kmsg")
+                .and_then(|mut f| std::io::Write::write_all(&mut f, format!("[EXECUTOR] Serial handler error: {}\n", e).as_bytes()));
+            sleep(Duration::from_millis(100)).await;
+        }
+    }
+}
+
+/// Set serial port to raw mode (disable canonical input, echo, etc.)
+#[cfg(target_os = "linux")]
+fn set_serial_raw_mode(file: &std::fs::File) -> Result<()> {
+    use std::os::unix::io::AsRawFd;
+    
+    let fd = file.as_raw_fd();
+    let mut termios: libc::termios = unsafe { std::mem::zeroed() };
+    
+    if unsafe { libc::tcgetattr(fd, &mut termios) } == 0 {
+        // Save current settings and set raw mode
+        let mut raw = termios;
+        unsafe { libc::cfmakeraw(&mut raw) };
+        raw.c_cc[libc::VMIN] = 1;
+        raw.c_cc[libc::VTIME] = 0;
+        
+        if unsafe { libc::tcsetattr(fd, libc::TCSANOW, &raw) } != 0 {
+            warn!("Failed to set serial raw mode, continuing anyway");
+        } else {
+            info!("Serial port set to raw mode");
+        }
+    } else {
+        warn!("tcgetattr failed on serial device, continuing without raw mode");
+    }
+    
+    Ok(())
+}
+
+/// Handle serial connection synchronously (Linux only)
+#[cfg(target_os = "linux")]
+fn handle_serial_connection_sync(
+    file: &mut std::fs::File,
+    state: Arc<ExecutorState>,
+) -> Result<()> {
+    use std::io::{Read, Write};
+    
+    loop {
+        // Read message length (4 bytes, big-endian)
+        let mut len_bytes = [0u8; 4];
+        match file.read_exact(&mut len_bytes) {
+            Ok(()) => {}
+            Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => {
+                info!("Serial connection closed by peer");
+                break;
+            }
+            Err(e) => return Err(e.into()),
+        }
+        let msg_len = u32::from_be_bytes(len_bytes) as usize;
+
+        // Sanity check on message length
+        if msg_len > 16 * 1024 * 1024 {
+            return Err(anyhow::anyhow!("Message too large: {} bytes", msg_len));
+        }
+
+        // Read message body
+        let mut msg_bytes = vec![0u8; msg_len];
+        file.read_exact(&mut msg_bytes)?;
+
+        // Parse message
+        let raw_json = String::from_utf8_lossy(&msg_bytes);
+        eprintln!("[SERIAL] Raw message ({} bytes): {}", msg_len, raw_json);
+        
+        let message: ProtocolMessage = match serde_json::from_slice(&msg_bytes) {
+            Ok(m) => m,
+            Err(e) => {
+                error!("Failed to parse message: {}", e);
+                eprintln!("[SERIAL] Parse error: {}", e);
+                let error_response = ProtocolMessage::Error {
+                    error: ProtocolError::InvalidMessage,
+                    message: format!("JSON parse error: {}", e),
+                };
+                send_message_sync_file(file, &error_response)?;
+                continue;
+            }
+        };
+
+        eprintln!("[SERIAL] Parsed message: {:?}", message);
+
+        // Handle message
+        let response = match message {
+            ProtocolMessage::CommandRequest(request) => {
+                match tokio::runtime::Handle::try_current() {
+                    Ok(handle) => {
+                        handle.block_on(handle_command(request, state.clone()))
+                    }
+                    Err(_) => {
+                        ProtocolMessage::Error {
+                            error: ProtocolError::InternalError,
+                            message: "No tokio runtime available".to_string(),
+                        }
+                    }
+                }
+            }
+            ProtocolMessage::CreateSession { tenant_id, spec } => {
+                match tokio::runtime::Handle::try_current() {
+                    Ok(handle) => {
+                        handle.block_on(handle_create_session(tenant_id, spec, state.clone()))
+                    }
+                    Err(_) => {
+                        ProtocolMessage::Error {
+                            error: ProtocolError::InternalError,
+                            message: "No tokio runtime available".to_string(),
+                        }
+                    }
+                }
+            }
+            ProtocolMessage::DestroySession { session_id } => {
+                match tokio::runtime::Handle::try_current() {
+                    Ok(handle) => {
+                        handle.block_on(handle_destroy_session(session_id, state.clone()))
+                    }
+                    Err(_) => {
+                        ProtocolMessage::Error {
+                            error: ProtocolError::InternalError,
+                            message: "No tokio runtime available".to_string(),
+                        }
+                    }
+                }
+            }
+            ProtocolMessage::Heartbeat => ProtocolMessage::Heartbeat,
+            _ => {
+                ProtocolMessage::Error {
+                    error: ProtocolError::InvalidMessage,
+                    message: "Unexpected message type".to_string(),
+                }
+            }
+        };
+
+        // Send response
+        eprintln!("[SERIAL] Sending response: {:?}", response);
+        send_message_sync_file(file, &response)?;
+    }
+
+    Ok(())
+}
+
+/// Send a protocol message synchronously over a File
+#[cfg(target_os = "linux")]
+fn send_message_sync_file(
+    file: &mut std::fs::File,
+    message: &ProtocolMessage,
+) -> Result<()> {
+    use std::io::Write;
+    
+    let msg_bytes = serde_json::to_vec(message)?;
+    let len_bytes = (msg_bytes.len() as u32).to_be_bytes();
+
+    file.write_all(&len_bytes)?;
+    file.write_all(&msg_bytes)?;
+    file.flush()?;
+
+    Ok(())
+}
+
+/// Start VSOCK server (Linux only, inside VM, for Firecracker)
 #[cfg(target_os = "linux")]
 async fn start_vsock_server(state: Arc<ExecutorState>) -> Result<()> {
     use vsock::{VsockAddr, VsockListener};
@@ -193,7 +443,6 @@ fn handle_vsock_connection_sync(
         // Handle message (convert async to sync using block_on)
         let response = match message {
             ProtocolMessage::CommandRequest(request) => {
-                // For command execution, we need to use block_on
                 match tokio::runtime::Handle::try_current() {
                     Ok(handle) => {
                         handle.block_on(handle_command(request, state.clone()))
@@ -248,7 +497,7 @@ fn handle_vsock_connection_sync(
     Ok(())
 }
 
-/// Send a protocol message synchronously
+/// Send a protocol message synchronously over VSOCK
 #[cfg(target_os = "linux")]
 fn send_message_sync(
     stream: &mut vsock::VsockStream,

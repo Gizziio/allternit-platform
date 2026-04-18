@@ -52,6 +52,7 @@ dirs = { workspace = true }
 # Platform-specific VSOCK support
 [target.'cfg(target_os = "linux")'.dependencies]
 vsock = "0.5"
+libc = "0.2"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 # macOS uses regular Unix sockets since it's not running in a VM

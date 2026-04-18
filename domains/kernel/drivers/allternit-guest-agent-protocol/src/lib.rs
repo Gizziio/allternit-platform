@@ -118,6 +118,7 @@ pub struct CommandRequest {
     /// Working directory (relative to session workspace)
     pub working_dir: Option<String>,
     /// Additional environment variables
+    #[serde(default)]
     pub env: HashMap<String, String>,
     /// Timeout in milliseconds
     pub timeout_ms: Option<u64>,
