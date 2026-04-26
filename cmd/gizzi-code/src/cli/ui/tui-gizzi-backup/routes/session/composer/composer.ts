@@ -1,5 +1,0 @@
-export { SessionComposerRegion } from "./session-composer-region"
-export { createComposerState } from "./session-composer-state"
-export { DockShell, DockTray } from "./dock-surface"
-export { PermissionPrompt } from "./session-permission-dock"
-export { QuestionPrompt } from "./session-question-dock"

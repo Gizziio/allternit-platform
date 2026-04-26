@@ -1,6 +1,0 @@
-[?25h[0m[>4;0m[?1003l[?1002l[?1000l[?1006l[?2004l[?1049l[?2031l]0;]12;default]112[0 q[?25h[?25hntime] Initializing...
-[AgentCommunicationRuntime] Initialization failed: undefined is not an object (evaluating 'def.type')
-[AgentCommunicationRuntime] Will retry on first use
-[AgentCommunicationRuntime] Initialization failed: undefined is not an object (evaluating 'def.type')
-[AgentCommunicationRuntime] Will retry on first use
-error: script "dev" was terminated by signal SIGTERM (Polite quit request)

@@ -1,8 +1,0 @@
-import { createSimpleContext } from "@/cli/ui/tui/context/helper";
-export const {
-  use: useArgs,
-  provider: ArgsProvider
-} = createSimpleContext({
-  name: "Args",
-  init: props => props
-});

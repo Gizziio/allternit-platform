@@ -1,2 +1,0 @@
-// Global context exports
-export * from "./global"

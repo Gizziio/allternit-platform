@@ -1,6 +1,0 @@
-#!/usr/bin/env bun
-// Gizzi Code - Production Build
-// All JSX pre-transformed at build time
-
-// Update path mappings for .js extensions
-import "./src/cli/main.ts"
