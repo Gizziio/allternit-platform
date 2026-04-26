@@ -1,0 +1,75 @@
+{
+  "$schema": "https://schemas.allternit.dev/registry.json",
+  "name": "codex-workflow-plugins",
+  "version": "1.0.0",
+  "description": "Registry of Codex 5.4 workflow plugins and skills integrated into Allternit",
+  "updatedAt": "2026-04-18T10:00:00.000Z",
+  "plugins": [
+    {
+      "id": "verceldeploy-plugin",
+      "name": "Vercel Deploy",
+      "version": "1.0.0",
+      "path": "plugins/verceldeploy-plugin",
+      "category": "automate",
+      "adapters": ["cli", "http", "mcp"],
+      "requires": {
+        "env": ["VERCEL_TOKEN"]
+      },
+      "mcpServerId": "verceldeploy"
+    },
+    {
+      "id": "remotioncard-plugin",
+      "name": "Remotion Video Generator",
+      "version": "1.0.0",
+      "path": "plugins/remotioncard-plugin",
+      "category": "create",
+      "adapters": ["cli", "http", "mcp"],
+      "requires": {
+        "optionalPeer": ["@remotion/renderer"]
+      },
+      "mcpServerId": "remotioncard"
+    },
+    {
+      "id": "iosappbuild-plugin",
+      "name": "iOS App Builder",
+      "version": "1.0.0",
+      "path": "plugins/iosappbuild-plugin",
+      "category": "build",
+      "adapters": ["cli", "http", "mcp"],
+      "requires": {
+        "os": ["darwin"],
+        "tools": ["xcodebuild", "simctl"]
+      },
+      "mcpServerId": "iosappbuild"
+    }
+  ],
+  "skills": [
+    {
+      "id": "docx",
+      "name": "Docx Document Generator",
+      "path": ".agents/skills/docx",
+      "backend": "domains/agent-swarm/tools/document-generator",
+      "action": "generateStudyGuide",
+      "tags": ["documents", "docx", "word", "office", "reporting"]
+    },
+    {
+      "id": "powerpoint",
+      "name": "PowerPoint Presentation Generator",
+      "path": ".agents/skills/powerpoint",
+      "backend": "domains/agent-swarm/tools/document-generator",
+      "action": "generatePhotoCardDeck",
+      "tags": ["presentations", "powerpoint", "pptx", "office", "slides"]
+    },
+    {
+      "id": "mobile-app-design",
+      "name": "Mobile App Design",
+      "path": ".agents/skills/mobile-app-design",
+      "tags": ["mobile", "ui-ux", "react-native", "expo", "figma"]
+    }
+  ],
+  "integrationPoints": {
+    "mcpConfig": ".mcp.json",
+    "pluginManagerState": "~/.allternit/plugin-manager/ui-state.json",
+    "validationScript": "scripts/validate-codex-plugins.ts"
+  }
+}

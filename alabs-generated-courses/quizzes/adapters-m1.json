@@ -1,0 +1,38 @@
+{
+  "title": "Module 1 Quiz: Provider Adapters",
+  "questions": [
+    {
+      "question": "What is the main purpose of the provider adapter pattern?",
+      "options": [
+        "To increase API response times",
+        "To unify different external APIs behind a common interface",
+        "To replace all external APIs with local implementations",
+        "To eliminate the need for API keys"
+      ],
+      "correctIndex": 1,
+      "explanation": "Provider adapters abstract different external services behind a unified interface, allowing the platform to switch providers without changing consumer code."
+    },
+    {
+      "question": "Which resilience pattern prevents cascading failures when an API is down?",
+      "options": [
+        "Rate limiting",
+        "Circuit breaker",
+        "Caching",
+        "Retry with backoff"
+      ],
+      "correctIndex": 1,
+      "explanation": "The circuit breaker pattern stops requests to a failing service, preventing cascading failures and giving the service time to recover."
+    },
+    {
+      "question": "Why add jitter to exponential backoff?",
+      "options": [
+        "To make the code more complex",
+        "To prevent thundering herd when a service recovers",
+        "To increase overall retry time",
+        "To bypass rate limits"
+      ],
+      "correctIndex": 1,
+      "explanation": "Jitter randomizes retry intervals, preventing all clients from retrying simultaneously when a service comes back online (thundering herd problem)."
+    }
+  ]
+}

@@ -1,0 +1,87 @@
+{
+  "id": "iosappbuild-plugin",
+  "name": "IosAppBuildPlugin",
+  "version": "1.0.0",
+  "runtime": "allternit-plugin-v1",
+  "description": "Build and run iOS apps from React Native, Expo, or Swift projects using xcodebuild",
+  "category": "build",
+  "requires": {
+    "llm": {
+      "capabilities": [
+        "reasoning"
+      ]
+    },
+    "tools": [
+      {
+        "id": "xcode",
+        "platform": "darwin"
+      }
+    ]
+  },
+  "provides": {
+    "functions": [
+      {
+        "name": "execute",
+        "description": "Build or run an iOS app project",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "Path to project directory"
+            },
+            "projectType": {
+              "type": "string",
+              "enum": [
+                "react-native",
+                "expo",
+                "swift",
+                "flutter"
+              ],
+              "default": "react-native"
+            },
+            "scheme": {
+              "type": "string"
+            },
+            "target": {
+              "type": "string",
+              "enum": [
+                "simulator",
+                "device",
+                "archive"
+              ],
+              "default": "simulator"
+            },
+            "simulatorName": {
+              "type": "string",
+              "default": "iPhone 15"
+            },
+            "configuration": {
+              "type": "string",
+              "enum": [
+                "Debug",
+                "Release"
+              ],
+              "default": "Debug"
+            },
+            "clean": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          "required": [
+            "path"
+          ]
+        },
+        "returns": {
+          "type": "object"
+        }
+      }
+    ]
+  },
+  "adapters": {
+    "mcp": "./adapters/mcp.js",
+    "http": "./adapters/http.js",
+    "cli": "./adapters/cli.js"
+  }
+}

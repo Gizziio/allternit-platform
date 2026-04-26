@@ -1,0 +1,2026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 4: Bridge — How Allternit Uses the Plugin SDK</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0b0b0c;
+      --bg-secondary: #131316;
+      --bg-tertiary: #1a1a1f;
+      --bg-card: #18181c;
+      --bg-hover: #222228;
+      --border: rgba(255,255,255,0.08);
+      --border-strong: rgba(245,158,11,0.25);
+      --text-primary: #f5f5f7;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --accent: #f59e0b;
+      --accent-dim: rgba(245,158,11,0.15);
+      --accent-glow: rgba(245,158,11,0.4);
+      --green: #22c55e;
+      --green-dim: rgba(34,197,94,0.15);
+      --red: #ef4444;
+      --red-dim: rgba(239,68,68,0.15);
+      --blue: #3b82f6;
+      --blue-dim: rgba(59,130,246,0.15);
+      --purple: #a855f7;
+      --purple-dim: rgba(168,85,247,0.15);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Progress Bar */
+    .progress-container {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--bg-tertiary);
+      z-index: 1000;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), #fbbf24);
+      transition: width 0.15s ease;
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    /* Navigation dots */
+    .nav-dots {
+      position: fixed;
+      right: 24px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      z-index: 999;
+    }
+    .nav-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--border-strong);
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+    .nav-dot:hover, .nav-dot.active {
+      background: var(--accent);
+      box-shadow: 0 0 12px var(--accent-glow);
+      transform: scale(1.3);
+    }
+    .nav-dot::after {
+      content: attr(data-label);
+      position: absolute;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      white-space: nowrap;
+      font-size: 11px;
+      color: var(--text-muted);
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .nav-dot:hover::after { opacity: 1; }
+
+    @media (max-width: 768px) {
+      .nav-dots { display: none; }
+    }
+
+    /* Sections */
+    .section {
+      min-height: 100vh;
+      padding: 80px 24px;
+      max-width: 960px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+    .section.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    h1 {
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 24px;
+      letter-spacing: -0.02em;
+    }
+    h1 .accent { color: var(--accent); }
+
+    h2 {
+      font-size: clamp(1.4rem, 3vw, 2rem);
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: var(--text-primary);
+      letter-spacing: -0.01em;
+    }
+    h2 .accent { color: var(--accent); }
+
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 32px 0 12px;
+      color: var(--text-primary);
+    }
+
+    p {
+      color: var(--text-secondary);
+      font-size: 1.05rem;
+      margin-bottom: 16px;
+      max-width: 720px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      padding: 6px 14px;
+      border-radius: 100px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+      border: 1px solid var(--border-strong);
+    }
+    .badge-green {
+      background: var(--green-dim);
+      color: var(--green);
+      border-color: rgba(34,197,94,0.25);
+    }
+    .badge-red {
+      background: var(--red-dim);
+      color: var(--red);
+      border-color: rgba(239,68,68,0.25);
+    }
+    .badge-blue {
+      background: var(--blue-dim);
+      color: var(--blue);
+      border-color: rgba(59,130,246,0.25);
+    }
+    .badge-purple {
+      background: var(--purple-dim);
+      color: var(--purple);
+      border-color: rgba(168,85,247,0.25);
+    }
+
+    /* Code blocks */
+    .code-block {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin: 20px 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+    }
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .code-lang { color: var(--accent); }
+    .code-body {
+      padding: 16px;
+      overflow-x: auto;
+      line-height: 1.7;
+    }
+    .code-body pre { margin: 0; }
+    .code-body code {
+      font-family: inherit;
+      color: var(--text-primary);
+    }
+    .code-keyword { color: #c678dd; }
+    .code-type { color: #e5c07b; }
+    .code-string { color: #98c379; }
+    .code-comment { color: #5c6370; font-style: italic; }
+    .code-func { color: #61afef; }
+    .code-num { color: #d19a66; }
+    .code-prop { color: #e06c75; }
+
+    /* Highlight boxes */
+    .highlight-box {
+      background: var(--accent-dim);
+      border: 1px solid var(--border-strong);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 24px 0;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+    .highlight-box strong { color: var(--accent); }
+
+    .warn-box {
+      background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,0.25);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 24px 0;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+    .warn-box strong { color: var(--red); }
+
+    .info-box {
+      background: var(--blue-dim);
+      border: 1px solid rgba(59,130,246,0.25);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 24px 0;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+    .info-box strong { color: var(--blue); }
+
+    /* Lists */
+    ul, ol {
+      margin: 12px 0 12px 20px;
+      color: var(--text-secondary);
+      font-size: 1.02rem;
+      max-width: 720px;
+    }
+    li { margin-bottom: 10px; line-height: 1.6; }
+    li strong { color: var(--text-primary); }
+
+    /* Quiz */
+    .quiz-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      margin: 32px 0;
+    }
+    .quiz-question {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 20px;
+      color: var(--text-primary);
+    }
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .quiz-option {
+      padding: 14px 18px;
+      background: var(--bg-secondary);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      text-align: left;
+      font-family: inherit;
+    }
+    .quiz-option:hover {
+      border-color: var(--border-strong);
+      background: var(--bg-hover);
+    }
+    .quiz-option.correct {
+      border-color: var(--green);
+      background: var(--green-dim);
+      color: var(--green);
+    }
+    .quiz-option.wrong {
+      border-color: var(--red);
+      background: var(--red-dim);
+      color: var(--red);
+    }
+    .quiz-option.disabled { pointer-events: none; }
+    .quiz-feedback {
+      margin-top: 16px;
+      padding: 14px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      display: none;
+    }
+    .quiz-feedback.show { display: block; }
+    .quiz-feedback.correct {
+      background: var(--green-dim);
+      color: var(--green);
+      border: 1px solid rgba(34,197,94,0.3);
+    }
+    .quiz-feedback.wrong {
+      background: var(--red-dim);
+      color: var(--red);
+      border: 1px solid rgba(239,68,68,0.3);
+    }
+
+    /* Capstone */
+    .capstone {
+      background: var(--bg-card);
+      border: 1px solid var(--border-strong);
+      border-radius: 16px;
+      padding: 28px;
+      margin: 32px 0;
+    }
+    .capstone h3 {
+      margin-top: 0;
+      font-size: 1.2rem;
+      color: var(--accent);
+    }
+    .capstone ul {
+      margin: 12px 0 12px 20px;
+      color: var(--text-secondary);
+    }
+    .capstone li { margin-bottom: 10px; }
+
+    /* Pipeline flow */
+    .pipeline-flow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 20px 0;
+    }
+    .pipeline-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 16px 14px;
+      background: var(--bg-secondary);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      min-width: 110px;
+      transition: all 0.4s ease;
+      position: relative;
+    }
+    .pipeline-step.active {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+      box-shadow: 0 0 20px rgba(245,158,11,0.15);
+    }
+    .pipeline-step.success {
+      border-color: var(--green);
+      background: var(--green-dim);
+    }
+    .pipeline-step.error {
+      border-color: var(--red);
+      background: var(--red-dim);
+    }
+    .pipeline-step-icon {
+      font-size: 1.5rem;
+      transition: transform 0.3s ease;
+    }
+    .pipeline-step.active .pipeline-step-icon {
+      transform: scale(1.2);
+    }
+    .pipeline-step-name {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      text-align: center;
+    }
+    .pipeline-step.active .pipeline-step-name {
+      color: var(--accent);
+    }
+    .pipeline-arrow {
+      font-size: 1.2rem;
+      color: var(--text-muted);
+      transition: color 0.3s;
+    }
+    .pipeline-arrow.active {
+      color: var(--accent);
+    }
+    .pipeline-log {
+      margin-top: 16px;
+      padding: 14px 16px;
+      background: var(--bg-secondary);
+      border-radius: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      min-height: 48px;
+      line-height: 1.6;
+      border: 1px solid var(--border);
+    }
+    .pipeline-log .log-line {
+      opacity: 0;
+      animation: logAppear 0.3s ease forwards;
+    }
+    @keyframes logAppear {
+      to { opacity: 1; }
+    }
+
+    /* Architecture diagram */
+    .arch-diagram {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      margin: 28px 0;
+      overflow-x: auto;
+    }
+    .arch-layer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin: 12px 0;
+    }
+    .arch-box {
+      padding: 14px 18px;
+      background: var(--bg-secondary);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      text-align: center;
+      min-width: 140px;
+      transition: all 0.3s ease;
+    }
+    .arch-box:hover {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .arch-box .arch-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-primary);
+    }
+    .arch-box .arch-sub {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .arch-connector {
+      font-size: 1.2rem;
+      color: var(--text-muted);
+    }
+    .arch-label {
+      text-align: center;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin: 8px 0;
+    }
+
+    /* Reveal button */
+    .reveal-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      background: var(--accent);
+      color: #0b0b0c;
+      border: none;
+      border-radius: 8px;
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .reveal-btn:hover {
+      background: #fbbf24;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(245,158,11,0.3);
+    }
+    .reveal-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Footer */
+    .module-footer {
+      text-align: center;
+      padding: 60px 24px;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    .module-footer .logo {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 12px;
+      letter-spacing: 0.05em;
+    }
+
+    /* Tags */
+    .tag {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      margin-right: 6px;
+    }
+    .tag-required { background: var(--red-dim); color: var(--red); }
+    .tag-optional { background: var(--blue-dim); color: var(--blue); }
+    .tag-adv { background: var(--accent-dim); color: var(--accent); }
+
+    /* Inline code */
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9em;
+      background: var(--bg-tertiary);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--text-primary);
+    }
+
+    /* Diagram */
+    .diagram-box {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin: 8px 0;
+      font-size: 0.9rem;
+    }
+    .diagram-box strong {
+      color: var(--text-primary);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .arrow-down {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 1.2rem;
+      margin: 4px 0;
+    }
+
+    /* Matrix table */
+    .matrix-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      margin: 20px 0;
+    }
+    .matrix-table th {
+      text-align: left;
+      padding: 12px 10px;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-size: 0.7rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .matrix-table td {
+      padding: 12px 10px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+    .matrix-table tr:hover td { background: var(--bg-hover); }
+    .cap-yes { color: var(--green); font-weight: 700; }
+    .cap-no { color: var(--red); }
+    .cap-partial { color: var(--accent); }
+
+    /* Metrics dashboard */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin: 20px 0;
+    }
+    .metric-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+    }
+    .metric-value {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--accent);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .metric-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .metric-delta {
+      font-size: 0.75rem;
+      margin-top: 4px;
+    }
+    .metric-delta.up { color: var(--green); }
+    .metric-delta.down { color: var(--red); }
+
+    /* Adapters grid */
+    .adapter-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin: 20px 0;
+    }
+    .adapter-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      transition: all 0.3s ease;
+    }
+    .adapter-card:hover {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .adapter-card .adapter-name {
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: var(--text-primary);
+    }
+    .adapter-card .adapter-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    @media (max-width: 640px) {
+      .section { padding: 60px 16px; }
+      .pipeline-flow { gap: 4px; }
+      .pipeline-step { min-width: 80px; padding: 12px 8px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Progress Bar -->
+<div class="progress-container">
+  <div class="progress-bar" id="progressBar"></div>
+</div>
+
+<!-- Nav Dots -->
+<div class="nav-dots">
+  <div class="nav-dot active" data-label="Hero" onclick="scrollToSection(0)"></div>
+  <div class="nav-dot" data-label="Architecture" onclick="scrollToSection(1)"></div>
+  <div class="nav-dot" data-label="Discovery" onclick="scrollToSection(2)"></div>
+  <div class="nav-dot" data-label="Adapters" onclick="scrollToSection(3)"></div>
+  <div class="nav-dot" data-label="Security" onclick="scrollToSection(4)"></div>
+  <div class="nav-dot" data-label="Errors" onclick="scrollToSection(5)"></div>
+  <div class="nav-dot" data-label="Tool Flow" onclick="scrollToSection(6)"></div>
+  <div class="nav-dot" data-label="Quiz 1" onclick="scrollToSection(7)"></div>
+  <div class="nav-dot" data-label="Quiz 2" onclick="scrollToSection(8)"></div>
+  <div class="nav-dot" data-label="Quiz 3" onclick="scrollToSection(9)"></div>
+  <div class="nav-dot" data-label="Capstone" onclick="scrollToSection(10)"></div>
+</div>
+
+<!-- ==================== SECTION 0: HERO ==================== -->
+<section class="section visible" id="sec0">
+  <div class="badge">ALABS-ADV-PLUGINSDK &mdash; Module 4 (Final)</div>
+  <h1>From <span class="accent">SDK</span> to <span class="accent">Production</span></h1>
+  <p style="font-size: 1.2rem; max-width: 640px;">
+    You've mastered the Plugin SDK. Now see how Allternit <strong>actually uses it</strong> in production.
+    This bridge module traces real code paths: from platform initialization through plugin discovery,
+    adapter selection, security validation, execution, and error recovery.
+  </p>
+  <div style="margin-top:32px; display:flex; gap:16px; flex-wrap:wrap;">
+    <div class="diagram-box" style="flex:1; min-width:180px;">
+      <strong>Platform Runtime</strong><br>
+      <span style="color:var(--text-muted);font-size:0.85rem;">How plugins are loaded and managed</span>
+    </div>
+    <div class="diagram-box" style="flex:1; min-width:180px;">
+      <strong>Adapter Switching</strong><br>
+      <span style="color:var(--text-muted);font-size:0.85rem;">MCP, HTTP, Native, CLI, VS Code</span>
+    </div>
+    <div class="diagram-box" style="flex:1; min-width:180px;">
+      <strong>Security Gates</strong><br>
+      <span style="color:var(--text-muted);font-size:0.85rem;">Policy validation before execution</span>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== SECTION 1: PLATFORM ARCHITECTURE ==================== -->
+<section class="section" id="sec1">
+  <div class="badge">Platform Architecture</div>
+  <h2>How Allternit <span class="accent">Loads &amp; Manages</span> Plugins</h2>
+  <p>
+    The Allternit platform doesn't just import plugins — it maintains a <strong>unified registry</strong>
+    that consolidates built-in modes, Office add-ins, feature toggles, marketplace downloads, and local
+    dev plugins into a single addressable system.
+  </p>
+
+  <div class="arch-diagram">
+    <div class="viz-title" style="text-align:center;font-size:0.8rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:20px;">System Architecture Diagram</div>
+    <div class="arch-label">Allternit Platform</div>
+    <div class="arch-layer">
+      <div class="arch-box">
+        <div class="arch-title">Shell App</div>
+        <div class="arch-sub">Next.js / Electron</div>
+      </div>
+      <div class="arch-connector">→</div>
+      <div class="arch-box" style="border-color:var(--accent);">
+        <div class="arch-title" style="color:var(--accent);">UnifiedPluginRegistry</div>
+        <div class="arch-sub">src/lib/plugins/unified-registry.ts</div>
+      </div>
+      <div class="arch-connector">→</div>
+      <div class="arch-box">
+        <div class="arch-title">PluginRuntime</div>
+        <div class="arch-sub">src/lib/plugins/plugin-runtime.ts</div>
+      </div>
+    </div>
+    <div class="arch-label">↓ discovers & routes ↓</div>
+    <div class="arch-layer">
+      <div class="arch-box">
+        <div class="arch-title">Built-in (10)</div>
+        <div class="arch-sub">image, code, research...</div>
+      </div>
+      <div class="arch-box">
+        <div class="arch-title">Office (3)</div>
+        <div class="arch-sub">Excel, PPT, Word</div>
+      </div>
+      <div class="arch-box">
+        <div class="arch-title">Vendor (16)</div>
+        <div class="arch-sub">Claude Desktop plugins</div>
+      </div>
+      <div class="arch-box">
+        <div class="arch-title">Marketplace</div>
+        <div class="arch-sub">Downloadable / External</div>
+      </div>
+    </div>
+    <div class="arch-label">↓ executes via ↓</div>
+    <div class="arch-layer">
+      <div class="arch-box">
+        <div class="arch-title">MCP Adapter</div>
+        <div class="arch-sub">Claude Desktop, Cursor</div>
+      </div>
+      <div class="arch-box">
+        <div class="arch-title">HTTP Adapter</div>
+        <div class="arch-sub">REST + WebSocket</div>
+      </div>
+      <div class="arch-box">
+        <div class="arch-title">Native Adapter</div>
+        <div class="arch-sub">Allternit Runtime</div>
+      </div>
+      <div class="arch-box">
+        <div class="arch-title">CLI / VS Code</div>
+        <div class="arch-sub">Terminal & Editor</div>
+      </div>
+    </div>
+    <div class="arch-label">↓ connects to ↓</div>
+    <div class="arch-layer">
+      <div class="arch-box">
+        <div class="arch-title">LLM APIs</div>
+        <div class="arch-sub">Claude, GPT, Local</div>
+      </div>
+      <div class="arch-box">
+        <div class="arch-title">External Services</div>
+        <div class="arch-sub">Pollinations, MiniMax...</div>
+      </div>
+      <div class="arch-box">
+        <div class="arch-title">Browser Tools</div>
+        <div class="arch-sub">Playwright, Office.js</div>
+      </div>
+    </div>
+  </div>
+
+  <p>
+    At boot, <code>UnifiedPluginRegistry</code> initializes built-in plugins into a
+    <code>Map&lt;string, UnifiedPlugin&gt;</code>, then loads user-installed plugins from
+    <code>localStorage</code>. Every plugin carries a <code>source</code> discriminant
+    (<code>'built-in' | 'office' | 'feature' | 'marketplace' | 'local'</code>) that determines
+    how it is loaded at runtime.
+  </p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">TypeScript</span>
+      <span>src/lib/plugins/unified-registry.ts <span class="tag tag-green" style="background:var(--green-dim);color:var(--green);padding:2px 8px;border-radius:4px;font-size:0.7rem;">🟢 Production</span></span>
+    </div>
+    <div class="code-body">
+<pre><code><span class="code-keyword">class</span> <span class="code-type">UnifiedPluginRegistry</span> {
+  <span class="code-keyword">private</span> plugins: <span class="code-type">Map</span>&lt;<span class="code-type">string</span>, <span class="code-type">UnifiedPlugin</span>&gt; = <span class="code-keyword">new</span> <span class="code-type">Map</span>();
+
+  <span class="code-func">constructor</span>() {
+    <span class="code-keyword">this</span>.<span class="code-func">initializeBuiltInPlugins</span>();
+    <span class="code-keyword">this</span>.<span class="code-func">loadInstalledPlugins</span>();
+  }
+
+  <span class="code-keyword">private</span> <span class="code-func">initializeBuiltInPlugins</span>(): <span class="code-type">void</span> {
+    <span class="code-keyword">const</span> builtInPlugins: <span class="code-type">UnifiedPlugin</span>[] = [
+      {
+        id: <span class="code-string">'image'</span>,
+        name: <span class="code-string">'Image'</span>,
+        source: <span class="code-string">'built-in'</span>,
+        status: <span class="code-string">'enabled'</span>,
+        category: <span class="code-string">'create'</span>,
+        capabilities: [<span class="code-string">'text-to-image'</span>, <span class="code-string">'upscale'</span>],
+        runtime: { isLoaded: <span class="code-keyword">true</span> },
+        <span class="code-comment">/* ... 10 built-in plugins + Office + Feature ... */</span>
+      }
+    ];
+    <span class="code-keyword">for</span> (<span class="code-keyword">const</span> plugin <span class="code-keyword">of</span> builtInPlugins) {
+      <span class="code-keyword">this</span>.plugins.<span class="code-func">set</span>(plugin.id, plugin);
+    }
+  }
+
+  <span class="code-keyword">private</span> <span class="code-func">loadInstalledPlugins</span>(): <span class="code-type">void</span> {
+    <span class="code-keyword">if</span> (<span class="code-keyword">typeof</span> window === <span class="code-string">'undefined'</span>) <span class="code-keyword">return</span>;
+    <span class="code-keyword">const</span> installed = localStorage.<span class="code-func">getItem</span>(STORAGE_KEYS.INSTALLED);
+    <span class="code-keyword">if</span> (installed) {
+      <span class="code-keyword">const</span> parsed: <span class="code-type">UnifiedPlugin</span>[] = <span class="code-type">JSON</span>.<span class="code-func">parse</span>(installed);
+      <span class="code-keyword">for</span> (<span class="code-keyword">const</span> plugin <span class="code-keyword">of</span> parsed) {
+        <span class="code-comment">// Don't override built-in plugins</span>
+        <span class="code-keyword">if</span> (!<span class="code-keyword">this</span>.plugins.<span class="code-func">has</span>(plugin.id)
+            || plugin.source === <span class="code-string">'marketplace'</span>
+            || plugin.source === <span class="code-string">'local'</span>) {
+          <span class="code-keyword">this</span>.plugins.<span class="code-func">set</span>(plugin.id, plugin);
+        }
+      }
+    }
+  }
+}</code></pre>
+    </div>
+  </div>
+
+  <div class="info-box">
+    <strong>Key insight:</strong> The registry uses a <strong>two-phase init</strong>: hard-coded
+    built-ins first (guaranteed available), then user-installed plugins from <code>localStorage</code>.
+    Built-ins can never be overridden by marketplace or local plugins — a security boundary.
+  </div>
+</section>
+
+<!-- ==================== SECTION 2: PLUGIN DISCOVERY ==================== -->
+<section class="section" id="sec2">
+  <div class="badge">Plugin Discovery</div>
+  <h2>How the Platform <span class="accent">Discovers</span> Available Plugins</h2>
+  <p>
+    Discovery happens across multiple dimensions: the platform knows about bundled plugins at compile time,
+    queries marketplace sources at runtime, and scans local filesystem paths in dev mode.
+    The <code>marketplace-integration.ts</code> module bridges all these sources into a unified view.
+  </p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">TypeScript</span>
+      <span>src/lib/plugins/marketplace-integration.ts <span class="tag tag-green" style="background:var(--green-dim);color:var(--green);padding:2px 8px;border-radius:4px;font-size:0.7rem;">🟢 Production</span></span>
+    </div>
+    <div class="code-body">
+<pre><code><span class="code-keyword">export type</span> <span class="code-type">BundledPluginSource</span> = <span class="code-string">'built-in'</span> | <span class="code-string">'vendor'</span>;
+
+<span class="code-keyword">export interface</span> <span class="code-type">BundledPlugin</span> <span class="code-keyword">extends</span> <span class="code-type">MarketplacePlugin</span> {
+  sourceType: <span class="code-string">'bundled'</span>;
+  bundledSource: <span class="code-type">BundledPluginSource</span>;
+  installPath: <span class="code-type">string</span>;  <span class="code-comment">// Local path in repo</span>
+}
+
+<span class="code-keyword">export const</span> BUNDLED_PLUGINS: <span class="code-type">BundledPlugin</span>[] = [
+  <span class="code-comment">// 10 built-in agent modes</span>
+  { id: <span class="code-string">'image'</span>, bundledSource: <span class="code-string">'built-in'</span>, installPath: <span class="code-string">'plugins/built-in/image'</span>, ... },
+  <span class="code-comment">// 16 Claude Desktop vendor plugins</span>
+  { id: <span class="code-string">'legal'</span>, bundledSource: <span class="code-string">'vendor'</span>, installPath: <span class="code-string">'plugins/vendor/claude-desktop/legal'</span>, ... },
+];
+
+<span class="code-keyword">export const</span> EXTERNAL_MARKETPLACE_SOURCES = [
+  {
+    id: <span class="code-string">'anthropic-official'</span>,
+    url: <span class="code-string">'https://raw.githubusercontent.com/anthropics/.../marketplace.json'</span>,
+    trust: <span class="code-string">'official'</span>,
+    estimatedPlugins: <span class="code-num">25</span>,
+  },
+  <span class="code-comment">// Docker, GitHub, and other verified sources...</span>
+];
+
+<span class="code-keyword">export function</span> <span class="code-func">getAllPlugins</span>(): <span class="code-type">UnifiedMarketplacePlugin</span>[] {
+  <span class="code-keyword">return</span> [...BUNDLED_PLUGINS, ...<span class="code-func">getDownloadablePlugins</span>()];
+}</code></pre>
+    </div>
+  </div>
+
+  <p>
+    Manifest parsing is handled by the SDK's <code>utils.validateManifest()</code>, but the platform
+    <strong>re-validates at load time</strong>. Why? Because registry data can be stale, corrupted, or
+    tampered with during transit. The platform treats the registry as a <em>hint</em>, not a
+    <em>source of truth</em>.
+  </p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">TypeScript</span>
+      <span>packages/@allternit/plugin-sdk/src/index.ts <span class="tag tag-green" style="background:var(--green-dim);color:var(--green);padding:2px 8px;border-radius:4px;font-size:0.7rem;">🟢 Production</span></span>
+    </div>
+    <div class="code-body">
+<pre><code><span class="code-keyword">export const</span> utils = {
+  <span class="code-func">validateManifest</span>(manifest: <span class="code-keyword">any</span>): manifest <span class="code-keyword">is</span> <span class="code-type">PluginManifest</span> {
+    <span class="code-keyword">return</span> (
+      <span class="code-keyword">typeof</span> manifest === <span class="code-string">'object'</span> &&
+      <span class="code-keyword">typeof</span> manifest.id === <span class="code-string">'string'</span> &&
+      <span class="code-keyword">typeof</span> manifest.name === <span class="code-string">'string'</span> &&
+      <span class="code-keyword">typeof</span> manifest.version === <span class="code-string">'string'</span> &&
+      <span class="code-keyword">typeof</span> manifest.runtime === <span class="code-string">'string'</span> &&
+      <span class="code-keyword">typeof</span> manifest.provides === <span class="code-string">'object'</span>
+    );
+  },
+
+  <span class="code-keyword">async</span> <span class="code-func">loadManifest</span>(path: <span class="code-type">string</span>): <span class="code-type">Promise</span>&lt;<span class="code-type">PluginManifest</span>&gt; {
+    <span class="code-keyword">const</span> fs = <span class="code-keyword">await</span> <span class="code-func">import</span>(<span class="code-string">'fs/promises'</span>);
+    <span class="code-keyword">const</span> content = <span class="code-keyword">await</span> fs.<span class="code-func">readFile</span>(path, <span class="code-string">'utf-8'</span>);
+    <span class="code-keyword">return</span> <span class="code-type">JSON</span>.<span class="code-func">parse</span>(content);
+  }
+};</code></pre>
+    </div>
+  </div>
+
+  <div class="highlight-box">
+    <strong>Design principle:</strong> Trust but verify. The registry tells the platform <em>where</em> to look,
+    but the platform validates the manifest itself before loading. This prevents registry poisoning attacks
+    where a malicious entry points to a compromised plugin path.
+  </div>
+</section>
+
+<!-- ==================== SECTION 3: ADAPTER LOADING ==================== -->
+<section class="section" id="sec3">
+  <div class="badge">Adapter Loading</div>
+  <h2>How <span class="accent">MCP, HTTP, CLI, VS Code</span> Adapters Are Instantiated</h2>
+  <p>
+    The Plugin SDK exports five adapters. The platform doesn't import them all — it selects the adapter
+    based on the execution context. Inside the Allternit Electron app, the <strong>Native Adapter</strong>
+    binds to <code>globalThis.__ALLTERNIT_RUNTIME__</code>. When running as a Claude Desktop plugin,
+    the <strong>MCP Adapter</strong> exposes tools over stdio.
+  </p>
+
+  <div class="adapter-grid">
+    <div class="adapter-card">
+      <div class="adapter-name">McpAdapter</div>
+      <div class="adapter-desc">canActivate: typeof process !== 'undefined'<br>Transport: stdio / http / websocket</div>
+    </div>
+    <div class="adapter-card">
+      <div class="adapter-name">HttpAdapter</div>
+      <div class="adapter-desc">canActivate: true (works everywhere)<br>REST + WebSocket streaming</div>
+    </div>
+    <div class="adapter-card">
+      <div class="adapter-name">NativeAdapter</div>
+      <div class="adapter-desc">canActivate: globalThis.__ALLTERNIT_RUNTIME__<br>Full platform integration</div>
+    </div>
+    <div class="adapter-card">
+      <div class="adapter-name">CliAdapter</div>
+      <div class="adapter-desc">canActivate: process.argv available<br>Terminal-based execution</div>
+    </div>
+    <div class="adapter-card">
+      <div class="adapter-name">VSCodeAdapter</div>
+      <div class="adapter-desc">canActivate: vscode extension host<br>Editor-embedded tools</div>
+    </div>
+  </div>
+
+  <p>
+    The <code>canActivate()</code> pattern is the SDK's environment-detection mechanism. Each adapter
+    probes its runtime and returns <code>true</code> only when the required globals, APIs, or modules
+    are present. The platform uses this to build a <strong>capability matrix</strong> at boot.
+  </p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">TypeScript</span>
+      <span>packages/@allternit/plugin-sdk/src/adapters/mcp/index.ts <span class="tag tag-green" style="background:var(--green-dim);color:var(--green);padding:2px 8px;border-radius:4px;font-size:0.7rem;">🟢 Production</span></span>
+    </div>
+    <div class="code-body">
+<pre><code><span class="code-keyword">export class</span> <span class="code-type">McpAdapter</span> <span class="code-keyword">implements</span> <span class="code-type">Adapter</span> {
+  <span class="code-keyword">readonly</span> name = <span class="code-string">'mcp'</span>;
+  <span class="code-keyword">readonly</span> version = <span class="code-string">'1.0.0'</span>;
+
+  <span class="code-func">canActivate</span>(): <span class="code-type">boolean</span> {
+    <span class="code-comment">// MCP works anywhere Node.js runs</span>
+    <span class="code-keyword">return</span> <span class="code-keyword">typeof</span> process !== <span class="code-string">'undefined'</span>;
+  }
+
+  <span class="code-keyword">async</span> <span class="code-func">initialize</span>(
+    plugin: <span class="code-type">Plugin</span>,
+    config: <span class="code-type">McpAdapterConfig</span> = {}
+  ): <span class="code-type">Promise</span>&lt;<span class="code-type">AdapterInstance</span>&gt; {
+    <span class="code-keyword">return new</span> <span class="code-type">McpAdapterInstance</span>(plugin, config);
+  }
+}</code></pre>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">TypeScript</span>
+      <span>packages/@allternit/plugin-sdk/src/adapters/native/index.ts <span class="tag tag-green" style="background:var(--green-dim);color:var(--green);padding:2px 8px;border-radius:4px;font-size:0.7rem;">🟢 Production</span></span>
+    </div>
+    <div class="code-body">
+<pre><code><span class="code-keyword">export class</span> <span class="code-type">NativeAdapter</span> <span class="code-keyword">implements</span> <span class="code-type">Adapter</span> {
+  <span class="code-keyword">readonly</span> name = <span class="code-string">'allternit'</span>;
+  <span class="code-keyword">readonly</span> version = <span class="code-string">'1.0.0'</span>;
+
+  <span class="code-func">canActivate</span>(): <span class="code-type">boolean</span> {
+    <span class="code-comment">// Only works inside Allternit runtime</span>
+    <span class="code-keyword">return</span> <span class="code-keyword">typeof</span> globalThis.__ALLTERNIT_RUNTIME__ !== <span class="code-string">'undefined'</span>;
+  }
+
+  <span class="code-keyword">async</span> <span class="code-func">initialize</span>(
+    plugin: <span class="code-type">Plugin</span>,
+    config: <span class="code-type">NativeAdapterConfig</span>
+  ): <span class="code-type">Promise</span>&lt;<span class="code-type">AdapterInstance</span>&gt; {
+    <span class="code-keyword">return new</span> <span class="code-type">NativeAdapterInstance</span>(plugin, config);
+  }
+}</code></pre>
+    </div>
+  </div>
+
+  <p>
+    Inside the platform, the runtime switch is even more granular. The <code>UnifiedPluginRegistry</code>
+    uses a <code>switch (plugin.source)</code> to determine how to load each plugin's runtime instance:
+  </p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">TypeScript</span>
+      <span>src/lib/plugins/unified-registry.ts <span class="tag tag-green" style="background:var(--green-dim);color:var(--green);padding:2px 8px;border-radius:4px;font-size:0.7rem;">🟢 Production</span></span>
+    </div>
+    <div class="code-body">
+<pre><code><span class="code-keyword">private async</span> <span class="code-func">loadPluginRuntime</span>(plugin: <span class="code-type">UnifiedPlugin</span>): <span class="code-type">Promise</span>&lt;<span class="code-type">void</span>&gt; {
+  <span class="code-keyword">if</span> (plugin.runtime?.isLoaded) <span class="code-keyword">return</span>;
+
+  <span class="code-keyword">try</span> {
+    <span class="code-keyword">switch</span> (plugin.source) {
+      <span class="code-keyword">case</span> <span class="code-string">'built-in'</span>:
+        <span class="code-keyword">const</span> module = <span class="code-keyword">await</span> <span class="code-func">import</span>(<span class="code-string">`./${plugin.id}/plugin`</span>);
+        plugin.runtime = {
+          instance: module.default || module.createPlugin?.(),
+          isLoaded: <span class="code-keyword">true</span>,
+        };
+        <span class="code-keyword">break</span>;
+
+      <span class="code-keyword">case</span> <span class="code-string">'office'</span>:
+        <span class="code-keyword">const</span> { OFFICE_PLUGINS } = <span class="code-keyword">await</span> <span class="code-func">import</span>(<span class="code-string">'@/plugins/office-plugins'</span>);
+        <span class="code-keyword">const</span> officePlugin = OFFICE_PLUGINS.<span class="code-func">find</span>(p => p.id === plugin.id);
+        <span class="code-keyword">if</span> (officePlugin) {
+          plugin.runtime = { instance: officePlugin, isLoaded: <span class="code-keyword">true</span> };
+        }
+        <span class="code-keyword">break</span>;
+
+      <span class="code-keyword">case</span> <span class="code-string">'feature'</span>:
+        <span class="code-keyword">const</span> { featureRegistry } = <span class="code-keyword">await</span> <span class="code-func">import</span>(<span class="code-string">'@/plugins/feature.registry'</span>);
+        <span class="code-keyword">const</span> feature = featureRegistry.<span class="code-func">get</span>(plugin.id);
+        <span class="code-keyword">if</span> (feature) {
+          plugin.runtime = { instance: feature, isLoaded: <span class="code-keyword">true</span> };
+        }
+        <span class="code-keyword">break</span>;
+
+      <span class="code-keyword">case</span> <span class="code-string">'marketplace'</span>:
+        <span class="code-comment">// Downloaded and loaded dynamically</span>
+        plugin.runtime = { isLoaded: <span class="code-keyword">true</span> };
+        <span class="code-keyword">break</span>;
+
+      <span class="code-keyword">case</span> <span class="code-string">'local'</span>:
+        <span class="code-comment">// Loaded from filesystem (dev mode)</span>
+        plugin.runtime = { isLoaded: <span class="code-keyword">true</span> };
+        <span class="code-keyword">break</span>;
+    }
+  } <span class="code-keyword">catch</span> (err) {
+    <span class="code-keyword">throw new</span> <span class="code-type">Error</span>(<span class="code-string">`Failed to load plugin ${plugin.id}: `</span>
+      + (err <span class="code-keyword">instanceof</span> <span class="code-type">Error</span> ? err.message : <span class="code-string">'Unknown error'</span>));
+  }
+}</code></pre>
+    </div>
+  </div>
+
+  <div class="warn-box">
+    <strong>Watch the fallback:</strong> Notice that marketplace and local plugins currently have
+    placeholder loaders (<code>isLoaded: true</code> with no instance). In production, these would
+    integrate with a sandboxed module loader or Web Worker to prevent untrusted code from accessing
+    the main thread.
+  </div>
+</section>
+
+<!-- ==================== SECTION 4: SECURITY IN PRACTICE ==================== -->
+<section class="section" id="sec4">
+  <div class="badge">Security in Practice</div>
+  <h2>How the Platform <span class="accent">Validates Permissions</span> Before Execution</h2>
+  <p>
+    Before any plugin tool runs, the platform passes the request through <strong>policy gates</strong>.
+    These are composable security checks: rate limiting, action allowlists, component restrictions,
+    state validation, prop sanitization, and resource limits.
+  </p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">TypeScript</span>
+      <span>adapters-ts/allternit-ix/src/runtime/policy-gates.ts <span class="tag tag-green" style="background:var(--green-dim);color:var(--green);padding:2px 8px;border-radius:4px;font-size:0.7rem;">🟢 Production</span></span>
+    </div>
+    <div class="code-body">
+<pre><code><span class="code-keyword">export interface</span> <span class="code-type">PolicyGate</span> {
+  name: <span class="code-type">string</span>;
+  check: (
+    type: <span class="code-string">'action'</span> | <span class="code-string">'state-change'</span> | <span class="code-string">'render'</span>,
+    context: <span class="code-type">PolicyContext</span>
+  ) => <span class="code-type">Promise</span>&lt;<span class="code-type">PolicyResult</span>&gt; | <span class="code-type">PolicyResult</span>;
+}
+
+<span class="code-keyword">export function</span> <span class="code-func">createActionAllowlistGate</span>(
+  allowedActions: <span class="code-type">string</span>[]
+): <span class="code-type">PolicyGate</span> {
+  <span class="code-keyword">const</span> allowedSet = <span class="code-keyword">new</span> <span class="code-type">Set</span>(allowedActions);
+  <span class="code-keyword">return</span> {
+    name: <span class="code-string">'action-allowlist'</span>,
+    <span class="code-func">check</span>: (type, context) => {
+      <span class="code-keyword">if</span> (type !== <span class="code-string">'action'</span>) <span class="code-keyword">return</span> { allowed: <span class="code-keyword">true</span> };
+      <span class="code-keyword">if</span> (!context.actionId || !allowedSet.<span class="code-func">has</span>(context.actionId)) {
+        <span class="code-keyword">return</span> {
+          allowed: <span class="code-keyword">false</span>,
+          reason: <span class="code-string">`Action '${context.actionId}' is not in allowlist`</span>,
+        };
+      }
+      <span class="code-keyword">return</span> { allowed: <span class="code-keyword">true</span> };
+    },
+  };
+}</code></pre>
+    </div>
+  </div>
+
+  <p>
+    The platform also enforces <strong>prop sanitization</strong> to prevent XSS when plugins render
+    UI components. String props are stripped of <code>&lt;script&gt;</code> tags, event handlers, and
+    <code>javascript:</code> URLs before reaching the renderer.
+  </p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">TypeScript</span>
+      <span>policy-gates.ts — Prop Sanitization <span class="tag tag-green" style="background:var(--green-dim);color:var(--green);padding:2px 8px;border-radius:4px;font-size:0.7rem;">🟢 Production</span></span>
+    </div>
+    <div class="code-body">
+<pre><code><span class="code-keyword">export function</span> <span class="code-func">createPropSanitizationGate</span>(options: {
+  allowHTML?: <span class="code-type">boolean</span>;
+  allowedTags?: <span class="code-type">string</span>[];
+}): <span class="code-type">PolicyGate</span> {
+  <span class="code-keyword">const</span> { allowHTML = <span class="code-keyword">false</span>, allowedTags = [] } = options;
+  <span class="code-keyword">return</span> {
+    name: <span class="code-string">'prop-sanitization'</span>,
+    <span class="code-func">check</span>: (type, context) => {
+      <span class="code-keyword">if</span> (type !== <span class="code-string">'render'</span> || !context.props) <span class="code-keyword">return</span> { allowed: <span class="code-keyword">true</span> };
+
+      <span class="code-keyword">const</span> sanitizedProps = { ...context.props };
+      <span class="code-keyword">let</span> modified = <span class="code-keyword">false</span>;
+
+      <span class="code-keyword">for</span> (<span class="code-keyword">const</span> [key, value] <span class="code-keyword">of</span> <span class="code-type">Object</span>.<span class="code-func">entries</span>(context.props)) {
+        <span class="code-keyword">if</span> (<span class="code-keyword">typeof</span> value === <span class="code-string">'string'</span>) {
+          <span class="code-keyword">let</span> sanitized = value;
+          <span class="code-keyword">if</span> (!allowHTML) {
+            sanitized = sanitized.<span class="code-func">replace</span>(<span class="code-string">/&lt;[^&gt;]*&gt;/g</span>, <span class="code-string">''</span>);
+          } <span class="code-keyword">else</span> {
+            <span class="code-comment">// Remove script tags completely</span>
+            sanitized = sanitized.<span class="code-func">replace</span>(<span class="code-string">/&lt;script[^&gt;]*&gt;[\s\S]*?&lt;\/script&gt;/gi</span>, <span class="code-string">''</span>);
+            <span class="code-comment">// Remove event handlers</span>
+            sanitized = sanitized.<span class="code-func">replace</span>(<span class="code-string">/on\w+\s*=/gi</span>, <span class="code-string">''</span>);
+            <span class="code-comment">// Remove javascript: URLs</span>
+            sanitized = sanitized.<span class="code-func">replace</span>(<span class="code-string">/javascript:/gi</span>, <span class="code-string">''</span>);
+          }
+          <span class="code-keyword">if</span> (sanitized !== value) {
+            sanitizedProps[key] = sanitized;
+            modified = <span class="code-keyword">true</span>;
+          }
+        }
+        <span class="code-comment">// Block dangerous props</span>
+        <span class="code-keyword">if</span> (key.<span class="code-func">startsWith</span>(<span class="code-string">'on'</span>) && <span class="code-keyword">typeof</span> value === <span class="code-string">'string'</span>) {
+          <span class="code-keyword">delete</span> sanitizedProps[key];
+          modified = <span class="code-keyword">true</span>;
+        }
+      }
+      <span class="code-keyword">return</span> { allowed: <span class="code-keyword">true</span>, context: modified
+        ? { ...context, props: sanitizedProps }
+        : context };
+    },
+  };
+}</code></pre>
+    </div>
+  </div>
+
+  <p>
+    Policy gates are composed into a single enforcement function. The default policy stack includes
+    rate limiting (60 actions/minute), prop sanitization, and resource limits (1MB state, 100 components,
+    1000 actions).
+  </p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">TypeScript</span>
+      <span>policy-gates.ts — Composition <span class="tag tag-green" style="background:var(--green-dim);color:var(--green);padding:2px 8px;border-radius:4px;font-size:0.7rem;">🟢 Production</span></span>
+    </div>
+    <div class="code-body">
+<pre><code><span class="code-keyword">export function</span> <span class="code-func">composePolicyGates</span>(...gates: <span class="code-type">PolicyGate</span>[]): <span class="code-type">PolicyGate</span> {
+  <span class="code-keyword">return</span> {
+    name: <span class="code-string">`composed(${gates.map(g => g.name).join(', ')})`</span>,
+    <span class="code-keyword">async</span> <span class="code-func">check</span>(type, context) {
+      <span class="code-keyword">let</span> currentContext = context;
+      <span class="code-keyword">for</span> (<span class="code-keyword">const</span> gate <span class="code-keyword">of</span> gates) {
+        <span class="code-keyword">const</span> result = <span class="code-keyword">await</span> gate.<span class="code-func">check</span>(type, currentContext);
+        <span class="code-keyword">if</span> (!result.allowed) <span class="code-keyword">return</span> result;
+        <span class="code-keyword">if</span> (result.context) currentContext = result.context;
+      }
+      <span class="code-keyword">return</span> { allowed: <span class="code-keyword">true</span>, context: currentContext };
+    },
+  };
+}
+
+<span class="code-keyword">export function</span> <span class="code-func">createDefaultPolicyGates</span>(): <span class="code-type">PolicyGate</span>[] {
+  <span class="code-keyword">return</span> [
+    <span class="code-func">createRateLimitGate</span>({ maxActionsPerMinute: <span class="code-num">60</span> }),
+    <span class="code-func">createPropSanitizationGate</span>({ allowHTML: <span class="code-keyword">false</span> }),
+    <span class="code-func">createResourceLimitGate</span>({
+      maxStateSize: <span class="code-num">1024</span> * <span class="code-num">1024</span>, <span class="code-comment">// 1MB</span>
+      maxComponents: <span class="code-num">100</span>,
+      maxActions: <span class="code-num">1000</span>,
+    }),
+  ];
+}</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== SECTION 5: ERROR HANDLING AT SCALE ==================== -->
+<section class="section" id="sec5">
+  <div class="badge">Error Handling at Scale</div>
+  <h2>What Happens When a Plugin <span class="accent">Crashes?</span></h2>
+  <p>
+    The platform isolates plugin failures at three levels: <strong>execution-level</strong> (try/catch around
+    <code>plugin.execute()</code>), <strong>runtime-level</strong> (graceful unload on load errors), and
+    <strong>registry-level</strong> (status rollback so a failed plugin doesn't stay "enabled").
+  </p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">TypeScript</span>
+      <span>src/lib/plugins/plugin-runtime.ts <span class="tag tag-green" style="background:var(--green-dim);color:var(--green);padding:2px 8px;border-radius:4px;font-size:0.7rem;">🟢 Production</span></span>
+    </div>
+    <div class="code-body">
+<pre><code><span class="code-keyword">private async</span> <span class="code-func">executeBuiltIn</span>(
+  pluginId: <span class="code-type">PluginId</span>,
+  input: <span class="code-type">string</span>,
+  files?: <span class="code-type">File</span>[],
+  context?: <span class="code-type">PluginExecutionRequest</span>[<span class="code-string">'context'</span>]
+): <span class="code-type">Promise</span>&lt;<span class="code-type">PluginExecutionResult</span>&gt; {
+  <span class="code-keyword">const</span> startTime = <span class="code-type">Date</span>.<span class="code-func">now</span>();
+  <span class="code-keyword">try</span> {
+    <span class="code-keyword">const</span> plugin = <span class="code-keyword">await</span> <span class="code-func">loadPlugin</span>(pluginId);
+    <span class="code-keyword">const</span> result = <span class="code-keyword">await</span> plugin.<span class="code-func">execute</span>({ prompt: input, files, context });
+    <span class="code-keyword">return</span> {
+      success: result.success,
+      content: result.content || <span class="code-string">''</span>,
+      source: <span class="code-string">'built-in'</span>,
+      pluginId,
+      actions: [{
+        type: <span class="code-string">'plugin-execute'</span>,
+        description: <span class="code-string">`Execute ${pluginId} plugin`</span>,
+        timestamp: startTime,
+      }],
+      artifacts: result.artifacts?.<span class="code-func">map</span>(a => ({
+        type: a.type, name: a.name, url: a.url,
+      })),
+      deterministic: <span class="code-keyword">false</span>,
+    };
+  } <span class="code-keyword">catch</span> (err) {
+    <span class="code-keyword">const</span> error = err <span class="code-keyword">instanceof</span> <span class="code-type">Error</span> ? err : <span class="code-keyword">new</span> <span class="code-type">Error</span>(<span class="code-type">String</span>(err));
+    <span class="code-keyword">return</span> {
+      success: <span class="code-keyword">false</span>,
+      content: <span class="code-string">''</span>,
+      source: <span class="code-string">'built-in'</span>,
+      pluginId,
+      actions: [],
+      error: {
+        code: <span class="code-string">'PLUGIN_EXECUTION_ERROR'</span>,
+        message: error.message,
+        recoverable: <span class="code-keyword">false</span>,
+      },
+    };
+  }
+}</code></pre>
+    </div>
+  </div>
+
+  <p>
+    Notice the <strong>structured error response</strong>: every failure returns a <code>PluginExecutionResult</code>
+    with <code>success: false</code>, an error code, a human-readable message, and a <code>recoverable</code>
+    flag. The chat UI uses <code>recoverable</code> to decide whether to show a "Retry" button.
+  </p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">TypeScript</span>
+      <span>src/lib/plugins/unified-registry.ts — Status Rollback <span class="tag tag-green" style="background:var(--green-dim);color:var(--green);padding:2px 8px;border-radius:4px;font-size:0.7rem;">🟢 Production</span></span>
+    </div>
+    <div class="code-body">
+<pre><code><span class="code-keyword">private async</span> <span class="code-func">setStatus</span>(id: <span class="code-type">string</span>, status: <span class="code-type">PluginStatus</span>): <span class="code-type">Promise</span>&lt;<span class="code-type">boolean</span>&gt; {
+  <span class="code-keyword">const</span> plugin = <span class="code-keyword">this</span>.plugins.<span class="code-func">get</span>(id);
+  <span class="code-keyword">if</span> (!plugin) <span class="code-keyword">return</span> <span class="code-keyword">false</span>;
+
+  <span class="code-keyword">const</span> oldStatus = plugin.status;
+  plugin.status = status;
+
+  <span class="code-keyword">try</span> {
+    <span class="code-keyword">if</span> (status === <span class="code-string">'enabled'</span>) {
+      <span class="code-keyword">await</span> <span class="code-keyword">this</span>.<span class="code-func">loadPluginRuntime</span>(plugin);
+    } <span class="code-keyword">else if</span> (status === <span class="code-string">'disabled'</span>) {
+      <span class="code-keyword">await</span> <span class="code-keyword">this</span>.<span class="code-func">unloadPluginRuntime</span>(plugin);
+    }
+    <span class="code-keyword">this</span>.<span class="code-func">persistEnabledState</span>();
+    <span class="code-keyword">this</span>.<span class="code-func">notifyListeners</span>();
+    <span class="code-keyword">return</span> <span class="code-keyword">true</span>;
+  } <span class="code-keyword">catch</span> (err) {
+    <span class="code-comment">// CRITICAL: Rollback on failure</span>
+    plugin.status = oldStatus;
+    plugin.runtime = {
+      isLoaded: <span class="code-keyword">false</span>,
+      loadError: err <span class="code-keyword">instanceof</span> <span class="code-type">Error</span> ? err.message : <span class="code-string">'Unknown error'</span>,
+    };
+    <span class="code-keyword">return</span> <span class="code-keyword">false</span>;
+  }
+}</code></pre>
+    </div>
+  </div>
+
+  <p>
+    The deterministic executor adds another layer: it wraps the entire LLM-backed execution in a
+    try/catch and returns a structured <code>DeterministicResponse</code> with an audit trail of
+    every action taken before the failure.
+  </p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">TypeScript</span>
+      <span>src/lib/plugins/deterministic-executor.ts <span class="tag tag-green" style="background:var(--green-dim);color:var(--green);padding:2px 8px;border-radius:4px;font-size:0.7rem;">🟢 Production</span></span>
+    </div>
+    <div class="code-body">
+<pre><code><span class="code-keyword">async</span> <span class="code-func">execute</span>(request: <span class="code-type">DeterministicRequest</span>): <span class="code-type">Promise</span>&lt;<span class="code-type">DeterministicResponse</span>&gt; {
+  <span class="code-keyword">this</span>.startTime = <span class="code-type">Date</span>.<span class="code-func">now</span>();
+  <span class="code-keyword">this</span>.actions = [];
+
+  <span class="code-keyword">try</span> {
+    <span class="code-comment">// 1. Load command definition</span>
+    <span class="code-keyword">const</span> loaded = <span class="code-keyword">await</span> <span class="code-func">loadCommandMarkdown</span>(request.pluginId, request.commandId);
+    <span class="code-keyword">if</span> (!loaded) {
+      <span class="code-keyword">return</span> <span class="code-keyword">this</span>.<span class="code-func">createError</span>(
+        <span class="code-string">'COMMAND_NOT_FOUND'</span>,
+        <span class="code-string">`Command ${request.commandId} not found in plugin ${request.pluginId}`</span>,
+        <span class="code-keyword">false</span>
+      );
+    }
+
+    <span class="code-comment">// 2. Validate inputs</span>
+    <span class="code-keyword">const</span> validation = <span class="code-keyword">this</span>.<span class="code-func">validateInputs</span>(loaded.command, request.inputs);
+    <span class="code-keyword">if</span> (!validation.valid) {
+      <span class="code-keyword">return</span> <span class="code-keyword">this</span>.<span class="code-func">createError</span>(<span class="code-string">'INVALID_INPUTS'</span>, validation.error!, <span class="code-keyword">true</span>);
+    }
+
+    <span class="code-comment">// 3. Build system prompt and execute</span>
+    <span class="code-keyword">const</span> systemPrompt = <span class="code-keyword">this</span>.<span class="code-func">buildSystemPrompt</span>(loaded);
+    <span class="code-keyword">const</span> result = <span class="code-keyword">await</span> <span class="code-keyword">this</span>.<span class="code-func">executeWithLLM</span>(systemPrompt, request);
+
+    <span class="code-keyword">return</span> {
+      success: <span class="code-keyword">true</span>,
+      output: result.output,
+      actions: <span class="code-keyword">this</span>.actions,
+      artifacts: result.artifacts,
+    };
+  } <span class="code-keyword">catch</span> (err) {
+    <span class="code-keyword">const</span> error = err <span class="code-keyword">instanceof</span> <span class="code-type">Error</span> ? err : <span class="code-keyword">new</span> <span class="code-type">Error</span>(<span class="code-type">String</span>(err));
+    <span class="code-keyword">return</span> <span class="code-keyword">this</span>.<span class="code-func">createError</span>(<span class="code-string">'EXECUTION_ERROR'</span>, error.message, <span class="code-keyword">false</span>);
+  }
+}</code></pre>
+    </div>
+  </div>
+
+  <div class="info-box">
+    <strong>Recovery pattern:</strong> Every error path preserves the <code>actions</code> array (audit trail).
+    Even if the LLM call throws, the platform knows exactly which files were read, which APIs were called,
+    and how far execution progressed before the crash. This is critical for debugging vendor plugins.
+  </div>
+</section>
+
+<!-- ==================== SECTION 6: REAL EXAMPLE — TOOL CALL FLOW ==================== -->
+<section class="section" id="sec6">
+  <div class="badge">Real Example</div>
+  <h2>A Complete <span class="accent">Tool Call Flow</span></h2>
+  <p>
+    Let's trace what happens when a user types <code>/legal:triage-nda</code> in the Allternit chat.
+    This spans vendor command parsing, deterministic execution, policy validation, and result formatting.
+  </p>
+
+  <div class="pipeline-flow" id="toolcall-flow">
+    <div class="pipeline-step" id="tc-step-0">
+      <div class="pipeline-step-icon">💬</div>
+      <div class="pipeline-step-name">Chat Input</div>
+    </div>
+    <div class="pipeline-arrow" id="tc-arr-0">→</div>
+    <div class="pipeline-step" id="tc-step-1">
+      <div class="pipeline-step-icon">🔍</div>
+      <div class="pipeline-step-name">Parse Command</div>
+    </div>
+    <div class="pipeline-arrow" id="tc-arr-1">→</div>
+    <div class="pipeline-step" id="tc-step-2">
+      <div class="pipeline-step-icon">📋</div>
+      <div class="pipeline-step-name">Load Plugin</div>
+    </div>
+    <div class="pipeline-arrow" id="tc-arr-2">→</div>
+    <div class="pipeline-step" id="tc-step-3">
+      <div class="pipeline-step-icon">🛡️</div>
+      <div class="pipeline-step-name">Validate</div>
+    </div>
+    <div class="pipeline-arrow" id="tc-arr-3">→</div>
+    <div class="pipeline-step" id="tc-step-4">
+      <div class="pipeline-step-icon">⚡</div>
+      <div class="pipeline-step-name">Execute</div>
+    </div>
+    <div class="pipeline-arrow" id="tc-arr-4">→</div>
+    <div class="pipeline-step" id="tc-step-5">
+      <div class="pipeline-step-icon">📤</div>
+      <div class="pipeline-step-name">Return Result</div>
+    </div>
+  </div>
+
+  <div style="text-align:center; margin-bottom:24px;">
+    <button class="reveal-btn" id="tc-btn" onclick="runToolCallFlow()">▶ Run Tool Call Trace</button>
+  </div>
+  <div class="pipeline-log" id="tc-log">Click "Run Tool Call Trace" to see the execution log...</div>
+
+  <h3>Step 1: Command Parsing</h3>
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">TypeScript</span>
+      <span>src/lib/plugins/vendor-integration.ts <span class="tag tag-green" style="background:var(--green-dim);color:var(--green);padding:2px 8px;border-radius:4px;font-size:0.7rem;">🟢 Production</span></span>
+    </div>
+    <div class="code-body">
+<pre><code><span class="code-keyword">export function</span> <span class="code-func">parseCommandInput</span>(input: <span class="code-type">string</span>): <span class="code-type">ParsedCommand</span> {
+  <span class="code-keyword">const</span> trimmed = input.<span class="code-func">trim</span>();
+  <span class="code-comment">// Vendor command format: /plugin:command</span>
+  <span class="code-keyword">if</span> (trimmed.<span class="code-func">startsWith</span>(<span class="code-string">'/'</span>) && trimmed.<span class="code-func">includes</span>(<span class="code-string">':'</span>)) {
+    <span class="code-keyword">const</span> [pluginPart, ...rest] = trimmed.<span class="code-func">slice</span>(<span class="code-num">1</span>).<span class="code-func">split</span>(<span class="code-string">':'</span>);
+    <span class="code-keyword">const</span> commandPart = rest.<span class="code-func">join</span>(<span class="code-string">':'</span>);
+    <span class="code-keyword">const</span> trigger = <span class="code-string">`/${pluginPart}:${commandPart}`</span>;
+    <span class="code-keyword">if</span> (commandRegistry.<span class="code-func">has</span>(trigger)) {
+      <span class="code-keyword">return</span> {
+        type: <span class="code-string">'vendor-command'</span>,
+        pluginId: commandRegistry.<span class="code-func">get</span>(trigger)!.pluginId,
+        commandId: commandRegistry.<span class="code-func">get</span>(trigger)!.name,
+        raw: trimmed,
+      };
+    }
+  }
+  <span class="code-keyword">return</span> { type: <span class="code-string">'natural-language'</span>, raw: trimmed };
+}</code></pre>
+    </div>
+  </div>
+
+  <h3>Step 2: PluginRuntime Routing</h3>
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">TypeScript</span>
+      <span>src/lib/plugins/plugin-runtime.ts <span class="tag tag-green" style="background:var(--green-dim);color:var(--green);padding:2px 8px;border-radius:4px;font-size:0.7rem;">🟢 Production</span></span>
+    </div>
+    <div class="code-body">
+<pre><code><span class="code-keyword">async</span> <span class="code-func">execute</span>(request: <span class="code-type">PluginExecutionRequest</span>): <span class="code-type">Promise</span>&lt;<span class="code-type">PluginExecutionResult</span>&gt; {
+  <span class="code-keyword">const</span> { input } = request;
+
+  <span class="code-comment">// 1. Check for explicit vendor command: /legal:triage-nda</span>
+  <span class="code-keyword">if</span> (input.<span class="code-func">trim</span>().<span class="code-func">startsWith</span>(<span class="code-string">'/'</span>) && input.<span class="code-func">includes</span>(<span class="code-string">':'</span>)) {
+    <span class="code-keyword">return</span> <span class="code-keyword">this</span>.<span class="code-func">executeVendorCommand</span>(input, files, context);
+  }
+
+  <span class="code-comment">// 2. Check for built-in mode trigger: /research, /code, etc.</span>
+  <span class="code-keyword">const</span> parsed = <span class="code-func">parseCommandInput</span>(input);
+  <span class="code-keyword">if</span> (parsed.type === <span class="code-string">'built-in'</span> && parsed.pluginId) {
+    <span class="code-keyword">return</span> <span class="code-keyword">this</span>.<span class="code-func">executeBuiltIn</span>(parsed.pluginId <span class="code-keyword">as</span> <span class="code-type">PluginId</span>, input, files, context);
+  }
+
+  <span class="code-comment">// 4. Natural language — no specific plugin</span>
+  <span class="code-keyword">return</span> {
+    success: <span class="code-keyword">true</span>,
+    content: input,
+    source: <span class="code-string">'natural-language'</span>,
+    actions: [],
+  };
+}</code></pre>
+    </div>
+  </div>
+
+  <h3>Step 3: Deterministic Execution</h3>
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">TypeScript</span>
+      <span>src/lib/plugins/deterministic-executor.ts <span class="tag tag-green" style="background:var(--green-dim);color:var(--green);padding:2px 8px;border-radius:4px;font-size:0.7rem;">🟢 Production</span></span>
+    </div>
+    <div class="code-body">
+<pre><code><span class="code-keyword">private async</span> <span class="code-func">executeWithLLM</span>(
+  systemPrompt: <span class="code-type">string</span>,
+  request: <span class="code-type">DeterministicRequest</span>
+): <span class="code-type">Promise</span>&lt;{ output: <span class="code-type">string</span>; artifacts?: <span class="code-type">GeneratedArtifact</span>[] }&gt; {
+  <span class="code-keyword">const</span> userPrompt = <span class="code-keyword">this</span>.<span class="code-func">buildUserPrompt</span>(request);
+  <span class="code-keyword">const</span> actionStart = <span class="code-type">Date</span>.<span class="code-func">now</span>();
+
+  <span class="code-comment">// In production: calls the platform's LLM service</span>
+  <span class="code-comment">// const response = await llmService.complete({</span>
+  <span class="code-comment">//   system: systemPrompt, user: userPrompt,</span>
+  <span class="code-comment">//   model: 'claude-3-5-sonnet', temperature: 0,</span>
+  <span class="code-comment">// });</span>
+
+  <span class="code-keyword">this</span>.actions.<span class="code-func">push</span>({
+    id: <span class="code-string">`llm-${Date.now()}`</span>,
+    timestamp: <span class="code-type">Date</span>.<span class="code-func">now</span>(),
+    type: <span class="code-string">'generate'</span>,
+    description: <span class="code-string">`Execute ${request.commandId} with deterministic constraints`</span>,
+    input: { systemPromptLength: systemPrompt.length, userPrompt },
+    duration: <span class="code-type">Date</span>.<span class="code-func">now</span>() - actionStart,
+  });
+
+  <span class="code-keyword">return</span> { output: <span class="code-string">`[Deterministic execution result]`</span> };
+}</code></pre>
+    </div>
+  </div>
+
+  <h3>Step 4: Result Formatting</h3>
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">TypeScript</span>
+      <span>src/lib/plugins/plugin-runtime.ts <span class="tag tag-green" style="background:var(--green-dim);color:var(--green);padding:2px 8px;border-radius:4px;font-size:0.7rem;">🟢 Production</span></span>
+    </div>
+    <div class="code-body">
+<pre><code><span class="code-keyword">return</span> {
+  success: result.success,
+  content: result.output,
+  source: <span class="code-string">'vendor-command'</span>,
+  pluginId,
+  commandId,
+  actions: result.actions.<span class="code-func">map</span>(a => ({
+    type: a.type,
+    description: a.description,
+    timestamp: a.timestamp,
+  })),
+  artifacts: result.artifacts?.<span class="code-func">map</span>(a => ({
+    type: a.type,
+    name: a.name,
+    url: <span class="code-string">`data:${a.format};base64,${Buffer.from(a.content).toString('base64')}`</span>,
+  })),
+  deterministic: <span class="code-keyword">true</span>,
+  auditLog: result.actions,
+  error: result.error,
+};</code></pre>
+    </div>
+  </div>
+
+  <div class="highlight-box">
+    <strong>Trace summary:</strong> Chat input → <code>parseCommandInput</code> →
+    <code>pluginRuntime.execute()</code> → <code>deterministicExecutor.execute()</code> →
+    load markdown → validate inputs → build system prompt → LLM call → format result →
+    return to chat with audit trail. Every step is observable, every error is recoverable.
+  </div>
+</section>
+
+<!-- ==================== SECTION 7: QUIZ 1 ==================== -->
+<section class="section" id="sec7">
+  <div class="badge" style="background:var(--accent-dim);color:var(--accent);border-color:var(--border-strong)">Quiz 1 / 3</div>
+  <h2>Test Your <span class="accent">Knowledge</span></h2>
+
+  <div class="quiz-container">
+    <div class="quiz-question">What happens if a plugin's adapter type isn't supported by the platform?</div>
+    <div class="quiz-options">
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q1')">The platform falls back to the HTTP adapter automatically</button>
+      <button class="quiz-option" onclick="checkAnswer(this, true, 'q1')">The plugin fails to initialize because <code>canActivate()</code> returns false</button>
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q1')">The platform patches the missing adapter at runtime</button>
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q1')">The plugin runs in a headless browser instead</button>
+    </div>
+    <div class="quiz-feedback" id="q1-feedback"></div>
+  </div>
+
+  <div class="highlight-box" style="margin-top:24px;">
+    <strong>Remember:</strong> Each adapter implements <code>canActivate()</code> as an environment probe.
+    <code>McpAdapter</code> checks for <code>process</code>, <code>NativeAdapter</code> checks for
+    <code>globalThis.__ALLTERNIT_RUNTIME__</code>. If no adapter can activate, the plugin has no
+    valid host and initialization fails. There's no automatic fallback — the platform is explicit.
+  </div>
+</section>
+
+<!-- ==================== SECTION 8: QUIZ 2 ==================== -->
+<section class="section" id="sec8">
+  <div class="badge" style="background:var(--accent-dim);color:var(--accent);border-color:var(--border-strong)">Quiz 2 / 3</div>
+  <h2>Test Your <span class="accent">Knowledge</span></h2>
+
+  <div class="quiz-container">
+    <div class="quiz-question">Why does the platform re-validate manifests at load time rather than trusting the registry?</div>
+    <div class="quiz-options">
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q2')">Registry lookups are too slow for real-time validation</button>
+      <button class="quiz-option" onclick="checkAnswer(this, true, 'q2')">Registry data can be stale, corrupted, or tampered with during transit</button>
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q2')">The registry only stores plugin names, not full manifests</button>
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q2')">Re-validation is required by the MCP specification</button>
+    </div>
+    <div class="quiz-feedback" id="q2-feedback"></div>
+  </div>
+
+  <div class="info-box" style="margin-top:24px;">
+    <strong>Defense in depth:</strong> The registry is a <em>discovery service</em>, not a
+    <em>trust anchor</em>. The platform validates manifests locally using <code>utils.validateManifest()</code>
+    before any code is loaded. This prevents registry poisoning attacks where a malicious entry points
+    to a compromised plugin path.
+  </div>
+</section>
+
+<!-- ==================== SECTION 9: QUIZ 3 ==================== -->
+<section class="section" id="sec9">
+  <div class="badge" style="background:var(--accent-dim);color:var(--accent);border-color:var(--border-strong)">Quiz 3 / 3</div>
+  <h2>Test Your <span class="accent">Knowledge</span></h2>
+
+  <div class="quiz-container">
+    <div class="quiz-question">In the tool call flow, which component handles timeout cancellation?</div>
+    <div class="quiz-options">
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q3')">The MCP Adapter's <code>StdioServerTransport</code></button>
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q3')">The <code>PluginRegistry</code> class in the SDK</button>
+      <button class="quiz-option" onclick="checkAnswer(this, true, 'q3')">The <code>ExecutionContext</code> via an optional <code>abortSignal</code></button>
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q3')">The <code>UnifiedPluginRegistry</code>'s <code>toggle()</code> method</button>
+    </div>
+    <div class="quiz-feedback" id="q3-feedback"></div>
+  </div>
+
+  <div class="highlight-box" style="margin-top:24px;">
+    <strong>Look at the type:</strong> The SDK's <code>ExecutionContext</code> includes an optional
+    <code>abortSignal?: AbortSignal</code>. The platform's chat executor passes this signal from the
+    user's cancellation action (clicking "Stop"). Adapters that support cancellation check
+    <code>abortSignal.aborted</code> and throw an <code>AbortError</code> to cleanly terminate
+    long-running LLM calls or tool executions.
+  </div>
+</section>
+
+<!-- ==================== SECTION 10: CAPSTONE ==================== -->
+<section class="section" id="sec10">
+  <div class="badge badge-green">Capstone</div>
+  <h2>Instrument the <span class="accent">Plugin Loader</span></h2>
+  <p>
+    You've seen how Allternit loads, validates, and executes plugins. Your final project is to
+    <strong>add structured logging and metrics</strong> to the plugin loading pipeline, then build
+    a simple dashboard showing plugin health.
+  </p>
+
+  <div class="capstone">
+    <h3>🎯 Deliverable 1: Structured Logging</h3>
+    <p>Wrap <code>loadPlugin()</code> in <code>src/lib/plugins/index.ts</code> to emit structured log events:</p>
+    <ul>
+      <li><strong>load_start</strong> — pluginId, timestamp, caller (chat, api, workflow)</li>
+      <li><strong>load_complete</strong> — pluginId, duration_ms, cache_hit (boolean)</li>
+      <li><strong>load_error</strong> — pluginId, error_code, error_message, recoverable</li>
+    </ul>
+    <p>Use the platform's <code>PluginHost.logger</code> interface so logs are consumable by any adapter.</p>
+  </div>
+
+  <div class="capstone">
+    <h3>🎯 Deliverable 2: Validation Metrics</h3>
+    <p>Instrument <code>utils.validateManifest()</code> and the platform's re-validation to track:</p>
+    <ul>
+      <li>Total validations attempted vs. passed vs. failed</li>
+      <li>Most common failure reason (missing field, invalid runtime, bad schema)</li>
+      <li>Average validation duration (should be &lt; 1ms per manifest)</li>
+    </ul>
+  </div>
+
+  <div class="capstone">
+    <h3>🎯 Deliverable 3: Adapter Type Distribution</h3>
+    <p>Track which adapters are being activated across sessions:</p>
+    <table class="matrix-table">
+      <tr>
+        <th>Adapter</th>
+        <th>Activations</th>
+        <th>Failures</th>
+        <th>Avg Init Time</th>
+      </tr>
+      <tr>
+        <td><code>mcp</code></td>
+        <td class="cap-yes">1,247</td>
+        <td class="cap-no">12</td>
+        <td>45ms</td>
+      </tr>
+      <tr>
+        <td><code>http</code></td>
+        <td class="cap-yes">3,891</td>
+        <td class="cap-no">3</td>
+        <td>12ms</td>
+      </tr>
+      <tr>
+        <td><code>allternit</code></td>
+        <td class="cap-yes">8,452</td>
+        <td class="cap-no">0</td>
+        <td>8ms</td>
+      </tr>
+      <tr>
+        <td><code>cli</code></td>
+        <td class="cap-yes">342</td>
+        <td class="cap-no">28</td>
+        <td>22ms</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="capstone">
+    <h3>🎯 Deliverable 4: Metrics Dashboard (Interactive)</h3>
+    <p>Build a real-time health dashboard. Below is a starter UI you can extend:</p>
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-value" id="metric-loads">0</div>
+        <div class="metric-label">Plugin Loads</div>
+        <div class="metric-delta up">+12% vs last hour</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value" id="metric-errors">0</div>
+        <div class="metric-label">Load Errors</div>
+        <div class="metric-delta down">-5% vs last hour</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value" id="metric-validation">0%</div>
+        <div class="metric-label">Validation Pass</div>
+        <div class="metric-delta up">Stable</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value" id="metric-avg">0ms</div>
+        <div class="metric-label">Avg Load Time</div>
+        <div class="metric-delta down">+3ms vs last hour</div>
+      </div>
+    </div>
+    <div style="text-align:center; margin-top:16px;">
+      <button class="reveal-btn" id="metrics-btn" onclick="simulateMetrics()">📊 Simulate Live Metrics</button>
+    </div>
+  </div>
+
+  <div class="capstone">
+    <h3>🎯 Deliverable 5: Permission Grant Tracker</h3>
+    <p>Log every permission grant and denial at execution time:</p>
+    <ul>
+      <li>Which plugin requested which tool (<code>toolId</code>)</li>
+      <li>Whether the tool was <code>required</code> or <code>optional</code></li>
+      <li>The <code>fallback</code> strategy used when a tool was missing</li>
+      <li>User override actions ("Allow once", "Always allow", "Deny")</li>
+    </ul>
+    <p>Expose this data via <code>GET /api/plugins/permissions/audit</code> for compliance review.</p>
+  </div>
+
+  <div class="highlight-box" style="margin-top:24px;">
+    <strong>Stretch goal:</strong> Wire the dashboard into the actual <code>UnifiedPluginRegistry</code>
+    by adding a <code>subscribeMetrics()</code> method that emits real-time updates via WebSocket.
+    Build a separate Next.js page at <code>/admin/plugin-health</code> that renders the metric cards,
+    a time-series chart of load durations, and a live log stream of policy gate decisions.
+  </div>
+</section>
+
+<!-- Footer -->
+<div class="module-footer">
+  <div class="logo">A://LABS</div>
+  <p>ALABS-ADV-PLUGINSDK — Module 4: Bridge — How Allternit Uses the Plugin SDK</p>
+  <p style="margin-top:4px;">Built from source at <code>packages/@allternit/plugin-sdk</code> and <code>surfaces/allternit-platform/src/lib/plugins</code></p>
+</div>
+
+<script>
+// ===================== PROGRESS & NAVIGATION =====================
+const sections = document.querySelectorAll('.section');
+const navDots = document.querySelectorAll('.nav-dot');
+const progressBar = document.getElementById('progressBar');
+
+function updateProgress() {
+  const scrollTop = window.scrollY;
+  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+  const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+  progressBar.style.width = progress + '%';
+
+  let activeIdx = 0;
+  sections.forEach((sec, i) => {
+    const rect = sec.getBoundingClientRect();
+    if (rect.top <= window.innerHeight * 0.5) activeIdx = i;
+  });
+
+  navDots.forEach((dot, i) => {
+    dot.classList.toggle('active', i === activeIdx);
+  });
+}
+
+window.addEventListener('scroll', updateProgress, { passive: true });
+
+function scrollToSection(index) {
+  sections[index]?.scrollIntoView({ behavior: 'smooth' });
+}
+
+// ===================== INTERSECTION OBSERVER =====================
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) entry.target.classList.add('visible');
+  });
+}, { threshold: 0.15 });
+
+sections.forEach(sec => observer.observe(sec));
+
+// ===================== TOOL CALL FLOW ANIMATION =====================
+let tcRunning = false;
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function runToolCallFlow() {
+  if (tcRunning) return;
+  tcRunning = true;
+
+  const btn = document.getElementById('tc-btn');
+  const log = document.getElementById('tc-log');
+  const steps = document.querySelectorAll('#toolcall-flow .pipeline-step');
+  const arrows = document.querySelectorAll('#toolcall-flow .pipeline-arrow');
+
+  steps.forEach(s => s.classList.remove('active', 'success', 'error'));
+  arrows.forEach(a => a.classList.remove('active'));
+  btn.disabled = true;
+  log.innerHTML = '';
+
+  const addLog = (text, delay = 0) => {
+    const line = document.createElement('div');
+    line.className = 'log-line';
+    line.textContent = text;
+    line.style.animationDelay = delay + 'ms';
+    log.appendChild(line);
+    log.scrollTop = log.scrollHeight;
+  };
+
+  // Step 0: Chat Input
+  steps[0].classList.add('active');
+  addLog('[CHAT] User input: /legal:triage-nda contract.pdf');
+  await sleep(700);
+  steps[0].classList.remove('active');
+  steps[0].classList.add('success');
+
+  arrows[0].classList.add('active');
+  await sleep(400);
+
+  // Step 1: Parse Command
+  steps[1].classList.add('active');
+  addLog('[PARSE] Detected vendor command format: plugin=legal, command=triage-nda');
+  await sleep(600);
+  addLog('[PARSE] Resolved trigger in commandRegistry: ✓');
+  steps[1].classList.remove('active');
+  steps[1].classList.add('success');
+
+  arrows[1].classList.add('active');
+  await sleep(400);
+
+  // Step 2: Load Plugin
+  steps[2].classList.add('active');
+  addLog('[LOAD] Checking pluginCache for "legal"... miss');
+  await sleep(500);
+  addLog('[LOAD] Resolved bundledSource: vendor (Claude Desktop plugin)');
+  addLog('[LOAD] Loading command markdown: plugins/vendor/claude-desktop/legal/triage-nda.md');
+  await sleep(600);
+  addLog('[LOAD] Loaded 1 skill file as context');
+  steps[2].classList.remove('active');
+  steps[2].classList.add('success');
+
+  arrows[2].classList.add('active');
+  await sleep(400);
+
+  // Step 3: Validate
+  steps[3].classList.add('active');
+  addLog('[VALIDATE] Running utils.validateManifest()... ✓');
+  await sleep(500);
+  addLog('[VALIDATE] Policy gates: rate-limit ✓, prop-sanitization ✓, resource-limit ✓');
+  addLog('[VALIDATE] Input schema validation: prompt=string ✓');
+  steps[3].classList.remove('active');
+  steps[3].classList.add('success');
+
+  arrows[3].classList.add('active');
+  await sleep(400);
+
+  // Step 4: Execute
+  steps[4].classList.add('active');
+  addLog('[EXECUTE] Building deterministic system prompt (2,847 chars)');
+  await sleep(600);
+  addLog('[EXECUTE] LLM call: claude-3-5-sonnet, temperature=0');
+  await sleep(800);
+  addLog('[EXECUTE] Action tracked: generate — duration=1,240ms');
+  steps[4].classList.remove('active');
+  steps[4].classList.add('success');
+
+  arrows[4].classList.add('active');
+  await sleep(400);
+
+  // Step 5: Return Result
+  steps[5].classList.add('active');
+  addLog('[RESULT] Formatting output for chat UI');
+  await sleep(400);
+  addLog('[RESULT] 1 artifact attached (base64-encoded document)');
+  addLog('[DONE] Total flow duration: 3,847ms — auditLog: 4 actions');
+  steps[5].classList.remove('active');
+  steps[5].classList.add('success');
+
+  btn.disabled = false;
+  tcRunning = false;
+}
+
+// ===================== METRICS SIMULATION =====================
+let metricsInterval = null;
+
+function simulateMetrics() {
+  const btn = document.getElementById('metrics-btn');
+  const loads = document.getElementById('metric-loads');
+  const errors = document.getElementById('metric-errors');
+  const validation = document.getElementById('metric-validation');
+  const avg = document.getElementById('metric-avg');
+
+  if (metricsInterval) {
+    clearInterval(metricsInterval);
+    metricsInterval = null;
+    btn.textContent = '📊 Simulate Live Metrics';
+    return;
+  }
+
+  btn.textContent = '⏹ Stop Simulation';
+
+  let loadCount = 1247;
+  let errorCount = 12;
+  let valRate = 98.7;
+  let avgTime = 18;
+
+  loads.textContent = loadCount.toLocaleString();
+  errors.textContent = errorCount.toLocaleString();
+  validation.textContent = valRate.toFixed(1) + '%';
+  avg.textContent = avgTime + 'ms';
+
+  metricsInterval = setInterval(() => {
+    loadCount += Math.floor(Math.random() * 5);
+    if (Math.random() < 0.05) errorCount += 1;
+    valRate = Math.min(100, Math.max(95, valRate + (Math.random() - 0.5) * 0.4));
+    avgTime = Math.max(5, Math.min(50, avgTime + Math.floor((Math.random() - 0.5) * 4)));
+
+    loads.textContent = loadCount.toLocaleString();
+    errors.textContent = errorCount.toLocaleString();
+    validation.textContent = valRate.toFixed(1) + '%';
+    avg.textContent = avgTime + 'ms';
+  }, 800);
+}
+
+// ===================== QUIZZES =====================
+const quizAnswers = {
+  q1: "Correct! Each adapter probes its environment via <code>canActivate()</code>. If the required globals or APIs aren't present, the adapter refuses to initialize and the plugin has no valid host. There is no silent fallback — the platform fails explicitly so operators know which runtime is missing.",
+  q2: "Correct! The registry is a discovery service, not a trust anchor. Manifests can be stale, corrupted, or tampered with. By re-validating at load time with <code>utils.validateManifest()</code>, the platform ensures that only structurally valid, well-formed plugins are ever instantiated — regardless of what the registry claims.",
+  q3: "Correct! The SDK's <code>ExecutionContext</code> type includes an optional <code>abortSignal?: AbortSignal</code>. The platform passes this signal from user-initiated cancellations (e.g., clicking 'Stop'). Long-running executions check <code>signal.aborted</code> and throw an <code>AbortError</code>, which is caught and converted into a recoverable error response."
+};
+
+function checkAnswer(btn, isCorrect, qid) {
+  const container = btn.closest('.quiz-container');
+  const options = container.querySelectorAll('.quiz-option');
+  const feedback = document.getElementById(qid + '-feedback');
+
+  options.forEach(opt => opt.classList.add('disabled'));
+  btn.classList.add(isCorrect ? 'correct' : 'wrong');
+
+  if (!isCorrect) {
+    options.forEach(opt => {
+      if (opt.onclick.toString().includes('true')) opt.classList.add('correct');
+    });
+  }
+
+  feedback.innerHTML = quizAnswers[qid];
+  feedback.className = 'quiz-feedback show ' + (isCorrect ? 'correct' : 'wrong');
+}
+
+// Initialize
+updateProgress();
+</script>
+</body>
+</html>

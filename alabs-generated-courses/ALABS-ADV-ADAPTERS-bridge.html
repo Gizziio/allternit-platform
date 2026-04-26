@@ -1,0 +1,1646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Module 3: Bridge — How Allternit Integrates External APIs — A://Labs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0b0c;
+      --bg-elevated: #131314;
+      --bg-surface: #1a1a1c;
+      --bg-surface-hover: #222224;
+      --border: #2a2a2c;
+      --border-subtle: #1e1e20;
+      --text-primary: #f0f0f2;
+      --text-secondary: #a0a0a8;
+      --text-muted: #6b6b74;
+      --accent: #f59e0b;
+      --accent-dim: rgba(245, 158, 11, 0.15);
+      --accent-glow: rgba(245, 158, 11, 0.4);
+      --green: #22c55e;
+      --green-dim: rgba(34, 197, 94, 0.15);
+      --red: #ef4444;
+      --red-dim: rgba(239, 68, 68, 0.15);
+      --blue: #3b82f6;
+      --blue-dim: rgba(59, 130, 246, 0.15);
+      --purple: #a855f7;
+      --purple-dim: rgba(168, 85, 247, 0.15);
+      --cyan: #06b6d4;
+      --cyan-dim: rgba(6, 182, 212, 0.15);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --max-content: 860px;
+      --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--text-primary);
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #444; }
+
+    /* Progress Bar */
+    .progress-container {
+      position: fixed; top: 0; left: 0; right: 0; height: 3px;
+      background: var(--border-subtle); z-index: 1000;
+    }
+    .progress-bar {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, var(--accent), #fbbf24);
+      transition: width 0.15s linear;
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+
+    /* Nav */
+    .nav-toggle {
+      display: none; position: fixed; top: 16px; left: 16px; z-index: 900;
+      width: 40px; height: 40px; border-radius: var(--radius-sm);
+      background: var(--bg-surface); border: 1px solid var(--border);
+      color: var(--text-primary); cursor: pointer; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+    .sidebar {
+      position: fixed; top: 0; left: 0; width: 260px; height: 100vh;
+      background: var(--bg-elevated); border-right: 1px solid var(--border);
+      padding: 28px 20px; z-index: 800; overflow-y: auto;
+      transition: transform 0.3s ease;
+    }
+    .sidebar-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      z-index: 750; backdrop-filter: blur(2px);
+    }
+    .sidebar-brand {
+      font-weight: 800; font-size: 14px; letter-spacing: 0.08em;
+      color: var(--accent); text-transform: uppercase; margin-bottom: 6px;
+    }
+    .sidebar-title {
+      font-size: 12px; color: var(--text-muted); line-height: 1.5;
+      margin-bottom: 24px; padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-list { list-style: none; }
+    .nav-list li { margin-bottom: 4px; }
+    .nav-list a {
+      display: block; padding: 8px 12px; border-radius: var(--radius-sm);
+      color: var(--text-secondary); text-decoration: none; font-size: 13px;
+      font-weight: 500; transition: all 0.2s; border-left: 2px solid transparent;
+    }
+    .nav-list a:hover, .nav-list a.active {
+      color: var(--text-primary); background: var(--bg-surface);
+      border-left-color: var(--accent);
+    }
+    .nav-list a.active { font-weight: 600; }
+    .nav-section-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.12em; color: var(--text-muted);
+      margin: 16px 0 8px 12px;
+    }
+    .nav-progress-text {
+      margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border);
+      font-size: 12px; color: var(--text-muted); text-align: center;
+    }
+    .nav-progress-text span { color: var(--accent); font-weight: 700; }
+
+    /* Main */
+    .main {
+      margin-left: 260px; min-height: 100vh;
+    }
+    .content { max-width: var(--max-content); margin: 0 auto; padding: 60px 32px 120px; }
+
+    /* Hero */
+    .hero {
+      text-align: center; padding: 80px 0 60px; position: relative;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 16px; border-radius: 999px;
+      background: var(--accent-dim); border: 1px solid rgba(245,158,11,0.25);
+      color: var(--accent); font-size: 12px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 24px;
+    }
+    .hero h1 {
+      font-size: clamp(32px, 5vw, 52px); font-weight: 800; line-height: 1.1;
+      letter-spacing: -0.03em; margin-bottom: 20px;
+      background: linear-gradient(180deg, #fff 0%, #a0a0a8 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .hero p {
+      font-size: 18px; color: var(--text-secondary); max-width: 560px;
+      margin: 0 auto 32px; line-height: 1.7;
+    }
+    .hero-meta {
+      display: flex; justify-content: center; gap: 24px; flex-wrap: wrap;
+      font-size: 13px; color: var(--text-muted);
+    }
+
+    /* Section */
+    section { padding-top: 24px; margin-bottom: 64px; }
+    section h2 {
+      font-size: 28px; font-weight: 700; margin-bottom: 20px;
+      letter-spacing: -0.02em;
+    }
+    section h3 {
+      font-size: 20px; font-weight: 600; margin: 36px 0 14px;
+      color: var(--text-primary);
+    }
+    section p {
+      color: var(--text-secondary); margin-bottom: 16px; font-size: 15px;
+    }
+    .section-label {
+      display: inline-block; font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.12em; color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-elevated); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 24px; margin-bottom: 20px;
+    }
+    .card h4 {
+      font-size: 15px; font-weight: 600; margin-bottom: 10px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .card p { font-size: 14px; margin-bottom: 0; }
+
+    /* Provider Grid */
+    .provider-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px; margin: 20px 0;
+    }
+    .provider-card {
+      background: var(--bg-elevated); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 16px;
+      transition: all 0.2s;
+    }
+    .provider-card:hover {
+      border-color: var(--accent); background: var(--bg-surface);
+    }
+    .provider-card .provider-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      display: inline-block; margin-right: 8px;
+    }
+    .provider-card h5 {
+      font-size: 13px; font-weight: 600; margin-bottom: 4px;
+    }
+    .provider-card span {
+      font-size: 12px; color: var(--text-muted);
+    }
+
+    /* Code Blocks */
+    .code-block {
+      background: #0d0d0f; border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm); overflow: hidden; margin: 20px 0;
+    }
+    .code-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 16px; background: rgba(255,255,255,0.03);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .code-header span {
+      font-size: 12px; color: var(--text-muted); font-weight: 500;
+    }
+    .code-header .tag {
+      font-size: 10px; padding: 2px 8px; border-radius: 4px;
+      background: var(--accent-dim); color: var(--accent);
+      font-weight: 600; text-transform: uppercase;
+    }
+    pre {
+      padding: 20px; overflow-x: auto; font-family: var(--font-mono);
+      font-size: 13px; line-height: 1.6; color: #d4d4d8;
+    }
+    code { font-family: var(--font-mono); }
+    .keyword { color: #c586c0; }
+    .function { color: #dcdcaa; }
+    .string { color: #ce9178; }
+    .comment { color: #6a9955; }
+    .number { color: #b5cea8; }
+    .type { color: #4ec9b0; }
+    .operator { color: #d4d4d8; }
+
+    /* Lists */
+    ul, ol { margin: 12px 0 16px 20px; color: var(--text-secondary); font-size: 15px; }
+    li { margin-bottom: 8px; }
+
+    /* Flow Animation */
+    .flow-container {
+      background: var(--bg-elevated); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 32px; margin: 24px 0;
+      position: relative; overflow: hidden;
+    }
+    .flow-stages {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 8px; position: relative; z-index: 2;
+    }
+    .flow-stage {
+      flex: 1; text-align: center; padding: 16px 8px;
+      background: var(--bg-surface); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); position: relative;
+      transition: all 0.3s;
+    }
+    .flow-stage.active {
+      border-color: var(--accent); box-shadow: 0 0 16px var(--accent-glow);
+    }
+    .flow-stage .stage-icon {
+      font-size: 20px; margin-bottom: 8px;
+    }
+    .flow-stage .stage-label {
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.05em; color: var(--text-primary);
+    }
+    .flow-stage .stage-desc {
+      font-size: 11px; color: var(--text-muted); margin-top: 4px;
+    }
+    .flow-arrow {
+      color: var(--text-muted); font-size: 14px; z-index: 2;
+    }
+    .flow-packet {
+      position: absolute; width: 12px; height: 12px; border-radius: 50%;
+      background: var(--accent); box-shadow: 0 0 12px var(--accent-glow);
+      z-index: 10; opacity: 0;
+    }
+    .flow-controls {
+      display: flex; justify-content: center; gap: 12px; margin-top: 24px;
+    }
+    .flow-btn {
+      padding: 8px 20px; border-radius: var(--radius-sm);
+      background: var(--accent-dim); border: 1px solid rgba(245,158,11,0.3);
+      color: var(--accent); font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: all 0.2s; font-family: var(--font-sans);
+    }
+    .flow-btn:hover { background: var(--accent); color: #000; }
+    .flow-log {
+      margin-top: 20px; padding: 16px;
+      background: #0d0d0f; border-radius: var(--radius-sm);
+      font-family: var(--font-mono); font-size: 12px;
+      color: var(--text-muted); min-height: 80px;
+      border: 1px solid var(--border-subtle);
+    }
+    .flow-log .log-line { margin-bottom: 4px; }
+    .flow-log .log-time { color: var(--accent); margin-right: 8px; }
+    .flow-log .log-ok { color: var(--green); }
+    .flow-log .log-warn { color: var(--accent); }
+    .flow-log .log-err { color: var(--red); }
+
+    /* Failover Diagram */
+    .failover-diagram {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 16px; margin: 20px 0;
+    }
+    .failover-node {
+      background: var(--bg-surface); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 20px; text-align: center;
+      position: relative;
+    }
+    .failover-node.primary { border-color: var(--green); }
+    .failover-node.fallback { border-color: var(--blue); }
+    .failover-node .node-status {
+      position: absolute; top: -1px; right: -1px;
+      padding: 2px 10px; border-radius: 0 var(--radius-sm) 0 var(--radius-sm);
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+    }
+    .failover-node.primary .node-status {
+      background: var(--green-dim); color: var(--green);
+    }
+    .failover-node.fallback .node-status {
+      background: var(--blue-dim); color: var(--blue);
+    }
+    .failover-node h5 { font-size: 14px; margin-bottom: 6px; }
+    .failover-node p { font-size: 12px; margin: 0; }
+
+    /* Metrics Grid */
+    .metrics-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px; margin: 20px 0;
+    }
+    .metric-box {
+      background: var(--bg-elevated); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 16px; text-align: center;
+    }
+    .metric-box .metric-value {
+      font-size: 24px; font-weight: 700; font-family: var(--font-mono);
+      color: var(--text-primary); margin-bottom: 4px;
+    }
+    .metric-box .metric-label {
+      font-size: 11px; color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Quizzes */
+    .quiz {
+      background: var(--bg-elevated); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 24px; margin-bottom: 20px;
+    }
+    .quiz-question {
+      font-weight: 600; font-size: 15px; margin-bottom: 16px;
+      color: var(--text-primary);
+    }
+    .quiz-options { display: flex; flex-direction: column; gap: 10px; }
+    .quiz-option {
+      padding: 12px 16px; border-radius: var(--radius-sm);
+      background: var(--bg-surface); border: 1px solid var(--border);
+      color: var(--text-secondary); font-size: 14px; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .quiz-option:hover {
+      border-color: var(--accent); background: var(--accent-dim);
+      color: var(--text-primary);
+    }
+    .quiz-option.correct {
+      border-color: var(--green); background: var(--green-dim); color: var(--green);
+    }
+    .quiz-option.wrong {
+      border-color: var(--red); background: var(--red-dim); color: var(--red);
+    }
+    .quiz-option.disabled { cursor: default; pointer-events: none; }
+    .quiz-feedback {
+      display: none; margin-top: 14px; padding: 12px 16px;
+      border-radius: var(--radius-sm); font-size: 14px;
+    }
+    .quiz-feedback.show { display: block; }
+    .alert-success { background: var(--green-dim); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+    .alert-error { background: var(--red-dim); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+
+    /* Capstone */
+    .capstone-section {
+      background: linear-gradient(135deg, rgba(245,158,11,0.08), rgba(168,85,247,0.06));
+      border: 1px solid rgba(245,158,11,0.25); border-radius: var(--radius);
+      padding: 32px; margin-top: 32px;
+    }
+    .capstone-section h3 {
+      font-size: 22px; margin-top: 0;
+      background: linear-gradient(90deg, var(--accent), var(--purple));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .capstone-section .badge-row {
+      display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 20px;
+    }
+    .badge {
+      font-size: 11px; font-weight: 600; padding: 4px 12px;
+      border-radius: 999px; background: var(--accent-dim); color: var(--accent);
+      border: 1px solid rgba(245,158,11,0.2);
+    }
+    .task-list { list-style: none; margin: 0; padding: 0; }
+    .task-list li {
+      padding: 10px 0; border-bottom: 1px solid var(--border);
+      display: flex; align-items: flex-start; gap: 12px;
+      font-size: 14px; color: var(--text-secondary);
+    }
+    .task-list li:last-child { border-bottom: none; }
+    .task-list .check { color: var(--accent); font-weight: 700; }
+
+    /* Alert Boxes */
+    .alert {
+      padding: 16px 20px; border-radius: var(--radius-sm); margin: 20px 0;
+      font-size: 14px; display: flex; align-items: flex-start; gap: 12px;
+    }
+    .alert-info {
+      background: var(--blue-dim); border: 1px solid rgba(59,130,246,0.25);
+      color: var(--blue);
+    }
+    .alert-warn {
+      background: var(--accent-dim); border: 1px solid rgba(245,158,11,0.25);
+      color: var(--accent);
+    }
+    .alert-green {
+      background: var(--green-dim); border: 1px solid rgba(34,197,94,0.25);
+      color: var(--green);
+    }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap; }
+    .tab-btn {
+      padding: 8px 16px; border-radius: var(--radius-sm);
+      background: transparent; border: 1px solid var(--border);
+      color: var(--text-muted); font-size: 13px; font-weight: 500;
+      cursor: pointer; transition: all 0.2s; font-family: var(--font-sans);
+    }
+    .tab-btn:hover { color: var(--text-secondary); border-color: var(--text-muted); }
+    .tab-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* Table */
+    table {
+      width: 100%; border-collapse: collapse; margin: 16px 0;
+      font-size: 13px; color: var(--text-secondary);
+    }
+    th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+    th { font-weight: 600; color: var(--text-primary); font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .sidebar-overlay.open { display: block; }
+      .main { margin-left: 0; }
+      .nav-toggle { display: flex; }
+      .content { padding: 60px 20px 80px; }
+      .flow-stages { flex-wrap: wrap; }
+      .flow-arrow { display: none; }
+      .failover-diagram { grid-template-columns: 1fr; }
+      .provider-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 480px) {
+      .provider-grid { grid-template-columns: 1fr; }
+      .metrics-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="progress-container"><div class="progress-bar" id="progressBar"></div></div>
+
+<button class="nav-toggle" id="navToggle" aria-label="Open navigation">&#9776;</button>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-brand">A://Labs</div>
+  <div class="sidebar-title">Bridge: How Allternit Integrates External APIs<br>ALABS-ADV-ADAPTERS &middot; Module 3</div>
+  <ul class="nav-list">
+    <li><a href="#hero" class="active">Overview</a></li>
+    <li><a href="#landscape">Provider Landscape</a></li>
+    <li><a href="#adapter">Real Adapter</a></li>
+    <li><a href="#flow">Request Flow</a></li>
+    <li><a href="#failover">Failover</a></li>
+    <li><a href="#monitoring">Monitoring</a></li>
+    <li><a href="#config">Configuration</a></li>
+    <li><a href="#quizzes">Quizzes</a></li>
+    <li><a href="#capstone">Capstone</a></li>
+  </ul>
+  <div class="nav-progress-text">Module <span>3</span> of 3</div>
+</nav>
+
+<main class="main" id="main">
+<div class="content">
+
+<!-- ==================== HERO ==================== -->
+<section id="hero">
+  <div class="hero">
+    <div class="hero-badge">ALABS-ADV-ADAPTERS &middot; Module 3 (Final)</div>
+    <h1>Bridge:<br>How Allternit Integrates External APIs</h1>
+    <p>Connect adapter theory to production reality. Trace real requests through rate limiters, retry handlers, provider adapters, and failover chains inside the Allternit platform.</p>
+    <div class="hero-meta">
+      <span>ADV Tier</span>
+      <span>&middot;</span>
+      <span>~45 min</span>
+      <span>&middot;</span>
+      <span>Bridge Module</span>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== PROVIDER LANDSCAPE ==================== -->
+<section id="landscape">
+  <span class="section-label">The Ecosystem</span>
+  <h2>The Provider Landscape</h2>
+  <p>Allternit is not a monolith that builds everything from scratch. It orchestrates a diverse set of external providers — AI models, databases, caching layers, search engines, and infrastructure APIs. Understanding this landscape is the first step to understanding how adapters bridge the gaps.</p>
+
+  <h3>AI Model Providers</h3>
+  <div class="provider-grid">
+    <div class="provider-card">
+      <h5><span class="provider-dot" style="background:#10A37F"></span>OpenAI</h5>
+      <span>GPT-4o, GPT-5, DALL-E, Codex, embeddings</span>
+    </div>
+    <div class="provider-card">
+      <h5><span class="provider-dot" style="background:#D97757"></span>Anthropic</h5>
+      <span>Claude 3.5 Sonnet, Claude Haiku 4.5, reasoning</span>
+    </div>
+    <div class="provider-card">
+      <h5><span class="provider-dot" style="background:#4285F4"></span>Google</h5>
+      <span>Gemini 2.5 Flash, multimodal, thinking budget</span>
+    </div>
+    <div class="provider-card">
+      <h5><span class="provider-dot" style="background:#5B4CF3"></span>Kimi</h5>
+      <span>Kimi-for-coding, local-compatible inference</span>
+    </div>
+    <div class="provider-card">
+      <h5><span class="provider-dot" style="background:#000"></span>Ollama</h5>
+      <span>Local model hosting, zero external dependency</span>
+    </div>
+    <div class="provider-card">
+      <h5><span class="provider-dot" style="background:#6366F1"></span>Allternit Kernel</h5>
+      <span>Custom Rust runtime, CLI agents, sandbox</span>
+    </div>
+  </div>
+
+  <h3>Infrastructure & Data Providers</h3>
+  <div class="provider-grid">
+    <div class="provider-card">
+      <h5><span class="provider-dot" style="background:#ef4444"></span>Upstash Redis</h5>
+      <span>KV cache, rate-limit counters, session store</span>
+    </div>
+    <div class="provider-card">
+      <h5><span class="provider-dot" style="background:#3b82f6"></span>Prisma / PostgreSQL</h5>
+      <span>User data, runtime backend targets, preferences</span>
+    </div>
+    <div class="provider-card">
+      <h5><span class="provider-dot" style="background:#f59e0b"></span>Firecrawl</h5>
+      <span>URL retrieval, web scraping, content extraction</span>
+    </div>
+    <div class="provider-card">
+      <h5><span class="provider-dot" style="background:#a855f7"></span>Tavily</h5>
+      <span>Web search, research synthesis</span>
+    </div>
+    <div class="provider-card">
+      <h5><span class="provider-dot" style="background:#22c55e"></span>Langfuse</h5>
+      <span>LLM observability, tracing, prompt management</span>
+    </div>
+    <div class="provider-card">
+      <h5><span class="provider-dot" style="background:#06b6d4"></span>Clerk</h5>
+      <span>Auth, user management, control-plane sync</span>
+    </div>
+  </div>
+
+  <div class="alert alert-info">
+    <span style="font-size:18px">&#9432;</span>
+    <div>
+      <strong>Key Insight:</strong> Every provider speaks a different protocol. OpenAI returns <code>choices[0].message.content</code>. Anthropic streams <code>content_block_delta</code> events. The adapter layer is what makes them all look the same to the rest of the platform.
+    </div>
+  </div>
+</section>
+
+<!-- ==================== REAL ADAPTER ==================== -->
+<section id="adapter">
+  <span class="section-label">Production Code</span>
+  <h2>A Real Adapter Implementation</h2>
+  <p>Let's examine the <code>AiSdkReplyAdapter</code> from <code>@allternit/provider-adapters</code> — the same adapter running in production that normalizes streams from OpenAI, Anthropic, Gemini, and local models into a single canonical event format.</p>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab(event,'tab-adapter')">Adapter Core</button>
+    <button class="tab-btn" onclick="switchTab(event,'tab-ratelimit')">Rate Limiter</button>
+    <button class="tab-btn" onclick="switchTab(event,'tab-retry')">Retry Logic</button>
+    <button class="tab-btn" onclick="switchTab(event,'tab-error')">Error Handling</button>
+  </div>
+
+  <div class="tab-panel active" id="tab-adapter">
+    <div class="code-block">
+      <div class="code-header"><span>packages/@allternit/provider-adapters/src/ai-sdk.ts</span><span class="tag">TypeScript</span></div>
+      <pre><code><span class="comment">/**
+ * AiSdkReplyAdapter
+ *
+ * Converts AI SDK v6 TextStreamPart events into canonical ReplyEvents.
+ * Works for ALL AI SDK providers with zero provider-specific code.
+ */</span>
+<span class="keyword">export class</span> <span class="function">AiSdkReplyAdapter</span> {
+  <span class="keyword">private readonly</span> openedTextIds = <span class="keyword">new</span> <span class="type">Set</span>&lt;<span class="type">string</span>&gt;();
+  <span class="keyword">private readonly</span> pendingTools = <span class="keyword">new</span> <span class="type">Map</span>&lt;<span class="type">string</span>, { toolName: <span class="type">string</span> }&gt;();
+  <span class="keyword">private</span> hasNativeReasoning = <span class="keyword">false</span>;
+
+  <span class="function">process</span>(part: <span class="type">AiSdkStreamPart</span>): <span class="type">void</span> {
+    <span class="keyword">switch</span> (part.type) {
+      <span class="keyword">case</span> <span class="string">"text-delta"</span>: {
+        <span class="keyword">if</span> (!<span class="keyword">this</span>.openedTextIds.has(part.id)) {
+          <span class="keyword">this</span>.openedTextIds.add(part.id);
+          <span class="keyword">this</span>.emit({
+            type: <span class="string">"reply.item.added"</span>,
+            itemId: part.id,
+            kind: <span class="string">"text"</span>,
+          });
+        }
+        <span class="keyword">this</span>.emit({
+          type: <span class="string">"reply.text.delta"</span>,
+          itemId: part.id,
+          delta: part.text,
+        });
+        <span class="keyword">break</span>;
+      }
+
+      <span class="keyword">case</span> <span class="string">"tool-call"</span>: {
+        <span class="keyword">const</span> { toolCallId, toolName, args } = part;
+        <span class="keyword">this</span>.emit({
+          type: <span class="string">"tool_call.started"</span>,
+          toolCallId,
+          toolName,
+          input: args,
+        });
+        <span class="keyword">break</span>;
+      }
+
+      <span class="keyword">case</span> <span class="string">"tool-result"</span>: {
+        <span class="keyword">const</span> itemId = <span class="keyword">this</span>.toolCallIdToItemId.get(part.toolCallId)
+          ?? part.toolCallId;
+        <span class="keyword">this</span>.emit({
+          type: <span class="string">"tool_call.completed"</span>,
+          itemId,
+          toolCallId: part.toolCallId,
+          output: part.result,
+        });
+        <span class="keyword">break</span>;
+      }
+
+      <span class="keyword">case</span> <span class="string">"error"</span>: {
+        <span class="keyword">this</span>.emit({
+          type: <span class="string">"reply.failed"</span>,
+          error: part.error <span class="keyword">instanceof</span> <span class="type">Error</span>
+            ? part.error.message
+            : <span class="string">"stream error"</span>,
+        });
+        <span class="keyword">break</span>;
+      }
+    }
+  }
+
+  <span class="keyword">async</span> <span class="function">consume</span>(stream: <span class="type">AsyncIterable</span>&lt;<span class="type">AiSdkStreamPart</span>&gt;): <span class="type">Promise</span>&lt;<span class="type">void</span>&gt; {
+    <span class="keyword">try</span> {
+      <span class="keyword">for await</span> (<span class="keyword">const</span> part <span class="keyword">of</span> stream) {
+        <span class="keyword">this</span>.process(part);
+      }
+    } <span class="keyword">catch</span> (err) {
+      <span class="keyword">this</span>.emit({
+        type: <span class="string">"reply.failed"</span>,
+        error: err <span class="keyword">instanceof</span> <span class="type">Error</span> ? err.message : <span class="string">"stream consume error"</span>,
+      });
+    }
+  }
+}</code></pre>
+    </div>
+    <p><strong>What makes this production-grade?</strong> The adapter handles <em>every</em> edge case: providers that skip <code>text-start</code>, reasoning blocks embedded in plain text (<code>&lt;thinking&gt;</code>), MCP app results, tool call deduplication, and graceful degradation on stream errors. One adapter, all providers.</p>
+  </div>
+
+  <div class="tab-panel" id="tab-ratelimit">
+    <div class="code-block">
+      <div class="code-header"><span>surfaces/allternit-platform/src/lib/error-rate-limiter.ts</span><span class="tag">TypeScript</span></div>
+      <pre><code><span class="keyword">export interface</span> <span class="type">RateLimitConfig</span> {
+  maxAttempts?: <span class="type">number</span>;
+  windowMs?: <span class="type">number</span>;
+  cooldownMs?: <span class="type">number</span>;
+}
+
+<span class="keyword">const</span> DEFAULT_CONFIG: <span class="type">Required</span>&lt;<span class="type">RateLimitConfig</span>&gt; = {
+  maxAttempts: <span class="number">3</span>,
+  windowMs: <span class="number">60000</span>,      <span class="comment">// 1 minute</span>
+  cooldownMs: <span class="number">300000</span>,    <span class="comment">// 5 minutes</span>
+};
+
+<span class="keyword">class</span> <span class="function">ErrorRateLimiter</span> {
+  <span class="keyword">private</span> errors = <span class="keyword">new</span> <span class="type">Map</span>&lt;<span class="type">string</span>, <span class="type">ErrorEntry</span>&gt;();
+
+  <span class="function">shouldShow</span>(errorKey: <span class="type">string</span>): <span class="type">boolean</span> {
+    <span class="keyword">const</span> now = Date.now();
+    <span class="keyword">const</span> entry = <span class="keyword">this</span>.errors.get(errorKey);
+
+    <span class="keyword">if</span> (!entry) {
+      <span class="keyword">this</span>.errors.set(errorKey, {
+        count: <span class="number">1</span>,
+        firstSeen: now,
+        lastSeen: now,
+        suppressed: <span class="keyword">false</span>,
+      });
+      <span class="keyword">return</span> <span class="keyword">true</span>;
+    }
+
+    <span class="comment">// In cooldown?</span>
+    <span class="keyword">if</span> (entry.suppressed) {
+      <span class="keyword">const</span> elapsed = now - entry.lastSeen;
+      <span class="keyword">if</span> (elapsed &lt; <span class="keyword">this</span>.config.cooldownMs) {
+        entry.lastSeen = now;
+        <span class="keyword">return</span> <span class="keyword">false</span>;
+      }
+      entry.suppressed = <span class="keyword">false</span>;
+      entry.count = <span class="number">1</span>;
+      <span class="keyword">return</span> <span class="keyword">true</span>;
+    }
+
+    <span class="comment">// Window expired?</span>
+    <span class="keyword">if</span> (now - entry.firstSeen &gt; <span class="keyword">this</span>.config.windowMs) {
+      entry.count = <span class="number">1</span>;
+      entry.firstSeen = now;
+      <span class="keyword">return</span> <span class="keyword">true</span>;
+    }
+
+    entry.count++;
+    <span class="keyword">if</span> (entry.count &gt; <span class="keyword">this</span>.config.maxAttempts) {
+      entry.suppressed = <span class="keyword">true</span>;
+      <span class="keyword">return</span> <span class="keyword">false</span>;
+    }
+    <span class="keyword">return</span> <span class="keyword">true</span>;
+  }
+
+  <span class="function">getSummary</span>(): { totalErrors: <span class="type">number</span>; suppressedErrors: <span class="type">number</span>; activeErrors: <span class="type">number</span> } {
+    <span class="keyword">let</span> suppressed = <span class="number">0</span>, active = <span class="number">0</span>;
+    <span class="keyword">for</span> (<span class="keyword">const</span> entry <span class="keyword">of</span> <span class="keyword">this</span>.errors.values()) {
+      entry.suppressed ? suppressed++ : active++;
+    }
+    <span class="keyword">return</span> { totalErrors: <span class="keyword">this</span>.errors.size, suppressedErrors: suppressed, activeErrors: active };
+  }
+}</code></pre>
+    </div>
+    <p>The <code>ErrorRateLimiter</code> prevents error notification spam. But more importantly, the same pattern powers API rate limiting: track keys per provider, enforce windows, and suppress (or queue) requests that exceed the threshold.</p>
+  </div>
+
+  <div class="tab-panel" id="tab-retry">
+    <div class="code-block">
+      <div class="code-header"><span>surfaces/allternit-platform/src/hooks/use-retry.ts</span><span class="tag">TypeScript</span></div>
+      <pre><code><span class="keyword">export interface</span> <span class="type">RetryConfig</span> {
+  maxAttempts?: <span class="type">number</span>;
+  initialDelay?: <span class="type">number</span>;
+  maxDelay?: <span class="type">number</span>;
+  backoffMultiplier?: <span class="type">number</span>;
+}
+
+<span class="keyword">const</span> DEFAULT_CONFIG: <span class="type">Required</span>&lt;<span class="type">RetryConfig</span>&gt; = {
+  maxAttempts: <span class="number">3</span>,
+  initialDelay: <span class="number">1000</span>,
+  maxDelay: <span class="number">30000</span>,
+  backoffMultiplier: <span class="number">2</span>,
+};
+
+<span class="keyword">export async function</span> <span class="function">withRetry</span>&lt;<span class="type">T</span>&gt;(
+  operation: () =&gt; <span class="type">Promise</span>&lt;<span class="type">T</span>&gt;,
+  config: <span class="type">RetryConfig</span> = {}
+): <span class="type">Promise</span>&lt;<span class="type">T</span>&gt; {
+  <span class="keyword">const</span> finalConfig = { ...DEFAULT_CONFIG, ...config };
+
+  <span class="keyword">for</span> (<span class="keyword">let</span> attempt = <span class="number">1</span>; attempt &lt;= finalConfig.maxAttempts; attempt++) {
+    <span class="keyword">try</span> {
+      <span class="keyword">return await</span> operation();
+    } <span class="keyword">catch</span> (error) {
+      <span class="keyword">const</span> err = error <span class="keyword">instanceof</span> <span class="type">Error</span> ? error : <span class="keyword">new</span> <span class="type">Error</span>(<span class="type">String</span>(error));
+
+      <span class="keyword">if</span> (attempt &gt;= finalConfig.maxAttempts) {
+        <span class="keyword">throw</span> err;
+      }
+
+      <span class="keyword">const</span> delay = Math.min(
+        finalConfig.initialDelay * Math.pow(finalConfig.backoffMultiplier, attempt - <span class="number">1</span>),
+        finalConfig.maxDelay
+      );
+
+      <span class="keyword">await</span> <span class="keyword">new</span> <span class="type">Promise</span>(resolve =&gt; setTimeout(resolve, delay));
+    }
+  }
+
+  <span class="keyword">throw</span> <span class="keyword">new</span> <span class="type">Error</span>(<span class="string">"Retry loop exited unexpectedly"</span>);
+}</code></pre>
+    </div>
+    <p>Exponential backoff with jitter (implied by the <code>backoffMultiplier</code>) prevents thundering herds when a provider recovers. The <code>maxDelay</code> cap ensures users never wait more than 30 seconds between attempts.</p>
+  </div>
+
+  <div class="tab-panel" id="tab-error">
+    <div class="code-block">
+      <div class="code-header"><span>surfaces/allternit-platform/src/lib/ai/rust-stream-adapter.ts</span><span class="tag">TypeScript</span></div>
+      <pre><code><span class="keyword">case</span> <span class="string">"error"</span>: {
+  <span class="keyword">const</span> p = part <span class="keyword">as</span> { error: <span class="type">unknown</span> };
+  <span class="keyword">const</span> errMsg =
+    p.error <span class="keyword">instanceof</span> <span class="type">Error</span>
+      ? p.error.message
+      : <span class="keyword">typeof</span> p.error === <span class="string">"string"</span>
+        ? p.error
+        : <span class="string">"stream error"</span>;
+  <span class="keyword">this</span>.emit({
+    type: <span class="string">"reply.failed"</span>,
+    replyId: <span class="keyword">this</span>.replyId,
+    runId: <span class="keyword">this</span>.runId,
+    error: errMsg,
+    ts: <span class="keyword">this</span>.ts(),
+  });
+  <span class="keyword">break</span>;
+}
+
+<span class="keyword">case</span> <span class="string">"abort"</span>: {
+  <span class="keyword">const</span> p = part <span class="keyword">as</span> { reason?: <span class="type">string</span> };
+  <span class="keyword">this</span>.emit({
+    type: <span class="string">"reply.failed"</span>,
+    error: p.reason ?? <span class="string">"aborted"</span>,
+    ts: <span class="keyword">this</span>.ts(),
+  });
+  <span class="keyword">break</span>;
+}</n
+<span class="comment">// In consume() — graceful catch-all</span>
+<span class="keyword">async</span> <span class="function">consume</span>(stream) {
+  <span class="keyword">try</span> {
+    <span class="keyword">for await</span> (<span class="keyword">const</span> part <span class="keyword">of</span> stream) {
+      <span class="keyword">this</span>.process(part);
+    }
+  } <span class="keyword">catch</span> (err) {
+    <span class="keyword">this</span>.emit({
+      type: <span class="string">"reply.failed"</span>,
+      error: err <span class="keyword">instanceof</span> <span class="type">Error</span> ? err.message : <span class="string">"stream consume error"</span>,
+      ts: <span class="keyword">this</span>.ts(),
+    });
+  }
+}</code></pre>
+    </div>
+    <p>Every error path normalizes into a <code>reply.failed</code> event. The UI never crashes from a provider exception — it receives a clean, typed failure event and renders an appropriate message. This is defensive programming at scale.</p>
+  </div>
+
+  <h3>The OpenAI Rust Adapter (Kernel Level)</h3>
+  <p>Not all adapters live in TypeScript. The Allternit kernel includes Rust-native adapters for low-latency inference:</p>
+
+  <div class="code-block">
+    <div class="code-header"><span>domains/kernel/drivers/allternit-providers/src/adapters/openai.rs</span><span class="tag">Rust</span></div>
+    <pre><code><span class="keyword">use</span> async_trait::async_trait;
+<span class="keyword">use</span> reqwest::Client;
+<span class="keyword">use</span> serde::{Deserialize, Serialize};
+
+#[async_trait]
+<span class="keyword">pub trait</span> <span class="type">LLMProvider</span>: Send + Sync {
+    <span class="keyword">async fn</span> <span class="function">complete</span>(&<span class="keyword">self</span>, system: &<span class="type">str</span>, user: &<span class="type">str</span>) -&gt; <span class="type">Result</span>&lt;<span class="type">String</span>&gt;;
+}
+
+<span class="keyword">pub struct</span> <span class="type">OpenAIProvider</span> {
+    api_key: <span class="type">String</span>,
+    model: <span class="type">String</span>,
+    client: <span class="type">Client</span>,
+}
+
+#[async_trait]
+<span class="keyword">impl</span> <span class="type">LLMProvider</span> <span class="keyword">for</span> <span class="type">OpenAIProvider</span> {
+    <span class="keyword">async fn</span> <span class="function">complete</span>(&<span class="keyword">self</span>, system: &<span class="type">str</span>, user: &<span class="type">str</span>) -&gt; <span class="type">Result</span>&lt;<span class="type">String</span>&gt; {
+        <span class="keyword">let</span> request = <span class="type">CompletionRequest</span> {
+            model: <span class="keyword">self</span>.model.clone(),
+            messages: <span class="type">vec!</span>[...],
+            temperature: <span class="number">0.0</span>,
+        };
+
+        <span class="keyword">let</span> res = <span class="keyword">self</span>
+            .client
+            .post(<span class="string">"https://api.openai.com/v1/chat/completions"</span>)
+            .header(<span class="string">"Authorization"</span>, format!(<span class="string">"Bearer {}"</span>, <span class="keyword">self</span>.api_key))
+            .json(&request)
+            .send()
+            .<span class="keyword">await</span>
+            .context(<span class="string">"Failed to send request to OpenAI"</span>)?;
+
+        <span class="keyword">if</span> !res.status().is_success() {
+            <span class="keyword">let</span> error_text = res.text().<span class="keyword">await</span>?;
+            anyhow::bail!(<span class="string">"OpenAI API error: {}"</span>, error_text);
+        }
+
+        <span class="keyword">let</span> body: <span class="type">CompletionResponse</span> = res
+            .json()
+            .<span class="keyword">await</span>
+            .context(<span class="string">"Failed to parse OpenAI response"</span>)?;
+
+        body.choices
+            .first()
+            .map(|c| c.message.content.clone())
+            .ok_or_else(|| anyhow::anyhow!(<span class="string">"No choices in response"</span>))
+    }
+}</code></pre>
+  </div>
+</section>
+
+<!-- ==================== REQUEST FLOW ==================== -->
+<section id="flow">
+  <span class="section-label">Tracing Requests</span>
+  <h2>Request Flow: End to End</h2>
+  <p>When a user sends a message in Allternit, that request doesn't go straight to OpenAI. It passes through a pipeline of guards, adapters, and caches. Click <strong>Run Simulation</strong> to watch a packet travel through the system.</p>
+
+  <div class="flow-container">
+    <div class="flow-stages" id="flowStages">
+      <div class="flow-stage" id="stage1">
+        <div class="stage-icon">&#128172;</div>
+        <div class="stage-label">Request</div>
+        <div class="stage-desc">User message</div>
+      </div>
+      <div class="flow-arrow">&#10142;</div>
+      <div class="flow-stage" id="stage2">
+        <div class="stage-icon">&#128737;</div>
+        <div class="stage-label">Rate Limit</div>
+        <div class="stage-desc">Token bucket</div>
+      </div>
+      <div class="flow-arrow">&#10142;</div>
+      <div class="flow-stage" id="stage3">
+        <div class="stage-icon">&#128260;</div>
+        <div class="stage-label">Retry Handler</div>
+        <div class="stage-desc">Exponential backoff</div>
+      </div>
+      <div class="flow-arrow">&#10142;</div>
+      <div class="flow-stage" id="stage4">
+        <div class="stage-icon">&#128208;</div>
+        <div class="stage-label">Adapter</div>
+        <div class="stage-desc">Normalize events</div>
+      </div>
+      <div class="flow-arrow">&#10142;</div>
+      <div class="flow-stage" id="stage5">
+        <div class="stage-icon">&#9729;</div>
+        <div class="stage-label">Provider</div>
+        <div class="stage-desc">OpenAI/Anthropic</div>
+      </div>
+      <div class="flow-arrow">&#10142;</div>
+      <div class="flow-stage" id="stage6">
+        <div class="stage-icon">&#128230;</div>
+        <div class="stage-label">Cache</div>
+        <div class="stage-desc">Redis / KV</div>
+      </div>
+    </div>
+
+    <div class="flow-controls">
+      <button class="flow-btn" id="runFlowBtn" onclick="runFlowSimulation()">Run Simulation</button>
+      <button class="flow-btn" onclick="resetFlowSimulation()">Reset</button>
+    </div>
+
+    <div class="flow-log" id="flowLog">
+      <div class="log-line"><span class="log-time">--:--:--</span>Ready. Click "Run Simulation" to trace a request.</div>
+    </div>
+  </div>
+
+  <h3>Stage-by-Stage Breakdown</h3>
+
+  <table>
+    <thead>
+      <tr><th>Stage</th><th>Component</th><th>Responsibility</th><th>File Reference</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>1. Request</strong></td>
+        <td>Chat composer / API route</td>
+        <td>Accept user input, validate session, build message array</td>
+        <td><code>app/api/agent-chat/route.ts</code></td>
+      </tr>
+      <tr>
+        <td><strong>2. Rate Limit</strong></td>
+        <td>ErrorRateLimiter</td>
+        <td>Track per-user request frequency, suppress spam</td>
+        <td><code>lib/error-rate-limiter.ts</code></td>
+      </tr>
+      <tr>
+        <td><strong>3. Retry Handler</strong></td>
+        <td>withRetry / useRetry</td>
+        <td>Exponential backoff on 5xx or timeout</td>
+        <td><code>hooks/use-retry.ts</code></td>
+      </tr>
+      <tr>
+        <td><strong>4. Adapter</strong></td>
+        <td>AiSdkReplyAdapter</td>
+        <td>Convert provider-specific streams to canonical ReplyEvents</td>
+        <td><code>provider-adapters/src/ai-sdk.ts</code></td>
+      </tr>
+      <tr>
+        <td><strong>5. Provider</strong></td>
+        <td>@ai-sdk/gateway</td>
+        <td>Route to OpenAI, Anthropic, or local model based on model ID</td>
+        <td><code>lib/ai/providers.ts</code></td>
+      </tr>
+      <tr>
+        <td><strong>6. Cache</strong></td>
+        <td>Upstash Redis</td>
+        <td>Cache embeddings, session state, provider responses</td>
+        <td><code>lib/redis/client.ts</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="alert alert-green">
+    <span style="font-size:18px">&#10003;</span>
+    <div>
+      <strong>Performance Insight:</strong> The Redis client uses Upstash's HTTP-based REST API instead of persistent TCP connections. This means it works in every serverless invocation without connection pool exhaustion — a critical design choice for Vercel Edge.
+    </div>
+  </div>
+</section>
+
+<!-- ==================== FAILOVER ==================== -->
+<section id="failover">
+  <span class="section-label">Resilience</span>
+  <h2>Failover in Practice</h2>
+  <p>What happens when the primary runtime backend goes offline? Allternit's gateway proxy implements automatic failover with health-checked candidate rotation.</p>
+
+  <h3>The Gateway Proxy Failover</h3>
+  <div class="code-block">
+    <div class="code-header"><span>surfaces/allternit-platform/src/lib/runtime-gateway-proxy.ts</span><span class="tag">TypeScript</span></div>
+    <pre><code><span class="keyword">export async function</span> <span class="function">proxyGatewayRequest</span>(
+  request: <span class="type">NextRequest</span>,
+  upstreamPath: <span class="type">string</span>,
+  options?: {
+    allowStatusesUnder500?: <span class="type">boolean</span>;
+    retryOnStatuses?: <span class="type">number</span>[];
+  },
+): <span class="type">Promise</span>&lt;<span class="type">Response</span>&gt; {
+  <span class="keyword">const</span> candidates = <span class="keyword">await</span> <span class="function">getGatewayCandidates</span>();
+  <span class="keyword">const</span> allowStatusesUnder500 = options?.allowStatusesUnder500 ?? <span class="keyword">true</span>;
+  <span class="keyword">const</span> retryOnStatuses = <span class="keyword">new</span> <span class="type">Set</span>(options?.retryOnStatuses ?? []);
+
+  <span class="keyword">for</span> (<span class="keyword">const</span> candidate <span class="keyword">of</span> candidates) {
+    <span class="keyword">const</span> targetUrl = <span class="string">`${candidate.base}${upstreamPath}`</span>;
+    <span class="keyword">try</span> {
+      <span class="keyword">const</span> upstream = <span class="keyword">await</span> <span class="function">fetch</span>(targetUrl, {
+        method,
+        headers: <span class="function">buildHeaders</span>(request, candidate, options),
+        body: bodyBuffer?.byteLength &gt; <span class="number">0</span> ? bodyBuffer : <span class="keyword">undefined</span>,
+        signal: AbortSignal.timeout(<span class="number">15_000</span>),
+        duplex: bodyBuffer ? <span class="string">"half"</span> : <span class="keyword">undefined</span>,
+      });
+
+      <span class="keyword">if</span> (retryOnStatuses.has(upstream.status)) {
+        <span class="keyword">continue</span>; <span class="comment">// Try next candidate</span>
+      }
+
+      <span class="keyword">if</span> (upstream.ok || (allowStatusesUnder500 && upstream.status &lt; <span class="number">500</span>)) {
+        <span class="keyword">return</span> <span class="function">buildResponse</span>(upstream);
+      }
+    } <span class="keyword">catch</span> {
+      <span class="comment">// Try the next candidate.</span>
+    }
+  }
+
+  <span class="keyword">return</span> NextResponse.json(
+    { error: <span class="string">"Runtime backend is unavailable"</span> },
+    { status: <span class="number">503</span> },
+  );
+}</code></pre>
+  </div>
+
+  <h3>Health Check &amp; Candidate Discovery</h3>
+  <p>Before any proxy request, the system resolves a prioritized list of gateway candidates:</p>
+
+  <div class="code-block">
+    <div class="code-header"><span>surfaces/allternit-platform/src/lib/runtime-backend.ts</span><span class="tag">TypeScript</span></div>
+    <pre><code><span class="keyword">export async function</span> <span class="function">verifyRuntimeBackendHealth</span>(
+  baseUrl: <span class="type">string</span>,
+  options: { authorizationHeader?: <span class="type">string</span> | <span class="keyword">null</span> } = {},
+): <span class="type">Promise</span>&lt;{ reachable: <span class="type">boolean</span>; healthUrl: <span class="type">string</span> | <span class="keyword">null</span> }&gt; {
+  <span class="keyword">const</span> candidates = [
+    <span class="string">`${normalized}/v1/global/health`</span>,
+    <span class="string">`${normalized}/v1/provider`</span>,
+    <span class="string">`${normalized}/health`</span>,
+  ];
+
+  <span class="keyword">for</span> (<span class="keyword">const</span> candidate <span class="keyword">of</span> candidates) {
+    <span class="keyword">try</span> {
+      <span class="keyword">const</span> response = <span class="keyword">await</span> <span class="function">fetch</span>(candidate, {
+        method: <span class="string">"GET"</span>,
+        headers,
+        signal: AbortSignal.timeout(<span class="number">3000</span>),
+      });
+
+      <span class="keyword">if</span> (response.ok) {
+        <span class="keyword">return</span> { reachable: <span class="keyword">true</span>, healthUrl: candidate };
+      }
+    } <span class="keyword">catch</span> {
+      <span class="comment">// Try the next health endpoint candidate.</span>
+    }
+  }
+
+  <span class="keyword">return</span> { reachable: <span class="keyword">false</span>, healthUrl: <span class="keyword">null</span> };
+}</code></pre>
+  </div>
+
+  <div class="failover-diagram">
+    <div class="failover-node primary">
+      <div class="node-status">Active</div>
+      <h5>Primary Gateway</h5>
+      <p>User's BYOC VPS or Cloud instance.<br>Resolved from runtime-backend snapshot.</p>
+    </div>
+    <div class="failover-node fallback">
+      <div class="node-status">Fallback</div>
+      <h5>Local Gateway</h5>
+      <p><code>http://127.0.0.1:8013</code><br>Always available on developer machines.</p>
+    </div>
+  </div>
+
+  <p>The proxy iterates candidates in priority order: <strong>user-preference → local default</strong>. If a candidate returns a retryable status or throws, it silently moves to the next. Only after exhausting all candidates does the user see a 503.</p>
+
+  <h3>Backend Snapshot Caching</h3>
+  <p>To avoid resolving the backend on every request, the client caches a snapshot with a 15-second TTL:</p>
+
+  <div class="code-block">
+    <div class="code-header"><span>surfaces/allternit-platform/src/lib/runtime-backend-client.ts</span><span class="tag">TypeScript</span></div>
+    <pre><code><span class="keyword">const</span> SNAPSHOT_TTL_MS = <span class="number">15_000</span>;
+
+<span class="keyword">export async function</span> <span class="function">loadRuntimeBackendSnapshot</span>(
+  options: { force?: <span class="type">boolean</span> } = {},
+): <span class="type">Promise</span>&lt;<span class="type">ClientRuntimeBackendSnapshot</span>&gt; {
+  <span class="keyword">const</span> cached = <span class="function">getRuntimeBackendSnapshotSync</span>();
+  <span class="keyword">const</span> fetchedAt = Date.parse(cached.fetched_at);
+
+  <span class="keyword">if</span> (
+    !options.force &&
+    Number.isFinite(fetchedAt) &&
+    Date.now() - fetchedAt &lt; SNAPSHOT_TTL_MS
+  ) {
+    <span class="keyword">return</span> cached; <span class="comment">// Fresh enough</span>
+  }
+
+  <span class="keyword">if</span> (inflightSnapshotPromise && !options.force) {
+    <span class="keyword">return</span> inflightSnapshotPromise; <span class="comment">// Deduplicate</span>
+  }
+
+  inflightSnapshotPromise = <span class="function">fetch</span>(<span class="string">"/api/v1/runtime/backend"</span>, { ... })
+    .then(<span class="keyword">async</span> (response) =&gt; {
+      <span class="keyword">const</span> payload = <span class="keyword">await</span> response.json();
+      <span class="keyword">return</span> <span class="function">applyRuntimeBackendSnapshot</span>(payload);
+    })
+    .catch(() =&gt; cached)
+    .finally(() =&gt; {
+      inflightSnapshotPromise = <span class="keyword">null</span>;
+    });
+
+  <span class="keyword">return</span> inflightSnapshotPromise;
+}</code></pre>
+  </div>
+
+  <div class="alert alert-warn">
+    <span style="font-size:18px">&#9888;</span>
+    <div>
+      <strong>Design Note:</strong> The snapshot uses request deduplication (<code>inflightSnapshotPromise</code>) so that 50 concurrent requests don't trigger 50 backend resolves. Only the first request fetches; the rest await the same promise.
+    </div>
+  </div>
+</section>
+
+<!-- ==================== MONITORING ==================== -->
+<section id="monitoring">
+  <span class="section-label">Observability</span>
+  <h2>Monitoring &amp; Alerting</h2>
+  <p>You can't operate what you can't see. Allternit's adapter health is tracked through a combination of client-side telemetry, error rate limiting, and backend heartbeat monitoring.</p>
+
+  <h3>What Gets Measured</h3>
+  <div class="metrics-grid">
+    <div class="metric-box">
+      <div class="metric-value" style="color:var(--green)">~45ms</div>
+      <div class="metric-label">P50 Latency</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-value" style="color:var(--accent)">~120ms</div>
+      <div class="metric-label">P99 Latency</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-value" style="color:var(--red)">0.3%</div>
+      <div class="metric-label">Error Rate</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-value" style="color:var(--blue)">99.97%</div>
+      <div class="metric-label">Uptime</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-value" style="color:var(--purple)">CLOSED</div>
+      <div class="metric-label">Circuit State</div>
+    </div>
+    <div class="metric-box">
+      <div class="metric-value" style="color:var(--cyan)">3/3</div>
+      <div class="metric-label">Healthy Nodes</div>
+    </div>
+  </div>
+
+  <h3>Error Rate Limiter as Health Signal</h3>
+  <p>The same <code>ErrorRateLimiter</code> that suppresses toast notifications also acts as a real-time health dashboard:</p>
+
+  <div class="code-block">
+    <div class="code-header"><span>lib/error-rate-limiter.ts — getSummary()</span><span class="tag">TypeScript</span></div>
+    <pre><code><span class="function">getSummary</span>(): {
+  totalErrors: <span class="type">number</span>;
+  suppressedErrors: <span class="type">number</span>;
+  activeErrors: <span class="type">number</span>;
+} {
+  <span class="keyword">let</span> suppressed = <span class="number">0</span>;
+  <span class="keyword">let</span> active = <span class="number">0</span>;
+
+  <span class="keyword">for</span> (<span class="keyword">const</span> entry <span class="keyword">of</span> Array.from(<span class="keyword">this</span>.errors.values())) {
+    <span class="keyword">if</span> (entry.suppressed) {
+      suppressed++;
+    } <span class="keyword">else</span> {
+      active++;
+    }
+  }
+
+  <span class="keyword">return</span> {
+    totalErrors: <span class="keyword">this</span>.errors.size,
+    suppressedErrors: suppressed,
+    activeErrors: active,
+  };
+}</code></pre>
+  </div>
+
+  <h3>Runtime Backend Health Monitoring</h3>
+  <p>Each backend target stores <code>lastVerifiedAt</code>, <code>lastHeartbeatAt</code>, and <code>lastError</code> in Prisma. The UI surfaces these as real-time status indicators:</p>
+
+  <table>
+    <thead>
+      <tr><th>Field</th><th>Type</th><th>Purpose</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>status</code></td><td>string</td><td><code>ready | installed | connected | error</code></td></tr>
+      <tr><td><code>installState</code></td><td>string</td><td><code>installed | not_installed</code></td></tr>
+      <tr><td><code>lastVerifiedAt</code></td><td>DateTime</td><td>Last successful health probe</td></tr>
+      <tr><td><code>lastHeartbeatAt</code></td><td>DateTime</td><td>Last websocket heartbeat</td></tr>
+      <tr><td><code>lastError</code></td><td>string</td><td>Most recent error message</td></tr>
+      <tr><td><code>encryptedGatewayToken</code></td><td>string</td><td>Encrypted auth credential</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Gateway Client Reconnection Telemetry</h3>
+  <p>The OpenClaw gateway client implements exponential backoff reconnection with capped jitter:</p>
+
+  <div class="code-block">
+    <div class="code-header"><span>views/openclaw/gateway-client.ts</span><span class="tag">TypeScript</span></div>
+    <pre><code><span class="keyword">private</span> backoffMs = <span class="number">800</span>;
+
+<span class="keyword">private</span> <span class="function">scheduleReconnect</span>(): <span class="type">void</span> {
+  <span class="keyword">if</span> (<span class="keyword">this</span>.closed) <span class="keyword">return</span>;
+
+  <span class="keyword">const</span> timeoutMs = <span class="keyword">this</span>.backoffMs;
+  <span class="keyword">this</span>.backoffMs = Math.min(Math.round(<span class="keyword">this</span>.backoffMs * <span class="number">1.7</span>), <span class="number">15_000</span>);
+
+  <span class="keyword">if</span> (<span class="keyword">this</span>.reconnectHandle != <span class="keyword">null</span>) {
+    window.clearTimeout(<span class="keyword">this</span>.reconnectHandle);
+  }
+
+  <span class="keyword">this</span>.reconnectHandle = window.setTimeout(() =&gt; {
+    <span class="keyword">this</span>.reconnectHandle = <span class="keyword">null</span>;
+    <span class="keyword">this</span>.connect();
+  }, timeoutMs);
+}</code></pre>
+  </div>
+  <p>Notice the multiplier (1.7x) and cap (15s). On successful connection, <code>backoffMs</code> resets to 800ms. This is jittered exponential backoff in practice.</p>
+</section>
+
+<!-- ==================== CONFIGURATION ==================== -->
+<section id="config">
+  <span class="section-label">Secrets &amp; Settings</span>
+  <h2>Configuration Management</h2>
+  <p>API keys, endpoints, and provider settings are managed through a layered configuration stack that prioritizes security and environment isolation.</p>
+
+  <h3>Layer 1: Environment Schema (Zod)</h3>
+  <p>All environment variables are validated at startup using Zod schemas. Missing or malformed keys fail fast:</p>
+
+  <div class="code-block">
+    <div class="code-header"><span>surfaces/allternit-platform/src/lib/env.ts</span><span class="tag">TypeScript</span></div>
+    <pre><code><span class="keyword">import</span> { createEnv } <span class="keyword">from</span> <span class="string">"@t3-oss/env-nextjs"</span>;
+<span class="keyword">import</span> { z } <span class="keyword">from</span> <span class="string">"zod"</span>;
+
+<span class="keyword">export const</span> env = <span class="function">createEnv</span>({
+  server: {
+    DATABASE_URL: z.string().optional(),
+    AUTH_SECRET: z.string().min(<span class="number">1</span>).default(<span class="string">"dev-secret-change-in-production"</span>),
+    <span class="comment">// External API Keys</span>
+    FIRECRAWL_API_KEY: z.string().optional(),
+    TAVILY_API_KEY: z.string().optional(),
+    LANGFUSE_API_KEY: z.string().optional(),
+    LANGFUSE_SECRET_KEY: z.string().optional(),
+    LANGFUSE_BASE_URL: z.string().url().optional(),
+  },
+  client: {
+    NEXT_PUBLIC_APP_URL: z.string().url().default(<span class="string">"http://localhost:3000"</span>),
+    NEXT_PUBLIC_KERNEL_URL: z.string().url().default(<span class="string">"http://127.0.0.1:3004"</span>),
+  },
+  runtimeEnv: {
+    DATABASE_URL: process.env.DATABASE_URL,
+    FIRECRAWL_API_KEY: process.env.FIRECRAWL_API_KEY,
+    TAVILY_API_KEY: process.env.TAVILY_API_KEY,
+    LANGFUSE_API_KEY: process.env.LANGFUSE_API_KEY,
+    <span class="comment">// ... explicit mapping prevents accidental leakage</span>
+  },
+});</code></pre>
+  </div>
+
+  <h3>Layer 2: Encrypted Tokens at Rest</h3>
+  <p>Gateway tokens are encrypted before storage in Prisma and decrypted only when needed for a proxied request:</p>
+
+  <div class="code-block">
+    <div class="code-header"><span>lib/runtime-backend.ts</span><span class="tag">TypeScript</span></div>
+    <pre><code><span class="keyword">const</span> encryptedGatewayToken = input.gatewayToken
+  ? <span class="function">encrypt</span>(input.gatewayToken)
+  : <span class="keyword">undefined</span>;
+
+<span class="comment">// ... later, when resolving the backend ...</span>
+
+<span class="keyword">return</span> {
+  gatewayToken: activeTarget.encryptedGatewayToken
+    ? <span class="function">decrypt</span>(activeTarget.encryptedGatewayToken)
+    : <span class="keyword">null</span>,
+};</code></pre>
+  </div>
+
+  <h3>Layer 3: Application Config Object</h3>
+  <p>Curated defaults and feature flags live in a typed config object that the entire platform imports:</p>
+
+  <div class="code-block">
+    <div class="code-header"><span>surfaces/allternit-platform/src/lib/config.ts</span><span class="tag">TypeScript</span></div>
+    <pre><code><span class="keyword">export const</span> config = {
+  models: {
+    disabledModels: [] <span class="keyword">as string</span>[],
+    providerOrder: [<span class="string">"openai"</span>, <span class="string">"anthropic"</span>, <span class="string">"google"</span>, <span class="string">"alibaba"</span>, <span class="string">"amazon"</span>],
+    curatedDefaults: [
+      <span class="string">"openai/gpt-5-mini"</span>,
+      <span class="string">"anthropic/claude-haiku-4.5"</span>,
+      <span class="string">"google/gemini-2.5-flash-lite"</span>,
+    ],
+    defaults: {
+      primary: <span class="string">"openai/gpt-5-mini"</span>,
+      image: <span class="string">"openai/dall-e-3"</span>,
+    },
+  },
+  integrations: {
+    urlRetrieval: <span class="keyword">true</span>,
+    webSearch: <span class="keyword">true</span>,
+    sandbox: <span class="keyword">true</span>,
+    imageGeneration: <span class="keyword">true</span>,
+    mcp: <span class="keyword">true</span>,
+    agentBrowser: <span class="keyword">true</span>,
+  },
+};</code></pre>
+  </div>
+
+  <h3>Layer 4: Provider Registry</h3>
+  <p>Visual metadata for every provider is centralized so the UI doesn't hardcode brand colors or icon names:</p>
+
+  <div class="code-block">
+    <div class="code-header"><span>surfaces/allternit-platform/src/lib/providers/provider-registry.ts</span><span class="tag">TypeScript</span></div>
+    <pre><code><span class="keyword">export const</span> PROVIDER_REGISTRY: Record&lt;<span class="type">string</span>, <span class="type">ProviderMeta</span>&gt; = {
+  anthropic: {
+    id: <span class="string">'anthropic'</span>,
+    name: <span class="string">'Anthropic'</span>,
+    color: <span class="string">'#D97757'</span>,
+    icon: <span class="string">'claude-logo.svg'</span>,
+    textColor: <span class="string">'#FFFFFF'</span>,
+  },
+  openai: {
+    id: <span class="string">'openai'</span>,
+    name: <span class="string">'OpenAI'</span>,
+    color: <span class="string">'#10A37F'</span>,
+    icon: <span class="string">'openai-logo.svg'</span>,
+  },
+  <span class="comment">// ... fallback for unknown providers</span>
+};
+
+<span class="keyword">export function</span> <span class="function">getProviderMeta</span>(id: <span class="type">string</span> | <span class="keyword">undefined</span>): <span class="type">ProviderMeta</span> {
+  <span class="keyword">if</span> (!id) <span class="keyword">return</span> PROVIDER_REGISTRY.allternit;
+  <span class="keyword">const</span> meta = PROVIDER_REGISTRY[id.toLowerCase()];
+  <span class="keyword">if</span> (meta) <span class="keyword">return</span> meta;
+  <span class="keyword">return</span> {
+    id,
+    name: id.charAt(<span class="number">0</span>).toUpperCase() + id.slice(<span class="number">1</span>),
+    color: <span class="string">'#6B7280'</span>,
+    icon: <span class="string">'bot'</span>,
+  };
+}</code></pre>
+  </div>
+
+  <div class="alert alert-info">
+    <span style="font-size:18px">&#9432;</span>
+    <div>
+      <strong>Security Principle:</strong> API keys never appear in client bundles. <code>FIRECRAWL_API_KEY</code> is a server-only env var. The client-side <code>env</code> object only exposes <code>NEXT_PUBLIC_*</code> variables. Zod's <code>createEnv</code> throws at build time if a server key is accidentally accessed from client code.
+    </div>
+  </div>
+</section>
+
+<!-- ==================== QUIZZES ==================== -->
+<section id="quizzes">
+  <span class="section-label">Knowledge Check</span>
+  <h2>3 Interactive Quizzes</h2>
+
+  <div class="quiz" id="quiz1">
+    <div class="quiz-question">Quiz 1: What triggers a provider failover in the Allternit platform?</div>
+    <div class="quiz-options">
+      <div class="quiz-option" data-correct="false" onclick="handleQuiz(this,1)">A user explicitly clicks "Switch Provider" in settings</div>
+      <div class="quiz-option" data-correct="true" onclick="handleQuiz(this,1)">A gateway candidate returns a retryable status or throws a network error</div>
+      <div class="quiz-option" data-correct="false" onclick="handleQuiz(this,1)">The circuit breaker transitions from Closed to Open state</div>
+      <div class="quiz-option" data-correct="false" onclick="handleQuiz(this,1)">The Redis cache TTL expires for a provider response</div>
+    </div>
+    <div class="quiz-feedback" id="feedback1"></div>
+  </div>
+
+  <div class="quiz" id="quiz2">
+    <div class="quiz-question">Quiz 2: Why cache responses from external APIs?</div>
+    <div class="quiz-options">
+      <div class="quiz-option" data-correct="false" onclick="handleQuiz(this,2)">To avoid paying for API requests during development</div>
+      <div class="quiz-option" data-correct="false" onclick="handleQuiz(this,2)">Because external APIs are always slower than local databases</div>
+      <div class="quiz-option" data-correct="true" onclick="handleQuiz(this,2)">To reduce latency, cost, and provider load for repeated or similar requests</div>
+      <div class="quiz-option" data-correct="false" onclick="handleQuiz(this,2)">To store user credentials securely across sessions</div>
+    </div>
+    <div class="quiz-feedback" id="feedback2"></div>
+  </div>
+
+  <div class="quiz" id="quiz3">
+    <div class="quiz-question">Quiz 3: How does the platform protect API keys from leaking in logs?</div>
+    <div class="quiz-options">
+      <div class="quiz-option" data-correct="false" onclick="handleQuiz(this,3)">By hashing all API keys with SHA-256 before every request</div>
+      <div class="quiz-option" data-correct="true" onclick="handleQuiz(this,3)">Server-only env vars + Zod validation + encrypted storage at rest</div>
+      <div class="quiz-option" data-correct="false" onclick="handleQuiz(this,3)">By rotating API keys every 60 seconds using a cron job</div>
+      <div class="quiz-option" data-correct="false" onclick="handleQuiz(this,3)">By Base64-encoding keys in the query string instead of headers</div>
+    </div>
+    <div class="quiz-feedback" id="feedback3"></div>
+  </div>
+</section>
+
+<!-- ==================== CAPSTONE ==================== -->
+<section id="capstone">
+  <span class="section-label">Final Project</span>
+  <h2>Capstone: Build a Multi-Provider AI Gateway</h2>
+
+  <div class="capstone-section">
+    <h3>Multi-Provider AI Gateway</h3>
+    <p>Create an adapter that routes chat requests to OpenAI, Anthropic, or a local Ollama model based on availability, cost, and user preference. This is exactly what Allternit's production gateway does.</p>
+
+    <div class="badge-row">
+      <span class="badge">TypeScript</span>
+      <span class="badge">Health Checks</span>
+      <span class="badge">Cost Tracking</span>
+      <span class="badge">Response Normalization</span>
+      <span class="badge">Fallback Chain</span>
+    </div>
+
+    <h3>Requirements</h3>
+    <ol class="task-list">
+      <li><span class="check">1.</span> <strong>Gateway Class:</strong> Implement a <code>MultiProviderGateway</code> that maintains a priority-ordered list of providers (OpenAI → Anthropic → Ollama).</li>
+      <li><span class="check">2.</span> <strong>Health Checks:</strong> Each provider must implement a <code>healthCheck()</code> method that returns <code>{ healthy: boolean; latencyMs: number }</code> within 3 seconds.</li>
+      <li><span class="check">3.</span> <strong>Cost Tracking:</strong> Track estimated cost per request using token counts and per-provider pricing tables. Expose a <code>getCostReport()</code> method.</li>
+      <li><span class="check">4.</span> <strong>Response Normalization:</strong> All providers must return a unified <code>GatewayResponse</code> with <code>{ text: string; model: string; usage: { promptTokens, completionTokens } }</code>.</li>
+      <li><span class="check">5.</span> <strong>Fallback Chain:</strong> If the primary provider fails or is unhealthy, automatically try the next. If all fail, return a structured error.</li>
+      <li><span class="check">6.</span> <strong>Tests:</strong> Write tests that simulate provider outages (using nock or mock providers) and verify the fallback chain works correctly.</li>
+    </ol>
+
+    <h3>Starter Scaffold</h3>
+    <div class="code-block">
+      <div class="code-header"><span>gateway.ts</span><span class="tag">Starter</span></div>
+      <pre><code><span class="keyword">interface</span> <span class="type">Provider</span> {
+  id: <span class="type">string</span>;
+  name: <span class="type">string</span>;
+  healthCheck(): <span class="type">Promise</span>&lt;{ healthy: <span class="type">boolean</span>; latencyMs: <span class="type">number</span> }&gt;;
+  complete(prompt: <span class="type">string</span>): <span class="type">Promise</span>&lt;<span class="type">GatewayResponse</span>&gt;;
+  costPer1KTokens: { input: <span class="type">number</span>; output: <span class="type">number</span> };
+}
+
+<span class="keyword">interface</span> <span class="type">GatewayResponse</span> {
+  text: <span class="type">string</span>;
+  model: <span class="type">string</span>;
+  providerId: <span class="type">string</span>;
+  usage: { promptTokens: <span class="type">number</span>; completionTokens: <span class="type">number</span> };
+  costUsd: <span class="type">number</span>;
+  latencyMs: <span class="type">number</span>;
+}
+
+<span class="keyword">class</span> <span class="type">MultiProviderGateway</span> {
+  <span class="keyword">private</span> providers: <span class="type">Provider</span>[] = [];
+  <span class="keyword">private</span> history: <span class="type">GatewayResponse</span>[] = [];
+
+  <span class="function">register</span>(provider: <span class="type">Provider</span>): <span class="type">void</span> {
+    <span class="keyword">this</span>.providers.push(provider);
+  }
+
+  <span class="keyword">async</span> <span class="function">route</span>(prompt: <span class="type">string</span>): <span class="type">Promise</span>&lt;<span class="type">GatewayResponse</span>&gt; {
+    <span class="comment">// TODO: Implement health check, fallback chain, cost tracking</span>
+  }
+
+  <span class="function">getCostReport</span>(): { totalUsd: <span class="type">number</span>; byProvider: Record&lt;<span class="type">string</span>, <span class="type">number</span>&gt; } {
+    <span class="comment">// TODO: Aggregate from history</span>
+  }
+}</code></pre>
+    </div>
+
+    <h3>Evaluation Criteria</h3>
+    <ul>
+      <li>Does the gateway handle all providers failing gracefully?</li>
+      <li>Are health checks parallelized (not sequential)?</li>
+      <li>Is cost calculation accurate to 4 decimal places?</li>
+      <li>Do tests cover: primary success, primary failure → fallback, all failure, timeout?</li>
+      <li>Is the normalized response format consistent regardless of provider?</li>
+    </ul>
+
+    <div class="alert alert-green">
+      <span style="font-size:18px">&#10003;</span>
+      <div>
+        <strong>You're Ready:</strong> After completing this capstone, you will have built a miniature version of Allternit's production AI gateway. The patterns — adapter normalization, health-checked failover, cost tracking, and structured error handling — are exactly what powers the platform at scale.
+      </div>
+    </div>
+  </div>
+</section>
+
+</div>
+</main>
+
+<script>
+// ===================== PROGRESS BAR =====================
+(function() {
+  const bar = document.getElementById('progressBar');
+  window.addEventListener('scroll', () => {
+    const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+    const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+    const pct = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
+    bar.style.width = pct + '%';
+  });
+})();
+
+// ===================== SIDEBAR =====================
+(function() {
+  const toggle = document.getElementById('navToggle');
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+  function open() { sidebar.classList.add('open'); overlay.classList.add('open'); }
+  function close() { sidebar.classList.remove('open'); overlay.classList.remove('open'); }
+  toggle.addEventListener('click', () => sidebar.classList.contains('open') ? close() : open());
+  overlay.addEventListener('click', close);
+
+  const sections = document.querySelectorAll('section[id]');
+  const links = document.querySelectorAll('.nav-list a');
+  window.addEventListener('scroll', () => {
+    let current = '';
+    sections.forEach(s => {
+      const rect = s.getBoundingClientRect();
+      if (rect.top <= 100) current = s.id;
+    });
+    links.forEach(a => {
+      a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+    });
+  });
+})();
+
+// ===================== TABS =====================
+function switchTab(event, panelId) {
+  const btn = event.target;
+  const parent = btn.parentElement;
+  parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(panelId).classList.add('active');
+}
+
+// ===================== FLOW SIMULATION =====================
+const flowStages = [
+  { id: 'stage1', label: 'Request received', detail: 'POST /api/agent-chat — user message parsed', type: 'ok' },
+  { id: 'stage2', label: 'Rate limit check', detail: 'ErrorRateLimiter: key=user_123, count=1/3, allowed', type: 'ok' },
+  { id: 'stage3', label: 'Retry handler armed', detail: 'withRetry configured: maxAttempts=3, backoff=2x', type: 'ok' },
+  { id: 'stage4', label: 'Adapter normalization', detail: 'AiSdkReplyAdapter: converting AI SDK stream parts', type: 'ok' },
+  { id: 'stage5', label: 'Provider call', detail: 'gateway("openai/gpt-5-mini") — stream opened', type: 'ok' },
+  { id: 'stage6', label: 'Cache write', detail: 'Redis SET session:abc:latest EX 300 — cached', type: 'ok' },
+];
+
+let flowRunning = false;
+
+function logFlow(msg, type = 'neutral') {
+  const container = document.getElementById('flowLog');
+  const time = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const cls = type === 'ok' ? 'log-ok' : type === 'warn' ? 'log-warn' : type === 'err' ? 'log-err' : '';
+  container.innerHTML += `<div class="log-line"><span class="log-time">${time}</span><span class="${cls}">${msg}</span></div>`;
+  container.scrollTop = container.scrollHeight;
+}
+
+async function runFlowSimulation() {
+  if (flowRunning) return;
+  flowRunning = true;
+  document.getElementById('runFlowBtn').textContent = 'Running...';
+  document.getElementById('flowLog').innerHTML = '';
+
+  for (let i = 0; i < flowStages.length; i++) {
+    const stage = flowStages[i];
+    document.querySelectorAll('.flow-stage').forEach(s => s.classList.remove('active'));
+    document.getElementById(stage.id).classList.add('active');
+    logFlow(`${stage.label} — ${stage.detail}`, stage.type);
+    await new Promise(r => setTimeout(r, 900));
+  }
+
+  document.querySelectorAll('.flow-stage').forEach(s => s.classList.remove('active'));
+  logFlow('Request complete. Response delivered to client.', 'ok');
+  document.getElementById('runFlowBtn').textContent = 'Run Simulation';
+  flowRunning = false;
+}
+
+function resetFlowSimulation() {
+  flowRunning = false;
+  document.getElementById('runFlowBtn').textContent = 'Run Simulation';
+  document.querySelectorAll('.flow-stage').forEach(s => s.classList.remove('active'));
+  document.getElementById('flowLog').innerHTML = '<div class="log-line"><span class="log-time">--:--:--</span>Ready. Click "Run Simulation" to trace a request.</div>';
+}
+
+// ===================== QUIZ HANDLER =====================
+function handleQuiz(el, quizNum) {
+  const quiz = document.getElementById('quiz' + quizNum);
+  const options = quiz.querySelectorAll('.quiz-option');
+  const feedback = document.getElementById('feedback' + quizNum);
+  options.forEach(o => o.classList.add('disabled'));
+
+  const isCorrect = el.dataset.correct === 'true';
+  if (isCorrect) {
+    el.classList.add('correct');
+    feedback.textContent = 'Correct! ' + getCorrectExplanation(quizNum);
+    feedback.className = 'quiz-feedback show alert-success';
+  } else {
+    el.classList.add('wrong');
+    options.forEach(o => { if (o.dataset.correct === 'true') o.classList.add('correct'); });
+    feedback.textContent = 'Not quite. ' + getCorrectExplanation(quizNum);
+    feedback.className = 'quiz-feedback show alert-error';
+  }
+}
+
+function getCorrectExplanation(n) {
+  const map = {
+    1: 'The gateway proxy iterates candidates and automatically tries the next when a candidate returns a retryable status or throws a network error. No manual intervention required.',
+    2: 'Caching reduces latency for repeated requests, lowers API costs by avoiding redundant calls, and decreases load on external providers — especially important for embedding and search APIs.',
+    3: 'Allternit uses Zod-validated server-only env vars via @t3-oss/env-nextjs, encrypts tokens at rest in Prisma, and never bundles secrets into client code. Build-time validation catches leaks.'
+  };
+  return map[n];
+}
+</script>
+
+</body>
+</html>

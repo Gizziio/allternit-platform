@@ -1,0 +1,59 @@
+{
+  "generatedAt": "2026-04-17T17:21:40.404Z",
+  "totalPackages": 1,
+  "totalModules": 3,
+  "modules": [
+    {
+      "package": "plugin-sdk",
+      "title": "Validation in plugin-sdk",
+      "topics": [
+        "Validation"
+      ],
+      "concepts": [
+        "validate",
+        "schema",
+        "parse",
+        "check"
+      ],
+      "complexity": "intermediate",
+      "challengeCount": 0,
+      "prerequisites": [
+        "Plugin System"
+      ]
+    },
+    {
+      "package": "plugin-sdk",
+      "title": "Adapter Pattern in plugin-sdk",
+      "topics": [
+        "Adapter Pattern"
+      ],
+      "concepts": [
+        "adapter",
+        "map",
+        "port"
+      ],
+      "complexity": "advanced",
+      "challengeCount": 0,
+      "prerequisites": []
+    },
+    {
+      "package": "plugin-sdk",
+      "title": "Plugin System in plugin-sdk",
+      "topics": [
+        "Plugin System"
+      ],
+      "concepts": [
+        "plugin",
+        "host",
+        "register",
+        "extension",
+        "manifest"
+      ],
+      "complexity": "advanced",
+      "challengeCount": 0,
+      "prerequisites": [
+        "Adapter Pattern"
+      ]
+    }
+  ]
+}

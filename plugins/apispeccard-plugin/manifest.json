@@ -1,0 +1,43 @@
+{
+  "id": "apispeccard-plugin",
+  "name": "ApispeccardPlugin",
+  "version": "1.0.0",
+  "runtime": "allternit-plugin-v1",
+  "description": "Plugin based on APISpecCard.tsx template",
+  "category": "custom",
+  "requires": {
+    "llm": {
+      "capabilities": [
+        "reasoning"
+      ]
+    }
+  },
+  "provides": {
+    "functions": [
+      {
+        "name": "execute",
+        "description": "Execute APISpecCard.tsx logic",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "input": {
+              "type": "string",
+              "description": "Input text"
+            }
+          },
+          "required": [
+            "input"
+          ]
+        },
+        "returns": {
+          "type": "object"
+        }
+      }
+    ]
+  },
+  "adapters": {
+    "mcp": "./adapters/mcp.js",
+    "http": "./adapters/http.js",
+    "cli": "./adapters/cli.js"
+  }
+}

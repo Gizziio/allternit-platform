@@ -1,0 +1,22 @@
+{
+  "name": "@allternit/codereviewcard-plugin",
+  "version": "1.0.1",
+  "description": "Plugin based on CodeReviewCard.tsx template",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build",
+    "validate": "allternit-plugin validate"
+  },
+  "dependencies": {
+    "@allternit/plugin-sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

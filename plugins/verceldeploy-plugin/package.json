@@ -1,0 +1,23 @@
+{
+  "name": "@allternit/verceldeploy-plugin",
+  "version": "1.0.0",
+  "description": "Deploy projects to Vercel instantly via API",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build",
+    "validate": "allternit-plugin validate"
+  },
+  "dependencies": {
+    "@allternit/plugin-sdk": "^1.0.0",
+    "vercel": "^41.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

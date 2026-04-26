@@ -1,0 +1,38 @@
+{
+  "title": "Module 1 Quiz: The Workflow Engine",
+  "questions": [
+    {
+      "question": "What determines the execution order of nodes in a workflow?",
+      "options": [
+        "The order they appear in the nodes array",
+        "The Connection edges and dependency resolution at runtime",
+        "Alphabetical order of node IDs",
+        "The scheduler's priority queue always"
+      ],
+      "correctIndex": 1,
+      "explanation": "The workflow engine builds a DAG from Connection edges and resolves dependencies at runtime, executing nodes only when their prerequisites are satisfied."
+    },
+    {
+      "question": "When does the scheduler NOT pull a task from the queue?",
+      "options": [
+        "When the queue has fewer tasks than maxConcurrency",
+        "When running.size >= maxConcurrency, isPaused is true, or the queue is empty",
+        "Only when the queue is empty",
+        "When the engine has not finished the previous workflow"
+      ],
+      "correctIndex": 1,
+      "explanation": "The scheduler has three gates: maxConcurrency limit, pause state, and empty queue. Any of these prevents task execution."
+    },
+    {
+      "question": "What algorithm does the visualizer use for auto-layout?",
+      "options": [
+        "Force-directed graph layout (Fruchterman-Reingold)",
+        "Random placement with collision detection",
+        "Kahn's topological sort with layered positioning",
+        "Dijkstra's shortest path for edge routing"
+      ],
+      "correctIndex": 2,
+      "explanation": "The visualizer uses Kahn's topological sort to determine node ordering, then applies layered positioning for clean horizontal flow."
+    }
+  ]
+}

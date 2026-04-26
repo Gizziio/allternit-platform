@@ -1,0 +1,1705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 1: The Allternit Workflow Engine — A://Labs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0b0c;
+      --surface: #151517;
+      --surface-raised: #1c1c1f;
+      --border: #27272a;
+      --border-light: #3f3f46;
+      --text: #e5e5e5;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --accent: #f59e0b;
+      --accent-dim: rgba(245, 158, 11, 0.15);
+      --accent-glow: rgba(245, 158, 11, 0.4);
+      --success: #22c55e;
+      --error: #ef4444;
+      --info: #3b82f6;
+      --code-bg: #0f0f11;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 80px;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Progress Bar */
+    #progress-container {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--surface);
+      z-index: 1000;
+    }
+    #progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), #fbbf24);
+      box-shadow: 0 0 12px var(--accent-glow);
+      transition: width 0.2s ease;
+    }
+
+    /* Navigation */
+    nav {
+      position: fixed;
+      top: 3px; left: 0; right: 0;
+      background: rgba(11, 11, 12, 0.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      z-index: 999;
+      padding: 0 24px;
+    }
+    .nav-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+    }
+    .nav-logo {
+      font-weight: 800;
+      font-size: 0.9rem;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+    .nav-logo span {
+      color: var(--accent);
+    }
+    .nav-links {
+      display: flex;
+      gap: 6px;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.78rem;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: 6px;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .nav-links a:hover, .nav-links a.active {
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .nav-tier {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+
+    /* Mobile nav toggle */
+    .nav-toggle {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 1.4rem;
+      cursor: pointer;
+    }
+
+    @media (max-width: 768px) {
+      .nav-links { display: none; position: absolute; top: 56px; left: 0; right: 0; background: var(--surface); flex-direction: column; padding: 12px; gap: 4px; border-bottom: 1px solid var(--border); }
+      .nav-links.open { display: flex; }
+      .nav-toggle { display: block; }
+    }
+
+    /* Sections */
+    section {
+      padding: 80px 24px;
+      max-width: 860px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    /* Hero */
+    .hero {
+      min-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      padding-top: 100px;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      background: var(--accent-dim);
+      border: 1px solid rgba(245,158,11,0.25);
+      padding: 6px 14px;
+      border-radius: 100px;
+      margin-bottom: 24px;
+    }
+    .hero-badge::before {
+      content: '';
+      width: 6px; height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .hero h1 {
+      font-size: clamp(2.2rem, 5vw, 3.8rem);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 20px;
+    }
+    .hero h1 em {
+      color: var(--accent);
+      font-style: normal;
+    }
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin-bottom: 32px;
+      line-height: 1.7;
+    }
+    .hero-meta {
+      display: flex;
+      gap: 24px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .hero-meta span { display: flex; align-items: center; gap: 6px; }
+
+    /* Typography */
+    h2 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      margin: 48px 0 20px;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    h2 .num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--accent);
+      background: var(--accent-dim);
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin: 32px 0 12px;
+      color: var(--text);
+    }
+    p { margin-bottom: 16px; color: var(--text-secondary); }
+    strong { color: var(--text); }
+
+    /* Cards */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin: 20px 0;
+    }
+    .card-raised {
+      background: var(--surface-raised);
+      border-color: var(--border-light);
+    }
+
+    /* Code blocks */
+    .code-block {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 20px 0;
+    }
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: rgba(255,255,255,0.02);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .code-header span:first-child {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; }
+    .dot.y { background: var(--accent); }
+    .dot.r { background: var(--error); }
+    .dot.g { background: var(--success); }
+    pre {
+      padding: 16px;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      line-height: 1.7;
+      color: #d4d4d8;
+    }
+    pre .k { color: #c084fc; } /* keyword */
+    pre .t { color: #67e8f9; } /* type */
+    pre .s { color: #86efac; } /* string */
+    pre .c { color: #71717a; } /* comment */
+    pre .f { color: #fbbf24; } /* function */
+    pre .n { color: #fca5a5; } /* number */
+
+    /* Translation block */
+    .translate-block {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin: 20px 0;
+      border: 1px solid var(--border);
+    }
+    .translate-block > div {
+      background: var(--surface);
+      padding: 20px;
+    }
+    .translate-block .label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      margin-bottom: 12px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .translate-block pre {
+      padding: 0;
+      background: transparent;
+      border: none;
+      font-size: 0.78rem;
+    }
+    .translate-block .plain {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+    .translate-block .plain strong { color: var(--text); }
+    @media (max-width: 640px) {
+      .translate-block { grid-template-columns: 1fr; }
+    }
+
+    /* DAG Visualization Canvas */
+    .dag-viz {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 24px 0;
+      position: relative;
+      overflow: hidden;
+    }
+    .dag-viz canvas {
+      width: 100%;
+      height: 320px;
+      display: block;
+    }
+    .dag-controls {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      background: var(--surface-raised);
+      border: 1px solid var(--border-light);
+      color: var(--text);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-primary {
+      background: var(--accent);
+      color: #0b0b0c;
+      border-color: var(--accent);
+    }
+    .btn-primary:hover { background: #fbbf24; color: #0b0b0c; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Group Chat Animation */
+    .chat-viz {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 24px 0;
+      min-height: 420px;
+      display: flex;
+      flex-direction: column;
+    }
+    .chat-header {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .chat-header .status-dot {
+      width: 8px; height: 8px;
+      background: var(--success);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 340px;
+      padding-right: 4px;
+    }
+    .chat-msg {
+      display: flex;
+      gap: 10px;
+      opacity: 0;
+      transform: translateY(12px);
+      animation: msgIn 0.4s ease forwards;
+    }
+    @keyframes msgIn {
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .chat-avatar {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 800;
+      flex-shrink: 0;
+      text-transform: uppercase;
+    }
+    .chat-avatar.engine { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(245,158,11,0.3); }
+    .chat-avatar.sched { background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); }
+    .chat-avatar.node { background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid rgba(34,197,94,0.3); }
+    .chat-bubble {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      max-width: 85%;
+    }
+    .chat-bubble strong { color: var(--text); }
+    .chat-bubble code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      background: var(--code-bg);
+      padding: 1px 5px;
+      border-radius: 4px;
+      color: var(--accent);
+    }
+
+    /* Quiz */
+    .quiz {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin: 28px 0;
+    }
+    .quiz-header {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 16px;
+    }
+    .quiz-num {
+      background: var(--accent);
+      color: #0b0b0c;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800;
+      font-size: 0.8rem;
+    }
+    .quiz h3 { margin: 0; }
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin: 16px 0;
+    }
+    .quiz-option {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .quiz-option:hover { border-color: var(--border-light); }
+    .quiz-option.selected { border-color: var(--accent); background: var(--accent-dim); color: var(--text); }
+    .quiz-option.correct { border-color: var(--success); background: rgba(34,197,94,0.1); }
+    .quiz-option.wrong { border-color: var(--error); background: rgba(239,68,68,0.1); }
+    .quiz-option .radio {
+      width: 18px; height: 18px;
+      border: 2px solid var(--border-light);
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .quiz-option.selected .radio { border-color: var(--accent); }
+    .quiz-option.correct .radio { border-color: var(--success); background: var(--success); }
+    .quiz-option.wrong .radio { border-color: var(--error); background: var(--error); }
+    .quiz-feedback {
+      font-size: 0.85rem;
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 12px;
+      display: none;
+    }
+    .quiz-feedback.show { display: block; }
+    .quiz-feedback.correct { background: rgba(34,197,94,0.1); color: #86efac; border: 1px solid rgba(34,197,94,0.3); }
+    .quiz-feedback.wrong { background: rgba(239,68,68,0.1); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+
+    /* Capstone */
+    .capstone {
+      background: linear-gradient(135deg, rgba(245,158,11,0.08), rgba(245,158,11,0.02));
+      border: 1px solid rgba(245,158,11,0.25);
+      border-radius: 16px;
+      padding: 32px;
+      margin: 32px 0;
+    }
+    .capstone h2 { margin-top: 0; }
+    .capstone-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .capstone-item {
+      background: rgba(11,11,12,0.5);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .capstone-item h4 {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+    .capstone-item p { font-size: 0.85rem; margin: 0; }
+
+    /* Lists */
+    ul, ol {
+      margin: 12px 0 12px 20px;
+      color: var(--text-secondary);
+    }
+    li { margin-bottom: 8px; }
+    li::marker { color: var(--accent); }
+
+    /* Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 0.85rem;
+    }
+    th, td {
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      font-weight: 600;
+      color: var(--text);
+      background: var(--surface);
+    }
+    td { color: var(--text-secondary); }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+    td code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      background: var(--code-bg);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--accent);
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 40px 24px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+
+    /* Scroll reveal */
+    .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: all 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Scheduler viz */
+    .scheduler-viz {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 20px 0;
+    }
+    .scheduler-viz canvas {
+      width: 100%;
+      height: 200px;
+      display: block;
+    }
+
+    /* Tooltip */
+    .tooltip {
+      position: relative;
+      cursor: help;
+      border-bottom: 1px dotted var(--accent);
+    }
+
+    /* Inline code */
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85em;
+      background: var(--code-bg);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--accent);
+    }
+
+    /* Divider */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border-light), transparent);
+      margin: 48px 0;
+      border: none;
+    }
+
+    /* Status badge */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 100px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+    .status-badge::before {
+      content: '';
+      width: 6px; height: 6px;
+      border-radius: 50%;
+    }
+    .status-badge.pending::before { background: var(--text-muted); }
+    .status-badge.running::before { background: var(--info); animation: pulse 1.5s infinite; }
+    .status-badge.completed::before { background: var(--success); }
+    .status-badge.failed::before { background: var(--error); }
+
+    /* Keyword pills */
+    .pill {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 100px;
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      margin: 2px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Progress -->
+  <div id="progress-container"><div id="progress-bar"></div></div>
+
+  <!-- Navigation -->
+  <nav>
+    <div class="nav-inner">
+      <div class="nav-logo">A://<span>Labs</span></div>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="#problem" data-section="problem">Problem</a></li>
+        <li><a href="#concept" data-section="concept">Concept</a></li>
+        <li><a href="#components" data-section="components">Components</a></li>
+        <li><a href="#engine" data-section="engine">Engine</a></li>
+        <li><a href="#scheduler" data-section="scheduler">Scheduler</a></li>
+        <li><a href="#visualizer" data-section="visualizer">Visualizer</a></li>
+        <li><a href="#execution" data-section="execution">Execution</a></li>
+        <li><a href="#quizzes" data-section="quizzes">Quizzes</a></li>
+        <li><a href="#capstone" data-section="capstone">Capstone</a></li>
+      </ul>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span class="nav-tier">ADV</span>
+        <button class="nav-toggle" onclick="document.getElementById('navLinks').classList.toggle('open')">☰</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero reveal" id="problem">
+    <div class="hero-badge">Module 1 of 4 — ADV Tier</div>
+    <h1>Master the <em>Allternit<br>Workflow Engine</em></h1>
+    <p>Build visual, DAG-based orchestration systems that execute complex multi-step processes with conditional branching, parallel execution, and real-time visualization. This is the engine that powers automation inside Allternit.</p>
+    <div class="hero-meta">
+      <span>📖 25 min read</span>
+      <span>💻 TypeScript</span>
+      <span>🔧 ADV Architecture</span>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- Section 1: The Problem -->
+  <section class="reveal" id="problem-detail">
+    <h2><span class="num">01</span> The Problem</h2>
+    <p>Most automation tools are either <strong>too rigid</strong> (linear sequence, no branching) or <strong>too chaotic</strong> (event soup with no execution guarantees). When you need to:</p>
+    <ul>
+      <li>Fetch data from three APIs <strong>in parallel</strong>, then join the results</li>
+      <li>Branch execution based on a condition <strong>at runtime</strong></li>
+      <li>Retry a failed node <strong>without restarting the whole flow</strong></li>
+      <li>Visualize what actually happened during execution</li>
+    </ul>
+    <p>...you need a <strong>directed acyclic graph (DAG) execution engine</strong> with first-class scheduling, state tracking, and visualization. Not a script. Not a chain of webhooks. An engine.</p>
+    <p>That's what <code>@allternit/workflow-engine</code> is — and by the end of this module, you will understand exactly how it executes workflows, schedules tasks, and renders DAGs.</p>
+  </section>
+
+  <hr class="divider">
+
+  <!-- Section 2: The Concept -->
+  <section class="reveal" id="concept">
+    <h2><span class="num">02</span> The Concept: DAG Architecture</h2>
+    <p>A workflow in Allternit is a <strong>DAG</strong>: a collection of <strong>nodes</strong> (steps) connected by <strong>edges</strong> (data flow), with no cycles. This guarantees that execution always terminates and that every node executes only after its dependencies are satisfied.</p>
+
+    <div class="card card-raised">
+      <h3>The Three Primitives</h3>
+      <table>
+        <thead>
+          <tr><th>Primitive</th><th>What It Is</th><th>Example</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>WorkflowNode</code></td><td>A single unit of work with a type, config, and executor</td><td><code>http:request</code> fetching an API</td></tr>
+          <tr><td><code>Connection</code></td><td>A directed edge from source node to target node</td><td><code>fetch → filter</code></td></tr>
+          <tr><td><code>NodeType</code></td><td>The behavior definition registered with the engine</td><td>executor function + input/output schema</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span><span class="dot y"></span>workflow-definition.ts</span></div>
+      <pre>{
+  <span class="k">id</span>: <span class="s">'data-pipeline'</span>,
+  <span class="k">name</span>: <span class="s">'Data Pipeline'</span>,
+  <span class="k">version</span>: <span class="s">'1.0.0'</span>,
+  <span class="k">nodes</span>: [
+    { <span class="k">id</span>: <span class="s">'trigger'</span>, <span class="k">type</span>: <span class="s">'trigger:webhook'</span>, <span class="k">name</span>: <span class="s">'Webhook'</span> },
+    { <span class="k">id</span>: <span class="s">'fetch'</span>,   <span class="k">type</span>: <span class="s">'http:request'</span>,  <span class="k">name</span>: <span class="s">'Fetch'</span>,
+      <span class="k">config</span>: { <span class="k">method</span>: <span class="s">'GET'</span>, <span class="k">url</span>: <span class="s">'https://api.example.com/data'</span> } },
+    { <span class="k">id</span>: <span class="s">'filter'</span>, <span class="k">type</span>: <span class="s">'transform:filter'</span>, <span class="k">name</span>: <span class="s">'Filter'</span>,
+      <span class="k">config</span>: { <span class="k">condition</span>: <span class="s">'item.active === true'</span> } },
+    { <span class="k">id</span>: <span class="s">'output'</span>, <span class="k">type</span>: <span class="s">'output:result'</span>, <span class="k">name</span>: <span class="s">'Result'</span> },
+  ],
+  <span class="k">connections</span>: [
+    { <span class="k">id</span>: <span class="s">'c1'</span>, <span class="k">source</span>: <span class="s">'trigger'</span>, <span class="k">target</span>: <span class="s">'fetch'</span> },
+    { <span class="k">id</span>: <span class="s">'c2'</span>, <span class="k">source</span>: <span class="s">'fetch'</span>,   <span class="k">target</span>: <span class="s">'filter'</span> },
+    { <span class="k">id</span>: <span class="s">'c3'</span>, <span class="k">source</span>: <span class="s">'filter'</span>,  <span class="k">target</span>: <span class="s">'output'</span> },
+  ],
+}</pre>
+    </div>
+
+    <p>The engine uses this definition to build a DAG, identify <strong>source nodes</strong> (nodes with no incoming edges), and begin execution from there. As each node completes, the engine traverses outgoing connections and evaluates any <strong>conditional guards</strong> before triggering downstream work.</p>
+  </section>
+
+  <hr class="divider">
+
+  <!-- Section 3: Components Chat -->
+  <section class="reveal" id="components">
+    <h2><span class="num">03</span> The Components</h2>
+    <p>The workflow engine is not a monolith. It is three collaborating systems, each with a single responsibility:</p>
+
+    <div class="card">
+      <span class="pill">WorkflowEngine</span> <span class="pill">Scheduler</span> <span class="pill">WorkflowVisualizer</span>
+      <p style="margin-top:12px;"><strong>WorkflowEngine</strong> owns DAG construction, node lifecycle, and state management. <strong>Scheduler</strong> owns parallel execution, queuing, and resource limits. <strong>Visualizer</strong> owns layout algorithms and export formats. They communicate through well-defined interfaces — not tight coupling.</p>
+    </div>
+
+    <div class="chat-viz" id="chatViz">
+      <div class="chat-header"><span class="status-dot"></span> Live Component Dialogue — Execution of <code>data-pipeline</code></div>
+      <div class="chat-messages" id="chatMessages"></div>
+      <div class="dag-controls">
+        <button class="btn btn-primary" id="chatPlay" onclick="playChat()">▶ Replay Dialogue</button>
+        <button class="btn" id="chatPause" onclick="pauseChat()">⏸ Pause</button>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- Section 4: The Engine -->
+  <section class="reveal" id="engine">
+    <h2><span class="num">04</span> The Engine: DAG Execution</h2>
+    <p>When you call <code>engine.execute('data-pipeline', inputs)</code>, here is exactly what happens inside <code>workflow-engine.ts</code>:</p>
+
+    <div class="translate-block">
+      <div>
+        <div class="label">🔧 TypeScript</div>
+        <pre><span class="k">async function</span> <span class="f">execute</span>(workflowId, inputs) {
+  <span class="k">const</span> workflow = workflows.<span class="f">get</span>(workflowId);
+  <span class="k">const</span> dag = <span class="f">buildDAG</span>(workflow);
+  <span class="k">const</span> execution = { <span class="k">id</span>: <span class="f">uuidv4</span>(), <span class="k">status</span>: <span class="s">'running'</span>, ... };
+
+  <span class="k">const</span> startNodes = dag.nodes.<span class="f">filter</span>(n =&gt;
+    !dag.connections.<span class="f">some</span>(c =&gt; c.target === n.id)
+  );
+
+  <span class="k">await</span> Promise.<span class="f">all</span>(
+    startNodes.<span class="f">map</span>(n =&gt; <span class="f">executeNode</span>(n, execution, dag))
+  );
+}</pre>
+      </div>
+      <div>
+        <div class="label">🗣 Plain English</div>
+        <div class="plain">
+          <p><strong>1.</strong> Look up the workflow definition by its ID. If it doesn't exist, throw immediately.</p>
+          <p><strong>2.</strong> Build a DAG from the nodes and connections array. This is a shallow struct — just references.</p>
+          <p><strong>3.</strong> Create an <code>Execution</code> record with a fresh UUID, copy inputs into <code>context.variables</code>, and initialize empty tracking arrays for active, completed, and failed nodes.</p>
+          <p><strong>4.</strong> Find every node that has <strong>zero incoming connections</strong>. These are the starting points.</p>
+          <p><strong>5.</strong> Fire all start nodes <strong>concurrently</strong> with <code>Promise.all</code>. The engine doesn't sequence them unless data dependencies force it.</p>
+        </div>
+      </div>
+    </div>
+
+    <h3>Node Execution & Dependency Resolution</h3>
+    <p>Each node's <code>executeNode</code> call is recursive. It checks dependencies, runs the executor, stores results, then walks outgoing edges:</p>
+
+    <div class="translate-block">
+      <div>
+        <div class="label">🔧 TypeScript</div>
+        <pre><span class="k">async function</span> <span class="f">executeNode</span>(node, execution, dag) {
+  <span class="k">const</span> incoming = dag.connections
+    .<span class="f">filter</span>(c =&gt; c.target === node.id);
+
+  <span class="k">const</span> depsMet = incoming.<span class="f">every</span>(c =&gt;
+    execution.context.state.completedNodes
+      .<span class="f">includes</span>(c.source)
+  );
+  <span class="k">if</span> (!depsMet) <span class="k">return</span>;
+
+  execution.context.state.activeNodes
+    .<span class="f">push</span>(node.id);
+
+  <span class="k">const</span> result = <span class="k">await</span> nodeType.executor(node, context, inputs);
+
+  execution.context.state.nodeResults[node.id] = result;
+  execution.context.state.completedNodes
+    .<span class="f">push</span>(node.id);
+
+  <span class="k">for</span> (<span class="k">const</span> conn <span class="k">of</span> outgoing) {
+    <span class="k">if</span> (conn.condition &amp;&amp; !<span class="f">evaluateCondition</span>(...))
+      <span class="k">continue</span>;
+    <span class="k">await</span> <span class="f">executeNode</span>(nextNode, execution, dag);
+  }
+}</pre>
+      </div>
+      <div>
+        <div class="label">🗣 Plain English</div>
+        <div class="plain">
+          <p><strong>1. Dependency Check:</strong> Before running, the node verifies that <em>every</em> node connected to its input has already completed. If not, it returns silently — it will be called again when the upstream node finishes.</p>
+          <p><strong>2. Activation:</strong> The node ID is pushed into <code>activeNodes</code> so observers (and the visualizer) know it's running.</p>
+          <p><strong>3. Input Assembly:</strong> Inputs are gathered from upstream <code>nodeResults</code> via connection mappings, then merged with any explicit <code>InputMapping</code> expressions.</p>
+          <p><strong>4. Execution:</strong> The <code>NodeType.executor</code> function is invoked. This is where the actual work happens — HTTP requests, transforms, delays.</p>
+          <p><strong>5. Result Storage:</strong> The return value is stored in <code>nodeResults</code> under the node's ID, and the node moves from <code>activeNodes</code> to <code>completedNodes</code>.</p>
+          <p><strong>6. Downstream Trigger:</strong> For each outgoing connection, the engine evaluates the optional <code>condition</code> string. If true (or absent), it <strong>recursively</strong> calls <code>executeNode</code> on the target.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Key Insight: Execution State is a Journal</h3>
+      <p>The <code>ExecutionState</code> interface tracks everything as arrays and maps — not a database, not an event log, just a plain object mutated in-place:</p>
+      <ul>
+        <li><code>activeNodes</code> — what's running right now</li>
+        <li><code>completedNodes</code> — what finished successfully</li>
+        <li><code>failedNodes</code> — what threw an error</li>
+        <li><code>nodeResults</code> — the output data from each node</li>
+        <li><code>executionPath</code> — the order nodes were activated</li>
+      </ul>
+      <p>This design makes the engine <strong>observable by default</strong>. Hooks like <code>beforeNodeExecute</code> and <code>afterNodeExecute</code> receive the live context and can stream it to any visualization layer.</p>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- Section 5: The Scheduler -->
+  <section class="reveal" id="scheduler">
+    <h2><span class="num">05</span> The Scheduler: Parallel Execution</h2>
+    <p>The engine handles <em>logic</em>. The scheduler handles <em>concurrency</em>. It is a task queue with configurable limits, timeouts, and priority sorting.</p>
+
+    <div class="translate-block">
+      <div>
+        <div class="label">🔧 TypeScript</div>
+        <pre><span class="k">function</span> <span class="f">createScheduler</span>(config = {}) {
+  <span class="k">const</span> {
+    maxConcurrency = <span class="n">5</span>,
+    queueLimit = <span class="n">100</span>,
+    defaultTimeout = <span class="n">60000</span>,
+    enablePriority = <span class="k">false</span>,
+  } = config;
+
+  <span class="k">const</span> queue = [];
+  <span class="k">const</span> running = <span class="k">new</span> <span class="t">Map</span>&lt;<span class="t">string</span>, <span class="t">AbortController</span>&gt;();
+
+  <span class="k">async function</span> <span class="f">processQueue</span>() {
+    <span class="k">if</span> (isPaused || running.size &gt;= maxConcurrency
+        || queue.length === <span class="n">0</span>) <span class="k">return</span>;
+
+    <span class="k">if</span> (enablePriority)
+      queue.<span class="f">sort</span>((a, b) =&gt; b.priority - a.priority);
+
+    <span class="k">const</span> task = queue.<span class="f">shift</span>();
+    <span class="k">const</span> controller = <span class="k">new</span> <span class="t">AbortController</span>();
+    running.<span class="f">set</span>(task.id, controller);
+
+    <span class="k">try</span> {
+      <span class="k">const</span> timeoutId = <span class="f">setTimeout</span>(
+        () =&gt; controller.<span class="f">abort</span>(),
+        task.timeout || defaultTimeout
+      );
+      <span class="k">const</span> result = <span class="k">await</span> <span class="f">executeTask</span>(task, controller.signal);
+      <span class="f">clearTimeout</span>(timeoutId);
+      completed++;
+    } <span class="k">finally</span> {
+      running.<span class="f">delete</span>(task.id);
+      <span class="f">processQueue</span>();
+    }
+  }
+}</pre>
+      </div>
+      <div>
+        <div class="label">🗣 Plain English</div>
+        <div class="plain">
+          <p><strong>1. Configuration:</strong> You set a <strong>concurrency ceiling</strong> (default 5), a <strong>queue cap</strong> (100), and a <strong>per-task timeout</strong> (60s). Priority sorting is opt-in.</p>
+          <p><strong>2. Queue:</strong> Tasks are plain objects with an ID, a node reference, and an execution context. When you <code>submit()</code>, the task enters the queue.</p>
+          <p><strong>3. Processing Loop:</strong> <code>processQueue()</code> is called after every submit and after every completion. It is a <strong>recursive pull</strong>, not a polling loop.</p>
+          <p><strong>4. Concurrency Guard:</strong> If <code>running.size &gt;= maxConcurrency</code>, the function returns immediately. The task waits in queue.</p>
+          <p><strong>5. AbortController:</strong> Every running task gets an <code>AbortController</code>. The scheduler can cancel tasks via <code>controller.abort()</code>, and the executor can check <code>signal.aborted</code> to clean up.</p>
+          <p><strong>6. Cascade:</strong> The <code>finally</code> block always calls <code>processQueue()</code> again, ensuring the next queued task starts as soon as a slot opens.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="scheduler-viz">
+      <div class="code-header"><span><span class="dot g"></span>Scheduler Live Simulation</span><span>Max concurrency: 3 | Queue limit: 8</span></div>
+      <canvas id="schedulerCanvas" width="800" height="200"></canvas>
+      <div class="dag-controls">
+        <button class="btn btn-primary" id="schedStart" onclick="startSchedulerSim()">▶ Start Simulation</button>
+        <button class="btn" id="schedPause" onclick="pauseSchedulerSim()">⏸ Pause</button>
+        <button class="btn" onclick="resetSchedulerSim()">↺ Reset</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Scheduler API</h3>
+      <table>
+        <thead>
+          <tr><th>Method</th><th>What It Does</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>submit(task)</code></td><td>Adds a task to the queue and starts processing if slots are free</td></tr>
+          <tr><td><code>submitAll(tasks)</code></td><td>Submits multiple tasks concurrently via <code>Promise.all</code></td></tr>
+          <tr><td><code>cancel(taskId)</code></td><td>Aborts a running task or removes it from queue</td></tr>
+          <tr><td><code>getStatus()</code></td><td>Returns { running, queued, completed, failed, isPaused }</td></tr>
+          <tr><td><code>pause() / resume()</code></td><td>Stops or restarts queue processing without killing running tasks</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- Section 6: The Visualizer -->
+  <section class="reveal" id="visualizer">
+    <h2><span class="num">06</span> The Visualizer: Layout & Export</h2>
+    <p>The visualizer turns a workflow definition into geometry. It uses <strong>topological sorting with layering</strong> to compute node positions automatically, then generates SVG paths, Mermaid syntax, or Graphviz DOT.</p>
+
+    <div class="translate-block">
+      <div>
+        <div class="label">🔧 TypeScript</div>
+        <pre><span class="k">function</span> <span class="f">autoLayoutNodes</span>(nodes, connections) {
+  <span class="k">const</span> incoming = <span class="k">new</span> <span class="t">Map</span>();
+  <span class="k">const</span> outgoing = <span class="k">new</span> <span class="t">Map</span>();
+
+  connections.<span class="f">forEach</span>(conn =&gt; {
+    outgoing.<span class="f">get</span>(conn.source)?.<span class="f">push</span>(conn.target);
+    incoming.<span class="f">get</span>(conn.target)?.<span class="f">push</span>(conn.source);
+  });
+
+  <span class="c">// Kahn's algorithm: topological sort by layer</span>
+  <span class="k">const</span> layers = [];
+  <span class="k">while</span> (visited.size &lt; nodes.length) {
+    <span class="k">const</span> layer = nodes.<span class="f">filter</span>(n =&gt;
+      !visited.<span class="f">has</span>(n.id) &amp;&amp;
+      (inDegree.<span class="f">get</span>(n.id) || <span class="n">0</span>) === <span class="n">0</span>
+    );
+    layers.<span class="f">push</span>(layer);
+    layer.<span class="f">forEach</span>(n =&gt; {
+      visited.<span class="f">add</span>(n.id);
+      outgoing.<span class="f">get</span>(n.id)?.<span class="f">forEach</span>(t =&gt; {
+        inDegree.<span class="f">set</span>(t, inDegree.<span class="f">get</span>(t) - <span class="n">1</span>);
+      });
+    });
+  }
+
+  <span class="c">// Position each layer horizontally centered</span>
+  layers.<span class="f">forEach</span>((layer, i) =&gt; {
+    <span class="k">const</span> layerWidth = layer.length * (w + gap) - gap;
+    <span class="k">const</span> startX = (canvasWidth - layerWidth) / <span class="n">2</span>;
+    layer.<span class="f">forEach</span>((node, j) =&gt; {
+      positions[node.id] = {
+        <span class="k">x</span>: startX + j * (w + gap),
+        <span class="k">y</span>: <span class="n">100</span> + i * (h + gap)
+      };
+    });
+  });
+}</pre>
+      </div>
+      <div>
+        <div class="label">🗣 Plain English</div>
+        <div class="plain">
+          <p><strong>1. Build Adjacency Lists:</strong> For every connection, record which node points to which. This gives us in-degree (how many prerequisites) and out-degree (how many dependents) for each node.</p>
+          <p><strong>2. Kahn's Algorithm:</strong> In each iteration, collect every node whose in-degree is zero. These nodes have no unresolved dependencies, so they can all be placed in the <strong>same horizontal layer</strong>.</p>
+          <p><strong>3. Decrement In-Degrees:</strong> After placing a layer, "remove" those nodes from the graph by decrementing the in-degree of every node they point to. This exposes the next layer.</p>
+          <p><strong>4. Position:</strong> Each layer is centered on the canvas. Nodes within a layer are spaced evenly. Vertical distance between layers is constant. The result is a clean, left-to-right or top-to-bottom flow with no edge crossings when possible.</p>
+          <p><strong>5. Paths:</strong> Connections are rendered as cubic Bézier curves from the bottom of the source node to the top of the target node, with control points at the vertical midpoint.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="dag-viz">
+      <div class="code-header"><span><span class="dot y"></span>Live DAG Auto-Layout</span><span>Topological layering with Kahn's algorithm</span></div>
+      <canvas id="dagCanvas" width="800" height="340"></canvas>
+      <div class="dag-controls">
+        <button class="btn btn-primary" id="dagPlay" onclick="playDag()">▶ Animate Execution</button>
+        <button class="btn" onclick="resetDag()">↺ Reset</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Export Targets</h3>
+      <p>The visualizer is not just for display. It is a <strong>format converter</strong>:</p>
+      <ul>
+        <li><code>toSVG()</code> — Generates a self-contained SVG with arrow markers, colored rectangles, and labels. Embed directly in documentation.</li>
+        <li><code>toMermaid()</code> — Outputs <code>graph TD</code> syntax. Paste into GitHub markdown, Notion, or any Mermaid renderer.</li>
+        <li><code>toDOT()</code> — Outputs Graphviz DOT. Use with <code>dot -Tpng</code> for high-resolution static renders.</li>
+      </ul>
+      <p>All three share the same <code>layout()</code> call, so the geometry is identical across formats.</p>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- Section 7: Execution Deep Dive -->
+  <section class="reveal" id="execution">
+    <h2><span class="num">07</span> Execution Lifecycle</h2>
+    <p>A workflow execution moves through a finite state machine. Understanding these states is critical for building reliable automation:</p>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:16px 0;">
+      <span class="status-badge pending">pending</span>
+      <span class="status-badge running">running</span>
+      <span class="status-badge completed">completed</span>
+      <span class="status-badge failed">failed</span>
+      <span class="status-badge pending">paused</span>
+      <span class="status-badge pending">cancelled</span>
+      <span class="status-badge pending">timeout</span>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span><span class="dot y"></span>Execution State Machine</span></div>
+      <pre><span class="k">type</span> <span class="t">ExecutionStatus</span> =
+  | <span class="s">'pending'</span>    <span class="c">// Workflow created, not yet started</span>
+  | <span class="s">'running'</span>    <span class="c">// Nodes are actively executing</span>
+  | <span class="s">'paused'</span>     <span class="c">// Execution suspended (retains state)</span>
+  | <span class="s">'completed'</span>  <span class="c">// All reachable nodes finished without error</span>
+  | <span class="s">'failed'</span>     <span class="c">// A node threw and errorHandling did not recover</span>
+  | <span class="s">'cancelled'</span>  <span class="c">// Cancelled by user or parent workflow</span>
+  | <span class="s">'timeout'</span>    <span class="c">// Exceeded defaultTimeout (5 min default)</span>;
+
+<span class="c">// State transitions are one-way except pause ↔ running</span>
+<span class="c">// failed, cancelled, and timeout are terminal</span></pre>
+    </div>
+
+    <h3>Hooks: Observing Execution</h3>
+    <p>The engine accepts a <code>hooks</code> object in its config. These are async functions called at precise lifecycle moments:</p>
+    <ul>
+      <li><code>beforeExecute</code> — Called once after the execution record is created but before any node runs</li>
+      <li><code>beforeNodeExecute</code> — Called before every single node invocation</li>
+      <li><code>afterNodeExecute</code> — Called after a node completes, receiving the result</li>
+      <li><code>afterExecute</code> — Called once after the workflow reaches a terminal state</li>
+      <li><code>onError</code> — Called when any node throws an uncaught error</li>
+    </ul>
+    <p>Hooks are how you build <strong>logging, metrics, audit trails, and real-time UIs</strong> on top of the engine without modifying its core.</p>
+
+    <h3>Custom Node Types</h3>
+    <p>The built-in types (triggers, transforms, HTTP, conditions) are just pre-registered <code>NodeType</code> objects. You can register your own:</p>
+
+    <div class="code-block">
+      <div class="code-header"><span><span class="dot y"></span>Custom Node Registration</span></div>
+      <pre>engine.<span class="f">registerNodeType</span>({
+  <span class="k">type</span>: <span class="s">'custom:processor'</span>,
+  <span class="k">category</span>: <span class="s">'custom'</span>,
+  <span class="k">displayName</span>: <span class="s">'Data Processor'</span>,
+  <span class="k">inputs</span>:  [{ <span class="k">name</span>: <span class="s">'data'</span>, <span class="k">type</span>: <span class="s">'object'</span>, <span class="k">required</span>: <span class="k">true</span> }],
+  <span class="k">outputs</span>: [{ <span class="k">name</span>: <span class="s">'result'</span>, <span class="k">type</span>: <span class="s">'object'</span> }],
+  <span class="k">configSchema</span>: [{ <span class="k">name</span>: <span class="s">'multiplier'</span>, <span class="k">type</span>: <span class="s">'number'</span>, <span class="k">default</span>: <span class="n">1</span> }],
+  <span class="k">executor</span>: <span class="k">async</span> (node, context, inputs) =&gt; {
+    <span class="k">const</span> multiplier = node.config?.multiplier || <span class="n">1</span>;
+    <span class="k">return</span> { <span class="k">result</span>: { <span class="k">value</span>: inputs.data.value * multiplier } };
+  },
+});</pre>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- Quizzes -->
+  <section class="reveal" id="quizzes">
+    <h2><span class="num">08</span> Knowledge Check</h2>
+
+    <div class="quiz" id="quiz1">
+      <div class="quiz-header"><span class="quiz-num">1</span><h3>What determines the execution order of nodes?</h3></div>
+      <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:12px;">Select the single correct answer.</p>
+      <div class="quiz-options">
+        <div class="quiz-option" onclick="selectOption(this, 1, 0)"><span class="radio"></span>The order they appear in the <code>nodes</code> array.</div>
+        <div class="quiz-option" onclick="selectOption(this, 1, 1)"><span class="radio"></span>The <code>Connection</code> edges and dependency resolution at runtime.</div>
+        <div class="quiz-option" onclick="selectOption(this, 1, 2)"><span class="radio"></span>The alphabetical order of node IDs.</div>
+        <div class="quiz-option" onclick="selectOption(this, 1, 3)"><span class="radio"></span>The scheduler's priority queue always.</div>
+      </div>
+      <div class="quiz-feedback" id="feedback1"></div>
+    </div>
+
+    <div class="quiz" id="quiz2">
+      <div class="quiz-header"><span class="quiz-num">2</span><h3>When does the scheduler <em>not</em> pull a task from the queue?</h3></div>
+      <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:12px;">Select the single correct answer.</p>
+      <div class="quiz-options">
+        <div class="quiz-option" onclick="selectOption(this, 2, 0)"><span class="radio"></span>When the queue has fewer tasks than <code>maxConcurrency</code>.</div>
+        <div class="quiz-option" onclick="selectOption(this, 2, 1)"><span class="radio"></span>When <code>running.size &gt;= maxConcurrency</code>, <code>isPaused</code> is true, or the queue is empty.</div>
+        <div class="quiz-option" onclick="selectOption(this, 2, 2)"><span class="radio"></span>Only when the queue is empty.</div>
+        <div class="quiz-option" onclick="selectOption(this, 2, 3)"><span class="radio"></span>When the engine has not finished the previous workflow.</div>
+      </div>
+      <div class="quiz-feedback" id="feedback2"></div>
+    </div>
+
+    <div class="quiz" id="quiz3">
+      <div class="quiz-header"><span class="quiz-num">3</span><h3>What algorithm does the visualizer use for auto-layout?</h3></div>
+      <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:12px;">Select the single correct answer.</p>
+      <div class="quiz-options">
+        <div class="quiz-option" onclick="selectOption(this, 3, 0)"><span class="radio"></span>Force-directed graph layout (Fruchterman-Reingold).</div>
+        <div class="quiz-option" onclick="selectOption(this, 3, 1)"><span class="radio"></span>Random placement with collision detection.</div>
+        <div class="quiz-option" onclick="selectOption(this, 3, 2)"><span class="radio"></span>Kahn's topological sort with layered positioning.</div>
+        <div class="quiz-option" onclick="selectOption(this, 3, 3)"><span class="radio"></span>Dijkstra's shortest path for edge routing.</div>
+      </div>
+      <div class="quiz-feedback" id="feedback3"></div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- Capstone -->
+  <section class="reveal" id="capstone">
+    <div class="capstone">
+      <h2><span class="num">🏆</span> Capstone Project</h2>
+      <p>Build a <strong>GitHub Star Tracker Workflow</strong> using <code>@allternit/workflow-engine</code>. This project demonstrates every concept from this module: DAG design, custom node types, conditional branching, scheduler concurrency, and Mermaid export.</p>
+
+      <div class="capstone-grid">
+        <div class="capstone-item">
+          <h4>Requirements</h4>
+          <p>Fetch stars for 5 repos in parallel, filter those with &gt;1000 stars, post a summary to a Slack webhook, and export the DAG as Mermaid.</p>
+        </div>
+        <div class="capstone-item">
+          <h4>Architecture</h4>
+          <p>Use a <code>trigger:manual</code> node, a custom <code>parallel-fetch</code> node, a <code>condition:if</code> branch, and an <code>http:request</code> output node.</p>
+        </div>
+        <div class="capstone-item">
+          <h4>Stretch Goals</h4>
+          <p>Add a retry policy via <code>ErrorHandlingConfig</code>, implement a <code>delay:wait</code> node for rate limiting, and visualize execution state in real-time using hooks.</p>
+        </div>
+        <div class="capstone-item">
+          <h4>Artifact</h4>
+          <p>A TypeScript repo with the workflow definition, a test that executes it, and a <code>README.md</code> containing the generated Mermaid diagram.</p>
+        </div>
+      </div>
+
+      <div style="margin-top:24px;padding:16px;background:rgba(11,11,12,0.6);border-radius:10px;border:1px solid var(--border);">
+        <p style="margin:0;font-size:0.85rem;color:var(--text-muted);"><strong style="color:var(--text);">Evaluation criteria:</strong> Correct DAG structure with no cycles, at least one custom node type registered, conditional branching used meaningfully, scheduler concurrency limited to 3, and a Mermaid diagram exported from the visualizer. Submit as a GitHub repo link.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- Next Steps -->
+  <section class="reveal">
+    <h2>What Comes Next</h2>
+    <p>Module 2 covers <strong>extending the engine</strong>: writing custom executors that integrate with MCP servers, building n8n-compatible nodes, and wiring the scheduler into Allternit's event bus. Module 3 covers <strong>observability</strong>: streaming execution state to WebSocket clients, building a real-time DAG monitor, and exporting execution traces.</p>
+    <p style="margin-top:16px;">Read the source: <code>packages/@allternit/workflow-engine/src/engine/workflow-engine.ts</code></p>
+  </section>
+
+  <footer>
+    <p>A://Labs — ADV Tier — Module 1: The Allternit Workflow Engine</p>
+    <p style="margin-top:4px;">Generated from <code>packages/@allternit/workflow-engine</code> · Allternit Internal</p>
+  </footer>
+
+  <script>
+    // ========================
+    // Scroll Progress & Nav
+    // ========================
+    const progressBar = document.getElementById('progress-bar');
+    const navLinks = document.querySelectorAll('.nav-links a');
+    const sections = document.querySelectorAll('section[id], section[class*="reveal"]');
+
+    function updateProgress() {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const pct = (scrollTop / docHeight) * 100;
+      progressBar.style.width = pct + '%';
+
+      let current = '';
+      sections.forEach(sec => {
+        const top = sec.offsetTop - 100;
+        if (scrollTop >= top) {
+          current = sec.getAttribute('id') || '';
+        }
+      });
+      navLinks.forEach(link => {
+        link.classList.toggle('active', link.dataset.section === current);
+      });
+    }
+    window.addEventListener('scroll', updateProgress, { passive: true });
+    updateProgress();
+
+    // Scroll reveal
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.08 });
+    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+    // ========================
+    // DAG Visualization
+    // ========================
+    const dagCanvas = document.getElementById('dagCanvas');
+    const dagCtx = dagCanvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    function resizeDag() {
+      const rect = dagCanvas.getBoundingClientRect();
+      dagCanvas.width = rect.width * dpr;
+      dagCanvas.height = rect.height * dpr;
+      dagCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    resizeDag();
+    window.addEventListener('resize', resizeDag);
+
+    const dagNodes = [
+      { id: 'trigger', label: 'Webhook', x: 0.2, y: 0.15, color: '#3b82f6', icon: '▶' },
+      { id: 'fetch',   label: 'Fetch Data', x: 0.2, y: 0.45, color: '#ec4899', icon: '◎' },
+      { id: 'filter',  label: 'Filter', x: 0.2, y: 0.75, color: '#10b981', icon: '◈' },
+      { id: 'notify',  label: 'Slack', x: 0.65, y: 0.45, color: '#8b5cf6', icon: '✉' },
+      { id: 'output',  label: 'Result', x: 0.2, y: 1.05, color: '#ef4444', icon: '✓' },
+    ];
+    const dagEdges = [
+      { from: 0, to: 1 },
+      { from: 1, to: 2 },
+      { from: 1, to: 3 },
+      { from: 2, to: 4 },
+    ];
+    let dagAnimating = false;
+    let dagProgress = 0;
+    let dagLastTime = 0;
+
+    function drawRoundedRect(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    }
+
+    function drawDag(timestamp) {
+      const w = dagCanvas.getBoundingClientRect().width;
+      const h = dagCanvas.getBoundingClientRect().height;
+      dagCtx.clearRect(0, 0, w, h);
+
+      const nodeW = 120, nodeH = 42;
+      const positions = dagNodes.map(n => ({
+        x: n.x * w + (n.x > 0.4 ? 0 : (w * 0.15)),
+        y: n.y * h * 0.55 + 20,
+      }));
+
+      // Draw edges
+      dagEdges.forEach((edge, ei) => {
+        const a = positions[edge.from];
+        const b = positions[edge.to];
+        const sx = a.x + nodeW / 2;
+        const sy = a.y + nodeH;
+        const tx = b.x + nodeW / 2;
+        const ty = b.y;
+        const my = (sy + ty) / 2;
+
+        dagCtx.beginPath();
+        dagCtx.moveTo(sx, sy);
+        dagCtx.bezierCurveTo(sx, my, tx, my, tx, ty);
+        dagCtx.strokeStyle = '#3f3f46';
+        dagCtx.lineWidth = 2;
+        dagCtx.stroke();
+
+        // Arrow
+        dagCtx.beginPath();
+        dagCtx.moveTo(tx, ty);
+        dagCtx.lineTo(tx - 5, ty - 8);
+        dagCtx.lineTo(tx + 5, ty - 8);
+        dagCtx.closePath();
+        dagCtx.fillStyle = '#3f3f46';
+        dagCtx.fill();
+
+        // Animated packet
+        if (dagAnimating) {
+          const edgeStart = ei * 0.25;
+          const edgeEnd = edgeStart + 0.25;
+          if (dagProgress >= edgeStart && dagProgress <= edgeEnd + 0.05) {
+            const t = Math.min(1, (dagProgress - edgeStart) / 0.25);
+            const px = (1 - t) * (1 - t) * sx + 2 * (1 - t) * t * sx + t * t * tx;
+            const py = (1 - t) * (1 - t) * sy + 2 * (1 - t) * t * my + t * t * ty;
+            dagCtx.beginPath();
+            dagCtx.arc(px, py, 5, 0, Math.PI * 2);
+            dagCtx.fillStyle = '#fbbf24';
+            dagCtx.shadowColor = '#f59e0b';
+            dagCtx.shadowBlur = 12;
+            dagCtx.fill();
+            dagCtx.shadowBlur = 0;
+          }
+        }
+      });
+
+      // Draw nodes
+      dagNodes.forEach((node, i) => {
+        const pos = positions[i];
+        const active = dagAnimating && dagProgress >= i * 0.22;
+        const completed = dagAnimating && dagProgress >= i * 0.22 + 0.18;
+
+        // Glow if active
+        if (active && !completed) {
+          dagCtx.shadowColor = node.color;
+          dagCtx.shadowBlur = 20;
+        }
+
+        drawRoundedRect(dagCtx, pos.x, pos.y, nodeW, nodeH, 8);
+        dagCtx.fillStyle = completed ? node.color : (active ? node.color + '88' : '#27272a');
+        if (!active && !completed) dagCtx.fillStyle = '#1c1c1f';
+        dagCtx.fill();
+        dagCtx.shadowBlur = 0;
+
+        // Border
+        dagCtx.strokeStyle = active ? node.color : '#3f3f46';
+        dagCtx.lineWidth = active ? 2 : 1;
+        dagCtx.stroke();
+
+        // Icon
+        dagCtx.fillStyle = active ? '#fff' : '#a1a1aa';
+        dagCtx.font = 'bold 13px Inter, sans-serif';
+        dagCtx.textAlign = 'left';
+        dagCtx.fillText(node.icon, pos.x + 12, pos.y + nodeH / 2 + 5);
+
+        // Label
+        dagCtx.fillStyle = active ? '#fff' : '#a1a1aa';
+        dagCtx.font = '600 12px Inter, sans-serif';
+        dagCtx.textAlign = 'left';
+        dagCtx.fillText(node.label, pos.x + 32, pos.y + nodeH / 2 + 4);
+
+        // Status dot
+        if (completed) {
+          dagCtx.beginPath();
+          dagCtx.arc(pos.x + nodeW - 12, pos.y + nodeH / 2, 4, 0, Math.PI * 2);
+          dagCtx.fillStyle = '#22c55e';
+          dagCtx.fill();
+        } else if (active) {
+          dagCtx.beginPath();
+          dagCtx.arc(pos.x + nodeW - 12, pos.y + nodeH / 2, 4, 0, Math.PI * 2);
+          dagCtx.fillStyle = '#3b82f6';
+          dagCtx.fill();
+        }
+      });
+
+      if (dagAnimating) {
+        const dt = timestamp - dagLastTime;
+        dagLastTime = timestamp;
+        dagProgress += dt * 0.00035;
+        if (dagProgress >= 1.3) {
+          dagAnimating = false;
+          dagProgress = 0;
+          document.getElementById('dagPlay').textContent = '▶ Animate Execution';
+          document.getElementById('dagPlay').disabled = false;
+        } else {
+          requestAnimationFrame(drawDag);
+        }
+      }
+    }
+
+    function playDag() {
+      dagAnimating = true;
+      dagProgress = 0;
+      dagLastTime = performance.now();
+      document.getElementById('dagPlay').textContent = 'Running...';
+      document.getElementById('dagPlay').disabled = true;
+      requestAnimationFrame(drawDag);
+    }
+    function resetDag() {
+      dagAnimating = false;
+      dagProgress = 0;
+      document.getElementById('dagPlay').textContent = '▶ Animate Execution';
+      document.getElementById('dagPlay').disabled = false;
+      drawDag(0);
+    }
+    drawDag(0);
+
+    // ========================
+    // Scheduler Simulation
+    // ========================
+    const schedCanvas = document.getElementById('schedulerCanvas');
+    const schedCtx = schedCanvas.getContext('2d');
+    function resizeSched() {
+      const rect = schedCanvas.getBoundingClientRect();
+      schedCanvas.width = rect.width * dpr;
+      schedCanvas.height = rect.height * dpr;
+      schedCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    resizeSched();
+    window.addEventListener('resize', resizeSched);
+
+    let schedRunning = false;
+    let schedTasks = [];
+    let schedTime = 0;
+    let schedLast = 0;
+    const MAX_CONCURRENCY = 3;
+    const QUEUE_LIMIT = 8;
+
+    function initSchedTasks() {
+      schedTasks = [];
+      for (let i = 0; i < 7; i++) {
+        schedTasks.push({
+          id: `T${i + 1}`,
+          state: 'queued',
+          x: 0,
+          y: 0,
+          progress: 0,
+          startDelay: i * 0.8,
+          duration: 2.5 + Math.random() * 1.5,
+        });
+      }
+    }
+    initSchedTasks();
+
+    function drawScheduler(timestamp) {
+      const w = schedCanvas.getBoundingClientRect().width;
+      const h = schedCanvas.getBoundingClientRect().height;
+      schedCtx.clearRect(0, 0, w, h);
+
+      const runningCount = schedTasks.filter(t => t.state === 'running').length;
+      const queuedCount = schedTasks.filter(t => t.state === 'queued').length;
+      const completedCount = schedTasks.filter(t => t.state === 'completed').length;
+
+      // Labels
+      schedCtx.font = '600 11px Inter, sans-serif';
+      schedCtx.fillStyle = '#a1a1aa';
+      schedCtx.textAlign = 'left';
+      schedCtx.fillText(`Queue (${queuedCount})`, 12, 18);
+      schedCtx.fillText(`Running (${runningCount}/${MAX_CONCURRENCY})`, w * 0.4, 18);
+      schedCtx.fillText(`Completed (${completedCount})`, w * 0.75, 18);
+
+      // Queue zone
+      schedCtx.fillStyle = 'rgba(245,158,11,0.06)';
+      schedCtx.fillRect(10, 28, w * 0.32, h - 38);
+      schedCtx.strokeStyle = 'rgba(245,158,11,0.2)';
+      schedCtx.strokeRect(10, 28, w * 0.32, h - 38);
+
+      // Running zone
+      schedCtx.fillStyle = 'rgba(59,130,246,0.06)';
+      schedCtx.fillRect(w * 0.37, 28, w * 0.32, h - 38);
+      schedCtx.strokeStyle = 'rgba(59,130,246,0.2)';
+      schedCtx.strokeRect(w * 0.37, 28, w * 0.32, h - 38);
+
+      // Completed zone
+      schedCtx.fillStyle = 'rgba(34,197,94,0.06)';
+      schedCtx.fillRect(w * 0.72, 28, w * 0.26, h - 38);
+      schedCtx.strokeStyle = 'rgba(34,197,94,0.2)';
+      schedCtx.strokeRect(w * 0.72, 28, w * 0.26, h - 38);
+
+      // Draw tasks
+      schedTasks.forEach((task, i) => {
+        let tx, ty;
+        const row = i % 4;
+        const col = Math.floor(i / 4);
+
+        if (task.state === 'queued') {
+          tx = 22 + col * 50;
+          ty = 42 + row * 36;
+        } else if (task.state === 'running') {
+          const rIdx = schedTasks.filter((t, idx) => idx < i && t.state === 'running').length;
+          tx = w * 0.37 + 16 + rIdx * 58;
+          ty = h / 2 - 14;
+        } else {
+          const cIdx = schedTasks.filter((t, idx) => idx < i && t.state === 'completed').length;
+          tx = w * 0.72 + 12 + (cIdx % 3) * 48;
+          ty = 42 + Math.floor(cIdx / 3) * 36;
+        }
+
+        // Smooth position
+        task.x += (tx - task.x) * 0.12;
+        task.y += (ty - task.y) * 0.12;
+
+        // Task box
+        const tw = 44, th = 26;
+        drawRoundedRect(schedCtx, task.x, task.y, tw, th, 5);
+        if (task.state === 'queued') schedCtx.fillStyle = '#f59e0b22';
+        else if (task.state === 'running') schedCtx.fillStyle = '#3b82f622';
+        else schedCtx.fillStyle = '#22c55e22';
+        schedCtx.fill();
+        schedCtx.strokeStyle = task.state === 'queued' ? '#f59e0b' : (task.state === 'running' ? '#3b82f6' : '#22c55e');
+        schedCtx.lineWidth = 1.5;
+        schedCtx.stroke();
+
+        // Progress bar for running
+        if (task.state === 'running') {
+          schedCtx.fillStyle = '#3b82f6';
+          schedCtx.fillRect(task.x + 3, task.y + th - 5, (tw - 6) * task.progress, 3);
+        }
+
+        // Label
+        schedCtx.fillStyle = '#e5e5e5';
+        schedCtx.font = '600 10px JetBrains Mono, monospace';
+        schedCtx.textAlign = 'center';
+        schedCtx.fillText(task.id, task.x + tw / 2, task.y + th / 2 + 4);
+      });
+
+      if (schedRunning) {
+        const dt = (timestamp - schedLast) / 1000;
+        schedLast = timestamp;
+        schedTime += dt;
+
+        // Spawn into queue with delay
+        schedTasks.forEach(task => {
+          if (task.state === 'queued' && schedTime > task.startDelay) {
+            if (runningCount < MAX_CONCURRENCY) {
+              task.state = 'running';
+            }
+          }
+          if (task.state === 'running') {
+            task.progress += dt / task.duration;
+            if (task.progress >= 1) {
+              task.progress = 1;
+              task.state = 'completed';
+            }
+          }
+        });
+
+        // Pull from queue when slots open
+        const currentRunning = schedTasks.filter(t => t.state === 'running').length;
+        if (currentRunning < MAX_CONCURRENCY) {
+          const nextQueued = schedTasks.find(t => t.state === 'queued' && schedTime > t.startDelay);
+          if (nextQueued) nextQueued.state = 'running';
+        }
+
+        // Reset when all done
+        if (schedTasks.every(t => t.state === 'completed')) {
+          setTimeout(() => { initSchedTasks(); schedTime = 0; }, 800);
+        }
+
+        requestAnimationFrame(drawScheduler);
+      }
+    }
+
+    function startSchedulerSim() {
+      if (schedRunning) return;
+      schedRunning = true;
+      schedLast = performance.now();
+      requestAnimationFrame(drawScheduler);
+    }
+    function pauseSchedulerSim() { schedRunning = false; }
+    function resetSchedulerSim() {
+      schedRunning = false;
+      initSchedTasks();
+      schedTime = 0;
+      drawScheduler(0);
+    }
+    drawScheduler(0);
+
+    // ========================
+    // Group Chat Animation
+    // ========================
+    const chatMessages = [
+      { from: 'engine', text: 'Received <code>execute("data-pipeline")</code>. Building DAG...' },
+      { from: 'engine', text: 'Found 1 start node: <code>trigger:webhook</code>. Starting execution.' },
+      { from: 'node', text: '<code>trigger:webhook</code> completed. Output: <code>{ body: {...} }</code>' },
+      { from: 'engine', text: 'Downstream edge to <code>fetch</code>. Condition is empty — proceeding.' },
+      { from: 'sched', text: 'Task <code>fetch</code> submitted. Queue depth: 0. Running: 1/5.' },
+      { from: 'node', text: '<code>http:request</code> executing GET https://api.example.com/data...' },
+      { from: 'node', text: '<code>fetch</code> completed. Status 200. Response cached in <code>nodeResults</code>.' },
+      { from: 'engine', text: 'Two outgoing edges from <code>fetch</code>: to <code>filter</code> and <code>notify</code>.' },
+      { from: 'sched', text: 'Submitting <code>filter</code> and <code>notify</code> concurrently.' },
+      { from: 'node', text: '<code>filter</code> running expression: <code>item.active === true</code>' },
+      { from: 'node', text: '<code>notify</code> completed. Slack webhook returned 204.' },
+      { from: 'node', text: '<code>filter</code> completed. 3 of 7 items passed.' },
+      { from: 'engine', text: 'Final edge to <code>output:result</code>. No conditions.' },
+      { from: 'node', text: '<code>output:result</code> stored. Workflow outputs collected.' },
+      { from: 'engine', text: 'Execution <code>completed</code>. Firing <code>afterExecute</code> hook.' },
+    ];
+    let chatIndex = 0;
+    let chatTimer = null;
+    let chatPlaying = false;
+
+    function renderChatMsg(msg) {
+      const container = document.getElementById('chatMessages');
+      const div = document.createElement('div');
+      div.className = 'chat-msg';
+      const labels = { engine: 'Engine', sched: 'Scheduler', node: 'Node' };
+      div.innerHTML = `
+        <div class="chat-avatar ${msg.from}">${msg.from === 'engine' ? 'E' : msg.from === 'sched' ? 'S' : 'N'}</div>
+        <div class="chat-bubble"><strong>${labels[msg.from]}:</strong> ${msg.text}</div>
+      `;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function playChat() {
+      if (chatPlaying) return;
+      chatPlaying = true;
+      document.getElementById('chatMessages').innerHTML = '';
+      chatIndex = 0;
+      function next() {
+        if (chatIndex >= chatMessages.length) {
+          chatPlaying = false;
+          return;
+        }
+        renderChatMsg(chatMessages[chatIndex]);
+        chatIndex++;
+        chatTimer = setTimeout(next, 1200 + Math.random() * 400);
+      }
+      next();
+    }
+    function pauseChat() {
+      chatPlaying = false;
+      clearTimeout(chatTimer);
+    }
+    // Auto-start chat once visible
+    const chatObserver = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting && !chatPlaying && chatIndex === 0) {
+          setTimeout(playChat, 600);
+        }
+      });
+    }, { threshold: 0.4 });
+    chatObserver.observe(document.getElementById('chatViz'));
+
+    // ========================
+    // Quizzes
+    // ========================
+    const quizAnswers = { 1: 1, 2: 1, 3: 2 };
+    const quizFeedback = {
+      1: {
+        correct: 'Correct. The engine uses <code>Connection</code> edges to build a DAG, then resolves dependencies at runtime. Array order does not matter.',
+        wrong: 'Not quite. The engine builds a DAG from <code>connections</code> and only executes a node after all its upstream dependencies have completed.'
+      },
+      2: {
+        correct: 'Correct. The scheduler guards on three conditions: paused state, concurrency ceiling, and empty queue. All three must be false for a task to be pulled.',
+        wrong: 'Not quite. Re-read the <code>processQueue()</code> guard clause: it returns early if <code>isPaused</code>, <code>running.size &gt;= maxConcurrency</code>, or the queue is empty.'
+      },
+      3: {
+        correct: 'Correct. The visualizer uses Kahn\'s algorithm (topological sort) to compute layers, then positions nodes within each layer.',
+        wrong: 'Not quite. The visualizer does not use force-directed or random placement. It uses Kahn\'s algorithm for deterministic layered layout.'
+      }
+    };
+
+    function selectOption(el, quizNum, optionIdx) {
+      const quizEl = document.getElementById('quiz' + quizNum);
+      const options = quizEl.querySelectorAll('.quiz-option');
+      const feedback = document.getElementById('feedback' + quizNum);
+      options.forEach(o => o.classList.remove('selected', 'correct', 'wrong'));
+      el.classList.add('selected');
+
+      const correct = quizAnswers[quizNum] === optionIdx;
+      if (correct) {
+        el.classList.add('correct');
+        feedback.className = 'quiz-feedback show correct';
+        feedback.textContent = quizFeedback[quizNum].correct;
+      } else {
+        el.classList.add('wrong');
+        feedback.className = 'quiz-feedback show wrong';
+        feedback.textContent = quizFeedback[quizNum].wrong;
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Allternit Cowork Integration Preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    background: #0b0b0c;
+    color: #e5e5e5;
+    font-family: system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+  code, .mono { font-family: 'JetBrains Mono', monospace; }
+
+  .container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 32px 24px 48px;
+  }
+
+  /* Header */
+  .page-header {
+    text-align: center;
+    margin-bottom: 40px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .page-header h1 {
+    font-size: 1.75rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin-bottom: 6px;
+  }
+  .page-header p {
+    color: #a1a1aa;
+    font-size: 0.95rem;
+  }
+  .page-header .badge {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: rgba(6,182,212,0.12);
+    color: #06b6d4;
+    border: 1px solid rgba(6,182,212,0.2);
+  }
+
+  /* Section titles */
+  .section {
+    margin-bottom: 48px;
+  }
+  .section-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #a1a1aa;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-title::before {
+    content: '';
+    display: block;
+    width: 4px;
+    height: 16px;
+    border-radius: 2px;
+    background: #af52de;
+  }
+
+  /* ========== SECTION 1: TABS ========== */
+  .tabs-bar {
+    display: flex;
+    gap: 4px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    padding: 6px;
+    backdrop-filter: blur(12px);
+  }
+  .tab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #a1a1aa;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    white-space: nowrap;
+  }
+  .tab:hover {
+    background: rgba(255,255,255,0.05);
+    color: #e5e5e5;
+  }
+  .tab.active {
+    background: rgba(6,182,212,0.12);
+    color: #06b6d4;
+    box-shadow: 0 0 0 1px rgba(6,182,212,0.25);
+  }
+  .tab svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+
+  /* ========== SECTION 2: KANBAN ========== */
+  .kanban-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .kanban-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .workspace-filter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: #a1a1aa;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+  }
+  .workspace-filter:hover {
+    border-color: rgba(255,255,255,0.15);
+    color: #e5e5e5;
+  }
+  .optimize-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    background: rgba(6,182,212,0.1);
+    border: 1px solid rgba(6,182,212,0.25);
+    color: #06b6d4;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+  }
+  .optimize-btn:hover {
+    background: rgba(6,182,212,0.18);
+    box-shadow: 0 0 16px rgba(6,182,212,0.25);
+    border-color: rgba(6,182,212,0.45);
+  }
+  .optimize-btn svg { width: 16px; height: 16px; }
+
+  .kanban-board {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 1280px) {
+    .kanban-board { grid-template-columns: repeat(3, 1fr); }
+  }
+  .kanban-col {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .col-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 4px;
+  }
+  .col-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .col-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+  .col-count {
+    font-size: 0.75rem;
+    color: #a1a1aa;
+    background: rgba(255,255,255,0.05);
+    padding: 2px 8px;
+    border-radius: 999px;
+  }
+
+  .task-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    padding: 14px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+  .task-card:hover {
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.12);
+    transform: translateY(-2px);
+  }
+  .task-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .priority-badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 2px 8px;
+    border-radius: 6px;
+  }
+  .priority-high { background: rgba(239,68,68,0.12); color: #ef4444; border: 1px solid rgba(239,68,68,0.2); }
+  .priority-medium { background: rgba(245,158,11,0.12); color: #f59e0b; border: 1px solid rgba(245,158,11,0.2); }
+  .priority-low { background: rgba(16,185,129,0.12); color: #10b981; border: 1px solid rgba(16,185,129,0.2); }
+
+  .task-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 10px;
+    line-height: 1.4;
+  }
+
+  .task-meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .est-time {
+    font-size: 0.78rem;
+    color: #a1a1aa;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .est-time svg { width: 14px; height: 14px; }
+
+  .agent-assign {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    color: #a1a1aa;
+  }
+  .agent-avatar {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #af52de, #06b6d4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .task-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+  }
+  .risk-pill {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    color: #a1a1aa;
+  }
+  .risk-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .risk-medium { background: #f59e0b; }
+  .risk-high { background: #ef4444; }
+  .risk-low { background: #10b981; }
+
+  .task-badges {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .rank-badge {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1.5px solid #06b6d4;
+    color: #06b6d4;
+    font-size: 0.7rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .comment-bubble {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 0.75rem;
+    color: #a1a1aa;
+  }
+  .comment-bubble svg { width: 14px; height: 14px; }
+
+  /* Column accent dots */
+  .dot-backlog { background: #6b7280; }
+  .dot-todo { background: #af52de; }
+  .dot-progress { background: #f59e0b; }
+  .dot-review { background: #3b82f6; }
+  .dot-done { background: #10b981; }
+
+  /* ========== SECTION 3: RUNS TABLE ========== */
+  .runs-table-wrap {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    overflow: hidden;
+    backdrop-filter: blur(12px);
+  }
+  .runs-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+  }
+  .runs-table thead th {
+    text-align: left;
+    padding: 12px 16px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #a1a1aa;
+    background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .runs-table tbody td {
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    color: #e5e5e5;
+    vertical-align: middle;
+  }
+  .runs-table tbody tr:last-child td { border-bottom: none; }
+  .runs-table tbody tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 500;
+  }
+  .status-running { background: rgba(59,130,246,0.1); color: #3b82f6; border: 1px solid rgba(59,130,246,0.2); }
+  .status-completed { background: rgba(16,185,129,0.1); color: #10b981; border: 1px solid rgba(16,185,129,0.2); }
+  .status-failed { background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.2); }
+
+  .assigned-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .avatar-human { background: linear-gradient(135deg, #6366f1, #a855f7); color: #fff; }
+  .avatar-robot { background: linear-gradient(135deg, #06b6d4, #0891b2); color: #fff; }
+
+  .runtime-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    background: rgba(255,255,255,0.05);
+    color: #a1a1aa;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+
+  /* Spinner animation */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(59,130,246,0.3);
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  /* ========== SECTION 4: MARKETPLACE ========== */
+  .marketplace-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .mp-tab {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #a1a1aa;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+  }
+  .mp-tab:hover { background: rgba(255,255,255,0.05); color: #e5e5e5; }
+  .mp-tab.active {
+    background: rgba(6,182,212,0.12);
+    color: #06b6d4;
+    box-shadow: 0 0 0 1px rgba(6,182,212,0.25);
+  }
+
+  .skills-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 1280px) {
+    .skills-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  .skill-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    padding: 18px;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .skill-card:hover {
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.12);
+    transform: translateY(-2px);
+  }
+  .skill-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .cyan-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #06b6d4;
+    box-shadow: 0 0 8px rgba(6,182,212,0.4);
+  }
+  .skill-name {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #e5e5e5;
+  }
+  .skill-desc {
+    font-size: 0.85rem;
+    color: #a1a1aa;
+    line-height: 1.5;
+    flex: 1;
+  }
+  .skill-meta {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 0.8rem;
+    color: #a1a1aa;
+  }
+  .skill-meta span { display: flex; align-items: center; gap: 4px; }
+  .stars { display: flex; gap: 2px; }
+  .stars svg { width: 14px; height: 14px; fill: #f59e0b; }
+  .stars svg.empty { fill: rgba(255,255,255,0.1); }
+
+  .install-btn {
+    margin-top: 4px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #e5e5e5;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    align-self: flex-start;
+  }
+  .install-btn:hover {
+    background: rgba(6,182,212,0.15);
+    border-color: rgba(6,182,212,0.35);
+    color: #06b6d4;
+  }
+
+  /* Footer */
+  .page-footer {
+    text-align: center;
+    padding-top: 32px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    color: #a1a1aa;
+    font-size: 0.8rem;
+  }
+  .page-footer .date { font-family: 'JetBrains Mono', monospace; margin-bottom: 4px; }
+
+  /* Responsive tweak */
+  @media (min-width: 1920px) {
+    .container { max-width: 1800px; padding: 40px 32px 56px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Page Header -->
+  <header class="page-header">
+    <h1>Allternit Cowork</h1>
+    <p>Allternit Cowork Integration Preview</p>
+    <span class="badge">Preview Build</span>
+  </header>
+
+  <!-- SECTION 1: CoworkModeTabs with Team Mode -->
+  <section class="section">
+    <div class="section-title">CoworkModeTabs</div>
+    <div class="tabs-bar">
+      <button class="tab">
+        <svg viewBox="0 0 256 256" fill="currentColor"><path d="M224 128a8 8 0 0 1-8 8H40a8 8 0 0 1 0-16h176a8 8 0 0 1 8 8ZM40 72h176a8 8 0 0 0 0-16H40a8 8 0 0 0 0 16Zm176 112H40a8 8 0 0 0 0 16h176a8 8 0 0 0 0-16Z"/></svg>
+        Plan
+      </button>
+      <button class="tab">
+        <svg viewBox="0 0 256 256" fill="currentColor"><path d="M240 128a15.79 15.79 0 0 1-10.5 15l-63.44 23.43-23.43 63.44a16 16 0 0 1-30.06 0L89.14 166.43 25.7 143a16 16 0 0 1 0-30.06l63.44-23.43L112.57 26.07a16 16 0 0 1 30.06 0l23.43 63.44 63.44 23.43A15.79 15.79 0 0 1 240 128Z"/></svg>
+        Execute
+      </button>
+      <button class="tab">
+        <svg viewBox="0 0 256 256" fill="currentColor"><path d="M245.48 125.57c-.34-.78-8.66-19.23-27.24-37.81C201 70.54 171.38 56 128 56S55 70.54 37.76 87.76c-18.58 18.58-26.9 37-27.24 37.81a6 6 0 0 0 0 4.88c.34.78 8.66 19.22 27.24 37.8C55 185.47 84.62 200 128 200s73-14.53 90.24-31.75c18.58-18.58 26.9-37 27.24-37.8a6 6 0 0 0 0-4.88ZM128 188c-31.38 0-58.78-10.71-81.48-31.85A131.25 131.25 0 0 1 25.74 128a131.25 131.25 0 0 1 20.78-28.15C69.22 78.71 96.62 68 128 68s58.78 10.71 81.48 31.85A131.25 131.25 0 0 1 230.26 128a131.25 131.25 0 0 1-20.78 28.15C186.78 177.29 159.38 188 128 188Zm0-100a10 10 0 1 0 10 10 10 10 0 0 0-10-10Zm0 56a46 46 0 1 1 46-46 46.06 46.06 0 0 1-46 46Zm0-80a34 34 0 1 0 34 34 34 34 0 0 0-34-34Z"/></svg>
+        Review
+      </button>
+      <button class="tab">
+        <svg viewBox="0 0 256 256" fill="currentColor"><path d="M224 66h-54.21l-28.49-28.48A6 6 0 0 0 138 36H80a6 6 0 0 0-6 6v18H40a14 14 0 0 0-14 14v120a14 14 0 0 0 14 14h152.89a14.11 14.11 0 0 0 14-14V78h17.11a13.89 13.89 0 0 0 14-14V72a6 6 0 0 0-6-6ZM80 46h55.52l22.24 22.24L132.68 70H80Zm106.89 144a2 2 0 0 1-2 2H40a2 2 0 0 1-2-2V74a2 2 0 0 1 2-2h34v68l17.51-10.51L109 142V72h69.89a2 2 0 0 1 2 2Zm-76-66h-12a6 6 0 0 0 0 12h12a6 6 0 0 0 0-12Zm0 32h-12a6 6 0 0 0 0 12h12a6 6 0 0 0 0-12Zm56-32h-12a6 6 0 0 0 0 12h12a6 6 0 0 0 0-12Zm0 32h-12a6 6 0 0 0 0 12h12a6 6 0 0 0 0-12Zm40-98h-17V72h17Z"/></svg>
+        Automate
+      </button>
+      <button class="tab">
+        <svg viewBox="0 0 256 256" fill="currentColor"><path d="M128 26a102 102 0 1 0 102 102A102.12 102.12 0 0 0 128 26Zm0 192a90 90 0 1 1 90-90 90.1 90.1 0 0 1-90 90Zm-6-82a10 10 0 1 1 10 10 10 10 0 0 1-10-10Zm100.24-22.48a6 6 0 0 1-11.76 2.44C198 80.08 165 62 128 62s-70 18.08-81.48 55.96a6 6 0 1 1-11.52-3.36C48.92 71.4 85.48 50 128 50s79.08 21.4 93 64.6a6 6 0 0 1 1.24 2.92ZM197.48 163.6a6 6 0 1 1-11.52 3.36C174.48 129.08 141.48 111 104.48 111a102.05 102.05 0 0 0-57.72 17.84 6 6 0 0 1-7.52-9.36A114.08 114.08 0 0 1 104.48 99c41.26 0 77.82 21.4 93 64.6Z"/></svg>
+        Web
+      </button>
+      <button class="tab">
+        <svg viewBox="0 0 256 256" fill="currentColor"><path d="M200 50h-16a14 14 0 0 0-14 14v16a14 14 0 0 0 14 14h16a14 14 0 0 0 14-14V64a14 14 0 0 0-14-14Zm2 30a2 2 0 0 1-2 2h-16a2 2 0 0 1-2-2V64a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2Zm-38-24a6 6 0 0 1 0-12h34a6 6 0 0 1 0 12Zm-34 0a6 6 0 0 1 0-12h10a6 6 0 0 1 0 12Zm72.54 66.57a73.78 73.78 0 0 1-20.06 53.07C173 190.75 151.52 202 128 202s-45-11.25-54.48-22.36a73.78 73.78 0 0 1-20.06-53.07 74.1 74.1 0 0 1 6.58-30.61 6 6 0 0 1 10.91 5 62.33 62.33 0 0 0-5.49 25.62 61.89 61.89 0 0 0 16.83 44.52C90.83 181.14 108.64 190 128 190s37.17-8.86 45.71-18.8a61.89 61.89 0 0 0 16.83-44.52A62.33 62.33 0 0 0 185.05 101a6 6 0 0 1 10.91-5 74.1 74.1 0 0 1 6.58 30.61ZM96 118a14 14 0 1 1 14 14 14 14 0 0 1-14-14Zm84 0a14 14 0 1 1-14-14 14 14 0 0 1 14 14Z"/></svg>
+        Agents
+      </button>
+      <button class="tab active">
+        <svg viewBox="0 0 256 256" fill="currentColor"><path d="M117.25 157.92a60 60 0 1 0-66.5 0A95.83 95.83 0 0 0 3.53 195.63a6 6 0 0 0 9.94 6.74 84 84 0 0 1 124.06 0 6 6 0 0 0 9.94-6.74 95.83 95.83 0 0 0-47.22-37.71ZM40 108a48 48 0 1 1 48 48 48.05 48.05 0 0 1-48-48Zm206.06 87.67a6 6 0 0 1-8.39-1.39 84.07 84.07 0 0 0-22.57-23.35 60 60 0 1 0-82.2 0 83.5 83.5 0 0 0-22.57 23.35 6 6 0 0 1-9.78-6.94 95.42 95.42 0 0 1 47.18-37.64 48 48 0 1 1 62.12 0 95.42 95.42 0 0 1 47.18 37.64 6 6 0 0 1-1.38 8.39ZM144 108a48 48 0 1 1 48 48 48.05 48.05 0 0 1-48-48Z"/></svg>
+        Team
+      </button>
+    </div>
+  </section>
+
+  <!-- SECTION 2: Enhanced TasksView (5-Column Kanban) -->
+  <section class="section">
+    <div class="section-title">Enhanced TasksView</div>
+    <div class="kanban-header">
+      <div class="kanban-header-left">
+        <button class="workspace-filter">
+          <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M230.6 49.53A14 14 0 0 0 218.67 42H37.33a14 14 0 0 0-11.93 7.53 13.68 13.68 0 0 0 1.69 14.67l77.33 102.67V210a14 14 0 0 0 21.79 11.65l32-21.33A14 14 0 0 0 162 188.27v-21.4l77.21-102.67a13.68 13.68 0 0 0 1.39-14.67ZM153.64 160.93a2 2 0 0 0-.31 1.07v22.27a2 2 0 0 1-.89 1.67l-32 21.33a2 2 0 0 1-3.11-1.67v-43.6a2 2 0 0 0 .31-1.07L46.42 66h163.16Z"/></svg>
+          Workspace: Allternit Platform
+          <svg width="12" height="12" viewBox="0 0 256 256" fill="currentColor"><path d="M213.66 101.66l-80 80a8 8 0 0 1-11.32 0l-80-80A8 8 0 0 1 53.66 90.34L128 164.69l74.34-74.35a8 8 0 0 1 11.32 11.32Z"/></svg>
+        </button>
+      </div>
+      <button class="optimize-btn">
+        <svg viewBox="0 0 256 256" fill="currentColor"><path d="M216 106H147l-22-60.66a6 6 0 0 0-11.24 0L91.67 106H24a6 6 0 0 0-3.52 10.84l58.21 42.18-22.3 61.3a6 6 0 0 0 9.23 6.72L128 184.7l62.38 42.34a6 6 0 0 0 9.23-6.72l-22.3-61.3 58.21-42.18A6 6 0 0 0 216 106Zm-60.62 48.72a6 6 0 0 0-2.17 6.73l19.66 54.05-55.06-37.36a6 6 0 0 0-6.72 0l-55.06 37.36 19.66-54.05a6 6 0 0 0-2.17-6.73l-49.4-35.85h58.81a6 6 0 0 0 5.62-3.9L128 49.34l22.45 61.43a6 6 0 0 0 5.62 3.9h58.81Z"/></svg>
+        Optimize Schedule
+      </button>
+    </div>
+
+    <div class="kanban-board">
+      <!-- BACKLOG -->
+      <div class="kanban-col">
+        <div class="col-header">
+          <div class="col-title"><span class="col-dot dot-backlog"></span>Backlog</div>
+          <span class="col-count">3</span>
+        </div>
+        <div class="task-card">
+          <div class="task-header-row">
+            <span class="priority-badge priority-low">Low</span>
+            <div class="rank-badge">③</div>
+          </div>
+          <div class="task-title">Update onboarding copy</div>
+          <div class="task-meta-row">
+            <span class="est-time">
+              <svg viewBox="0 0 256 256" fill="currentColor"><path d="M128 26a102 102 0 1 0 102 102A102.12 102.12 0 0 0 128 26Zm0 192a90 90 0 1 1 90-90 90.1 90.1 0 0 1-90 90Zm62-90a6 6 0 0 1-6 6h-56a6 6 0 0 1-6-6V72a6 6 0 0 1 12 0v50h50a6 6 0 0 1 6 6Z"/></svg>
+              1h 15m
+            </span>
+          </div>
+          <div class="task-meta-row">
+            <div class="agent-assign"><div class="agent-avatar">CW</div>@copy-agent</div>
+          </div>
+          <div class="task-footer">
+            <div class="risk-pill"><span class="risk-dot risk-low"></span>Low risk</div>
+            <div class="comment-bubble">
+              <svg viewBox="0 0 256 256" fill="currentColor"><path d="M140 128a12 12 0 1 1-12-12 12 12 0 0 1 12 12Zm-56-12a12 12 0 1 0 12 12 12 12 0 0 0-12-12Zm88 0a12 12 0 1 0 12 12 12 12 0 0 0-12-12Zm104 12A102 102 0 0 1 79.31 219.31L43.16 235a14 14 0 0 1-17.89-17.88l15.69-36.15A102 102 0 1 1 276 128Zm-12 0a90 90 0 1 0-149.83 67.29 6 6 0 0 1 .87 5l-15 34.55 34.55-15a5.92 5.92 0 0 1 5 .87A89.93 89.93 0 0 0 264 128Z"/></svg>
+              2
+            </div>
+          </div>
+        </div>
+        <div class="task-card">
+          <div class="task-header-row">
+            <span class="priority-badge priority-medium">Medium</span>
+            <div class="rank-badge">②</div>
+          </div>
+          <div class="task-title">Audit dependency licenses</div>
+          <div class="task-meta-row">
+            <span class="est-time">
+              <svg viewBox="0 0 256 256" fill="currentColor"><path d="M128 26a102 102 0 1 0 102 102A102.12 102.12 0 0 0 128 26Zm0 192a90 90 0 1 1 90-90 90.1 90.1 0 0 1-90 90Zm62-90a6 6 0 0 1-6 6h-56a6 6 0 0 1-6-6V72a6 6 0 0 1 12 0v50h50a6 6 0 0 1 6 6Z"/></svg>
+              3h 00m
+            </span>
+          </div>
+          <div class="task-meta-row">
+            <div class="agent-assign"><div class="agent-avatar">L</div>@legal-agent</div>
+          </div>
+          <div class="task-footer">
+            <div class="risk-pill"><span class="risk-dot risk-medium"></span>Medium risk</div>
+            <div class="comment-bubble">
+              <svg viewBox="0 0 256 256" fill="currentColor"><path d="M140 128a12 12 0 1 1-12-12 12 12 0 0 1 12 12Zm-56-12a12 12 0 1 0 12 12 12 12 0 0 0-12-12Zm88 0a12 12 0 1 0 12 12 12 12 0 0 0-12-12Zm104 12A102 102 0 0 1 79.31 219.31L43.16 235a14 14 0 0 1-17.89-17.88l15.69-36.15A102 102 0 1 1 276 128Zm-12 0a90 90 0 1 0-149.83 67.29 6 6 0 0 1 .87 5l-15 34.55 34.55-15a5.92 5.92 0 0 1 5 .87A89.93 89.93 0 0 0 264 128Z"/></svg>
+              5
+            </div>
+          </div>
+        </div>
+        <div class="task-card">
+          <div class="task-header-row">
+            <span class="priority-badge priority-high">High</span>
+            <div class="rank-badge">①</div>
+          </div>
+          <div class="task-title">Design new API rate-limit schema</div>
+          <div class="task-meta-row">
+            <span class="est-time">
+              <svg viewBox="0 0 256 256" fill="currentColor"><path d="M128 26a102 102 0 1 0 102 102A102.12 102.12 0 0 0 128 26Zm0 192a90 90 0 1 1 90-90 90.1 90.1 0 0 1-90 90Zm62-90a6 6 0 0 1-6 6h-56a6 6 0 0 1-6-6V72a6 6 0 0 1 12 0v50h50a6 6 0 0 1 6 6Z"/></svg>
+              4h 30m
+            </span>
+          </div>
+          <div class="task-meta-row">
+            <div class="agent-assign"><div class="agent-avatar">D</div>@design-agent</div>
+          </div>
+          <div class="task-footer">
+            <div class="risk-pill"><span class="risk-dot risk-high"></span>High risk</div>
+            <div class="comment-bubble">
+              <svg viewBox="0 0 256 256" fill="currentColor"><path d="M140 128a12 12 0 1 1-12-12 12 12 0 0 1 12 12Zm-56-12a12 12 0 1 0 12 12 12 12 0 0 0-12-12Zm88 0a12 12 0 1 0 12 12 12 12 0 0 0-12-12Zm104 12A102 102 0 0 1 79.31 219.31L43.16 235a14 14 0 0 1-17.89-17.88l15.69-36.15A102 102 0 1 1 276 128Zm-12 0a90 90 0 1 0-149.83 67.29 6 6 0 0 1 .87 5l-15 34.55 34.55-15a5.92 5.92 0 0 1 5 .87A89.93 89.93 0 0 0 264 128Z"/></svg>
+              8
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TODO -->
+      <div class="kanban-col">
+        <div class="col-header">
+          <div class="col-title"><span class="col-dot dot-todo"></span>Todo</div>
+          <span class="col-count">2</span>
+        </div>
+        <div class="task-card">
+          <div class="task-header-row">
+            <span class="priority-badge priority-high">High</span>
+            <div class="rank-badge">①</div>
+          </div>
+          <div class="task-title">Implement auth middleware</div>
+          <div class="task-meta-row">
+            <span class="est-time">
+              <svg viewBox="0 0 256 256" fill="currentColor"><path d="M128 26a102 102 0 1 0 102 102A102.12 102.12 0 0 0 128 26Zm0 192a90 90 0 1 1 90-90 90.1 90.1 0 0 1-90 90Zm62-90a6 6 0 0 1-6 6h-56a6 6 0 0 1-6-6V72a6 6 0 0 1 12 0v50h50a6 6 0 0 1 6 6Z"/></svg>
+              2h 30m
+            </span>
+          </div>
+          <div class="task-meta-row">
+            <div class="agent-assign"><div class="agent-avatar">B</div>@build-agent</div>
+          </div>
+          <div class="task-footer">
+            <div class="risk-pill"><span class="risk-dot risk-medium"></span>Medium risk</div>
+            <div class="comment-bubble">
+              <svg viewBox="0 0 256 256" fill="currentColor"><path d="M140 128a12 12 0 1 1-12-12 12 12 0 0 1 12 12Zm-56-12a12 12 0 1 0 12 12 12 12 0 0 0-12-12Zm88 0a12 12 0 1 0 12 12 12 12 0 0 0-12-12Zm104 12A102 102 0 0 1 79.31 219.31L43.16 235a14 14 0 0 1-17.89-17.88l15.69-36.15A102 102 0 1 1 276 128Zm-12 0a90 90 0 1 0-149.83 67.29 6 6 0 0 1 .87 5l-15 34.55 34.55-15a5.92 5.92 0 0 1 5 .87A89.93 89.93 0 0 0 264 128Z"/></svg>
+              4
+            </div>
+          </div>
+        </div>
+        <div class="task-card">
+          <div class="task-header-row">
+            <span class="priority-badge priority-medium">Medium</span>
+            <div class="rank-badge">②</div>
+          </div>
+          <div class="task-title">Write unit tests for utils</div>
+          <div class="task-meta-row">
+            <span class="est-time">
+              <svg viewBox="0 0 256 256" fill="currentColor"><path d="M128 26a102 102 0 1 0 102 102A102.12 102.12 0 0 0 128 26Zm0 192a90 90 0 1 1 90-90 90.1 90.1 0 0 1-90 90Zm62-90a6 6 0 0 1-6 6h-56a6 6 0 0 1-6-6V72a6 6 0 0 1 12 0v50h50a6 6 0 0 1 6 6Z"/></svg>
+              1h 45m
+            </span>
+          </div>
+          <div class="task-meta-row">
+            <div class="agent-assign"><div class="agent-avatar">T</div>@test-agent</div>
+          </div>
+          <div class="task-footer">
+            <div class="risk-pill"><span class="risk-dot risk-low"></span>Low risk</div>
+            <div class="comment-bubble">
+              <svg viewBox="0 0 256 256" fill="currentColor"><path d="M140 128a12 12 0 1 1-12-12 12 12 0 0 1 12 12Zm-56-12a12 12 0 1 0 12 12 12 12 0 0 0-12-12Zm88 0a12 12 0 1 0 12 12 12 12 0 0 0-12-12Zm104 12A102 102 0 0 1 79.31 219.31L43.16 235a14 14 0 0 1-17.89-17.88l15.69-36.15A102 102 0 1 1 276 128Zm-12 0a90 90 0 1 0-149.83 67.29 6 6 0 0 1 .87 5l-15 34.55 34.55-15a5.92 5.92 0 0 1 5 .87A89.93 89.93 0 0 0 264 128Z"/></svg>
+              1
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- IN PROGRESS -->
+      <div class="kanban-col">
+        <div class="col-header">
+          <div class="col-title"><span class="col-dot dot-progress"></span>In Progress</div>
+          <span class="col-count">3</span>
+        </div>
+        <div class="task-card">
+          <div class="task-header-row">
+            <span class="priority-badge priority-high">High</span>
+            <div class="rank-badge">①</div>
+          </div>
+          <div class="task-title">Refactor database layer</div>
+          <div class="task-meta-row">
+            <span class="est-time">
+              <svg viewBox="0 0 256 256" fill="currentColor"><path d="M128 26a102 102 0 1 0 102 102A102.12 102.12 0 0 0 128 26Zm0 192a90 90 0 1 1 90-90 90.1 90.1 0 0 1-90 90Zm62-90a6 6 0 0 1-6 6h-56a6 6 0 0 1-6-6V72a6 6 0 0 1 12 0v50h50a6 6 0 0 1 6 6Z"/></svg>
+              5h 00m
+            </span>
+          </div>
+          <div class="task-meta-row">
+            <div class="agent-assign"><div class="agent-avatar">M</div>@migrate-agent</div>
+          </div>
+          <div class="task-footer">
+            <div class="risk-pill"><span class="risk-dot risk-high"></span>High risk</div>
+            <div class="comment-bubble">
+              <svg viewBox="0 0 256 256" fill="currentColor"><path d="M140 128a12 12 0 1 1-12-12 12 12 0 0 1 12 12Zm-56-12a12 12 0 1 0 12 12 12 12 0 0 0-12-12Zm88 0a12 12 0 1 0 12 12 12 12 0 0 0-12-12Zm104 12A102 102 0 0 1 79.31 219.31L43.16 235a14 14 0 0 1-17.89-17.88l15.69-36.15A102 102 0 1 1 276 128Zm-12 0a90 90 0 1 0-149.83 67.29 6 6 0 0 1 .87 5l-15 34.55 34.55-15a5.92 5.92 0 0 1 5 .87A89.93 89.93 0 0 0 264 128Z"/></svg>
+              7
+            </div>
+          </div>
+        </div>
+        <div class="task-card">
+          <div class="task-header-row">
+            <span class="priority-badge priority-medium">Medium</span>
+            <div class="rank-badge">②</div>
+          </div>
+          <div class="task-title">Build dashboard widgets</div>
+          <div class="task-meta-row">
+            <span class="est-time">
+              <svg viewBox="0 0 256 256" fill="currentColor"><path d="M128 26a102 102 0 1 0 102 102A102.12 102.12 0 0 0 128 26Zm0 192a90 90 0 1 1 90-90 90.1 90.1 0 0 1-90 90Zm62-90a6 6 0 0 1-6 6h-56a6 6 0 0 1-6-6V72a6 6 0 0 1 12 0v50h50a6 6 0 0 1 6 6Z"/></svg>
+              3h 15m
+            </span>
+          </div>
+          <div class="task-meta-row">
+            <div class="agent-assign"><div class="agent-avatar">F</div>@frontend-agent</div>
+          </div>
+          <div class="task-footer">
+            <div class="risk-pill"><span class="risk-dot risk-medium"></span>Medium risk</div>
+            <div class="comment-bubble">
+              <svg viewBox="0 0 256 256" fill="currentColor"><path d="M140 128a12 12 0 1 1-12-12 12 12 0 0 1 12 12Zm-56-12a12 12 0 1 0 12 12 12 12 0 0 0-12-12Zm88 0a12 12 0 1 0 12 12 12 12 0 0 0-12-12Zm104 12A102 102 0 0 1 79.31 219.31L43.16 235a14 14 0 0 1-17.89-17.88l15.69-36.15A102 102 0 1 1 276 128Zm-12 0a90 90 0 1 0-149.83 67.29 6 6 0 0 1 .87 5l-15 34.55 34.55-15a5.92 5.92 0 0 1 5 .87A89.93 89.93 0 0 0 264 128Z"/></svg>
+              3
+            </div>
+          </div>
+        </div>
+        <div class="task-card">
+          <div class="task-header-row">
+            <span class="priority-badge priority-low">Low</span>
+            <div class="rank-badge">③</div>
+          </div>
+          <div class="task-title">Clean up legacy CSS</div>
+          <div class="task-meta-row">
+            <span class="est-time">
+              <svg viewBox="0 0 256 256" fill="currentColor"><path d="M128 26a102 102 0 1 0 102 102A102.12 102.12 0 0 0 128 26Zm0 192a90 90 0 1 1 90-90 90.1 90.1 0 0 1-90 90Zm62-90a6 6 0 0 1-6 6h-56a6 6 0 0 1-6-6V72a6 6 0 0 1 12 0v50h50a6 6 0 0 1 6 6Z"/></svg>
+              2h 00m
+            </span>
+          </div>
+          <div class="task-meta-row">
+            <div class="agent-assign"><div class="agent-avatar">S</div>@style-agent</div>
+          </div>
+          <div class="task-footer">
+            <div class="risk-pill"><span class="risk-dot risk-low"></span>Low risk</div>
+            <div class="comment-bubble">
+              <svg viewBox="0 0 256 256" fill="currentColor"><path d="M140 128a12 12 0 1 1-12-12 12 12 0 0 1 12 12Zm-56-12a12 12 0 1 0 12 12 12 12 0 0 0-12-12Zm88 0a12 12 0 1 0 12 12 12 12 0 0 0-12-12Zm104 12A102 102 0 0 1 79.31 219.31L43.16 235a14 14 0 0 1-17.89-17.88l15.69-36.15A102 102 0 1 1 276 128Zm-12 0a90 90 0 1 0-149.83 67.29 6 6 0 0 1 .87 5l-15 34.55 34.55-15a5.92 5.92 0 0 1 5 .87A89.93 89.93 0 0 0 264 128Z"/></svg>
+              0
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- IN REVIEW -->
+      <div class="kanban-col">
+        <div class="col-header">
+          <div class="col-title"><span class="col-dot dot-review"></span>In Review</div>
+          <span class="col-count">2</span>
+        </div>
+        <div class="task-card">
+          <div class="task-header-row">
+            <span class="priority-badge priority-high">High</span>
+            <div class="rank-badge">①</div>
+          </div>
+          <div class="task-title">Add WebSocket push notifications</div>
+          <div class="task-meta-row">
+            <span class="est-time">
+              <svg viewBox="0 0 256 256" fill="currentColor"><path d="M128 26a102 102 0 1 0 102 102A102.12 102.12 0 0 0 128 26Zm0 192a90 90 0 1 1 90-90 90.1 90.1 0 0 1-90 90Zm62-90a6 6 0 0 1-6 6h-56a6 6 0 0 1-6-6V72a6 6 0 0 1 12 0v50h50a6 6 0 0 1 6 6Z"/></svg>
+              4h 00m
+            </span>
+          </div>
+          <div class="task-meta-row">
+            <div class="agent-assign"><div class="agent-avatar">R</div>@realtime-agent</div>
+          </div>
+          <div class="task-footer">
+            <div class="risk-pill"><span class="risk-dot risk-medium"></span>Medium risk</div>
+            <div class="comment-bubble">
+              <svg viewBox="0 0 256 256" fill="currentColor"><path d="M140 128a12 12 0 1 1-12-12 12 12 0 0 1 12 12Zm-56-12a12 12 0 1 0 12 12 12 12 0 0 0-12-12Zm88 0a12 12 0 1 0 12 12 12 12 0 0 0-12-12Zm104 12A102 102 0 0 1 79.31 219.31L43.16 235a14 14 0 0 1-17.89-17.88l15.69-36.15A102 102 0 1 1 276 128Zm-12 0a90 90 0 1 0-149.83 67.29 6 6 0 0 1 .87 5l-15 34.55 34.55-15a5.92 5.92 0 0 1 5 .87A89.93 89.93 0 0 0 264 128Z"/></svg>
+              6
+            </div>
+          </div>
+        </div>
+        <div class="task-card">
+          <div class="task-header-row">
+            <span class="priority-badge priority-medium">Medium</span>
+            <div class="rank-badge">②</div>
+          </div>
+          <div class="task-title">Optimize image pipeline</div>
+          <div class="task-meta-row">
+            <span class="est-time">
+              <svg viewBox="0 0 256 256" fill="currentColor"><path d="M128 26a102 102 0 1 0 102 102A102.12 102.12 0 0 0 128 26Zm0 192a90 90 0 1 1 90-90 90.1 90.1 0 0 1-90 90Zm62-90a6 6 0 0 1-6 6h-56a6 6 0 0 1-6-6V72a6 6 0 0 1 12 0v50h50a6 6 0 0 1 6 6Z"/></svg>
+              2h 30m
+            </span>
+          </div>
+          <div class="task-meta-row">
+            <div class="agent-assign"><div class="agent-avatar">P</div>@perf-agent</div>
+          </div>
+          <div class="task-footer">
+            <div class="risk-pill"><span class="risk-dot risk-low"></span>Low risk</div>
+            <div class="comment-bubble">
+              <svg viewBox="0 0 256 256" fill="currentColor"><path d="M140 128a12 12 0 1 1-12-12 12 12 0 0 1 12 12Zm-56-12a12 12 0 1 0 12 12 12 12 0 0 0-12-12Zm88 0a12 12 0 1 0 12 12 12 12 0 0 0-12-12Zm104 12A102 102 0 0 1 79.31 219.31L43.16 235a14 14 0 0 1-17.89-17.88l15.69-36.15A102 102 0 1 1 276 128Zm-12 0a90 90 0 1 0-149.83 67.29 6 6 0 0 1 .87 5l-15 34.55 34.55-15a5.92 5.92 0 0 1 5 .87A89.93 89.93 0 0 0 264 128Z"/></svg>
+              2
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DONE -->
+      <div class="kanban-col">
+        <div class="col-header">
+          <div class="col-title"><span class="col-dot dot-done"></span>Done</div>
+          <span class="col-count">2</span>
+        </div>
+        <div class="task-card">
+          <div class="task-header-row">
+            <span class="priority-badge priority-high">High</span>
+            <div class="rank-badge">①</div>
+          </div>
+          <div class="task-title">Setup CI/CD pipeline</div>
+          <div class="task-meta-row">
+            <span class="est-time">
+              <svg viewBox="0 0 256 256" fill="currentColor"><path d="M128 26a102 102 0 1 0 102 102A102.12 102.12 0 0 0 128 26Zm0 192a90 90 0 1 1 90-90 90.1 90.1 0 0 1-90 90Zm62-90a6 6 0 0 1-6 6h-56a6 6 0 0 1-6-6V72a6 6 0 0 1 12 0v50h50a6 6 0 0 1 6 6Z"/></svg>
+              6h 00m
+            </span>
+          </div>
+          <div class="task-meta-row">
+            <div class="agent-assign"><div class="agent-avatar">D</div>@deploy-agent</div>
+          </div>
+          <div class="task-footer">
+            <div class="risk-pill"><span class="risk-dot risk-low"></span>Low risk</div>
+            <div class="comment-bubble">
+              <svg viewBox="0 0 256 256" fill="currentColor"><path d="M140 128a12 12 0 1 1-12-12 12 12 0 0 1 12 12Zm-56-12a12 12 0 1 0 12 12 12 12 0 0 0-12-12Zm88 0a12 12 0 1 0 12 12 12 12 0 0 0-12-12Zm104 12A102 102 0 0 1 79.31 219.31L43.16 235a14 14 0 0 1-17.89-17.88l15.69-36.15A102 102 0 1 1 276 128Zm-12 0a90 90 0 1 0-149.83 67.29 6 6 0 0 1 .87 5l-15 34.55 34.55-15a5.92 5.92 0 0 1 5 .87A89.93 89.93 0 0 0 264 128Z"/></svg>
+              9
+            </div>
+          </div>
+        </div>
+        <div class="task-card">
+          <div class="task-header-row">
+            <span class="priority-badge priority-low">Low</span>
+            <div class="rank-badge">②</div>
+          </div>
+          <div class="task-title">Update README docs</div>
+          <div class="task-meta-row">
+            <span class="est-time">
+              <svg viewBox="0 0 256 256" fill="currentColor"><path d="M128 26a102 102 0 1 0 102 102A102.12 102.12 0 0 0 128 26Zm0 192a90 90 0 1 1 90-90 90.1 90.1 0 0 1-90 90Zm62-90a6 6 0 0 1-6 6h-56a6 6 0 0 1-6-6V72a6 6 0 0 1 12 0v50h50a6 6 0 0 1 6 6Z"/></svg>
+              45m
+            </span>
+          </div>
+          <div class="task-meta-row">
+            <div class="agent-assign"><div class="agent-avatar">D</div>@docs-agent</div>
+          </div>
+          <div class="task-footer">
+            <div class="risk-pill"><span class="risk-dot risk-low"></span>Low risk</div>
+            <div class="comment-bubble">
+              <svg viewBox="0 0 256 256" fill="currentColor"><path d="M140 128a12 12 0 1 1-12-12 12 12 0 0 1 12 12Zm-56-12a12 12 0 1 0 12 12 12 12 0 0 0-12-12Zm88 0a12 12 0 1 0 12 12 12 12 0 0 0-12-12Zm104 12A102 102 0 0 1 79.31 219.31L43.16 235a14 14 0 0 1-17.89-17.88l15.69-36.15A102 102 0 1 1 276 128Zm-12 0a90 90 0 1 0-149.83 67.29 6 6 0 0 1 .87 5l-15 34.55 34.55-15a5.92 5.92 0 0 1 5 .87A89.93 89.93 0 0 0 264 128Z"/></svg>
+              1
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 3: Enhanced RunsView -->
+  <section class="section">
+    <div class="section-title">Enhanced RunsView</div>
+    <div class="runs-table-wrap">
+      <table class="runs-table">
+        <thead>
+          <tr>
+            <th>Run Name</th>
+            <th>Status</th>
+            <th>Assigned To</th>
+            <th>Runtime</th>
+            <th>Duration</th>
+            <th>Trigger</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="mono">deploy-staging-v2.4.1</td>
+            <td>
+              <span class="status-badge status-running">
+                <div class="spinner"></div>
+                Running
+              </span>
+            </td>
+            <td>
+              <div class="assigned-cell">
+                <div class="avatar avatar-robot">R</div>
+                @deploy-agent
+              </div>
+            </td>
+            <td><span class="runtime-badge">Local MBP</span></td>
+            <td class="mono">4m 12s</td>
+            <td class="mono">Git push</td>
+          </tr>
+          <tr>
+            <td class="mono">integration-tests-main</td>
+            <td>
+              <span class="status-badge status-completed">
+                <svg width="14" height="14" viewBox="0 0 256 256" fill="currentColor"><path d="M173.66 98.34a8 8 0 0 1 0 11.32l-56 56a8 8 0 0 1-11.32 0l-24-24a8 8 0 0 1 11.32-11.32L112 148.69l50.34-50.35a8 8 0 0 1 11.32 0ZM232 128A104 104 0 1 1 128 24a104.11 104.11 0 0 1 104 104Zm-16 0a88 88 0 1 0-88 88 88.1 88.1 0 0 0 88-88Z"/></svg>
+                Completed
+              </span>
+            </td>
+            <td>
+              <div class="assigned-cell">
+                <div class="avatar avatar-human">AL</div>
+                Alex L.
+              </div>
+            </td>
+            <td><span class="runtime-badge">Cloud AWS</span></td>
+            <td class="mono">12m 45s</td>
+            <td class="mono">Cron</td>
+          </tr>
+          <tr>
+            <td class="mono">lint-check-pr-442</td>
+            <td>
+              <span class="status-badge status-failed">
+                <svg width="14" height="14" viewBox="0 0 256 256" fill="currentColor"><path d="M165.66 101.66L139.31 128l26.35 26.34a8 8 0 0 1-11.32 11.32L128 139.31l-26.34 26.35a8 8 0 0 1-11.32-11.32L116.69 128l-26.35-26.34a8 8 0 0 1 11.32-11.32L128 116.69l26.34-26.35a8 8 0 0 1 11.32 11.32ZM232 128A104 104 0 1 1 128 24a104.11 104.11 0 0 1 104 104Zm-16 0a88 88 0 1 0-88 88 88.1 88.1 0 0 0 88-88Z"/></svg>
+                Failed
+              </span>
+            </td>
+            <td>
+              <div class="assigned-cell">
+                <div class="avatar avatar-robot">L</div>
+                @lint-agent
+              </div>
+            </td>
+            <td><span class="runtime-badge">Local MBP</span></td>
+            <td class="mono">1m 03s</td>
+            <td class="mono">PR open</td>
+          </tr>
+          <tr>
+            <td class="mono">build-release-v2.4.0</td>
+            <td>
+              <span class="status-badge status-completed">
+                <svg width="14" height="14" viewBox="0 0 256 256" fill="currentColor"><path d="M173.66 98.34a8 8 0 0 1 0 11.32l-56 56a8 8 0 0 1-11.32 0l-24-24a8 8 0 0 1 11.32-11.32L112 148.69l50.34-50.35a8 8 0 0 1 11.32 0ZM232 128A104 104 0 1 1 128 24a104.11 104.11 0 0 1 104 104Zm-16 0a88 88 0 1 0-88 88 88.1 88.1 0 0 0 88-88Z"/></svg>
+                Completed
+              </span>
+            </td>
+            <td>
+              <div class="assigned-cell">
+                <div class="avatar avatar-human">SK</div>
+                Sam K.
+              </div>
+            </td>
+            <td><span class="runtime-badge">Cloud AWS</span></td>
+            <td class="mono">8m 20s</td>
+            <td class="mono">Manual</td>
+          </tr>
+          <tr>
+            <td class="mono">security-scan-nightly</td>
+            <td>
+              <span class="status-badge status-running">
+                <div class="spinner"></div>
+                Running
+              </span>
+            </td>
+            <td>
+              <div class="assigned-cell">
+                <div class="avatar avatar-robot">S</div>
+                @security-agent
+              </div>
+            </td>
+            <td><span class="runtime-badge">Cloud AWS</span></td>
+            <td class="mono">18m 05s</td>
+            <td class="mono">Cron</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- SECTION 4: PluginMarketplace with Cowork Skills -->
+  <section class="section">
+    <div class="section-title">PluginMarketplace</div>
+    <div class="marketplace-tabs">
+      <button class="mp-tab">Create</button>
+      <button class="mp-tab">Analyze</button>
+      <button class="mp-tab">Build</button>
+      <button class="mp-tab">Automate</button>
+      <button class="mp-tab active">Cowork</button>
+      <button class="mp-tab">Productivity</button>
+      <button class="mp-tab">Integration</button>
+      <button class="mp-tab">Custom</button>
+    </div>
+    <div class="skills-grid">
+      <!-- Skill 1 -->
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="cyan-dot"></div>
+          <div class="skill-name">Auto-Deploy Skill</div>
+        </div>
+        <div class="skill-desc">Deploys to production with approval gates and rollback triggers. Integrates with GitHub Actions and AWS ECS.</div>
+        <div class="skill-meta">
+          <span>by @deploy-team</span>
+          <span>1.2k installs</span>
+          <div class="stars">
+            <svg viewBox="0 0 256 256"><path d="M234.29 114.85l-45 38.83 13.51 58.6a16 16 0 0 1-23.41 17.86l-51.87-31-51.87 31a16 16 0 0 1-23.41-17.86l13.49-58.54-45-38.83A16 16 0 0 1 36 91.82l59.91-5.14 23.21-55.36a15.95 15.95 0 0 1 29.44 0L171.07 86.68l59.91 5.14a16 16 0 0 1 9.11 28.18Z"/></svg>
+            <svg viewBox="0 0 256 256"><path d="M234.29 114.85l-45 38.83 13.51 58.6a16 16 0 0 1-23.41 17.86l-51.87-31-51.87 31a16 16 0 0 1-23.41-17.86l13.49-58.54-45-38.83A16 16 0 0 1 36 91.82l59.91-5.14 23.21-55.36a15.95 15.95 0 0 1 29.44 0L171.07 86.68l59.91 5.14a16 16 0 0 1 9.11 28.18Z"/></svg>
+            <svg viewBox="0 0 256 256"><path d="M234.29 114.85l-45 38.83 13.51 58.6a16 16 0 0 1-23.41 17.86l-51.87-31-51.87 31a16 16 0 0 1-23.41-17.86l13.49-58.54-45-38.83A16 16 0 0 1 36 91.82l59.91-5.14 23.21-55.36a15.95 15.95 0 0 1 29.44 0L171.07 86.68l59.91 5.14a16 16 0 0 1 9.11 28.18Z"/></svg>
+            <svg viewBox="0 0 256 256"><path d="M234.29 114.85l-45 38.83 13.51 58.6a16 16 0 0 1-23.41 17.86l-51.87-31-51.87 31a16 16 0 0 1-23.41-17.86l13.49-58.54-45-38.83A16 16 0 0 1 36 91.82l59.91-5.14 23.21-55.36a15.95 15.95 0 0 1 29.44 0L171.07 86.68l59.91 5.14a16 16 0 0 1 9.11 28.18Z"/></svg>
+            <svg class="empty" viewBox="0 0 256 256"><path d="M234.29 114.85l-45 38.83 13.51 58.6a16 16 0 0 1-23.41 17.86l-51.87-31-51.87 31a16 16 0 0 1-23.41-17.86l13.49-58.54-45-38.83A16 16 0 0 1 36 91.82l59.91-5.14 23.21-55.36a15.95 15.95 0 0 1 29.44 0L171.07 86.68l59.91 5.14a16 16 0 0 1 9.11 28.18Z"/></svg>
+          </div>
+        </div>
+        <button class="install-btn">Install</button>
+      </div>
+      <!-- Skill 2 -->
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="cyan-dot"></div>
+          <div class="skill-name">Code Review Skill</div>
+        </div>
+        <div class="skill-desc">Reviews PRs with style enforcement, security checks, and performance linting. Supports custom rule packs.</div>
+        <div class="skill-meta">
+          <span>by @review-team</span>
+          <span>3.4k installs</span>
+          <div class="stars">
+            <svg viewBox="0 0 256 256"><path d="M234.29 114.85l-45 38.83 13.51 58.6a16 16 0 0 1-23.41 17.86l-51.87-31-51.87 31a16 16 0 0 1-23.41-17.86l13.49-58.54-45-38.83A16 16 0 0 1 36 91.82l59.91-5.14 23.21-55.36a15.95 15.95 0 0 1 29.44 0L171.07 86.68l59.91 5.14a16 16 0 0 1 9.11 28.18Z"/></svg>
+            <svg viewBox="0 0 256 256"><path d="M234.29 114.85l-45 38.83 13.51 58.6a16 16 0 0 1-23.41 17.86l-51.87-31-51.87 31a16 16 0 0 1-23.41-17.86l13.49-58.54-45-38.83A16 16 0 0 1 36 91.82l59.91-5.14 23.21-55.36a15.95 15.95 0 0 1 29.44 0L171.07 86.68l59.91 5.14a16 16 0 0 1 9.11 28.18Z"/></svg>
+            <svg viewBox="0 0 256 256"><path d="M234.29 114.85l-45 38.83 13.51 58.6a16 16 0 0 1-23.41 17.86l-51.87-31-51.87 31a16 16 0 0 1-23.41-17.86l13.49-58.54-45-38.83A16 16 0 0 1 36 91.82l59.91-5.14 23.21-55.36a15.95 15.95 0 0 1 29.44 0L171.07 86.68l59.91 5.14a16 16 0 0 1 9.11 28.18Z"/></svg>
+            <svg viewBox="0 0 256 256"><path d="M234.29 114.85l-45 38.83 13.51 58.6a16 16 0 0 1-23.41 17.86l-51.87-31-51.87 31a16 16 0 0 1-23.41-17.86l13.49-58.54-45-38.83A16 16 0 0 1 36 91.82l59.91-5.14 23.21-55.36a15.95 15.95 0 0 1 29.44 0L171.07 86.68l59.91 5.14a16 16 0 0 1 9.11 28.18Z"/></svg>
+            <svg viewBox="0 0 256 256"><path d="M234.29 114.85l-45 38.83 13.51 58.6a16 16 0 0 1-23.41 17.86l-51.87-31-51.87 31a16 16 0 0 1-23.41-17.86l13.49-58.54-45-38.83A16 16 0 0 1 36 91.82l59.91-5.14 23.21-55.36a15.95 15.95 0 0 1 29.44 0L171.07 86.68l59.91 5.14a16 16 0 0 1 9.11 28.18Z"/></svg>
+          </div>
+        </div>
+        <button class="install-btn">Install</button>
+      </div>
+      <!-- Skill 3 -->
+      <div class="skill-card">
+        <div class="skill-top">
+          <div class="cyan-dot"></div>
+          <div class="skill-name">Migration Skill</div>
+        </div>
+        <div class="skill-desc">Database migrations with rollback safety, dry-run preview, and schema diff reporting. Postgres &amp; MySQL.</div>
+        <div class="skill-meta">
+          <span>by @data-team</span>
+          <span>890 installs</span>
+          <div class="stars">
+            <svg viewBox="0 0 256 256"><path d="M234.29 114.85l-45 38.83 13.51 58.6a16 16 0 0 1-23.41 17.86l-51.87-31-51.87 31a16 16 0 0 1-23.41-17.86l13.49-58.54-45-38.83A16 16 0 0 1 36 91.82l59.91-5.14 23.21-55.36a15.95 15.95 0 0 1 29.44 0L171.07 86.68l59.91 5.14a16 16 0 0 1 9.11 28.18Z"/></svg>
+            <svg viewBox="0 0 256 256"><path d="M234.29 114.85l-45 38.83 13.51 58.6a16 16 0 0 1-23.41 17.86l-51.87-31-51.87 31a16 16 0 0 1-23.41-17.86l13.49-58.54-45-38.83A16 16 0 0 1 36 91.82l59.91-5.14 23.21-55.36a15.95 15.95 0 0 1 29.44 0L171.07 86.68l59.91 5.14a16 16 0 0 1 9.11 28.18Z"/></svg>
+            <svg viewBox="0 0 256 256"><path d="M234.29 114.85l-45 38.83 13.51 58.6a16 16 0 0 1-23.41 17.86l-51.87-31-51.87 31a16 16 0 0 1-23.41-17.86l13.49-58.54-45-38.83A16 16 0 0 1 36 91.82l59.91-5.14 23.21-55.36a15.95 15.95 0 0 1 29.44 0L171.07 86.68l59.91 5.14a16 16 0 0 1 9.11 28.18Z"/></svg>
+            <svg viewBox="0 0 256 256"><path d="M234.29 114.85l-45 38.83 13.51 58.6a16 16 0 0 1-23.41 17.86l-51.87-31-51.87 31a16 16 0 0 1-23.41-17.86l13.49-58.54-45-38.83A16 16 0 0 1 36 91.82l59.91-5.14 23.21-55.36a15.95 15.95 0 0 1 29.44 0L171.07 86.68l59.91 5.14a16 16 0 0 1 9.11 28.18Z"/></svg>
+            <svg class="empty" viewBox="0 0 256 256"><path d="M234.29 114.85l-45 38.83 13.51 58.6a16 16 0 0 1-23.41 17.86l-51.87-31-51.87 31a16 16 0 0 1-23.41-17.86l13.49-58.54-45-38.83A16 16 0 0 1 36 91.82l59.91-5.14 23.21-55.36a15.95 15.95 0 0 1 29.44 0L171.07 86.68l59.91 5.14a16 16 0 0 1 9.11 28.18Z"/></svg>
+          </div>
+        </div>
+        <button class="install-btn">Install</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="page-footer">
+    <div class="date">2026-04-18</div>
+    <div>Preview Only — Not Functional</div>
+  </footer>
+
+</div>
+
+</body>
+</html>

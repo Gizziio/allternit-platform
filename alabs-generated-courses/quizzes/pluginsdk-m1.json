@@ -1,0 +1,38 @@
+{
+  "title": "Module 1 Quiz: Plugin SDK Architecture",
+  "questions": [
+    {
+      "question": "What is the primary role of the PluginHost interface?",
+      "options": [
+        "To compile TypeScript plugins into JavaScript",
+        "To define the contract between a plugin and its runtime environment",
+        "To manage CSS styling for plugin UIs",
+        "To handle database migrations for plugins"
+      ],
+      "correctIndex": 1,
+      "explanation": "The PluginHost interface defines the contract that both the plugin and its runtime must adhere to, including methods for tool registration, execution, and lifecycle management."
+    },
+    {
+      "question": "Which adapter would you use to integrate a plugin with a VS Code extension?",
+      "options": [
+        "McpAdapter",
+        "HttpAdapter",
+        "VSCodeAdapter",
+        "CliAdapter"
+      ],
+      "correctIndex": 2,
+      "explanation": "The VSCodeAdapter is specifically designed to bridge plugins into the VS Code extension host environment, handling message passing and UI integration."
+    },
+    {
+      "question": "What happens when a plugin's tool throws an unhandled error?",
+      "options": [
+        "The entire platform crashes",
+        "The error is silently ignored",
+        "The adapter catches it and returns a structured error response",
+        "The plugin is automatically uninstalled"
+      ],
+      "correctIndex": 2,
+      "explanation": "Adapters wrap tool execution in try/catch blocks and return structured error objects, preventing individual tool failures from affecting the platform."
+    }
+  ]
+}

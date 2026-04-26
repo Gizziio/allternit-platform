@@ -1,0 +1,1550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 2: Deep Dive — Adapters & PluginHost</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0b0b0c;
+      --bg-secondary: #131316;
+      --bg-tertiary: #1a1a1f;
+      --bg-card: #18181c;
+      --bg-hover: #222228;
+      --border: rgba(255,255,255,0.08);
+      --border-strong: rgba(245,158,11,0.25);
+      --text-primary: #f5f5f7;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --accent: #f59e0b;
+      --accent-dim: rgba(245,158,11,0.15);
+      --accent-glow: rgba(245,158,11,0.4);
+      --green: #22c55e;
+      --green-dim: rgba(34,197,94,0.15);
+      --red: #ef4444;
+      --red-dim: rgba(239,68,68,0.15);
+      --blue: #3b82f6;
+      --blue-dim: rgba(59,130,246,0.15);
+      --purple: #a855f7;
+      --purple-dim: rgba(168,85,247,0.15);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Progress Bar */
+    .progress-container {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--bg-tertiary);
+      z-index: 1000;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), #fbbf24);
+      transition: width 0.15s ease;
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    /* Navigation dots */
+    .nav-dots {
+      position: fixed;
+      right: 24px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      z-index: 999;
+    }
+    .nav-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--border-strong);
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+    .nav-dot:hover, .nav-dot.active {
+      background: var(--accent);
+      box-shadow: 0 0 12px var(--accent-glow);
+      transform: scale(1.3);
+    }
+    .nav-dot::after {
+      content: attr(data-label);
+      position: absolute;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      white-space: nowrap;
+      font-size: 11px;
+      color: var(--text-muted);
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .nav-dot:hover::after { opacity: 1; }
+
+    @media (max-width: 768px) {
+      .nav-dots { display: none; }
+    }
+
+    /* Sections */
+    .section {
+      min-height: 100vh;
+      padding: 80px 24px;
+      max-width: 960px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+    .section.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    h1 {
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 24px;
+      letter-spacing: -0.02em;
+    }
+    h1 .accent { color: var(--accent); }
+
+    h2 {
+      font-size: clamp(1.4rem, 3vw, 2rem);
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: var(--text-primary);
+      letter-spacing: -0.01em;
+    }
+    h2 .accent { color: var(--accent); }
+
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 32px 0 12px;
+      color: var(--text-primary);
+    }
+
+    p {
+      color: var(--text-secondary);
+      font-size: 1.05rem;
+      margin-bottom: 16px;
+      max-width: 720px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      padding: 6px 14px;
+      border-radius: 100px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+      border: 1px solid var(--border-strong);
+    }
+
+    .badge-green {
+      background: var(--green-dim);
+      color: var(--green);
+      border-color: rgba(34,197,94,0.25);
+    }
+
+    /* Code blocks */
+    .code-block {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin: 20px 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+    }
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .code-lang {
+      color: var(--accent);
+    }
+    .code-body {
+      padding: 16px;
+      overflow-x: auto;
+      line-height: 1.7;
+    }
+    .code-body pre { margin: 0; }
+    .code-body code {
+      font-family: inherit;
+      color: var(--text-primary);
+    }
+    .code-keyword { color: #c678dd; }
+    .code-type { color: #e5c07b; }
+    .code-string { color: #98c379; }
+    .code-comment { color: #5c6370; font-style: italic; }
+    .code-func { color: #61afef; }
+    .code-num { color: #d19a66; }
+    .code-prop { color: #e06c75; }
+
+    /* Translation blocks */
+    .translate-block {
+      margin: 24px 0;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .translate-tabs {
+      display: flex;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border);
+    }
+    .translate-tab {
+      flex: 1;
+      padding: 12px 16px;
+      text-align: center;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border: none;
+      background: none;
+      transition: all 0.2s;
+      border-bottom: 2px solid transparent;
+    }
+    .translate-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .translate-panel {
+      display: none;
+      padding: 20px;
+      background: var(--bg-card);
+    }
+    .translate-panel.active { display: block; }
+    .translate-plain {
+      color: var(--text-secondary);
+      font-size: 1rem;
+      line-height: 1.8;
+    }
+    .translate-plain strong { color: var(--accent); }
+    .translate-plain ul {
+      margin: 12px 0 12px 20px;
+      color: var(--text-secondary);
+    }
+    .translate-plain li { margin-bottom: 8px; }
+
+    /* Quiz */
+    .quiz-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      margin: 32px 0;
+    }
+    .quiz-question {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 20px;
+      color: var(--text-primary);
+    }
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .quiz-option {
+      padding: 14px 18px;
+      background: var(--bg-secondary);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      text-align: left;
+    }
+    .quiz-option:hover {
+      border-color: var(--border-strong);
+      background: var(--bg-hover);
+    }
+    .quiz-option.correct {
+      border-color: var(--green);
+      background: var(--green-dim);
+      color: var(--green);
+    }
+    .quiz-option.wrong {
+      border-color: var(--red);
+      background: var(--red-dim);
+      color: var(--red);
+    }
+    .quiz-option.disabled { pointer-events: none; }
+    .quiz-feedback {
+      margin-top: 16px;
+      padding: 14px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      display: none;
+    }
+    .quiz-feedback.show { display: block; }
+    .quiz-feedback.correct {
+      background: var(--green-dim);
+      color: var(--green);
+      border: 1px solid rgba(34,197,94,0.3);
+    }
+    .quiz-feedback.wrong {
+      background: var(--red-dim);
+      color: var(--red);
+      border: 1px solid rgba(239,68,68,0.3);
+    }
+
+    /* Chat animation */
+    .chat-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      margin: 28px 0;
+      max-width: 640px;
+    }
+    .chat-message {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+      opacity: 0;
+      transform: translateY(10px);
+      animation: chatAppear 0.5s ease forwards;
+    }
+    .chat-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      flex-shrink: 0;
+      text-transform: uppercase;
+    }
+    .avatar-mcp { background: var(--blue-dim); color: var(--blue); }
+    .avatar-http { background: var(--purple-dim); color: var(--purple); }
+    .avatar-cli { background: var(--green-dim); color: var(--green); }
+    .avatar-native { background: var(--accent-dim); color: var(--accent); }
+    .chat-bubble {
+      background: var(--bg-secondary);
+      padding: 12px 16px;
+      border-radius: 12px;
+      border-top-left-radius: 4px;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      max-width: 480px;
+    }
+    .chat-name {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 4px;
+      color: var(--text-muted);
+    }
+    @keyframes chatAppear {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Visualization */
+    .viz-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      margin: 28px 0;
+      overflow: hidden;
+    }
+    .viz-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .adapter-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+    }
+    .adapter-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 12px;
+      text-align: center;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+    .adapter-card:hover {
+      border-color: var(--border-strong);
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .adapter-card.active {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .adapter-card.active .adapter-icon {
+      color: var(--accent);
+      transform: scale(1.1);
+    }
+    .adapter-icon {
+      font-size: 1.8rem;
+      margin-bottom: 8px;
+      transition: transform 0.3s;
+    }
+    .adapter-name {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+    .adapter-desc {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
+    .adapter-detail {
+      margin-top: 20px;
+      padding: 20px;
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      display: none;
+    }
+    .adapter-detail.show { display: block; animation: fadeIn 0.4s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Capability matrix */
+    .matrix-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      margin: 20px 0;
+    }
+    .matrix-table th {
+      text-align: left;
+      padding: 12px 10px;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-size: 0.7rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .matrix-table td {
+      padding: 12px 10px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+    .matrix-table tr:hover td { background: var(--bg-hover); }
+    .cap-yes { color: var(--green); font-weight: 700; }
+    .cap-no { color: var(--red); }
+    .cap-partial { color: var(--accent); }
+
+    /* Lifecycle diagram */
+    .lifecycle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 20px 0;
+    }
+    .lifecycle-step {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 18px;
+      text-align: center;
+      min-width: 110px;
+      position: relative;
+      transition: all 0.4s ease;
+    }
+    .lifecycle-step.active {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+      box-shadow: 0 0 20px rgba(245,158,11,0.15);
+    }
+    .lifecycle-step .step-num {
+      font-size: 0.65rem;
+      font-weight: 800;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 4px;
+    }
+    .lifecycle-step .step-name {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .lifecycle-arrow {
+      color: var(--text-muted);
+      font-size: 1.2rem;
+      animation: pulseArrow 1.5s ease infinite;
+    }
+    @keyframes pulseArrow {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 1; }
+    }
+
+    /* Capstone */
+    .capstone {
+      background: linear-gradient(135deg, var(--accent-dim), transparent);
+      border: 1px solid var(--border-strong);
+      border-radius: 16px;
+      padding: 32px;
+      margin-top: 20px;
+    }
+    .capstone h3 {
+      margin-top: 0;
+      color: var(--accent);
+    }
+    .capstone ul {
+      margin: 16px 0 0 20px;
+      color: var(--text-secondary);
+    }
+    .capstone li { margin-bottom: 10px; }
+
+    /* Footer */
+    .module-footer {
+      text-align: center;
+      padding: 60px 24px;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    .module-footer .logo {
+      font-weight: 800;
+      font-size: 1.1rem;
+      color: var(--accent);
+      margin-bottom: 8px;
+      letter-spacing: 0.05em;
+    }
+
+    /* Highlight box */
+    .highlight-box {
+      background: var(--blue-dim);
+      border-left: 3px solid var(--blue);
+      padding: 16px 20px;
+      border-radius: 0 10px 10px 0;
+      margin: 20px 0;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+    .highlight-box strong { color: var(--blue); }
+
+    /* Reveal button */
+    .reveal-btn {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid var(--border-strong);
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 12px;
+    }
+    .reveal-btn:hover {
+      background: var(--accent);
+      color: var(--bg-primary);
+    }
+
+    /* Scroll hint */
+    .scroll-hint {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      animation: bounce 2s ease infinite;
+    }
+    @keyframes bounce {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50% { transform: translateX(-50%) translateY(8px); }
+    }
+
+    /* Mobile */
+    @media (max-width: 768px) {
+      .section { padding: 60px 16px; }
+      .adapter-grid { grid-template-columns: repeat(2, 1fr); }
+      .lifecycle { gap: 6px; }
+      .lifecycle-step { min-width: 80px; padding: 10px 12px; }
+      .lifecycle-arrow { display: none; }
+      .chat-container { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Progress Bar -->
+<div class="progress-container"><div class="progress-bar" id="progressBar"></div></div>
+
+<!-- Nav Dots -->
+<div class="nav-dots">
+  <div class="nav-dot active" data-label="Start" onclick="scrollToSection(0)"></div>
+  <div class="nav-dot" data-label="Adapters" onclick="scrollToSection(1)"></div>
+  <div class="nav-dot" data-label="PluginHost" onclick="scrollToSection(2)"></div>
+  <div class="nav-dot" data-label="MCP" onclick="scrollToSection(3)"></div>
+  <div class="nav-dot" data-label="HTTP" onclick="scrollToSection(4)"></div>
+  <div class="nav-dot" data-label="CLI" onclick="scrollToSection(5)"></div>
+  <div class="nav-dot" data-label="Native" onclick="scrollToSection(6)"></div>
+  <div class="nav-dot" data-label="Lifecycle" onclick="scrollToSection(7)"></div>
+  <div class="nav-dot" data-label="Quiz 1" onclick="scrollToSection(8)"></div>
+  <div class="nav-dot" data-label="Quiz 2" onclick="scrollToSection(9)"></div>
+  <div class="nav-dot" data-label="Quiz 3" onclick="scrollToSection(10)"></div>
+  <div class="nav-dot" data-label="Capstone" onclick="scrollToSection(11)"></div>
+</div>
+
+<!-- SECTION 0: Hero -->
+<section class="section visible" id="sec0">
+  <div class="badge">A://Labs ADV — Module 2</div>
+  <h1>Deep Dive — <span class="accent">Adapters & PluginHost</span></h1>
+  <p style="font-size: 1.2rem; color: var(--text-secondary); max-width: 640px;">
+    Build once, run anywhere. Understand how the Allternit Plugin SDK bridges your plugin to 6 different runtime environments through a universal host contract.
+  </p>
+  <div class="highlight-box" style="margin-top: 28px;">
+    <strong>By the end of this module</strong> you will understand the Adapter pattern, the PluginHost interface contract, how each adapter maps capabilities, and how to implement graceful degradation when platforms lack features.
+  </div>
+  <div class="scroll-hint">
+    <span>Scroll to begin</span>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+  </div>
+</section>
+
+<!-- SECTION 1: Adapter System Overview -->
+<section class="section" id="sec1">
+  <div class="badge">Core Concept</div>
+  <h2>The <span class="accent">Adapter</span> System</h2>
+  <p>An adapter is a translation layer. It takes the universal <code style="background:var(--bg-tertiary);padding:2px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:0.9em;">PluginHost</code> interface and maps it to the specific capabilities of a target platform.</p>
+
+  <div class="viz-container">
+    <div class="viz-title">Click an adapter to inspect its platform mapping</div>
+    <div class="adapter-grid">
+      <div class="adapter-card" onclick="showAdapter('mcp')">
+        <div class="adapter-icon">🔌</div>
+        <div class="adapter-name">MCP</div>
+        <div class="adapter-desc">Claude, Cursor</div>
+      </div>
+      <div class="adapter-card" onclick="showAdapter('http')">
+        <div class="adapter-icon">🌐</div>
+        <div class="adapter-name">HTTP</div>
+        <div class="adapter-desc">Universal REST</div>
+      </div>
+      <div class="adapter-card" onclick="showAdapter('cli')">
+        <div class="adapter-icon">💻</div>
+        <div class="adapter-name">CLI</div>
+        <div class="adapter-desc">Codex, Aider</div>
+      </div>
+      <div class="adapter-card" onclick="showAdapter('vscode')">
+        <div class="adapter-icon">📝</div>
+        <div class="adapter-name">VS Code</div>
+        <div class="adapter-desc">Copilot, Cody</div>
+      </div>
+      <div class="adapter-card" onclick="showAdapter('langchain')">
+        <div class="adapter-icon">🦜</div>
+        <div class="adapter-name">LangChain</div>
+        <div class="adapter-desc">Python agents</div>
+      </div>
+      <div class="adapter-card" onclick="showAdapter('native')">
+        <div class="adapter-icon">⚡</div>
+        <div class="adapter-name">Native</div>
+        <div class="adapter-desc">Allternit runtime</div>
+      </div>
+    </div>
+
+    <div class="adapter-detail" id="detail-mcp">
+      <h3 style="margin-top:0;color:var(--blue)">MCP Adapter — Model Context Protocol</h3>
+      <p>Uses <code>@modelcontextprotocol/sdk</code> to expose plugins as MCP tools. Each plugin function becomes a tool. Supports stdio, HTTP, and WebSocket transports.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TypeScript</span></div>
+        <div class="code-body"><pre><code><span class="code-keyword">class</span> <span class="code-type">McpAdapter</span> <span class="code-keyword">implements</span> <span class="code-type">Adapter</span> {
+  <span class="code-prop">name</span> = <span class="code-string">'mcp'</span>;
+  <span class="code-prop">version</span> = <span class="code-string">'1.0.0'</span>;
+
+  <span class="code-func">canActivate</span>() {
+    <span class="code-comment">// MCP works anywhere Node.js runs</span>
+    <span class="code-keyword">return</span> <span class="code-keyword">typeof</span> process !== <span class="code-string">'undefined'</span>;
+  }
+
+  <span class="code-keyword">async</span> <span class="code-func">initialize</span>(plugin, config) {
+    <span class="code-keyword">return</span> <span class="code-keyword">new</span> <span class="code-type">McpAdapterInstance</span>(plugin, config);
+  }
+}</code></pre></div>
+      </div>
+    </div>
+
+    <div class="adapter-detail" id="detail-http">
+      <h3 style="margin-top:0;color:var(--purple)">HTTP Adapter — Universal REST API</h3>
+      <p>Express-based server with CORS, auth, rate limiting, SSE streaming, and WebSocket support. Every plugin function maps to <code>POST /v1/execute/:functionName</code>.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TypeScript</span></div>
+        <div class="code-body"><pre><code><span class="code-keyword">class</span> <span class="code-type">HttpAdapter</span> <span class="code-keyword">implements</span> <span class="code-type">Adapter</span> {
+  <span class="code-prop">name</span> = <span class="code-string">'http'</span>;
+
+  <span class="code-func">canActivate</span>() {
+    <span class="code-keyword">return</span> <span class="code-keyword">true</span>; <span class="code-comment">// HTTP works everywhere</span>
+  }
+}
+
+<span class="code-comment">// Routes exposed:</span>
+<span class="code-comment">// GET  /v1/health</span>
+<span class="code-comment">// GET  /v1/manifest</span>
+<span class="code-comment">// POST /v1/execute/:fn</span>
+<span class="code-comment">// POST /v1/batch</span>
+<span class="code-comment">// WS   /v1/stream</span></code></pre></div>
+      </div>
+    </div>
+
+    <div class="adapter-detail" id="detail-cli">
+      <h3 style="margin-top:0;color:var(--green)">CLI Adapter — Terminal Interface</h3>
+      <p>Parses <code>process.argv</code>, executes the plugin once, prints results, and exits. Supports JSON, markdown, and text output modes. Designed for Codex, Aider, and shell workflows.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TypeScript</span></div>
+        <div class="code-body"><pre><code><span class="code-keyword">class</span> <span class="code-type">CliAdapter</span> <span class="code-keyword">implements</span> <span class="code-type">Adapter</span> {
+  <span class="code-prop">name</span> = <span class="code-string">'cli'</span>;
+
+  <span class="code-keyword">async</span> <span class="code-func">start</span>() {
+    <span class="code-keyword">await</span> <span class="code-keyword">this</span>.plugin.initialize(<span class="code-keyword">this</span>.host);
+    <span class="code-keyword">const</span> args = <span class="code-keyword">this</span>.parseArgs();
+    <span class="code-keyword">await</span> <span class="code-keyword">this</span>.runOnce(args); <span class="code-comment">// one-shot execution</span>
+  }
+}</code></pre></div>
+      </div>
+    </div>
+
+    <div class="adapter-detail" id="detail-vscode">
+      <h3 style="margin-top:0;color:#3b82f6">VS Code Adapter — Extension Integration</h3>
+      <p>Registers as VS Code commands and webview panels. Integrates with Copilot chat and Cody. Renders results in native UI panels rather than text streams.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TypeScript</span></div>
+        <div class="code-body"><pre><code><span class="code-comment">// Registers command palette entries</span>
+<span class="code-comment">// Shows results in webview panel</span>
+<span class="code-comment">// Integrates with Copilot chat API</span>
+<span class="code-keyword">class</span> <span class="code-type">VSCodeAdapter</span> <span class="code-keyword">implements</span> <span class="code-type">Adapter</span> {
+  <span class="code-prop">name</span> = <span class="code-string">'vscode'</span>;
+  <span class="code-func">canActivate</span>() {
+    <span class="code-keyword">return</span> <span class="code-keyword">typeof</span> vscode !== <span class="code-string">'undefined'</span>;
+  }
+}</code></pre></div>
+      </div>
+    </div>
+
+    <div class="adapter-detail" id="detail-langchain">
+      <h3 style="margin-top:0;color:#a855f7">LangChain Adapter — Python Tool</h3>
+      <p>Wraps the plugin as a LangChain <code>BaseTool</code>. Python agents can import and invoke Allternit plugins directly via <code>AllternitTool.from_id("market-research")</code>.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">Python</span></div>
+        <div class="code-body"><pre><code><span class="code-keyword">from</span> allternit_plugin_sdk <span class="code-keyword">import</span> AllternitTool
+
+tool = AllternitTool.from_id(<span class="code-string">"market-research"</span>)
+agent = initialize_agent([tool], llm)
+result = <span class="code-keyword">await</span> tool.call({<span class="code-string">"industry"</span>: <span class="code-string">"AI"</span>})</code></pre></div>
+      </div>
+    </div>
+
+    <div class="adapter-detail" id="detail-native">
+      <h3 style="margin-top:0;color:var(--accent)">Native Adapter — Full Allternit Runtime</h3>
+      <p>The richest implementation. Checks for <code>globalThis.__ALLTERNIT_RUNTIME__</code> and wires every capability directly to the platform. Full LLM, tools, UI panels, persistent storage, and session history.</p>
+      <div class="code-block">
+        <div class="code-header"><span class="code-lang">TypeScript</span></div>
+        <div class="code-body"><pre><code><span class="code-keyword">class</span> <span class="code-type">NativeAdapter</span> <span class="code-keyword">implements</span> <span class="code-type">Adapter</span> {
+  <span class="code-prop">name</span> = <span class="code-string">'allternit'</span>;
+
+  <span class="code-func">canActivate</span>() {
+    <span class="code-keyword">return</span> <span class="code-keyword">typeof</span> globalThis.__ALLTERNIT_RUNTIME__
+      !== <span class="code-string">'undefined'</span>;
+  }
+}</code></pre></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="translate-block">
+    <div class="translate-tabs">
+      <button class="translate-tab active" onclick="setTranslate(this, 'code1')">Code</button>
+      <button class="translate-tab" onclick="setTranslate(this, 'plain1')">Plain English</button>
+    </div>
+    <div class="translate-panel active" id="code1">
+      <div class="code-block" style="margin:0;border:none;">
+        <div class="code-body"><pre><code><span class="code-keyword">export interface</span> <span class="code-type">Adapter</span> {
+  <span class="code-prop">readonly</span> name: <span class="code-type">string</span>;
+  <span class="code-prop">readonly</span> version: <span class="code-type">string</span>;
+
+  <span class="code-comment">// Can this adapter run here?</span>
+  <span class="code-func">canActivate</span>(): <span class="code-type">boolean</span>;
+
+  <span class="code-comment">// Create an instance for a plugin</span>
+  <span class="code-func">initialize</span>(
+    plugin: <span class="code-type">Plugin</span>,
+    config?: <span class="code-type">Record</span>&lt;<span class="code-type">string</span>, <span class="code-type">any</span>&gt;
+  ): <span class="code-type">Promise</span>&lt;<span class="code-type">AdapterInstance</span>&gt;;
+}</code></pre></div>
+      </div>
+    </div>
+    <div class="translate-panel" id="plain1">
+      <div class="translate-plain">
+        <p>Every adapter must answer three questions:</p>
+        <ul>
+          <li><strong>Who am I?</strong> — A <code>name</code> like "mcp" or "http" and a <code>version</code>.</li>
+          <li><strong>Can I run here?</strong> — <code>canActivate()</code> inspects the environment. Native checks for <code>__ALLTERNIT_RUNTIME__</code>. MCP checks for <code>process</code>. CLI always returns <code>true</code>.</li>
+          <li><strong>How do I start?</strong> — <code>initialize()</code> creates an <code>AdapterInstance</code> that wires the plugin to the platform.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 2: PluginHost Deep Dive -->
+<section class="section" id="sec2">
+  <div class="badge badge-green">The Contract</div>
+  <h2>The <span class="accent">PluginHost</span> Interface</h2>
+  <p>The PluginHost is the <strong>universal contract</strong> between a plugin and its runtime environment. It has six pillars: platform identity, LLM access, tool registry, UI capabilities, storage backend, and session context.</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">TypeScript</span> <span>src/types.ts — PluginHost</span></div>
+    <div class="code-body"><pre><code><span class="code-keyword">export interface</span> <span class="code-type">PluginHost</span> {
+  <span class="code-prop">readonly</span> platform: <span class="code-type">string</span>;     <span class="code-comment">// "mcp" | "http" | "cli" ...</span>
+  <span class="code-prop">readonly</span> version: <span class="code-type">string</span>;
+
+  <span class="code-prop">readonly</span> llm: <span class="code-type">LlmCapabilities</span>;
+  <span class="code-prop">readonly</span> tools: <span class="code-type">ToolRegistry</span>;
+  <span class="code-prop">readonly</span> ui: <span class="code-type">UiCapabilities</span>;
+  <span class="code-prop">readonly</span> storage: <span class="code-type">StorageBackend</span>;
+  <span class="code-prop">readonly</span> session: <span class="code-type">SessionContext</span>;
+  <span class="code-prop">readonly</span> logger: <span class="code-type">Logger</span>;
+  <span class="code-prop">readonly</span> config: <span class="code-type">Record</span>&lt;<span class="code-type">string</span>, <span class="code-type">any</span>&gt;;
+}</code></pre></div>
+  </div>
+
+  <h3>How Adapters Map the Host</h3>
+  <p>Each adapter creates its own implementation of PluginHost. The key insight: <strong>the same plugin runs unchanged</strong> because it only talks to the PluginHost interface, never to the platform directly.</p>
+
+  <div class="translate-block">
+    <div class="translate-tabs">
+      <button class="translate-tab active" onclick="setTranslate(this, 'code2')">Code</button>
+      <button class="translate-tab" onclick="setTranslate(this, 'plain2')">Plain English</button>
+    </div>
+    <div class="translate-panel active" id="code2">
+      <div class="code-block" style="margin:0;border:none;">
+        <div class="code-body"><pre><code><span class="code-comment">// MCP host: LLM is delegated to Claude</span>
+<span class="code-keyword">class</span> <span class="code-type">McpPluginHost</span> <span class="code-keyword">implements</span> <span class="code-type">PluginHost</span> {
+  <span class="code-prop">platform</span> = <span class="code-string">'mcp'</span>;
+  <span class="code-prop">llm</span> = <span class="code-keyword">new</span> <span class="code-type">McpLlmCapabilities</span>();
+  <span class="code-prop">tools</span> = <span class="code-keyword">new</span> <span class="code-type">McpToolRegistry</span>();
+  <span class="code-prop">ui</span> = <span class="code-keyword">new</span> <span class="code-type">McpUiCapabilities</span>();
+  <span class="code-prop">storage</span> = <span class="code-keyword">new</span> <span class="code-type">McpStorageBackend</span>();
+}
+
+<span class="code-comment">// HTTP host: LLM calls external APIs</span>
+<span class="code-keyword">class</span> <span class="code-type">HttpPluginHost</span> <span class="code-keyword">implements</span> <span class="code-type">PluginHost</span> {
+  <span class="code-prop">platform</span> = <span class="code-string">'http'</span>;
+  <span class="code-prop">llm</span> = <span class="code-keyword">new</span> <span class="code-type">HttpLlmCapabilities</span>();  <span class="code-comment">// calls OpenAI/Anthropic</span>
+  <span class="code-prop">tools</span> = <span class="code-keyword">new</span> <span class="code-type">HttpToolRegistry</span>();   <span class="code-comment">// 7 tools registered</span>
+  <span class="code-prop">storage</span> = <span class="code-keyword">new</span> <span class="code-type">HttpStorageBackend</span>(); <span class="code-comment">// in-memory + persistent flag</span>
+}</code></pre></div>
+      </div>
+    </div>
+    <div class="translate-panel" id="plain2">
+      <div class="translate-plain">
+        <p>Think of PluginHost as a <strong>power strip with six outlets</strong>. Each adapter builds its own power strip, but the plugs (your plugin) are always the same shape.</p>
+        <ul>
+          <li><strong>MCP</strong> plugs into Claude Desktop — LLM requests are delegated to the host Claude instance. Storage is in-memory only (<code>isPersistent = false</code>).</li>
+          <li><strong>HTTP</strong> plugs into the open web — LLM calls external APIs directly. Storage claims persistence but currently uses a Map (extensible to Redis/DB).</li>
+          <li><strong>Native</strong> plugs into Allternit itself — every capability is a direct passthrough to the platform runtime.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="viz-container">
+    <div class="viz-title">Capability Matrix — What each host actually provides</div>
+    <table class="matrix-table">
+      <thead>
+        <tr>
+          <th>Capability</th>
+          <th>MCP</th>
+          <th>HTTP</th>
+          <th>CLI</th>
+          <th>Native</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>LLM complete()</td>
+          <td class="cap-partial">Delegated</td>
+          <td class="cap-yes">External API</td>
+          <td class="cap-partial">Configured provider</td>
+          <td class="cap-yes">Full passthrough</td>
+        </tr>
+        <tr>
+          <td>Tool execute()</td>
+          <td class="cap-no">Host provides</td>
+          <td class="cap-yes">7 tools</td>
+          <td class="cap-no">Not implemented</td>
+          <td class="cap-yes">Full passthrough</td>
+        </tr>
+        <tr>
+          <td>UI Panels</td>
+          <td class="cap-no">Inline only</td>
+          <td class="cap-no">Log only</td>
+          <td class="cap-no">Not supported</td>
+          <td class="cap-yes">Webview</td>
+        </tr>
+        <tr>
+          <td>Storage persistent</td>
+          <td class="cap-no">false</td>
+          <td class="cap-yes">true</td>
+          <td class="cap-no">false</td>
+          <td class="cap-yes">true</td>
+        </tr>
+        <tr>
+          <td>Session history</td>
+          <td class="cap-no">Empty array</td>
+          <td class="cap-no">Empty array</td>
+          <td class="cap-no">Empty array</td>
+          <td class="cap-yes">Runtime history</td>
+        </tr>
+        <tr>
+          <td>Streaming</td>
+          <td class="cap-no">No</td>
+          <td class="cap-yes">SSE + WS</td>
+          <td class="cap-partial">Sync only</td>
+          <td class="cap-yes">Full</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- SECTION 3: MCP Adapter Deep -->
+<section class="section" id="sec3">
+  <div class="badge" style="background:var(--blue-dim);color:var(--blue);border-color:rgba(59,130,246,0.25)">Adapter Spotlight</div>
+  <h2>MCP Adapter — <span style="color:var(--blue)">Under the Hood</span></h2>
+  <p>The MCP adapter is the most complex because it bridges two protocols: the Plugin SDK's synchronous-style interface and MCP's request/response server model.</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">TypeScript</span> <span>src/adapters/mcp/index.ts</span></div>
+    <div class="code-body"><pre><code><span class="code-keyword">class</span> <span class="code-type">McpAdapterInstance</span> <span class="code-keyword">implements</span> <span class="code-type">AdapterInstance</span> {
+  <span class="code-keyword">private</span> <span class="code-func">setupHandlers</span>(): <span class="code-type">void</span> {
+    <span class="code-comment">// 1. ListTools — exposes plugin functions as MCP tools</span>
+    <span class="code-keyword">this</span>.server.setRequestHandler(<span class="code-type">ListToolsRequestSchema</span>, <span class="code-keyword">async</span> () => {
+      <span class="code-keyword">const</span> tools = <span class="code-keyword">this</span>.plugin.manifest.provides.functions.map(fn => ({
+        name: fn.name,
+        description: fn.description,
+        inputSchema: fn.parameters,
+      }));
+      <span class="code-keyword">return</span> { tools };
+    });
+
+    <span class="code-comment">// 2. CallTool — execute the plugin function</span>
+    <span class="code-keyword">this</span>.server.setRequestHandler(<span class="code-type">CallToolRequestSchema</span>, <span class="code-keyword">async</span> (req) => {
+      <span class="code-keyword">const</span> result = <span class="code-keyword">await</span> <span class="code-keyword">this</span>.plugin.execute(
+        req.params.name,
+        req.params.arguments,
+        { executionId: <span class="code-string">`mcp_${Date.now()}`</span>, startedAt: <span class="code-keyword">new</span> <span class="code-type">Date</span>(), metadata: { source: <span class="code-string">'mcp'</span> } }
+      );
+      <span class="code-keyword">return</span> { content: [{ type: <span class="code-string">'text'</span>, text: result.content }] };
+    });
+
+    <span class="code-comment">// 3. ListResources — manifest + readme</span>
+    <span class="code-keyword">this</span>.server.setRequestHandler(<span class="code-type">ListResourcesRequestSchema</span>, <span class="code-keyword">async</span> () => {
+      <span class="code-keyword">return</span> {
+        resources: [
+          { uri: <span class="code-string">`plugin://${id}/manifest`</span>, mimeType: <span class="code-string">'application/json'</span> },
+          { uri: <span class="code-string">`plugin://${id}/readme`</span>, mimeType: <span class="code-string">'text/markdown'</span> },
+        ]
+      };
+    });
+  }
+}</code></pre></div>
+  </div>
+
+  <div class="highlight-box">
+    <strong>Key insight:</strong> The MCP adapter registers <em>three</em> request handlers: <code>ListTools</code> (discovery), <code>CallTool</code> (execution), and <code>ListResources</code> (documentation). The plugin itself never knows it's talking to MCP — it just sees a standard PluginHost.
+  </div>
+</section>
+
+<!-- SECTION 4: HTTP Adapter Deep -->
+<section class="section" id="sec4">
+  <div class="badge" style="background:var(--purple-dim);color:var(--purple);border-color:rgba(168,85,247,0.25)">Adapter Spotlight</div>
+  <h2>HTTP Adapter — <span style="color:var(--purple)">Under the Hood</span></h2>
+  <p>The HTTP adapter is the most flexible. It spins up an Express server with CORS, optional API key auth, rate limiting, SSE streaming, and WebSocket support.</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">TypeScript</span> <span>src/adapters/http/index.ts</span></div>
+    <div class="code-body"><pre><code><span class="code-keyword">private</span> <span class="code-func">setupRoutes</span>(): <span class="code-type">void</span> {
+  <span class="code-keyword">const</span> router = <span class="code-type">Router</span>();
+
+  router.get(<span class="code-string">'/health'</span>, (req, res) => {
+    res.json({ status: <span class="code-string">'ok'</span>, plugin: <span class="code-keyword">this</span>.plugin.manifest.id });
+  });
+
+  router.post(<span class="code-string">'/execute/:functionName'</span>, <span class="code-keyword">async</span> (req, res) => {
+    <span class="code-keyword">if</span> (req.body.options?.stream) {
+      <span class="code-keyword">return</span> <span class="code-keyword">this</span>.handleStreamingExecution(req, res, ...);
+    }
+    <span class="code-keyword">const</span> result = <span class="code-keyword">await</span> <span class="code-keyword">this</span>.plugin.execute(
+      req.params.functionName,
+      req.body.inputs,
+      { executionId: <span class="code-string">`http_${Date.now()}`</span>, metadata: { source: <span class="code-string">'http'</span>, ip: req.ip } }
+    );
+    res.json({ success: result.success, content: result.content, ... });
+  });
+
+  router.post(<span class="code-string">'/batch'</span>, <span class="code-keyword">async</span> (req, res) => {
+    <span class="code-keyword">const</span> results = <span class="code-keyword">await</span> <span class="code-type">Promise</span>.all(
+      req.body.jobs.map(job => <span class="code-keyword">this</span>.plugin.execute(job.function, job.inputs, ...))
+    );
+    res.json({ results });
+  });
+
+  <span class="code-keyword">this</span>.app.use(<span class="code-string">'/v1'</span>, router);
+}</code></pre></div>
+  </div>
+
+  <div class="translate-block">
+    <div class="translate-tabs">
+      <button class="translate-tab active" onclick="setTranslate(this, 'code4')">Code</button>
+      <button class="translate-tab" onclick="setTranslate(this, 'plain4')">Plain English</button>
+    </div>
+    <div class="translate-panel active" id="code4">
+      <div class="code-block" style="margin:0;border:none;">
+        <div class="code-body"><pre><code><span class="code-comment">// SSE Streaming handler</span>
+<span class="code-keyword">private</span> <span class="code-func">handleStreamingExecution</span>(req, res, fnName, inputs) {
+  res.setHeader(<span class="code-string">'Content-Type'</span>, <span class="code-string">'text/event-stream'</span>);
+  res.setHeader(<span class="code-string">'Cache-Control'</span>, <span class="code-string">'no-cache'</span>);
+
+  <span class="code-keyword">const</span> sendEvent = (event, data) => {
+    res.write(<span class="code-string">`event: ${event}\n`</span>);
+    res.write(<span class="code-string">`data: ${JSON.stringify(data)}\n\n`</span>);
+  };
+
+  sendEvent(<span class="code-string">'start'</span>, { function: fnName });
+  <span class="code-keyword">this</span>.plugin.execute(...).then(result => {
+    sendEvent(<span class="code-string">'complete'</span>, result);
+    res.end();
+  });
+}</code></pre></div>
+      </div>
+    </div>
+    <div class="translate-panel" id="plain4">
+      <div class="translate-plain">
+        <p>When a client asks for streaming, the HTTP adapter switches protocols:</p>
+        <ul>
+          <li><strong>Normal request:</strong> Returns a single JSON response after execution finishes.</li>
+          <li><strong>Streaming request:</strong> Opens an SSE (Server-Sent Events) connection. Sends a <code>start</code> event immediately, then a <code>complete</code> event when the plugin finishes. The client receives real-time progress without polling.</li>
+        </ul>
+        <p>The WebSocket path does the same thing bidirectionally: clients can send <code>execute</code> messages and receive <code>result</code> messages over a persistent socket.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 5: CLI Adapter Deep -->
+<section class="section" id="sec5">
+  <div class="badge" style="background:var(--green-dim);color:var(--green);border-color:rgba(34,197,94,0.25)">Adapter Spotlight</div>
+  <h2>CLI Adapter — <span style="color:var(--green)">Under the Hood</span></h2>
+  <p>The CLI adapter is the simplest: parse arguments, execute once, print, exit. But simplicity is its superpower — it works in any terminal, any CI pipeline, any Codex conversation.</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">TypeScript</span> <span>src/adapters/cli/index.ts</span></div>
+    <div class="code-body"><pre><code><span class="code-keyword">private</span> <span class="code-func">parseArgs</span>(): <span class="code-type">Record</span>&lt;<span class="code-type">string</span>, <span class="code-type">any</span>&gt; {
+  <span class="code-keyword">const</span> args: <span class="code-type">Record</span>&lt;<span class="code-type">string</span>, <span class="code-type">any</span>&gt; = {};
+  <span class="code-keyword">const</span> argv = process.argv.slice(<span class="code-num">2</span>);
+
+  <span class="code-keyword">for</span> (<span class="code-keyword">let</span> i = <span class="code-num">0</span>; i &lt; argv.length; i++) {
+    <span class="code-keyword">if</span> (argv[i].startsWith(<span class="code-string">'--'</span>)) {
+      <span class="code-keyword">const</span> key = argv[i].slice(<span class="code-num">2</span>);
+      <span class="code-keyword">const</span> value = argv[i + <span class="code-num">1</span>];
+      <span class="code-keyword">if</span> (value && !value.startsWith(<span class="code-string">'--'</span>)) {
+        <span class="code-keyword">try</span> { args[key] = <span class="code-type">JSON</span>.parse(value); }
+        <span class="code-keyword">catch</span> { args[key] = value; }
+        i++;
+      } <span class="code-keyword">else</span> {
+        args[key] = <span class="code-keyword">true</span>;
+      }
+    }
+  }
+  <span class="code-keyword">return</span> args;
+}</code></pre></div>
+  </div>
+
+  <div class="highlight-box">
+    <strong>Design note:</strong> The CLI adapter parses <code>--key value</code> pairs and auto-detects JSON. <code>--input '{"topic":"AI"}'</code> becomes a real object, not a string. This lets Codex pass structured data without quoting hell.
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">TypeScript</span></div>
+    <div class="code-body"><pre><code><span class="code-keyword">class</span> <span class="code-type">CliPluginHost</span> <span class="code-keyword">implements</span> <span class="code-type">PluginHost</span> {
+  <span class="code-prop">llm</span> = <span class="code-keyword">new</span> <span class="code-type">CliLlmCapabilities</span>(config); <span class="code-comment">// configurable provider</span>
+  <span class="code-prop">tools</span> = <span class="code-keyword">new</span> <span class="code-type">CliToolRegistry</span>();      <span class="code-comment">// has() = always false</span>
+  <span class="code-prop">ui</span> = <span class="code-keyword">new</span> <span class="code-type">CliUiCapabilities</span>();       <span class="code-comment">// console.log()</span>
+  <span class="code-prop">storage</span> = <span class="code-keyword">new</span> <span class="code-type">CliStorageBackend</span>();  <span class="code-comment">// in-memory Map</span>
+}</code></pre></div>
+  </div>
+</section>
+
+<!-- SECTION 6: Native Adapter -->
+<section class="section" id="sec6">
+  <div class="badge">Platform Native</div>
+  <h2>Native Adapter — <span class="accent">The Gold Standard</span></h2>
+  <p>The Native adapter is what all others aspire to. It requires the Allternit runtime to be present, but in exchange it provides every capability with zero translation loss.</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">TypeScript</span> <span>src/adapters/native/index.ts</span></div>
+    <div class="code-body"><pre><code><span class="code-keyword">export interface</span> <span class="code-type">AllternitRuntime</span> {
+  llm: {
+    complete(prompt: <span class="code-type">string</span>, options?: <span class="code-type">any</span>): <span class="code-type">Promise</span>&lt;<span class="code-type">string</span>&gt;;
+    stream(prompt: <span class="code-type">string</span>, handler: (chunk: <span class="code-type">string</span>) => <span class="code-type">void</span>): <span class="code-type">Promise</span>&lt;<span class="code-type">void</span>&gt;;
+    getModels(): <span class="code-type">string</span>[];
+  };
+  tools: {
+    execute(toolId: <span class="code-type">string</span>, params: <span class="code-type">any</span>): <span class="code-type">Promise</span>&lt;<span class="code-type">any</span>&gt;;
+    list(): <span class="code-type">string</span>[];
+  };
+  ui: {
+    sendMessage(content: <span class="code-type">string</span>, type?: <span class="code-type">string</span>): <span class="code-type">void</span>;
+    createArtifact(type: <span class="code-type">string</span>, content: <span class="code-type">any</span>): <span class="code-type">string</span>;
+    openPanel(title: <span class="code-type">string</span>, content: <span class="code-type">any</span>): { update: <span class="code-type">Function</span>; close: <span class="code-type">Function</span> };
+    showForm(schema: <span class="code-type">any</span>): <span class="code-type">Promise</span>&lt;<span class="code-type">any</span>&gt;;
+    progress(percent: <span class="code-type">number</span>): <span class="code-type">void</span>;
+  };
+  storage: { get(key: <span class="code-type">string</span>): <span class="code-type">Promise</span>&lt;<span class="code-type">any</span>&gt;; set(key: <span class="code-type">string</span>, value: <span class="code-type">any</span>): <span class="code-type">Promise</span>&lt;<span class="code-type">void</span>&gt;; };
+  session: { id: <span class="code-type">string</span>; getHistory(): <span class="code-type">Promise</span>&lt;<span class="code-type">any</span>[]&gt;; };
+}</code></pre></div>
+  </div>
+
+  <div class="translate-block">
+    <div class="translate-tabs">
+      <button class="translate-tab active" onclick="setTranslate(this, 'code6')">Code</button>
+      <button class="translate-tab" onclick="setTranslate(this, 'plain6')">Plain English</button>
+    </div>
+    <div class="translate-panel active" id="code6">
+      <div class="code-block" style="margin:0;border:none;">
+        <div class="code-body"><pre><code><span class="code-keyword">class</span> <span class="code-type">NativeAdapter</span> <span class="code-keyword">implements</span> <span class="code-type">Adapter</span> {
+  <span class="code-func">canActivate</span>() {
+    <span class="code-keyword">return</span> <span class="code-keyword">typeof</span> globalThis.__ALLTERNIT_RUNTIME__
+      !== <span class="code-string">'undefined'</span>;
+  }
+}
+
+<span class="code-keyword">class</span> <span class="code-type">NativeLlmCapabilities</span> <span class="code-keyword">implements</span> <span class="code-type">LlmCapabilities</span> {
+  <span class="code-keyword">async</span> <span class="code-func">complete</span>(prompt, options) {
+    <span class="code-keyword">return</span> <span class="code-keyword">this</span>.runtimeLlm.complete(prompt, options);
+  }
+  <span class="code-keyword">async</span> <span class="code-func">stream</span>(prompt, handler, options) {
+    <span class="code-keyword">return</span> <span class="code-keyword">this</span>.runtimeLlm.stream(prompt, handler);
+  }
+}</code></pre></div>
+      </div>
+    </div>
+    <div class="translate-panel" id="plain6">
+      <div class="translate-plain">
+        <p>The Native adapter is a <strong>thin proxy</strong>. It doesn't reimplement anything — it just forwards calls:</p>
+        <ul>
+          <li><strong>LLM</strong> → directly to the Allternit runtime's LLM provider.</li>
+          <li><strong>Tools</strong> → <code>runtime.tools.execute()</code> with no wrapper.</li>
+          <li><strong>UI</strong> → <code>runtime.ui.createArtifact()</code> for images, code, charts, tables.</li>
+          <li><strong>Storage</strong> → <code>runtime.storage.get/set()</code> with real persistence.</li>
+          <li><strong>Session</strong> → <code>runtime.session.getHistory()</code> returns actual conversation history.</li>
+        </ul>
+        <p>If the runtime exists, this is the adapter you want. If not, the others provide graceful fallbacks.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 7: Lifecycle + Chat Animation -->
+<section class="section" id="sec7">
+  <div class="badge badge-green">Lifecycle</div>
+  <h2>Plugin <span class="accent">Lifecycle</span> & Adapter Boot</h2>
+  <p>Every plugin goes through the same lifecycle, but the adapter determines what "initialize" and "destroy" actually mean on each platform.</p>
+
+  <div class="viz-container">
+    <div class="viz-title">Click "Run Lifecycle" to watch the boot sequence</div>
+    <div class="lifecycle" id="lifecycle">
+      <div class="lifecycle-step" data-step="0">
+        <div class="step-num">Step 1</div>
+        <div class="step-name">Adapter<br>Selected</div>
+      </div>
+      <div class="lifecycle-arrow">→</div>
+      <div class="lifecycle-step" data-step="1">
+        <div class="step-num">Step 2</div>
+        <div class="step-name">canActivate<br>Checked</div>
+      </div>
+      <div class="lifecycle-arrow">→</div>
+      <div class="lifecycle-step" data-step="2">
+        <div class="step-num">Step 3</div>
+        <div class="step-name">Host<br>Created</div>
+      </div>
+      <div class="lifecycle-arrow">→</div>
+      <div class="lifecycle-step" data-step="3">
+        <div class="step-num">Step 4</div>
+        <div class="step-name">Plugin<br>Initialized</div>
+      </div>
+      <div class="lifecycle-arrow">→</div>
+      <div class="lifecycle-step" data-step="4">
+        <div class="step-num">Step 5</div>
+        <div class="step-name">Adapter<br>Started</div>
+      </div>
+      <div class="lifecycle-arrow">→</div>
+      <div class="lifecycle-step" data-step="5">
+        <div class="step-num">Step 6</div>
+        <div class="step-name">Execute /<br>Serve</div>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:16px;">
+      <button class="reveal-btn" onclick="runLifecycle()">▶ Run Lifecycle</button>
+    </div>
+    <div id="lifecycle-log" style="margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--text-muted);text-align:center;min-height:24px;"></div>
+  </div>
+
+  <h3>Group Chat: The Adapters Discuss Graceful Degradation</h3>
+  <p>What happens when a plugin asks for a capability the platform doesn't support? Here's how the adapters handle it:</p>
+
+  <div class="chat-container" id="chat">
+    <div class="chat-message" style="animation-delay:0.2s">
+      <div class="chat-avatar avatar-native">N</div>
+      <div>
+        <div class="chat-name">Native Adapter</div>
+        <div class="chat-bubble">I have everything: panels, persistent storage, full tool registry, session history. My plugins get the VIP treatment. 🏆</div>
+      </div>
+    </div>
+    <div class="chat-message" style="animation-delay:0.8s">
+      <div class="chat-avatar avatar-http">H</div>
+      <div>
+        <div class="chat-name">HTTP Adapter</div>
+        <div class="chat-bubble">I have SSE streaming and a REST API. But my UI is basically console.log — no real panels. I tell plugins <code>isPersistent = true</code> even though I'm just a Map for now. Fake it till you make it. 😅</div>
+      </div>
+    </div>
+    <div class="chat-message" style="animation-delay:1.4s">
+      <div class="chat-avatar avatar-mcp">M</div>
+      <div>
+        <div class="chat-name">MCP Adapter</div>
+        <div class="chat-bubble">Claude handles my LLM calls — I just delegate. But tools? I have to tell the plugin "ask the host, I don't have them." And storage is in-memory only. When the MCP server restarts, everything resets. 💨</div>
+      </div>
+    </div>
+    <div class="chat-message" style="animation-delay:2.0s">
+      <div class="chat-avatar avatar-cli">C</div>
+      <div>
+        <div class="chat-name">CLI Adapter</div>
+        <div class="chat-bubble">I'm the bare minimum. No tools, no panels, no images, no persistent storage. But I work <em>everywhere</em> — CI, Docker, Codex, Aider. Sometimes simplicity wins. ⚡</div>
+      </div>
+    </div>
+    <div class="chat-message" style="animation-delay:2.6s">
+      <div class="chat-avatar avatar-native">N</div>
+      <div>
+        <div class="chat-name">Native Adapter</div>
+        <div class="chat-bubble">That's why the PluginHost contract has <code>has()</code>, <code>isPersistent</code>, and fallback modes. Plugins check before they leap. Smart plugins degrade gracefully — they simulate research if <code>web_search</code> isn't available.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="highlight-box">
+    <strong>Best practice:</strong> Always check <code>host.tools.has('tool_id')</code> before executing. If unavailable, fall back to LLM-based simulation or return a clear error. Never assume a capability exists.
+  </div>
+</section>
+
+<!-- SECTION 8: Quiz 1 -->
+<section class="section" id="sec8">
+  <div class="badge" style="background:var(--accent-dim);color:var(--accent);border-color:var(--border-strong)">Quiz 1 / 3</div>
+  <h2>Test Your <span class="accent">Knowledge</span></h2>
+
+  <div class="quiz-container">
+    <div class="quiz-question">Which adapter method determines if the current environment can support the adapter?</div>
+    <div class="quiz-options">
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q1')"><code>initialize()</code> — it tries to start and catches errors</button>
+      <button class="quiz-option" onclick="checkAnswer(this, true, 'q1')"><code>canActivate()</code> — it inspects the environment before starting</button>
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q1')"><code>start()</code> — it returns false if the platform is unsupported</button>
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q1')"><code>getEndpoint()</code> — it probes the network stack</button>
+    </div>
+    <div class="quiz-feedback" id="q1-feedback"></div>
+  </div>
+
+  <div class="quiz-container">
+    <div class="quiz-question">The MCP adapter's <code>McpStorageBackend</code> sets <code>isPersistent = false</code>. What does this mean for a plugin using <code>host.storage.set()</code>?</div>
+    <div class="quiz-options">
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q2')">The storage call throws an error</button>
+      <button class="quiz-option" onclick="checkAnswer(this, true, 'q2')">Data is stored in-memory only and lost on restart</button>
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q2')">Data is written to a temporary file</button>
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q2')">The call is silently ignored</button>
+    </div>
+    <div class="quiz-feedback" id="q2-feedback"></div>
+  </div>
+</section>
+
+<!-- SECTION 9: Quiz 2 -->
+<section class="section" id="sec9">
+  <div class="badge" style="background:var(--accent-dim);color:var(--accent);border-color:var(--border-strong)">Quiz 2 / 3</div>
+  <h2>Test Your <span class="accent">Knowledge</span></h2>
+
+  <div class="quiz-container">
+    <div class="quiz-question">When the HTTP adapter receives a request with <code>options.stream = true</code>, what protocol does it use to send real-time updates?</div>
+    <div class="quiz-options">
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q3')">Long-polling with repeated HTTP GETs</button>
+      <button class="quiz-option" onclick="checkAnswer(this, true, 'q3')">Server-Sent Events (SSE) with <code>text/event-stream</code></button>
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q3')">gRPC streaming over HTTP/2</button>
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q3')">Raw TCP socket</button>
+    </div>
+    <div class="quiz-feedback" id="q3-feedback"></div>
+  </div>
+
+  <div class="quiz-container">
+    <div class="quiz-question">The Native adapter checks <code>globalThis.__ALLTERNIT_RUNTIME__</code>. Why does it use <code>globalThis</code> instead of <code>window</code> or <code>global</code>?</div>
+    <div class="quiz-options">
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q4')">Because Allternit runs in a Service Worker</button>
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q4')">Because <code>global</code> is deprecated in Node.js 20+</button>
+      <button class="quiz-option" onclick="checkAnswer(this, true, 'q4')">Because it works in both browsers and Node.js without platform detection</button>
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q4')">Because <code>window</code> is blocked by Content Security Policy</button>
+    </div>
+    <div class="quiz-feedback" id="q4-feedback"></div>
+  </div>
+</section>
+
+<!-- SECTION 10: Quiz 3 -->
+<section class="section" id="sec10">
+  <div class="badge" style="background:var(--accent-dim);color:var(--accent);border-color:var(--border-strong)">Quiz 3 / 3</div>
+  <h2>Test Your <span class="accent">Knowledge</span></h2>
+
+  <div class="quiz-container">
+    <div class="quiz-question">In the MCP adapter, what happens when a plugin function returns an artifact of type <code>image</code>?</div>
+    <div class="quiz-options">
+      <button class="quiz-option" onclick="checkAnswer(this, true, 'q5')">The adapter wraps it in an MCP <code>{ type: 'image', data, mimeType }</code> content block</button>
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q5')">The adapter converts it to base64 text and sends <code>type: 'text'</code></button>
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q5')">The adapter ignores it because MCP doesn't support images</button>
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q5')">The adapter writes it to disk and returns a file path</button>
+    </div>
+    <div class="quiz-feedback" id="q5-feedback"></div>
+  </div>
+
+  <div class="quiz-container">
+    <div class="quiz-question">Which adapter provides <code>session.getHistory()</code> that returns actual conversation history rather than an empty array?</div>
+    <div class="quiz-options">
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q6')">HTTP Adapter — it caches history in the server</button>
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q6')">MCP Adapter — Claude provides the history</button>
+      <button class="quiz-option" onclick="checkAnswer(this, true, 'q6')">Native Adapter — it forwards to <code>runtime.session.getHistory()</code></button>
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q6')">CLI Adapter — it reads from a local JSON log file</button>
+    </div>
+    <div class="quiz-feedback" id="q6-feedback"></div>
+  </div>
+</section>
+
+<!-- SECTION 11: Capstone -->
+<section class="section" id="sec11">
+  <div class="badge badge-green">Capstone</div>
+  <h2>Build Your Own <span class="accent">Adapter</span></h2>
+  <p>You now understand every built-in adapter. The ultimate test: implement a new one from scratch.</p>
+
+  <div class="capstone">
+    <h3>🎯 Project: WebSocket-First Real-Time Adapter</h3>
+    <p>Create a new <code>WebSocketAdapter</code> that does the following:</p>
+    <ul>
+      <li><strong>Protocol:</strong> Pure WebSocket — no HTTP fallback. Clients connect to <code>ws://localhost:3001</code>.</li>
+      <li><strong>Discovery:</strong> On connect, the server sends a <code>manifest</code> message with all available functions and their schemas.</li>
+      <li><strong>Execution:</strong> Clients send <code>{ type: 'execute', function: 'name', inputs: {} }</code>. The server streams progress updates via <code>{ type: 'progress', percent: 25 }</code> messages before sending the final <code>{ type: 'result', ... }</code>.</li>
+      <li><strong>PluginHost:</strong> Implement a minimal host with in-memory storage, a console-based UI, and an LLM capability that delegates to an OpenAI API key passed in config.</li>
+      <li><strong>Graceful degradation:</strong> If the plugin requests <code>renderImage()</code> but the client hasn't signaled image support, degrade to a markdown link.</li>
+      <li><strong>Bonus:</strong> Add a <code>subscribe</code> message type so clients can receive plugin events (not just function results).</li>
+    </ul>
+    <p style="margin-top:16px;"><strong>Deliverable:</strong> A single TypeScript file <code>websocket-adapter.ts</code> that implements the <code>Adapter</code> and <code>AdapterInstance</code> interfaces, plus a tiny test client HTML page.</p>
+  </div>
+
+  <div class="highlight-box" style="margin-top:24px;">
+    <strong>Stretch goal:</strong> Compare your WebSocket adapter to the built-in HTTP adapter. What are the trade-offs? When would you choose one over the other? Document your reasoning in a <code>DESIGN_DECISIONS.md</code> file.
+  </div>
+</section>
+
+<!-- Footer -->
+<div class="module-footer">
+  <div class="logo">A://LABS</div>
+  <p>ALABS-ADV-PLUGINSDK — Module 2: Adapters & PluginHost</p>
+  <p style="margin-top:4px;">Built from source at <code>packages/@allternit/plugin-sdk</code></p>
+</div>
+
+<script>
+// ===================== PROGRESS & NAVIGATION =====================
+const sections = document.querySelectorAll('.section');
+const navDots = document.querySelectorAll('.nav-dot');
+const progressBar = document.getElementById('progressBar');
+
+function updateProgress() {
+  const scrollTop = window.scrollY;
+  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+  const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+  progressBar.style.width = progress + '%';
+
+  let activeIdx = 0;
+  sections.forEach((sec, i) => {
+    const rect = sec.getBoundingClientRect();
+    if (rect.top <= window.innerHeight * 0.5) activeIdx = i;
+  });
+
+  navDots.forEach((dot, i) => {
+    dot.classList.toggle('active', i === activeIdx);
+  });
+}
+
+window.addEventListener('scroll', updateProgress, { passive: true });
+
+function scrollToSection(index) {
+  sections[index]?.scrollIntoView({ behavior: 'smooth' });
+}
+
+// ===================== INTERSECTION OBSERVER =====================
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) entry.target.classList.add('visible');
+  });
+}, { threshold: 0.15 });
+
+sections.forEach(sec => observer.observe(sec));
+
+// ===================== ADAPTER DETAILS =====================
+function showAdapter(id) {
+  document.querySelectorAll('.adapter-detail').forEach(d => d.classList.remove('show'));
+  document.querySelectorAll('.adapter-card').forEach(c => c.classList.remove('active'));
+  const detail = document.getElementById('detail-' + id);
+  if (detail) detail.classList.add('show');
+  event.currentTarget.classList.add('active');
+}
+
+// ===================== TRANSLATE TABS =====================
+function setTranslate(btn, panelId) {
+  const block = btn.closest('.translate-block');
+  block.querySelectorAll('.translate-tab').forEach(t => t.classList.remove('active'));
+  block.querySelectorAll('.translate-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(panelId).classList.add('active');
+}
+
+// ===================== LIFECYCLE ANIMATION =====================
+let lifecycleRunning = false;
+function runLifecycle() {
+  if (lifecycleRunning) return;
+  lifecycleRunning = true;
+  const steps = document.querySelectorAll('.lifecycle-step');
+  const log = document.getElementById('lifecycle-log');
+  const messages = [
+    'Adapter selected by PluginRuntime config...',
+    'Checking canActivate() — environment supports this adapter ✓',
+    'Instantiating PluginHost implementation (McpPluginHost, HttpPluginHost, etc.)',
+    'Calling plugin.initialize(host) — plugin receives host reference',
+    'Calling adapterInstance.start() — MCP server connects, HTTP server listens, CLI parses args',
+    'Plugin is now serving requests via the adapter endpoint'
+  ];
+
+  steps.forEach(s => s.classList.remove('active'));
+  log.textContent = '';
+
+  let i = 0;
+  function next() {
+    if (i > 0) steps[i - 1].classList.remove('active');
+    if (i < steps.length) {
+      steps[i].classList.add('active');
+      log.textContent = messages[i];
+      i++;
+      setTimeout(next, 900);
+    } else {
+      setTimeout(() => {
+        steps.forEach(s => s.classList.remove('active'));
+        log.textContent = 'Lifecycle complete. Plugin is running.';
+        lifecycleRunning = false;
+      }, 1200);
+    }
+  }
+  next();
+}
+
+// ===================== QUIZZES =====================
+const quizAnswers = {
+  q1: "Correct! <code>canActivate()</code> is the guard method. Native checks for <code>__ALLTERNIT_RUNTIME__</code>, MCP checks for <code>process</code>, CLI always returns true.",
+  q2: "Correct! The MCP storage uses an in-memory Map. When the MCP server process restarts, all stored data is gone. Plugins should check <code>host.storage.isPersistent</code> before relying on long-term state.",
+  q3: "Correct! The HTTP adapter sets <code>Content-Type: text/event-stream</code> and sends SSE events: <code>start</code>, then <code>complete</code> (or <code>error</code>).",
+  q4: "Correct! <code>globalThis</code> is the standard ECMAScript reference to the global object, working in browsers, Node.js, Deno, and Web Workers without conditional checks.",
+  q5: "Correct! The MCP adapter inspects <code>result.artifacts</code> and wraps image artifacts as <code>{ type: 'image', data, mimeType }</code> blocks in the MCP content array.",
+  q6: "Correct! Only the Native adapter forwards <code>getHistory()</code> to the Allternit runtime. All other adapters return an empty array because they don't have access to the host platform's conversation history."
+};
+
+function checkAnswer(btn, isCorrect, qid) {
+  const container = btn.closest('.quiz-container');
+  const options = container.querySelectorAll('.quiz-option');
+  const feedback = document.getElementById(qid + '-feedback');
+
+  options.forEach(opt => opt.classList.add('disabled'));
+  btn.classList.add(isCorrect ? 'correct' : 'wrong');
+
+  if (!isCorrect) {
+    options.forEach(opt => {
+      if (opt.onclick.toString().includes('true')) opt.classList.add('correct');
+    });
+  }
+
+  feedback.innerHTML = quizAnswers[qid];
+  feedback.className = 'quiz-feedback show ' + (isCorrect ? 'correct' : 'wrong');
+}
+
+// Initialize
+updateProgress();
+</script>
+</body>
+</html>

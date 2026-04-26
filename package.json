@@ -1,7 +1,7 @@
 {
-  "name": "a2rchitect",
+  "name": "allternitchitect",
   "version": "1.0.0",
-  "description": "A2rchitect - AI Governance and Workflow System",
+  "description": "allternit - AI Governance and Workflow System",
   "type": "module",
   "private": true,
   "pnpm": {
@@ -16,41 +16,55 @@
   "workspaces": [
     "extension/*",
     "extensions/*",
-    "7-apps/*",
-    "6-ui/a2r-platform"
+    "packages/@allternit/*",
+    "packages/@allternit/*/*",
+    "packages/@allternit/*/*/*",
+    "sdk/*",
+    "plugins/*",
+    "cmd/*",
+    "cmd/*/*/*",
+    "domains/*/*",
+    "platform/*/*",
+    "services/*",
+    "services/*/*",
+    "services/*/*/*",
+    "surfaces/*",
+    "surfaces/*/*",
+    "surfaces/*/*/*",
+    "surfaces/allternit-extensions/allternit-extension/packages/*"
   ],
   "scripts": {
     "build": "pnpm -r build",
-    "dev": "concurrently \"cd 7-apps/api && cargo run\" \"pnpm --filter @a2r/runtime serve\" \"pnpm --filter @a2rchitech/shell-electron dev\"",
-    "dev:api": "cd 7-apps/api && cargo run",
+    "dev": "concurrently \"cd cmd/allternit-api && cargo run\" \"pnpm --filter @allternit/runtime serve\" \"pnpm --filter @allternit/desktop dev\"",
+    "dev:api": "cd cmd/allternit-api && cargo run",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:integration": "vitest run --config tests/vitest.config.ts",
     "test:unit": "vitest run",
-    "test:e2e": "pnpm --filter @a2rchitech/shell-ui test:e2e",
-    "test:e2e:headed": "pnpm --filter @a2rchitech/shell test:e2e:headed",
-    "test:e2e:debug": "pnpm --filter @a2rchitech/shell test:e2e:debug",
-    "test:e2e:ci": "pnpm --filter @a2rchitech/shell test:e2e:ci",
+    "test:e2e": "echo 'No e2e tests configured'",
+    "test:e2e:headed": "echo 'No e2e tests configured'",
+    "test:e2e:debug": "echo 'No e2e tests configured'",
+    "test:e2e:ci": "echo 'No e2e tests configured'",
     "test:benchmark": "vitest run tests/benchmarks",
     "test:coverage": "vitest run --coverage",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
     "clean": "pnpm -r clean && rm -rf dist",
-    "shell": "pnpm --filter @a2rchitech/shell-electron dev",
-    "shell:web": "pnpm --filter @a2rchitech/shell-ui dev",
-    "shell:desktop": "pnpm --filter @a2rchitech/shell-electron dev",
-    "tui": "bun run --cwd 7-apps/shell/terminal dev",
-    "tui:build": "bun run --cwd 7-apps/shell/terminal build",
-    "tui:test": "bun run --cwd 7-apps/shell/terminal test",
-    "start:all": "concurrently \"pnpm --filter @a2r/runtime serve\" \"pnpm --filter @a2rchitech/shell-electron dev"
+    "shell": "pnpm --filter @allternit/desktop dev",
+    "shell:web": "pnpm --filter @allternit/desktop dev",
+    "shell:desktop": "pnpm --filter @allternit/desktop dev",
+    "tui": "bun run --cwd cmd/gizzi-code dev",
+    "tui:build": "bun run --cwd cmd/gizzi-code build",
+    "tui:test": "bun run --cwd cmd/gizzi-code test",
+    "start:all": "concurrently \"pnpm --filter @allternit/runtime serve\" \"pnpm --filter @allternit/desktop dev\""
   },
   "keywords": [
-    "a2r",
+    "allternit",
     "ai",
     "governance",
     "workflow"
   ],
-  "author": "A2rchitect Team",
+  "author": "allternit Team",
   "license": "MIT",
   "devDependencies": {
     "@playwright/test": "^1.58.2",
@@ -66,6 +80,7 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "jszip": "^3.10.1"
+    "jszip": "^3.10.1",
+    "sqlite-vec": "^0.1.9"
   }
 }

@@ -1,0 +1,31 @@
+{
+  "name": "@allternit/remotioncard-plugin",
+  "version": "1.0.0",
+  "description": "Generate videos from prompts using Remotion React components",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build",
+    "validate": "allternit-plugin validate"
+  },
+  "dependencies": {
+    "@allternit/plugin-sdk": "^1.0.0",
+    "remotion": "^4.0.0"
+  },
+  "peerDependencies": {
+    "@remotion/renderer": "^4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@remotion/renderer": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

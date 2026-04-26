@@ -1,49 +1,40 @@
 packages:
-  # New functional structure (Phase 1-6)
+  # Shallow packages
+  - 'agents/*'
+  - 'api/*'
+  - 'bin/*'
   - 'cmd/*'
-  - '!cmd/cli'
-  - '!domains/agent/gizziclaw'
-  - '!domains/mcp/connectors'
-  - '!platform/plugins'
+  - 'domains/*'
   - 'domains/*/*'
-  - 'packages/@allternit/types/visual-state'
-  - 'packages/@allternit/types/allternit-types'
+  - 'infrastructure/*'
+  - 'packages/*'
+  - 'packages/@allternit/*'
+  - 'platform/*'
+  - 'platform/*/*'
+  - 'plugins/*'
   - 'sdk/*'
+  - 'services/*'
   - 'services/*/*'
-  - 'services/runtime/adapter/allternit-runtime'
   - 'surfaces/*'
   - 'surfaces/*/*'
-  - 'surfaces/allternit-platform/adapters-ts/allternit-avatar-adapters'
-  - 'surfaces/page-agent/packages/*'
-  - '!surfaces/page-agent/packages/extension'
-  - '!surfaces/page-agent/packages/website'
+  # Deeper nested packages (reorganization artifacts)
+  - 'cmd/*/*/*'
+  - 'packages/@allternit/*/*'
+  - 'packages/@allternit/*/*/*'
+  - 'packages/@allternit/*/*/*/*'
+  - 'services/*/*/*'
+  - 'services/*/*/*/*'
+  - 'surfaces/*/*/*'
+  - 'surfaces/*/*/*/*'
   - 'surfaces/allternit-extensions/allternit-extension/packages/*'
-  - 'platform/*/*'
-  - 'packages/@allternit/*'
-  
-  # Legacy structure (still active during migration)
-  - packages/*
-  - apps/*
-  - 6-ui/*
-  - 7-apps/*
-  - 7-apps/*/*
-  - '!7-apps/_legacy/**'
-  - '!7-apps/shell/terminal/**'
-  - 3-adapters/*
-  - 3-adapters/*/*
-  - 3-adapters/*/*/*
-  - 3-adapters/allternit-bridges/*
-  - 2-governance/*
-  - 2-governance/*/*
-  - 2-governance/*/*/*
-  - 1-kernel/*
-  - 1-kernel/*/*
-  - 4-services/*
-  - 4-services/*/*
-  - cmd/gizzi-code/packages/*
+  # Exclusions
+  - '!cmd/*/sdks'
+  - '!packages/@allternit/adapters/src/**'
+  - '!surfaces/allternit-platform/adapters-ts/**'
 
 onlyBuiltDependencies:
   - '@whiskeysockets/baileys'
+  - better-sqlite3
   - canvas
   - electron
   - protobufjs

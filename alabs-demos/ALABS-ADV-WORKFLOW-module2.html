@@ -1,0 +1,1761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Module 2: The Scheduler & Execution Model — ALABS-ADV-WORKFLOW</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0b0b0c;
+  --bg-elevated: #111114;
+  --bg-card: #16161a;
+  --bg-code: #0e0e10;
+  --border: #232328;
+  --border-hover: #2e2e35;
+  --text-primary: #f0f0f5;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+  --accent: #f59e0b;
+  --accent-dim: #d97706;
+  --accent-glow: rgba(245,158,11,0.15);
+  --green: #10b981;
+  --red: #ef4444;
+  --blue: #3b82f6;
+  --purple: #8b5cf6;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text-primary);
+  line-height: 1.65;
+  overflow-x: hidden;
+}
+
+/* Progress bar */
+.progress-bar {
+  position: fixed;
+  top: 0; left: 0; height: 3px;
+  background: linear-gradient(90deg, var(--accent), #fbbf24);
+  width: 0%;
+  z-index: 1000;
+  transition: width 0.15s linear;
+  box-shadow: 0 0 12px rgba(245,158,11,0.4);
+}
+
+/* Nav */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  background: rgba(11,11,12,0.85);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  z-index: 999;
+  padding: 0 24px;
+}
+
+.nav-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+}
+
+.nav-brand {
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: var(--accent);
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-brand span { color: var(--text-muted); font-weight: 400; }
+
+.nav-links {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.nav-links::-webkit-scrollbar { display: none; }
+
+.nav-links a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.nav-links a:hover,
+.nav-links a.active {
+  color: var(--accent);
+  background: var(--accent-glow);
+}
+
+/* Sections */
+section { padding: 80px 24px; }
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* Hero */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  position: relative;
+  padding-top: 56px;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: var(--accent-glow);
+  border: 1px solid rgba(245,158,11,0.25);
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 32px;
+}
+
+.hero h1 {
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  margin-bottom: 20px;
+}
+
+.hero h1 .accent { color: var(--accent); }
+
+.hero p {
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  color: var(--text-secondary);
+  max-width: 560px;
+  margin: 0 auto 40px;
+  font-weight: 400;
+}
+
+.hero-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 32px;
+  background: var(--accent);
+  color: #0b0b0c;
+  font-weight: 700;
+  font-size: 0.95rem;
+  border-radius: 10px;
+  text-decoration: none;
+  transition: all 0.2s;
+  box-shadow: 0 4px 24px rgba(245,158,11,0.25);
+}
+
+.hero-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(245,158,11,0.35);
+}
+
+.hero-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(245,158,11,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(245,158,11,0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse 60% 50% at 50% 50%, black 20%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Scroll reveal */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.7s cubic-bezier(0.16,1,0.3,1), transform 0.7s cubic-bezier(0.16,1,0.3,1);
+}
+.reveal.visible { opacity: 1; transform: translateY(0); }
+
+/* Typography */
+h2 {
+  font-size: clamp(1.6rem, 3.5vw, 2.2rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 16px;
+  line-height: 1.25;
+}
+
+h2 .num {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 0.7em;
+  font-weight: 600;
+  margin-right: 10px;
+}
+
+h3 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin: 32px 0 12px;
+  color: var(--text-primary);
+}
+
+.section-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+
+p { color: var(--text-secondary); margin-bottom: 16px; }
+
+/* Cards */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 28px;
+  margin: 24px 0;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.card:hover { border-color: var(--border-hover); }
+
+.card-accent {
+  border-left: 3px solid var(--accent);
+}
+
+.card-green { border-left: 3px solid var(--green); }
+.card-red { border-left: 3px solid var(--red); }
+.card-blue { border-left: 3px solid var(--blue); }
+
+/* Code blocks */
+pre, code { font-family: var(--font-mono); }
+
+pre {
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 24px;
+  overflow-x: auto;
+  font-size: 0.82rem;
+  line-height: 1.7;
+  margin: 20px 0;
+  position: relative;
+}
+
+code {
+  background: rgba(245,158,11,0.08);
+  color: var(--accent);
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-size: 0.85em;
+}
+
+pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  font-size: inherit;
+}
+
+/* Custom syntax highlighting */
+.hljs-keyword { color: #c678dd; }
+.hljs-function { color: #61afef; }
+.hljs-string { color: #98c379; }
+.hljs-number { color: #d19a66; }
+.hljs-comment { color: #5c6370; font-style: italic; }
+.hljs-type { color: #e5c07b; }
+.hljs-variable { color: #e06c75; }
+.hljs-property { color: #e06c75; }
+.hljs-punctuation { color: #abb2bf; }
+.hljs-operator { color: #56b6c2; }
+
+/* Inline code in paragraphs */
+p code { font-size: 0.8em; }
+
+/* Lists */
+ul, ol {
+  color: var(--text-secondary);
+  margin: 0 0 16px 20px;
+}
+
+li { margin-bottom: 8px; }
+
+/* Diagram / visual */
+.diagram {
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px;
+  margin: 24px 0;
+  overflow-x: auto;
+}
+
+.diagram-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.diagram-box {
+  padding: 14px 22px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  min-width: 120px;
+}
+
+.db-queue { background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.3); color: #60a5fa; }
+.db-running { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.3); color: #fbbf24; }
+.db-completed { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3); color: #34d399; }
+.db-failed { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); color: #f87171; }
+
+.diagram-arrow {
+  color: var(--text-muted);
+  font-size: 1.2rem;
+}
+
+/* Table */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
+  font-size: 0.88rem;
+}
+
+th, td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+th {
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+td { color: var(--text-secondary); }
+
+tr:hover td { background: rgba(245,158,11,0.03); }
+
+/* Quiz */
+.quiz-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 28px;
+  margin: 28px 0;
+}
+
+.quiz-question {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: var(--text-primary);
+}
+
+.quiz-options { display: flex; flex-direction: column; gap: 10px; }
+
+.quiz-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+}
+
+.quiz-option:hover { border-color: var(--border-hover); background: rgba(245,158,11,0.04); }
+
+.quiz-option .opt-label {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--accent);
+  min-width: 24px;
+  margin-top: 2px;
+}
+
+.quiz-option.correct { border-color: var(--green); background: rgba(16,185,129,0.08); }
+.quiz-option.wrong { border-color: var(--red); background: rgba(239,68,68,0.08); }
+.quiz-option.disabled { pointer-events: none; opacity: 0.7; }
+
+.quiz-feedback {
+  margin-top: 16px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  display: none;
+}
+
+.quiz-feedback.show { display: block; }
+.quiz-feedback.correct { background: rgba(16,185,129,0.08); border: 1px solid var(--green); color: #34d399; }
+.quiz-feedback.wrong { background: rgba(239,68,68,0.08); border: 1px solid var(--red); color: #f87171; }
+
+/* Capstone */
+.capstone-box {
+  background: linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(245,158,11,0.02) 100%);
+  border: 1px solid rgba(245,158,11,0.25);
+  border-radius: 14px;
+  padding: 32px;
+  margin: 28px 0;
+}
+
+.capstone-box h3 {
+  margin-top: 0;
+  color: var(--accent);
+  font-size: 1.25rem;
+}
+
+/* Canvas simulation */
+.sim-wrapper {
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  margin: 24px 0;
+}
+
+.sim-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.sim-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sim-status { display: flex; gap: 16px; font-size: 0.78rem; font-family: var(--font-mono); }
+
+.sim-status span { display: flex; align-items: center; gap: 6px; }
+
+.dot { width: 8px; height: 8px; border-radius: 50%; }
+.dot-queue { background: var(--blue); }
+.dot-run { background: var(--accent); }
+.dot-done { background: var(--green); }
+.dot-fail { background: var(--red); }
+
+.sim-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.sim-controls button {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sim-controls button:hover { border-color: var(--accent); color: var(--accent); }
+
+.sim-controls input[type="range"] {
+  width: 120px;
+  accent-color: var(--accent);
+}
+
+.sim-canvas {
+  width: 100%;
+  height: 360px;
+  display: block;
+  background: var(--bg-code);
+}
+
+/* Footer */
+.footer {
+  border-top: 1px solid var(--border);
+  padding: 40px 24px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+/* Scroll to top */
+.scroll-top {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.3s;
+  z-index: 998;
+  font-size: 1.1rem;
+}
+
+.scroll-top.visible { opacity: 1; transform: translateY(0); }
+.scroll-top:hover { border-color: var(--accent); box-shadow: 0 0 16px var(--accent-glow); }
+
+/* Code filename label */
+.code-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 12px 12px 0 0;
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  margin-bottom: -1px;
+}
+
+.code-label + pre { border-radius: 0 0 12px 12px; margin-top: 0; }
+
+/* Mobile */
+@media (max-width: 640px) {
+  section { padding: 56px 16px; }
+  .nav-inner { padding: 0 8px; }
+  .nav-links a { padding: 5px 8px; font-size: 0.7rem; }
+  .card { padding: 20px; }
+  pre { padding: 16px; font-size: 0.75rem; }
+  .sim-canvas { height: 280px; }
+}
+
+/* Highlight callout */
+.callout {
+  display: flex;
+  gap: 14px;
+  padding: 18px 22px;
+  border-radius: 12px;
+  margin: 20px 0;
+  font-size: 0.92rem;
+}
+
+.callout-icon {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.callout-info {
+  background: rgba(59,130,246,0.08);
+  border: 1px solid rgba(59,130,246,0.2);
+  color: #93c5fd;
+}
+
+.callout-warn {
+  background: rgba(245,158,11,0.08);
+  border: 1px solid rgba(245,158,11,0.2);
+  color: #fbbf24;
+}
+
+.callout-danger {
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.2);
+  color: #f87171;
+}
+
+/* Capstone interactive test area */
+.test-area {
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 20px;
+}
+
+.test-log {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.8;
+  color: var(--text-secondary);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.test-log .log-time { color: var(--text-muted); margin-right: 8px; }
+.test-log .log-info { color: var(--blue); }
+.test-log .log-success { color: var(--green); }
+.test-log .log-error { color: var(--red); }
+.test-log .log-retry { color: var(--accent); }
+
+/* Type badge */
+.type-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  margin-right: 6px;
+}
+
+.tb-interface { background: rgba(139,92,246,0.12); color: #c4b5fd; border: 1px solid rgba(139,92,246,0.25); }
+.tb-type { background: rgba(59,130,246,0.12); color: #93c5fd; border: 1px solid rgba(59,130,246,0.25); }
+.tb-function { background: rgba(16,185,129,0.12); color: #34d399; border: 1px solid rgba(16,185,129,0.25); }
+</style>
+</head>
+<body>
+
+<!-- Progress bar -->
+<div class="progress-bar" id="progressBar"></div>
+
+<!-- Nav -->
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="nav-brand">A://Labs <span>ADV — Module 2</span></div>
+    <div class="nav-links">
+      <a href="#hero">Start</a>
+      <a href="#problem">Problem</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#concurrency">Concurrency</a>
+      <a href="#cancellation">Cancellation</a>
+      <a href="#priority">Priority</a>
+      <a href="#integration">Integration</a>
+      <a href="#errors">Errors</a>
+      <a href="#quizzes">Quizzes</a>
+      <a href="#capstone">Capstone</a>
+    </div>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero" id="hero">
+  <div class="hero-grid"></div>
+  <div class="container">
+    <div class="hero-badge">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      ADVANCED TIER
+    </div>
+    <h1>The <span class="accent">Scheduler</span><br>&amp; Execution Model</h1>
+    <p>Master concurrency control, cancellation semantics, priority queues, and how the scheduler orchestrates every node in your workflow DAG.</p>
+    <a href="#problem" class="hero-cta">
+      Begin Module
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+    </a>
+  </div>
+</section>
+
+<!-- The Problem -->
+<section id="problem">
+  <div class="container reveal">
+    <div class="section-label">01 — The Problem</div>
+    <h2><span class="num">01</span>Why <code>Promise.all()</code> Doesn't Scale</h2>
+    <p>When you kick off a workflow with dozens of nodes, the naive approach is to fire every task at once and hope for the best. This breaks down in production for three reasons:</p>
+
+    <div class="card card-red">
+      <h3>1. Resource Exhaustion</h3>
+      <p>Opening 200 HTTP connections simultaneously will hit OS file-descriptor limits, crash the event loop, or get rate-limited by downstream APIs.</p>
+    </div>
+
+    <div class="card card-red">
+      <h3>2. No Backpressure</h3>
+      <p>Once <code>Promise.all()</code> is invoked, there is no mechanism to slow down or pause incoming work. Memory grows unbounded as tasks queue up in the microtask queue.</p>
+    </div>
+
+    <div class="card card-red">
+      <h3>3. Cancellation is Impossible</h3>
+      <p>There is no built-in way to abort an individual promise mid-flight. You need <code>AbortController</code> plumbing, which <code>Promise.all()</code> does not manage for you.</p>
+    </div>
+
+    <div class="callout callout-warn">
+      <span class="callout-icon">&#9888;</span>
+      <div>
+        <strong>Production reality:</strong> A workflow engine without a scheduler is just a script. The scheduler is what makes workflows <em>safe</em> under load.
+      </div>
+    </div>
+
+    <p>The Allternit Workflow Engine solves this with a dedicated <code>Scheduler</code> subsystem. It sits between the DAG traversal logic and the actual node execution, enforcing limits, managing lifecycles, and giving you observability hooks.</p>
+  </div>
+</section>
+
+<!-- Scheduler Architecture -->
+<section id="architecture">
+  <div class="container reveal">
+    <div class="section-label">02 — Architecture</div>
+    <h2><span class="num">02</span>Inside <code>createScheduler()</code></h2>
+    <p>The scheduler is a closure that encapsulates all state. Nothing is exposed except the methods on the returned <code>Scheduler</code> interface. Let's look at the data structures first.</p>
+
+    <div class="code-label">scheduler/index.ts — Types</div>
+<pre><code><span class="hljs-keyword">export interface</span> <span class="hljs-type">SchedulerConfig</span> {
+  <span class="hljs-comment">/** Max concurrent tasks */</span>
+  maxConcurrency?: <span class="hljs-type">number</span>;
+  <span class="hljs-comment">/** Queue size limit */</span>
+  queueLimit?: <span class="hljs-type">number</span>;
+  <span class="hljs-comment">/** Default task timeout (ms) */</span>
+  defaultTimeout?: <span class="hljs-type">number</span>;
+  <span class="hljs-comment">/** Enable task prioritization */</span>
+  enablePriority?: <span class="hljs-type">boolean</span>;
+}
+
+<span class="hljs-keyword">export interface</span> <span class="hljs-type">Task</span> {
+  id: <span class="hljs-type">string</span>;
+  node: <span class="hljs-type">WorkflowNode</span>;
+  execution: <span class="hljs-type">WorkflowExecution</span>;
+  priority?: <span class="hljs-type">number</span>;
+  timeout?: <span class="hljs-type">number</span>;
+}
+
+<span class="hljs-keyword">export interface</span> <span class="hljs-type">SchedulerStatus</span> {
+  running: <span class="hljs-type">number</span>;
+  queued: <span class="hljs-type">number</span>;
+  completed: <span class="hljs-type">number</span>;
+  failed: <span class="hljs-type">number</span>;
+  isPaused: <span class="hljs-type">boolean</span>;
+}</code></pre>
+
+    <p>The <code>createScheduler</code> factory initializes four pieces of mutable state inside the closure:</p>
+
+    <table>
+      <thead>
+        <tr><th>State</th><th>Type</th><th>Purpose</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>queue</code></td><td><code>Task[]</code></td><td>FIFO buffer for tasks waiting to run</td></tr>
+        <tr><td><code>running</code></td><td><code>Map&lt;string, AbortController&gt;</code></td><td>Active tasks keyed by task ID</td></tr>
+        <tr><td><code>completed</code></td><td><code>number</code></td><td>Counter for finished tasks</td></tr>
+        <tr><td><code>failed</code></td><td><code>number</code></td><td>Counter for errored tasks</td></tr>
+        <tr><td><code>isPaused</code></td><td><code>boolean</code></td><td>Global pause gate</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-info">
+      <span class="callout-icon">&#9432;</span>
+      <div>
+        <strong>Design note:</strong> Using a <code>Map&lt;string, AbortController&gt;</code> for <code>running</code> gives O(1) lookup for cancellation and naturally enforces uniqueness — you cannot have two tasks with the same ID in flight.
+      </div>
+    </div>
+
+    <div class="diagram">
+      <div class="diagram-row">
+        <div class="diagram-box db-queue">Queue<br><small>Task[]</small></div>
+        <span class="diagram-arrow">&rarr;</span>
+        <div class="diagram-box db-running">Running<br><small>Map&lt;id, AbortController&gt;</small></div>
+        <span class="diagram-arrow">&rarr;</span>
+        <div class="diagram-box db-completed">Completed</div>
+        <span class="diagram-arrow">|</span>
+        <div class="diagram-box db-failed">Failed</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Concurrency Control -->
+<section id="concurrency">
+  <div class="container reveal">
+    <div class="section-label">03 — Concurrency</div>
+    <h2><span class="num">03</span>Concurrency Control &amp; Backpressure</h2>
+    <p>The heart of the scheduler is <code>processQueue()</code>. It is called every time a task is submitted and again in the <code>finally</code> block when a task finishes, creating a self-sustaining pipeline.</p>
+
+    <div class="code-label">scheduler/index.ts — processQueue()</div>
+<pre><code><span class="hljs-keyword">async function</span> <span class="hljs-function">processQueue</span>(): <span class="hljs-type">Promise</span>&lt;<span class="hljs-type">void</span>&gt; {
+  <span class="hljs-comment">// Gate 1: paused</span>
+  <span class="hljs-comment">// Gate 2: at max concurrency</span>
+  <span class="hljs-comment">// Gate 3: nothing to do</span>
+  <span class="hljs-keyword">if</span> (isPaused || running.size >= maxConcurrency || queue.length === <span class="hljs-number">0</span>) {
+    <span class="hljs-keyword">return</span>;
+  }
+
+  <span class="hljs-comment">// Sort by priority if enabled (descending)</span>
+  <span class="hljs-keyword">if</span> (enablePriority) {
+    queue.sort((a, b) => (b.priority || <span class="hljs-number">0</span>) - (a.priority || <span class="hljs-number">0</span>));
+  }
+
+  <span class="hljs-keyword">const</span> task = queue.shift();
+  <span class="hljs-keyword">if</span> (!task) <span class="hljs-keyword">return</span>;
+
+  <span class="hljs-keyword">const</span> controller = <span class="hljs-keyword">new</span> <span class="hljs-type">AbortController</span>();
+  running.set(task.id, controller);
+
+  <span class="hljs-keyword">try</span> {
+    <span class="hljs-keyword">const</span> timeout = task.timeout || defaultTimeout;
+    <span class="hljs-keyword">const</span> timeoutId = setTimeout(() => controller.abort(), timeout);
+
+    <span class="hljs-keyword">const</span> result = <span class="hljs-keyword">await</span> executeTask(task, controller.signal);
+
+    clearTimeout(timeoutId);
+    completed++;
+  } <span class="hljs-keyword">catch</span> (error) {
+    failed++;
+    <span class="hljs-keyword">throw</span> error;
+  } <span class="hljs-keyword">finally</span> {
+    running.delete(task.id);
+    <span class="hljs-comment">// Recursively process the next slot</span>
+    processQueue();
+  }
+}</code></pre>
+
+    <h3>Gate Logic Explained</h3>
+    <p>The three early-return conditions form a precise state machine:</p>
+    <ul>
+      <li><strong><code>isPaused</code></strong> — The scheduler is in a paused state. New tasks queue up but are not dequeued until <code>resume()</code> is called.</li>
+      <li><strong><code>running.size >= maxConcurrency</code></strong> — The concurrency budget is exhausted. This is the backpressure mechanism.</li>
+      <li><strong><code>queue.length === 0</code></strong> — Nothing is waiting. The pipeline stalls until <code>submit()</code> is called again.</li>
+    </ul>
+
+    <div class="card card-accent">
+      <h3>The <code>queueLimit</code> Safety Valve</h3>
+      <p>Before a task ever enters the queue, <code>submit()</code> checks <code>queue.length >= queueLimit</code> and throws. This prevents unbounded memory growth when the system is under sustained load and consumers are slower than producers.</p>
+    </div>
+
+    <div class="code-label">scheduler/index.ts — submit()</div>
+<pre><code><span class="hljs-keyword">async function</span> <span class="hljs-function">submit</span>(task: <span class="hljs-type">Task</span>): <span class="hljs-type">Promise</span>&lt;<span class="hljs-type">unknown</span>&gt; {
+  <span class="hljs-keyword">if</span> (queue.length >= queueLimit) {
+    <span class="hljs-keyword">throw new</span> <span class="hljs-type">Error</span>(<span class="hljs-string">'Queue limit reached'</span>);
+  }
+  queue.push(task);
+  <span class="hljs-keyword">return</span> processQueue();
+}</code></pre>
+  </div>
+</section>
+
+<!-- Cancellation -->
+<section id="cancellation">
+  <div class="container reveal">
+    <div class="section-label">04 — Cancellation</div>
+    <h2><span class="num">04</span>Cancellation &amp; Timeouts</h2>
+    <p>The scheduler uses the standard Web <code>AbortController</code> API for cooperative cancellation. Every task in the <code>running</code> Map owns its own controller. Timeouts are implemented as automatic aborts.</p>
+
+    <div class="code-label">scheduler/index.ts — Timeout wiring</div>
+<pre><code><span class="hljs-keyword">const</span> timeout = task.timeout || defaultTimeout;
+<span class="hljs-keyword">const</span> timeoutId = setTimeout(() => controller.abort(), timeout);
+
+<span class="hljs-keyword">const</span> result = <span class="hljs-keyword">await</span> executeTask(task, controller.signal);
+
+clearTimeout(timeoutId);</code></pre>
+
+    <p>If the task finishes before the timeout, <code>clearTimeout</code> prevents the abort from firing. If the timeout fires first, <code>controller.signal</code> transitions to <code>aborted</code>, and the executor can react:</p>
+
+    <div class="code-label">scheduler/index.ts — Task executor</div>
+<pre><code><span class="hljs-keyword">async function</span> <span class="hljs-function">executeTask</span>(
+  task: <span class="hljs-type">Task</span>,
+  signal: <span class="hljs-type">AbortSignal</span>
+): <span class="hljs-type">Promise</span>&lt;<span class="hljs-type">unknown</span>&gt; {
+  <span class="hljs-keyword">if</span> (signal.aborted) {
+    <span class="hljs-keyword">throw new</span> <span class="hljs-type">Error</span>(<span class="hljs-string">'Task cancelled'</span>);
+  }
+
+  <span class="hljs-comment">// Real integration would pass signal to fetch, fs, etc.</span>
+  <span class="hljs-keyword">return</span> { taskId: task.id, status: <span class="hljs-string">'completed'</span> };
+}</code></pre>
+
+    <div class="callout callout-danger">
+      <span class="callout-icon">&#9888;</span>
+      <div>
+        <strong>Cooperative cancellation:</strong> The signal only works if the underlying executor checks <code>signal.aborted</code> or passes the signal to an abort-aware API like <code>fetch()</code>. Non-cooperative code (e.g. a tight <code>while</code> loop) will ignore the abort.
+      </div>
+    </div>
+
+    <h3>Cancelling a Queued vs Running Task</h3>
+    <p>The <code>cancel()</code> method handles both cases with a simple branch:</p>
+
+    <div class="code-label">scheduler/index.ts — cancel()</div>
+<pre><code><span class="hljs-keyword">function</span> <span class="hljs-function">cancel</span>(taskId: <span class="hljs-type">string</span>): <span class="hljs-type">boolean</span> {
+  <span class="hljs-comment">// Case 1: Task is currently running</span>
+  <span class="hljs-keyword">const</span> controller = running.get(taskId);
+  <span class="hljs-keyword">if</span> (controller) {
+    controller.abort();
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">true</span>;
+  }
+
+  <span class="hljs-comment">// Case 2: Task is still queued</span>
+  <span class="hljs-keyword">const</span> index = queue.findIndex(t => t.id === taskId);
+  <span class="hljs-keyword">if</span> (index >= <span class="hljs-number">0</span>) {
+    queue.splice(index, <span class="hljs-number">1</span>);
+    <span class="hljs-keyword">return</span> <span class="hljs-keyword">true</span>;
+  }
+
+  <span class="hljs-keyword">return</span> <span class="hljs-keyword">false</span>; <span class="hljs-comment">// Not found anywhere</span>
+}</code></pre>
+
+    <div class="card card-blue">
+      <h3>Key Difference</h3>
+      <p>A <strong>running</strong> task is aborted via <code>AbortController.abort()</code>. The task may still briefly execute cleanup in its <code>finally</code> block. A <strong>queued</strong> task is simply removed from the array — it never starts, so no abort signal is needed.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Priority & Pause/Resume -->
+<section id="priority">
+  <div class="container reveal">
+    <div class="section-label">05 — Priority</div>
+    <h2><span class="num">05</span>Priority Queues &amp; Pause/Resume</h2>
+    <p>When <code>enablePriority: true</code> is set in the config, the scheduler sorts the queue every time <code>processQueue()</code> runs. The sort is descending by priority — higher numbers execute first.</p>
+
+    <div class="code-label">Priority sort in processQueue()</div>
+<pre><code><span class="hljs-keyword">if</span> (enablePriority) {
+  queue.sort((a, b) => (b.priority || <span class="hljs-number">0</span>) - (a.priority || <span class="hljs-number">0</span>));
+}</code></pre>
+
+    <p>This is a <strong>stable-enough</strong> approach for workflow use cases because:</p>
+    <ul>
+      <li>The queue size is bounded by <code>queueLimit</code> (default 100).</li>
+      <li>Sorting runs only when a slot frees up, not on every insertion.</li>
+      <li>Tasks with the same priority retain their relative order (stable sort in V8).</li>
+    </ul>
+
+    <h3>Pause / Resume State Machine</h3>
+    <p>The scheduler supports a global pause. This is distinct from cancelling — paused tasks remain in the <code>running</code> Map and continue their work. Only <em>new</em> tasks from the queue are blocked.</p>
+
+    <div class="code-label">Pause &amp; Resume</div>
+<pre><code><span class="hljs-keyword">function</span> <span class="hljs-function">pause</span>(): <span class="hljs-type">void</span> {
+  isPaused = <span class="hljs-keyword">true</span>;
+}
+
+<span class="hljs-keyword">function</span> <span class="hljs-function">resume</span>(): <span class="hljs-type">void</span> {
+  isPaused = <span class="hljs-keyword">false</span>;
+  processQueue(); <span class="hljs-comment">// Kick the pipeline</span>
+}</code></pre>
+
+    <table>
+      <thead>
+        <tr><th>State</th><th>Running Tasks</th><th>Queue Drain</th><th>New Submissions</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Active</td><td>Yes</td><td>Yes</td><td>Accepted</td></tr>
+        <tr><td>Paused</td><td>Continue</td><td>Blocked</td><td>Accepted (enqueued)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Engine Integration -->
+<section id="integration">
+  <div class="container reveal">
+    <div class="section-label">06 — Integration</div>
+    <h2><span class="num">06</span>Engine Integration: DAG to Scheduler</h2>
+    <p>The workflow engine traverses the DAG depth-first. After a node completes successfully, it walks the outgoing connections and recursively executes downstream nodes. But where does the scheduler fit in?</p>
+
+    <div class="callout callout-info">
+      <span class="callout-icon">&#9432;</span>
+      <div>
+        In the current implementation, <code>executeNode</code> awaits the executor directly. The scheduler is designed to wrap this call, turning synchronous-looking node execution into managed, cancellable, concurrency-limited tasks.
+      </div>
+    </div>
+
+    <div class="code-label">engine/workflow-engine.ts — executeNode()</div>
+<pre><code><span class="hljs-keyword">async function</span> <span class="hljs-function">executeNode</span>(
+  node: <span class="hljs-type">WorkflowNode</span>,
+  execution: <span class="hljs-type">WorkflowExecution</span>,
+  dag: { nodes: <span class="hljs-type">WorkflowNode</span>[]; connections: <span class="hljs-type">Connection</span>[] }
+): <span class="hljs-type">Promise</span>&lt;<span class="hljs-type">void</span>&gt; {
+
+  <span class="hljs-comment">// 1. Skip if already executed</span>
+  <span class="hljs-keyword">if</span> (execution.context!.state.completedNodes.includes(node.id)) {
+    <span class="hljs-keyword">return</span>;
+  }
+
+  <span class="hljs-comment">// 2. Verify all dependencies have results</span>
+  <span class="hljs-keyword">const</span> incoming = dag.connections.filter(c => c.target === node.id);
+  <span class="hljs-keyword">const</span> depsMet = incoming.every(c =>
+    execution.context!.state.completedNodes.includes(c.source) ||
+    execution.context!.state.nodeResults[c.source] !== <span class="hljs-keyword">undefined</span>
+  );
+  <span class="hljs-keyword">if</span> (!depsMet) <span class="hljs-keyword">return</span>;
+
+  <span class="hljs-comment">// 3. Mark active</span>
+  execution.context!.state.activeNodes.push(node.id);
+  execution.context!.state.executionPath.push(node.id);
+
+  <span class="hljs-comment">// 4. Resolve inputs from upstream results</span>
+  <span class="hljs-keyword">const</span> inputs: <span class="hljs-type">Record</span>&lt;<span class="hljs-type">string</span>, <span class="hljs-type">unknown</span>&gt; = {};
+  incoming.forEach(conn => {
+    <span class="hljs-keyword">const</span> sourceResult = execution.context!.state.nodeResults[conn.source];
+    <span class="hljs-keyword">if</span> (sourceResult) {
+      inputs[conn.sourcePort || <span class="hljs-string">'data'</span>] = sourceResult;
+    }
+  });
+
+  <span class="hljs-comment">// 5. Execute via node type executor</span>
+  <span class="hljs-keyword">const</span> nodeType = nodeTypes.get(node.type)!;
+  <span class="hljs-keyword">const</span> result = <span class="hljs-keyword">await</span> nodeType.executor(node, execution.context!, inputs);
+
+  <span class="hljs-comment">// 6. Store result</span>
+  execution.context!.state.nodeResults[node.id] = result;
+  execution.context!.state.completedNodes.push(node.id);
+
+  <span class="hljs-comment">// 7. Traverse outgoing connections</span>
+  <span class="hljs-keyword">const</span> outgoing = dag.connections.filter(c => c.source === node.id);
+  <span class="hljs-keyword">for</span> (<span class="hljs-keyword">const</span> conn <span class="hljs-keyword">of</span> outgoing) {
+    <span class="hljs-keyword">if</span> (conn.condition) {
+      <span class="hljs-keyword">const</span> met = evaluateCondition(conn.condition, result, execution.context!);
+      <span class="hljs-keyword">if</span> (!met) <span class="hljs-keyword">continue</span>;
+    }
+    <span class="hljs-keyword">const</span> nextNode = dag.nodes.find(n => n.id === conn.target);
+    <span class="hljs-keyword">if</span> (nextNode) {
+      <span class="hljs-keyword">await</span> executeNode(nextNode, execution, dag);
+    }
+  }
+}</code></pre>
+
+    <p>The integration point is step 5. Instead of awaiting the executor directly, the engine would construct a <code>Task</code> and call <code>scheduler.submit(task)</code>. The scheduler then manages when that task actually begins based on concurrency limits, priority, and pause state.</p>
+
+    <div class="card card-green">
+      <h3>Future Integration Pattern</h3>
+      <pre style="margin:12px 0 0;"><code style="background:none;padding:0;"><span class="hljs-keyword">const</span> task: <span class="hljs-type">Task</span> = {
+  id: <span class="hljs-string">`${execution.id}:${node.id}`</span>,
+  node,
+  execution,
+  priority: node.metadata?.priority,
+  timeout: node.config?.timeout,
+};
+<span class="hljs-keyword">await</span> scheduler.submit(task);</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- Error Handling -->
+<section id="errors">
+  <div class="container reveal">
+    <div class="section-label">07 — Errors</div>
+    <h2><span class="num">07</span>Error Handling &amp; Recovery</h2>
+    <p>Errors can happen at three layers: the scheduler, the engine's node executor, and the workflow's DAG traversal. Each layer has its own recovery semantics.</p>
+
+    <h3>Scheduler Layer</h3>
+    <p>When <code>executeTask</code> throws, the scheduler catches it, increments <code>failed</code>, and re-throws. The re-throw is important — it allows the caller (the engine) to decide whether to fail the entire workflow or continue.</p>
+
+    <div class="code-label">scheduler/index.ts — Error propagation</div>
+<pre><code><span class="hljs-keyword">try</span> {
+  <span class="hljs-keyword">const</span> result = <span class="hljs-keyword">await</span> executeTask(task, controller.signal);
+  clearTimeout(timeoutId);
+  completed++;
+} <span class="hljs-keyword">catch</span> (error) {
+  failed++;
+  <span class="hljs-keyword">throw</span> error; <span class="hljs-comment">// Propagate to the engine</span>
+} <span class="hljs-keyword">finally</span> {
+  running.delete(task.id);
+  processQueue();
+}</code></pre>
+
+    <h3>Engine Layer</h3>
+    <p>The engine catches node errors in <code>executeNode</code>, records them in the execution state, and propagates them up to <code>execute()</code> where the workflow-level <code>try/catch</code> marks the entire execution as failed and triggers the <code>onError</code> hook.</p>
+
+    <div class="code-label">engine/workflow-engine.ts — Node error handling</div>
+<pre><code><span class="hljs-keyword">try</span> {
+  <span class="hljs-keyword">const</span> result = <span class="hljs-keyword">await</span> nodeType.executor(node, execution.context!, inputs);
+  <span class="hljs-comment">// ... store result ...</span>
+} <span class="hljs-keyword">catch</span> (error) {
+  nodeExecution.status = <span class="hljs-string">'failed'</span>;
+  nodeExecution.error = {
+    code: <span class="hljs-string">'NODE_EXECUTION_ERROR'</span>,
+    message: error <span class="hljs-keyword">instanceof</span> <span class="hljs-type">Error</span> ? error.message : <span class="hljs-type">String</span>(error),
+    nodeId: node.id,
+  };
+  execution.context!.state.failedNodes.push(node.id);
+  <span class="hljs-keyword">throw</span> error; <span class="hljs-comment">// Fail the workflow</span>
+}</code></pre>
+
+    <h3>Hooks for Observability</h3>
+    <p>The engine config accepts a <code>hooks</code> object with lifecycle callbacks. These are perfect for logging, metrics, and external alerting:</p>
+
+    <div class="code-label">types.ts — WorkflowHooks</div>
+<pre><code><span class="hljs-keyword">export interface</span> <span class="hljs-type">WorkflowHooks</span> {
+  beforeExecute?: (execution: <span class="hljs-type">WorkflowExecution</span>) => <span class="hljs-type">Promise</span>&lt;<span class="hljs-type">void</span>&gt;;
+  afterExecute?: (execution: <span class="hljs-type">WorkflowExecution</span>) => <span class="hljs-type">Promise</span>&lt;<span class="hljs-type">void</span>&gt;;
+  beforeNodeExecute?: (node: <span class="hljs-type">WorkflowNode</span>, context: <span class="hljs-type">ExecutionContext</span>) => <span class="hljs-type">Promise</span>&lt;<span class="hljs-type">void</span>&gt;;
+  afterNodeExecute?: (node: <span class="hljs-type">WorkflowNode</span>, context: <span class="hljs-type">ExecutionContext</span>, result: <span class="hljs-type">unknown</span>) => <span class="hljs-type">Promise</span>&lt;<span class="hljs-type">void</span>&gt;;
+  onError?: (error: <span class="hljs-type">ExecutionError</span>, context: <span class="hljs-type">ExecutionContext</span>) => <span class="hljs-type">Promise</span>&lt;<span class="hljs-type">void</span>&gt;;
+}</code></pre>
+
+    <div class="card card-accent">
+      <h3>Where Retry Logic Belongs</h3>
+      <p>Retry is currently not implemented in the scheduler. The ideal location is inside <code>executeNode</code> (engine layer) or as a wrapper around the scheduler's <code>submit()</code>. The <code>NodeExecution</code> type already has a <code>retryCount</code> field, signaling that retries are part of the intended design.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Scheduler Simulation -->
+<section>
+  <div class="container reveal">
+    <div class="section-label">Interactive</div>
+    <h2><span class="num">&#9670;</span>Live Scheduler Simulation</h2>
+    <p>Watch tasks move through the scheduler in real time. Adjust the concurrency limit, spawn tasks, pause the system, and observe backpressure in action.</p>
+
+    <div class="sim-wrapper">
+      <div class="sim-header">
+        <div class="sim-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          Scheduler Visualizer
+        </div>
+        <div class="sim-status">
+          <span><span class="dot dot-queue"></span>Queued: <b id="simQueued">0</b></span>
+          <span><span class="dot dot-run"></span>Running: <b id="simRunning">0</b>/<b id="simMax">3</b></span>
+          <span><span class="dot dot-done"></span>Done: <b id="simDone">0</b></span>
+          <span><span class="dot dot-fail"></span>Failed: <b id="simFail">0</b></span>
+        </div>
+        <div class="sim-controls">
+          <label style="font-size:0.75rem;color:var(--text-muted);">Max: <span id="maxVal">3</span></label>
+          <input type="range" id="maxSlider" min="1" max="6" value="3">
+          <button id="btnSpawn">Spawn 4 Tasks</button>
+          <button id="btnPause">Pause</button>
+          <button id="btnClear">Reset</button>
+        </div>
+      </div>
+      <canvas class="sim-canvas" id="simCanvas" width="900" height="360"></canvas>
+    </div>
+  </div>
+</section>
+
+<!-- Quizzes -->
+<section id="quizzes">
+  <div class="container reveal">
+    <div class="section-label">08 — Knowledge Check</div>
+    <h2><span class="num">08</span>Interactive Quizzes</h2>
+
+    <!-- Quiz 1 -->
+    <div class="quiz-container" data-quiz="1">
+      <div class="quiz-question">1. What happens when <code>running.size >= maxConcurrency</code> inside <code>processQueue()</code>?</div>
+      <div class="quiz-options">
+        <button class="quiz-option" data-correct="false"><span class="opt-label">A</span>The oldest running task is preempted to make room.</button>
+        <button class="quiz-option" data-correct="true"><span class="opt-label">B</span><code>processQueue()</code> returns early; queued tasks stay in the queue.</button>
+        <button class="quiz-option" data-correct="false"><span class="opt-label">C</span>The queue is sorted again and the highest-priority task is forced to run.</button>
+        <button class="quiz-option" data-correct="false"><span class="opt-label">D</span>An error is thrown telling the caller to wait.</button>
+      </div>
+      <div class="quiz-feedback" data-feedback="correct">
+        <strong>Correct!</strong> The scheduler uses early return as a backpressure gate. Tasks remain in the queue until a running task finishes and frees a concurrency slot.
+      </div>
+      <div class="quiz-feedback" data-feedback="wrong">
+        <strong>Not quite.</strong> The scheduler never preempts running tasks. It simply waits for a slot to open via the <code>finally</code> block's recursive <code>processQueue()</code> call.
+      </div>
+    </div>
+
+    <!-- Quiz 2 -->
+    <div class="quiz-container" data-quiz="2">
+      <div class="quiz-question">2. How does task cancellation differ for a queued task vs a running task?</div>
+      <div class="quiz-options">
+        <button class="quiz-option" data-correct="false"><span class="opt-label">A</span>Both are aborted via <code>AbortController</code>; only the timing differs.</button>
+        <button class="quiz-option" data-correct="false"><span class="opt-label">B</span>Queued tasks are paused; running tasks are removed from the Map.</button>
+        <button class="quiz-option" data-correct="true"><span class="opt-label">C</span>Running tasks call <code>controller.abort()</code>; queued tasks are spliced out of the array.</button>
+        <button class="quiz-option" data-correct="false"><span class="opt-label">D</span>There is no difference; cancel() behaves identically in both cases.</button>
+      </div>
+      <div class="quiz-feedback" data-feedback="correct">
+        <strong>Correct!</strong> Running tasks need cooperative cancellation via <code>AbortController</code>. Queued tasks have not started, so removing them from the queue is sufficient.
+      </div>
+      <div class="quiz-feedback" data-feedback="wrong">
+        <strong>Not quite.</strong> Look at the <code>cancel()</code> implementation: it branches on whether the task ID exists in the <code>running</code> Map. Queued tasks don't have a controller yet.
+      </div>
+    </div>
+
+    <!-- Quiz 3 -->
+    <div class="quiz-container" data-quiz="3">
+      <div class="quiz-question">3. In the engine's <code>executeNode()</code>, when are outgoing connections traversed?</div>
+      <div class="quiz-options">
+        <button class="quiz-option" data-correct="false"><span class="opt-label">A</span>Immediately before the node executor runs, to pre-fetch downstream nodes.</button>
+        <button class="quiz-option" data-correct="false"><span class="opt-label">B</span>Only if the node has no incoming connections, as a starting-node optimization.</button>
+        <button class="quiz-option" data-correct="true"><span class="opt-label">C</span>After the node executor succeeds and its result is stored in <code>nodeResults</code>.</button>
+        <button class="quiz-option" data-correct="false"><span class="opt-label">D</span>In the <code>finally</code> block so they run even when the node fails.</button>
+      </div>
+      <div class="quiz-feedback" data-feedback="correct">
+        <strong>Correct!</strong> Outgoing connections are traversed inside the <code>try</code> block, after the result is stored. If the node fails, the <code>catch</code> throws before downstream nodes are reached.
+      </div>
+      <div class="quiz-feedback" data-feedback="wrong">
+        <strong>Not quite.</strong> Outgoing traversal happens after storing the result and calling <code>afterNodeExecute</code> hooks. It's in the success path only.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Capstone -->
+<section id="capstone">
+  <div class="container reveal">
+    <div class="section-label">09 — Capstone</div>
+    <h2><span class="num">09</span>Capstone: Build a Retry-Aware Scheduler Wrapper</h2>
+
+    <div class="capstone-box">
+      <h3>Objective</h3>
+      <p>Wrap <code>createScheduler()</code> with exponential backoff retry logic. Track retry counts per task, emit an <code>onRetry</code> hook, and test with a task that fails twice before succeeding.</p>
+    </div>
+
+    <h3>The Solution</h3>
+
+    <div class="code-label">retry-scheduler.ts</div>
+<pre><code><span class="hljs-keyword">import</span> { createScheduler, type Scheduler, type Task } <span class="hljs-keyword">from</span> <span class="hljs-string">'./scheduler'</span>;
+
+<span class="hljs-keyword">export interface</span> <span class="hljs-type">RetryConfig</span> {
+  maxRetries?: <span class="hljs-type">number</span>;
+  baseDelay?: <span class="hljs-type">number</span>;
+  maxDelay?: <span class="hljs-type">number</span>;
+  onRetry?: (taskId: <span class="hljs-type">string</span>, attempt: <span class="hljs-type">number</span>, delay: <span class="hljs-type">number</span>) => <span class="hljs-type">void</span>;
+}
+
+<span class="hljs-keyword">export interface</span> <span class="hljs-type">RetryAwareScheduler</span> <span class="hljs-keyword">extends</span> <span class="hljs-type">Scheduler</span> {
+  getRetryCount(taskId: <span class="hljs-type">string</span>): <span class="hljs-type">number</span>;
+}
+
+<span class="hljs-keyword">export function</span> <span class="hljs-function">createRetryScheduler</span>(
+  retryConfig: <span class="hljs-type">RetryConfig</span> = {}
+): <span class="hljs-type">RetryAwareScheduler</span> {
+  <span class="hljs-keyword">const</span> {
+    maxRetries = <span class="hljs-number">3</span>,
+    baseDelay = <span class="hljs-number">500</span>,
+    maxDelay = <span class="hljs-number">10000</span>,
+    onRetry,
+  } = retryConfig;
+
+  <span class="hljs-keyword">const</span> scheduler = createScheduler();
+  <span class="hljs-keyword">const</span> retryCounts = <span class="hljs-keyword">new</span> <span class="hljs-type">Map</span>&lt;<span class="hljs-type">string</span>, <span class="hljs-type">number</span>&gt;();
+
+  <span class="hljs-keyword">function</span> <span class="hljs-function">exponentialBackoff</span>(attempt: <span class="hljs-type">number</span>): <span class="hljs-type">number</span> {
+    <span class="hljs-keyword">const</span> delay = baseDelay * (<span class="hljs-number">2</span> ** attempt);
+    <span class="hljs-keyword">return</span> <span class="hljs-type">Math</span>.min(delay, maxDelay);
+  }
+
+  <span class="hljs-keyword">async function</span> <span class="hljs-function">submitWithRetry</span>(task: <span class="hljs-type">Task</span>): <span class="hljs-type">Promise</span>&lt;<span class="hljs-type">unknown</span>&gt; {
+    <span class="hljs-keyword">try</span> {
+      <span class="hljs-keyword">return await</span> scheduler.submit(task);
+    } <span class="hljs-keyword">catch</span> (error) {
+      <span class="hljs-keyword">const</span> count = retryCounts.get(task.id) || <span class="hljs-number">0</span>;
+
+      <span class="hljs-keyword">if</span> (count >= maxRetries) {
+        retryCounts.delete(task.id);
+        <span class="hljs-keyword">throw</span> error;
+      }
+
+      <span class="hljs-keyword">const</span> nextCount = count + <span class="hljs-number">1</span>;
+      retryCounts.set(task.id, nextCount);
+
+      <span class="hljs-keyword">const</span> delay = exponentialBackoff(nextCount);
+      onRetry?.(task.id, nextCount, delay);
+
+      <span class="hljs-keyword">await</span> <span class="hljs-keyword">new</span> <span class="hljs-type">Promise</span>(resolve => setTimeout(resolve, delay));
+
+      <span class="hljs-comment">// Clone task for retry to avoid mutating original state</span>
+      <span class="hljs-keyword">return</span> submitWithRetry({ ...task });
+    }
+  }
+
+  <span class="hljs-keyword">return</span> {
+    ...scheduler,
+    submit: submitWithRetry,
+    submitAll: (tasks: <span class="hljs-type">Task</span>[]) =>
+      <span class="hljs-type">Promise</span>.all(tasks.map(t => submitWithRetry(t))),
+    getRetryCount(taskId: <span class="hljs-type">string</span>) {
+      <span class="hljs-keyword">return</span> retryCounts.get(taskId) || <span class="hljs-number">0</span>;
+    },
+  };
+}</code></pre>
+
+    <h3>Walkthrough</h3>
+    <ul>
+      <li><strong>Closure state:</strong> <code>retryCounts</code> is a <code>Map&lt;string, number&gt;</code> scoped inside the factory. It persists across calls but is hidden from consumers.</li>
+      <li><strong>Exponential backoff:</strong> <code>baseDelay &times; 2<sup>attempt</sup></code> capped at <code>maxDelay</code>. Attempt 1 = 500ms, attempt 2 = 1000ms, attempt 3 = 2000ms.</li>
+      <li><strong>Hook:</strong> <code>onRetry</code> fires before the delay, giving the caller a chance to log or emit metrics.</li>
+      <li><strong>Task cloning:</strong> We spread the task object on retry so any downstream mutations don't leak back to the caller's reference.</li>
+    </ul>
+
+    <h3>Test Run</h3>
+    <p>Click the button below to simulate a task that fails 2 times, then succeeds. Watch the retry delay grow.</p>
+
+    <div class="sim-controls" style="margin: 16px 0;">
+      <button id="btnRunCapstone">Run Retry Test</button>
+      <button id="btnClearCapstone">Clear Log</button>
+    </div>
+
+    <div class="test-area">
+      <div class="test-log" id="capstoneLog">
+        <span class="log-time">--:--:--</span><span class="log-info">Ready. Click "Run Retry Test" to begin.</span>
+      </div>
+    </div>
+
+    <div class="card card-green" style="margin-top: 24px;">
+      <h3>Expected Output</h3>
+      <pre style="margin:12px 0 0;"><code style="background:none;padding:0;">[submit] task-flaky-1 attempt 1
+[error]  task-flaky-1 — Simulated failure
+[retry]  task-flaky-1 — waiting 500ms (attempt 1/3)
+[submit] task-flaky-1 attempt 2
+[error]  task-flaky-1 — Simulated failure
+[retry]  task-flaky-1 — waiting 1000ms (attempt 2/3)
+[submit] task-flaky-1 attempt 3
+[success] task-flaky-1 — Result received</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<div class="footer">
+  <p>A://Labs ADVANCED — ALABS-ADV-WORKFLOW — Module 2: The Scheduler &amp; Execution Model</p>
+  <p style="margin-top:6px;color:var(--text-muted);">Generated for ADV tier learners. Source: <code>@allternit/workflow-engine</code></p>
+</div>
+
+<button class="scroll-top" id="scrollTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 15l-6-6-6 6"/></svg>
+</button>
+
+<script>
+/* =====================
+   Scroll Reveal
+   ===================== */
+const reveals = document.querySelectorAll('.reveal');
+const revealObserver = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.12 });
+reveals.forEach(r => revealObserver.observe(r));
+
+/* =====================
+   Progress Bar
+   ===================== */
+const progressBar = document.getElementById('progressBar');
+window.addEventListener('scroll', () => {
+  const scrollTop = window.scrollY;
+  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+  const pct = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+  progressBar.style.width = pct + '%';
+});
+
+/* =====================
+   Scroll-to-top
+   ===================== */
+const scrollTopBtn = document.getElementById('scrollTop');
+window.addEventListener('scroll', () => {
+  scrollTopBtn.classList.toggle('visible', window.scrollY > 500);
+});
+
+/* =====================
+   Nav Active State
+   ===================== */
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.nav-links a');
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(sec => {
+    const top = sec.offsetTop - 100;
+    if (window.scrollY >= top) current = sec.getAttribute('id');
+  });
+  navLinks.forEach(a => {
+    a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+  });
+});
+
+/* =====================
+   Quizzes
+   ===================== */
+document.querySelectorAll('.quiz-container').forEach(quiz => {
+  const options = quiz.querySelectorAll('.quiz-option');
+  const correctFeedback = quiz.querySelector('[data-feedback="correct"]');
+  const wrongFeedback = quiz.querySelector('[data-feedback="wrong"]');
+
+  options.forEach(opt => {
+    opt.addEventListener('click', () => {
+      if (opt.classList.contains('disabled')) return;
+      const isCorrect = opt.dataset.correct === 'true';
+
+      options.forEach(o => {
+        o.classList.add('disabled');
+        if (o.dataset.correct === 'true') o.classList.add('correct');
+      });
+
+      if (isCorrect) {
+        opt.classList.add('correct');
+        correctFeedback.classList.add('show');
+      } else {
+        opt.classList.add('wrong');
+        wrongFeedback.classList.add('show');
+      }
+    });
+  });
+});
+
+/* =====================
+   Scheduler Simulation (Canvas)
+   ===================== */
+(function() {
+  const canvas = document.getElementById('simCanvas');
+  const ctx = canvas.getContext('2d');
+  let dpr = window.devicePixelRatio || 1;
+
+  function resize() {
+    const rect = canvas.getBoundingClientRect();
+    dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const W = () => canvas.getBoundingClientRect().width;
+  const H = () => canvas.getBoundingClientRect().height;
+
+  let maxConcurrency = 3;
+  let isPaused = false;
+  let taskIdCounter = 1;
+
+  const tasks = [];
+  const particles = [];
+
+  function spawnTasks(n) {
+    for (let i = 0; i < n; i++) {
+      tasks.push({
+        id: taskIdCounter++,
+        state: 'queued',
+        x: 80,
+        y: 60 + ((taskIdCounter % 5) * 45),
+        targetX: 80,
+        targetY: 60 + ((taskIdCounter % 5) * 45),
+        progress: 0,
+        duration: 2000 + Math.random() * 2500,
+        failChance: 0.15,
+      });
+    }
+  }
+
+  function resetSim() {
+    tasks.length = 0;
+    particles.length = 0;
+    taskIdCounter = 1;
+    isPaused = false;
+    document.getElementById('btnPause').textContent = 'Pause';
+    updateDOM();
+  }
+
+  function count(state) {
+    return tasks.filter(t => t.state === state).length;
+  }
+
+  function updateDOM() {
+    document.getElementById('simQueued').textContent = count('queued');
+    document.getElementById('simRunning').textContent = count('running');
+    document.getElementById('simMax').textContent = maxConcurrency;
+    document.getElementById('simDone').textContent = count('completed');
+    document.getElementById('simFail').textContent = count('failed');
+  }
+
+  function update(dt) {
+    if (isPaused) return;
+
+    const running = tasks.filter(t => t.state === 'running');
+    const queued = tasks.filter(t => t.state === 'queued');
+
+    // Promote queued -> running
+    const slots = maxConcurrency - running.length;
+    for (let i = 0; i < slots && i < queued.length; i++) {
+      const t = queued[i];
+      t.state = 'running';
+      t.progress = 0;
+    }
+
+    tasks.forEach(t => {
+      if (t.state === 'running') {
+        t.progress += dt;
+        if (t.progress >= t.duration) {
+          if (Math.random() < t.failChance) {
+            t.state = 'failed';
+            spawnParticles(t.x, t.y, '#ef4444');
+          } else {
+            t.state = 'completed';
+            spawnParticles(t.x, t.y, '#10b981');
+          }
+        }
+      }
+
+      // Animate positions
+      const cols = {
+        queued: { x: 80, w: 140 },
+        running: { x: 320, w: 160 },
+        completed: { x: 620, w: 100 },
+        failed: { x: 620, w: 100 },
+      };
+      const col = cols[t.state];
+      const targetX = col.x + Math.random() * (col.w - 80);
+      const targetY = 60 + ((t.id % 6) * 44);
+      t.x += (targetX - t.x) * 0.12;
+      t.y += (targetY - t.y) * 0.12;
+    });
+
+    // Particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.life -= dt;
+      p.vy += 0.02;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+
+    updateDOM();
+  }
+
+  function spawnParticles(x, y, color) {
+    for (let i = 0; i < 12; i++) {
+      particles.push({
+        x, y,
+        vx: (Math.random() - 0.5) * 3,
+        vy: (Math.random() - 1) * 3,
+        life: 600 + Math.random() * 400,
+        color,
+        r: 2 + Math.random() * 2,
+      });
+    }
+  }
+
+  function draw() {
+    const w = W();
+    const h = H();
+    ctx.clearRect(0, 0, w, h);
+
+    // Column backgrounds
+    const colW = [180, 200, 180];
+    const colX = [40, 260, 540];
+    const colLabels = ['QUEUE', 'RUNNING', 'COMPLETED'];
+    const colColors = ['rgba(59,130,246,0.06)', 'rgba(245,158,11,0.06)', 'rgba(16,185,129,0.06)'];
+
+    colLabels.forEach((label, i) => {
+      ctx.fillStyle = colColors[i];
+      ctx.beginPath();
+      ctx.roundRect(colX[i], 20, colW[i], h - 40, 10);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.fillStyle = '#6b7280';
+      ctx.font = '600 11px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(label, colX[i] + colW[i] / 2, 40);
+    });
+
+    // Failed column (right of completed)
+    ctx.fillStyle = 'rgba(239,68,68,0.05)';
+    ctx.beginPath();
+    ctx.roundRect(740, 20, 120, h - 40, 10);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.stroke();
+    ctx.fillStyle = '#6b7280';
+    ctx.fillText('FAILED', 800, 40);
+
+    // Divider lines
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+    ctx.beginPath();
+    ctx.moveTo(250, 50); ctx.lineTo(250, h - 20);
+    ctx.moveTo(470, 50); ctx.lineTo(470, h - 20);
+    ctx.moveTo(730, 50); ctx.lineTo(730, h - 20);
+    ctx.stroke();
+
+    // Concurrency indicator in running column
+    const runningCount = count('running');
+    ctx.fillStyle = 'rgba(245,158,11,0.15)';
+    const barH = ((h - 70) / maxConcurrency) * runningCount;
+    ctx.fillRect(450, 55 + (h - 70 - barH), 4, barH);
+
+    // Tasks
+    tasks.forEach(t => {
+      const isRunning = t.state === 'running';
+      const isFailed = t.state === 'failed';
+      const isCompleted = t.state === 'completed';
+
+      ctx.save();
+      ctx.translate(t.x, t.y);
+
+      // Glow
+      if (isRunning) {
+        ctx.shadowColor = 'rgba(245,158,11,0.35)';
+        ctx.shadowBlur = 14;
+      }
+
+      // Box
+      ctx.fillStyle = isFailed ? 'rgba(239,68,68,0.15)' : isCompleted ? 'rgba(16,185,129,0.15)' : isRunning ? 'rgba(245,158,11,0.15)' : 'rgba(59,130,246,0.12)';
+      ctx.strokeStyle = isFailed ? 'rgba(239,68,68,0.45)' : isCompleted ? 'rgba(16,185,129,0.45)' : isRunning ? 'rgba(245,158,11,0.45)' : 'rgba(59,130,246,0.35)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(-36, -14, 72, 28, 7);
+      ctx.fill();
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Progress bar for running
+      if (isRunning) {
+        const pct = Math.min(t.progress / t.duration, 1);
+        ctx.fillStyle = 'rgba(245,158,11,0.5)';
+        ctx.beginPath();
+        ctx.roundRect(-34, 10, 68 * pct, 3, 2);
+        ctx.fill();
+      }
+
+      // Label
+      ctx.fillStyle = isFailed ? '#f87171' : isCompleted ? '#34d399' : isRunning ? '#fbbf24' : '#93c5fd';
+      ctx.font = '600 11px JetBrains Mono, monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('T' + t.id, 0, -1);
+
+      ctx.restore();
+    });
+
+    // Particles
+    particles.forEach(p => {
+      ctx.globalAlpha = Math.max(0, p.life / 800);
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+
+    // Pause overlay
+    if (isPaused) {
+      ctx.fillStyle = 'rgba(11,11,12,0.6)';
+      ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = '#f59e0b';
+      ctx.font = '700 18px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('PAUSED', w / 2, h / 2);
+    }
+  }
+
+  let lastTime = performance.now();
+  function loop(now) {
+    const dt = now - lastTime;
+    lastTime = now;
+    update(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  // Controls
+  document.getElementById('btnSpawn').addEventListener('click', () => spawnTasks(4));
+  document.getElementById('btnClear').addEventListener('click', resetSim);
+  document.getElementById('maxSlider').addEventListener('input', (e) => {
+    maxConcurrency = parseInt(e.target.value);
+    document.getElementById('maxVal').textContent = maxConcurrency;
+  });
+  document.getElementById('btnPause').addEventListener('click', (e) => {
+    isPaused = !isPaused;
+    e.target.textContent = isPaused ? 'Resume' : 'Pause';
+  });
+
+  // Start with some tasks
+  spawnTasks(5);
+})();
+
+/* =====================
+   Capstone Interactive Demo
+   ===================== */
+(function() {
+  const logEl = document.getElementById('capstoneLog');
+
+  function nowStr() {
+    const d = new Date();
+    return d.toTimeString().split(' ')[0];
+  }
+
+  function log(cls, text) {
+    const line = document.createElement('div');
+    line.innerHTML = `<span class="log-time">${nowStr()}</span><span class="${cls}">${text}</span>`;
+    logEl.appendChild(line);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  async function sleep(ms) {
+    return new Promise(r => setTimeout(r, ms));
+  }
+
+  async function runCapstone() {
+    const btn = document.getElementById('btnRunCapstone');
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+
+    const taskId = 'task-flaky-' + Math.floor(Math.random() * 1000);
+    let failuresRemaining = 2;
+    let attempt = 0;
+    const maxRetries = 3;
+    const baseDelay = 500;
+
+    log('log-info', `=== Starting retry-aware scheduler test: ${taskId} ===`);
+
+    while (true) {
+      attempt++;
+      log('log-info', `[submit] ${taskId} attempt ${attempt}`);
+      await sleep(400);
+
+      if (failuresRemaining > 0) {
+        failuresRemaining--;
+        log('log-error', `[error]  ${taskId} — Simulated failure`);
+
+        if (attempt > maxRetries) {
+          log('log-error', `[fatal]  ${taskId} — Max retries exceeded. Giving up.`);
+          break;
+        }
+
+        const delay = Math.min(baseDelay * (2 ** (attempt - 1)), 10000);
+        log('log-retry', `[retry]  ${taskId} — waiting ${delay}ms (attempt ${attempt}/${maxRetries})`);
+        await sleep(delay);
+      } else {
+        log('log-success', `[success] ${taskId} — Result received after ${attempt} attempt(s)`);
+        break;
+      }
+    }
+
+    btn.disabled = false;
+    btn.style.opacity = '1';
+  }
+
+  document.getElementById('btnRunCapstone').addEventListener('click', runCapstone);
+  document.getElementById('btnClearCapstone').addEventListener('click', () => {
+    logEl.innerHTML = '';
+    log('log-info', 'Ready. Click "Run Retry Test" to begin.');
+  });
+})();
+</script>
+</body>
+</html>

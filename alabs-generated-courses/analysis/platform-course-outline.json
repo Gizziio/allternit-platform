@@ -1,0 +1,122 @@
+{
+  "courseCode": "ALABS-PLATFORM",
+  "title": "How A://Labs Works",
+  "subtitle": "A deep dive into the Allternit platform architecture",
+  "tier": "ADV",
+  "totalModules": 5,
+  "estimatedHours": 15,
+  "modules": [
+    {
+      "position": 1,
+      "title": "Module 1: Next.js App Router & Layouts",
+      "complexity": "beginner",
+      "concepts": [
+        "app router",
+        "layouts",
+        "nested routes",
+        "loading states"
+      ],
+      "keyFiles": [
+        "surfaces/allternit-platform/src/app/layout.tsx"
+      ],
+      "learningObjectives": [
+        "Understand how app router works in the A://Labs platform",
+        "Understand how layouts works in the A://Labs platform",
+        "Understand how nested routes works in the A://Labs platform",
+        "Understand how loading states works in the A://Labs platform"
+      ]
+    },
+    {
+      "position": 2,
+      "title": "Module 2: Database Layer: SQLite + PostgreSQL",
+      "complexity": "intermediate",
+      "concepts": [
+        "dual database",
+        "sqlite",
+        "postgresql",
+        "prisma",
+        "migrations"
+      ],
+      "keyFiles": [
+        "surfaces/allternit-platform/src/lib/db",
+        "surfaces/allternit-platform/src/lib/db.ts",
+        "surfaces/allternit-platform/prisma/schema.prisma"
+      ],
+      "learningObjectives": [
+        "Understand how dual database works in the A://Labs platform",
+        "Understand how sqlite works in the A://Labs platform",
+        "Understand how postgresql works in the A://Labs platform",
+        "Understand how prisma works in the A://Labs platform",
+        "Understand how migrations works in the A://Labs platform"
+      ]
+    },
+    {
+      "position": 3,
+      "title": "Module 3: Authentication & Authorization",
+      "complexity": "intermediate",
+      "concepts": [
+        "auth",
+        "middleware",
+        "sessions",
+        "jwt",
+        "permissions"
+      ],
+      "keyFiles": [
+        "surfaces/allternit-platform/src/lib/auth-browser.ts",
+        "surfaces/allternit-platform/src/lib/auth-sqlite.ts",
+        "surfaces/allternit-platform/src/lib/auth.ts",
+        "surfaces/allternit-platform/src/middleware.ts"
+      ],
+      "learningObjectives": [
+        "Understand how auth works in the A://Labs platform",
+        "Understand how middleware works in the A://Labs platform",
+        "Understand how sessions works in the A://Labs platform",
+        "Understand how jwt works in the A://Labs platform",
+        "Understand how permissions works in the A://Labs platform"
+      ]
+    },
+    {
+      "position": 4,
+      "title": "Module 4: API Routes & Middleware",
+      "complexity": "beginner",
+      "concepts": [
+        "api routes",
+        "middleware",
+        "request handling",
+        "validation"
+      ],
+      "keyFiles": [
+        "surfaces/allternit-platform/src/middleware.ts"
+      ],
+      "learningObjectives": [
+        "Understand how api routes works in the A://Labs platform",
+        "Understand how middleware works in the A://Labs platform",
+        "Understand how request handling works in the A://Labs platform",
+        "Understand how validation works in the A://Labs platform"
+      ]
+    },
+    {
+      "position": 5,
+      "title": "Module 5: Build & Deployment Pipeline",
+      "complexity": "beginner",
+      "concepts": [
+        "next.js build",
+        "docker",
+        "ci/cd",
+        "deployment",
+        "vercel"
+      ],
+      "keyFiles": [
+        "surfaces/allternit-platform/next.config.ts",
+        "surfaces/allternit-platform/package.json"
+      ],
+      "learningObjectives": [
+        "Understand how next.js build works in the A://Labs platform",
+        "Understand how docker works in the A://Labs platform",
+        "Understand how ci/cd works in the A://Labs platform",
+        "Understand how deployment works in the A://Labs platform",
+        "Understand how vercel works in the A://Labs platform"
+      ]
+    }
+  ]
+}

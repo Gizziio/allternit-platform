@@ -1,0 +1,1659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Module 2: Resilience Patterns — ALABS-ADV-ADAPTERS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0b0c;
+    --bg-elevated: #111113;
+    --bg-card: #161618;
+    --bg-code: #0d0d0f;
+    --border: #1f1f23;
+    --border-hover: #2a2a2f;
+    --text: #e8e8ec;
+    --text-secondary: #9ca3af;
+    --text-muted: #6b7280;
+    --accent: #f59e0b;
+    --accent-dim: #b45309;
+    --accent-glow: rgba(245,158,11,0.15);
+    --success: #22c55e;
+    --error: #ef4444;
+    --warning: #f59e0b;
+    --info: #3b82f6;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Inter', system-ui, sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* Progress bar */
+  #progressBar {
+    position: fixed;
+    top: 0; left: 0; height: 3px;
+    background: linear-gradient(90deg, var(--accent), #fbbf24);
+    width: 0%;
+    z-index: 1000;
+    transition: width 0.1s linear;
+    box-shadow: 0 0 12px rgba(245,158,11,0.4);
+  }
+
+  /* Navigation */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 64px;
+    background: rgba(11,11,12,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2rem;
+    z-index: 999;
+  }
+
+  .nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--text);
+    text-decoration: none;
+  }
+
+  .nav-brand .badge {
+    background: var(--accent);
+    color: #000;
+    font-size: 0.65rem;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 0.25rem;
+    list-style: none;
+  }
+
+  .nav-links a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 500;
+    padding: 0.4rem 0.75rem;
+    border-radius: 6px;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .nav-links a:hover, .nav-links a.active {
+    color: var(--accent);
+    background: var(--accent-glow);
+  }
+
+  .nav-module {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  /* Sections */
+  section {
+    padding: 5rem 2rem;
+    max-width: 880px;
+    margin: 0 auto;
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+
+  section.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Hero */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 64px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -50%; right: -20%;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(245,158,11,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero-label {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .hero-label::before {
+    content: '';
+    display: block;
+    width: 24px; height: 2px;
+    background: var(--accent);
+  }
+
+  .hero h1 {
+    font-size: clamp(2.5rem, 6vw, 4.5rem);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    margin-bottom: 1.5rem;
+    background: linear-gradient(135deg, #fff 0%, #a1a1aa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero h1 span {
+    background: linear-gradient(135deg, var(--accent) 0%, #fbbf24 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero p {
+    font-size: 1.15rem;
+    color: var(--text-secondary);
+    max-width: 560px;
+    line-height: 1.7;
+    margin-bottom: 2.5rem;
+  }
+
+  .hero-meta {
+    display: flex;
+    gap: 2rem;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  .hero-meta strong {
+    color: var(--accent);
+  }
+
+  /* Typography */
+  h2 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin: 3rem 0 1.25rem;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  h2 .num {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin: 2rem 0 0.75rem;
+    color: var(--text);
+  }
+
+  h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 1.5rem 0 0.5rem;
+    color: var(--text-secondary);
+  }
+
+  p {
+    margin-bottom: 1rem;
+    color: var(--text-secondary);
+  }
+
+  strong { color: var(--text); font-weight: 600; }
+
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Lists */
+  ul, ol {
+    margin: 1rem 0 1.5rem 1.5rem;
+    color: var(--text-secondary);
+  }
+
+  li { margin-bottom: 0.5rem; }
+
+  li::marker { color: var(--accent); }
+
+  /* Code blocks */
+  .code-block {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin: 1.25rem 0;
+    overflow: hidden;
+  }
+
+  .code-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 1rem;
+    background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .code-header .lang { color: var(--accent); font-weight: 600; }
+
+  pre {
+    padding: 1.25rem;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    line-height: 1.6;
+    color: var(--text);
+  }
+
+  code {
+    font-family: var(--mono);
+    font-size: 0.85em;
+  }
+
+  code.inline {
+    background: rgba(245,158,11,0.1);
+    color: var(--accent);
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.8em;
+  }
+
+  /* Syntax highlighting colors */
+  .token-k { color: #c678dd; } /* keyword */
+  .token-f { color: #61afef; } /* function */
+  .token-c { color: #5c6370; font-style: italic; } /* comment */
+  .token-s { color: #98c379; } /* string */
+  .token-n { color: #e5c07b; } /* number */
+  .token-t { color: #e06c75; } /* type */
+  .token-v { color: #d19a66; } /* variable/const */
+  .token-o { color: #56b6c2; } /* operator */
+
+  /* Cards */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin: 1.25rem 0;
+  }
+
+  .card-title {
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .card-title svg { flex-shrink: 0; }
+
+  /* Alert boxes */
+  .alert {
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin: 1.25rem 0;
+    border-left: 3px solid;
+    font-size: 0.95rem;
+  }
+
+  .alert-info { background: rgba(59,130,246,0.08); border-color: var(--info); color: #93c5fd; }
+  .alert-warn { background: rgba(245,158,11,0.08); border-color: var(--accent); color: #fcd34d; }
+  .alert-error { background: rgba(239,68,68,0.08); border-color: var(--error); color: #fca5a5; }
+  .alert-success { background: rgba(34,197,94,0.08); border-color: var(--success); color: #86efac; }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.25rem 0;
+    font-size: 0.9rem;
+  }
+
+  th, td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  th {
+    font-weight: 600;
+    color: var(--text);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: var(--bg-elevated);
+  }
+
+  td { color: var(--text-secondary); }
+
+  tr:hover td { background: rgba(255,255,255,0.02); }
+
+  /* Diagram */
+  .diagram {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    margin: 1.5rem 0;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+  }
+
+  /* State pills */
+  .state-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.75rem;
+    border-radius: 20px;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .state-closed { background: rgba(34,197,94,0.12); color: var(--success); }
+  .state-open { background: rgba(239,68,68,0.12); color: var(--error); }
+  .state-half { background: rgba(59,130,246,0.12); color: var(--info); }
+
+  .state-pill::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  /* Quizzes */
+  .quiz {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+  }
+
+  .quiz-question {
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 1rem;
+    font-size: 1.05rem;
+  }
+
+  .quiz-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .quiz-option {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.85rem 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+  }
+
+  .quiz-option:hover {
+    border-color: var(--border-hover);
+    background: rgba(255,255,255,0.03);
+  }
+
+  .quiz-option.correct {
+    border-color: var(--success);
+    background: rgba(34,197,94,0.08);
+    color: var(--success);
+  }
+
+  .quiz-option.wrong {
+    border-color: var(--error);
+    background: rgba(239,68,68,0.08);
+    color: var(--error);
+  }
+
+  .quiz-option.disabled { cursor: default; pointer-events: none; }
+
+  .quiz-feedback {
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    display: none;
+  }
+
+  .quiz-feedback.show { display: block; }
+
+  /* Capstone */
+  .capstone-section {
+    background: linear-gradient(135deg, rgba(245,158,11,0.05) 0%, transparent 60%);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 2.5rem;
+    margin: 2rem 0;
+  }
+
+  .capstone-section h3 {
+    margin-top: 0;
+    color: var(--accent);
+  }
+
+  .checklist {
+    list-style: none;
+    margin: 1rem 0;
+    padding: 0;
+  }
+
+  .checklist li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    color: var(--text-secondary);
+  }
+
+  .checklist li::before {
+    content: '☐';
+    color: var(--accent);
+    font-weight: bold;
+  }
+
+  /* Canvas container */
+  .canvas-container {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 1.5rem 0;
+  }
+
+  .canvas-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .canvas-title {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .canvas-controls {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .canvas-btn {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .canvas-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 380px;
+  }
+
+  .canvas-legend {
+    display: flex;
+    gap: 1.5rem;
+    padding: 0.6rem 1rem;
+    background: rgba(255,255,255,0.02);
+    border-top: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    flex-wrap: wrap;
+  }
+
+  .canvas-legend span {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .legend-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  /* Metrics grid */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+    margin: 1.25rem 0;
+  }
+
+  .metric-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem;
+    text-align: center;
+  }
+
+  .metric-value {
+    font-family: var(--mono);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .metric-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* Footer */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 3rem 2rem;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    nav { padding: 0 1rem; }
+    .nav-links { display: none; }
+    section { padding: 3rem 1rem; }
+    .hero { min-height: auto; padding: 6rem 1rem 4rem; }
+    .capstone-section { padding: 1.5rem; }
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: #2a2a2f; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3a3a3f; }
+
+  /* Animations */
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .pulse { animation: pulse 2s ease-in-out infinite; }
+</style>
+</head>
+<body>
+
+<div id="progressBar"></div>
+
+<nav>
+  <a href="#" class="nav-brand">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+    A://Labs
+    <span class="badge">ADV</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="#problem">Problem</a></li>
+    <li><a href="#rate-limiting">Rate Limit</a></li>
+    <li><a href="#backoff">Backoff</a></li>
+    <li><a href="#circuit">Circuit</a></li>
+    <li><a href="#failover">Failover</a></li>
+    <li><a href="#observability">Observability</a></li>
+    <li><a href="#quizzes">Quizzes</a></li>
+    <li><a href="#capstone">Capstone</a></li>
+  </ul>
+  <span class="nav-module">ALABS-ADV-ADAPTERS</span>
+</nav>
+
+<!-- HERO -->
+<section class="hero visible" id="top">
+  <div class="hero-label">Module 2 / ADV Tier</div>
+  <h1>Resilience Patterns.<br><span>Rate Limiting, Failover &amp; Circuit Breakers.</span></h1>
+  <p>Building production-grade AI provider adapters means embracing failure as the default. Learn to shield your <code class="inline">AiSdkReplyAdapter</code> from cascading outages with token buckets, exponential backoff, and circuit breakers.</p>
+  <div class="hero-meta">
+    <span>Tier <strong>ADV</strong></span>
+    <span>Course <strong>ALABS-ADV-ADAPTERS</strong></span>
+    <span>~45 min</span>
+  </div>
+</section>
+
+<!-- THE RESILIENCE PROBLEM -->
+<section id="problem">
+  <h2><span class="num">01</span> The Resilience Problem</h2>
+  <p>External APIs fail. It is not a matter of <em>if</em> but <em>when</em>. The <code class="inline">AiSdkReplyAdapter</code> consumes an <code class="inline">AsyncIterable&lt;AiSdkStreamPart&gt;</code> from providers like OpenAI, Anthropic, and Gemini. Any point in that pipeline can fail:</p>
+
+  <div class="card">
+    <div class="card-title">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Failure Modes in Production
+    </div>
+    <table>
+      <tr><th>Failure</th><th>HTTP Status</th><th>Impact</th></tr>
+      <tr><td>Rate limiting</td><td><code class="inline">429 Too Many Requests</code></td><td>Temporarily blocked; retry after header</td></tr>
+      <tr><td>Server errors</td><td><code class="inline">500/502/503</code></td><td>Provider is degraded or down</td></tr>
+      <tr><td>Network partitions</td><td>Timeout / ECONNRESET</td><td>Request never reaches the provider</td></tr>
+      <tr><td>Stream aborts</td><td>Partial body</td><td>Client receives incomplete deltas</td></tr>
+      <tr><td>Token exhaustion</td><td><code class="inline">400</code> or stream error</td><td>Model refuses to continue</td></tr>
+    </table>
+  </div>
+
+  <p>Without resilience patterns, a single provider hiccup becomes a user-facing outage. The adapter layer is the <strong>runtime boundary</strong> between the Allternit kernel and external vendors — it is exactly where these defenses belong.</p>
+
+  <div class="alert alert-warn">
+    <strong>Architectural principle:</strong> Layer 3-adapters/contracts/runtime.ts defines <code class="inline">ToolExecutionRequest</code> with <code class="inline">retryCount</code> and <code class="inline">idempotencyKey</code>. Resilience is not an afterthought; it is a first-class contract concern.
+  </div>
+</section>
+
+<!-- RATE LIMITING -->
+<section id="rate-limiting">
+  <h2><span class="num">02</span> Rate Limiting</h2>
+  <p>Before you even <em>send</em> a request, you should know whether you are allowed to. Rate limiting prevents outbound storms and keeps your adapter a well-behaved citizen of the provider's infrastructure.</p>
+
+  <h3>Token Bucket vs. Sliding Window</h3>
+
+  <table>
+    <tr><th>Algorithm</th><th>Mechanism</th><th>Pros</th><th>Cons</th></tr>
+    <tr><td><strong>Token Bucket</strong></td><td>Tokens refill at a fixed rate; each request consumes one</td><td>Burst-friendly, simple state</td><td>Can burst unexpectedly at window boundaries</td></tr>
+    <tr><td><strong>Sliding Window</strong></td><td>Counts requests in a rolling time window</td><td>Smoother distribution</td><td>Higher memory cost (per-request timestamps)</td></tr>
+    <tr><td><strong>Fixed Window</strong></td><td>Resets counter at interval boundaries</td><td>Minimal state</td><td>Thundering herd at reset edge</td></tr>
+  </table>
+
+  <p>For AI provider adapters, <strong>Token Bucket</strong> is usually the right trade-off: it allows short bursts (useful for parallel tool calls) while capping sustained throughput.</p>
+
+  <h3>Implementing a TokenBucket in TypeScript</h3>
+
+  <div class="code-block">
+    <div class="code-header"><span class="lang">TypeScript</span> <span>TokenBucket.ts</span></div>
+    <pre><span class="token-t">interface</span> <span class="token-f">TokenBucketOptions</span> {
+  <span class="token-v">capacity</span>: <span class="token-t">number</span>;      <span class="token-c">// max tokens in the bucket</span>
+  <span class="token-v">refillRate</span>: <span class="token-t">number</span>;    <span class="token-c">// tokens added per second</span>
+  <span class="token-v">refillIntervalMs</span>?: <span class="token-t">number</span>;
+}
+
+<span class="token-t">export</span> <span class="token-t">class</span> <span class="token-f">TokenBucket</span> {
+  <span class="token-k">private</span> <span class="token-v">tokens</span>: <span class="token-t">number</span>;
+  <span class="token-k">private</span> <span class="token-v">lastRefill</span>: <span class="token-t">number</span>;
+  <span class="token-k">private</span> <span class="token-v">capacity</span>: <span class="token-t">number</span>;
+  <span class="token-k">private</span> <span class="token-v">refillRate</span>: <span class="token-t">number</span>;
+  <span class="token-k">private</span> <span class="token-v">intervalMs</span>: <span class="token-t">number</span>;
+
+  <span class="token-f">constructor</span>(<span class="token-v">opts</span>: <span class="token-t">TokenBucketOptions</span>) {
+    <span class="token-k">this</span>.<span class="token-v">capacity</span> = <span class="token-v">opts</span>.<span class="token-v">capacity</span>;
+    <span class="token-k">this</span>.<span class="token-v">refillRate</span> = <span class="token-v">opts</span>.<span class="token-v">refillRate</span>;
+    <span class="token-k">this</span>.<span class="token-v">intervalMs</span> = <span class="token-v">opts</span>.<span class="token-v">refillIntervalMs</span> ?? <span class="token-n">1000</span>;
+    <span class="token-k">this</span>.<span class="token-v">tokens</span> = <span class="token-v">opts</span>.<span class="token-v">capacity</span>;
+    <span class="token-k">this</span>.<span class="token-v">lastRefill</span> = <span class="token-t">Date</span>.<span class="token-f">now</span>();
+  }
+
+  <span class="token-k">private</span> <span class="token-f">refill</span>(): <span class="token-t">void</span> {
+    <span class="token-k">const</span> <span class="token-v">now</span> = <span class="token-t">Date</span>.<span class="token-f">now</span>();
+    <span class="token-k">const</span> <span class="token-v">elapsed</span> = <span class="token-v">now</span> - <span class="token-k">this</span>.<span class="token-v">lastRefill</span>;
+    <span class="token-k">const</span> <span class="token-v">tokensToAdd</span> = <span class="token-t">Math</span>.<span class="token-f">floor</span>(
+      (<span class="token-v">elapsed</span> / <span class="token-k">this</span>.<span class="token-v">intervalMs</span>) * <span class="token-k">this</span>.<span class="token-v">refillRate</span>
+    );
+    <span class="token-k">if</span> (<span class="token-v">tokensToAdd</span> > <span class="token-n">0</span>) {
+      <span class="token-k">this</span>.<span class="token-v">tokens</span> = <span class="token-t">Math</span>.<span class="token-f">min</span>(<span class="token-k">this</span>.<span class="token-v">capacity</span>, <span class="token-k">this</span>.<span class="token-v">tokens</span> + <span class="token-v">tokensToAdd</span>);
+      <span class="token-k">this</span>.<span class="token-v">lastRefill</span> = <span class="token-v">now</span>;
+    }
+  }
+
+  <span class="token-c">/** Returns true if a token was consumed. */</span>
+  <span class="token-f">consume</span>(): <span class="token-t">boolean</span> {
+    <span class="token-k">this</span>.<span class="token-f">refill</span>();
+    <span class="token-k">if</span> (<span class="token-k">this</span>.<span class="token-v">tokens</span> >= <span class="token-n">1</span>) {
+      <span class="token-k">this</span>.<span class="token-v">tokens</span> -= <span class="token-n">1</span>;
+      <span class="token-k">return</span> <span class="token-t">true</span>;
+    }
+    <span class="token-k">return</span> <span class="token-t">false</span>;
+  }
+
+  <span class="token-c">/** Estimated wait time in ms until next token is available. */</span>
+  <span class="token-f">waitTimeMs</span>(): <span class="token-t">number</span> {
+    <span class="token-k">this</span>.<span class="token-f">refill</span>();
+    <span class="token-k">if</span> (<span class="token-k">this</span>.<span class="token-v">tokens</span> >= <span class="token-n">1</span>) <span class="token-k">return</span> <span class="token-n">0</span>;
+    <span class="token-k">const</span> <span class="token-v">needed</span> = <span class="token-n">1</span> - <span class="token-k">this</span>.<span class="token-v">tokens</span>;
+    <span class="token-k">return</span> <span class="token-t">Math</span>.<span class="token-f">ceil</span>((<span class="token-v">needed</span> / <span class="token-k">this</span>.<span class="token-v">refillRate</span>) * <span class="token-k">this</span>.<span class="token-v">intervalMs</span>);
+  }
+}</pre>
+  </div>
+
+  <h3>Integrating with the Adapter Layer</h3>
+
+  <div class="code-block">
+    <div class="code-header"><span class="lang">TypeScript</span> <span>RateLimitedAdapter.ts</span></div>
+    <pre><span class="token-k">import</span> { <span class="token-t">AiSdkReplyAdapter</span>, <span class="token-t">AiSdkStreamPart</span> } <span class="token-k">from</span> <span class="token-s">"@allternit/provider-adapters"</span>;
+<span class="token-k">import</span> { <span class="token-t">TokenBucket</span> } <span class="token-k">from</span> <span class="token-s">"./TokenBucket"</span>;
+
+<span class="token-t">export</span> <span class="token-t">class</span> <span class="token-f">RateLimitedAiSdkAdapter</span> <span class="token-k">extends</span> <span class="token-t">AiSdkReplyAdapter</span> {
+  <span class="token-k">private</span> <span class="token-v">bucket</span> = <span class="token-k">new</span> <span class="token-f">TokenBucket</span>({ <span class="token-v">capacity</span>: <span class="token-n">60</span>, <span class="token-v">refillRate</span>: <span class="token-n">10</span> });
+
+  <span class="token-k">async</span> <span class="token-f">consume</span>(<span class="token-v">stream</span>: <span class="token-t">AsyncIterable</span>&lt;<span class="token-t">AiSdkStreamPart</span>&gt;): <span class="token-t">Promise</span>&lt;<span class="token-t">void</span>&gt; {
+    <span class="token-k">if</span> (!<span class="token-k">this</span>.<span class="token-v">bucket</span>.<span class="token-f">consume</span>()) {
+      <span class="token-k">const</span> <span class="token-v">wait</span> = <span class="token-k">this</span>.<span class="token-v">bucket</span>.<span class="token-f">waitTimeMs</span>();
+      <span class="token-k">await</span> <span class="token-k">new</span> <span class="token-t">Promise</span>(<span class="token-v">r</span> => <span class="token-f">setTimeout</span>(<span class="token-v">r</span>, <span class="token-v">wait</span>));
+    }
+    <span class="token-k">return</span> <span class="token-k">super</span>.<span class="token-f">consume</span>(<span class="token-v">stream</span>);
+  }
+}</pre>
+  </div>
+
+  <div class="alert alert-info">
+    <strong>Design note:</strong> The <code class="inline">@allternit/replies-contract</code> <code class="inline">ToolExecutionRequest</code> already carries <code class="inline">retryCount</code> and <code class="inline">idempotencyKey</code>. When rate limiting triggers, increment <code class="inline">retryCount</code> and preserve the idempotency key so upstream retries remain safe.
+  </div>
+</section>
+
+<!-- EXPONENTIAL BACKOFF -->
+<section id="backoff">
+  <h2><span class="num">03</span> Exponential Backoff</h2>
+  <p>Linear retry (<code class="inline">wait 1s, wait 1s, wait 1s...</code>) is dangerous. During an incident, every client retries at the same cadence, creating a <strong>thundering herd</strong> that prolongs recovery. Exponential backoff spreads retries across time.</p>
+
+  <h3>Why Linear Retry Fails</h3>
+
+  <div class="diagram">
+    <div style="display:flex;justify-content:center;gap:2rem;margin-bottom:1rem;flex-wrap:wrap;">
+      <div>
+        <div style="color:var(--error);font-weight:700;margin-bottom:0.5rem;">Linear: 1s + 1s + 1s</div>
+        <div style="display:flex;gap:0.25rem;justify-content:center;">
+          <div style="width:8px;height:40px;background:var(--error);border-radius:2px;"></div>
+          <div style="width:8px;height:40px;background:var(--error);border-radius:2px;"></div>
+          <div style="width:8px;height:40px;background:var(--error);border-radius:2px;"></div>
+          <div style="width:8px;height:40px;background:var(--error);border-radius:2px;"></div>
+        </div>
+        <div style="margin-top:0.5rem;color:var(--text-muted);">All clients collide</div>
+      </div>
+      <div>
+        <div style="color:var(--success);font-weight:700;margin-bottom:0.5rem;">Exponential: 1s + 2s + 4s + 8s</div>
+        <div style="display:flex;gap:0.25rem;align-items:flex-end;justify-content:center;">
+          <div style="width:8px;height:10px;background:var(--success);border-radius:2px;"></div>
+          <div style="width:8px;height:20px;background:var(--success);border-radius:2px;"></div>
+          <div style="width:8px;height:40px;background:var(--success);border-radius:2px;"></div>
+          <div style="width:8px;height:80px;background:var(--success);border-radius:2px;"></div>
+        </div>
+        <div style="margin-top:0.5rem;color:var(--text-muted);">Retries desynchronize</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Jitter Strategies</h3>
+  <p>Even exponential backoff can synchronize if all clients start at the same time. <strong>Jitter</strong> adds randomness to break alignment:</p>
+
+  <ul>
+    <li><strong>Full jitter:</strong> <code class="inline">sleep = random(0, base * 2^attempt)</code> — maximum desynchronization, but can be very fast</li>
+    <li><strong>Equal jitter:</strong> <code class="inline">sleep = (base * 2^attempt) / 2 + random(0, base * 2^attempt / 2)</code> — balances spread and minimum delay</li>
+    <li><strong>Decorrelated jitter:</strong> <code class="inline">sleep = min(cap, random(base, sleep_prev * 3))</code> — AWS approach; excellent in practice</li>
+  </ul>
+
+  <h3>Implementation</h3>
+
+  <div class="code-block">
+    <div class="code-header"><span class="lang">TypeScript</span> <span>backoff.ts</span></div>
+    <pre><span class="token-t">interface</span> <span class="token-f">BackoffOptions</span> {
+  <span class="token-v">baseMs</span>: <span class="token-t">number</span>;
+  <span class="token-v">maxDelayMs</span>: <span class="token-t">number</span>;
+  <span class="token-v">maxRetries</span>: <span class="token-t">number</span>;
+  <span class="token-v">jitter</span>: <span class="token-s">"none"</span> | <span class="token-s">"full"</span> | <span class="token-s">"equal"</span> | <span class="token-s">"decorrelated"</span>;
+}
+
+<span class="token-t">export</span> <span class="token-t">class</span> <span class="token-f">ExponentialBackoff</span> {
+  <span class="token-k">private</span> <span class="token-v">prevSleep</span> = <span class="token-n">0</span>;
+
+  <span class="token-f">constructor</span>(<span class="token-k">private</span> <span class="token-v">opts</span>: <span class="token-t">BackoffOptions</span>) {}
+
+  <span class="token-f">delayMs</span>(<span class="token-v">attempt</span>: <span class="token-t">number</span>): <span class="token-t">number</span> {
+    <span class="token-k">const</span> <span class="token-v">base</span> = <span class="token-k">this</span>.<span class="token-v">opts</span>.<span class="token-v">baseMs</span> * (<span class="token-t">Math</span>.<span class="token-f">pow</span>(<span class="token-n">2</span>, <span class="token-v">attempt</span>));
+    <span class="token-k">let</span> <span class="token-v">sleep</span>: <span class="token-t">number</span>;
+
+    <span class="token-k">switch</span> (<span class="token-k">this</span>.<span class="token-v">opts</span>.<span class="token-v">jitter</span>) {
+      <span class="token-k">case</span> <span class="token-s">"full"</span>:
+        <span class="token-v">sleep</span> = <span class="token-t">Math</span>.<span class="token-f">random</span>() * <span class="token-t">Math</span>.<span class="token-f">min</span>(<span class="token-v">base</span>, <span class="token-k">this</span>.<span class="token-v">opts</span>.<span class="token-v">maxDelayMs</span>);
+        <span class="token-k">break</span>;
+      <span class="token-k">case</span> <span class="token-s">"equal"</span>:
+        <span class="token-v">sleep</span> = <span class="token-t">Math</span>.<span class="token-f">min</span>(<span class="token-v">base</span>, <span class="token-k">this</span>.<span class="token-v">opts</span>.<span class="token-v">maxDelayMs</span>) / <span class="token-n">2</span>
+          + <span class="token-t">Math</span>.<span class="token-f">random</span>() * (<span class="token-t">Math</span>.<span class="token-f">min</span>(<span class="token-v">base</span>, <span class="token-k">this</span>.<span class="token-v">opts</span>.<span class="token-v">maxDelayMs</span>) / <span class="token-n">2</span>);
+        <span class="token-k">break</span>;
+      <span class="token-k">case</span> <span class="token-s">"decorrelated"</span>:
+        <span class="token-v">sleep</span> = <span class="token-t">Math</span>.<span class="token-f">min</span>(
+          <span class="token-k">this</span>.<span class="token-v">opts</span>.<span class="token-v">maxDelayMs</span>,
+          <span class="token-t">Math</span>.<span class="token-f">random</span>() * <span class="token-k">this</span>.<span class="token-v">opts</span>.<span class="token-v">baseMs</span> + <span class="token-k">this</span>.<span class="token-v">prevSleep</span> * <span class="token-n">3</span>
+        );
+        <span class="token-k">break</span>;
+      <span class="token-k">default</span>:
+        <span class="token-v">sleep</span> = <span class="token-t">Math</span>.<span class="token-f">min</span>(<span class="token-v">base</span>, <span class="token-k">this</span>.<span class="token-v">opts</span>.<span class="token-v">maxDelayMs</span>);
+    }
+
+    <span class="token-k">this</span>.<span class="token-v">prevSleep</span> = <span class="token-v">sleep</span>;
+    <span class="token-k">return</span> <span class="token-t">Math</span>.<span class="token-f">floor</span>(<span class="token-v">sleep</span>);
+  }
+
+  <span class="token-k">async</span> <span class="token-f">execute</span>&lt;<span class="token-t">T</span>&gt;(
+    <span class="token-v">fn</span>: () => <span class="token-t">Promise</span>&lt;<span class="token-t">T</span>&gt;,
+    <span class="token-v">isRetryable</span>: (<span class="token-v">err</span>: <span class="token-t">unknown</span>) => <span class="token-t">boolean</span>
+  ): <span class="token-t">Promise</span>&lt;<span class="token-t">T</span>&gt; {
+    <span class="token-k">for</span> (<span class="token-k">let</span> <span class="token-v">attempt</span> = <span class="token-n">0</span>; <span class="token-v">attempt</span> <= <span class="token-k">this</span>.<span class="token-v">opts</span>.<span class="token-v">maxRetries</span>; <span class="token-v">attempt</span>++) {
+      <span class="token-k">try</span> {
+        <span class="token-k">return</span> <span class="token-k">await</span> <span class="token-v">fn</span>();
+      } <span class="token-k">catch</span> (<span class="token-v">err</span>) {
+        <span class="token-k">if</span> (<span class="token-v">attempt</span> === <span class="token-k">this</span>.<span class="token-v">opts</span>.<span class="token-v">maxRetries</span> || !<span class="token-f">isRetryable</span>(<span class="token-v">err</span>)) <span class="token-k">throw</span> <span class="token-v">err</span>;
+        <span class="token-k">const</span> <span class="token-v">delay</span> = <span class="token-k">this</span>.<span class="token-f">delayMs</span>(<span class="token-v">attempt</span>);
+        <span class="token-k">await</span> <span class="token-k">new</span> <span class="token-t">Promise</span>(<span class="token-v">r</span> => <span class="token-f">setTimeout</span>(<span class="token-v">r</span>, <span class="token-v">delay</span>));
+      }
+    }
+    <span class="token-k">throw</span> <span class="token-k">new</span> <span class="token-t">Error</span>(<span class="token-s">"unreachable"</span>);
+  }
+}</pre>
+  </div>
+
+  <div class="alert alert-success">
+    <strong>Recommendation:</strong> Use <strong>decorrelated jitter</strong> for AI provider adapters. It is the strategy AWS employs in their own SDKs and provides the best convergence under high contention.
+  </div>
+</section>
+
+<!-- CIRCUIT BREAKER -->
+<section id="circuit">
+  <h2><span class="num">04</span> Circuit Breaker Pattern</h2>
+  <p>Retries help with transient failures. But when a provider is genuinely down, retries waste resources and amplify load. The <strong>Circuit Breaker</strong> prevents calls to a failing service, giving it time to recover.</p>
+
+  <h3>States</h3>
+
+  <div style="display:flex;gap:1rem;flex-wrap:wrap;margin:1.25rem 0;">
+    <div class="card" style="flex:1;min-width:200px;">
+      <div class="card-title"><span class="state-pill state-closed">CLOSED</span></div>
+      <p style="font-size:0.9rem;">Requests flow through normally. Failure counter increments on each error. If failures exceed threshold, transition to <strong>OPEN</strong>.</p>
+    </div>
+    <div class="card" style="flex:1;min-width:200px;">
+      <div class="card-title"><span class="state-pill state-open">OPEN</span></div>
+      <p style="font-size:0.9rem;">All requests fail fast immediately. No network call is made. After <strong>recovery timeout</strong>, transition to <strong>HALF-OPEN</strong>.</p>
+    </div>
+    <div class="card" style="flex:1;min-width:200px;">
+      <div class="card-title"><span class="state-pill state-half">HALF-OPEN</span></div>
+      <p style="font-size:0.9rem;">A <strong>probe request</strong> is allowed through. Success → <strong>CLOSED</strong>. Failure → <strong>OPEN</strong> (resetting timeout).</p>
+    </div>
+  </div>
+
+  <div class="canvas-container">
+    <div class="canvas-header">
+      <span class="canvas-title">Circuit Breaker State Machine</span>
+      <div class="canvas-controls">
+        <button class="canvas-btn" onclick="cbSim.setState('closed')">Reset: Closed</button>
+        <button class="canvas-btn" onclick="cbSim.setState('open')">Force: Open</button>
+        <button class="canvas-btn" onclick="cbSim.setState('halfOpen')">Force: Half-Open</button>
+        <button class="canvas-btn" onclick="cbSim.toggleAuto()">Auto: <span id="autoLabel">On</span></button>
+      </div>
+    </div>
+    <canvas id="cbCanvas" width="840" height="380"></canvas>
+    <div class="canvas-legend">
+      <span><span class="legend-dot" style="background:#22c55e"></span> Request success</span>
+      <span><span class="legend-dot" style="background:#ef4444"></span> Request failure</span>
+      <span><span class="legend-dot" style="background:#3b82f6"></span> Probe request</span>
+      <span><span class="legend-dot" style="background:#f59e0b"></span> Fast-fail (Open)</span>
+      <span>State: <strong id="stateLabel" style="color:#22c55e">CLOSED</strong></span>
+      <span>Failures: <strong id="failLabel">0</strong> / 5</span>
+      <span>Successes: <strong id="succLabel">0</strong></span>
+    </div>
+  </div>
+
+  <h3>Full Implementation</h3>
+
+  <div class="code-block">
+    <div class="code-header"><span class="lang">TypeScript</span> <span>CircuitBreaker.ts</span></div>
+    <pre><span class="token-t">type</span> <span class="token-f">CircuitState</span> = <span class="token-s">"CLOSED"</span> | <span class="token-s">"OPEN"</span> | <span class="token-s">"HALF_OPEN"</span>;
+
+<span class="token-t">interface</span> <span class="token-f">CircuitBreakerOptions</span> {
+  <span class="token-v">failureThreshold</span>: <span class="token-t">number</span>;     <span class="token-c">// failures to trip OPEN</span>
+  <span class="token-v">recoveryTimeoutMs</span>: <span class="token-t">number</span>;   <span class="token-c">// time before HALF_OPEN probe</span>
+  <span class="token-v">successThreshold</span>?: <span class="token-t">number</span>;    <span class="token-c">// probes to close (default 1)</span>
+  <span class="token-v">isFailure</span>?: (<span class="token-v">err</span>: <span class="token-t">unknown</span>) => <span class="token-t">boolean</span>;
+}
+
+<span class="token-t">export</span> <span class="token-t">class</span> <span class="token-f">CircuitBreaker</span> {
+  <span class="token-k">private</span> <span class="token-v">state</span>: <span class="token-t">CircuitState</span> = <span class="token-s">"CLOSED"</span>;
+  <span class="token-k">private</span> <span class="token-v">failures</span> = <span class="token-n">0</span>;
+  <span class="token-k">private</span> <span class="token-v">successes</span> = <span class="token-n">0</span>;
+  <span class="token-k">private</span> <span class="token-v">lastFailureTime</span>: <span class="token-t">number</span> | <span class="token-t">null</span> = <span class="token-t">null</span>;
+  <span class="token-k">private</span> <span class="token-v">onStateChange</span>?: (<span class="token-v">s</span>: <span class="token-t">CircuitState</span>) => <span class="token-t">void</span>;
+
+  <span class="token-f">constructor</span>(
+    <span class="token-k">private</span> <span class="token-v">opts</span>: <span class="token-t">CircuitBreakerOptions</span>,
+    <span class="token-v">callbacks</span>?: { <span class="token-v">onStateChange</span>?: (<span class="token-v">s</span>: <span class="token-t">CircuitState</span>) => <span class="token-t">void</span> }
+  ) {
+    <span class="token-k">this</span>.<span class="token-v">onStateChange</span> = <span class="token-v">callbacks</span>?.<span class="token-v">onStateChange</span>;
+    <span class="token-k">this</span>.<span class="token-v">opts</span>.<span class="token-v">successThreshold</span> ??= <span class="token-n">1</span>;
+    <span class="token-k">this</span>.<span class="token-v">opts</span>.<span class="token-v">isFailure</span> ??= (<span class="token-v">err</span>) => <span class="token-t">true</span>;
+  }
+
+  <span class="token-f">getState</span>(): <span class="token-t">CircuitState</span> { <span class="token-k">return</span> <span class="token-k">this</span>.<span class="token-v">state</span>; }
+
+  <span class="token-k">private</span> <span class="token-f">transition</span>(<span class="token-v">to</span>: <span class="token-t">CircuitState</span>): <span class="token-t">void</span> {
+    <span class="token-k">if</span> (<span class="token-k">this</span>.<span class="token-v">state</span> === <span class="token-v">to</span>) <span class="token-k">return</span>;
+    <span class="token-k">this</span>.<span class="token-v">state</span> = <span class="token-v">to</span>;
+    <span class="token-k">this</span>.<span class="token-v">onStateChange</span>?.(<span class="token-v">to</span>);
+  }
+
+  <span class="token-k">async</span> <span class="token-f">execute</span>&lt;<span class="token-t">T</span>&gt;(<span class="token-v">fn</span>: () => <span class="token-t">Promise</span>&lt;<span class="token-t">T</span>&gt;): <span class="token-t">Promise</span>&lt;<span class="token-t">T</span>&gt; {
+    <span class="token-k">if</span> (<span class="token-k">this</span>.<span class="token-v">state</span> === <span class="token-s">"OPEN"</span>) {
+      <span class="token-k">if</span> (<span class="token-t">Date</span>.<span class="token-f">now</span>() - (<span class="token-k">this</span>.<span class="token-v">lastFailureTime</span> ?? <span class="token-n">0</span>) >= <span class="token-k">this</span>.<span class="token-v">opts</span>.<span class="token-v">recoveryTimeoutMs</span>) {
+        <span class="token-k">this</span>.<span class="token-f">transition</span>(<span class="token-s">"HALF_OPEN"</span>);
+        <span class="token-k">this</span>.<span class="token-v">successes</span> = <span class="token-n">0</span>;
+      } <span class="token-k">else</span> {
+        <span class="token-k">throw</span> <span class="token-k">new</span> <span class="token-t">Error</span>(<span class="token-s">"Circuit breaker is OPEN"</span>);
+      }
+    }
+
+    <span class="token-k">try</span> {
+      <span class="token-k">const</span> <span class="token-v">result</span> = <span class="token-k">await</span> <span class="token-v">fn</span>();
+      <span class="token-k">this</span>.<span class="token-f">onSuccess</span>();
+      <span class="token-k">return</span> <span class="token-v">result</span>;
+    } <span class="token-k">catch</span> (<span class="token-v">err</span>) {
+      <span class="token-k">this</span>.<span class="token-f">onFailure</span>();
+      <span class="token-k">throw</span> <span class="token-v">err</span>;
+    }
+  }
+
+  <span class="token-k">private</span> <span class="token-f">onSuccess</span>(): <span class="token-t">void</span> {
+    <span class="token-k">if</span> (<span class="token-k">this</span>.<span class="token-v">state</span> === <span class="token-s">"HALF_OPEN"</span>) {
+      <span class="token-k">this</span>.<span class="token-v">successes</span>++;
+      <span class="token-k">if</span> (<span class="token-k">this</span>.<span class="token-v">successes</span> >= (<span class="token-k">this</span>.<span class="token-v">opts</span>.<span class="token-v">successThreshold</span> ?? <span class="token-n">1</span>)) {
+        <span class="token-k">this</span>.<span class="token-v">failures</span> = <span class="token-n">0</span>;
+        <span class="token-k">this</span>.<span class="token-f">transition</span>(<span class="token-s">"CLOSED"</span>);
+      }
+    } <span class="token-k">else</span> {
+      <span class="token-k">this</span>.<span class="token-v">failures</span> = <span class="token-t">Math</span>.<span class="token-f">max</span>(<span class="token-n">0</span>, <span class="token-k">this</span>.<span class="token-v">failures</span> - <span class="token-n">1</span>);
+    }
+  }
+
+  <span class="token-k">private</span> <span class="token-f">onFailure</span>(): <span class="token-t">void</span> {
+    <span class="token-k">this</span>.<span class="token-v">failures</span>++;
+    <span class="token-k">this</span>.<span class="token-v">lastFailureTime</span> = <span class="token-t">Date</span>.<span class="token-f">now</span>();
+    <span class="token-k">if</span> (<span class="token-k">this</span>.<span class="token-v">state</span> === <span class="token-s">"HALF_OPEN"</span> || <span class="token-k">this</span>.<span class="token-v">failures</span> >= <span class="token-k">this</span>.<span class="token-v">opts</span>.<span class="token-v">failureThreshold</span>) {
+      <span class="token-k">this</span>.<span class="token-f">transition</span>(<span class="token-s">"OPEN"</span>);
+    }
+  }
+}</pre>
+  </div>
+
+  <p>Notice how the breaker <strong>wraps</strong> the adapter call rather than modifying it. This is the decorator pattern in practice — the same contract, with enhanced behavior.</p>
+</section>
+
+<!-- FAILOVER & FALLBACK -->
+<section id="failover">
+  <h2><span class="num">05</span> Failover &amp; Fallback</h2>
+  <p>When one provider fails, another can take its place. The <strong>primary/secondary</strong> pattern lets you route to a backup model (e.g., GPT-4 → Claude → local Llama) without changing upstream code.</p>
+
+  <h3>Primary/Secondary Provider Pattern</h3>
+
+  <div class="code-block">
+    <div class="code-header"><span class="lang">TypeScript</span> <span>FailoverAdapter.ts</span></div>
+    <pre><span class="token-k">import</span> <span class="token-t">type</span> { <span class="token-t">ReplyEvent</span> } <span class="token-k">from</span> <span class="token-s">"@allternit/replies-contract"</span>;
+
+<span class="token-t">interface</span> <span class="token-f">ProviderAdapter</span> {
+  <span class="token-v">name</span>: <span class="token-t">string</span>;
+  <span class="token-f">send</span>(<span class="token-v">input</span>: <span class="token-t">string</span>): <span class="token-t">AsyncIterable</span>&lt;<span class="token-t">ReplyEvent</span>&gt;;
+  <span class="token-f">healthCheck</span>(): <span class="token-t">Promise</span>&lt;<span class="token-t">boolean</span>&gt;;
+}
+
+<span class="token-t">export</span> <span class="token-t">class</span> <span class="token-f">FailoverAdapter</span> {
+  <span class="token-f">constructor</span>(
+    <span class="token-k">private</span> <span class="token-v">providers</span>: <span class="token-t">ProviderAdapter</span>[],
+    <span class="token-k">private</span> <span class="token-v">fallback</span>?: (<span class="token-v">input</span>: <span class="token-t">string</span>) => <span class="token-t">AsyncIterable</span>&lt;<span class="token-t">ReplyEvent</span>&gt;
+  ) {
+    <span class="token-k">if</span> (<span class="token-v">providers</span>.<span class="token-v">length</span> === <span class="token-n">0</span>) <span class="token-k">throw</span> <span class="token-k">new</span> <span class="token-t">Error</span>(<span class="token-s">"At least one provider required"</span>);
+  }
+
+  <span class="token-k">async</span> *<span class="token-f">send</span>(<span class="token-v">input</span>: <span class="token-t">string</span>): <span class="token-t">AsyncGenerator</span>&lt;<span class="token-t">ReplyEvent</span>&gt; {
+    <span class="token-k">for</span> (<span class="token-k">const</span> <span class="token-v">provider</span> <span class="token-k">of</span> <span class="token-k">this</span>.<span class="token-v">providers</span>) {
+      <span class="token-k">try</span> {
+        <span class="token-k">const</span> <span class="token-v">healthy</span> = <span class="token-k">await</span> <span class="token-v">provider</span>.<span class="token-f">healthCheck</span>();
+        <span class="token-k">if</span> (!<span class="token-v">healthy</span>) <span class="token-k">continue</span>;
+
+        <span class="token-k">yield</span>* <span class="token-v">provider</span>.<span class="token-f">send</span>(<span class="token-v">input</span>);
+        <span class="token-k">return</span>;
+      } <span class="token-k">catch</span> (<span class="token-v">err</span>) {
+        <span class="token-t">console</span>.<span class="token-f">warn</span>(<span class="token-s">`Provider </span>${<span class="token-v">provider</span>.<span class="token-v">name</span>}<span class="token-s"> failed:`</span>, <span class="token-v">err</span>);
+      }
+    }
+
+    <span class="token-k">if</span> (<span class="token-k">this</span>.<span class="token-v">fallback</span>) {
+      <span class="token-k">yield</span>* <span class="token-k">this</span>.<span class="token-f">fallback</span>(<span class="token-v">input</span>);
+    } <span class="token-k">else</span> {
+      <span class="token-k">throw</span> <span class="token-k">new</span> <span class="token-t">Error</span>(<span class="token-s">"All providers exhausted and no fallback configured"</span>);
+    }
+  }
+}</pre>
+  </div>
+
+  <h3>Graceful Degradation</h3>
+  <p>Not every failure needs a model switch. Sometimes you can degrade the <em>quality</em> of the response:</p>
+
+  <ul>
+    <li><strong>Streaming → Batch:</strong> If the stream aborts, fall back to a non-streaming completion call.</li>
+    <li><strong>Tools → No tools:</strong> If tool-use fails, retry with the same prompt but no tool definitions.</li>
+    <li><strong>Rich → Plain:</strong> If citations/sources fail, return plain text without attribution.</li>
+  </ul>
+
+  <h3>Health Checks</h3>
+  <p>A health check should be <strong>cheap and representative</strong>. For AI providers, a good pattern is a lightweight <code class="inline">/models</code> or <code class="inline">/health</code> endpoint call. Avoid using a full completion as a health probe — it burns tokens and rate limit budget.</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="lang">TypeScript</span> <span>healthCheck.ts</span></div>
+    <pre><span class="token-k">async</span> <span class="token-k">function</span> <span class="token-f">providerHealthCheck</span>(<span class="token-v">baseUrl</span>: <span class="token-t">string</span>, <span class="token-v">timeoutMs</span> = <span class="token-n">3000</span>): <span class="token-t">Promise</span>&lt;<span class="token-t">boolean</span>&gt; {
+  <span class="token-k">const</span> <span class="token-v">controller</span> = <span class="token-k">new</span> <span class="token-t">AbortController</span>();
+  <span class="token-k">const</span> <span class="token-v">timer</span> = <span class="token-f">setTimeout</span>(() => <span class="token-v">controller</span>.<span class="token-f">abort</span>(), <span class="token-v">timeoutMs</span>);
+  <span class="token-k">try</span> {
+    <span class="token-k">const</span> <span class="token-v">res</span> = <span class="token-k">await</span> <span class="token-f">fetch</span>(<span class="token-s">`</span>${<span class="token-v">baseUrl</span>}<span class="token-s">/health`</span>, { <span class="token-v">signal</span>: <span class="token-v">controller</span>.<span class="token-v">signal</span> });
+    <span class="token-k">return</span> <span class="token-v">res</span>.<span class="token-v">ok</span>;
+  } <span class="token-k">catch</span> {
+    <span class="token-k">return</span> <span class="token-t">false</span>;
+  } <span class="token-k">finally</span> {
+    <span class="token-f">clearTimeout</span>(<span class="token-v">timer</span>);
+  }
+}</pre>
+  </div>
+</section>
+
+<!-- OBSERVABILITY -->
+<section id="observability">
+  <h2><span class="num">06</span> Observability</h2>
+  <p>You cannot improve what you cannot measure. Resilience patterns add complexity; observability tells you whether they are working.</p>
+
+  <h3>Adapter Lifecycle Hooks</h3>
+  <p>Hook into the adapter at key points to emit structured telemetry:</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="lang">TypeScript</span> <span>ResilientAdapter.ts</span></div>
+    <pre><span class="token-t">interface</span> <span class="token-f">AdapterMetrics</span> {
+  <span class="token-v">requestCount</span>: <span class="token-t">number</span>;
+  <span class="token-v">errorCount</span>: <span class="token-t">number</span>;
+  <span class="token-v">retryCount</span>: <span class="token-t">number</span>;
+  <span class="token-v">circuitState</span>: <span class="token-t">CircuitState</span>;
+  <span class="token-v">latencyMs</span>: <span class="token-t">number</span>[];
+  <span class="token-v">tokensConsumed</span>: <span class="token-t">number</span>;
+}
+
+<span class="token-t">export</span> <span class="token-t">class</span> <span class="token-f">ResilientAiSdkAdapter</span> <span class="token-k">extends</span> <span class="token-t">AiSdkReplyAdapter</span> {
+  <span class="token-k">private</span> <span class="token-v">metrics</span>: <span class="token-t">AdapterMetrics</span> = {
+    <span class="token-v">requestCount</span>: <span class="token-n">0</span>, <span class="token-v">errorCount</span>: <span class="token-n">0</span>, <span class="token-v">retryCount</span>: <span class="token-n">0</span>,
+    <span class="token-v">circuitState</span>: <span class="token-s">"CLOSED"</span>, <span class="token-v">latencyMs</span>: [], <span class="token-v">tokensConsumed</span>: <span class="token-n">0</span>
+  };
+
+  <span class="token-k">private</span> <span class="token-f">record</span>(<span class="token-v">event</span>: <span class="token-t">string</span>, <span class="token-v">meta</span>?: <span class="token-t">Record</span>&lt;<span class="token-t">string</span>, <span class="token-t">unknown</span>&gt;) {
+    <span class="token-t">console</span>.<span class="token-f">log</span>(<span class="token-s">`[adapter] </span>${<span class="token-v">event</span>}<span class="token-s">`</span>, {
+      <span class="token-v">runId</span>: <span class="token-k">this</span>.<span class="token-v">runId</span>,
+      <span class="token-v">ts</span>: <span class="token-t">Date</span>.<span class="token-f">now</span>(),
+      ...<span class="token-v">meta</span>
+    });
+  }
+
+  <span class="token-k">async</span> <span class="token-f">consume</span>(<span class="token-v">stream</span>: <span class="token-t">AsyncIterable</span>&lt;<span class="token-t">AiSdkStreamPart</span>&gt;): <span class="token-t">Promise</span>&lt;<span class="token-t">void</span>&gt; {
+    <span class="token-k">const</span> <span class="token-v">start</span> = <span class="token-t">Date</span>.<span class="token-f">now</span>();
+    <span class="token-k">this</span>.<span class="token-v">metrics</span>.<span class="token-v">requestCount</span>++;
+    <span class="token-k">this</span>.<span class="token-f">record</span>(<span class="token-s">"consume.start"</span>);
+
+    <span class="token-k">try</span> {
+      <span class="token-k">await</span> <span class="token-k">super</span>.<span class="token-f">consume</span>(<span class="token-v">stream</span>);
+      <span class="token-k">this</span>.<span class="token-v">metrics</span>.<span class="token-v">latencyMs</span>.<span class="token-f">push</span>(<span class="token-t">Date</span>.<span class="token-f">now</span>() - <span class="token-v">start</span>);
+      <span class="token-k">this</span>.<span class="token-f">record</span>(<span class="token-s">"consume.success"</span>, { <span class="token-v">latencyMs</span>: <span class="token-t">Date</span>.<span class="token-f">now</span>() - <span class="token-v">start</span> });
+    } <span class="token-k">catch</span> (<span class="token-v">err</span>) {
+      <span class="token-k">this</span>.<span class="token-v">metrics</span>.<span class="token-v">errorCount</span>++;
+      <span class="token-k">this</span>.<span class="token-f">record</span>(<span class="token-s">"consume.error"</span>, { <span class="token-v">error</span>: (<span class="token-v">err</span> <span class="token-k">as</span> <span class="token-t">Error</span>).<span class="token-v">message</span> });
+      <span class="token-k">throw</span> <span class="token-v">err</span>;
+    }
+  }
+
+  <span class="token-f">getMetrics</span>(): <span class="token-t">AdapterMetrics</span> {
+    <span class="token-k">return</span> { ...<span class="token-k">this</span>.<span class="token-v">metrics</span> };
+  }
+}</pre>
+  </div>
+
+  <h3>What to Measure</h3>
+
+  <div class="metrics-grid">
+    <div class="metric-card">
+      <div class="metric-value" id="m1">req/s</div>
+      <div class="metric-label">Throughput</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" id="m2">p99</div>
+      <div class="metric-label">Latency</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" id="m3">%</div>
+      <div class="metric-label">Error Rate</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" id="m4">state</div>
+      <div class="metric-label">Circuit</div>
+    </div>
+  </div>
+
+  <ul>
+    <li><strong>Throughput (requests/sec):</strong> Track using a rolling window counter. Sudden drops often precede error spikes.</li>
+    <li><strong>Latency percentiles (p50, p95, p99):</strong> Average latency hides tail behavior. p99 tells you when rate limiting or retries are hurting real users.</li>
+    <li><strong>Error rate by category:</strong> 429s suggest rate-limit misconfiguration; 503s suggest provider degradation; timeouts suggest network issues.</li>
+    <li><strong>Circuit state transitions:</strong> Each OPEN transition is an alert. Frequent oscillation between OPEN and HALF-OPEN means your threshold or timeout is mis-tuned.</li>
+  </ul>
+
+  <div class="alert alert-info">
+    <strong>Tip:</strong> Export metrics in a format your orchestrator can scrape. The <code class="inline">ServiceStatus</code> contract from <code class="inline">layer-boundary-contracts.ts</code> includes a <code class="inline">health</code> field (<code class="inline">healthy | unhealthy | degraded</code>). Use adapter metrics to drive that status.
+  </div>
+</section>
+
+<!-- QUIZZES -->
+<section id="quizzes">
+  <h2><span class="num">07</span> Knowledge Checks</h2>
+
+  <div class="quiz" id="quiz1">
+    <div class="quiz-question">Quiz 1: When should the circuit breaker transition from Open to Half-Open?</div>
+    <div class="quiz-options">
+      <div class="quiz-option" data-correct="false" onclick="handleQuiz(this,1)">Immediately after the first failure that opened it</div>
+      <div class="quiz-option" data-correct="true" onclick="handleQuiz(this,1)">After the configured recovery timeout has elapsed</div>
+      <div class="quiz-option" data-correct="false" onclick="handleQuiz(this,1)">When the upstream service sends a health-check ping</div>
+      <div class="quiz-option" data-correct="false" onclick="handleQuiz(this,1)">Only after manual operator intervention</div>
+    </div>
+    <div class="quiz-feedback" id="feedback1"></div>
+  </div>
+
+  <div class="quiz" id="quiz2">
+    <div class="quiz-question">Quiz 2: Why add jitter to exponential backoff?</div>
+    <div class="quiz-options">
+      <div class="quiz-option" data-correct="false" onclick="handleQuiz(this,2)">To make the delay longer on average</div>
+      <div class="quiz-option" data-correct="false" onclick="handleQuiz(this,2)">To satisfy provider API requirements</div>
+      <div class="quiz-option" data-correct="true" onclick="handleQuiz(this,2)">To desynchronize retries and prevent thundering herds</div>
+      <div class="quiz-option" data-correct="false" onclick="handleQuiz(this,2)">To reduce the total number of retry attempts</div>
+    </div>
+    <div class="quiz-feedback" id="feedback2"></div>
+  </div>
+
+  <div class="quiz" id="quiz3">
+    <div class="quiz-question">Quiz 3: What's the difference between rate limiting and concurrency limiting?</div>
+    <div class="quiz-options">
+      <div class="quiz-option" data-correct="false" onclick="handleQuiz(this,3)">There is no difference; they are synonyms</div>
+      <div class="quiz-option" data-correct="true" onclick="handleQuiz(this,3)">Rate limiting caps requests over time; concurrency limiting caps simultaneous requests</div>
+      <div class="quiz-option" data-correct="false" onclick="handleQuiz(this,3)">Rate limiting is client-side; concurrency limiting is server-side</div>
+      <div class="quiz-option" data-correct="false" onclick="handleQuiz(this,3)">Concurrency limiting only applies to HTTP/2 streams</div>
+    </div>
+    <div class="quiz-feedback" id="feedback3"></div>
+  </div>
+</section>
+
+<!-- CAPSTONE -->
+<section id="capstone">
+  <h2><span class="num">08</span> Capstone Project</h2>
+  <div class="capstone-section">
+    <h3>Build a Resilient AI Provider Adapter</h3>
+    <p>Combine everything in this module into a single production-ready wrapper around the <code class="inline">AiSdkReplyAdapter</code>.</p>
+
+    <h4>Requirements</h4>
+    <ul class="checklist">
+      <li>Wrap <code class="inline">AiSdkReplyAdapter.consume()</code> with a <strong>TokenBucket</strong> rate limiter</li>
+      <li>Wrap the same method with a <strong>CircuitBreaker</strong> (failureThreshold: 5, recoveryTimeoutMs: 10000)</li>
+      <li>Add <strong>exponential backoff with decorrelated jitter</strong> for retryable errors (429, 503, timeout)</li>
+      <li>Implement a <strong>health check</strong> that calls a simulated <code class="inline">/health</code> endpoint</li>
+      <li>Emit structured <strong>metrics</strong> for every adapter call</li>
+    </ul>
+
+    <h4>Simulated Test Scenarios</h4>
+    <p>Write tests that inject these failure modes and assert correct behavior:</p>
+
+    <div class="code-block">
+      <div class="code-header"><span class="lang">TypeScript</span> <span>resilient-adapter.spec.ts</span></div>
+      <pre><span class="token-k">describe</span>(<span class="token-s">"ResilientAiSdkAdapter"</span>, () => {
+  <span class="token-k">it</span>(<span class="token-s">"handles 429 rate limit with backoff retry"</span>, <span class="token-k">async</span> () => {
+    <span class="token-k">const</span> <span class="token-v">mock</span> = <span class="token-f">createFailingStream</span>({ <span class="token-v">failures</span>: <span class="token-n">2</span>, <span class="token-v">errorCode</span>: <span class="token-n">429</span> });
+    <span class="token-k">const</span> <span class="token-v">adapter</span> = <span class="token-k">new</span> <span class="token-f">ResilientAiSdkAdapter</span>(<span class="token-v">baseOptions</span>);
+    <span class="token-k">await</span> <span class="token-v">adapter</span>.<span class="token-f">consume</span>(<span class="token-v">mock</span>);
+    <span class="token-f">expect</span>(<span class="token-v">adapter</span>.<span class="token-f">getMetrics</span>().<span class="token-v">retryCount</span>).<span class="token-f">toBe</span>(<span class="token-n">2</span>);
+  });
+
+  <span class="token-k">it</span>(<span class="token-s">"opens circuit after 5 consecutive 503s"</span>, <span class="token-k">async</span> () => {
+    <span class="token-k">const</span> <span class="token-v">mock</span> = <span class="token-f">createFailingStream</span>({ <span class="token-v">failures</span>: <span class="token-n">10</span>, <span class="token-v">errorCode</span>: <span class="token-n">503</span> });
+    <span class="token-k">const</span> <span class="token-v">adapter</span> = <span class="token-k">new</span> <span class="token-f">ResilientAiSdkAdapter</span>(<span class="token-v">baseOptions</span>);
+    <span class="token-k">await</span> <span class="token-f">expect</span>(<span class="token-v">adapter</span>.<span class="token-f">consume</span>(<span class="token-v">mock</span>)).<span class="token-f">rejects</span>.<span class="token-f">toThrow</span>(<span class="token-s">/OPEN/</span>);
+    <span class="token-f">expect</span>(<span class="token-v">adapter</span>.<span class="token-f">getCircuitState</span>()).<span class="token-f">toBe</span>(<span class="token-s">"OPEN"</span>);
+  });
+
+  <span class="token-k">it</span>(<span class="token-s">"fast-fails when circuit is OPEN"</span>, <span class="token-k">async</span> () => {
+    <span class="token-k">const</span> <span class="token-v">adapter</span> = <span class="token-k">new</span> <span class="token-f">ResilientAiSdkAdapter</span>(<span class="token-v">baseOptions</span>);
+    <span class="token-v">adapter</span>.<span class="token-f">forceOpen</span>();
+    <span class="token-k">const</span> <span class="token-v">start</span> = <span class="token-t">Date</span>.<span class="token-f">now</span>();
+    <span class="token-k">await</span> <span class="token-f">expect</span>(<span class="token-v">adapter</span>.<span class="token-f">consume</span>(<span class="token-f">createGoodStream</span>())).<span class="token-f">rejects</span>.<span class="token-f">toThrow</span>();
+    <span class="token-f">expect</span>(<span class="token-t">Date</span>.<span class="token-f">now</span>() - <span class="token-v">start</span>).<span class="token-f">toBeLessThan</span>(<span class="token-n">50</span>);
+  });
+
+  <span class="token-k">it</span>(<span class="token-s">"transitions HALF_OPEN -> CLOSED after probe success"</span>, <span class="token-k">async</span> () => {
+    <span class="token-k">const</span> <span class="token-v">adapter</span> = <span class="token-k">new</span> <span class="token-f">ResilientAiSdkAdapter</span>(<span class="token-v">baseOptions</span>);
+    <span class="token-v">adapter</span>.<span class="token-f">forceOpen</span>();
+    <span class="token-v">adapter</span>.<span class="token-f">fastForwardRecovery</span>();
+    <span class="token-k">await</span> <span class="token-v">adapter</span>.<span class="token-f">consume</span>(<span class="token-f">createGoodStream</span>());
+    <span class="token-f">expect</span>(<span class="token-v">adapter</span>.<span class="token-f">getCircuitState</span>()).<span class="token-f">toBe</span>(<span class="token-s">"CLOSED"</span>);
+  });
+});</pre>
+    </div>
+
+    <h4>Expected Metrics Output</h4>
+    <p>Your adapter should expose a <code class="inline">getMetrics()</code> method returning:</p>
+
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-value" style="color:var(--success);">142</div>
+        <div class="metric-label">Requests/min</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value" style="color:var(--error);">2.1%</div>
+        <div class="metric-label">Error Rate</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value" style="color:var(--info);">HALF_OPEN</div>
+        <div class="metric-label">Circuit State</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value" style="color:var(--accent);">847ms</div>
+        <div class="metric-label">p99 Latency</div>
+      </div>
+    </div>
+
+    <div class="alert alert-success">
+      <strong>Submission checklist:</strong> Ensure your implementation does not leak memory (clean up timers), handles AbortSignal correctly, and preserves the <code class="inline">idempotencyKey</code> across retries per the Layer 3 adapter contract.
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>A://Labs ADV Curriculum &mdash; Module 2: Resilience Patterns</p>
+  <p style="margin-top:0.5rem;font-size:0.75rem;color:var(--text-muted);">ALABS-ADV-ADAPTERS &middot; Tier ADV &middot; Generated for Allternit Provider Adapters</p>
+</footer>
+
+<script>
+// ===================== PROGRESS BAR =====================
+(function() {
+  const bar = document.getElementById('progressBar');
+  window.addEventListener('scroll', () => {
+    const scrolled = window.scrollY;
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    bar.style.width = (max > 0 ? (scrolled / max) * 100 : 0) + '%';
+  });
+})();
+
+// ===================== SCROLL REVEAL =====================
+(function() {
+  const sections = document.querySelectorAll('section:not(.hero)');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.08 });
+  sections.forEach(s => observer.observe(s));
+})();
+
+// ===================== NAV ACTIVE STATE =====================
+(function() {
+  const links = document.querySelectorAll('.nav-links a');
+  const sections = document.querySelectorAll('section[id]');
+  window.addEventListener('scroll', () => {
+    let current = '';
+    sections.forEach(s => {
+      const rect = s.getBoundingClientRect();
+      if (rect.top <= 100) current = s.id;
+    });
+    links.forEach(a => {
+      a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+    });
+  });
+})();
+
+// ===================== QUIZ HANDLER =====================
+function handleQuiz(el, quizNum) {
+  const quiz = document.getElementById('quiz' + quizNum);
+  const options = quiz.querySelectorAll('.quiz-option');
+  const feedback = document.getElementById('feedback' + quizNum);
+  options.forEach(o => o.classList.add('disabled'));
+
+  const isCorrect = el.dataset.correct === 'true';
+  if (isCorrect) {
+    el.classList.add('correct');
+    feedback.textContent = 'Correct! ' + getCorrectExplanation(quizNum);
+    feedback.className = 'quiz-feedback show alert-success';
+  } else {
+    el.classList.add('wrong');
+    options.forEach(o => { if (o.dataset.correct === 'true') o.classList.add('correct'); });
+    feedback.textContent = 'Not quite. ' + getCorrectExplanation(quizNum);
+    feedback.className = 'quiz-feedback show alert-error';
+  }
+}
+
+function getCorrectExplanation(n) {
+  const map = {
+    1: 'The circuit breaker transitions to HALF-OPEN only after the recovery timeout has elapsed, allowing a single probe request to test if the service has recovered.',
+    2: 'Jitter adds randomness to retry delays so that multiple clients do not retry simultaneously, preventing synchronized retry storms (thundering herds).',
+    3: 'Rate limiting restricts how many requests can be made in a time period. Concurrency limiting restricts how many requests can be in flight at the same time.'
+  };
+  return map[n];
+}
+
+// ===================== CIRCUIT BREAKER CANVAS SIMULATION =====================
+const cbSim = (function() {
+  const canvas = document.getElementById('cbCanvas');
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+
+  const W = rect.width, H = rect.height;
+
+  // State machine layout
+  const states = {
+    closed:   { x: W * 0.25, y: H * 0.55, r: 45, label: 'CLOSED', color: '#22c55e' },
+    open:     { x: W * 0.75, y: H * 0.3,  r: 45, label: 'OPEN',   color: '#ef4444' },
+    halfOpen: { x: W * 0.75, y: H * 0.75, r: 40, label: 'HALF_OPEN', color: '#3b82f6' }
+  };
+
+  let currentState = 'closed';
+  let failures = 0;
+  let successes = 0;
+  let auto = true;
+  let lastTime = Date.now();
+  let stateTimer = 0;
+  let openTimer = 0;
+  const failureThreshold = 5;
+  const recoveryTimeout = 6000; // ms for sim speed
+  const successThreshold = 1;
+
+  // Particles
+  const particles = [];
+  let spawnTimer = 0;
+
+  function setState(s) {
+    currentState = s;
+    stateTimer = 0;
+    if (s === 'open') { openTimer = 0; failures = failureThreshold; }
+    if (s === 'closed') { failures = 0; successes = 0; }
+    if (s === 'halfOpen') { successes = 0; }
+    updateLabels();
+  }
+
+  function toggleAuto() {
+    auto = !auto;
+    document.getElementById('autoLabel').textContent = auto ? 'On' : 'Off';
+  }
+
+  function updateLabels() {
+    const sl = document.getElementById('stateLabel');
+    sl.textContent = currentState.toUpperCase();
+    sl.style.color = states[currentState].color;
+    document.getElementById('failLabel').textContent = failures;
+    document.getElementById('succLabel').textContent = successes;
+  }
+
+  function spawnParticle() {
+    const id = Math.random().toString(36).slice(2, 7);
+    let type = 'normal';
+    let result = Math.random() > 0.3 ? 'success' : 'failure';
+
+    if (currentState === 'open') {
+      type = 'fastfail';
+      result = 'failure';
+    } else if (currentState === 'halfOpen') {
+      type = 'probe';
+    }
+
+    particles.push({
+      id, x: 20, y: H * 0.55 + (Math.random() - 0.5) * 20,
+      vx: 2.5 + Math.random(), vy: 0,
+      type, result,
+      alpha: 1, processed: false,
+      trail: []
+    });
+  }
+
+  function update(dt) {
+    if (auto) {
+      stateTimer += dt;
+      if (currentState === 'open') {
+        openTimer += dt;
+        if (openTimer >= recoveryTimeout) {
+          setState('halfOpen');
+        }
+      }
+    }
+
+    spawnTimer += dt;
+    if (spawnTimer > 350) {
+      spawnTimer = 0;
+      spawnParticle();
+    }
+
+    const target = states[currentState];
+    particles.forEach(p => {
+      if (!p.processed) {
+        const dx = target.x - p.x;
+        const dy = target.y - p.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < target.r + 10) {
+          p.processed = true;
+          if (p.type === 'fastfail') {
+            p.vx = -1; p.vy = -2;
+          } else if (p.result === 'failure') {
+            failures++;
+            p.vx = (target === states.closed ? 2.5 : 0);
+            p.vy = -2.5;
+            if (currentState === 'halfOpen') setState('open');
+            else if (currentState === 'closed' && failures >= failureThreshold) setState('open');
+          } else {
+            successes++;
+            p.vx = 0.5; p.vy = -2;
+            if (currentState === 'halfOpen' && successes >= successThreshold) setState('closed');
+            else if (currentState === 'closed') failures = Math.max(0, failures - 1);
+          }
+        } else {
+          p.vx += (dx / dist) * 0.15;
+          p.vy += (dy / dist) * 0.15;
+          const speed = Math.sqrt(p.vx*p.vx + p.vy*p.vy);
+          if (speed > 3.5) { p.vx = (p.vx/speed)*3.5; p.vy = (p.vy/speed)*3.5; }
+        }
+      } else {
+        p.alpha -= 0.015;
+        p.vy += 0.05;
+      }
+      p.x += p.vx;
+      p.y += p.vy;
+      p.trail.push({x:p.x,y:p.y});
+      if (p.trail.length > 12) p.trail.shift();
+    });
+
+    for (let i = particles.length - 1; i >= 0; i--) {
+      if (particles[i].alpha <= 0 || particles[i].x < -50 || particles[i].x > W + 50 || particles[i].y > H + 50) {
+        particles.splice(i, 1);
+      }
+    }
+
+    updateLabels();
+  }
+
+  function drawArrow(x1, y1, x2, y2, color, label) {
+    const dx = x2 - x1, dy = y2 - y1;
+    const len = Math.sqrt(dx*dx + dy*dy);
+    const nx = dx/len, ny = dy/len;
+    const px = -ny, py = nx;
+    const startR = states.closed.r;
+    const endR = currentState === 'open' ? states.open.r : states.halfOpen.r;
+    const sx = x1 + nx * startR, sy = y1 + ny * startR;
+    const ex = x2 - nx * endR, ey = y2 - ny * endR;
+
+    ctx.beginPath();
+    ctx.moveTo(sx + px*4, sy + py*4);
+    ctx.lineTo(ex + px*4, ey + py*4);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Arrowhead
+    ctx.beginPath();
+    ctx.moveTo(ex + px*4, ey + py*4);
+    ctx.lineTo(ex + px*4 - nx*10 - px*5, ey + py*4 - ny*10 - py*5);
+    ctx.lineTo(ex + px*4 - nx*10 + px*5, ey + py*4 - ny*10 + py*5);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+
+    // Label
+    if (label) {
+      const mx = (sx + ex) / 2 + px * 14;
+      const my = (sy + ey) / 2 + py * 14;
+      ctx.fillStyle = color;
+      ctx.font = '600 11px JetBrains Mono';
+      ctx.textAlign = 'center';
+      ctx.fillText(label, mx, my);
+    }
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    // Draw connections
+    drawArrow(states.closed.x, states.closed.y, states.open.x, states.open.y,
+      failures >= failureThreshold ? '#ef4444' : '#3f3f46', 'failures >= threshold');
+    drawArrow(states.open.x, states.open.y, states.halfOpen.x, states.halfOpen.y,
+      '#3b82f6', 'timeout');
+    drawArrow(states.halfOpen.x, states.halfOpen.y, states.closed.x, states.closed.y,
+      '#22c55e', 'probe success');
+    drawArrow(states.halfOpen.x, states.halfOpen.y, states.open.x, states.open.y,
+      '#ef4444', 'probe fail');
+
+    // Draw states
+    Object.entries(states).forEach(([key, s]) => {
+      const active = currentState === key;
+      const glow = active ? 20 : 0;
+
+      if (active) {
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r + glow, 0, Math.PI * 2);
+        ctx.fillStyle = s.color + '18';
+        ctx.fill();
+      }
+
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = '#0d0d0f';
+      ctx.fill();
+      ctx.lineWidth = active ? 3 : 1.5;
+      ctx.strokeStyle = s.color;
+      ctx.stroke();
+
+      ctx.fillStyle = s.color;
+      ctx.font = active ? '700 13px JetBrains Mono' : '600 12px JetBrains Mono';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(s.label, s.x, s.y);
+    });
+
+    // Draw particles
+    particles.forEach(p => {
+      const color = p.type === 'fastfail' ? '#f59e0b' :
+                    p.type === 'probe' ? '#3b82f6' :
+                    p.result === 'success' ? '#22c55e' : '#ef4444';
+
+      // Trail
+      p.trail.forEach((t, i) => {
+        const a = (i / p.trail.length) * p.alpha * 0.4;
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, 2 + i*0.3, 0, Math.PI*2);
+        ctx.fillStyle = color + Math.floor(a*255).toString(16).padStart(2,'0');
+        ctx.fill();
+      });
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 4, 0, Math.PI*2);
+      ctx.fillStyle = color;
+      ctx.globalAlpha = p.alpha;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    });
+  }
+
+  function loop() {
+    const now = Date.now();
+    const dt = now - lastTime;
+    lastTime = now;
+    update(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  loop();
+
+  return { setState, toggleAuto };
+})();
+</script>
+
+</body>
+</html>

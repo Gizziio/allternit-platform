@@ -1,0 +1,74 @@
+{
+  "id": "remotioncard-plugin",
+  "name": "RemotionCardPlugin",
+  "version": "1.0.0",
+  "runtime": "allternit-plugin-v1",
+  "description": "Generate videos from prompts using Remotion React components",
+  "category": "create",
+  "requires": {
+    "llm": {
+      "capabilities": [
+        "reasoning",
+        "code_execution"
+      ]
+    },
+    "ui": {
+      "renderers": [
+        "code",
+        "image"
+      ]
+    }
+  },
+  "provides": {
+    "functions": [
+      {
+        "name": "execute",
+        "description": "Generate Remotion video from prompt",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "prompt": {
+              "type": "string"
+            },
+            "durationInFrames": {
+              "type": "number",
+              "default": 150
+            },
+            "width": {
+              "type": "number",
+              "default": 1920
+            },
+            "height": {
+              "type": "number",
+              "default": 1080
+            },
+            "fps": {
+              "type": "number",
+              "default": 30
+            },
+            "action": {
+              "type": "string",
+              "enum": [
+                "generate",
+                "render",
+                "preview"
+              ],
+              "default": "generate"
+            }
+          },
+          "required": [
+            "prompt"
+          ]
+        },
+        "returns": {
+          "type": "object"
+        }
+      }
+    ]
+  },
+  "adapters": {
+    "mcp": "./adapters/mcp.js",
+    "http": "./adapters/http.js",
+    "cli": "./adapters/cli.js"
+  }
+}

@@ -1,0 +1,1589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Module 1: Provider Adapters & Unified APIs — A://Labs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0b0c;
+      --bg-elevated: #131314;
+      --bg-surface: #1a1a1c;
+      --bg-surface-hover: #222224;
+      --border: #2a2a2c;
+      --border-subtle: #1e1e20;
+      --text-primary: #f0f0f2;
+      --text-secondary: #a0a0a8;
+      --text-muted: #6b6b74;
+      --accent: #f59e0b;
+      --accent-dim: rgba(245, 158, 11, 0.15);
+      --accent-glow: rgba(245, 158, 11, 0.4);
+      --green: #22c55e;
+      --green-dim: rgba(34, 197, 94, 0.15);
+      --red: #ef4444;
+      --red-dim: rgba(239, 68, 68, 0.15);
+      --blue: #3b82f6;
+      --blue-dim: rgba(59, 130, 246, 0.15);
+      --purple: #a855f7;
+      --purple-dim: rgba(168, 85, 247, 0.15);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --max-content: 860px;
+      --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--text-primary);
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #444; }
+
+    /* Progress Bar */
+    .progress-container {
+      position: fixed; top: 0; left: 0; right: 0; height: 3px;
+      background: var(--border-subtle); z-index: 1000;
+    }
+    .progress-bar {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, var(--accent), #fbbf24);
+      transition: width 0.15s linear;
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+
+    /* Nav */
+    .nav-toggle {
+      display: none; position: fixed; top: 16px; left: 16px; z-index: 900;
+      width: 40px; height: 40px; border-radius: var(--radius-sm);
+      background: var(--bg-surface); border: 1px solid var(--border);
+      color: var(--text-primary); cursor: pointer; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+    .sidebar {
+      position: fixed; top: 0; left: 0; width: 260px; height: 100vh;
+      background: var(--bg-elevated); border-right: 1px solid var(--border);
+      padding: 28px 20px; z-index: 800; overflow-y: auto;
+      transition: transform 0.3s ease;
+    }
+    .sidebar-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      z-index: 750; backdrop-filter: blur(2px);
+    }
+    .sidebar-brand {
+      font-weight: 800; font-size: 14px; letter-spacing: 0.08em;
+      color: var(--accent); text-transform: uppercase; margin-bottom: 6px;
+    }
+    .sidebar-title {
+      font-size: 12px; color: var(--text-muted); line-height: 1.5;
+      margin-bottom: 24px; padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-list { list-style: none; }
+    .nav-list li { margin-bottom: 4px; }
+    .nav-list a {
+      display: block; padding: 8px 12px; border-radius: var(--radius-sm);
+      color: var(--text-secondary); text-decoration: none; font-size: 13px;
+      font-weight: 500; transition: all 0.2s; border-left: 2px solid transparent;
+    }
+    .nav-list a:hover, .nav-list a.active {
+      color: var(--text-primary); background: var(--bg-surface);
+      border-left-color: var(--accent);
+    }
+    .nav-list a.active { font-weight: 600; }
+    .nav-section-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.12em; color: var(--text-muted);
+      margin: 16px 0 8px 12px;
+    }
+    .nav-progress-text {
+      margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border);
+      font-size: 12px; color: var(--text-muted); text-align: center;
+    }
+    .nav-progress-text span { color: var(--accent); font-weight: 700; }
+
+    /* Main */
+    .main {
+      margin-left: 260px; min-height: 100vh;
+    }
+    .content { max-width: var(--max-content); margin: 0 auto; padding: 60px 32px 120px; }
+
+    /* Hero */
+    .hero {
+      text-align: center; padding: 80px 0 60px; position: relative;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 16px; border-radius: 999px;
+      background: var(--accent-dim); border: 1px solid rgba(245,158,11,0.25);
+      color: var(--accent); font-size: 12px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 24px;
+    }
+    .hero h1 {
+      font-size: clamp(32px, 5vw, 52px); font-weight: 800; line-height: 1.1;
+      letter-spacing: -0.03em; margin-bottom: 20px;
+      background: linear-gradient(180deg, #fff 0%, #a0a0a8 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .hero p {
+      font-size: 18px; color: var(--text-secondary); max-width: 560px;
+      margin: 0 auto 32px; line-height: 1.7;
+    }
+    .hero-meta {
+      display: flex; justify-content: center; gap: 24px; flex-wrap: wrap;
+      font-size: 13px; color: var(--text-muted);
+    }
+    .hero-meta span { display: flex; align-items: center; gap: 6px; }
+
+    /* Section */
+    .section { margin-bottom: 80px; opacity: 0; transform: translateY(30px); transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1); }
+    .section.visible { opacity: 1; transform: translateY(0); }
+    .section h2 {
+      font-size: 28px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.02em;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .section h2 .num {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 36px; height: 36px; border-radius: 10px; font-size: 14px;
+      background: var(--accent-dim); color: var(--accent); font-weight: 800;
+      flex-shrink: 0;
+    }
+    .section h3 {
+      font-size: 20px; font-weight: 600; margin: 36px 0 14px; color: var(--text-primary);
+    }
+    .section h4 {
+      font-size: 15px; font-weight: 600; margin: 24px 0 10px; color: var(--text-primary);
+    }
+    .section p { color: var(--text-secondary); margin-bottom: 16px; font-size: 15px; }
+    .section ul, .section ol { margin: 0 0 16px 20px; color: var(--text-secondary); font-size: 15px; }
+    .section li { margin-bottom: 8px; }
+    .section li::marker { color: var(--accent); }
+
+    /* Callout */
+    .callout {
+      padding: 16px 20px; border-radius: var(--radius); margin: 20px 0;
+      border: 1px solid var(--border); background: var(--bg-elevated);
+      font-size: 14px; color: var(--text-secondary);
+    }
+    .callout-accent { border-color: rgba(245,158,11,0.3); background: var(--accent-dim); }
+    .callout-green { border-color: rgba(34,197,94,0.3); background: var(--green-dim); }
+    .callout-blue { border-color: rgba(59,130,246,0.3); background: var(--blue-dim); }
+    .callout strong { color: var(--text-primary); }
+
+    /* Code block */
+    .code-block {
+      background: var(--bg-elevated); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden; margin: 20px 0;
+      font-family: var(--font-mono); font-size: 13px; line-height: 1.7;
+    }
+    .code-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 16px; background: var(--bg-surface);
+      border-bottom: 1px solid var(--border); font-size: 12px;
+      color: var(--text-muted); font-family: var(--font-sans); font-weight: 500;
+    }
+    .code-header .lang { color: var(--accent); font-weight: 600; }
+    pre { padding: 16px 20px; overflow-x: auto; color: var(--text-primary); }
+    code { font-family: var(--font-mono); }
+    .token-keyword { color: #c678dd; }
+    .token-string { color: #98c379; }
+    .token-comment { color: #5c6370; font-style: italic; }
+    .token-function { color: #61afef; }
+    .token-type { color: #e5c07b; }
+    .token-number { color: #d19a66; }
+    .token-operator { color: #56b6c2; }
+    .token-property { color: #e06c75; }
+
+    /* Translation Block */
+    .translate-block {
+      border: 1px solid var(--border); border-radius: var(--radius);
+      overflow: hidden; margin: 20px 0;
+    }
+    .translate-tabs {
+      display: flex; background: var(--bg-surface); border-bottom: 1px solid var(--border);
+    }
+    .translate-tab {
+      padding: 10px 18px; font-size: 13px; font-weight: 600; cursor: pointer;
+      color: var(--text-muted); border-bottom: 2px solid transparent;
+      background: none; border-top: none; border-left: none; border-right: none;
+      font-family: var(--font-sans); transition: all 0.2s;
+    }
+    .translate-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .translate-tab:hover:not(.active) { color: var(--text-secondary); }
+    .translate-pane { display: none; padding: 20px; }
+    .translate-pane.active { display: block; }
+    .translate-pane.english { background: var(--bg-elevated); color: var(--text-secondary); font-size: 15px; line-height: 1.8; }
+    .translate-pane.english p:last-child { margin-bottom: 0; }
+    .translate-pane.english strong { color: var(--text-primary); }
+
+    /* Data Flow Viz */
+    .flow-viz {
+      background: var(--bg-elevated); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 32px; margin: 24px 0;
+      position: relative; overflow: hidden;
+    }
+    .flow-viz-title {
+      text-align: center; font-size: 13px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--text-muted); margin-bottom: 28px;
+    }
+    .flow-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; margin-bottom: 20px; position: relative;
+    }
+    .flow-node {
+      flex: 1; text-align: center; padding: 14px 10px;
+      border-radius: var(--radius-sm); border: 1px solid var(--border);
+      background: var(--bg-surface); font-size: 13px; font-weight: 600;
+      color: var(--text-primary); position: relative; z-index: 2;
+      transition: all 0.4s ease;
+    }
+    .flow-node.provider { border-color: var(--purple); background: var(--purple-dim); color: #c4a5f5; }
+    .flow-node.adapter { border-color: var(--accent); background: var(--accent-dim); color: #fbbf24; }
+    .flow-node.system { border-color: var(--green); background: var(--green-dim); color: #86efac; }
+    .flow-arrow {
+      width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+      color: var(--text-muted); font-size: 18px; position: relative; z-index: 2;
+    }
+    .flow-packet {
+      position: absolute; width: 14px; height: 14px; border-radius: 50%;
+      background: var(--accent); box-shadow: 0 0 12px var(--accent-glow);
+      z-index: 5; opacity: 0;
+    }
+    .flow-packet.p1 { left: 18%; }
+    .flow-packet.p2 { left: 52%; }
+    .flow-packet.p3 { left: 86%; }
+
+    @keyframes packetMove {
+      0% { opacity: 0; transform: translateX(-20px) scale(0.5); }
+      15% { opacity: 1; transform: translateX(0) scale(1); }
+      85% { opacity: 1; transform: translateX(0) scale(1); }
+      100% { opacity: 0; transform: translateX(20px) scale(0.5); }
+    }
+
+    .flow-viz.animate .flow-packet {
+      animation: packetMove 2.2s ease-in-out infinite;
+    }
+    .flow-viz.animate .flow-packet.p2 { animation-delay: 0.4s; }
+    .flow-viz.animate .flow-packet.p3 { animation-delay: 0.8s; }
+
+    .flow-viz.animate .flow-node {
+      animation: nodePulse 2.2s ease-in-out infinite;
+    }
+    .flow-viz.animate .flow-node.adapter { animation-delay: 0.3s; }
+    .flow-viz.animate .flow-node.system { animation-delay: 0.6s; }
+
+    @keyframes nodePulse {
+      0%, 100% { box-shadow: none; }
+      50% { box-shadow: 0 0 20px rgba(245,158,11,0.15); }
+    }
+
+    .flow-legend {
+      display: flex; justify-content: center; gap: 20px; margin-top: 20px;
+      flex-wrap: wrap; font-size: 12px; color: var(--text-muted);
+    }
+    .flow-legend span { display: flex; align-items: center; gap: 6px; }
+    .flow-legend .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+    /* Group Chat Animation */
+    .chat-stage {
+      background: var(--bg-elevated); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 24px; margin: 24px 0;
+      min-height: 340px; position: relative;
+    }
+    .chat-actors {
+      display: flex; justify-content: space-around; margin-bottom: 20px;
+      padding-bottom: 16px; border-bottom: 1px solid var(--border);
+    }
+    .chat-actor {
+      text-align: center; opacity: 0.4; transition: all 0.4s ease;
+    }
+    .chat-actor.active { opacity: 1; }
+    .chat-actor-avatar {
+      width: 48px; height: 48px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; margin: 0 auto 8px;
+      border: 2px solid var(--border); background: var(--bg-surface);
+      transition: all 0.4s ease;
+    }
+    .chat-actor.active .chat-actor-avatar {
+      border-color: var(--accent); box-shadow: 0 0 16px var(--accent-glow);
+    }
+    .chat-actor-name { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+    .chat-actor.active .chat-actor-name { color: var(--accent); }
+
+    .chat-messages { min-height: 200px; position: relative; }
+    .chat-msg {
+      display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px;
+      opacity: 0; transform: translateY(12px); transition: all 0.5s ease;
+    }
+    .chat-msg.show { opacity: 1; transform: translateY(0); }
+    .chat-msg-bubble {
+      padding: 12px 16px; border-radius: 14px; border: 1px solid var(--border);
+      background: var(--bg-surface); font-size: 13px; color: var(--text-secondary);
+      max-width: 420px; line-height: 1.6;
+    }
+    .chat-msg-bubble strong { color: var(--text-primary); }
+    .chat-msg-bubble code {
+      background: var(--bg-elevated); padding: 2px 6px; border-radius: 4px;
+      font-size: 12px; color: var(--accent);
+    }
+    .chat-msg-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; flex-shrink: 0; background: var(--bg-surface);
+      border: 1px solid var(--border);
+    }
+    .chat-msg.right { flex-direction: row-reverse; }
+    .chat-msg.right .chat-msg-bubble { text-align: right; }
+
+    .chat-controls {
+      display: flex; justify-content: center; gap: 10px; margin-top: 16px;
+    }
+    .chat-btn {
+      padding: 8px 18px; border-radius: var(--radius-sm);
+      background: var(--bg-surface); border: 1px solid var(--border);
+      color: var(--text-secondary); font-size: 13px; font-weight: 600;
+      cursor: pointer; font-family: var(--font-sans); transition: all 0.2s;
+    }
+    .chat-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .chat-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Stream Part Grid */
+    .part-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px; margin: 20px 0;
+    }
+    .part-card {
+      padding: 16px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+      background: var(--bg-elevated); cursor: pointer; transition: all 0.25s ease;
+      position: relative; overflow: hidden;
+    }
+    .part-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .part-card.active { border-color: var(--accent); background: var(--accent-dim); }
+    .part-card .tag {
+      display: inline-block; padding: 3px 8px; border-radius: 4px;
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      margin-bottom: 8px; letter-spacing: 0.04em;
+    }
+    .part-card .tag-text { background: var(--blue-dim); color: var(--blue); }
+    .part-card .tag-reasoning { background: var(--purple-dim); color: var(--purple); }
+    .part-card .tag-tool { background: var(--green-dim); color: var(--green); }
+    .part-card .tag-lifecycle { background: rgba(245,158,11,0.2); color: #fbbf24; }
+    .part-card .tag-meta { background: rgba(107,107,116,0.25); color: var(--text-muted); }
+    .part-card h5 { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
+    .part-card p { font-size: 12px; color: var(--text-muted); margin: 0; line-height: 1.5; }
+    .part-detail {
+      display: none; margin-top: 20px; padding: 20px;
+      border-radius: var(--radius); border: 1px solid var(--border);
+      background: var(--bg-elevated);
+    }
+    .part-detail.show { display: block; }
+
+    /* Quiz */
+    .quiz {
+      border: 1px solid var(--border); border-radius: var(--radius);
+      background: var(--bg-elevated); margin: 28px 0; overflow: hidden;
+    }
+    .quiz-header {
+      padding: 16px 20px; background: var(--bg-surface);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .quiz-header .badge {
+      padding: 4px 10px; border-radius: 6px; background: var(--accent-dim);
+      color: var(--accent); font-size: 11px; font-weight: 800;
+      text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .quiz-header h4 { margin: 0; font-size: 15px; }
+    .quiz-body { padding: 20px; }
+    .quiz-question { font-size: 15px; color: var(--text-primary); margin-bottom: 16px; font-weight: 500; }
+    .quiz-options { list-style: none; margin: 0; }
+    .quiz-options li { margin-bottom: 8px; }
+    .quiz-option {
+      display: flex; align-items: center; gap: 12px; width: 100%;
+      padding: 12px 16px; border-radius: var(--radius-sm);
+      background: var(--bg-surface); border: 1px solid var(--border);
+      color: var(--text-secondary); font-size: 14px; cursor: pointer;
+      font-family: var(--font-sans); text-align: left; transition: all 0.2s;
+    }
+    .quiz-option:hover { border-color: var(--accent); }
+    .quiz-option .radio {
+      width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border);
+      flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+    }
+    .quiz-option .radio::after {
+      content: ''; width: 8px; height: 8px; border-radius: 50%;
+      background: var(--accent); opacity: 0; transition: opacity 0.2s;
+    }
+    .quiz-option.selected { border-color: var(--accent); background: var(--accent-dim); }
+    .quiz-option.selected .radio { border-color: var(--accent); }
+    .quiz-option.selected .radio::after { opacity: 1; }
+    .quiz-option.correct { border-color: var(--green); background: var(--green-dim); }
+    .quiz-option.correct .radio { border-color: var(--green); }
+    .quiz-option.correct .radio::after { opacity: 1; background: var(--green); }
+    .quiz-option.wrong { border-color: var(--red); background: var(--red-dim); }
+    .quiz-option.wrong .radio { border-color: var(--red); }
+    .quiz-option.wrong .radio::after { opacity: 1; background: var(--red); }
+    .quiz-feedback {
+      margin-top: 14px; padding: 12px 16px; border-radius: var(--radius-sm);
+      font-size: 14px; display: none;
+    }
+    .quiz-feedback.show { display: block; }
+    .quiz-feedback.correct { background: var(--green-dim); color: #86efac; border: 1px solid rgba(34,197,94,0.3); }
+    .quiz-feedback.wrong { background: var(--red-dim); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+    .quiz-actions { padding: 12px 20px; border-top: 1px solid var(--border); display: none; }
+    .quiz-actions.show { display: flex; justify-content: flex-end; }
+    .quiz-btn {
+      padding: 8px 18px; border-radius: var(--radius-sm); font-size: 13px;
+      font-weight: 600; cursor: pointer; font-family: var(--font-sans); border: none;
+    }
+    .quiz-btn-primary { background: var(--accent); color: #0b0b0c; }
+    .quiz-btn-primary:hover { background: #fbbf24; }
+
+    /* Capstone */
+    .capstone {
+      border: 1px solid var(--border); border-radius: var(--radius);
+      background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg) 100%);
+      padding: 32px; margin: 24px 0;
+    }
+    .capstone h3 { margin-top: 0; }
+    .capstone-steps { counter-reset: step; list-style: none; margin: 16px 0 0 0; }
+    .capstone-steps li {
+      position: relative; padding-left: 36px; margin-bottom: 14px;
+      color: var(--text-secondary); font-size: 14px;
+    }
+    .capstone-steps li::before {
+      counter-increment: step; content: counter(step);
+      position: absolute; left: 0; top: 0;
+      width: 24px; height: 24px; border-radius: 50%;
+      background: var(--accent-dim); color: var(--accent);
+      font-size: 11px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* Table */
+    .data-table {
+      width: 100%; border-collapse: collapse; margin: 20px 0;
+      font-size: 13px;
+    }
+    .data-table th, .data-table td {
+      padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border);
+    }
+    .data-table th {
+      color: var(--text-muted); font-weight: 600; font-size: 11px;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      background: var(--bg-surface);
+    }
+    .data-table td { color: var(--text-secondary); }
+    .data-table tr:hover td { background: var(--bg-surface); }
+
+    /* Inline code */
+    p code, li code {
+      background: var(--bg-surface); padding: 2px 6px; border-radius: 4px;
+      font-family: var(--font-mono); font-size: 0.9em; color: var(--accent);
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center; padding: 40px; border-top: 1px solid var(--border);
+      color: var(--text-muted); font-size: 13px;
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .nav-toggle { display: flex; }
+      .sidebar {
+        transform: translateX(-100%);
+        box-shadow: 4px 0 24px rgba(0,0,0,0.4);
+      }
+      .sidebar.open { transform: translateX(0); }
+      .sidebar-overlay.show { display: block; }
+      .main { margin-left: 0; }
+      .content { padding: 60px 20px 80px; }
+      .hero { padding: 60px 0 40px; }
+      .flow-row { flex-direction: column; gap: 8px; }
+      .flow-arrow { transform: rotate(90deg); }
+      .chat-actors { gap: 12px; }
+      .chat-actor-avatar { width: 40px; height: 40px; font-size: 16px; }
+      .chat-actor-name { font-size: 10px; }
+    }
+
+    @media (max-width: 600px) {
+      .part-grid { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 28px; }
+      .section h2 { font-size: 22px; }
+      .section h2 .num { width: 30px; height: 30px; font-size: 12px; }
+    }
+
+    /* Divider */
+    .divider {
+      height: 1px; background: linear-gradient(90deg, transparent, var(--border), transparent);
+      margin: 60px 0;
+    }
+
+    /* Highlight */
+    .hl { color: var(--accent); font-weight: 600; }
+
+    /* State visualizer */
+    .state-viz {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px; margin: 20px 0;
+    }
+    .state-box {
+      padding: 16px; border-radius: var(--radius-sm);
+      border: 1px solid var(--border); background: var(--bg-elevated);
+      font-size: 13px;
+    }
+    .state-box .label {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 8px;
+    }
+    .state-box .value { font-family: var(--font-mono); color: var(--accent); font-size: 12px; }
+    .state-box .desc { font-size: 12px; color: var(--text-muted); margin-top: 6px; line-height: 1.5; }
+  </style>
+</head>
+<body>
+
+<!-- Progress -->
+<div class="progress-container"><div class="progress-bar" id="progressBar"></div></div>
+
+<!-- Mobile Nav Toggle -->
+<button class="nav-toggle" id="navToggle" aria-label="Open navigation">☰</button>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- Sidebar -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-brand">A://Labs</div>
+  <div class="sidebar-title">ADV — Provider Adapters &amp; Unified APIs</div>
+  <ul class="nav-list">
+    <li class="nav-section-label">Module</li>
+    <li><a href="#intro" class="active">Introduction</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#chat-animation">Component Chat</a></li>
+    <li><a href="#adapter-deep-dive">Adapter Deep Dive</a></li>
+    <li><a href="#stream-parts">Stream Part Types</a></li>
+    <li><a href="#state-management">State Management</a></li>
+    <li><a href="#post-processing">Post-Processing</a></li>
+    <li><a href="#consume-error">consume() &amp; Errors</a></li>
+    <li><a href="#testing">Testing Patterns</a></li>
+    <li class="nav-section-label">Assessments</li>
+    <li><a href="#quiz1">Quiz 1: Concepts</a></li>
+    <li><a href="#quiz2">Quiz 2: Events</a></li>
+    <li><a href="#quiz3">Quiz 3: State</a></li>
+    <li class="nav-section-label">Project</li>
+    <li><a href="#capstone">Capstone</a></li>
+  </ul>
+  <div class="nav-progress-text"><span id="navPct">0%</span> complete</div>
+</nav>
+
+<!-- Main -->
+<main class="main">
+  <div class="content">
+
+    <!-- Hero -->
+    <section class="hero" id="intro">
+      <div class="hero-badge">⚡ ADV — Architecture Deep Dive</div>
+      <h1>Provider Adapters &amp; Unified APIs</h1>
+      <p>Learn how Allternit converts chaotic provider streams into a single, predictable <strong>ReplyEvent</strong> contract — with zero provider-specific code.</p>
+      <div class="hero-meta">
+        <span>📦 <strong>@allternit/provider-adapters</strong></span>
+        <span>🕒 ~25 min</span>
+        <span>🎯 3 quizzes</span>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Section 1: What are Provider Adapters? -->
+    <section class="section" id="what-are-adapters">
+      <h2><span class="num">1</span> What Are Provider Adapters?</h2>
+      <p>Every AI provider speaks a slightly different dialect. Anthropic streams <code>content_block_delta</code> events. OpenAI sends <code>choices[0].delta.content</code>. Gemini has its own shape. Your frontend shouldn't care.</p>
+      <p><strong class="hl">Provider adapters are the translation layer.</strong> They sit between raw provider streams and the Allternit Replies API, converting every provider's unique event format into a single, canonical <code>ReplyEvent</code> contract.</p>
+
+      <div class="callout callout-accent">
+        <strong>The Golden Rule:</strong> Provider-specific types (like <code>AnthropicStreamChunk</code> or <code>GizziBusEvent</code>) must <em>never</em> leak into the replies-contract package. The contract is pure TypeScript with zero external dependencies.
+      </div>
+
+      <p>This package — <code>@allternit/provider-adapters</code> — currently exports the <strong>AiSdkReplyAdapter</strong>, which handles <em>all</em> AI SDK v6 providers (Anthropic, OpenAI, Gemini, and more) with a single class. No provider-specific branches. No special cases.</p>
+    </section>
+
+    <!-- Section 2: Architecture -->
+    <section class="section" id="architecture">
+      <h2><span class="num">2</span> The Architecture</h2>
+      <p>Here's what happens when a user sends a message. Watch the animated data flow below — packets travel from the provider, through the adapter, and into the unified event bus.</p>
+
+      <div class="flow-viz" id="flowViz">
+        <div class="flow-viz-title">Live Data Flow — Click to animate</div>
+        <div class="flow-row">
+          <div class="flow-node provider">AI SDK Provider<br><span style="font-weight:400;color:var(--text-muted);font-size:11px;">Anthropic / OpenAI / Gemini</span></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node adapter">AiSdkReplyAdapter<br><span style="font-weight:400;color:var(--text-muted);font-size:11px;">Translation Layer</span></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node system">ReplyEvent Bus<br><span style="font-weight:400;color:var(--text-muted);font-size:11px;">Canonical Contract</span></div>
+        </div>
+        <div class="flow-packet p1"></div>
+        <div class="flow-packet p2"></div>
+        <div class="flow-packet p3"></div>
+        <div class="flow-legend">
+          <span><span class="dot" style="background:var(--purple)"></span> Raw stream parts</span>
+          <span><span class="dot" style="background:var(--accent)"></span> Translated events</span>
+          <span><span class="dot" style="background:var(--green)"></span> Canonical output</span>
+        </div>
+      </div>
+
+      <p>The adapter's job is simple but critical: <strong>consume</strong> a stream of <code>AiSdkStreamPart</code> objects and <strong>emit</strong> <code>ReplyEvent</code> objects through the <code>onEvent</code> callback. Every downstream consumer — transcripts, reducers, UI components — speaks only <code>ReplyEvent</code>.</p>
+
+      <div class="translate-block">
+        <div class="translate-tabs">
+          <button class="translate-tab active" data-target="arch-code">TypeScript</button>
+          <button class="translate-tab" data-target="arch-english">Plain English</button>
+        </div>
+        <div class="translate-pane code active" id="arch-code">
+          <div class="code-block" style="margin:0;border:none;">
+            <pre><code><span class="token-keyword">const</span> result = <span class="token-function">streamText</span>({ model, messages, tools });
+<span class="token-keyword">const</span> adapter = <span class="token-keyword">new</span> <span class="token-function">AiSdkReplyAdapter</span>({
+  replyId: <span class="token-string">"reply_123"</span>,
+  runId: <span class="token-string">"run_reply_123"</span>,
+  <span class="token-property">onEvent</span>: (event) => {
+    <span class="token-comment">// Every event here is a canonical ReplyEvent</span>
+    <span class="token-function">dispatch</span>(event);
+  },
+});
+<span class="token-keyword">await</span> adapter.<span class="token-function">consume</span>(result.fullStream);</code></pre>
+          </div>
+        </div>
+        <div class="translate-pane english" id="arch-english">
+          <p>We start a text stream from the AI SDK using <code>streamText()</code>. Instead of handling raw provider chunks directly, we create an <strong>AiSdkReplyAdapter</strong> and give it our reply ID and run ID. Then we tell the adapter to <strong>consume</strong> the entire stream. For every chunk the provider sends, the adapter figures out what kind of canonical event to emit and calls our <code>onEvent</code> handler. Our app only ever sees clean, typed <code>ReplyEvent</code> objects.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3: Group Chat Animation -->
+    <section class="section" id="chat-animation">
+      <h2><span class="num">3</span> The Component Group Chat</h2>
+      <p>Imagine the AI SDK, the Adapter, and the Provider as characters in a group chat. Watch how they negotiate a single user request step by step.</p>
+
+      <div class="chat-stage" id="chatStage">
+        <div class="chat-actors">
+          <div class="chat-actor" data-actor="sdk"><div class="chat-actor-avatar">🤖</div><div class="chat-actor-name">AI SDK</div></div>
+          <div class="chat-actor" data-actor="adapter"><div class="chat-actor-avatar">🔌</div><div class="chat-actor-name">Adapter</div></div>
+          <div class="chat-actor" data-actor="provider"><div class="chat-actor-avatar">⚡</div><div class="chat-actor-name">Provider</div></div>
+          <div class="chat-actor" data-actor="bus"><div class="chat-actor-avatar">📡</div><div class="chat-actor-name">Event Bus</div></div>
+        </div>
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-controls">
+          <button class="chat-btn" id="chatPrev" disabled>← Prev</button>
+          <button class="chat-btn" id="chatNext">Next →</button>
+          <button class="chat-btn" id="chatReplay">↻ Replay</button>
+        </div>
+      </div>
+
+      <p>This choreography happens for <em>every</em> stream part. The adapter is the diplomat — it speaks provider on one side and canonical events on the other.</p>
+    </section>
+
+    <!-- Section 4: Deep Dive -->
+    <section class="section" id="adapter-deep-dive">
+      <h2><span class="num">4</span> Adapter Deep Dive</h2>
+      <p>The <code>AiSdkReplyAdapter</code> is a stateful class. It doesn't just blindly map types — it tracks which items have been opened, buffers text for post-processing, and guards against duplicate events.</p>
+
+      <h3>Constructor &amp; Options</h3>
+      <div class="translate-block">
+        <div class="translate-tabs">
+          <button class="translate-tab active" data-target="opts-code">TypeScript</button>
+          <button class="translate-tab" data-target="opts-english">Plain English</button>
+        </div>
+        <div class="translate-pane code active" id="opts-code">
+          <div class="code-block" style="margin:0;border:none;">
+            <pre><code><span class="token-keyword">export interface</span> <span class="token-type">AiSdkReplyAdapterOptions</span> {
+  replyId: <span class="token-type">string</span>;
+  runId: <span class="token-type">string</span>;
+  conversationId?: <span class="token-type">string</span>;
+  <span class="token-property">onEvent</span>: (event: <span class="token-type">ReplyEvent</span>) => <span class="token-type">void</span>;
+}</code></pre>
+          </div>
+        </div>
+        <div class="translate-pane english" id="opts-english">
+          <p>The adapter needs four things to do its job:</p>
+          <ul>
+            <li><strong>replyId</strong> — the unique ID of this reply (e.g., <code>"reply_123"</code>)</li>
+            <li><strong>runId</strong> — the run that produced this reply (convention: <code>"run_" + replyId</code>)</li>
+            <li><strong>conversationId</strong> — optional, ties the reply to a conversation thread</li>
+            <li><strong>onEvent</strong> — the callback where every canonical <code>ReplyEvent</code> is delivered</li>
+          </ul>
+          <p>All events emitted by the adapter include these IDs, so downstream reducers always know which reply and run an event belongs to.</p>
+        </div>
+      </div>
+
+      <h3>The process() Method</h3>
+      <p>The heart of the adapter is the <code>process(part)</code> method. It takes a single <code>AiSdkStreamPart</code> and routes it through a massive <code>switch</code> statement. Here's how text streaming works:</p>
+
+      <div class="translate-block">
+        <div class="translate-tabs">
+          <button class="translate-tab active" data-target="text-code">TypeScript</button>
+          <button class="translate-tab" data-target="text-english">Plain English</button>
+        </div>
+        <div class="translate-pane code active" id="text-code">
+          <div class="code-block" style="margin:0;border:none;">
+            <pre><code><span class="token-keyword">case</span> <span class="token-string">"text-start"</span>: {
+  <span class="token-keyword">this</span>.<span class="token-function">ensureStarted</span>();
+  <span class="token-keyword">if</span> (!<span class="token-keyword">this</span>.openedTextIds.<span class="token-function">has</span>(part.id)) {
+    <span class="token-keyword">this</span>.openedTextIds.<span class="token-function">add</span>(part.id);
+    <span class="token-keyword">this</span>.<span class="token-function">emit</span>({
+      type: <span class="token-string">"reply.item.added"</span>,
+      replyId: <span class="token-keyword">this</span>.replyId,
+      runId: <span class="token-keyword">this</span>.runId,
+      itemId: part.id,
+      kind: <span class="token-string">"text"</span>,
+      ts: <span class="token-keyword">this</span>.<span class="token-function">ts</span>(),
+    });
+  }
+  <span class="token-keyword">break</span>;
+}
+
+<span class="token-keyword">case</span> <span class="token-string">"text-delta"</span>: {
+  <span class="token-keyword">this</span>.<span class="token-function">ensureStarted</span>();
+  <span class="token-keyword">if</span> (!<span class="token-keyword">this</span>.openedTextIds.<span class="token-function">has</span>(part.id)) {
+    <span class="token-comment">// Guard: some providers skip text-start, open now</span>
+    <span class="token-keyword">this</span>.openedTextIds.<span class="token-function">add</span>(part.id);
+    <span class="token-keyword">this</span>.<span class="token-function">emit</span>({ type: <span class="token-string">"reply.item.added"</span>, ... });
+  }
+  <span class="token-keyword">if</span> (part.text) {
+    <span class="token-keyword">this</span>.textBuffers.<span class="token-function">set</span>(part.id,
+      (<span class="token-keyword">this</span>.textBuffers.<span class="token-function">get</span>(part.id) ?? <span class="token-string">""</span>) + part.text
+    );
+    <span class="token-keyword">this</span>.<span class="token-function">emit</span>({
+      type: <span class="token-string">"reply.text.delta"</span>,
+      itemId: part.id,
+      delta: part.text,
+      ...
+    });
+  }
+  <span class="token-keyword">break</span>;
+}</code></pre>
+          </div>
+        </div>
+        <div class="translate-pane english" id="text-english">
+          <p>When the provider says <code>text-start</code>, the adapter checks: "Have I already opened this text item?" If not, it emits a <code>reply.item.added</code> event with <code>kind: "text"</code> and records the ID so it won't open it again.</p>
+          <p>When the provider sends <code>text-delta</code>, the adapter first makes sure the item is open (some providers skip <code>text-start</code>, so this is a safety guard). Then it does <strong>two things</strong>:</p>
+          <ol>
+            <li>Appends the text to an internal buffer (for post-processing later)</li>
+            <li>Emits a <code>reply.text.delta</code> event so the UI can stream the text live</li>
+          </ol>
+          <p>The buffer is crucial. When <code>text-end</code> arrives, the adapter uses the accumulated text to extract hidden structures like <code>&lt;thinking&gt;</code> blocks or <code>&lt;document&gt;</code> tags.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 5: Stream Part Types -->
+    <section class="section" id="stream-parts">
+      <h2><span class="num">5</span> Stream Part Types</h2>
+      <p>The <code>AiSdkStreamPart</code> union defines every possible chunk that can flow from the AI SDK. Click any card to see how the adapter handles it.</p>
+
+      <div class="part-grid" id="partGrid">
+        <div class="part-card" data-part="start">
+          <span class="tag tag-lifecycle">Lifecycle</span>
+          <h5>start</h5>
+          <p>Stream begins</p>
+        </div>
+        <div class="part-card" data-part="text-start">
+          <span class="tag tag-text">Text</span>
+          <h5>text-start</h5>
+          <p>New text item opens</p>
+        </div>
+        <div class="part-card" data-part="text-delta">
+          <span class="tag tag-text">Text</span>
+          <h5>text-delta</h5>
+          <p>Text chunk arrives</p>
+        </div>
+        <div class="part-card" data-part="text-end">
+          <span class="tag tag-text">Text</span>
+          <h5>text-end</h5>
+          <p>Text item closes</p>
+        </div>
+        <div class="part-card" data-part="reasoning-start">
+          <span class="tag tag-reasoning">Reasoning</span>
+          <h5>reasoning-start</h5>
+          <p>Extended thinking opens</p>
+        </div>
+        <div class="part-card" data-part="reasoning-delta">
+          <span class="tag tag-reasoning">Reasoning</span>
+          <h5>reasoning-delta</h5>
+          <p>Reasoning chunk arrives</p>
+        </div>
+        <div class="part-card" data-part="reasoning-end">
+          <span class="tag tag-reasoning">Reasoning</span>
+          <h5>reasoning-end</h5>
+          <p>Reasoning item closes</p>
+        </div>
+        <div class="part-card" data-part="tool-input-start">
+          <span class="tag tag-tool">Tool</span>
+          <h5>tool-input-start</h5>
+          <p>Tool call begins</p>
+        </div>
+        <div class="part-card" data-part="tool-input-delta">
+          <span class="tag tag-tool">Tool</span>
+          <h5>tool-input-delta</h5>
+          <p>Partial tool JSON</p>
+        </div>
+        <div class="part-card" data-part="tool-call">
+          <span class="tag tag-tool">Tool</span>
+          <h5>tool-call</h5>
+          <p>Full tool call ready</p>
+        </div>
+        <div class="part-card" data-part="tool-result">
+          <span class="tag tag-tool">Tool</span>
+          <h5>tool-result</h5>
+          <p>Tool execution result</p>
+        </div>
+        <div class="part-card" data-part="tool-error">
+          <span class="tag tag-tool">Tool</span>
+          <h5>tool-error</h5>
+          <p>Tool execution failed</p>
+        </div>
+        <div class="part-card" data-part="source">
+          <span class="tag tag-meta">Meta</span>
+          <h5>source</h5>
+          <p>Citation / source</p>
+        </div>
+        <div class="part-card" data-part="file">
+          <span class="tag tag-meta">Meta</span>
+          <h5>file</h5>
+          <p>File / artifact</p>
+        </div>
+        <div class="part-card" data-part="finish">
+          <span class="tag tag-lifecycle">Lifecycle</span>
+          <h5>finish</h5>
+          <p>Stream ends</p>
+        </div>
+        <div class="part-card" data-part="error">
+          <span class="tag tag-lifecycle">Lifecycle</span>
+          <h5>error</h5>
+          <p>Stream error</p>
+        </div>
+        <div class="part-card" data-part="abort">
+          <span class="tag tag-lifecycle">Lifecycle</span>
+          <h5>abort</h5>
+          <p>Stream aborted</p>
+        </div>
+      </div>
+
+      <div class="part-detail" id="partDetail">
+        <h4 id="partDetailTitle">Select a part above</h4>
+        <p id="partDetailDesc">Click any stream part card to see the adapter's handling logic.</p>
+        <div class="code-block" style="margin:12px 0 0;" id="partDetailCodeWrap">
+          <pre><code id="partDetailCode">// ...</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 6: State Management -->
+    <section class="section" id="state-management">
+      <h2><span class="num">6</span> State Management</h2>
+      <p>The adapter maintains several private data structures to prevent duplicate events and route tool results correctly. Understanding these is key to understanding the adapter's behavior.</p>
+
+      <div class="state-viz">
+        <div class="state-box">
+          <div class="label">openedTextIds</div>
+          <div class="value">Set&lt;string&gt;</div>
+          <div class="desc">Tracks which text items have already emitted <code>reply.item.added</code> so we never open the same item twice.</div>
+        </div>
+        <div class="state-box">
+          <div class="label">openedReasoningIds</div>
+          <div class="value">Set&lt;string&gt;</div>
+          <div class="desc">Same guard for reasoning items. Prevents duplicate <code>reply.item.added</code> events on reasoning deltas.</div>
+        </div>
+        <div class="state-box">
+          <div class="label">pendingTools</div>
+          <div class="value">Map&lt;string, {...}&gt;</div>
+          <div class="desc">Maps tool-input-start IDs to tool names. Used to correlate partial input with the final tool-call.</div>
+        </div>
+        <div class="state-box">
+          <div class="label">toolCallIdToItemId</div>
+          <div class="value">Map&lt;string, string&gt;</div>
+          <div class="desc">Routes tool-result and tool-error events to the correct item ID, even when providers skip intermediate steps.</div>
+        </div>
+        <div class="state-box">
+          <div class="label">textBuffers</div>
+          <div class="value">Map&lt;string, string&gt;</div>
+          <div class="desc">Accumulates text per item ID. Cleared on <code>text-end</code> and passed to <code>extractStructuredParts</code>.</div>
+        </div>
+        <div class="state-box">
+          <div class="label">hasNativeReasoning</div>
+          <div class="value">boolean</div>
+          <div class="desc">Set to true when native reasoning events arrive. Prevents double-extraction from text buffers.</div>
+        </div>
+      </div>
+
+      <div class="callout callout-blue">
+        <strong>Why Sets and Maps instead of arrays?</strong> Because <code>O(1)</code> lookups matter when you're processing hundreds of stream parts per second. The adapter is designed to be fast enough for real-time streaming UI updates.
+      </div>
+    </section>
+
+    <!-- Section 7: Post-Processing -->
+    <section class="section" id="post-processing">
+      <h2><span class="num">7</span> Post-Processing Magic</h2>
+      <p>Not all providers emit native reasoning or artifact events. Some models (DeepSeek, Kimi, local models) embed thinking inside plain text using XML-like tags. The adapter detects these <em>after</em> a text item closes.</p>
+
+      <div class="translate-block">
+        <div class="translate-tabs">
+          <button class="translate-tab active" data-target="extract-code">TypeScript</button>
+          <button class="translate-tab" data-target="extract-english">Plain English</button>
+        </div>
+        <div class="translate-pane code active" id="extract-code">
+          <div class="code-block" style="margin:0;border:none;">
+            <pre><code><span class="token-keyword">private</span> <span class="token-function">extractStructuredParts</span>(text: <span class="token-type">string</span>, afterItemId: <span class="token-type">string</span>): <span class="token-type">void</span> {
+  <span class="token-comment">// ── Thinking blocks ──</span>
+  <span class="token-keyword">if</span> (!<span class="token-keyword">this</span>.hasNativeReasoning) {
+    <span class="token-keyword">const</span> thinkRe = <span class="token-string">/&lt;(?:thinking|think|thought)&gt;([\s\S]*?)(?:&lt;\/(?:thinking|think|thought)&gt;|$)/g</span>;
+    <span class="token-comment">// ... emits reply.item.added(reasoning) + reply.reasoning.delta + reply.item.done</span>
+  }
+
+  <span class="token-comment">// ── Document blocks ──</span>
+  <span class="token-keyword">const</span> docRe = <span class="token-string">/&lt;document(?:\s+title="([^"]*)")?&gt;([\s\S]*?)(?:&lt;\/document&gt;|$)/g</span>;
+  <span class="token-comment">// ... emits reply.item.added(artifact) + artifact.created</span>
+}</code></pre>
+          </div>
+        </div>
+        <div class="translate-pane english" id="extract-english">
+          <p>When <code>text-end</code> fires, the adapter looks at the <strong>complete accumulated text</strong> for that item. It runs two regex passes:</p>
+          <ol>
+            <li><strong>Thinking blocks</strong> — matches <code>&lt;thinking&gt;</code>, <code>&lt;think&gt;</code>, or <code>&lt;thought&gt;</code> tags. If the provider already sent native reasoning events, this step is skipped to avoid duplicates.</li>
+            <li><strong>Document blocks</strong> — matches <code>&lt;document title="..."&gt;</code> tags and converts them into artifact items with inline previews.</li>
+          </ol>
+          <p>This is how Allternit supports "extended thinking" on providers that don't natively expose it — without any provider-specific code.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 8: consume & Error Handling -->
+    <section class="section" id="consume-error">
+      <h2><span class="num">8</span> consume() &amp; Error Handling</h2>
+      <p>The <code>consume()</code> method wraps the entire stream iteration in a <code>try/catch</code>. This is a deliberate design choice: <strong>the adapter never throws.</strong> Instead, it emits <code>reply.failed</code> so downstream reducers can update the UI gracefully.</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="lang">TypeScript</span><span>ai-sdk.ts</span></div>
+        <pre><code><span class="token-keyword">async</span> <span class="token-function">consume</span>(stream: <span class="token-type">AsyncIterable</span>&lt;<span class="token-type">AiSdkStreamPart</span>&gt;): <span class="token-type">Promise</span>&lt;<span class="token-type">void</span>&gt; {
+  <span class="token-keyword">try</span> {
+    <span class="token-keyword">for await</span> (<span class="token-keyword">const</span> part <span class="token-keyword">of</span> stream) {
+      <span class="token-keyword">this</span>.<span class="token-function">process</span>(part);
+    }
+  } <span class="token-keyword">catch</span> (err) {
+    <span class="token-keyword">const</span> errMsg = err <span class="token-keyword">instanceof</span> <span class="token-type">Error</span> ? err.message : <span class="token-string">"stream consume error"</span>;
+    <span class="token-keyword">this</span>.<span class="token-function">emit</span>({
+      type: <span class="token-string">"reply.failed"</span>,
+      replyId: <span class="token-keyword">this</span>.replyId,
+      runId: <span class="token-keyword">this</span>.runId,
+      error: errMsg,
+      ts: <span class="token-keyword">this</span>.<span class="token-function">ts</span>(),
+    });
+  }
+}</code></pre>
+      </div>
+
+      <p>This pattern appears throughout the adapter. <code>error</code> parts, <code>abort</code> parts, and <code>finish</code> parts with <code>finishReason: "error"</code> all converge on <code>reply.failed</code>. The frontend only needs to handle one failure event type.</p>
+
+      <div class="callout callout-green">
+        <strong>Resilience Principle:</strong> Network drops, provider timeouts, and stream corruption are all handled the same way. The adapter absorbs the chaos and emits a clean failure event. This is what makes the Replies API reliable across dozens of provider configurations.
+      </div>
+    </section>
+
+    <!-- Section 9: Testing -->
+    <section class="section" id="testing">
+      <h2><span class="num">9</span> Testing Patterns</h2>
+      <p>The test suite uses a simple helper — <code>makeAdapter()</code> — to capture every emitted event into an array. This makes assertions declarative and readable.</p>
+
+      <div class="code-block">
+        <div class="code-header"><span class="lang">TypeScript</span><span>ai-sdk.test.ts</span></div>
+        <pre><code><span class="token-keyword">function</span> <span class="token-function">makeAdapter</span>(replyId = <span class="token-string">"r1"</span>, runId = <span class="token-string">"run1"</span>) {
+  <span class="token-keyword">const</span> events: <span class="token-type">ReplyEvent</span>[] = [];
+  <span class="token-keyword">const</span> adapter = <span class="token-keyword">new</span> <span class="token-function">AiSdkReplyAdapter</span>({
+    replyId, runId,
+    <span class="token-property">onEvent</span>: (e) => events.<span class="token-function">push</span>(e),
+  });
+  <span class="token-keyword">return</span> { adapter, events };
+}
+
+<span class="token-comment">// Example assertion</span>
+<span class="token-keyword">const</span> { adapter, events } = <span class="token-function">makeAdapter</span>();
+adapter.<span class="token-function">process</span>({ type: <span class="token-string">"text-start"</span>, id: <span class="token-string">"t1"</span> });
+<span class="token-function">expect</span>(events[<span class="token-number">0</span>].type).<span class="token-function">toBe</span>(<span class="token-string">"reply.item.added"</span>);</code></pre>
+      </div>
+
+      <p>Key test categories in the suite:</p>
+      <ul>
+        <li><strong>Lifecycle</strong> — ensures <code>reply.started</code> fires exactly once, and <code>reply.completed</code> / <code>reply.failed</code> fire correctly</li>
+        <li><strong>Text streaming</strong> — guards against duplicate <code>reply.item.added</code>, auto-opens items when providers skip <code>text-start</code></li>
+        <li><strong>Reasoning</strong> — verifies native reasoning events produce correct item kinds</li>
+        <li><strong>Tool calls</strong> — tests both the tool-input-start path and the fallback tool-call path</li>
+        <li><strong>Sources &amp; files</strong> — confirms citations and artifacts are emitted</li>
+        <li><strong>consume()</strong> — validates async iteration and graceful error handling</li>
+        <li><strong>Mixed replies</strong> — end-to-end sequences with reasoning + text + tools</li>
+      </ul>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Quiz 1 -->
+    <section class="section" id="quiz1">
+      <div class="quiz">
+        <div class="quiz-header"><span class="badge">Quiz 1</span><h4>Conceptual Understanding</h4></div>
+        <div class="quiz-body">
+          <div class="quiz-question">Why does the adapter maintain <code>openedTextIds</code> as a <code>Set&lt;string&gt;</code>?</div>
+          <ul class="quiz-options">
+            <li><button class="quiz-option" data-correct="false"><span class="radio"></span>To sort text items alphabetically</button></li>
+            <li><button class="quiz-option" data-correct="false"><span class="radio"></span>To buffer text for the consume() method</button></li>
+            <li><button class="quiz-option" data-correct="true"><span class="radio"></span>To prevent duplicate <code>reply.item.added</code> events for the same text item</button></li>
+            <li><button class="quiz-option" data-correct="false"><span class="radio"></span>To map toolCallIds to itemIds</button></li>
+          </ul>
+          <div class="quiz-feedback" id="q1-feedback"></div>
+        </div>
+        <div class="quiz-actions" id="q1-actions"><button class="quiz-btn quiz-btn-primary" onclick="resetQuiz('q1')">Retry</button></div>
+      </div>
+    </section>
+
+    <!-- Quiz 2 -->
+    <section class="section" id="quiz2">
+      <div class="quiz">
+        <div class="quiz-header"><span class="badge">Quiz 2</span><h4>Event Mapping</h4></div>
+        <div class="quiz-body">
+          <div class="quiz-question">A provider sends <code>{ type: "tool-result", toolCallId: "tc1", toolName: "bash", result: { stdout: "hello" } }</code>. Which events does the adapter emit?</div>
+          <ul class="quiz-options">
+            <li><button class="quiz-option" data-correct="false"><span class="radio"></span>Only <code>tool_call.completed</code></button></li>
+            <li><button class="quiz-option" data-correct="true"><span class="radio"></span><code>tool_call.completed</code> followed by <code>reply.item.done</code></button></li>
+            <li><button class="quiz-option" data-correct="false"><span class="radio"></span>Only <code>reply.item.done</code></button></li>
+            <li><button class="quiz-option" data-correct="false"><span class="radio"></span><code>reply.item.added(tool_call)</code> and then <code>tool_call.completed</code></button></li>
+          </ul>
+          <div class="quiz-feedback" id="q2-feedback"></div>
+        </div>
+        <div class="quiz-actions" id="q2-actions"><button class="quiz-btn quiz-btn-primary" onclick="resetQuiz('q2')">Retry</button></div>
+      </div>
+    </section>
+
+    <!-- Quiz 3 -->
+    <section class="section" id="quiz3">
+      <div class="quiz">
+        <div class="quiz-header"><span class="badge">Quiz 3</span><h4>Error Handling</h4></div>
+        <div class="quiz-body">
+          <div class="quiz-question">The <code>consume()</code> method wraps stream iteration in a try/catch. What event does it emit if the AsyncIterable throws?</div>
+          <ul class="quiz-options">
+            <li><button class="quiz-option" data-correct="false"><span class="radio"></span>It re-throws the error so the caller handles it</button></li>
+            <li><button class="quiz-option" data-correct="false"><span class="radio"></span>It emits <code>reply.completed</code> with an error flag</button></li>
+            <li><button class="quiz-option" data-correct="true"><span class="radio"></span>It emits <code>reply.failed</code> with the error message</button></li>
+            <li><button class="quiz-option" data-correct="false"><span class="radio"></span>It silently swallows the error</button></li>
+          </ul>
+          <div class="quiz-feedback" id="q3-feedback"></div>
+        </div>
+        <div class="quiz-actions" id="q3-actions"><button class="quiz-btn quiz-btn-primary" onclick="resetQuiz('q3')">Retry</button></div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Capstone -->
+    <section class="section" id="capstone">
+      <div class="capstone">
+        <h3>🎯 Capstone Project: Build a Custom Provider Adapter</h3>
+        <p>Now that you understand how <code>AiSdkReplyAdapter</code> works, apply that knowledge by building a new adapter for a hypothetical provider called <strong>NovaStream</strong> that emits its own custom chunks.</p>
+        <ol class="capstone-steps">
+          <li>Define a <code>NovaStreamChunk</code> union type with at least 5 distinct chunk shapes (e.g., <code>nova.token</code>, <code>nova.tool_invoke</code>, <code>nova.citation</code>).</li>
+          <li>Implement a <code>NovaReplyAdapter</code> class that accepts the same <code>AiSdkReplyAdapterOptions</code> interface.</li>
+          <li>Write a <code>process(chunk)</code> method that maps each Nova chunk to one or more <code>ReplyEvent</code>s using the canonical contract from <code>@allternit/replies-contract</code>.</li>
+          <li>Add state guards (Sets/Maps) to prevent duplicate events, just like the AI SDK adapter does.</li>
+          <li>Write a Vitest test suite with at least 8 test cases covering lifecycle, text streaming, tool calls, and error handling.</li>
+          <li>Bonus: Add post-processing that extracts <code>&lt;plan&gt;</code> tags from accumulated text and emits <code>plan.created</code> events.</li>
+        </ol>
+        <div class="callout callout-accent" style="margin-top:20px;">
+          <strong>Deliverable:</strong> A new file <code>packages/@allternit/provider-adapters/src/nova.ts</code> with full TypeScript types, implementation, and tests. Run <code>vitest</code> to verify everything passes.
+        </div>
+      </div>
+    </section>
+
+    <div class="footer">
+      <p>A://Labs — ADV Architecture Track</p>
+      <p style="margin-top:4px;font-size:12px;">Generated from <code>packages/@allternit/provider-adapters</code></p>
+    </div>
+
+  </div>
+</main>
+
+<script>
+// ========================= PROGRESS & NAV =========================
+const progressBar = document.getElementById('progressBar');
+const navPct = document.getElementById('navPct');
+function updateProgress() {
+  const scrollTop = window.scrollY;
+  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+  const pct = Math.min(100, Math.max(0, Math.round((scrollTop / docHeight) * 100)));
+  progressBar.style.width = pct + '%';
+  navPct.textContent = pct + '%';
+}
+window.addEventListener('scroll', updateProgress, { passive: true });
+updateProgress();
+
+// ========================= NAV ACTIVE STATE =========================
+const navLinks = document.querySelectorAll('.nav-list a');
+const sections = document.querySelectorAll('section[id]');
+function updateNav() {
+  let current = '';
+  sections.forEach(sec => {
+    const rect = sec.getBoundingClientRect();
+    if (rect.top <= 120) current = sec.id;
+  });
+  navLinks.forEach(link => {
+    link.classList.toggle('active', link.getAttribute('href') === '#' + current);
+  });
+}
+window.addEventListener('scroll', updateNav, { passive: true });
+
+// ========================= MOBILE NAV =========================
+const navToggle = document.getElementById('navToggle');
+const sidebar = document.getElementById('sidebar');
+const overlay = document.getElementById('sidebarOverlay');
+function toggleNav() {
+  sidebar.classList.toggle('open');
+  overlay.classList.toggle('show');
+}
+navToggle.addEventListener('click', toggleNav);
+overlay.addEventListener('click', toggleNav);
+navLinks.forEach(link => link.addEventListener('click', () => {
+  sidebar.classList.remove('open');
+  overlay.classList.remove('show');
+}));
+
+// ========================= SCROLL REVEAL =========================
+const revealObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) entry.target.classList.add('visible');
+  });
+}, { threshold: 0.08 });
+document.querySelectorAll('.section').forEach(s => revealObserver.observe(s));
+
+// ========================= TRANSLATION TABS =========================
+document.querySelectorAll('.translate-block').forEach(block => {
+  const tabs = block.querySelectorAll('.translate-tab');
+  const panes = block.querySelectorAll('.translate-pane');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const target = tab.dataset.target;
+      tabs.forEach(t => t.classList.toggle('active', t === tab));
+      panes.forEach(p => p.classList.toggle('active', p.id === target));
+    });
+  });
+});
+
+// ========================= FLOW VIZ ANIMATION =========================
+const flowViz = document.getElementById('flowViz');
+let flowAnimating = false;
+flowViz.addEventListener('click', () => {
+  flowAnimating = !flowAnimating;
+  flowViz.classList.toggle('animate', flowAnimating);
+});
+// Auto-start once when scrolled into view
+const flowObserver = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting && !flowAnimating) {
+      flowAnimating = true;
+      flowViz.classList.add('animate');
+    }
+  });
+}, { threshold: 0.5 });
+flowObserver.observe(flowViz);
+
+// ========================= GROUP CHAT =========================
+const chatMessages = document.getElementById('chatMessages');
+const chatActors = document.querySelectorAll('.chat-actor');
+const chatPrev = document.getElementById('chatPrev');
+const chatNext = document.getElementById('chatNext');
+const chatReplay = document.getElementById('chatReplay');
+
+const chatScript = [
+  { actor: 'sdk', text: 'Hey Provider, I need a stream for this user message.' },
+  { actor: 'provider', text: 'Sure! Here comes a <code>start</code> part... now <code>text-start</code> for item <code>t1</code>.' },
+  { actor: 'adapter', text: 'Got it. I see <code>text-start</code> — I\'ll emit <code>reply.item.added</code> with <code>kind: "text"</code>.' },
+  { actor: 'provider', text: 'Sending <code>text-delta</code>: "Hello, world!"' },
+  { actor: 'adapter', text: 'Buffering the text and emitting <code>reply.text.delta</code> so the UI can stream it live.' },
+  { actor: 'provider', text: 'That\'s all the text. Here\'s <code>text-end</code> for item <code>t1</code>.' },
+  { actor: 'adapter', text: 'Emitting <code>reply.item.done</code>. Now scanning the buffer for hidden <code>&lt;thinking&gt;</code> blocks... none found.' },
+  { actor: 'provider', text: 'Stream complete. Sending <code>finish</code> with <code>finishReason: "stop"</code>.' },
+  { actor: 'adapter', text: 'Emitting <code>reply.completed</code>. All done! No provider-specific types leaked upstream.' },
+  { actor: 'bus', text: 'Received 6 canonical events. Reducer updated. Transcript rendered. ✅' },
+];
+
+let chatIndex = -1;
+let chatInterval = null;
+
+function setActiveActor(name) {
+  chatActors.forEach(a => a.classList.toggle('active', a.dataset.actor === name));
+}
+
+function renderChatStep(i) {
+  chatMessages.innerHTML = '';
+  for (let j = 0; j <= i; j++) {
+    const step = chatScript[j];
+    const msg = document.createElement('div');
+    msg.className = 'chat-msg show';
+    const isRight = ['provider','bus'].includes(step.actor);
+    if (isRight) msg.classList.add('right');
+    msg.innerHTML = `
+      <div class="chat-msg-avatar">${isRight ? '⚡' : (step.actor === 'adapter' ? '🔌' : '🤖')}</div>
+      <div class="chat-msg-bubble">${step.text}</div>
+    `;
+    chatMessages.appendChild(msg);
+  }
+  setActiveActor(chatScript[i].actor);
+  chatPrev.disabled = i <= 0;
+  chatNext.disabled = i >= chatScript.length - 1;
+}
+
+function advanceChat() {
+  if (chatIndex < chatScript.length - 1) {
+    chatIndex++;
+    renderChatStep(chatIndex);
+  }
+}
+
+chatNext.addEventListener('click', advanceChat);
+chatPrev.addEventListener('click', () => {
+  if (chatIndex > 0) { chatIndex--; renderChatStep(chatIndex); }
+});
+chatReplay.addEventListener('click', () => {
+  chatIndex = -1;
+  chatMessages.innerHTML = '';
+  setActiveActor('');
+  chatPrev.disabled = true;
+  chatNext.disabled = false;
+  clearInterval(chatInterval);
+  chatInterval = setInterval(() => {
+    advanceChat();
+    if (chatIndex >= chatScript.length - 1) clearInterval(chatInterval);
+  }, 1400);
+});
+
+// Auto-play chat once on scroll-in
+const chatObserver = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting && chatIndex === -1) {
+      chatInterval = setInterval(() => {
+        advanceChat();
+        if (chatIndex >= chatScript.length - 1) clearInterval(chatInterval);
+      }, 1400);
+    }
+  });
+}, { threshold: 0.4 });
+chatObserver.observe(document.getElementById('chatStage'));
+
+// ========================= STREAM PART CARDS =========================
+const partDetails = {
+  'start': {
+    title: 'start',
+    desc: 'The first event in a stream. Triggers ensureStarted(), which emits reply.started if it hasn\'t already been sent.',
+    code: `case "start": {
+  this.ensureStarted();
+  break;
+}`
+  },
+  'text-start': {
+    title: 'text-start',
+    desc: 'Opens a new text item. The adapter checks openedTextIds and emits reply.item.added with kind: "text".',
+    code: `case "text-start": {
+  this.ensureStarted();
+  if (!this.openedTextIds.has(part.id)) {
+    this.openedTextIds.add(part.id);
+    this.emit({ type: "reply.item.added", kind: "text", itemId: part.id, ... });
+  }
+  break;
+}`
+  },
+  'text-delta': {
+    title: 'text-delta',
+    desc: 'A chunk of text. The adapter buffers it and emits reply.text.delta. If text-start was skipped, it auto-opens the item.',
+    code: `case "text-delta": {
+  this.ensureStarted();
+  if (!this.openedTextIds.has(part.id)) { /* auto-open */ }
+  if (part.text) {
+    this.textBuffers.set(part.id, (this.textBuffers.get(part.id) ?? "") + part.text);
+    this.emit({ type: "reply.text.delta", itemId: part.id, delta: part.text, ... });
+  }
+  break;
+}`
+  },
+  'text-end': {
+    title: 'text-end',
+    desc: 'Closes a text item. Emits reply.item.done, then runs extractStructuredParts() on the accumulated buffer.',
+    code: `case "text-end": {
+  this.emit({ type: "reply.item.done", itemId: part.id, ... });
+  const buffered = this.textBuffers.get(part.id) ?? "";
+  this.textBuffers.delete(part.id);
+  if (buffered) this.extractStructuredParts(buffered, part.id);
+  break;
+}`
+  },
+  'reasoning-start': {
+    title: 'reasoning-start',
+    desc: 'Opens an extended thinking / reasoning item. Sets hasNativeReasoning = true.',
+    code: `case "reasoning-start": {
+  this.ensureStarted();
+  this.hasNativeReasoning = true;
+  if (!this.openedReasoningIds.has(part.id)) {
+    this.openedReasoningIds.add(part.id);
+    this.emit({ type: "reply.item.added", kind: "reasoning", itemId: part.id, ... });
+  }
+  break;
+}`
+  },
+  'reasoning-delta': {
+    title: 'reasoning-delta',
+    desc: 'A chunk of reasoning text. Emits reply.reasoning.delta.',
+    code: `case "reasoning-delta": {
+  this.ensureStarted();
+  this.hasNativeReasoning = true;
+  if (!this.openedReasoningIds.has(part.id)) { /* auto-open */ }
+  if (part.text) {
+    this.emit({ type: "reply.reasoning.delta", itemId: part.id, delta: part.text, ... });
+  }
+  break;
+}`
+  },
+  'reasoning-end': {
+    title: 'reasoning-end',
+    desc: 'Closes a reasoning item. Emits reply.item.done.',
+    code: `case "reasoning-end": {
+  this.emit({ type: "reply.item.done", itemId: part.id, ... });
+  break;
+}`
+  },
+  'tool-input-start': {
+    title: 'tool-input-start',
+    desc: 'A tool call is starting. Emits reply.item.added(kind: tool_call) and tool_call.started.',
+    code: `case "tool-input-start": {
+  this.ensureStarted();
+  this.pendingTools.set(part.id, { toolName: part.toolName, title: part.title });
+  this.emit({ type: "reply.item.added", kind: "tool_call", itemId: part.id, ... });
+  this.emit({ type: "tool_call.started", toolCallId: part.id, toolName: part.toolName, ... });
+  break;
+}`
+  },
+  'tool-input-delta': {
+    title: 'tool-input-delta',
+    desc: 'Partial JSON input for a tool call. Emits tool_call.progress with the raw delta string.',
+    code: `case "tool-input-delta": {
+  this.emit({ type: "tool_call.progress", toolCallId: part.id, statusText: part.delta, ... });
+  break;
+}`
+  },
+  'tool-call': {
+    title: 'tool-call',
+    desc: 'The full tool call is ready. If tool-input-start was already emitted, this updates it. Otherwise, it opens the item.',
+    code: `case "tool-call": {
+  if (!this.toolCallIdToItemId.has(toolCallId)) {
+    // Provider skipped tool-input-start
+    this.emit({ type: "reply.item.added", kind: "tool_call", itemId: toolCallId, ... });
+    this.emit({ type: "tool_call.started", toolCallId, toolName, input: args, ... });
+  } else {
+    // Update with full input
+    this.emit({ type: "tool_call.started", toolCallId, toolName, input: args, ... });
+  }
+  this.toolCallIdToItemId.set(toolCallId, toolCallId);
+  break;
+}`
+  },
+  'tool-result': {
+    title: 'tool-result',
+    desc: 'Tool execution succeeded. If the result is an MCP app, emits mcp_app.created. Always emits tool_call.completed + reply.item.done.',
+    code: `case "tool-result": {
+  const itemId = this.toolCallIdToItemId.get(toolCallId) ?? toolCallId;
+  if (isMcpAppResult(result)) {
+    this.emit({ type: "mcp_app.created", toolCallId, ... });
+  }
+  this.emit({ type: "tool_call.completed", itemId, toolCallId, output: result, ... });
+  this.emit({ type: "reply.item.done", itemId, ... });
+  break;
+}`
+  },
+  'tool-error': {
+    title: 'tool-error',
+    desc: 'Tool execution failed. Emits tool_call.failed with the error message, then reply.item.done.',
+    code: `case "tool-error": {
+  const itemId = this.toolCallIdToItemId.get(toolCallId) ?? toolCallId;
+  const errMsg = error instanceof Error ? error.message : typeof error === "string" ? error : JSON.stringify(error);
+  this.emit({ type: "tool_call.failed", itemId, toolCallId, error: errMsg, ... });
+  this.emit({ type: "reply.item.done", itemId, ... });
+  break;
+}`
+  },
+  'source': {
+    title: 'source',
+    desc: 'A citation or source reference. Emits citation.added.',
+    code: `case "source": {
+  const citationId = part.id ?? \`cite-\${this.ts()}\`;
+  this.emit({ type: "citation.added", citationId, title: part.title ?? part.url ?? "", url: part.url, ... });
+  break;
+}`
+  },
+  'file': {
+    title: 'file',
+    desc: 'A file or artifact from the provider. Emits reply.item.added(artifact) + artifact.created.',
+    code: `case "file": {
+  const artifactId = part.id ?? \`artifact-\${this.ts()}\`;
+  this.emit({ type: "reply.item.added", kind: "artifact", itemId: artifactId, ... });
+  this.emit({ type: "artifact.created", artifactId, artifactType: part.file.mimeType ?? "file", ... });
+  break;
+}`
+  },
+  'finish': {
+    title: 'finish',
+    desc: 'Stream finished. If finishReason is "error", emits reply.failed. Otherwise emits reply.completed.',
+    code: `case "finish": {
+  if (finishReason === "error") {
+    this.emit({ type: "reply.failed", error: "stream finished with error", ... });
+  } else {
+    this.emit({ type: "reply.completed", ... });
+  }
+  break;
+}`
+  },
+  'error': {
+    title: 'error',
+    desc: 'A stream-level error occurred. Emits reply.failed with the error message.',
+    code: `case "error": {
+  const errMsg = error instanceof Error ? error.message : typeof error === "string" ? error : "stream error";
+  this.emit({ type: "reply.failed", error: errMsg, ... });
+  break;
+}`
+  },
+  'abort': {
+    title: 'abort',
+    desc: 'The stream was aborted (e.g., user cancelled). Emits reply.failed with the abort reason.',
+    code: `case "abort": {
+  this.emit({ type: "reply.failed", error: part.reason ?? "aborted", ... });
+  break;
+}`
+  },
+};
+
+const partCards = document.querySelectorAll('.part-card');
+const partDetail = document.getElementById('partDetail');
+const partDetailTitle = document.getElementById('partDetailTitle');
+const partDetailDesc = document.getElementById('partDetailDesc');
+const partDetailCode = document.getElementById('partDetailCode');
+
+partCards.forEach(card => {
+  card.addEventListener('click', () => {
+    partCards.forEach(c => c.classList.remove('active'));
+    card.classList.add('active');
+    const key = card.dataset.part;
+    const info = partDetails[key];
+    if (info) {
+      partDetailTitle.textContent = info.title;
+      partDetailDesc.textContent = info.desc;
+      partDetailCode.textContent = info.code;
+      partDetail.classList.add('show');
+    }
+  });
+});
+
+// ========================= QUIZZES =========================
+function setupQuiz(qid) {
+  const container = document.getElementById(qid);
+  const options = container.querySelectorAll('.quiz-option');
+  const feedback = document.getElementById(qid + '-feedback');
+  const actions = document.getElementById(qid + '-actions');
+  let answered = false;
+
+  options.forEach(opt => {
+    opt.addEventListener('click', () => {
+      if (answered) return;
+      answered = true;
+      options.forEach(o => o.disabled = true);
+      const isCorrect = opt.dataset.correct === 'true';
+      opt.classList.add(isCorrect ? 'correct' : 'wrong');
+      if (!isCorrect) {
+        options.forEach(o => {
+          if (o.dataset.correct === 'true') o.classList.add('correct');
+        });
+      }
+      feedback.className = 'quiz-feedback show ' + (isCorrect ? 'correct' : 'wrong');
+      feedback.textContent = isCorrect
+        ? '✅ Correct! ' + getCorrectText(qid)
+        : '❌ Not quite. ' + getCorrectText(qid);
+      actions.classList.add('show');
+    });
+  });
+}
+
+function getCorrectText(qid) {
+  if (qid === 'q1') return 'openedTextIds is a Set that deduplicates text item additions, ensuring reply.item.added fires exactly once per item.';
+  if (qid === 'q2') return 'tool-result always produces tool_call.completed followed by reply.item.done to close the item lifecycle.';
+  if (qid === 'q3') return 'consume() swallows exceptions and emits reply.failed so downstream consumers can handle errors gracefully.';
+  return '';
+}
+
+function resetQuiz(qid) {
+  const container = document.getElementById(qid);
+  const options = container.querySelectorAll('.quiz-option');
+  const feedback = document.getElementById(qid + '-feedback');
+  const actions = document.getElementById(qid + '-actions');
+  options.forEach(o => {
+    o.disabled = false;
+    o.classList.remove('selected', 'correct', 'wrong');
+  });
+  feedback.className = 'quiz-feedback';
+  feedback.textContent = '';
+  actions.classList.remove('show');
+  // Re-bind because we need fresh answered state
+  setupQuizFresh(qid);
+}
+
+function setupQuizFresh(qid) {
+  const container = document.getElementById(qid);
+  const options = container.querySelectorAll('.quiz-option');
+  const feedback = document.getElementById(qid + '-feedback');
+  const actions = document.getElementById(qid + '-actions');
+  let answered = false;
+  // Clone to remove old listeners
+  options.forEach(opt => {
+    const clone = opt.cloneNode(true);
+    opt.parentNode.replaceChild(clone, opt);
+    clone.addEventListener('click', () => {
+      if (answered) return;
+      answered = true;
+      container.querySelectorAll('.quiz-option').forEach(o => o.disabled = true);
+      const isCorrect = clone.dataset.correct === 'true';
+      clone.classList.add(isCorrect ? 'correct' : 'wrong');
+      if (!isCorrect) {
+        container.querySelectorAll('.quiz-option').forEach(o => {
+          if (o.dataset.correct === 'true') o.classList.add('correct');
+        });
+      }
+      feedback.className = 'quiz-feedback show ' + (isCorrect ? 'correct' : 'wrong');
+      feedback.textContent = isCorrect
+        ? '✅ Correct! ' + getCorrectText(qid)
+        : '❌ Not quite. ' + getCorrectText(qid);
+      actions.classList.add('show');
+    });
+  });
+}
+
+setupQuizFresh('q1');
+setupQuizFresh('q2');
+setupQuizFresh('q3');
+</script>
+</body>
+</html>

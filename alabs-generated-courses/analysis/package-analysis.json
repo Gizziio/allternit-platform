@@ -1,0 +1,1033 @@
+[
+  {
+    "name": "plugin-sdk",
+    "path": "packages/@allternit/plugin-sdk",
+    "exports": [
+      {
+        "name": "CliAdapterConfig",
+        "type": "interface",
+        "line": 20
+      },
+      {
+        "name": "CliAdapter",
+        "type": "class",
+        "line": 31
+      },
+      {
+        "name": "HttpAdapterConfig",
+        "type": "interface",
+        "line": 44
+      },
+      {
+        "name": "HttpAdapter",
+        "type": "class",
+        "line": 75
+      },
+      {
+        "name": "LangChainAdapterConfig",
+        "type": "interface",
+        "line": 19
+      },
+      {
+        "name": "AllternitTool",
+        "type": "class",
+        "line": 42
+      },
+      {
+        "name": "LangChainAdapter",
+        "type": "class",
+        "line": 97
+      },
+      {
+        "name": "McpAdapterConfig",
+        "type": "interface",
+        "line": 48
+      },
+      {
+        "name": "McpAdapter",
+        "type": "class",
+        "line": 71
+      },
+      {
+        "name": "NativeAdapterConfig",
+        "type": "interface",
+        "line": 37
+      },
+      {
+        "name": "AllternitRuntime",
+        "type": "interface",
+        "line": 52
+      },
+      {
+        "name": "NativeAdapter",
+        "type": "class",
+        "line": 93
+      },
+      {
+        "name": "VSCodeAdapterConfig",
+        "type": "interface",
+        "line": 44
+      },
+      {
+        "name": "VSCodeAdapter",
+        "type": "class",
+        "line": 67
+      },
+      {
+        "name": "PluginRegistry",
+        "type": "class",
+        "line": 53
+      },
+      {
+        "name": "PluginRuntime",
+        "type": "class",
+        "line": 96
+      },
+      {
+        "name": "utils",
+        "type": "const",
+        "line": 116
+      },
+      {
+        "name": "PluginManifest",
+        "type": "interface",
+        "line": 11
+      },
+      {
+        "name": "HostRequirements",
+        "type": "interface",
+        "line": 58
+      },
+      {
+        "name": "ToolRequirement",
+        "type": "interface",
+        "line": 99
+      },
+      {
+        "name": "ToolId",
+        "type": "type",
+        "line": 105
+      },
+      {
+        "name": "PluginFunctions",
+        "type": "interface",
+        "line": 121
+      },
+      {
+        "name": "PluginFunction",
+        "type": "interface",
+        "line": 129
+      },
+      {
+        "name": "ParameterSchema",
+        "type": "interface",
+        "line": 152
+      },
+      {
+        "name": "ParameterDef",
+        "type": "interface",
+        "line": 158
+      },
+      {
+        "name": "ReturnSchema",
+        "type": "interface",
+        "line": 166
+      },
+      {
+        "name": "ArtifactSchema",
+        "type": "interface",
+        "line": 175
+      },
+      {
+        "name": "PluginEvent",
+        "type": "interface",
+        "line": 181
+      },
+      {
+        "name": "AdapterConfig",
+        "type": "interface",
+        "line": 187
+      },
+      {
+        "name": "ConfigSchema",
+        "type": "interface",
+        "line": 201
+      },
+      {
+        "name": "PluginHost",
+        "type": "interface",
+        "line": 220
+      },
+      {
+        "name": "LlmCapabilities",
+        "type": "interface",
+        "line": 249
+      },
+      {
+        "name": "LlmOptions",
+        "type": "interface",
+        "line": 269
+      },
+      {
+        "name": "StreamHandler",
+        "type": "type",
+        "line": 289
+      },
+      {
+        "name": "ToolRegistry",
+        "type": "interface",
+        "line": 291
+      },
+      {
+        "name": "ToolResult",
+        "type": "interface",
+        "line": 305
+      },
+      {
+        "name": "ToolError",
+        "type": "interface",
+        "line": 315
+      },
+      {
+        "name": "ToolMetadata",
+        "type": "interface",
+        "line": 322
+      },
+      {
+        "name": "UiCapabilities",
+        "type": "interface",
+        "line": 329
+      },
+      {
+        "name": "ImageData",
+        "type": "type",
+        "line": 361
+      },
+      {
+        "name": "ChartData",
+        "type": "interface",
+        "line": 366
+      },
+      {
+        "name": "ChartOptions",
+        "type": "interface",
+        "line": 375
+      },
+      {
+        "name": "InteractiveComponent",
+        "type": "interface",
+        "line": 382
+      },
+      {
+        "name": "PanelHandle",
+        "type": "interface",
+        "line": 389
+      },
+      {
+        "name": "PanelContent",
+        "type": "type",
+        "line": 395
+      },
+      {
+        "name": "FormSchema",
+        "type": "interface",
+        "line": 401
+      },
+      {
+        "name": "FormField",
+        "type": "interface",
+        "line": 407
+      },
+      {
+        "name": "FormData",
+        "type": "interface",
+        "line": 422
+      },
+      {
+        "name": "StorageBackend",
+        "type": "interface",
+        "line": 426
+      },
+      {
+        "name": "SessionContext",
+        "type": "interface",
+        "line": 446
+      },
+      {
+        "name": "Message",
+        "type": "interface",
+        "line": 463
+      },
+      {
+        "name": "Logger",
+        "type": "interface",
+        "line": 470
+      },
+      {
+        "name": "Plugin",
+        "type": "interface",
+        "line": 481
+      },
+      {
+        "name": "ExecutionContext",
+        "type": "interface",
+        "line": 498
+      },
+      {
+        "name": "ExecutionResult",
+        "type": "interface",
+        "line": 512
+      },
+      {
+        "name": "Artifact",
+        "type": "interface",
+        "line": 520
+      },
+      {
+        "name": "ExecutionError",
+        "type": "interface",
+        "line": 529
+      },
+      {
+        "name": "Adapter",
+        "type": "interface",
+        "line": 541
+      },
+      {
+        "name": "AdapterInstance",
+        "type": "interface",
+        "line": 552
+      },
+      {
+        "name": "AdapterEndpoint",
+        "type": "interface",
+        "line": 563
+      }
+    ],
+    "types": [
+      {
+        "name": "CliAdapterConfig",
+        "kind": "interface",
+        "fields": [
+          "inputMode?",
+          "format?",
+          "llmProvider?",
+          "apiKey?",
+          "baseUrl?",
+          "stream?",
+          "output?",
+          "quiet?"
+        ],
+        "line": 20
+      },
+      {
+        "name": "HttpAdapterConfig",
+        "kind": "interface",
+        "fields": [
+          "port?",
+          "host?",
+          "corsOrigins?",
+          "apiKey?",
+          "enableWebSocket?",
+          "staticDir?"
+        ],
+        "line": 44
+      },
+      {
+        "name": "LangChainAdapterConfig",
+        "kind": "interface",
+        "fields": [
+          "callbacks?",
+          "metadata?",
+          "tags?",
+          "verbose?"
+        ],
+        "line": 19
+      },
+      {
+        "name": "McpAdapterConfig",
+        "kind": "interface",
+        "fields": [
+          "transport?",
+          "port?",
+          "host?",
+          "exposeTools?",
+          "exposeResources?",
+          "exposePrompts?",
+          "serverName?",
+          "serverVersion?"
+        ],
+        "line": 48
+      },
+      {
+        "name": "NativeAdapterConfig",
+        "kind": "interface",
+        "fields": [
+          "runtime"
+        ],
+        "line": 37
+      },
+      {
+        "name": "AllternitRuntime",
+        "kind": "interface",
+        "fields": [],
+        "line": 52
+      },
+      {
+        "name": "VSCode",
+        "kind": "interface",
+        "fields": [],
+        "line": 20
+      },
+      {
+        "name": "WebviewPanel",
+        "kind": "interface",
+        "fields": [],
+        "line": 35
+      },
+      {
+        "name": "VSCodeAdapterConfig",
+        "kind": "interface",
+        "fields": [
+          "vscode",
+          "copilotIntegration?",
+          "commandPrefix?"
+        ],
+        "line": 44
+      },
+      {
+        "name": "PluginManifest",
+        "kind": "interface",
+        "fields": [
+          "id",
+          "name",
+          "version",
+          "runtime",
+          "description",
+          "author?",
+          "license?",
+          "repository?",
+          "keywords?",
+          "category",
+          "requires",
+          "provides",
+          "adapters",
+          "config?",
+          "defaults?"
+        ],
+        "line": 11
+      },
+      {
+        "name": "HostRequirements",
+        "kind": "interface",
+        "fields": [
+          "tools?"
+        ],
+        "line": 58
+      },
+      {
+        "name": "ToolRequirement",
+        "kind": "interface",
+        "fields": [
+          "tool",
+          "required",
+          "fallback?"
+        ],
+        "line": 99
+      },
+      {
+        "name": "ToolId",
+        "kind": "type",
+        "fields": [],
+        "line": 105
+      },
+      {
+        "name": "PluginFunctions",
+        "kind": "interface",
+        "fields": [
+          "functions",
+          "events?"
+        ],
+        "line": 121
+      },
+      {
+        "name": "PluginFunction",
+        "kind": "interface",
+        "fields": [
+          "name",
+          "description",
+          "parameters",
+          "returns",
+          "mode?",
+          "estimated_duration?",
+          "side_effects?"
+        ],
+        "line": 129
+      },
+      {
+        "name": "ParameterSchema",
+        "kind": "interface",
+        "fields": [
+          "type",
+          "properties",
+          "required?"
+        ],
+        "line": 152
+      },
+      {
+        "name": "ParameterDef",
+        "kind": "interface",
+        "fields": [
+          "type",
+          "description",
+          "enum?",
+          "default?",
+          "items?"
+        ],
+        "line": 158
+      },
+      {
+        "name": "ReturnSchema",
+        "kind": "interface",
+        "fields": [
+          "type"
+        ],
+        "line": 166
+      },
+      {
+        "name": "ArtifactSchema",
+        "kind": "interface",
+        "fields": [
+          "type",
+          "format",
+          "filename?"
+        ],
+        "line": 175
+      },
+      {
+        "name": "PluginEvent",
+        "kind": "interface",
+        "fields": [
+          "name",
+          "description",
+          "payload"
+        ],
+        "line": 181
+      },
+      {
+        "name": "AdapterConfig",
+        "kind": "interface",
+        "fields": [
+          "mcp?",
+          "http?",
+          "allternit?"
+        ],
+        "line": 187
+      },
+      {
+        "name": "ConfigSchema",
+        "kind": "interface",
+        "fields": [
+          "type"
+        ],
+        "line": 201
+      },
+      {
+        "name": "PluginHost",
+        "kind": "interface",
+        "fields": [],
+        "line": 220
+      },
+      {
+        "name": "LlmCapabilities",
+        "kind": "interface",
+        "fields": [],
+        "line": 249
+      },
+      {
+        "name": "LlmOptions",
+        "kind": "interface",
+        "fields": [
+          "model?",
+          "temperature?",
+          "maxTokens?",
+          "stop?",
+          "system?",
+          "tools?"
+        ],
+        "line": 269
+      },
+      {
+        "name": "ToolRegistry",
+        "kind": "interface",
+        "fields": [],
+        "line": 291
+      },
+      {
+        "name": "ToolError",
+        "kind": "interface",
+        "fields": [
+          "code",
+          "message",
+          "details?",
+          "retryable"
+        ],
+        "line": 315
+      },
+      {
+        "name": "ToolMetadata",
+        "kind": "interface",
+        "fields": [
+          "id",
+          "name",
+          "description",
+          "parameters"
+        ],
+        "line": 322
+      },
+      {
+        "name": "UiCapabilities",
+        "kind": "interface",
+        "fields": [],
+        "line": 329
+      },
+      {
+        "name": "ImageData",
+        "kind": "type",
+        "fields": [],
+        "line": 361
+      },
+      {
+        "name": "ChartData",
+        "kind": "interface",
+        "fields": [
+          "labels"
+        ],
+        "line": 366
+      },
+      {
+        "name": "ChartOptions",
+        "kind": "interface",
+        "fields": [
+          "title?",
+          "xAxis?",
+          "yAxis?",
+          "stacked?"
+        ],
+        "line": 375
+      },
+      {
+        "name": "InteractiveComponent",
+        "kind": "interface",
+        "fields": [
+          "type",
+          "id",
+          "label?",
+          "props?"
+        ],
+        "line": 382
+      },
+      {
+        "name": "PanelHandle",
+        "kind": "interface",
+        "fields": [
+          "id"
+        ],
+        "line": 389
+      },
+      {
+        "name": "PanelContent",
+        "kind": "type",
+        "fields": [],
+        "line": 395
+      },
+      {
+        "name": "FormSchema",
+        "kind": "interface",
+        "fields": [
+          "title?",
+          "description?",
+          "fields"
+        ],
+        "line": 401
+      },
+      {
+        "name": "FormField",
+        "kind": "interface",
+        "fields": [
+          "name",
+          "type",
+          "label",
+          "description?",
+          "required?",
+          "default?",
+          "options?"
+        ],
+        "line": 407
+      },
+      {
+        "name": "FormData",
+        "kind": "interface",
+        "fields": [],
+        "line": 422
+      },
+      {
+        "name": "StorageBackend",
+        "kind": "interface",
+        "fields": [],
+        "line": 426
+      },
+      {
+        "name": "SessionContext",
+        "kind": "interface",
+        "fields": [
+          "id",
+          "startedAt",
+          "userId?",
+          "metadata"
+        ],
+        "line": 446
+      },
+      {
+        "name": "Message",
+        "kind": "interface",
+        "fields": [
+          "role",
+          "content",
+          "timestamp",
+          "metadata?"
+        ],
+        "line": 463
+      },
+      {
+        "name": "Logger",
+        "kind": "interface",
+        "fields": [],
+        "line": 470
+      },
+      {
+        "name": "Plugin",
+        "kind": "interface",
+        "fields": [],
+        "line": 481
+      },
+      {
+        "name": "ExecutionContext",
+        "kind": "interface",
+        "fields": [
+          "executionId",
+          "startedAt",
+          "parentExecutionId?",
+          "metadata"
+        ],
+        "line": 498
+      },
+      {
+        "name": "ExecutionResult",
+        "kind": "interface",
+        "fields": [
+          "success",
+          "content?",
+          "artifacts?",
+          "data?",
+          "error?"
+        ],
+        "line": 512
+      },
+      {
+        "name": "Artifact",
+        "kind": "interface",
+        "fields": [
+          "id",
+          "type",
+          "format",
+          "filename?",
+          "content",
+          "metadata?"
+        ],
+        "line": 520
+      },
+      {
+        "name": "ExecutionError",
+        "kind": "interface",
+        "fields": [
+          "code",
+          "message",
+          "details?",
+          "retryable",
+          "retryAfter?"
+        ],
+        "line": 529
+      },
+      {
+        "name": "Adapter",
+        "kind": "interface",
+        "fields": [],
+        "line": 541
+      },
+      {
+        "name": "AdapterInstance",
+        "kind": "interface",
+        "fields": [],
+        "line": 552
+      },
+      {
+        "name": "AdapterEndpoint",
+        "kind": "interface",
+        "fields": [
+          "type",
+          "url?",
+          "command?",
+          "env?"
+        ],
+        "line": 563
+      }
+    ],
+    "complexity": {
+      "cyclomatic": 83,
+      "cognitive": 49.5,
+      "lines": 2955,
+      "exports": 68
+    },
+    "topics": [
+      {
+        "name": "Adapter Pattern",
+        "concepts": [
+          "adapter",
+          "map",
+          "port"
+        ],
+        "complexity": "advanced",
+        "relatedExports": [
+          "CliAdapterConfig",
+          "CliAdapter",
+          "HttpAdapterConfig",
+          "HttpAdapter",
+          "LangChainAdapterConfig",
+          "LangChainAdapter",
+          "McpAdapterConfig",
+          "McpAdapter",
+          "NativeAdapterConfig",
+          "NativeAdapter",
+          "VSCodeAdapterConfig",
+          "VSCodeAdapter",
+          "AdapterConfig",
+          "Adapter",
+          "AdapterInstance",
+          "AdapterEndpoint"
+        ]
+      },
+      {
+        "name": "Plugin System",
+        "concepts": [
+          "plugin",
+          "host",
+          "register",
+          "extension",
+          "manifest"
+        ],
+        "complexity": "advanced",
+        "relatedExports": [
+          "PluginRegistry",
+          "PluginRuntime",
+          "PluginManifest",
+          "HostRequirements",
+          "PluginFunctions",
+          "PluginFunction",
+          "PluginEvent",
+          "PluginHost",
+          "Plugin"
+        ]
+      },
+      {
+        "name": "Validation",
+        "concepts": [
+          "validate",
+          "schema",
+          "parse",
+          "check"
+        ],
+        "complexity": "intermediate",
+        "relatedExports": [
+          "ParameterSchema",
+          "ReturnSchema",
+          "ArtifactSchema",
+          "ConfigSchema",
+          "FormSchema"
+        ]
+      },
+      {
+        "name": "Error Handling",
+        "concepts": [
+          "error",
+          "catch",
+          "try",
+          "fallback",
+          "retry"
+        ],
+        "complexity": "intermediate",
+        "relatedExports": [
+          "PluginRegistry",
+          "ToolRegistry",
+          "ToolError",
+          "ExecutionError"
+        ]
+      },
+      {
+        "name": "API Design",
+        "concepts": [
+          "api",
+          "endpoint",
+          "request",
+          "response",
+          "client",
+          "fetch",
+          "http"
+        ],
+        "complexity": "intermediate",
+        "relatedExports": [
+          "HttpAdapterConfig",
+          "HttpAdapter",
+          "AdapterEndpoint"
+        ]
+      },
+      {
+        "name": "Events",
+        "concepts": [
+          "event"
+        ],
+        "complexity": "beginner",
+        "relatedExports": [
+          "PluginEvent"
+        ]
+      },
+      {
+        "name": "Provider",
+        "concepts": [
+          "provider",
+          "service",
+          "client",
+          "backend"
+        ],
+        "complexity": "beginner",
+        "relatedExports": [
+          "StorageBackend"
+        ]
+      },
+      {
+        "name": "Architecture",
+        "concepts": [
+          "interface",
+          "abstract",
+          "pattern",
+          "system"
+        ],
+        "complexity": "beginner",
+        "relatedExports": []
+      },
+      {
+        "name": "State Management",
+        "concepts": [
+          "state"
+        ],
+        "complexity": "beginner",
+        "relatedExports": []
+      },
+      {
+        "name": "Concurrency",
+        "concepts": [
+          "async",
+          "await",
+          "promise",
+          "queue"
+        ],
+        "complexity": "beginner",
+        "relatedExports": []
+      },
+      {
+        "name": "Security",
+        "concepts": [
+          "auth",
+          "token"
+        ],
+        "complexity": "beginner",
+        "relatedExports": []
+      },
+      {
+        "name": "Serialization",
+        "concepts": [
+          "json",
+          "encode"
+        ],
+        "complexity": "beginner",
+        "relatedExports": []
+      },
+      {
+        "name": "Caching",
+        "concepts": [
+          "cache",
+          "memo"
+        ],
+        "complexity": "beginner",
+        "relatedExports": []
+      },
+      {
+        "name": "Workflow",
+        "concepts": [
+          "workflow",
+          "node",
+          "graph",
+          "connection"
+        ],
+        "complexity": "beginner",
+        "relatedExports": []
+      }
+    ],
+    "challengeIdeas": [
+      {
+        "title": "Extend CliAdapterConfig",
+        "description": "Create a new interface that extends CliAdapterConfig with at least 3 additional fields. Write a factory function that constructs valid objects.",
+        "difficulty": "easy",
+        "relatedExports": [
+          "CliAdapterConfig"
+        ],
+        "skills": [
+          "typescript",
+          "interfaces",
+          "factories"
+        ]
+      },
+      {
+        "title": "Build a Plugin Loader",
+        "description": "Implement a plugin discovery and loading system that validates manifests before activation.",
+        "difficulty": "hard",
+        "relatedExports": [],
+        "skills": [
+          "plugins",
+          "validation",
+          "dynamic-loading"
+        ]
+      },
+      {
+        "title": "Implement a Task Queue",
+        "description": "Build a priority task queue with max concurrency, cancellation support, and progress tracking.",
+        "difficulty": "hard",
+        "relatedExports": [],
+        "skills": [
+          "concurrency",
+          "queues",
+          "scheduling"
+        ]
+      }
+    ],
+    "dependencies": [
+      "@modelcontextprotocol/sdk",
+      "commander",
+      "express",
+      "cors",
+      "ws"
+    ],
+    "fileCount": 8,
+    "lineCount": 2954
+  }
+]

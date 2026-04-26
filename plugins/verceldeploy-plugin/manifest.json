@@ -1,0 +1,35 @@
+{
+  "id": "verceldeploy-plugin",
+  "name": "VercelDeployPlugin",
+  "version": "1.0.0",
+  "runtime": "allternit-plugin-v1",
+  "description": "Deploy projects to Vercel instantly via API",
+  "category": "automate",
+  "requires": {
+    "llm": { "capabilities": ["reasoning"] },
+    "tools": ["filesystem"]
+  },
+  "provides": {
+    "functions": [
+      {
+        "name": "execute",
+        "description": "Deploy a project directory to Vercel",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": { "type": "string", "description": "Path to project directory" },
+            "projectName": { "type": "string", "description": "Optional Vercel project name" },
+            "prod": { "type": "boolean", "description": "Deploy to production", "default": false }
+          },
+          "required": ["path"]
+        },
+        "returns": { "type": "object" }
+      }
+    ]
+  },
+  "adapters": {
+    "mcp": "./adapters/mcp.js",
+    "http": "./adapters/http.js",
+    "cli": "./adapters/cli.js"
+  }
+}
