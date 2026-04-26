@@ -98,6 +98,7 @@ import type { QuerySource } from '@/constants/querySource.js'
 import { createDumpPromptsFetch } from '@/services/api/dumpPrompts.js'
 import { StreamingToolExecutor } from '@/services/tools/StreamingToolExecutor.js'
 import { queryCheckpoint } from './utils/queryProfiler.js'
+import { MemoryAgentClient } from '../memory/agent-client.js'
 import { runTools } from '@/services/tools/toolOrchestration.js'
 import { applyToolResultBudget } from './utils/toolResultStorage.js'
 import { recordContentReplacement } from './utils/sessionStorage.js'
@@ -491,6 +492,7 @@ async function* queryLoop(
     state.messages,
     state.toolUseContext,
   )
+  const pendingAgentMemoryPrefetch = MemoryAgentClient.startPrefetch(state.messages)
 
   // eslint-disable-next-line no-constant-condition
   while (true) {
@@ -1598,6 +1600,29 @@ async function* queryLoop(
     }
     queryCheckpoint('query_tool_execution_end')
 
+    // Step 3: Automatic Memory Capture
+    if (toolUseBlocks.length === 0 && assistantMessages.length > 0) {
+      const lastAssistant = assistantMessages.at(-1)
+      if (lastAssistant && lastAssistant.message) {
+        const text = Array.isArray(lastAssistant.message.content)
+          ? (lastAssistant.message.content as any[])
+              .filter(b => b.type === 'text')
+              .map(b => b.text)
+              .join('\n')
+          : typeof lastAssistant.message.content === 'string'
+            ? lastAssistant.message.content
+            : ''
+
+        if (text.length > 50) {
+          // Only capture substantial responses
+          MemoryAgentClient.ingest(text, 'assistant_response', {
+            sessionId: (params as any).sessionId || 'unknown',
+            turn: turnCount,
+          }).catch(() => {})
+        }
+      }
+    }
+
     // Generate tool use summary after tool batch completes — passed to next recursive call
     let nextPendingToolUseSummary:
       | Promise<ToolUseSummaryMessage | null>
@@ -1803,6 +1828,19 @@ async function* queryLoop(
       pendingMemoryPrefetch.consumedOnIteration = turnCount - 1
     }
 
+    // Collect Agent Memory Prefetch
+    if (pendingAgentMemoryPrefetch && turnCount === 1) {
+      const result = await pendingAgentMemoryPrefetch.promise
+      if (result?.answer) {
+        const msg = createAttachmentMessage({
+          type: 'memory_vault_context',
+          content: result.answer,
+          memories: result.memories,
+        } as any)
+        yield msg
+        toolResults.push(msg)
+      }
+    }
 
     // Inject prefetched skill discovery. collectSkillDiscoveryPrefetch emits
     // hidden_by_main_turn — true when the prefetch resolved before this point

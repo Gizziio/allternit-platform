@@ -1,6 +1,6 @@
 /**
  * Plugin Remote Control
- * Controls A2R plugins
+ * Controls Allternit plugins
  */
 import type { Plugin, RemoteControlOptions } from "./types";
 export declare class PluginController {

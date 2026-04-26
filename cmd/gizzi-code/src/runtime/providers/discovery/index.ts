@@ -11,7 +11,7 @@
  *   3. subscription — providers that surface via a CLI but are subscription-authed
  *
  * Extension:
- *   Any service (A2R platform, enterprise gateway, plugin) can register its own
+ *   Any service (Allternit platform, enterprise gateway, plugin) can register its own
  *   discovery hook via `Discovery.register()` before the state initializes.
  *   The hook returns zero or more DiscoveredProvider entries which are merged
  *   into the provider map under the same rules as built-in providers.
@@ -52,17 +52,17 @@ const _hooks: DiscoveryHook[] = []
 export const Discovery = {
   /**
    * Register an external discovery hook.
-   * Called by A2R platform, enterprise plugins, or custom integrations.
+   * Called by Allternit platform, enterprise plugins, or custom integrations.
    *
-   * Example (A2R platform plugin):
+   * Example (Allternit platform plugin):
    *   Discovery.register(async () => [{
-   *     id: "a2r-platform",
-   *     name: "A2R Platform LLM",
+   *     id: "allternit-platform",
+   *     name: "Allternit Platform LLM",
    *     auth_type: "bearer",
-   *     base_url: "https://api.a2r.io/v1",
-   *     token: await A2R.getToken(),
+   *     base_url: "https://api.allternit.io/v1",
+   *     token: await Allternit.getToken(),
    *     source: "platform",
-   *     models: [{ id: "a2r-sonnet", name: "A2R Sonnet" }],
+   *     models: [{ id: "allternit-sonnet", name: "Allternit Sonnet" }],
    *   }])
    */
   register(hook: DiscoveryHook): void {

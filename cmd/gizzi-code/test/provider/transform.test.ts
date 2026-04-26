@@ -686,7 +686,7 @@ describe("ProviderTransform.message - DeepSeek reasoning content", () => {
         input: { command: "echo hello" },
       },
     ])
-    expect(result[0].providerOptions?.a2r?.reasoning_content).toBe("Let me think about this...")
+    expect(result[0].providerOptions?.allternit?.reasoning_content).toBe("Let me think about this...")
   })
 
   test("Non-DeepSeek providers leave reasoning content unchanged", () => {
@@ -741,7 +741,7 @@ describe("ProviderTransform.message - DeepSeek reasoning content", () => {
       { type: "reasoning", text: "Should not be processed" },
       { type: "text", text: "Answer" },
     ])
-    expect(result[0].providerOptions?.a2r?.reasoning_content).toBeUndefined()
+    expect(result[0].providerOptions?.allternit?.reasoning_content).toBeUndefined()
   })
 })
 
@@ -1211,7 +1211,7 @@ describe("ProviderTransform.message - strip openai metadata when store=false", (
       providerID: "opencode",
       api: {
         id: "opencode-test",
-        url: "https://api.a2r.dev",
+        url: "https://api.allternit.dev",
         npm: "@ai-sdk/openai-compatible",
       },
     }
@@ -1245,7 +1245,7 @@ describe("ProviderTransform.message - strip openai metadata when store=false", (
       providerID: "opencode",
       api: {
         id: "opencode-test",
-        url: "https://api.a2r.dev",
+        url: "https://api.allternit.dev",
         npm: "@ai-sdk/openai-compatible",
       },
     }

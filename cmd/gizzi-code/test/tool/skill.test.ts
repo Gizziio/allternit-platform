@@ -37,8 +37,8 @@ description: Skill for tool tests.
       },
     })
 
-    const home = process.env.A2R_TEST_HOME
-    process.env.A2R_TEST_HOME = tmp.path
+    const home = process.env.Allternit_TEST_HOME
+    process.env.Allternit_TEST_HOME = tmp.path
 
     try {
       await Instance.provide({
@@ -50,7 +50,7 @@ description: Skill for tool tests.
         },
       })
     } finally {
-      process.env.A2R_TEST_HOME = home
+      process.env.Allternit_TEST_HOME = home
     }
   })
 
@@ -75,8 +75,8 @@ Use this skill.
       },
     })
 
-    const home = process.env.A2R_TEST_HOME
-    process.env.A2R_TEST_HOME = tmp.path
+    const home = process.env.Allternit_TEST_HOME
+    process.env.Allternit_TEST_HOME = tmp.path
 
     try {
       await Instance.provide({
@@ -107,7 +107,7 @@ Use this skill.
         },
       })
     } finally {
-      process.env.A2R_TEST_HOME = home
+      process.env.Allternit_TEST_HOME = home
     }
   })
 })

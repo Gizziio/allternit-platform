@@ -1,17 +1,5 @@
-/**
- * usePasteHandler Module
- * 
- * TODO: Implement full functionality
- * This is a placeholder shim for the gizzi-specific implementation.
- */
-
-export interface usePasteHandlerOptions {
-  // TODO: Define options
+export function usePasteHandler_ts(): void {
+  // Not yet implemented
 }
 
-export function usePasteHandler(options: usePasteHandlerOptions): void {
-  // TODO: Implement
-  console.log('usePasteHandler called with:', options);
-}
-
-export default usePasteHandler;
+export default usePasteHandler_ts

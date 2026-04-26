@@ -1,6 +1,6 @@
 import { Hono } from "hono"
 import { streamSSE } from "hono/streaming"
-import { describeRoute, resolver } from "hono-openapi"
+import { describeRoute, resolver } from "@/runtime/server/openapi"
 import { Bus } from "@/shared/bus"
 import { BusEvent } from "@/shared/bus/bus-event"
 import { Log } from "@/shared/util/log"

@@ -5,8 +5,8 @@
 //!
 //! Usage:
 //! ```bash
-//! export A2R_HETZNER_TOKEN=your_token
-//! export A2R_DO_TOKEN=your_token
+//! export Allternit_HETZNER_TOKEN=your_token
+//! export Allternit_DO_TOKEN=your_token
 //! cargo test e2e -- --ignored --nocapture
 //! ```
 
@@ -20,8 +20,8 @@ use std::time::Duration;
 #[tokio::test]
 #[ignore]  // Requires real API token
 async fn e2e_hetzner_provisioning() {
-    let api_token = std::env::var("A2R_HETZNER_TOKEN")
-        .expect("A2R_HETZNER_TOKEN must be set for e2e tests");
+    let api_token = std::env::var("Allternit_HETZNER_TOKEN")
+        .expect("Allternit_HETZNER_TOKEN must be set for e2e tests");
 
     println!("Starting Hetzner e2e test...");
 
@@ -41,7 +41,7 @@ async fn e2e_hetzner_provisioning() {
     let driver = HetznerDriver::new(api_token.clone());
     
     let request = CreateServerRequest {
-        name: format!("a2r-e2e-test-{}", uuid::Uuid::new_v4()),
+        name: format!("allternit-e2e-test-{}", uuid::Uuid::new_v4()),
         region: "fsn1".to_string(),
         instance_type: "cx11".to_string(),  // Cheapest option
         image: "ubuntu-22.04".to_string(),
@@ -82,8 +82,8 @@ async fn e2e_hetzner_provisioning() {
 #[tokio::test]
 #[ignore]  // Requires real API token
 async fn e2e_digitalocean_provisioning() {
-    let api_token = std::env::var("A2R_DO_TOKEN")
-        .expect("A2R_DO_TOKEN must be set for e2e tests");
+    let api_token = std::env::var("Allternit_DO_TOKEN")
+        .expect("Allternit_DO_TOKEN must be set for e2e tests");
 
     println!("Starting DigitalOcean e2e test...");
 
@@ -103,7 +103,7 @@ async fn e2e_digitalocean_provisioning() {
     let driver = DigitalOceanDriver::new(api_token.clone());
     
     let request = CreateServerRequest {
-        name: format!("a2r-e2e-test-{}", uuid::Uuid::new_v4()),
+        name: format!("allternit-e2e-test-{}", uuid::Uuid::new_v4()),
         region: "nyc3".to_string(),
         instance_type: "s-1vcpu-1gb".to_string(),  // Cheapest option
         image: "ubuntu-22-04-x64".to_string(),

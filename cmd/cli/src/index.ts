@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * A2R Command Line Interface
+ * Allternit Command Line Interface
  * 
  * TypeScript implementation ported from Rust CLI
  * Integrated with GizziClaw workspace system
@@ -23,8 +23,8 @@ import { version } from '../package.json' assert { type: 'json' };
 const program = new Command();
 
 program
-  .name('a2r')
-  .description('A2R - AI-native runtime environment')
+  .name('allternit')
+  .description('Allternit - AI-native runtime environment')
   .version(version);
 
 // Register all commands

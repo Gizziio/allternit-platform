@@ -236,7 +236,7 @@ export class GitHubActionsIntegration {
     }
     
     lines.push("---");
-    lines.push("*Powered by [a2rchitech Semi-Formal Verification](https://github.com/a2rchitech/verification)*");
+    lines.push("*Powered by [allternit Semi-Formal Verification](https://github.com/allternit/verification)*");
     
     return lines.join("\n");
   }
@@ -409,8 +409,8 @@ export class GitLabCIIntegration {
   private formatMRComment(result: OrchestratedVerificationResult): string {
     // Similar to GitHub format but with GitLab markdown
     return this.formatPRComment(result).replace(
-      "*Powered by [a2rchitech Semi-Formal Verification](https://github.com/a2rchitech/verification)*",
-      "_Powered by a2rchitech Semi-Formal Verification_"
+      "*Powered by [allternit Semi-Formal Verification](https://github.com/allternit/verification)*",
+      "_Powered by allternit Semi-Formal Verification_"
     );
   }
   

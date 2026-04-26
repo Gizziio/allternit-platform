@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.a2r.gizzi</string>
+    <string>com.allternit.gizzi</string>
     <key>ProgramArguments</key>
     <array>
         <string>/Users/USERNAME/.local/bin/gizzi</string>

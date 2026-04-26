@@ -1,0 +1,39 @@
+# Allternit VM — Lima configuration
+# Usage: limactl start --name=allternit allternit.yaml
+# Docs:  https://lima-vm.io/docs/config/
+
+vmType: vz         # Apple Virtualization.framework (native, fast)
+rosetta:
+  enabled: false   # Linux only — no macOS-app compat needed
+
+cpus: 4
+memory: "4GiB"
+disk: "20GiB"
+
+images:
+  - location: "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-arm64.img"
+    arch: "aarch64"
+  - location: "https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img"
+    arch: "x86_64"
+
+mounts:
+  - location: "~"
+    writable: true
+  - location: "/tmp/allternit"
+    writable: true
+    mountPoint: "/tmp/allternit"
+
+networks:
+  - lima: shared
+
+provision:
+  - mode: system
+    script: |
+      #!/bin/bash
+      set -euo pipefail
+      curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+      apt-get install -y nodejs git bubblewrap python3 python3-pip
+      npm install -g pnpm bun
+
+hostResolver:
+  enabled: true

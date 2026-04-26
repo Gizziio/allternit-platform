@@ -1,21 +1,21 @@
 {
-  "name": "@a2rchitech/cli",
+  "name": "@allternit/cli-typescript",
   "version": "1.0.0",
-  "description": "A2rchitech CLI with Superconductor integration",
+  "description": "Allternit CLI with Superconductor integration",
   "bin": {
-    "a2r": "./bin/a2r-parallel.js"
+    "allternit": "./bin/allternit-parallel.js"
   },
   "dependencies": {
     "commander": "^9.0.0",
-    "@a2r/runtime": "workspace:*"
+    "@allternit/runtime": "workspace:*"
   },
   "keywords": [
-    "a2rchitech",
+    "allternit",
     "ai",
     "agents",
     "parallel-execution",
     "superconductor"
   ],
-  "author": "A2rchitech",
+  "author": "Allternit",
   "license": "MIT"
 }

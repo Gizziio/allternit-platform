@@ -2,7 +2,7 @@
  * Enhanced CronService with SQLite Persistence
  * 
  * Unified TypeScript implementation replacing both:
- * - Rust a2r-scheduler (will be deprecated)
+ * - Rust allternit-scheduler (will be deprecated)
  * - Previous in-memory CronService
  * 
  * Features:
@@ -18,6 +18,8 @@ import { CronDatabase } from "./database";
 import { parseScheduleToType, getNextRunTime, describeSchedule } from "./parser";
 import { AgentExecutor } from "./executors/agent-executor";
 import { CoworkExecutor } from "./executors/cowork-executor";
+import { VaultSyncExecutor } from "./executors/vault-sync-executor";
+import { getFunction, listRegisteredFunctions } from "./executors/function-registry";
 import type {
   CronJob,
   CronRun,
@@ -34,6 +36,15 @@ import { join } from "path";
 import { randomUUID } from "crypto";
 
 const log = Log.create({ service: "cron-service" });
+
+// Singleton vault sync executor reused across job runs
+let vaultSyncExecutor: VaultSyncExecutor | null = null;
+function getVaultSyncExecutor(): VaultSyncExecutor {
+  if (!vaultSyncExecutor) {
+    vaultSyncExecutor = new VaultSyncExecutor({});
+  }
+  return vaultSyncExecutor;
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // State Management
@@ -572,6 +583,9 @@ export const CronService = {
         case "function":
           await this._executeFunction(job, run, controller.signal);
           break;
+        case "vault":
+          await this._executeVault(job, run, controller.signal);
+          break;
       }
 
       // Success
@@ -706,23 +720,29 @@ export const CronService = {
     await executor.execute(job, run, signal)
   },
 
-  async _executeFunction(job: CronJob, run: CronRun, signal: AbortSignal): Promise<void> {
-    const config = job.config as { module: string; function: string; args: unknown[] };
+  async _executeFunction(job: CronJob, run: CronRun, _signal: AbortSignal): Promise<void> {
+    const config = job.config as { function: string; args: unknown[] };
+    
+    const fn = getFunction(config.function);
+    if (!fn) {
+      throw new Error(
+        `Function "${config.function}" is not registered. ` +
+        `Available functions: ${listRegisteredFunctions().join(", ") || "none"}. ` +
+        `Register functions with registerFunction() before creating cron jobs.`
+      );
+    }
     
     try {
-      // Dynamic import
-      const mod = await import(config.module);
-      const fn = mod[config.function];
-      
-      if (typeof fn !== "function") {
-        throw new Error(`Function ${config.function} not found in module ${config.module}`);
-      }
-      
       const result = await fn(...config.args);
       run.output = JSON.stringify(result, null, 2);
     } catch (error) {
-      throw new Error(`Function execution failed: ${error}`);
+      throw new Error(`Function "${config.function}" execution failed: ${error instanceof Error ? error.message : String(error)}`);
     }
+  },
+
+  async _executeVault(job: CronJob, run: CronRun, signal: AbortSignal): Promise<void> {
+    const executor = getVaultSyncExecutor()
+    await executor.execute(job, run, signal)
   },
 };
 

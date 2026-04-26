@@ -86,6 +86,6 @@ export declare class CloudRelayClient extends EventEmitter {
  * Create a cloud relay client
  */
 export declare function createCloudRelayClient(options: CloudRelayOptions): CloudRelayClient;
-export declare const DEFAULT_CLOUD_RELAY_URL = "wss://cowork.a2r.com";
+export declare const DEFAULT_CLOUD_RELAY_URL = "wss://cowork.allternit.com";
 export default CloudRelayClient;
 //# sourceMappingURL=cloud-relay.d.ts.map

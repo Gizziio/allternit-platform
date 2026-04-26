@@ -3,6 +3,7 @@
 pub mod cost_service;
 pub mod event_store;
 pub mod run_service;
+pub mod task_service;
 pub mod scheduler_service;
 
 pub use cost_service::{
@@ -12,4 +13,5 @@ pub use cost_service::{
 };
 pub use event_store::{EventStore, EventStoreImpl, event_utils};
 pub use run_service::{RunService, RunServiceImpl, RunListFilter};
+pub use task_service::TaskService;
 pub use scheduler_service::{SchedulerService, SchedulerConfig, MisfirePolicy, start_scheduler_service};

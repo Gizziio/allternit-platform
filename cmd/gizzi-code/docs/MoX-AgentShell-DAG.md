@@ -1,6 +1,6 @@
 # MoX DAG: Agent-Shell TUI + Usage Guard
 
-**Target Codebase**: `a2rchitech/7-apps/agent-shell/a2r-shell/packages/a2r-shell/`
+**Target Codebase**: `allternit/7-apps/agent-shell/allternit-shell/packages/allternit-shell/`
 **Tech Stack**: TypeScript, SolidJS, Bun
 **Scope**: TUI features + Usage Guard (all in TypeScript)
 
@@ -16,12 +16,12 @@
 
 ### What Agent-Shell Is NOT
 - Not the Rust CLI in `7-apps/cli/`
-- Not the web platform in `6-ui/a2r-platform/`
+- Not the web platform in `6-ui/allternit-platform/`
 
 ### External Integrations (Subprocess)
 - May spawn Rust CLI for handoff operations
-- Reads usage data from `~/.a2r/cache/usage/`
-- Writes batons to `/.a2r/handoff/`
+- Reads usage data from `~/.allternit/cache/usage/`
+- Writes batons to `/.allternit/handoff/`
 
 ---
 
@@ -37,7 +37,7 @@
 // New file: src/cli/cmd/tui/hooks/useMessageState.ts
 export function useMessageState(sessionID: string) {
   const [state, setState] = createStore<Record<string, { collapsed?: boolean }>>({})
-  // Persist to localStorage: `a2r-msg-${sessionID}`
+  // Persist to localStorage: `allternit-msg-${sessionID}`
   return { state, toggle: (msgID: string) => ... }
 }
 ```
@@ -129,7 +129,7 @@ export function useMessageState(sessionID: string) {
 - Create: `src/usage/parsers/codex.ts`
 
 **Reads from**:
-- `~/.a2r/cache/usage/` (usage snapshots)
+- `~/.allternit/cache/usage/` (usage snapshots)
 - Session message tokens (in-memory)
 
 **Calculates**:
@@ -156,7 +156,7 @@ const usage = useUsage() // Returns UsageSnapshot
 ---
 
 ### Task: MoX-GUARD-003 | Enhanced Status Bar
-**Location**: `src/ui/a2r/status-bar.tsx`
+**Location**: `src/ui/allternit/status-bar.tsx`
 **Type**: Modify existing
 **Duration**: 6h
 **Depends**: MoX-GUARD-002
@@ -191,14 +191,14 @@ const THRESHOLDS = {
 ```
 
 **Emits events**:
-- `A2R_GUARD_WARN`
-- `A2R_GUARD_COMPACT`
-- `A2R_GUARD_HANDOFF`
+- `Allternit_GUARD_WARN`
+- `Allternit_GUARD_COMPACT`
+- `Allternit_GUARD_HANDOFF`
 
 ---
 
 ### Task: MoX-GUARD-005 | Guard Banners
-**Location**: `src/ui/a2r/guard-banner.tsx`
+**Location**: `src/ui/allternit/guard-banner.tsx`
 **Type**: New component
 **Duration**: 6h
 **Depends**: MoX-GUARD-004
@@ -234,9 +234,9 @@ const THRESHOLDS = {
 - Create: `src/continuity/handoff.ts` (handoff trigger)
 
 **Writes to**:
-- `/.a2r/compact/compact-*.md`
-- `/.a2r/handoff/latest.md`
-- `/.a2r/state/state.json`
+- `/.allternit/compact/compact-*.md`
+- `/.allternit/handoff/latest.md`
+- `/.allternit/state/state.json`
 
 ---
 
@@ -312,7 +312,7 @@ src/
 │   └── routes/
 │       ├── home.tsx                # MoX-SHELL-006
 │       └── session/index.tsx       # MoX-SHELL-001,003,005
-├── ui/a2r/
+├── ui/allternit/
 │   ├── status-bar.tsx              # MoX-GUARD-003
 │   └── guard-banner.tsx            # MoX-GUARD-005
 ├── usage/                          # MoX-GUARD-001
@@ -341,5 +341,5 @@ src/
 
 - ✅ TypeScript/SolidJS only
 - ✅ No Rust crate creation
-- ✅ All in `packages/a2r-shell/src/`
+- ✅ All in `packages/allternit-shell/src/`
 - ✅ May call external CLI as subprocess (handoff only)

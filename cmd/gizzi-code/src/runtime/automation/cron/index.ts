@@ -1,8 +1,8 @@
 /**
- * A2R Cron - Unified TypeScript Cron System
+ * Allternit Cron - Unified TypeScript Cron System
  * 
  * Consolidated implementation replacing:
- * - Rust a2r-scheduler (deprecated)
+ * - Rust allternit-scheduler (deprecated)
  * - Previous in-memory CronService
  * 
  * Features:
@@ -112,7 +112,7 @@ export { CronDatabase } from "./database";
  * import { CronServiceEnhanced, AgentExecutor, CoworkExecutor } from "./index";
  * // Initialize CronService with executors
  * CronServiceEnhanced.initialize({
- *   dbPath: "~/.a2r/cron.db",
+ *   dbPath: "~/.allternit/cron.db",
  *   timezone: "America/New_York",
  *   agent: {
  *     defaultCwd: process.cwd(),
@@ -181,7 +181,7 @@ export { CronDatabase } from "./database";
  * 
  * const daemon = await startDaemon({
  *   port: 3031,
- *   dbPath: "~/.a2r/cron.db",
+ *   dbPath: "~/.allternit/cron.db",
  *   checkIntervalMs: 60000,
  *   timezone: "UTC",
  * });

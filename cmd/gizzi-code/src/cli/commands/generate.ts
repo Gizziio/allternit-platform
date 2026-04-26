@@ -13,9 +13,9 @@ export const GenerateCommand = {
           {
             lang: "js",
             source: [
-              `import { createA2RClient } from "@a2r/sdk`,
+              `import { createAllternitClient } from "@allternit/sdk`,
               ``,
-              `const client = createA2RClient()`,
+              `const client = createAllternitClient()`,
               `await client.${operation.operationId}({`,
               `  ...`,
               `})`,

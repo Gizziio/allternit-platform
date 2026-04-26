@@ -33,7 +33,7 @@ export class CronDaemon {
       config: {
         port: config.port ?? 3031,
         host: config.host ?? "127.0.0.1",
-        dbPath: config.dbPath ?? `${process.env.HOME}/.a2r/cron.db`,
+        dbPath: config.dbPath ?? `${process.env.HOME}/.allternit/cron.db`,
         checkIntervalMs: config.checkIntervalMs ?? 60000,
         logLevel: config.logLevel ?? "info",
         maxConcurrentJobs: config.maxConcurrentJobs ?? 10,

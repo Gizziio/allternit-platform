@@ -10,7 +10,9 @@
     "customConditions": ["browser"],
     "paths": {
       "@/*": ["./src/*"],
-      "@tui/*": ["./src/cli/ui/tui/*"]
+      "@tui/*": ["./src/cli/ui/tui/*"],
+      "@allternit/util": ["../../packages/@allternit/util/src"],
+      "@allternit/sdk": ["../../packages/@allternit/sdk/src"]
     }
   },
   "include": [

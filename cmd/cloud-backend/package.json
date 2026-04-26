@@ -1,7 +1,7 @@
 {
-  "name": "@a2r/cloud-backend",
+  "name": "@allternit/cloud-backend-service",
   "version": "0.1.0",
-  "description": "A2R Cloud Backend - WebSocket server for browser extensions and thin clients",
+  "description": "Allternit Cloud Backend - WebSocket server for browser extensions and thin clients",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {

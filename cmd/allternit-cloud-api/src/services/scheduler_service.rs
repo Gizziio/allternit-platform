@@ -8,7 +8,6 @@ use crate::db::cowork_models::Schedule;
 use crate::db::models::Region;
 use crate::ApiState;
 use chrono::Utc;
-use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::interval;
@@ -129,7 +128,7 @@ impl std::str::FromStr for MisfirePolicy {
 enum MisfireAction {
     Ignore,
     FireOnce,
-    FireAll { count: i32 },
+    FireAll,
 }
 
 /// Scheduler service that runs as a background task
@@ -579,7 +578,7 @@ impl SchedulerService {
                     // Trigger one run
                     let _ = self.process_schedule(state, &schedule).await;
                 }
-                MisfireAction::FireAll { count: _ } => {
+                MisfireAction::FireAll => {
                     // Trigger multiple runs (rare case)
                     warn!("Firing misfired run for {}", schedule.id);
                     let _ = self.process_schedule(state, &schedule).await;
@@ -604,7 +603,7 @@ impl SchedulerService {
             MisfirePolicy::FireOnce => MisfireAction::FireOnce,
             MisfirePolicy::FireAll => {
                 // Calculate how many runs were missed (simplified)
-                MisfireAction::FireAll { count: 1 }
+                MisfireAction::FireAll
             }
         }
     }

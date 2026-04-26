@@ -1,18 +1,18 @@
 [package]
-name = "a2r-cloud-api"
+name = "allternit-cloud-api"
 version = "0.1.0"
 edition = "2021"
-description = "A2R Cloud API - Backend API for cloud deployment"
+description = "Allternit Cloud API - Backend API for cloud deployment"
 
 [[bin]]
-name = "a2r-cloud-api"
+name = "allternit-cloud-api"
 path = "src/main.rs"
 
 [dependencies]
-# A2R internal
-a2r-cloud-core = { path = "../a2r-cloud-core" }
-a2r-cloud-ssh = { path = "../a2r-cloud-ssh" }
-a2r-cloud-hetzner = { path = "../a2r-cloud-providers/hetzner" }
+# Allternit internal
+allternit-cloud-core = { path = "../../infrastructure/cloud" }
+allternit-cloud-ssh = { path = "../../infrastructure/cloud/allternit-cloud-ssh" }
+allternit-cloud-hetzner = { path = "../../infrastructure/providers/hetzner" }
 
 # Web framework
 axum = { workspace = true, features = ["ws"] }

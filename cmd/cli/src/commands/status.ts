@@ -15,7 +15,7 @@ export const statusCommand = new Command('status')
     if (options.json) {
       console.log(JSON.stringify(status, null, 2));
     } else {
-      console.log(chalk.blue('A2R System Status'));
+      console.log(chalk.blue('Allternit System Status'));
       console.log(chalk.gray('─────────────────────'));
       console.log(chalk.green('✓'), 'Daemon:', chalk.white(status.daemon));
       console.log(chalk.green('✓'), 'Workspace:', chalk.white(status.workspace));

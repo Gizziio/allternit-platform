@@ -1,7 +1,7 @@
 import { BusEvent } from "@/shared/bus/bus-event"
 import { Bus } from "@/shared/bus"
 import { Log } from "@/shared/util/log"
-import { describeRoute, generateSpecs, validator, resolver, openAPIRouteHandler } from "hono-openapi"
+import { describeRoute, generateSpecs, validator, resolver, openAPIRouteHandler } from "@/runtime/server/openapi"
 import { Hono } from "hono"
 import { cors } from "hono/cors"
 import { streamSSE } from "hono/streaming"
@@ -9,7 +9,7 @@ import { proxy } from "hono/proxy"
 import { basicAuth } from "hono/basic-auth"
 import z from "zod/v4"
 import { Provider } from "@/runtime/providers/provider"
-import { NamedError } from "@a2r/util/error"
+import { NamedError, NamedErrorBase } from "@allternit/gizzi-util/error.js"
 import { LSP } from "@/runtime/integrations/lsp"
 import { Format } from "@/shared/format"
 import { Config } from "@/runtime/context/config/config"
@@ -65,6 +65,7 @@ import { SandboxRoutes } from "@/runtime/server/routes/sandbox"
 import { VmSessionRoutes } from "@/runtime/server/routes/vm-session"
 import { WorkspaceRoutes } from "@/runtime/server/routes/workspace"
 import { PluginRoutes } from "@/runtime/server/routes/plugin"
+import { CoworkRoutes } from "@/runtime/server/routes/cowork"
 
 // @ts-ignore This global is needed to prevent ai-sdk from logging warnings to stdout https://github.com/vercel/ai/blob/2dc67e0ef538307f21368db32d5a12345d98831b/packages/ai/src/logger/log-warnings.ts#L85
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -87,7 +88,7 @@ export namespace Server {
           log.error("failed", {
             error: err,
           })
-          if (err instanceof NamedError) {
+          if (err instanceof NamedErrorBase) {
             let status: ContentfulStatusCode
             if (err instanceof NotFoundError) status = 404
             else if (Provider.ModelNotFoundError.isInstance(err)) status = 400
@@ -309,6 +310,7 @@ export namespace Server {
         .route("/sandbox", SandboxRoutes())
         .route("/vm-session", VmSessionRoutes())
         .route("/plugin", PluginRoutes())
+        .route("/cowork", CoworkRoutes())
         .post(
           "/log",
           describeRoute({
@@ -389,6 +391,7 @@ export namespace Server {
             .route("/vm-session", VmSessionRoutes())
             .route("/plugin", PluginRoutes())
             .route("/event", EventRoutes())
+            .route("/", CoworkRoutes())
             .route("/ars-contexta", ArsContextaRoutes())
             .route("/auth", AuthRoutes())
             .route("/auth/terminal/clerk", TerminalClerkAuthRoutes())

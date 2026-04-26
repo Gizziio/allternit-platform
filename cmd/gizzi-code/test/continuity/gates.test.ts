@@ -7,7 +7,7 @@ import path from "path"
 import { mkdir, writeFile, rmdir } from "fs/promises"
 
 describe("CI Gates", () => {
-  const testWorkspace = "/tmp/a2r-gates-test"
+  const testWorkspace = "/tmp/allternit-gates-test"
   
   beforeAll(async () => {
     // Create test workspace

@@ -14,7 +14,7 @@ use crate::runtime::*;
 /// Cloud runtime for managed cloud execution
 pub struct CloudRuntime {
     /// Hetzner provider client
-    hetzner: a2r_cloud_hetzner::HetznerProvider,
+    hetzner: allternit_cloud_hetzner::HetznerProvider,
     /// Active cloud instances
     instances: Arc<RwLock<HashMap<String, CloudInstance>>>,
     /// Event streams
@@ -24,20 +24,17 @@ pub struct CloudRuntime {
 /// Cloud instance state
 #[derive(Debug, Clone)]
 struct CloudInstance {
-    instance_id: String,
     server_id: i64,
     status: RuntimeState,
     public_ip: String,
     ssh_key: String,
-    region: String,
-    instance_type: String,
 }
 
 impl CloudRuntime {
     /// Create a new cloud runtime with Hetzner provider
     pub async fn new_hetzner(api_token: String) -> Result<Self, ApiError> {
         Ok(Self {
-            hetzner: a2r_cloud_hetzner::HetznerProvider::new(&api_token),
+            hetzner: allternit_cloud_hetzner::HetznerProvider::new(&api_token),
             instances: Arc::new(RwLock::new(HashMap::new())),
             streams: Arc::new(RwLock::new(HashMap::new())),
         })
@@ -57,7 +54,7 @@ impl CloudRuntime {
         instances: Arc<RwLock<HashMap<String, CloudInstance>>>,
     ) {
         // Establish SSH connection to cloud instance for event streaming
-        let ssh_conn = match a2r_cloud_ssh::SshConnection::connect(
+        let ssh_conn = match allternit_cloud_ssh::SshConnection::connect(
             &instance_ip,
             22,
             "root",
@@ -87,7 +84,7 @@ impl CloudRuntime {
             
             // Get status from cloud instance
             let ssh = ssh_conn.lock().await;
-            let result = ssh.execute("systemctl is-active a2r-agent 2>/dev/null || echo 'inactive'").await;
+            let result = ssh.execute("systemctl is-active allternit-agent 2>/dev/null || echo 'inactive'").await;
             drop(ssh);
             
             match result {
@@ -155,8 +152,8 @@ impl Runtime for CloudRuntime {
             .unwrap_or_else(|_| "dev-token".to_string());
 
         // Deploy to Hetzner Cloud
-        let deploy_config = a2r_cloud_hetzner::DeploymentConfig {
-            instance_name: format!("a2r-run-{}", &runtime_id[..8]),
+        let deploy_config = allternit_cloud_hetzner::DeploymentConfig {
+            instance_name: format!("allternit-run-{}", &runtime_id[..8]),
             instance_type_id: instance_type.to_string(),
             region_id: region.to_string(),
             storage_gb: config.extra
@@ -184,14 +181,11 @@ impl Runtime for CloudRuntime {
 
         // Create instance record
         let instance = CloudInstance {
-            instance_id: runtime_id.clone(),
             server_id: result.instance_id.parse::<i64>()
                 .map_err(|e| ApiError::Internal(format!("Invalid server ID: {}", e)))?,
             status: RuntimeState::Running,
             public_ip: result.instance_ip.clone(),
             ssh_key: result.ssh_key.clone(),
-            region: region.to_string(),
-            instance_type: instance_type.to_string(),
         };
 
         {
@@ -200,7 +194,7 @@ impl Runtime for CloudRuntime {
         }
 
         // Start the actual run on the cloud instance via SSH
-        let ssh_conn = a2r_cloud_ssh::SshConnection::connect(
+        let ssh_conn = allternit_cloud_ssh::SshConnection::connect(
             &result.instance_ip,
             22,
             "root",
@@ -212,7 +206,7 @@ impl Runtime for CloudRuntime {
         let cmd = if let Some(command) = &config.command {
             format!(
                 "cd {} && {}",
-                config.working_dir.as_deref().unwrap_or("/opt/a2r"),
+                config.working_dir.as_deref().unwrap_or("/opt/allternit"),
                 command
             )
         } else {
@@ -245,7 +239,7 @@ impl Runtime for CloudRuntime {
     }
 
     async fn stop(&self, runtime_id: &str) -> Result<(), ApiError> {
-        let mut instances = self.instances.write().await;
+        let instances = self.instances.write().await;
 
         if let Some(instance) = instances.get(runtime_id) {
             // Actually delete the Hetzner server
@@ -265,7 +259,7 @@ impl Runtime for CloudRuntime {
 
         if let Some(instance) = instances.get(runtime_id) {
             // Check SSH connectivity
-            let ssh_result = a2r_cloud_ssh::SshConnection::connect(
+            let ssh_result = allternit_cloud_ssh::SshConnection::connect(
                 &instance.public_ip,
                 22,
                 "root",
@@ -362,7 +356,7 @@ impl Runtime for CloudRuntime {
         };
 
         // Execute via SSH
-        let ssh_conn = a2r_cloud_ssh::SshConnection::connect(
+        let ssh_conn = allternit_cloud_ssh::SshConnection::connect(
             &instance.public_ip,
             22,
             "root",
@@ -391,7 +385,7 @@ impl Runtime for CloudRuntime {
 
         if let Some(instance) = instances.get_mut(runtime_id) {
             // Connect via SSH and pause the agent
-            let ssh_conn = a2r_cloud_ssh::SshConnection::connect(
+            let ssh_conn = allternit_cloud_ssh::SshConnection::connect(
                 &instance.public_ip,
                 22,
                 "root",
@@ -399,7 +393,7 @@ impl Runtime for CloudRuntime {
             ).await
             .map_err(|e| ApiError::Internal(format!("SSH connection failed: {}", e)))?;
 
-            let _ = ssh_conn.execute("systemctl stop a2r-agent").await;
+            let _ = ssh_conn.execute("systemctl stop allternit-agent").await;
             
             instance.status = RuntimeState::Paused;
             tracing::info!("Paused cloud instance {}", runtime_id);
@@ -414,7 +408,7 @@ impl Runtime for CloudRuntime {
 
         if let Some(instance) = instances.get_mut(runtime_id) {
             // Connect via SSH and resume the agent
-            let ssh_conn = a2r_cloud_ssh::SshConnection::connect(
+            let ssh_conn = allternit_cloud_ssh::SshConnection::connect(
                 &instance.public_ip,
                 22,
                 "root",
@@ -422,7 +416,7 @@ impl Runtime for CloudRuntime {
             ).await
             .map_err(|e| ApiError::Internal(format!("SSH connection failed: {}", e)))?;
 
-            let _ = ssh_conn.execute("systemctl start a2r-agent").await;
+            let _ = ssh_conn.execute("systemctl start allternit-agent").await;
             
             instance.status = RuntimeState::Running;
             tracing::info!("Resumed cloud instance {}", runtime_id);

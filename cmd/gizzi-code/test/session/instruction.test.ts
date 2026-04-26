@@ -71,22 +71,22 @@ describe("InstructionPrompt.resolve", () => {
   })
 })
 
-describe("InstructionPrompt.systemPaths A2R_CONFIG_DIR", () => {
+describe("InstructionPrompt.systemPaths Allternit_CONFIG_DIR", () => {
   let originalConfigDir: string | undefined
 
   beforeEach(() => {
-    originalConfigDir = process.env["A2R_CONFIG_DIR"]
+    originalConfigDir = process.env["Allternit_CONFIG_DIR"]
   })
 
   afterEach(() => {
     if (originalConfigDir === undefined) {
-      delete process.env["A2R_CONFIG_DIR"]
+      delete process.env["Allternit_CONFIG_DIR"]
     } else {
-      process.env["A2R_CONFIG_DIR"] = originalConfigDir
+      process.env["Allternit_CONFIG_DIR"] = originalConfigDir
     }
   })
 
-  test("prefers A2R_CONFIG_DIR AGENTS.md over global when both exist", async () => {
+  test("prefers Allternit_CONFIG_DIR AGENTS.md over global when both exist", async () => {
     await using profileTmp = await tmpdir({
       init: async (dir) => {
         await Bun.write(path.join(dir, "AGENTS.md"), "# Profile Instructions")
@@ -99,7 +99,7 @@ describe("InstructionPrompt.systemPaths A2R_CONFIG_DIR", () => {
     })
     await using projectTmp = await tmpdir()
 
-    process.env["A2R_CONFIG_DIR"] = profileTmp.path
+    process.env["Allternit_CONFIG_DIR"] = profileTmp.path
     const originalGlobalConfig = Global.Path.config
     ;(Global.Path as { config: string }).config = globalTmp.path
 
@@ -117,7 +117,7 @@ describe("InstructionPrompt.systemPaths A2R_CONFIG_DIR", () => {
     }
   })
 
-  test("falls back to global AGENTS.md when A2R_CONFIG_DIR has no AGENTS.md", async () => {
+  test("falls back to global AGENTS.md when Allternit_CONFIG_DIR has no AGENTS.md", async () => {
     await using profileTmp = await tmpdir()
     await using globalTmp = await tmpdir({
       init: async (dir) => {
@@ -126,7 +126,7 @@ describe("InstructionPrompt.systemPaths A2R_CONFIG_DIR", () => {
     })
     await using projectTmp = await tmpdir()
 
-    process.env["A2R_CONFIG_DIR"] = profileTmp.path
+    process.env["Allternit_CONFIG_DIR"] = profileTmp.path
     const originalGlobalConfig = Global.Path.config
     ;(Global.Path as { config: string }).config = globalTmp.path
 
@@ -144,7 +144,7 @@ describe("InstructionPrompt.systemPaths A2R_CONFIG_DIR", () => {
     }
   })
 
-  test("uses global AGENTS.md when A2R_CONFIG_DIR is not set", async () => {
+  test("uses global AGENTS.md when Allternit_CONFIG_DIR is not set", async () => {
     await using globalTmp = await tmpdir({
       init: async (dir) => {
         await Bun.write(path.join(dir, "AGENTS.md"), "# Global Instructions")
@@ -152,7 +152,7 @@ describe("InstructionPrompt.systemPaths A2R_CONFIG_DIR", () => {
     })
     await using projectTmp = await tmpdir()
 
-    delete process.env["A2R_CONFIG_DIR"]
+    delete process.env["Allternit_CONFIG_DIR"]
     const originalGlobalConfig = Global.Path.config
     ;(Global.Path as { config: string }).config = globalTmp.path
 

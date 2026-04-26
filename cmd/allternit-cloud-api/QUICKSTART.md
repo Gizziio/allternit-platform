@@ -8,7 +8,7 @@ Get started with the Cowork Runtime in 5 minutes.
 
 - Rust toolchain (1.70+)
 - SQLite (or Postgres for production)
-- A2R CLI (optional, for client access)
+- Allternit CLI (optional, for client access)
 
 ---
 
@@ -17,8 +17,8 @@ Get started with the Cowork Runtime in 5 minutes.
 The Control Plane is the central API server for the Cowork Runtime.
 
 ```bash
-# From the a2rchitech workspace root
-cargo run -p a2r-cloud-api
+# From the allternit workspace root
+cargo run -p allternit-cloud-api
 ```
 
 The API server starts on `http://localhost:8080` by default.
@@ -242,7 +242,7 @@ Features:
 
 ```bash
 # Use a different port
-PORT=8081 cargo run -p a2r-cloud-api
+PORT=8081 cargo run -p allternit-cloud-api
 ```
 
 ### Database locked
@@ -251,7 +251,7 @@ The default SQLite database is in `./data/api.db`. For concurrent access:
 
 ```bash
 # Use Postgres in production
-DATABASE_URL="postgres://user:pass@localhost/cowork" cargo run -p a2r-cloud-api
+DATABASE_URL="postgres://user:pass@localhost/cowork" cargo run -p allternit-cloud-api
 ```
 
 ### Run won't start
@@ -277,10 +277,10 @@ HOST=0.0.0.0
 DATABASE_URL=./data/api.db
 
 # Runtime paths
-LOCAL_RUNTIME_SOCKET=/var/run/a2r-runtime.sock
+LOCAL_RUNTIME_SOCKET=/var/run/allternit-runtime.sock
 
 # Logging
-RUST_LOG=info,a2r_cloud_api=debug
+RUST_LOG=info,allternit_cloud_api=debug
 
 # Features
 ENABLE_APPROVALS=true

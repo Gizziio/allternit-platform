@@ -1,93 +1,43 @@
 /**
- * @a2r/sdk smoke tests
+ * @allternit/sdk smoke tests
  *
- * Verifies that the SDK can be imported, instantiated, and that
- * the key methods added manually (events, globalEvents) exist and
- * return async iterables. Does NOT require a live server.
+ * Verifies that the SDK can be imported and key exports exist.
+ * Does NOT require a live server.
  */
 
 import { describe, expect, test } from "bun:test"
-import { createA2RClient, A2RClient } from "@a2r/sdk"
+import {
+  AllternitAI,
+  AllternitOpenAI,
+  PROVIDER_REGISTRY,
+  createProvider,
+  listProviders,
+  VERSION,
+} from "@allternit/sdk"
 
-describe("@a2r/sdk — createA2RClient", () => {
-  test("createA2RClient is a function", () => {
-    expect(typeof createA2RClient).toBe("function")
+describe("@allternit/sdk — exports", () => {
+  test("AllternitAI is a class", () => {
+    expect(typeof AllternitAI).toBe("function")
   })
 
-  test("A2RClient is a class", () => {
-    expect(typeof A2RClient).toBe("function")
+  test("AllternitOpenAI is a class", () => {
+    expect(typeof AllternitOpenAI).toBe("function")
   })
 
-  test("client can be instantiated with a baseUrl", () => {
-    const client = createA2RClient({ baseUrl: "http://localhost:4000" })
-    expect(client).toBeDefined()
-    expect(client).toBeInstanceOf(A2RClient)
+  test("PROVIDER_REGISTRY is defined", () => {
+    expect(Array.isArray(PROVIDER_REGISTRY)).toBe(true)
+    expect(PROVIDER_REGISTRY.length).toBeGreaterThan(0)
   })
 
-  test("client.events is a function", () => {
-    const client = createA2RClient({ baseUrl: "http://localhost:4000" })
-    expect(typeof client.events).toBe("function")
+  test("createProvider is a function", () => {
+    expect(typeof createProvider).toBe("function")
   })
 
-  test("client.globalEvents is a function", () => {
-    const client = createA2RClient({ baseUrl: "http://localhost:4000" })
-    expect(typeof client.globalEvents).toBe("function")
+  test("listProviders is a function", () => {
+    expect(typeof listProviders).toBe("function")
   })
 
-  test("client.events() returns an async iterable", () => {
-    const ac = new AbortController()
-    ac.abort() // abort immediately so we don't actually fetch
-    const client = createA2RClient({ baseUrl: "http://localhost:4000" })
-    const iter = client.events({ signal: ac.signal })
-    // An async iterable has Symbol.asyncIterator
-    expect(typeof (iter as any)[Symbol.asyncIterator]).toBe("function")
-  })
-
-  test("client.globalEvents() returns an async iterable", () => {
-    const ac = new AbortController()
-    ac.abort()
-    const client = createA2RClient({ baseUrl: "http://localhost:4000" })
-    const iter = client.globalEvents({ signal: ac.signal })
-    expect(typeof (iter as any)[Symbol.asyncIterator]).toBe("function")
-  })
-
-  test("client respects custom fetch function", async () => {
-    let called = false
-    const fakeFetch = async (_input: RequestInfo | URL, _init?: RequestInit) => {
-      called = true
-      return new Response(JSON.stringify([]), { status: 200, headers: { "Content-Type": "application/json" } })
-    }
-    const client = createA2RClient({
-      baseUrl: "http://localhost:4000",
-      fetch: fakeFetch as typeof globalThis.fetch,
-    })
-    // Call any non-streaming endpoint to trigger fetch
-    try {
-      await (client as any).session?.list?.()
-    } catch {
-      // May fail due to response shape — we only care that fetch was called
-    }
-    // Even if the call throws, our fake fetch should have been invoked
-    // (streaming calls bypass this; use a direct HTTP call as a proxy)
-    const client2 = createA2RClient({
-      baseUrl: "http://localhost:4000",
-      fetch: fakeFetch as typeof globalThis.fetch,
-    })
-    try {
-      await (client2 as any).agent?.list?.()
-    } catch {
-      // expected
-    }
-    // At minimum, the client accepted the fetch override without throwing
-    expect(client2).toBeDefined()
-  })
-
-  test("client has namespace accessors (session, agent, event, global)", () => {
-    const client = createA2RClient({ baseUrl: "http://localhost:4000" })
-    // These are lazy getter objects — they should be accessible without throwing
-    expect(() => (client as any).session).not.toThrow()
-    expect(() => (client as any).agent).not.toThrow()
-    expect(() => (client as any).event).not.toThrow()
-    expect(() => (client as any).global).not.toThrow()
+  test("VERSION is a string", () => {
+    expect(typeof VERSION).toBe("string")
   })
 })

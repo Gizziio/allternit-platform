@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import path from "path";
 import { pathToFileURL } from "bun";
-import { createA2R } from "@allternit/sdk";
+import { createAllternit } from "@allternit/sdk";
 import { parseArgs } from "util";
 async function main() {
     const { values, positionals } = parseArgs({
@@ -30,7 +30,7 @@ Examples:
         console.error("Error: message is required");
         process.exit(1);
     }
-    const a2r = await createA2R({ port: 0 });
+    const allternit = await createAllternit({ port: 0 });
     try {
         const parts = [];
         if (values.file) {
@@ -48,8 +48,8 @@ Examples:
             });
         }
         parts.push({ type: "text", text: message });
-        const session = await a2r.client.session.create();
-        const result = await a2r.client.session
+        const session = await allternit.client.session.create();
+        const result = await allternit.client.session
             .prompt({
             path: { id: session.data.id },
             body: {
@@ -62,7 +62,7 @@ Examples:
         console.log(result.trim());
     }
     finally {
-        a2r.server.close();
+        allternit.server.close();
     }
 }
 main();

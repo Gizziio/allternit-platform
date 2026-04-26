@@ -7,6 +7,7 @@
 
 import { CronServiceEnhanced } from "./service-enhanced";
 import { CoworkExecutor } from "./executors/cowork-executor";
+import { registerFunction } from "./executors/function-registry";
 import { unlinkSync, existsSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
@@ -19,7 +20,7 @@ async function sleep(ms: number): Promise<void> {
 
 async function runDemo() {
   console.log("╔════════════════════════════════════════════════════════════════╗");
-  console.log("║     A2R Unified Cron System - E2E Demonstration               ║");
+  console.log("║     Allternit Unified Cron System - E2E Demonstration               ║");
   console.log("╚════════════════════════════════════════════════════════════════╝\n");
 
   // Cleanup any existing DB
@@ -98,12 +99,12 @@ async function runDemo() {
     console.log(`      Next run: ${httpJob.nextRunAt}\n`);
 
     // Job 3: Function job - custom code execution
+    registerFunction("demoFunction", demoFunction as (...args: unknown[]) => unknown);
     const functionJob = CronServiceEnhanced.create({
       name: "Function Demo",
       type: "function",
       schedule: "*/3 * * * *", // Every 3 minutes
       config: {
-        module: "./e2e-demo",
         function: "demoFunction",
         args: ["hello from cron"],
       },

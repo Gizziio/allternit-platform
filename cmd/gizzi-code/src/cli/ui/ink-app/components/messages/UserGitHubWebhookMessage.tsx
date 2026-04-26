@@ -1,20 +1,12 @@
-import React from 'react';
-import { Box, Text } from '../ink';
+import * as React from 'react'
+import { Box, Text } from '../ink'
 
-interface UserGitHubWebhookMessageProps {
-  // TODO: Define props
-}
-
-/**
- * UserGitHubWebhookMessage Component
- * 
- * TODO: Implement full functionality
- * This is a placeholder shim for the gizzi-specific implementation.
- */
-export default function UserGitHubWebhookMessage(_props: UserGitHubWebhookMessageProps): React.ReactElement {
+export function moduleExport(): React.ReactElement {
   return (
     <Box>
-      <Text>UserGitHubWebhookMessage - Implementation pending</Text>
+      <Text>moduleExport</Text>
     </Box>
-  );
+  )
 }
+
+export default moduleExport

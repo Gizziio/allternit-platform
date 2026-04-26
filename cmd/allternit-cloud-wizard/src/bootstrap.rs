@@ -56,7 +56,7 @@ impl BootstrapContract {
     const DEBIAN_FAMILY_SCRIPT: &'static str = r#"#!/bin/bash
 set -e
 
-# A2R Bootstrap Script - Debian/Ubuntu Family
+# Allternit Bootstrap Script - Debian/Ubuntu Family
 # Idempotent: safe to run multiple times
 
 log() {
@@ -96,74 +96,74 @@ apt-get update -qq
 log "Installing dependencies..."
 apt-get install -y -qq curl ca-certificates gnupg
 
-# Create A2R user if not exists
-if ! id -u a2r >/dev/null 2>&1; then
-    log "Creating a2r user..."
-    useradd -r -s /bin/false a2r
+# Create Allternit user if not exists
+if ! id -u allternit >/dev/null 2>&1; then
+    log "Creating allternit user..."
+    useradd -r -s /bin/false allternit
 fi
 
 # Create directories
 log "Creating directories..."
-mkdir -p /opt/a2r/bin
-mkdir -p /opt/a2r/config
-mkdir -p /var/log/a2r
-chown -R a2r:a2r /opt/a2r
-chown -R a2r:a2r /var/log/a2r
+mkdir -p /opt/allternit/bin
+mkdir -p /opt/allternit/config
+mkdir -p /var/log/allternit
+chown -R allternit:allternit /opt/allternit
+chown -R allternit:allternit /var/log/allternit
 
-# Download A2R binary
-A2R_VERSION="${A2R_VERSION:-latest}"
-log "Downloading A2R $A2R_VERSION..."
-RELEASE_URL="https://releases.a2r.sh/${A2R_VERSION}/a2r-agent-x86_64-unknown-linux-gnu.tar.gz"
+# Download Allternit binary
+Allternit_VERSION="${Allternit_VERSION:-latest}"
+log "Downloading Allternit $Allternit_VERSION..."
+RELEASE_URL="https://releases.allternit.sh/${Allternit_VERSION}/allternit-agent-x86_64-unknown-linux-gnu.tar.gz"
 
-if curl -sLf "$RELEASE_URL" | tar xz -C /opt/a2r/bin --strip-components=1; then
-    log "A2R downloaded successfully"
+if curl -sLf "$RELEASE_URL" | tar xz -C /opt/allternit/bin --strip-components=1; then
+    log "Allternit downloaded successfully"
 else
-    error "Failed to download A2R from $RELEASE_URL"
+    error "Failed to download Allternit from $RELEASE_URL"
 fi
 
-chmod +x /opt/a2r/bin/a2r-agent
+chmod +x /opt/allternit/bin/allternit-agent
 
 # Create systemd service
 log "Creating systemd service..."
-cat > /etc/systemd/system/a2r-agent.service << 'EOF'
+cat > /etc/systemd/system/allternit-agent.service << 'EOF'
 [Unit]
-Description=A2R Agent
+Description=Allternit Agent
 After=network.target
 
 [Service]
 Type=simple
-ExecStart=/opt/a2r/bin/a2r-agent
+ExecStart=/opt/allternit/bin/allternit-agent
 Restart=always
 RestartSec=5
-User=a2r
-Group=a2r
+User=allternit
+Group=allternit
 Environment=RUST_LOG=info
 
 # Security
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/var/log/a2r /opt/a2r/config
+ReadWritePaths=/var/log/allternit /opt/allternit/config
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
 # Enable and start service
-log "Starting A2R agent..."
+log "Starting Allternit agent..."
 systemctl daemon-reload
-systemctl enable a2r-agent
-systemctl start a2r-agent
+systemctl enable allternit-agent
+systemctl start allternit-agent
 
 # Verify installation
 sleep 2
-if systemctl is-active --quiet a2r-agent; then
-    log "✓ A2R installation complete"
+if systemctl is-active --quiet allternit-agent; then
+    log "✓ Allternit installation complete"
     log "✓ Service is running"
     echo "STATUS=SUCCESS"
-    echo "MESSAGE=A2R installed successfully"
+    echo "MESSAGE=Allternit installed successfully"
 else
-    error "A2R service failed to start"
+    error "Allternit service failed to start"
 fi
 "#;
 
@@ -171,7 +171,7 @@ fi
     const RHEL_FAMILY_SCRIPT: &'static str = r#"#!/bin/bash
 set -e
 
-# A2R Bootstrap Script - RHEL/CentOS Family
+# Allternit Bootstrap Script - RHEL/CentOS Family
 # Idempotent: safe to run multiple times
 
 log() {
@@ -207,74 +207,74 @@ fi
 log "Installing dependencies..."
 dnf install -y -q curl ca-certificates gnupg2
 
-# Create A2R user if not exists
-if ! id -u a2r >/dev/null 2>&1; then
-    log "Creating a2r user..."
-    useradd -r -s /bin/false a2r
+# Create Allternit user if not exists
+if ! id -u allternit >/dev/null 2>&1; then
+    log "Creating allternit user..."
+    useradd -r -s /bin/false allternit
 fi
 
 # Create directories
 log "Creating directories..."
-mkdir -p /opt/a2r/bin
-mkdir -p /opt/a2r/config
-mkdir -p /var/log/a2r
-chown -R a2r:a2r /opt/a2r
-chown -R a2r:a2r /var/log/a2r
+mkdir -p /opt/allternit/bin
+mkdir -p /opt/allternit/config
+mkdir -p /var/log/allternit
+chown -R allternit:allternit /opt/allternit
+chown -R allternit:allternit /var/log/allternit
 
-# Download A2R binary
-A2R_VERSION="${A2R_VERSION:-latest}"
-log "Downloading A2R $A2R_VERSION..."
-RELEASE_URL="https://releases.a2r.sh/${A2R_VERSION}/a2r-agent-x86_64-unknown-linux-gnu.tar.gz"
+# Download Allternit binary
+Allternit_VERSION="${Allternit_VERSION:-latest}"
+log "Downloading Allternit $Allternit_VERSION..."
+RELEASE_URL="https://releases.allternit.sh/${Allternit_VERSION}/allternit-agent-x86_64-unknown-linux-gnu.tar.gz"
 
-if curl -sLf "$RELEASE_URL" | tar xz -C /opt/a2r/bin --strip-components=1; then
-    log "A2R downloaded successfully"
+if curl -sLf "$RELEASE_URL" | tar xz -C /opt/allternit/bin --strip-components=1; then
+    log "Allternit downloaded successfully"
 else
-    error "Failed to download A2R from $RELEASE_URL"
+    error "Failed to download Allternit from $RELEASE_URL"
 fi
 
-chmod +x /opt/a2r/bin/a2r-agent
+chmod +x /opt/allternit/bin/allternit-agent
 
 # Create systemd service
 log "Creating systemd service..."
-cat > /etc/systemd/system/a2r-agent.service << 'EOF'
+cat > /etc/systemd/system/allternit-agent.service << 'EOF'
 [Unit]
-Description=A2R Agent
+Description=Allternit Agent
 After=network.target
 
 [Service]
 Type=simple
-ExecStart=/opt/a2r/bin/a2r-agent
+ExecStart=/opt/allternit/bin/allternit-agent
 Restart=always
 RestartSec=5
-User=a2r
-Group=a2r
+User=allternit
+Group=allternit
 Environment=RUST_LOG=info
 
 # Security
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/var/log/a2r /opt/a2r/config
+ReadWritePaths=/var/log/allternit /opt/allternit/config
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
 # Enable and start service
-log "Starting A2R agent..."
+log "Starting Allternit agent..."
 systemctl daemon-reload
-systemctl enable a2r-agent
-systemctl start a2r-agent
+systemctl enable allternit-agent
+systemctl start allternit-agent
 
 # Verify installation
 sleep 2
-if systemctl is-active --quiet a2r-agent; then
-    log "✓ A2R installation complete"
+if systemctl is-active --quiet allternit-agent; then
+    log "✓ Allternit installation complete"
     log "✓ Service is running"
     echo "STATUS=SUCCESS"
-    echo "MESSAGE=A2R installed successfully"
+    echo "MESSAGE=Allternit installed successfully"
 else
-    error "A2R service failed to start"
+    error "Allternit service failed to start"
 fi
 "#;
 
@@ -282,7 +282,7 @@ fi
     const GENERIC_SCRIPT: &'static str = r#"#!/bin/bash
 set -e
 
-# A2R Bootstrap Script - Generic Fallback
+# Allternit Bootstrap Script - Generic Fallback
 # This script attempts best-effort installation
 
 log() {
@@ -324,42 +324,42 @@ log "Using package manager: $PKG_MANAGER"
 log "Installing dependencies..."
 $INSTALL_CMD curl ca-certificates
 
-# Create A2R user if not exists
-if ! id -u a2r >/dev/null 2>&1; then
-    log "Creating a2r user..."
-    useradd -r -s /bin/false a2r 2>/dev/null || true
+# Create Allternit user if not exists
+if ! id -u allternit >/dev/null 2>&1; then
+    log "Creating allternit user..."
+    useradd -r -s /bin/false allternit 2>/dev/null || true
 fi
 
 # Create directories
 log "Creating directories..."
-mkdir -p /opt/a2r/bin /opt/a2r/config /var/log/a2r
-chown -R a2r:a2r /opt/a2r /var/log/a2r 2>/dev/null || true
+mkdir -p /opt/allternit/bin /opt/allternit/config /var/log/allternit
+chown -R allternit:allternit /opt/allternit /var/log/allternit 2>/dev/null || true
 
-# Download A2R binary
-A2R_VERSION="${A2R_VERSION:-latest}"
-log "Downloading A2R $A2R_VERSION..."
-RELEASE_URL="https://releases.a2r.sh/${A2R_VERSION}/a2r-agent-x86_64-unknown-linux-gnu.tar.gz"
+# Download Allternit binary
+Allternit_VERSION="${Allternit_VERSION:-latest}"
+log "Downloading Allternit $Allternit_VERSION..."
+RELEASE_URL="https://releases.allternit.sh/${Allternit_VERSION}/allternit-agent-x86_64-unknown-linux-gnu.tar.gz"
 
-if curl -sLf "$RELEASE_URL" | tar xz -C /opt/a2r/bin --strip-components=1; then
-    log "A2R downloaded successfully"
+if curl -sLf "$RELEASE_URL" | tar xz -C /opt/allternit/bin --strip-components=1; then
+    log "Allternit downloaded successfully"
 else
-    error "Failed to download A2R"
+    error "Failed to download Allternit"
 fi
 
-chmod +x /opt/a2r/bin/a2r-agent
+chmod +x /opt/allternit/bin/allternit-agent
 
-log "A2R installed to /opt/a2r/bin/a2r-agent"
+log "Allternit installed to /opt/allternit/bin/allternit-agent"
 log "You must manually configure and start the service"
 echo "STATUS=PARTIAL"
-echo "MESSAGE=A2R binary installed - manual configuration required"
+echo "MESSAGE=Allternit binary installed - manual configuration required"
 "#;
 
     /// Get post-install verification commands
     pub fn get_verify_commands(&self) -> Vec<&'static str> {
         vec![
-            "systemctl is-active a2r-agent",
+            "systemctl is-active allternit-agent",
             "curl -s http://localhost:8443/health",
-            "/opt/a2r/bin/a2r-agent --version",
+            "/opt/allternit/bin/allternit-agent --version",
         ]
     }
 }

@@ -1,17 +1,5 @@
-/**
- * useDiffInIDE Module
- * 
- * TODO: Implement full functionality
- * This is a placeholder shim for the gizzi-specific implementation.
- */
-
-export interface useDiffInIDEOptions {
-  // TODO: Define options
+export function useDiffInIDE_ts(): void {
+  // Not yet implemented
 }
 
-export function useDiffInIDE(options: useDiffInIDEOptions): void {
-  // TODO: Implement
-  console.log('useDiffInIDE called with:', options);
-}
-
-export default useDiffInIDE;
+export default useDiffInIDE_ts

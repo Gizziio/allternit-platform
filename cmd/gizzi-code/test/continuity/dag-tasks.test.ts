@@ -128,7 +128,7 @@ describe("DAG Tasks", () => {
   })
 })
 
-describe("A2R Conventions", () => {
+describe("Allternit Conventions", () => {
   const baseContext: SessionContext = {
     session_id: "test-session",
     source_tool: "opencode",
@@ -146,20 +146,20 @@ describe("A2R Conventions", () => {
     next_actions: [],
   }
 
-  describe("generateA2RConventions section", () => {
+  describe("generateAllternitConventions section", () => {
     it("should not show section when no conventions", () => {
       const markdown = HandoffEmitter.emitMarkdown({
         context: baseContext,
         compact_reason: "manual",
       })
 
-      expect(markdown).not.toContain("## A2R Conventions")
+      expect(markdown).not.toContain("## Allternit Conventions")
     })
 
     it("should show file naming conventions", () => {
       const context: SessionContext = {
         ...baseContext,
-        a2r_conventions: {
+        allternit_conventions: {
           file_naming: {
             pattern: "kebab-case",
             examples: ["my-file.ts", "another-file.ts"],
@@ -172,7 +172,7 @@ describe("A2R Conventions", () => {
         compact_reason: "manual",
       })
 
-      expect(markdown).toContain("## A2R Conventions")
+      expect(markdown).toContain("## Allternit Conventions")
       expect(markdown).toContain("### File Naming")
       expect(markdown).toContain("Pattern: `kebab-case`")
       expect(markdown).toContain("`my-file.ts`")
@@ -181,7 +181,7 @@ describe("A2R Conventions", () => {
     it("should show code style", () => {
       const context: SessionContext = {
         ...baseContext,
-        a2r_conventions: {
+        allternit_conventions: {
           code_style: {
             formatter: "prettier",
             linter: "eslint",
@@ -202,7 +202,7 @@ describe("A2R Conventions", () => {
     it("should show testing conventions", () => {
       const context: SessionContext = {
         ...baseContext,
-        a2r_conventions: {
+        allternit_conventions: {
           testing: {
             framework: "vitest",
             pattern: "**/*.test.ts",
@@ -225,7 +225,7 @@ describe("A2R Conventions", () => {
     it("should show git workflow", () => {
       const context: SessionContext = {
         ...baseContext,
-        a2r_conventions: {
+        allternit_conventions: {
           git_workflow: {
             branching_strategy: "git-flow",
             commit_convention: "conventional-commits",
@@ -246,7 +246,7 @@ describe("A2R Conventions", () => {
     it("should show architecture patterns", () => {
       const context: SessionContext = {
         ...baseContext,
-        a2r_conventions: {
+        allternit_conventions: {
           architecture: {
             pattern: "layered",
             patterns_used: ["Repository", "Service"],
@@ -269,7 +269,7 @@ describe("A2R Conventions", () => {
     it("should show review checklist", () => {
       const context: SessionContext = {
         ...baseContext,
-        a2r_conventions: {
+        allternit_conventions: {
           review_checklist: [
             "Tests passing",
             "Documentation updated",

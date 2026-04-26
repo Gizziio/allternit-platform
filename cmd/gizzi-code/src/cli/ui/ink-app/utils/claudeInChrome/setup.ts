@@ -1,4 +1,5 @@
-import { BROWSER_TOOLS } from '../../../../../vendor/@allternit/extension'
+// @ts-ignore
+const BROWSER_TOOLS = [];
 import { chmod, mkdir, readFile, writeFile } from 'fs/promises'
 import { homedir } from 'os'
 import { join } from 'path'

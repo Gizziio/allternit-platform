@@ -20,15 +20,15 @@ const log = Log.create({ service: "sidecar" })
 const SIDECAR_PORT = 11435
 const SIDECAR_HOST = "127.0.0.1"
 /**
- * If A2R_SIDECAR_URL is set (e.g. "http://my-vps.example.com:11434"),
+ * If Allternit_SIDECAR_URL is set (e.g. "http://my-vps.example.com:11434"),
  * the sidecar skips local Ollama startup and points directly at the remote server.
  */
-const REMOTE_SIDECAR_URL = process.env["A2R_SIDECAR_URL"]?.replace(/\/$/, "")
+const REMOTE_SIDECAR_URL = process.env["Allternit_SIDECAR_URL"]?.replace(/\/$/, "")
 /**
- * Set A2R_SIDECAR_DISABLED=1 to skip sidecar startup entirely.
+ * Set Allternit_SIDECAR_DISABLED=1 to skip sidecar startup entirely.
  * Useful on low-resource VMs or environments where local Ollama is unavailable/undesirable.
  */
-const SIDECAR_DISABLED = process.env["A2R_SIDECAR_DISABLED"] === "1" || process.env["A2R_SIDECAR_DISABLED"] === "true"
+const SIDECAR_DISABLED = process.env["Allternit_SIDECAR_DISABLED"] === "1" || process.env["Allternit_SIDECAR_DISABLED"] === "true"
 
 // Default embedded model — shipped with gizzi-code
 const EMBEDDED_MODEL = {
@@ -255,7 +255,7 @@ export namespace Sidecar {
     const result = { available: false, baseURL: BaseURL, modelID: EMBEDDED_MODEL.id }
 
     if (SIDECAR_DISABLED) {
-      log.info("sidecar disabled via A2R_SIDECAR_DISABLED")
+      log.info("sidecar disabled via Allternit_SIDECAR_DISABLED")
       return result
     }
 

@@ -6,7 +6,7 @@
  * 
  * Provides coverage maps, console logs, UI state, and visual diffs for LLM verification.
  * 
- * Includes A2R Autoland integration for governance-compliant pre-landing verification.
+ * Includes Allternit Autoland integration for governance-compliant pre-landing verification.
  */
 
 // ============================================================================
@@ -104,7 +104,7 @@ export {
 } from "./visual/integration/session-processor-adapter";
 
 // ============================================================================
-// A2R Autoland Integration
+// Allternit Autoland Integration
 // ============================================================================
 
 export {
@@ -179,7 +179,7 @@ export { buildPromptContext, formatArtifactForLLM } from "./visual/prompt";
  * });
  * ```
  * 
- * ### 2. A2R Autoland Integration (File Mode - Development)
+ * ### 2. Allternit Autoland Integration (File Mode - Development)
  * ```typescript
  * import { 
  *   setVisualManagerForAutoland,
@@ -199,7 +199,7 @@ export { buildPromptContext, formatArtifactForLLM } from "./visual/prompt";
  * await initializeVisualAutoland();
  * ```
  * 
- * ### 3. A2R Autoland Integration (gRPC Mode - Production)
+ * ### 3. Allternit Autoland Integration (gRPC Mode - Production)
  * ```typescript
  * configureVisualAutoland({
  *   enabled: true,

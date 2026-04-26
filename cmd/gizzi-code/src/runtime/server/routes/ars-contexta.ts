@@ -11,7 +11,7 @@
  */
 
 import { Hono } from "hono"
-import { describeRoute, validator, resolver } from "hono-openapi"
+import { describeRoute, validator, resolver } from "@/runtime/server/openapi"
 import z from "zod/v4"
 import { streamSSE } from "hono/streaming"
 import { lazy } from "@/shared/util/lazy"
@@ -103,7 +103,7 @@ export async function createLlmClientWithFallback(_model?: string): Promise<LlmC
       const parsed = Provider.parseModel(_model);
       model = await Provider.getModel(parsed.providerID, parsed.modelID);
     } else {
-      const defaultModel = await Provider.defaultModel();
+      const defaultModel = await Provider.defaultModelConcrete();
       model = await Provider.getModel(defaultModel.providerID, defaultModel.modelID);
     }
 

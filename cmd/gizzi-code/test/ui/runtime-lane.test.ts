@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { describe, expect, test } from "bun:test"
-import { deriveRuntimeLaneCards, type RuntimeLaneToolSnapshot } from "../../src/ui/a2r/runtime-lane"
+import { deriveRuntimeLaneCards, type RuntimeLaneToolSnapshot } from "../../src/ui/allternit/runtime-lane"
 
 function baseInput(overrides: Partial<Parameters<typeof deriveRuntimeLaneCards>[0]> = {}) {
   return {

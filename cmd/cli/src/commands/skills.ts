@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { loadSkills } from '@a2r/gizziclaw';
+import { loadSkills } from '@allternit/gizziclaw';
 
 export const skillsCommand = new Command('skills')
   .description('Manage skills')

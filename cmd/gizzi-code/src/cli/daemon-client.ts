@@ -1,7 +1,7 @@
 /**
  * Desktop Daemon Client
  *
- * Provides a client for communicating with the A2R Desktop daemon via Unix socket.
+ * Provides a client for communicating with the Allternit Desktop daemon via Unix socket.
  * Implements the protocol for sending commands and receiving results from the VM.
  *
  * @module @/cli/daemon-client
@@ -356,14 +356,14 @@ class ProtocolClient extends EventEmitter {
 }
 
 /**
- * Client for communicating with the A2R Desktop daemon
+ * Client for communicating with the Allternit Desktop daemon
  *
  * Provides methods for executing commands, querying status, and managing
  * the VM through a Unix socket connection.
  *
  * @example
  * ```typescript
- * const client = new DaemonClient("/var/run/a2r/desktop-vm.sock")
+ * const client = new DaemonClient("/var/run/allternit/desktop-vm.sock")
  * try {
  *   const result = await client.execute({
  *     command: "ls -la",

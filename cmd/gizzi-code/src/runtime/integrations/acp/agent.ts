@@ -41,7 +41,7 @@ import { Config } from "@/runtime/context/config/config"
 import { Todo } from "@/runtime/session/todo"
 import { z } from "zod/v4"
 import { LoadAPIKeyError } from "ai"
-import type { A2RClientLike } from "@/runtime/integrations/acp/types"
+import type { AllternitClientLike } from "@/runtime/integrations/acp/types"
 import { Session } from "@/runtime/session"
 import { applyPatch } from "diff"
 
@@ -210,7 +210,7 @@ export namespace ACP {
       })
   }
 
-  export async function init({ sdk: _sdk }: { sdk: A2RClientLike }) {
+  export async function init({ sdk: _sdk }: { sdk: AllternitClientLike }) {
     return {
       create: (connection: AgentSideConnection, fullConfig: ACPConfig) => {
         return new Agent(connection, fullConfig)
@@ -221,7 +221,7 @@ export namespace ACP {
   export class Agent implements ACPAgent {
     private connection: AgentSideConnection
     private config: ACPConfig
-    private sdk: A2RClientLike
+    private sdk: AllternitClientLike
     private sessionManager: ACPSessionManager
     private eventAbort = new AbortController()
     private eventStarted = false

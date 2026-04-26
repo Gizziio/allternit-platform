@@ -15,7 +15,7 @@ const VERSION = "0.1.0"
 
 function printHelp() {
   process.stdout.write(`
-GIZZI - A2rchitect Platform Command ${VERSION}
+GIZZI - allternit Platform Command ${VERSION}
 
 Usage: gizzi [command]
 

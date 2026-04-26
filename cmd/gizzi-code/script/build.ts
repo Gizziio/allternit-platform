@@ -39,7 +39,7 @@ Options:
   }
 
   // Run the production build
-  const cmd = ['bun', 'run', 'script/build-production.ts']
+  const cmd = ['bun', 'run', 'script/build-production.js']
   if (target) cmd.push(`--target=${target}`)
   if (all) cmd.push('--all')
 

@@ -12,7 +12,7 @@
 allternit/                          ← Monorepo
 └── cmd/
     └── gizzi-code/                 ← Gizzi Code buried here
-        ├── package.json            ← Name: @a2r/gizzi-code
+        ├── package.json            ← Name: @allternit/gizzi-code
         ├── install                 ← Points to anomalyco/opencode
         └── ...
 
@@ -121,7 +121,7 @@ rm -rf /tmp/gizzi-export/node_modules
 cd /tmp/gizzi-export
 
 # Update package.json
-# Change: "name": "@a2r/gizzi-code" → "name": "@gizzi/gizzi-code"
+# Change: "name": "@allternit/gizzi-code" → "name": "@gizzi/gizzi-code"
 # Update description, repository URL, etc.
 
 # Create proper go.mod (if Go)
@@ -131,15 +131,15 @@ cd /tmp/gizzi-export
 #### Step 1.3: Fix Install Scripts
 ```bash
 # Fix install script (bash)
-# Change: APP=a2r → APP=gizzi-code
+# Change: APP=allternit → APP=gizzi-code
 # Change: anomalyco/opencode → Gizziio/gizzi-code
-# Change: ~/.a2r/bin → ~/.gizzi/bin
-# Change: a2r.dev/docs → docs.gizziio.com
+# Change: ~/.allternit/bin → ~/.gizzi/bin
+# Change: allternit.dev/docs → docs.gizziio.com
 
 # Fix install.ps1
 # Update $Repo = "Gizziio/gizzi-code"
-# Update $InstallDir to use "gizzi" not "a2r"
-# Change "A2R Ecosystem" → "Allternit Ecosystem"
+# Update $InstallDir to use "gizzi" not "allternit"
+# Change "Allternit Ecosystem" → "Allternit Ecosystem"
 
 # Fix Homebrew formula
 # Update URLs to github.com/Gizziio/gizzi-code

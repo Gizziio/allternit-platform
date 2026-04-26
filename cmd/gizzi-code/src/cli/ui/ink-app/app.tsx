@@ -70,6 +70,10 @@ export async function startInkTUI(): Promise<void> {
   await app.waitUntilExit();
 }
 
+export async function tui(_options?: unknown): Promise<void> {
+  await startInkTUI();
+}
+
 if (import.meta.main) {
   startInkTUI().catch(err => {
     console.error('Failed:', err);

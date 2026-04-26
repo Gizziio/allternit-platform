@@ -2,7 +2,7 @@
  * E2E tests for the VM Session architecture.
  *
  * Tests the full lifecycle:
- *   1. Mock a2r-api server that handles POST/GET/DELETE /vm-session
+ *   1. Mock allternit-api server that handles POST/GET/DELETE /vm-session
  *   2. VmSession manager — provision → exec → destroy
  *   3. gizzi-code /vm-session HTTP routes — toggle, state, cleanup
  *   4. Process-fallback path (no VM driver)
@@ -13,7 +13,7 @@ import { Hono } from "hono"
 import { serve } from "bun"
 import type { Server } from "bun"
 
-// ── Mock a2r-api server ────────────────────────────────────────────────────────
+// ── Mock allternit-api server ────────────────────────────────────────────────────────
 
 interface MockVmSession {
   session_id: string
@@ -31,7 +31,7 @@ const mockSessions = new Map<string, MockVmSession>()
 const mockExecLog: MockExecRecord[] = []
 let mockSessionCounter = 0
 
-function buildMockA2rApi(): Hono {
+function buildMockAllternitApi(): Hono {
   const app = new Hono()
 
   // POST /vm-session — create session (simulate bootstrap)
@@ -127,11 +127,11 @@ function buildMockA2rApi(): Hono {
 
 // ── Test setup ─────────────────────────────────────────────────────────────────
 
-let mockServer: Server
+let mockServer: Server<unknown>
 let mockApiUrl: string
 
 beforeAll(async () => {
-  const app = buildMockA2rApi()
+  const app = buildMockAllternitApi()
   mockServer = serve({
     port: 0, // random available port
     fetch: app.fetch,
@@ -151,8 +151,8 @@ beforeEach(() => {
 
 // ── VmSession manager tests ────────────────────────────────────────────────────
 
-describe("VmSession manager (against mock a2r-api)", () => {
-  // We test the manager by directly calling the a2r-api REST endpoints,
+describe("VmSession manager (against mock allternit-api)", () => {
+  // We test the manager by directly calling the allternit-api REST endpoints,
   // since VmSession.provision() etc. use fetch internally.
 
   test("POST /vm-session creates a session with bootstrap log", async () => {
@@ -527,7 +527,7 @@ describe("DiscretionaryScreen VM disclosure", () => {
     const fs = await import("fs/promises")
     const path = await import("path")
     const content = await fs.readFile(
-      path.join(__dirname, "../../a2r-api/src/vm_session_routes.rs"),
+      path.join(__dirname, "../../allternit-api/src/vm_session_routes.rs"),
       "utf-8",
     )
 
@@ -730,11 +730,11 @@ describe("DiscretionaryScreen VM disclosure", () => {
     expect(content).toContain("GIZZI_VM_API_URL")
   })
 
-  test("a2r-api main.rs registers /vm-session route", async () => {
+  test("allternit-api main.rs registers /vm-session route", async () => {
     const fs = await import("fs/promises")
     const path = await import("path")
     const content = await fs.readFile(
-      path.join(__dirname, "../../a2r-api/src/main.rs"),
+      path.join(__dirname, "../../allternit-api/src/main.rs"),
       "utf-8",
     )
     expect(content).toContain('nest("/vm-session", vm_session_router())')
@@ -748,7 +748,7 @@ describe("DiscretionaryScreen VM disclosure", () => {
     const fs = await import("fs/promises")
     const path = await import("path")
     const content = await fs.readFile(
-      path.join(__dirname, "../../a2r-api/src/vm_session_routes.rs"),
+      path.join(__dirname, "../../allternit-api/src/vm_session_routes.rs"),
       "utf-8",
     )
     // WebSearch: EXA_API_KEY field
@@ -773,7 +773,7 @@ describe("DiscretionaryScreen VM disclosure", () => {
     const fs = await import("fs/promises")
     const path = await import("path")
     const content = await fs.readFile(
-      path.join(__dirname, "../../a2r-api/src/vm_session_routes.rs"),
+      path.join(__dirname, "../../allternit-api/src/vm_session_routes.rs"),
       "utf-8",
     )
     // Environment injection block
@@ -790,7 +790,7 @@ describe("DiscretionaryScreen VM disclosure", () => {
     const fs = await import("fs/promises")
     const path = await import("path")
     const content = await fs.readFile(
-      path.join(__dirname, "../../a2r-api/src/vm_session_routes.rs"),
+      path.join(__dirname, "../../allternit-api/src/vm_session_routes.rs"),
       "utf-8",
     )
     // config_dir bind-mount: target is /gizzi-config, read_only, MountType::Bind

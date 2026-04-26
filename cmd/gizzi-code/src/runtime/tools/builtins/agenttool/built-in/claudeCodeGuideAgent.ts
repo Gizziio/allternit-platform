@@ -87,7 +87,7 @@ Complete the user's request by providing accurate, documentation-based guidance.
 }
 
 function getFeedbackGuideline(): string {
-  // For 3P services (Bedrock/Vertex/Foundry), /feedback command is disabled
+  // /feedback command is enabled for allternit users
   // Direct users to the appropriate feedback channel instead
   if (isUsing3PServices()) {
     return `- When you cannot find an answer or the feature doesn't exist, direct the user to ${MACRO.ISSUES_EXPLAINER}`

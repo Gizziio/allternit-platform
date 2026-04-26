@@ -7,7 +7,7 @@ use axum::{
     extract::{Request, State},
     http::{header, StatusCode},
     middleware::Next,
-    response::{IntoResponse, Response},
+    response::Response,
     body::Body,
 };
 use std::sync::Arc;
@@ -46,7 +46,7 @@ pub struct AuthLayer {
 impl AuthLayer {
     /// Create a new auth layer
     pub fn new() -> Self {
-        let development_mode = env::var("A2R_API_DEVELOPMENT_MODE")
+        let development_mode = env::var("Allternit_API_DEVELOPMENT_MODE")
             .map(|v| v == "true" || v == "1")
             .unwrap_or(false);
         
@@ -107,8 +107,8 @@ impl<S> AuthMiddleware<S> {
             return Some(AuthenticatedUser::development_user());
         }
         
-        // Check if token starts with "a2r_" (our token format)
-        if token.starts_with("a2r_") && token.len() >= 32 {
+        // Check if token starts with "allternit_" (our token format)
+        if token.starts_with("allternit_") && token.len() >= 32 {
             // Placeholder: In production, hash the token and look it up in the database
             // let token_hash = sha256::digest(token);
             // let db_token = sqlx::query_as::<_, ApiToken>(...)
@@ -206,7 +206,7 @@ pub async fn auth_middleware(
     request: Request<Body>,
     next: Next,
 ) -> Response {
-    let development_mode = env::var("A2R_API_DEVELOPMENT_MODE")
+    let development_mode = env::var("Allternit_API_DEVELOPMENT_MODE")
         .map(|v| v == "true" || v == "1")
         .unwrap_or(false);
     

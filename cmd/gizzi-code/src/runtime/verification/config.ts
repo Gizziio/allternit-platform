@@ -433,7 +433,7 @@ export function createDevConfig(): VerificationConfig {
 export function createProdConfig(): VerificationConfig {
   return VerificationConfigSchema.parse({
     defaultMode: "adaptive",
-    storage: { backend: "file", path: "/var/lib/a2rchitech/verification" },
+    storage: { backend: "file", path: "/var/lib/allternit/verification" },
     semiFormal: {
       model: "claude-opus-4",
       maxTraceDepth: 15,

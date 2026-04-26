@@ -303,7 +303,7 @@ Please generate a complete verification certificate following the semi-formal re
       const { Provider } = await import("@/runtime/providers/provider");
       const { VerificationCertificateSchema } = await import("@/runtime/loop/semi-formal-verifier");
       
-      const defaultModel = await Provider.defaultModel();
+      const defaultModel = await Provider.defaultModelConcrete();
       const model = await Provider.getModel(defaultModel.providerID, defaultModel.modelID);
       const languageModel = await Provider.getLanguage(model);
 

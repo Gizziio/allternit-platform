@@ -1,11 +1,11 @@
 /**
- * Visual Evidence + A2R Autoland Integration
+ * Visual Evidence + Allternit Autoland Integration
  * 
- * Integrates the visual evidence capture system with the existing A2R Autoland
+ * Integrates the visual evidence capture system with the existing Allternit Autoland
  * protocol (Rust-based gate system in 0-substrate).
  * 
  * This adapter adds visual verification as a pre-condition before the autoland
- * gate allows changes to be landed from `.a2r/runner/{wih_id}/` to project root.
+ * gate allows changes to be landed from `.allternit/runner/{wih_id}/` to project root.
  * 
  * Flow:
  * 1. WIH completes with PASS status

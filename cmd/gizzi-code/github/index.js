@@ -5,9 +5,9 @@ import { Octokit } from "@octokit/rest";
 import { graphql } from "@octokit/graphql";
 import * as core from "@actions/core";
 import * as github from "@actions/github";
-import { createA2RClient } from "@allternit/sdk";
+import { createAllternitClient } from "@allternit/sdk";
 import { spawn } from "node:child_process";
-const { client, server } = createA2R();
+const { client, server } = createAllternit();
 let accessToken;
 let octoRest;
 let octoGraph;
@@ -115,12 +115,12 @@ finally {
     await revokeAppToken();
 }
 process.exit(exitCode);
-function createA2R() {
+function createAllternit() {
     const host = "127.0.0.1";
     const port = 4096;
     const url = `http://${host}:${port}`;
     const proc = spawn(`opencode`, [`serve`, `--hostname=${host}`, `--port=${port}`]);
-    const client = createA2RClient({ baseUrl: url });
+    const client = createAllternitClient({ baseUrl: url });
     return {
         server: { url, close: () => proc.kill() },
         client,
@@ -234,7 +234,7 @@ function useIssueId() {
     return payload.issue.number;
 }
 function useShareUrl() {
-    return isMock() ? "https://dev.a2r.dev" : "https://a2r.dev";
+    return isMock() ? "https://dev.allternit.dev" : "https://allternit.dev";
 }
 async function getAccessToken() {
     const { repo } = useContext();
@@ -243,7 +243,7 @@ async function getAccessToken() {
         return envToken;
     let response;
     if (isMock()) {
-        response = await fetch("https://api.a2r.dev/exchange_github_app_token_with_pat", {
+        response = await fetch("https://api.allternit.dev/exchange_github_app_token_with_pat", {
             method: "POST",
             headers: {
                 Authorization: `Bearer ${useEnvMock().mockToken}`,
@@ -253,7 +253,7 @@ async function getAccessToken() {
     }
     else {
         const oidcToken = await core.getIDToken("opencode-github-action");
-        response = await fetch("https://api.a2r.dev/exchange_github_app_token", {
+        response = await fetch("https://api.allternit.dev/exchange_github_app_token", {
             method: "POST",
             headers: {
                 Authorization: `Bearer ${oidcToken}`,

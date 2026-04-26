@@ -3,7 +3,7 @@
  * E2E Tests - Workspace Bridge Integration
  * 
  * Tests the integration between agent-workspace and agent management:
- * - Detects .a2r and .openclaw workspaces
+ * - Detects .allternit and .openclaw workspaces
  * - Loads workspace identity
  * - Creates workspace-aware agents
  * - Enhances prompts with context
@@ -18,7 +18,7 @@ import path from "path"
 import fs from "fs/promises"
 
 describe("Workspace Bridge E2E", () => {
-  const testDir = "/tmp/a2r-workspace-bridge-test"
+  const testDir = "/tmp/allternit-workspace-bridge-test"
   
   beforeAll(async () => {
     await mkdir(testDir, { recursive: true })
@@ -31,19 +31,19 @@ describe("Workspace Bridge E2E", () => {
   })
 
   describe("Workspace Detection", () => {
-    it("should detect .a2r workspace", async () => {
-      const workspace = path.join(testDir, "a2r-project")
+    it("should detect .allternit workspace", async () => {
+      const workspace = path.join(testDir, "allternit-project")
       
       // Initialize workspace properly - returns paths, not result object
       const paths = await AgentWorkspace.initialize(workspace, { sessionId: "test-001" })
       expect(paths).toBeDefined()
-      expect(paths.manifest).toContain(".a2r")
+      expect(paths.manifest).toContain(".allternit")
       
       // Verify workspace exists
       const exists = await AgentWorkspace.exists(workspace)
       expect(exists).toBe(true)
       
-      // Note: Workspace detection works for openclaw, but a2r detection in test
+      // Note: Workspace detection works for openclaw, but allternit detection in test
       // environment may have timing issues. The core functionality is tested
       // through integration tests with handoff-flow.test.ts
     })
@@ -121,13 +121,13 @@ describe("Workspace Bridge E2E", () => {
       expect(agents[0].config?.purpose).toContain("prioritization")
     })
 
-    it("should return empty list for a2r workspace", async () => {
-      const workspace = path.join(testDir, "a2r-agents")
+    it("should return empty list for allternit workspace", async () => {
+      const workspace = path.join(testDir, "allternit-agents")
       await AgentWorkspace.initialize(workspace)
       
       const agents = await AgentWorkspaceBridge.getWorkspaceAgents(
-        path.join(workspace, ".a2r"),
-        "a2r"
+        path.join(workspace, ".allternit"),
+        "allternit"
       )
       
       expect(agents).toHaveLength(0)

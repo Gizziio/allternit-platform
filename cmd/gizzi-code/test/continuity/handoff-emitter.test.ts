@@ -66,7 +66,7 @@ describe("HandoffEmitter", () => {
       })
 
       // Check header
-      expect(markdown).toContain("# A2R Session Baton")
+      expect(markdown).toContain("# Allternit Session Baton")
       expect(markdown).toContain("test-session-123")
       expect(markdown).toContain("opencode")
 
@@ -162,7 +162,7 @@ describe("HandoffEmitter", () => {
     it("should handle empty context gracefully", () => {
       const emptyContext: SessionContext = {
         session_id: "empty-session",
-        source_tool: "a2r_shell",
+        source_tool: "allternit_shell",
         workspace_path: "/tmp",
         time_start: Date.now(),
         objective: "",
@@ -182,7 +182,7 @@ describe("HandoffEmitter", () => {
         compact_reason: "error",
       })
 
-      expect(markdown).toContain("# A2R Session Baton")
+      expect(markdown).toContain("# Allternit Session Baton")
       expect(markdown).toContain("Reason:** error")
       expect(markdown).toContain("- No files modified")
       expect(markdown).toContain("- No commands recorded")

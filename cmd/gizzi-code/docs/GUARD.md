@@ -1,4 +1,4 @@
-# A2R Guard System
+# Allternit Guard System
 
 ## Overview
 
@@ -46,13 +46,13 @@ quota_ratio = max(
 )
 ```
 
-## The .a2r/ Workspace Directory
+## The .allternit/ Workspace Directory
 
-Every workspace (project) with A2R Guard enabled has a `.a2r/` directory:
+Every workspace (project) with Allternit Guard enabled has a `.allternit/` directory:
 
 ```
 workspace/
-├── .a2r/
+├── .allternit/
 │   ├── receipts/
 │   │   └── receipt.jsonl          # Append-only tool activity log
 │   ├── state/
@@ -89,7 +89,7 @@ Current session state for resumption.
   "run_id": "run_xyz789",
   "dag_node_id": "implement-auth",
   "last_compact": 1740321622000,
-  "compact_path": "/workspace/.a2r/compact/compact-20260223-143022.md",
+  "compact_path": "/workspace/.allternit/compact/compact-20260223-143022.md",
   "message_count": 42,
   "initialized": true,
   "initialized_at": 1740321000000
@@ -100,13 +100,13 @@ Current session state for resumption.
 Pointer to the most recent baton.
 
 ```markdown
-# A2R Handoff Pointer
+# Allternit Handoff Pointer
 
 Generated: 2026-02-23T14:30:22.123Z
 
 ## Current Baton
 
-/workspace/.a2r/compact/compact-20260223-143022.md
+/workspace/.allternit/compact/compact-20260223-143022.md
 
 ## Metadata
 
@@ -118,13 +118,13 @@ Generated: 2026-02-23T14:30:22.123Z
 Structured summary of session state with 11 required sections.
 
 ```markdown
-# A2R Session Baton
+# Allternit Session Baton
 
 **Session:** sess_abc123  
 **Run:** run_xyz789  
 **Node:** implement-auth  
 **Generated:** 2026-02-23T14:30:22.123Z  
-**Tool:** a2r_shell
+**Tool:** allternit_shell
 
 ---
 
@@ -201,8 +201,8 @@ Implement authentication middleware for the API
 
 ## Evidence Pointers
 
-- Receipts: /workspace/.a2r/receipts/receipt.jsonl
-- State: /workspace/.a2r/state/state.json
+- Receipts: /workspace/.allternit/receipts/receipt.jsonl
+- State: /workspace/.allternit/state/state.json
 - Messages: 42 total
 
 ---
@@ -234,10 +234,10 @@ const result = await GuardCompaction.emit({
   usage_summary: {...},
   model: "claude-3-5-sonnet",
   provider: "anthropic",
-  runner: "a2r_shell"
+  runner: "allternit_shell"
 })
 
-console.log(result.baton_path) // /workspace/.a2r/compact/compact-...
+console.log(result.baton_path) // /workspace/.allternit/compact/compact-...
 ```
 
 ### Manual Handoff (Hotkey: `H`)
@@ -275,7 +275,7 @@ const context = {
   run_id: "run_xyz789",
   model: "claude-3-5-sonnet",
   provider: "anthropic",
-  runner: "a2r_shell",
+  runner: "allternit_shell",
   workspace: "/workspace"
 }
 
@@ -292,13 +292,13 @@ import { GuardMetrics } from "@/guard"
 await GuardMetrics.record(
   {
     "gen_ai.usage.total_tokens": 45234,
-    "a2r.context.ratio": 0.48,
-    "a2r.guard.state": "OK"
+    "allternit.context.ratio": 0.48,
+    "allternit.guard.state": "OK"
   },
   {
     model: "claude-3-5-sonnet",
     provider: "anthropic",
-    runner: "a2r_shell",
+    runner: "allternit_shell",
     workspace: "/workspace",
     session_id: "sess_abc123",
     run_id: "run_xyz789",
@@ -307,13 +307,13 @@ await GuardMetrics.record(
 )
 ```
 
-### Initialize A2R Structure
+### Initialize Allternit Structure
 
 ```typescript
 import { GuardArtifacts } from "@/guard"
 
 const paths = await GuardArtifacts.initialize("/workspace")
-// Creates all .a2r/ directories
+// Creates all .allternit/ directories
 ```
 
 ## Events
@@ -365,7 +365,7 @@ Bus.on(GuardPolicy.Event.Handoff, (event) => {
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
 │  │    Policy   │  │   Metrics   │  │  Artifacts  │     │
 │  │             │  │             │  │             │     │
-│  │ • Thresholds│  │ • OTel GenAI│  │ • .a2r/ fs  │     │
+│  │ • Thresholds│  │ • OTel GenAI│  │ • .allternit/ fs  │     │
 │  │ • Events    │  │ • Snapshots │  │ • Receipts  │     │
 │  │ • Actions   │  │ • Slopes    │  │ • State     │     │
 │  └──────┬──────┘  └─────────────┘  └─────────────┘     │
@@ -373,7 +373,7 @@ Bus.on(GuardPolicy.Event.Handoff, (event) => {
 │  ┌──────┴──────┐                                         │
 │  │  Compaction │                                         │
 │  │             │                                         │
-│  │ • Emitter   │  →  /.a2r/compact/*.md                 │
+│  │ • Emitter   │  →  /.allternit/compact/*.md                 │
 │  │ • 11-sect   │                                         │
 │  │ • Handoff   │                                         │
 │  └─────────────┘                                         │
@@ -402,4 +402,4 @@ Key tests:
 
 - **SessionUsage** (`src/session/usage.ts`) - Token/cost tracking
 - **SessionCompaction** (`src/session/compaction.ts`) - Existing compaction
-- **a2r-continuity** (pending) - Cross-tool session handoff
+- **allternit-continuity** (pending) - Cross-tool session handoff

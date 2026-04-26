@@ -1,20 +1,20 @@
-# Visual Evidence + A2R Autoland Integration
+# Visual Evidence + Allternit Autoland Integration
 
 ## Overview
 
-This document describes how the **Visual Evidence Capture System** integrates with the existing **A2R Autoland Protocol** (Rust-based gate system in `0-substrate`).
+This document describes how the **Visual Evidence Capture System** integrates with the existing **Allternit Autoland Protocol** (Rust-based gate system in `0-substrate`).
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                     EXISTING A2R AUTOLAND SYSTEM                             │
+│                     EXISTING Allternit AUTOLAND SYSTEM                             │
 │                         (0-substrate Rust)                                   │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │  WIH (Work Identity Handle)                                                  │
 │     │                                                                        │
-│     ├── Phase 1: Planning (.a2r/runner/{wih_id}/)                           │
+│     ├── Phase 1: Planning (.allternit/runner/{wih_id}/)                           │
 │     ├── Phase 2: Execution (agent works in sandbox)                         │
 │     ├── Phase 3: Validation (WIHClosedSigned with PASS/FAIL)                │
 │     ├── Phase 4: LANDING GATE ───────────────────────┐                      │
@@ -62,8 +62,8 @@ This document describes how the **Visual Evidence Capture System** integrates wi
 │              Rust Autoland Gate (gate.rs)                                   │
 │     ┌──────────────────────────────────────────────────┐                   │
 │     │ 6. Has WIH PASS status?                          │                   │
-│     │ 7. Backup files to .a2r/backups/                 │                   │
-│     │ 8. Copy from .a2r/runner/{wih_id}/ to root      │                   │
+│     │ 7. Backup files to .allternit/backups/                 │                   │
+│     │ 8. Copy from .allternit/runner/{wih_id}/ to root      │                   │
 │     │ 9. Optional: git commit                          │                   │
 │     │ 10. Emit GateAutolanded event                    │                   │
 │     └──────────────────────────────────────────────────┘                   │
@@ -343,7 +343,7 @@ Rust writes a request file, TypeScript polls and responds:
 ```rust
 // Rust writes
 std::fs::write(
-    ".a2r/visual-checks/{wih_id}.req",
+    ".allternit/visual-checks/{wih_id}.req",
     json!({ "action": "preLand", "wihId": wih_id })
 )?;
 
@@ -384,7 +384,7 @@ console.assert(status.allowed === evidence!.passed);
 
 ## Summary
 
-This integration adds **visual quality gates** to the existing A2R Autoland protocol:
+This integration adds **visual quality gates** to the existing Allternit Autoland protocol:
 
 1. **Before Landing**: Visual evidence is captured and verified
 2. **During Landing**: Rust gate checks TypeScript preLandHook

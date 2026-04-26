@@ -13,12 +13,9 @@ use image::ImageEncoder;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-/// Application state
-pub struct AppState {
-    // Add shared state here
-}
+use crate::AppState;
 
-/// Request structure for chart rendering
+// Request structure for chart rendering
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RenderChartRequest {
     /// Chart type (e.g., "bar", "line", "pie")
@@ -410,7 +407,7 @@ pub fn render_to_pdf(request: &RenderChartRequest) -> Result<String, (StatusCode
     
     // Create PDF document with title and initial layer
     let (doc, page1, layer1) = PdfDocument::new(
-        "A2R Chart Visualization",
+        "Allternit Chart Visualization",
         Mm(width_mm),
         Mm(height_mm),
         "Chart Layer",

@@ -2,7 +2,7 @@
  * Agent Communication CLI (ac - Agent Communicate)
  * 
  * CLI tool for agents to communicate and coordinate.
- * Similar to agenthub's `ah` tool but integrated with a2r rails.
+ * Similar to agenthub's `ah` tool but integrated with allternit rails.
  */
 
 import { AgentAuth } from '@/runtime/integrations/agent-auth/agent-auth'

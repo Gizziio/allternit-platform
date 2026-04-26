@@ -7,7 +7,7 @@ import time
 child = pexpect.spawn(
     "bun", 
     ["run", "--conditions=browser", "./src/cli/main.ts", "ses_311b7be49ffedE2BLlbAbxvIOE"],
-    cwd="/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/cmd/gizzi-code",
+    cwd="/Users/macbook/Desktop/allternit-workspace/allternit/cmd/gizzi-code",
     timeout=30
 )
 

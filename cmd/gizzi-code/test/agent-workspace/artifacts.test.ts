@@ -5,7 +5,7 @@ import { rmdir, mkdir, writeFile, readFile } from "fs/promises"
 import path from "path"
 
 describe("AgentWorkspace", () => {
-  const testWorkspace = "/tmp/a2r-agent-workspace-test"
+  const testWorkspace = "/tmp/allternit-agent-workspace-test"
   
   beforeAll(async () => {
     await mkdir(testWorkspace, { recursive: true })
@@ -21,7 +21,7 @@ describe("AgentWorkspace", () => {
     it("should return all 5-layer paths", () => {
       const paths = AgentWorkspace.getPaths(testWorkspace)
       
-      expect(paths.root).toContain(".a2r")
+      expect(paths.root).toContain(".allternit")
       expect(paths.manifest).toContain("manifest.json")
       expect(paths.l1_cognitive).toContain("L1-COGNITIVE")
       expect(paths.l2_identity).toContain("L2-IDENTITY")
@@ -188,7 +188,7 @@ describe("AgentWorkspace", () => {
       const testDir = path.join(testWorkspace, "test-handoff")
       await AgentWorkspace.initialize(testDir)
       
-      const batonPath = path.join(testDir, ".a2r", "L1-COGNITIVE", "brain", "batons", "test.md")
+      const batonPath = path.join(testDir, ".allternit", "L1-COGNITIVE", "brain", "batons", "test.md")
       await mkdir(path.dirname(batonPath), { recursive: true })
       await writeFile(batonPath, "# Test Baton")
       

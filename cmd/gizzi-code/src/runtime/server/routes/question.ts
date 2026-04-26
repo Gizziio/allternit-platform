@@ -1,6 +1,6 @@
 import { Hono } from "hono"
-import { describeRoute, validator } from "hono-openapi"
-import { resolver } from "hono-openapi"
+import { describeRoute, validator } from "@/runtime/server/openapi"
+import { resolver } from "@/runtime/server/openapi"
 import { Question } from "@/runtime/integrations/question"
 import z from "zod/v4"
 import { errors } from "@/runtime/server/error"

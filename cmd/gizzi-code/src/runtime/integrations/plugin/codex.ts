@@ -1,4 +1,4 @@
-import type { Hooks, PluginInput } from "@a2r/plugin"
+import type { Hooks, PluginInput } from "@allternit/plugin"
 import { Log } from "@/shared/util/log"
 import { Installation } from "@/shared/installation"
 import { Auth, OAUTH_DUMMY_KEY } from "@/runtime/integrations/auth"

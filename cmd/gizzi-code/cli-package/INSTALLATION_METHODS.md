@@ -23,26 +23,26 @@ irm https://gizzi.sh/install.ps1 | iex
 ### Homebrew (macOS)
 
 ```bash
-brew tap a2r/gizzi-code
+brew tap allternit/gizzi-code
 brew install gizzi-code
 ```
 
 ### npm (All Platforms)
 
 ```bash
-npm install -g @a2r/gizzi-code
+npm install -g @allternit/gizzi-code
 ```
 
 ### Winget (Windows)
 
 ```powershell
-winget install A2R.GizziCode
+winget install Allternit.GizziCode
 ```
 
 ### Scoop (Windows)
 
 ```powershell
-scoop bucket add gizzi-code https://github.com/a2r/scoop-gizzi-code
+scoop bucket add gizzi-code https://github.com/allternit/scoop-gizzi-code
 scoop install gizzi-code
 ```
 
@@ -55,13 +55,13 @@ scoop install gizzi-code
 1. Download the latest release from GitHub:
    ```bash
    # macOS
-   curl -LO https://github.com/a2r/gizzi-code/releases/latest/download/gizzi-code-macos
+   curl -LO https://github.com/allternit/gizzi-code/releases/latest/download/gizzi-code-macos
    
    # Linux
-   curl -LO https://github.com/a2r/gizzi-code/releases/latest/download/gizzi-code-linux
+   curl -LO https://github.com/allternit/gizzi-code/releases/latest/download/gizzi-code-linux
    
    # Windows
-   curl -LO https://github.com/a2r/gizzi-code/releases/latest/download/gizzi-code-win.exe
+   curl -LO https://github.com/allternit/gizzi-code/releases/latest/download/gizzi-code-win.exe
    ```
 
 2. Make executable (macOS/Linux):
@@ -81,7 +81,7 @@ scoop install gizzi-code
 
 ```bash
 # Clone repository
-git clone https://github.com/a2r/gizzi-code.git
+git clone https://github.com/allternit/gizzi-code.git
 cd gizzi-code/cli-package
 
 # Install dependencies
@@ -100,13 +100,13 @@ npm link
 
 ```bash
 # Pull image
-docker pull a2r/gizzi-code:latest
+docker pull allternit/gizzi-code:latest
 
 # Run
-docker run -it --rm a2r/gizzi-code:latest
+docker run -it --rm allternit/gizzi-code:latest
 
 # With volume mount
-docker run -it --rm -v $(pwd):/workspace a2r/gizzi-code:latest
+docker run -it --rm -v $(pwd):/workspace allternit/gizzi-code:latest
 ```
 
 ---
@@ -172,19 +172,19 @@ rm -rf ~/.config/gizzi
 
 ```bash
 brew uninstall gizzi-code
-brew untap a2r/gizzi-code
+brew untap allternit/gizzi-code
 ```
 
 ### npm
 
 ```bash
-npm uninstall -g @a2r/gizzi-code
+npm uninstall -g @allternit/gizzi-code
 ```
 
 ### Winget
 
 ```powershell
-winget uninstall A2R.GizziCode
+winget uninstall Allternit.GizziCode
 ```
 
 ---
@@ -212,8 +212,8 @@ chmod +x $(which gizzi)
 ```bash
 # Update via your package manager
 brew upgrade gizzi-code       # Homebrew
-npm update -g @a2r/gizzi-code # npm
-winget upgrade A2R.GizziCode  # Winget
+npm update -g @allternit/gizzi-code # npm
+winget upgrade Allternit.GizziCode  # Winget
 ```
 
 ---
@@ -221,5 +221,5 @@ winget upgrade A2R.GizziCode  # Winget
 ## Support
 
 - **Documentation**: https://docs.gizzi.sh
-- **Issues**: https://github.com/a2r/gizzi-code/issues
-- **Discord**: https://discord.gg/a2r
+- **Issues**: https://github.com/allternit/gizzi-code/issues
+- **Discord**: https://discord.gg/allternit

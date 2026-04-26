@@ -7,7 +7,7 @@ Use this tool when you need to:
 - Capture screenshots of web pages or desktop
 - Execute complex multi-step browser workflows
 
-This tool connects to the A2R Computer Use service which provides browser automation through Playwright, browser-use (LLM-powered), and Chrome DevTools Protocol adapters.
+This tool connects to the Allternit Computer Use service which provides browser automation through Playwright, browser-use (LLM-powered), and Chrome DevTools Protocol adapters.
 
 Available actions:
 - execute: Execute a high-level goal using the browser-use adapter (LLM-powered automation)

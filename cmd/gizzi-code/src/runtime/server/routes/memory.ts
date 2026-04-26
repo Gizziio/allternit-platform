@@ -1,5 +1,5 @@
 import { Hono } from "hono"
-import { validator } from "hono-openapi"
+import { validator } from "@/runtime/server/openapi"
 import z from "zod/v4"
 import { MemoryService } from "@/runtime/memory/memory-service"
 import { errors } from "@/runtime/server/error"

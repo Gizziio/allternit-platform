@@ -218,5 +218,5 @@ export function createCloudRelayClient(options) {
     return new CloudRelayClient(options);
 }
 // Default relay URL (to be replaced with actual deployment)
-export const DEFAULT_CLOUD_RELAY_URL = 'wss://cowork.a2r.com';
+export const DEFAULT_CLOUD_RELAY_URL = 'wss://cowork.allternit.com';
 export default CloudRelayClient;

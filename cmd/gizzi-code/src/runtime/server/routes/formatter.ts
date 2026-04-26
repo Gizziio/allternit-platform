@@ -1,5 +1,5 @@
 import { Hono } from "hono"
-import { describeRoute, resolver } from "hono-openapi"
+import { describeRoute, resolver } from "@/runtime/server/openapi"
 import { Format } from "@/shared/format"
 
 export function FormatterRoutes() {

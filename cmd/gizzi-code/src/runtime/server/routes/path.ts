@@ -1,5 +1,5 @@
 import { Hono } from "hono"
-import { describeRoute, resolver } from "hono-openapi"
+import { describeRoute, resolver } from "@/runtime/server/openapi"
 import z from "zod/v4"
 import { Global } from "@/runtime/context/global"
 import { Instance } from "@/runtime/context/project/instance"

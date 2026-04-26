@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { describe, expect, test } from "bun:test"
-import { blockValue, inlineText } from "../../src/ui/a2r/inline-coerce"
+import { blockValue, inlineText } from "../../src/ui/allternit/inline-coerce"
 
-describe("A2R inline block coercion", () => {
+describe("Allternit inline block coercion", () => {
   test("normalizes mixed inline values to strings", () => {
     const value = inlineText(["a", 1, 2n, null, false, () => "b", new Error("boom")])
     expect(value).toBe("a12bboom")

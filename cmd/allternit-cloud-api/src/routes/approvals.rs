@@ -11,7 +11,6 @@ use axum::{
 };
 use chrono::Utc;
 use serde::Deserialize;
-use serde_json::json;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -19,7 +18,6 @@ use crate::{
     auth::middleware::AuthContext,
     db::cowork_models::*,
     error::ApiError,
-    services::EventStore,
     ApiState,
 };
 

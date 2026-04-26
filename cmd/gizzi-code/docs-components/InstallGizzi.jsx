@@ -40,7 +40,7 @@ const InstallGizzi = () => {
       </h2>
       
       <p style={{ color: '#a0a0b0', marginBottom: '30px' }}>
-        AI-powered terminal interface for the A2R ecosystem
+        AI-powered terminal interface for the Allternit ecosystem
       </p>
 
       {/* Install Command */}

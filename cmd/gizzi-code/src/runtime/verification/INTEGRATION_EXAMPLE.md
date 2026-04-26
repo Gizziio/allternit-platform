@@ -1,6 +1,6 @@
 # Visual Verification Integration Example
 
-Complete examples for integrating visual evidence capture with A2R Autoland.
+Complete examples for integrating visual evidence capture with Allternit Autoland.
 
 ## Scenario 1: Development Setup (File-Based Mode)
 
@@ -253,7 +253,7 @@ pub async fn autoland_wih(&self, wih_id: &str, dry_run: bool, git_commit: bool) 
 
     // NEW: Check visual verification
     let visual_client = VisualVerificationClient::new(
-        self.root_dir.join(".a2r/evidence"),
+        self.root_dir.join(".allternit/evidence"),
         60,  // 60 second timeout
     );
 
@@ -460,7 +460,7 @@ configureVisualAutoland({
 **Characteristics:**
 - Simple, no network dependencies
 - Good for development/debugging
-- Evidence files in `.a2r/evidence/`
+- Evidence files in `.allternit/evidence/`
 - Slower (polling-based)
 
 ### gRPC Mode (Production)

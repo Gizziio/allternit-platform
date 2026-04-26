@@ -24,7 +24,7 @@
 
 **Current (broken):**
 ```bash
-APP=a2r
+APP=allternit
 url="https://github.com/anomalyco/opencode/releases/latest/download/$filename"
 ```
 
@@ -215,10 +215,10 @@ jobs:
 
 **Package:** `cmd/gizzi-code/package.json`
 
-**Current name:** `@a2r/gizzi-code`
+**Current name:** `@allternit/gizzi-code`
 
 **Options:**
-1. Keep as `@a2r/gizzi-code` (scope matches monorepo)
+1. Keep as `@allternit/gizzi-code` (scope matches monorepo)
 2. Change to `@gizzi/gizzi-code` (better branding)
 
 **Workflow:**
@@ -292,8 +292,8 @@ cd cmd/gizzi-code
 
 # Fix install script
 sed -i.bak 's/anomalyco\/opencode/Gizziio\/allternit-platform/g' install
-sed -i.bak 's/APP=a2r/APP=gizzi-code/g' install
-sed -i.bak 's/~\/.a2r/~\/.gizzi/g' install
+sed -i.bak 's/APP=allternit/APP=gizzi-code/g' install
+sed -i.bak 's/~\/.allternit/~\/.gizzi/g' install
 
 # Fix install.ps1
 sed -i.bak 's/Gizziio\/gizzi-code/Gizziio\/allternit-platform/g' cli-package/install/install.ps1
@@ -344,7 +344,7 @@ cd cmd/gizzi-code/gizzi-install-site
 |--------|---------|------------------|
 | curl | `curl -fsSL https://install.gizziio.com/install \| bash` | ✅ Works |
 | Windows | `irm https://install.gizziio.com/install.ps1 \| iex` | ✅ Works |
-| NPM | `npm install -g @a2r/gizzi-code` | ✅ Works (if published) |
+| NPM | `npm install -g @allternit/gizzi-code` | ✅ Works (if published) |
 | Homebrew | `brew install gizzi-code` | ✅ Works (after SHA256 update) |
 
 ---

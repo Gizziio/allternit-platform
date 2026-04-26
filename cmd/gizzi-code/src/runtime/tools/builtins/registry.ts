@@ -20,7 +20,7 @@ import { Tool } from "@/runtime/tools/builtins/tool"
 import { Instance } from "@/runtime/context/project/instance"
 import { Config } from "@/runtime/context/config/config"
 import path from "path"
-import { type ToolContext as PluginToolContext, type ToolDefinition } from "@a2r/plugin"
+import { type ToolContext as PluginToolContext, type ToolDefinition } from "@allternit/plugin"
 import z from "zod/v4"
 import { Plugin } from "@/runtime/integrations/plugin"
 import { WebSearchTool } from "@/runtime/tools/builtins/websearch"
@@ -35,6 +35,8 @@ import { ApplyPatchTool } from "@/runtime/tools/builtins/apply_patch"
 import { NotebookEditTool } from "@/runtime/tools/builtins/notebook"
 import { MemoryWriteTool } from "@/runtime/tools/builtins/memory-write"
 import { MemoryRecallTool } from "@/runtime/tools/builtins/memory-recall"
+import { VaultQueryTool } from "@/runtime/tools/builtins/vault-query"
+import { VaultWriteTool } from "@/runtime/tools/builtins/vault-write"
 import { Glob } from "@/shared/util/glob"
 
 export namespace ToolRegistry {
@@ -129,6 +131,8 @@ export namespace ToolRegistry {
       NotebookEditTool,
       MemoryWriteTool,
       MemoryRecallTool,
+      VaultQueryTool,
+      VaultWriteTool,
       ...(Flag.GIZZI_EXPERIMENTAL_LSP_TOOL ? [LspTool] : []),
       ...(config.experimental?.batch_tool === true ? [BatchTool] : []),
       ...(Flag.GIZZI_CLIENT === "cli" ? [PlanExitTool, PlanEnterTool] : []),

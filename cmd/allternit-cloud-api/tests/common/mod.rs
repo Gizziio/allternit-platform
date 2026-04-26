@@ -3,7 +3,7 @@
 //! Provides a TestApp struct for setting up test environment
 //! with in-memory database and HTTP client.
 
-use a2r_cloud_api::{
+use allternit_cloud_api::{
     create_router, ApiState,
     db::cowork_models::*,
 };
@@ -19,7 +19,7 @@ pub struct TestApp {
     pub db: SqlitePool,
     pub router: axum::Router,
     pub temp_dir: TempDir,
-    pub event_tx: broadcast::Sender<a2r_cloud_api::DeploymentEvent>,
+    pub event_tx: broadcast::Sender<allternit_cloud_api::DeploymentEvent>,
 }
 
 impl TestApp {
@@ -34,12 +34,12 @@ impl TestApp {
         let db = Self::init_test_db(&database_url).await;
 
         // Create broadcast channel for events
-        let (event_tx, _event_rx) = broadcast::channel::<a2r_cloud_api::DeploymentEvent>(100);
+        let (event_tx, _event_rx) = broadcast::channel::<allternit_cloud_api::DeploymentEvent>(100);
 
         // Create API state
         let state = Arc::new(ApiState {
             db: db.clone(),
-            ssh_executor: a2r_cloud_ssh::SshExecutor::new(),
+            ssh_executor: allternit_cloud_ssh::SshExecutor::new(),
             event_tx: event_tx.clone(),
         });
 

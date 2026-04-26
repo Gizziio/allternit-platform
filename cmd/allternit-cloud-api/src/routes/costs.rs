@@ -398,29 +398,3 @@ pub async fn recalculate_costs(
 // ============================================================================
 // Helper Functions
 // ============================================================================
-
-/// Format a duration in seconds to a human-readable string
-fn format_duration(seconds: i64) -> String {
-    let hours = seconds / 3600;
-    let minutes = (seconds % 3600) / 60;
-    let secs = seconds % 60;
-
-    if hours > 0 {
-        format!("{}h {}m {}s", hours, minutes, secs)
-    } else if minutes > 0 {
-        format!("{}m {}s", minutes, secs)
-    } else {
-        format!("{}s", secs)
-    }
-}
-
-/// Calculate cost per hour from a run cost record
-fn calculate_cost_per_hour(cost: &RunCost) -> Option<f64> {
-    if let (Some(duration), Some(instance_cost)) = (cost.duration_seconds, Some(cost.instance_cost)) {
-        if duration > 0 {
-            let hours = duration as f64 / 3600.0;
-            return Some(instance_cost / hours);
-        }
-    }
-    None
-}

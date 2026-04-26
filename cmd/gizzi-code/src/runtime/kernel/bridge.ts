@@ -4,7 +4,7 @@
  * Detects and loads workspace identity from .gizzi/ or .openclaw/ directories.
  * Injects SOUL.md, IDENTITY.md, USER.md, MEMORY.md, AGENTS.md as system prompt context.
  *
- * A2R 5-layer format (.gizzi/ layered):
+ * Allternit 5-layer format (.gizzi/ layered):
  *   .gizzi/
  *   ├── manifest.json
  *   ├── L1-COGNITIVE/
@@ -52,7 +52,7 @@ export interface WorkspaceIdentity {
   vibe?: string
   /** Source workspace type */
   source: "gizzi" | "openclaw"
-  /** Whether this is the full 5-layer A2R workspace */
+  /** Whether this is the full 5-layer Allternit workspace */
   layered?: boolean
   /** Absolute path to the workspace root (for display) */
   workspacePath: string
@@ -72,7 +72,7 @@ export interface WorkspaceIdentity {
 
 export interface DetectedWorkspace {
   type: "gizzi" | "openclaw"
-  /** "layered" = A2R 5-layer, "flat" = OpenClaw-compatible */
+  /** "layered" = Allternit 5-layer, "flat" = OpenClaw-compatible */
   format: "layered" | "flat"
   path: string
   identity?: WorkspaceIdentity
@@ -81,7 +81,7 @@ export interface DetectedWorkspace {
 }
 
 /**
- * Check if a directory is a valid A2R 5-layer workspace.
+ * Check if a directory is a valid Allternit 5-layer workspace.
  * Must have manifest.json + L1-COGNITIVE/ + L2-IDENTITY/
  */
 async function isLayeredWorkspace(dir: string): Promise<boolean> {
@@ -103,7 +103,7 @@ async function isFlatWorkspace(dir: string): Promise<boolean> {
 }
 
 /**
- * Load identity from the A2R 5-layer workspace structure.
+ * Load identity from the Allternit 5-layer workspace structure.
  * Reads from L2-IDENTITY/, L1-COGNITIVE/memory/, L3-GOVERNANCE/
  */
 async function loadLayeredIdentity(
@@ -235,7 +235,7 @@ export async function detectWorkspace(
 
 /**
  * Build system prompt sections from workspace identity.
- * Layered (5-layer A2R): identity → soul → voice → policy → user → memory → brain → agents/playbook
+ * Layered (5-layer Allternit): identity → soul → voice → policy → user → memory → brain → agents/playbook
  * Flat (OpenClaw-compatible): identity → soul → user → memory → agents
  */
 export function buildWorkspaceSystemPrompt(identity: WorkspaceIdentity): string {

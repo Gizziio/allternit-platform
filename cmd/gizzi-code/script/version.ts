@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { Script } from "@a2r/script"
+import { Script } from "@allternit/script"
 import { $ } from "bun"
 import { buildNotes, getLatestRelease } from "./changelog"
 

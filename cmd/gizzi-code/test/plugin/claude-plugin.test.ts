@@ -679,7 +679,7 @@ describe("discovery: ~/.claude/plugins/cache/ (versioned dirs)", () => {
 
 // ── bundled plugins: allBuiltin() content validation ─────────────────────────
 // Test the built-in knowledge-work plugins directly via the loader.
-// Avoids bootstrapping the full app runtime (@a2r/sdk dependency chain).
+// Avoids bootstrapping the full app runtime (@allternit/sdk dependency chain).
 
 const BUILTIN_DIR = path.join(import.meta.dir, "../../src/runtime/plugins/builtin")
 

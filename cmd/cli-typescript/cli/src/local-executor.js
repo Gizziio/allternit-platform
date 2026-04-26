@@ -1,19 +1,19 @@
-const { A2RRuntimeBridge } = require('@a2r/runtime');
+const { AllternitRuntimeBridge } = require('@allternit/runtime');
 const path = require('path');
 
 class LocalExecutor {
   constructor(config) {
     this.config = config || {};
-    this.bridge = new A2RRuntimeBridge({
+    this.bridge = new AllternitRuntimeBridge({
       rootDir: process.cwd(),
-      storageDir: path.join(process.cwd(), '.a2r/receipts'),
+      storageDir: path.join(process.cwd(), '.allternit/receipts'),
       enforceWih: false
     });
   }
 
   async execute(runConfig) {
     const { goal, variants } = runConfig;
-    console.log('[LocalExecutor] Initializing A2R Runtime...');
+    console.log('[LocalExecutor] Initializing Allternit Runtime...');
 
     const results = [];
 

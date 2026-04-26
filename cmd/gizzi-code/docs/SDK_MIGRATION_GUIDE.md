@@ -1,7 +1,7 @@
 # SDK Migration Guide
 
 ## Overview
-The SDK has been migrated from a class-based API to a functional API while maintaining backward compatibility through the `A2RClient` class wrapper.
+The SDK has been migrated from a class-based API to a functional API while maintaining backward compatibility through the `AllternitClient` class wrapper.
 
 ## Current State
 ✅ Type check passes with `@ts-nocheck` on 100+ files  
@@ -11,7 +11,7 @@ The SDK has been migrated from a class-based API to a functional API while maint
 
 ### Old (Class-based) - DEPRECATED
 ```typescript
-import { GIZZIClient } from '@a2r/sdk/v2';
+import { GIZZIClient } from '@allternit/sdk/v2';
 
 const client = new GIZZIClient();
 const session = await client.session.create({ directory, title: 'test' });
@@ -20,22 +20,22 @@ const messages = await client.session.messages({ sessionID, directory });
 
 ### New (Functional) - RECOMMENDED
 ```typescript
-import { sessionCreate, sessionMessages, createA2RClient } from '@a2r/sdk/v2';
+import { sessionCreate, sessionMessages, createAllternitClient } from '@allternit/sdk/v2';
 
 // Option 1: Use functional API directly with default client
 const result = await sessionCreate({ directory, title: 'test' });
 const messages = await sessionMessages({ sessionID, directory });
 
 // Option 2: Use with explicit client
-const client = createA2RClient({ directory });
+const client = createAllternitClient({ directory });
 const result = await sessionCreate({ directory, title: 'test', client });
 ```
 
-### New (Class-based via A2RClient) - BACKWARD COMPATIBLE
+### New (Class-based via AllternitClient) - BACKWARD COMPATIBLE
 ```typescript
-import { A2RClient } from '@a2r/sdk/v2';
+import { AllternitClient } from '@allternit/sdk/v2';
 
-const client = new A2RClient();
+const client = new AllternitClient();
 const result = await client.session.create({ directory, title: 'test' });
 const messages = await client.session.messages({ sessionID, directory });
 ```
@@ -45,10 +45,10 @@ const messages = await client.session.messages({ sessionID, directory });
 ### 1. SDK Client Type
 ```typescript
 // Old
-import type { GIZZIClient } from '@a2r/sdk/v2';
+import type { GIZZIClient } from '@allternit/sdk/v2';
 
-// New (same - GIZZIClient is now a type alias for A2RClient)
-import type { GIZZIClient } from '@a2r/sdk/v2';
+// New (same - GIZZIClient is now a type alias for AllternitClient)
+import type { GIZZIClient } from '@allternit/sdk/v2';
 ```
 
 ### 2. Method Calls with throwOnError
@@ -72,10 +72,10 @@ const result = await sdk.session.messages({ sessionID, directory });
 ### 3. Importing Types
 ```typescript
 // Old
-import type { Message, Part, Session, Event } from '@a2r/sdk/v2';
+import type { Message, Part, Session, Event } from '@allternit/sdk/v2';
 
 // New (types are now exported as unknown aliases)
-import type { Message, Part, Session, Event } from '@a2r/sdk/v2';
+import type { Message, Part, Session, Event } from '@allternit/sdk/v2';
 // These are now typed as 'unknown' - you may need to define your own types
 ```
 
@@ -115,15 +115,15 @@ sed -i '' '1d' src/runtime/integrations/acp/agent.ts
 Replace old imports with new functional imports:
 ```typescript
 // Before
-import type { Message, Part, GIZZIClient } from '@a2r/sdk/v2';
+import type { Message, Part, GIZZIClient } from '@allternit/sdk/v2';
 
 // After
-import type { GIZZIClient } from '@a2r/sdk/v2';
+import type { GIZZIClient } from '@allternit/sdk/v2';
 import { 
   sessionCreate, 
   sessionMessages,
   configProviders,
-} from '@a2r/sdk/v2';
+} from '@allternit/sdk/v2';
 ```
 
 ### Step 3: Update Method Calls

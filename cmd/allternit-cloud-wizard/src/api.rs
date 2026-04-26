@@ -2,8 +2,8 @@
 //!
 //! Main wizard API state and configuration.
 
-use a2r_cloud_core::ProviderRegistry;
-use a2r_cloud_deploy::DeploymentTracker;
+use allternit_cloud_core::ProviderRegistry;
+use allternit_cloud_deploy::DeploymentTracker;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -25,35 +25,35 @@ impl WizardAppState {
         // Register all available providers
         #[cfg(feature = "aws")]
         {
-            if let Ok(provider) = a2r_cloud_aws::create_provider() {
+            if let Ok(provider) = allternit_cloud_aws::create_provider() {
                 self.registry.register(provider).await;
             }
         }
         
         #[cfg(feature = "digitalocean")]
         {
-            if let Ok(provider) = a2r_cloud_digitalocean::create_provider() {
+            if let Ok(provider) = allternit_cloud_digitalocean::create_provider() {
                 self.registry.register(provider).await;
             }
         }
         
         #[cfg(feature = "hetzner")]
         {
-            if let Ok(provider) = a2r_cloud_hetzner::create_provider() {
+            if let Ok(provider) = allternit_cloud_hetzner::create_provider() {
                 self.registry.register(provider).await;
             }
         }
         
         #[cfg(feature = "contabo")]
         {
-            if let Ok(provider) = a2r_cloud_contabo::create_provider() {
+            if let Ok(provider) = allternit_cloud_contabo::create_provider() {
                 self.registry.register(provider).await;
             }
         }
         
         #[cfg(feature = "racknerd")]
         {
-            if let Ok(provider) = a2r_cloud_racknerd::create_provider() {
+            if let Ok(provider) = allternit_cloud_racknerd::create_provider() {
                 self.registry.register(provider).await;
             }
         }

@@ -1,5 +1,5 @@
 import { Hono } from "hono"
-import { describeRoute, validator, resolver } from "hono-openapi"
+import { describeRoute, validator, resolver } from "@/runtime/server/openapi"
 import z from "zod/v4"
 import { Project } from "@/runtime/context/project/project"
 import { Instance } from "@/runtime/context/project/instance"
@@ -11,7 +11,7 @@ export const ProjectRoutes = () =>
       "/list",
       describeRoute({
         summary: "List projects",
-        description: "Retrieve a list of all projects managed by the A2R instance.",
+        description: "Retrieve a list of all projects managed by the Allternit instance.",
         operationId: "project.list",
         responses: {
           200: {

@@ -14,7 +14,7 @@ use crate::runtime::*;
 /// Remote runtime for SSH-based execution
 pub struct RemoteRuntime {
     /// SSH executor for remote commands
-    ssh_executor: a2r_cloud_ssh::SshExecutor,
+    ssh_executor: allternit_cloud_ssh::SshExecutor,
     /// Active connections
     connections: Arc<RwLock<HashMap<String, RemoteConnection>>>,
     /// Event streams for each runtime
@@ -25,19 +25,15 @@ pub struct RemoteRuntime {
 #[derive(Clone)]
 struct RemoteConnection {
     host: String,
-    port: u16,
-    username: String,
-    private_key: String,
-    runtime_id: String,
     status: RuntimeState,
-    ssh_conn: Option<Arc<tokio::sync::Mutex<a2r_cloud_ssh::SshConnection>>>,
+    ssh_conn: Option<Arc<tokio::sync::Mutex<allternit_cloud_ssh::SshConnection>>>,
 }
 
 impl RemoteRuntime {
     /// Create a new remote runtime
     pub async fn new() -> Result<Self, ApiError> {
         Ok(Self {
-            ssh_executor: a2r_cloud_ssh::SshExecutor::new(),
+            ssh_executor: allternit_cloud_ssh::SshExecutor::new(),
             connections: Arc::new(RwLock::new(HashMap::new())),
             streams: Arc::new(RwLock::new(HashMap::new())),
         })
@@ -74,7 +70,7 @@ impl RemoteRuntime {
     /// Stream events from remote host
     async fn stream_events(
         runtime_id: String,
-        conn: Arc<tokio::sync::Mutex<a2r_cloud_ssh::SshConnection>>,
+        conn: Arc<tokio::sync::Mutex<allternit_cloud_ssh::SshConnection>>,
         tx: mpsc::Sender<RuntimeEvent>,
         connections: Arc<RwLock<HashMap<String, RemoteConnection>>>,
     ) {
@@ -97,7 +93,7 @@ impl RemoteRuntime {
             // Try to get status from remote
             let result = {
                 let ssh = conn.lock().await;
-                ssh.execute("cat /var/log/a2r/run.status 2>/dev/null || echo '{}'").await
+                ssh.execute("cat /var/log/allternit/run.status 2>/dev/null || echo '{}'").await
             };
             
             match result {
@@ -165,7 +161,7 @@ impl Runtime for RemoteRuntime {
         let private_key = self.get_ssh_key()?;
 
         // Establish SSH connection
-        let ssh_conn = a2r_cloud_ssh::SshConnection::connect(host, port, username, &private_key)
+        let ssh_conn = allternit_cloud_ssh::SshConnection::connect(host, port, username, &private_key)
             .await
             .map_err(|e| ApiError::Internal(format!("SSH connection failed: {}", e)))?;
 
@@ -193,10 +189,6 @@ impl Runtime for RemoteRuntime {
         // Store connection info
         let connection = RemoteConnection {
             host: host.to_string(),
-            port,
-            username: username.to_string(),
-            private_key,
-            runtime_id: runtime_id.clone(),
             status: RuntimeState::Running,
             ssh_conn: Some(Arc::new(tokio::sync::Mutex::new(ssh_conn))),
         };
@@ -230,7 +222,7 @@ impl Runtime for RemoteRuntime {
             if let Some(ssh_conn) = &conn.ssh_conn {
                 let ssh = ssh_conn.lock().await;
                 // Send stop signal to remote process
-                let _ = ssh.execute("pkill -f 'a2r-run'").await;
+                let _ = ssh.execute("pkill -f 'allternit-run'").await;
             }
             
             conn.status = RuntimeState::Stopped;
@@ -370,7 +362,7 @@ impl Runtime for RemoteRuntime {
         if let Some(conn) = conns.get_mut(runtime_id) {
             if let Some(ssh_conn) = &conn.ssh_conn {
                 let ssh = ssh_conn.lock().await;
-                let _ = ssh.execute("kill -STOP $(pgrep -f 'a2r-run')").await;
+                let _ = ssh.execute("kill -STOP $(pgrep -f 'allternit-run')").await;
             }
             conn.status = RuntimeState::Paused;
             tracing::info!("Paused remote runtime {}", runtime_id);
@@ -386,7 +378,7 @@ impl Runtime for RemoteRuntime {
         if let Some(conn) = conns.get_mut(runtime_id) {
             if let Some(ssh_conn) = &conn.ssh_conn {
                 let ssh = ssh_conn.lock().await;
-                let _ = ssh.execute("kill -CONT $(pgrep -f 'a2r-run')").await;
+                let _ = ssh.execute("kill -CONT $(pgrep -f 'allternit-run')").await;
             }
             conn.status = RuntimeState::Running;
             tracing::info!("Resumed remote runtime {}", runtime_id);

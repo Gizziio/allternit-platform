@@ -1,7 +1,7 @@
 /**
- * Browser Tool - A2R Computer Use Bridge
+ * Browser Tool - Allternit Computer Use Bridge
  *
- * Thin wrapper that bridges GIZZI runtime to A2R Computer Use service.
+ * Thin wrapper that bridges GIZZI runtime to Allternit Computer Use service.
  * Does NOT implement browser automation logic - only transports requests
  * to the Python Computer Use gateway and normalizes responses.
  *
@@ -36,8 +36,8 @@ const log = Log.create({ service: "browser-tool" })
 // Configuration
 // ============================================================================
 
-const GATEWAY_URL = process.env.A2R_COMPUTER_USE_URL || "http://localhost:3010"
-const GATEWAY_TOKEN = process.env.A2R_COMPUTER_USE_TOKEN
+const GATEWAY_URL = process.env.Allternit_COMPUTER_USE_URL || "http://localhost:3010"
+const GATEWAY_TOKEN = process.env.Allternit_COMPUTER_USE_TOKEN
 
 // ============================================================================
 // Operator Auto-Start
@@ -46,7 +46,7 @@ const GATEWAY_TOKEN = process.env.A2R_COMPUTER_USE_TOKEN
 let _operatorProc: ReturnType<typeof spawn> | null = null
 
 function findOperatorDir(): string | null {
-  if (process.env.A2R_OPERATOR_PATH) return process.env.A2R_OPERATOR_PATH
+  if (process.env.Allternit_OPERATOR_PATH) return process.env.Allternit_OPERATOR_PATH
   // Walk up from __dirname to find the monorepo root, then look for the service
   const candidates = [
     path.join(__dirname, "../../../../../../services/computer-use-operator"),
@@ -87,17 +87,17 @@ async function autoStartOperator(): Promise<boolean> {
   }
 
   const cuPath =
-    process.env.A2R_COMPUTER_USE_PATH ??
+    process.env.Allternit_COMPUTER_USE_PATH ??
     path.join(operatorDir, "../../packages/computer-use")
 
-  log.info("Auto-starting A2R Operator", { operatorDir })
+  log.info("Auto-starting Allternit Operator", { operatorDir })
 
   _operatorProc = spawn(
     "python3",
     ["-m", "uvicorn", "src.main:app", "--host", "127.0.0.1", "--port", "3010", "--log-level", "warning"],
     {
       cwd: operatorDir,
-      env: { ...process.env, A2R_COMPUTER_USE_PATH: cuPath },
+      env: { ...process.env, Allternit_COMPUTER_USE_PATH: cuPath },
       stdio: "ignore",
       detached: true,
     },
@@ -106,15 +106,15 @@ async function autoStartOperator(): Promise<boolean> {
 
   const ready = await waitForGateway(10000)
   if (ready) {
-    log.info("A2R Operator started successfully")
+    log.info("Allternit Operator started successfully")
   } else {
-    log.warn("A2R Operator did not become ready within 10s")
+    log.warn("Allternit Operator did not become ready within 10s")
   }
   return ready
 }
 
 // ============================================================================
-// Types - Aligned with A2R Computer Use ResultEnvelope
+// Types - Aligned with Allternit Computer Use ResultEnvelope
 // ============================================================================
 
 const BrowserAction = z.enum([
@@ -222,7 +222,7 @@ async function callComputerUseGateway(
           family: "browser",
           mode: "execute",
           status: "failed",
-          summary: "A2R Operator started but request still failed",
+          summary: "Allternit Operator started but request still failed",
           extracted_content: null,
           artifacts: [],
           receipts: [],
@@ -241,13 +241,13 @@ async function callComputerUseGateway(
         family: "browser",
         mode: "execute",
         status: "failed",
-        summary: "A2R Operator is not running and could not be auto-started",
+        summary: "Allternit Operator is not running and could not be auto-started",
         extracted_content: null,
         artifacts: [],
         receipts: [],
         error: {
           code: "GATEWAY_UNREACHABLE",
-          message: `Cannot connect to A2R Operator at ${GATEWAY_URL}. Start manually: cd services/computer-use-operator && python3 -m uvicorn src.main:app --port 3010`,
+          message: `Cannot connect to Allternit Operator at ${GATEWAY_URL}. Start manually: cd services/computer-use-operator && python3 -m uvicorn src.main:app --port 3010`,
         },
         trace_id: crypto.randomUUID(),
       }

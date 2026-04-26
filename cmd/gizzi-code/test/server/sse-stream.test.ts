@@ -13,7 +13,7 @@ import { describe, expect, test } from "bun:test"
 import { Instance } from "../../src/runtime/context/project/instance"
 import { Server } from "../../src/runtime/server/server"
 import { Bus } from "../../src/shared/bus"
-import { createA2RClient } from "@a2r/sdk"
+import { createAllternitClient } from "@allternit/sdk"
 import { tmpdir } from "../fixture/fixture"
 
 describe("SSE event stream — in-process", () => {
@@ -28,7 +28,7 @@ describe("SSE event stream — in-process", () => {
       return Server.App().fetch(new Request(url.toString(), init))
     }
 
-    const sdk = createA2RClient({
+    const sdk = createAllternitClient({
       baseUrl: "http://gizzi.internal",
       fetch: fetchFn as typeof globalThis.fetch,
     })
@@ -72,7 +72,7 @@ describe("SSE event stream — in-process", () => {
       return Server.App().fetch(new Request(url.toString(), init))
     }
 
-    const sdk = createA2RClient({
+    const sdk = createAllternitClient({
       baseUrl: "http://gizzi.internal",
       fetch: fetchFn as typeof globalThis.fetch,
     })

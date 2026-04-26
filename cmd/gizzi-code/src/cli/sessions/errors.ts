@@ -7,10 +7,10 @@
  * @module @/cli/sessions/errors
  */
 
-import { NamedError } from "@a2r/util/error"
+import { NamedError } from "@allternit/gizzi-util/error.js"
 
 /**
- * Error thrown when the A2R Desktop daemon is not running
+ * Error thrown when the Allternit Desktop daemon is not running
  *
  * This error indicates that the CLI cannot connect to the desktop
  * application via Unix socket, suggesting the desktop app needs
@@ -19,8 +19,8 @@ import { NamedError } from "@a2r/util/error"
 export class DaemonNotRunningError extends Error {
   constructor() {
     super(
-      "A2R Desktop is not running.\n" +
-        "Please start it with: a2r desktop\n" +
+      "Allternit Desktop is not running.\n" +
+        "Please start it with: allternit desktop\n" +
         "Or run with --local for limited local execution."
     )
     this.name = "DaemonNotRunningError"

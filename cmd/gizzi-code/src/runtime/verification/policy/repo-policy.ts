@@ -2,7 +2,7 @@
  * Per-Repository Policy Configuration
  * 
  * Allows different projects to have different visual verification policies.
- * Policies are read from .a2r/policy.yaml in each repository.
+ * Policies are read from .allternit/policy.yaml in each repository.
  */
 
 import * as fs from "fs/promises";
@@ -86,7 +86,7 @@ export class RepoPolicyLoader {
       return cached.policy;
     }
 
-    const policyPath = path.join(repoPath, ".a2r", "policy.json");
+    const policyPath = path.join(repoPath, ".allternit", "policy.json");
     
     try {
       const content = await fs.readFile(policyPath, "utf-8");

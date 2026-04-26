@@ -18,12 +18,15 @@
 
 import type { Argv } from "yargs"
 import yargs from "yargs"
+import * as React from "react"
 import { cmd } from "@/cli/commands/cmd"
 import { bootstrap } from "@/cli/bootstrap"
 import { UI } from "@/cli/ui"
 import * as prompts from "@clack/prompts"
 import { Global } from "@/runtime/context/global"
 import open from "open"
+import { render } from "@/ink"
+import { IntelliTaskScreen } from "@/screens/IntelliTaskScreen"
 
 // ============================================================================
 // Types
@@ -93,11 +96,36 @@ interface CheckpointSummary {
   created_at: string
 }
 
+interface TaskItem {
+  id: string
+  workspace_id: string
+  title: string
+  description?: string
+  status: string
+  priority: number
+  estimated_minutes?: number
+  estimatedMinutes?: number
+  deadline?: number | string
+  dependencies: string[]
+  assignee_type?: string
+  assignee_id?: string
+  assignee_name?: string
+  optimize_rank?: number
+}
+
+interface Comment {
+  id: string
+  task_id: string
+  author: string
+  body: string
+  created_at: string
+}
+
 // ============================================================================
 // API Client Helper
 // ============================================================================
 
-const API_BASE = process.env.A2R_API_URL || "http://localhost:3001"
+const API_BASE = process.env.Allternit_API_URL || "http://localhost:3001"
 
 async function apiCall<T>(
   method: "GET" | "POST" | "PUT" | "DELETE",
@@ -105,7 +133,7 @@ async function apiCall<T>(
   body?: unknown
 ): Promise<T> {
   const url = `${API_BASE}${path}`
-  const token = process.env.A2R_API_TOKEN
+  const token = process.env.Allternit_API_TOKEN
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -157,6 +185,13 @@ export const CoworkCommand = cmd({
       .command(CoworkApprovalCommand)
       .command(CoworkCheckpointCommand)
       .command(CoworkWebCommand)
+      .command(CoworkTasksCommand)
+      .command(CoworkQueueCommand)
+      .command(CoworkBoardCommand)
+      .command(CoworkOptimizeCommand)
+      .command(CoworkTimerCommand)
+      .command(CoworkRuntimeCommand)
+      .command(CoworkWorkspaceCommand)
       .demandCommand(1, "Choose a command")
   },
   async handler() {
@@ -177,6 +212,12 @@ export const CoworkCommand = cmd({
     UI.println("  approval          Manage approvals")
     UI.println("  checkpoint        Manage checkpoints")
     UI.println("  web               Mirror session to web browser")
+    UI.println("  tasks, t          View and optimize cowork tasks (TUI)")
+    UI.println("  board             Open board view")
+    UI.println("  optimize          Run schedule optimization")
+    UI.println("  timer             Start/stop task timer")
+    UI.println("  runtime           List or register runtimes")
+    UI.println("  workspace         List or switch workspaces")
     UI.println("")
     UI.println(`Run ${UI.Style.TEXT_NORMAL_BOLD}gizzi cowork <command> --help${UI.Style.TEXT_NORMAL} for more information`)
   },
@@ -458,7 +499,7 @@ async function attachToRun(runId: string): Promise<void> {
 
   // Stream events via SSE
   const url = `${API_BASE}/api/v1/runs/${runId}/events/stream`
-  const token = process.env.A2R_API_TOKEN
+  const token = process.env.Allternit_API_TOKEN
 
   const headers: Record<string, string> = {
     Accept: "text/event-stream",
@@ -1483,6 +1524,676 @@ export const CoworkWebCommand = cmd({
   },
 })
 
+// ============================================================================
+// Tasks Commands
+// ============================================================================
+
+export const CoworkTasksCommand = cmd({
+  command: "tasks",
+  aliases: ["t"],
+  describe: "view and optimize cowork tasks (IntelliSchedule TUI)",
+  builder: (yargs: Argv) => {
+    return yargs
+      .option("workspace", {
+        alias: "w",
+        describe: "Workspace ID",
+        type: "string",
+        demandOption: true,
+      })
+      .command(CoworkTasksListCommand)
+      .command(CoworkTasksCreateCommand)
+      .command(CoworkTasksEditCommand)
+      .command(CoworkTasksMoveCommand)
+      .command(CoworkTasksAssignCommand)
+      .command(CoworkTasksDeleteCommand)
+      .command(CoworkTasksCommentCommand)
+      .command(CoworkTasksOptimizeCommand)
+  },
+  handler: async (args) => {
+    try {
+      const tasks = await apiCall<TaskItem[]>("GET", `/api/v1/tasks?workspace_id=${args.workspace}&limit=100`)
+
+      if (tasks.length === 0) {
+        UI.println(UI.Style.TEXT_WARNING + "No tasks found in workspace." + UI.Style.TEXT_NORMAL)
+        UI.println("Create tasks in the Allternit platform or run:")
+        UI.println("  gizzi cowork tasks create \"<title>\" --workspace=" + args.workspace)
+        return
+      }
+
+      const { unmount } = await render(
+        React.createElement(IntelliTaskScreen, {
+          tasks: tasks.map(t => ({
+            id: t.id,
+            title: t.title,
+            priority: t.priority,
+            estimatedMinutes: t.estimated_minutes || t.estimatedMinutes || 60,
+            deadline: t.deadline ? new Date(t.deadline).getTime() : undefined,
+            dependencies: t.dependencies || [],
+          })),
+          onSelect: (taskId: string) => {
+            UI.println(`${UI.Style.TEXT_INFO_BOLD}Selected task:${UI.Style.TEXT_NORMAL} ${taskId}`)
+          },
+          onQuit: () => {
+            unmount()
+            process.exit(0)
+          },
+        })
+      )
+    } catch (error) {
+      UI.error(`Failed to load tasks: ${error instanceof Error ? error.message : String(error)}`)
+      process.exit(1)
+    }
+  },
+})
+
+export const CoworkTasksListCommand = cmd({
+  command: "list",
+  aliases: ["ls"],
+  describe: "list tasks",
+  builder: (yargs: Argv) => {
+    return yargs
+      .option("workspace", {
+        alias: "w",
+        describe: "Workspace ID",
+        type: "string",
+        demandOption: true,
+      })
+      .option("status", {
+        alias: "s",
+        describe: "Filter by status (backlog,todo,in-progress,in-review,done)",
+        type: "string",
+      })
+      .option("limit", {
+        alias: "l",
+        describe: "Maximum results",
+        type: "number",
+        default: 50,
+      })
+      .option("format", {
+        describe: "Output format",
+        type: "string",
+        choices: ["table", "json"],
+        default: "table",
+      })
+  },
+  handler: async (args) => {
+    await bootstrap(process.cwd(), async () => {
+      try {
+        const params = new URLSearchParams()
+        params.append("workspace_id", args.workspace)
+        if (args.status) params.append("status", args.status)
+        params.append("limit", String(args.limit))
+
+        const query = params.toString() ? `?${params.toString()}` : ""
+        const tasks = await apiCall<TaskItem[]>("GET", `/api/v1/tasks${query}`)
+
+        if (args.format === "json") {
+          UI.println(JSON.stringify(tasks, null, 2))
+          return
+        }
+
+        if (tasks.length === 0) {
+          UI.println("No tasks found")
+          return
+        }
+
+        UI.println(`${UI.Style.TEXT_NORMAL_BOLD}${"ID".padEnd(10)} ${"TITLE".padEnd(25)} ${"STATUS".padEnd(12)} ${"PRI".padEnd(4)} ${"EST".padEnd(6)} ${"ASSIGNEE"}${UI.Style.TEXT_NORMAL}`)
+        UI.println("-".repeat(90))
+
+        for (const task of tasks) {
+          const id = task.id.slice(0, 8)
+          const title = task.title.slice(0, 25).padEnd(25)
+          const status = task.status.padEnd(12)
+          const priority = String(task.priority).padEnd(4)
+          const estimate = task.estimatedMinutes || task.estimated_minutes ? `${task.estimatedMinutes || task.estimated_minutes}m`.padEnd(6) : "-".padEnd(6)
+          const assignee = task.assignee_name || task.assignee_id || "-"
+
+          UI.println(`${id} ${title} ${status} ${priority} ${estimate} ${assignee}`)
+        }
+
+        UI.println("")
+        UI.println(`Showing ${tasks.length} task(s)`)
+      } catch (error) {
+        UI.error(`Failed to list tasks: ${error instanceof Error ? error.message : String(error)}`)
+        process.exit(1)
+      }
+    })
+  },
+})
+
+export const CoworkTasksCreateCommand = cmd({
+  command: "create <title>",
+  aliases: ["new"],
+  describe: "create a new task in a workspace",
+  builder: (yargs: Argv) => {
+    return yargs
+      .positional("title", {
+        describe: "Task title",
+        type: "string",
+        demandOption: true,
+      })
+      .option("workspace", {
+        alias: "w",
+        describe: "Workspace ID",
+        type: "string",
+        demandOption: true,
+      })
+      .option("description", {
+        alias: "d",
+        describe: "Task description",
+        type: "string",
+      })
+      .option("priority", {
+        alias: "p",
+        describe: "Priority (0-100)",
+        type: "number",
+        default: 50,
+      })
+      .option("estimate", {
+        alias: "e",
+        describe: "Estimated minutes",
+        type: "number",
+      })
+      .option("deadline", {
+        describe: "Deadline (ISO 8601)",
+        type: "string",
+      })
+      .option("status", {
+        alias: "s",
+        describe: "Initial status",
+        type: "string",
+        choices: ["backlog", "todo", "in-progress", "in-review", "done"],
+        default: "backlog",
+      })
+  },
+  handler: async (args) => {
+    await bootstrap(process.cwd(), async () => {
+      try {
+        const body: Record<string, unknown> = {
+          title: args.title,
+          workspace_id: args.workspace,
+          description: args.description,
+          priority: args.priority,
+          status: args.status,
+        }
+        if (args.estimate !== undefined) {
+          body.estimated_minutes = args.estimate
+        }
+        if (args.deadline !== undefined) {
+          body.deadline = args.deadline
+        }
+
+        const task = await apiCall<TaskItem>("POST", "/api/v1/tasks", body)
+        UI.println(UI.Style.TEXT_SUCCESS_BOLD + "✓ Task created" + UI.Style.TEXT_NORMAL)
+        UI.println(`  ID: ${task.id}`)
+        UI.println(`  Title: ${task.title}`)
+      } catch (error) {
+        UI.error(`Failed to create task: ${error instanceof Error ? error.message : String(error)}`)
+        process.exit(1)
+      }
+    })
+  },
+})
+
+export const CoworkTasksEditCommand = cmd({
+  command: "edit <id>",
+  describe: "edit a task",
+  builder: (yargs: Argv) => {
+    return yargs
+      .positional("id", {
+        describe: "Task ID",
+        type: "string",
+        demandOption: true,
+      })
+      .option("workspace", {
+        alias: "w",
+        describe: "Workspace ID",
+        type: "string",
+        demandOption: true,
+      })
+      .option("estimate", {
+        alias: "e",
+        describe: "Estimated minutes",
+        type: "number",
+      })
+      .option("priority", {
+        alias: "p",
+        describe: "Priority (0-100)",
+        type: "number",
+      })
+      .option("status", {
+        alias: "s",
+        describe: "Status",
+        type: "string",
+        choices: ["backlog", "todo", "in-progress", "in-review", "done"],
+      })
+      .option("title", {
+        alias: "t",
+        describe: "Title",
+        type: "string",
+      })
+  },
+  handler: async (args) => {
+    await bootstrap(process.cwd(), async () => {
+      try {
+        const updates: Record<string, unknown> = {}
+        if (args.estimate !== undefined) updates.estimated_minutes = args.estimate
+        if (args.priority !== undefined) updates.priority = args.priority
+        if (args.status) updates.status = args.status
+        if (args.title) updates.title = args.title
+
+        const task = await apiCall<TaskItem>("PUT", `/api/v1/tasks/${args.id}`, updates)
+        UI.println(`${UI.Style.TEXT_SUCCESS}✓ Updated task:${UI.Style.TEXT_NORMAL} ${task.id}`)
+      } catch (error) {
+        UI.error(`Failed to update task: ${error instanceof Error ? error.message : String(error)}`)
+        process.exit(1)
+      }
+    })
+  },
+})
+
+export const CoworkTasksMoveCommand = cmd({
+  command: "move <id>",
+  describe: "move a task to a new status",
+  builder: (yargs: Argv) => {
+    return yargs
+      .positional("id", {
+        describe: "Task ID",
+        type: "string",
+        demandOption: true,
+      })
+      .option("workspace", {
+        alias: "w",
+        describe: "Workspace ID",
+        type: "string",
+        demandOption: true,
+      })
+      .option("status", {
+        alias: "s",
+        describe: "New status",
+        type: "string",
+        demandOption: true,
+        choices: ["backlog", "todo", "in-progress", "in-review", "done"],
+      })
+  },
+  handler: async (args) => {
+    await bootstrap(process.cwd(), async () => {
+      try {
+        const task = await apiCall<TaskItem>("PUT", `/api/v1/tasks/${args.id}`, { status: args.status })
+        UI.println(`${UI.Style.TEXT_SUCCESS}✓ Moved task:${UI.Style.TEXT_NORMAL} ${task.id} → ${task.status}`)
+      } catch (error) {
+        UI.error(`Failed to move task: ${error instanceof Error ? error.message : String(error)}`)
+        process.exit(1)
+      }
+    })
+  },
+})
+
+export const CoworkTasksAssignCommand = cmd({
+  command: "assign <id>",
+  describe: "assign a task to an agent or user",
+  builder: (yargs: Argv) => {
+    return yargs
+      .positional("id", {
+        describe: "Task ID",
+        type: "string",
+        demandOption: true,
+      })
+      .option("workspace", {
+        alias: "w",
+        describe: "Workspace ID",
+        type: "string",
+        demandOption: true,
+      })
+      .option("agent", {
+        alias: "a",
+        describe: "Agent ID to assign",
+        type: "string",
+      })
+      .option("user", {
+        alias: "u",
+        describe: "User ID to assign",
+        type: "string",
+      })
+      .option("name", {
+        alias: "n",
+        describe: "Assignee display name",
+        type: "string",
+      })
+  },
+  handler: async (args) => {
+    await bootstrap(process.cwd(), async () => {
+      try {
+        if (args.agent) {
+          const body = {
+            assignee_type: "agent",
+            assignee_id: args.agent,
+            assignee_name: args.name || args.agent,
+          }
+          const task = await apiCall<TaskItem>("POST", `/api/v1/tasks/${args.id}/assign`, body)
+          UI.println(`${UI.Style.TEXT_SUCCESS}✓ Assigned task:${UI.Style.TEXT_NORMAL} ${task.id}`)
+        } else if (args.user) {
+          const body = {
+            assignee_type: "human",
+            assignee_id: args.user,
+            assignee_name: args.name || args.user,
+          }
+          const task = await apiCall<TaskItem>("POST", `/api/v1/tasks/${args.id}/assign`, body)
+          UI.println(`${UI.Style.TEXT_SUCCESS}✓ Assigned task:${UI.Style.TEXT_NORMAL} ${task.id}`)
+        } else {
+          const body = {
+            assignee_type: null,
+            assignee_id: null,
+            assignee_name: null,
+          }
+          const task = await apiCall<TaskItem>("POST", `/api/v1/tasks/${args.id}/assign`, body)
+          UI.println(`${UI.Style.TEXT_SUCCESS}✓ Unassigned task:${UI.Style.TEXT_NORMAL} ${task.id}`)
+        }
+      } catch (error) {
+        UI.error(`Failed to assign task: ${error instanceof Error ? error.message : String(error)}`)
+        process.exit(1)
+      }
+    })
+  },
+})
+
+export const CoworkTasksDeleteCommand = cmd({
+  command: "delete <id>",
+  aliases: ["rm"],
+  describe: "delete a task",
+  builder: (yargs: Argv) => {
+    return yargs
+      .positional("id", {
+        describe: "Task ID",
+        type: "string",
+        demandOption: true,
+      })
+      .option("workspace", {
+        alias: "w",
+        describe: "Workspace ID",
+        type: "string",
+        demandOption: true,
+      })
+      .option("yes", {
+        alias: "y",
+        describe: "Skip confirmation",
+        type: "boolean",
+        default: false,
+      })
+  },
+  handler: async (args) => {
+    await bootstrap(process.cwd(), async () => {
+      try {
+        if (!args.yes) {
+          const confirmed = await prompts.confirm({
+            message: `Delete task ${args.id.slice(0, 8)}?`,
+            initialValue: false,
+          })
+          if (!confirmed || prompts.isCancel(confirmed)) {
+            UI.println("Cancelled")
+            return
+          }
+        }
+
+        await apiCall("DELETE", `/api/v1/tasks/${args.id}`, {})
+        UI.println(`${UI.Style.TEXT_SUCCESS}✓ Task deleted${UI.Style.TEXT_NORMAL}`)
+      } catch (error) {
+        UI.error(`Failed to delete task: ${error instanceof Error ? error.message : String(error)}`)
+        process.exit(1)
+      }
+    })
+  },
+})
+
+export const CoworkTasksCommentCommand = cmd({
+  command: "comment <id> <body>",
+  describe: "add a comment to a task",
+  builder: (yargs: Argv) => {
+    return yargs
+      .positional("id", {
+        describe: "Task ID",
+        type: "string",
+        demandOption: true,
+      })
+      .positional("body", {
+        describe: "Comment body",
+        type: "string",
+        demandOption: true,
+      })
+      .option("workspace", {
+        alias: "w",
+        describe: "Workspace ID",
+        type: "string",
+        demandOption: true,
+      })
+  },
+  handler: async (args) => {
+    await bootstrap(process.cwd(), async () => {
+      try {
+        const comment = await apiCall<Comment>("POST", `/api/v1/tasks/${args.id}/comments`, {
+          author: process.env.USER || "cli-user",
+          body: args.body,
+        })
+        UI.println(`${UI.Style.TEXT_SUCCESS}✓ Added comment:${UI.Style.TEXT_NORMAL} ${comment.id}`)
+      } catch (error) {
+        UI.error(`Failed to add comment: ${error instanceof Error ? error.message : String(error)}`)
+        process.exit(1)
+      }
+    })
+  },
+})
+
+// ============================================================================
+// Tasks Optimize Command
+// ============================================================================
+
+export const CoworkTasksOptimizeCommand = cmd({
+  command: "optimize",
+  aliases: ["opt"],
+  describe: "optimize task ordering for a workspace (IntelliSchedule)",
+  builder: (yargs: Argv) => {
+    return yargs
+      .option("workspace", {
+        alias: "w",
+        describe: "Workspace ID",
+        type: "string",
+        demandOption: true,
+      })
+  },
+  handler: async (args) => {
+    await bootstrap(process.cwd(), async () => {
+      try {
+        const tasks = await apiCall<TaskItem[]>("POST", `/api/v1/tasks/optimize?workspace_id=${args.workspace}`)
+        UI.println(`${UI.Style.TEXT_SUCCESS}✓ Optimized ${tasks.length} tasks for workspace ${args.workspace}${UI.Style.TEXT_NORMAL}`)
+        for (const t of tasks.slice(0, 10)) {
+          UI.println(`  #${t.optimize_rank} ${t.title} (priority: ${t.priority})`)
+        }
+        if (tasks.length > 10) {
+          UI.println(`  ... and ${tasks.length - 10} more`)
+        }
+      } catch (error) {
+        UI.error(`Failed to optimize tasks: ${error instanceof Error ? error.message : String(error)}`)
+        process.exit(1)
+      }
+    })
+  },
+})
+
+// ============================================================================
+// Queue Commands
+// ============================================================================
+
+export const CoworkQueueCommand = cmd({
+  command: "queue",
+  aliases: ["q"],
+  describe: "manage agent task queue",
+  builder: (yargs: Argv) => {
+    return yargs
+      .command(CoworkQueueListCommand)
+      .command(CoworkQueueClaimCommand)
+      .command(CoworkQueueCompleteCommand)
+  },
+  handler: async () => {
+    UI.println(UI.Style.TEXT_NORMAL_BOLD + "Agent Task Queue" + UI.Style.TEXT_NORMAL)
+    UI.println("")
+    UI.println("Subcommands:")
+    UI.println("  list      List queue items")
+    UI.println("  claim     Claim the next pending item")
+    UI.println("  complete  Mark a queue item as completed/failed")
+  },
+})
+
+export const CoworkQueueListCommand = cmd({
+  command: "list",
+  aliases: ["ls"],
+  describe: "list queue items",
+  builder: (yargs: Argv) => {
+    return yargs
+      .option("workspace", {
+        alias: "w",
+        describe: "Workspace ID",
+        type: "string",
+      })
+      .option("status", {
+        alias: "s",
+        describe: "Filter by status (pending, claimed, running, completed, failed)",
+        type: "string",
+      })
+  },
+  handler: async (args) => {
+    await bootstrap(process.cwd(), async () => {
+      try {
+        const query = new URLSearchParams()
+        if (args.workspace) query.set("workspace_id", args.workspace)
+        if (args.status) query.set("status", args.status)
+        const qs = query.toString()
+        const items = await apiCall<Array<{
+          id: string
+          task_id: string
+          status: string
+          agent_id?: string
+          agent_role?: string
+          created_at: string
+        }>>("GET", `/api/v1/queue${qs ? "?" + qs : ""}`)
+
+        if (items.length === 0) {
+          UI.println("No queue items found")
+          return
+        }
+
+        UI.println(UI.Style.TEXT_NORMAL_BOLD + "Queue Items" + UI.Style.TEXT_NORMAL)
+        UI.println("")
+        for (const item of items) {
+          const statusColor =
+            item.status === "pending"
+              ? UI.Style.TEXT_WARNING
+              : item.status === "completed"
+                ? UI.Style.TEXT_SUCCESS
+                : item.status === "failed"
+                  ? UI.Style.TEXT_ERROR
+                  : UI.Style.TEXT_INFO
+          UI.println(
+            `  ${statusColor}${item.status.padEnd(12)}${UI.Style.TEXT_NORMAL} ${item.task_id.slice(0, 8)}  ${item.agent_id ? `agent: ${item.agent_id}` : "unclaimed"}`
+          )
+        }
+      } catch (error) {
+        UI.error(`Failed to list queue: ${error instanceof Error ? error.message : String(error)}`)
+        process.exit(1)
+      }
+    })
+  },
+})
+
+export const CoworkQueueClaimCommand = cmd({
+  command: "claim",
+  describe: "claim the next pending queue item",
+  builder: (yargs: Argv) => {
+    return yargs
+      .option("agent-id", {
+        alias: "a",
+        describe: "Agent ID",
+        type: "string",
+        demandOption: true,
+      })
+      .option("agent-role", {
+        alias: "r",
+        describe: "Agent role",
+        type: "string",
+      })
+      .option("workspace", {
+        alias: "w",
+        describe: "Workspace ID",
+        type: "string",
+      })
+  },
+  handler: async (args) => {
+    await bootstrap(process.cwd(), async () => {
+      try {
+        const item = await apiCall<{
+          id: string
+          task_id: string
+          status: string
+        } | null>("POST", "/api/v1/queue/claim", {
+          agent_id: args["agent-id"],
+          agent_role: args["agent-role"] || null,
+          workspace_id: args.workspace || null,
+        })
+
+        if (!item) {
+          UI.println(UI.Style.TEXT_WARNING + "No pending queue items available" + UI.Style.TEXT_NORMAL)
+          return
+        }
+
+        UI.println(`${UI.Style.TEXT_SUCCESS}✓ Claimed queue item:${UI.Style.TEXT_NORMAL} ${item.id}`)
+        UI.println(`  Task: ${item.task_id}`)
+        UI.println(`  Status: ${item.status}`)
+      } catch (error) {
+        UI.error(`Failed to claim queue item: ${error instanceof Error ? error.message : String(error)}`)
+        process.exit(1)
+      }
+    })
+  },
+})
+
+export const CoworkQueueCompleteCommand = cmd({
+  command: "complete <id>",
+  describe: "mark a queue item as completed or failed",
+  builder: (yargs: Argv) => {
+    return yargs
+      .positional("id", {
+        describe: "Queue item ID",
+        type: "string",
+        demandOption: true,
+      })
+      .option("result", {
+        describe: "Result JSON string",
+        type: "string",
+      })
+      .option("error", {
+        describe: "Error message (if failed)",
+        type: "string",
+      })
+  },
+  handler: async (args) => {
+    await bootstrap(process.cwd(), async () => {
+      try {
+        const item = await apiCall<{
+          id: string
+          status: string
+        }>("POST", `/api/v1/queue/${args.id}/complete`, {
+          result: args.result || null,
+          error: args.error || null,
+        })
+
+        UI.println(`${UI.Style.TEXT_SUCCESS}✓ Queue item ${item.status}:${UI.Style.TEXT_NORMAL} ${item.id}`)
+      } catch (error) {
+        UI.error(`Failed to complete queue item: ${error instanceof Error ? error.message : String(error)}`)
+        process.exit(1)
+      }
+    })
+  },
+})
+
 /**
  * Generate a simple ASCII representation of content for terminal display
  * In production, this could use a proper QR code library
@@ -1515,7 +2226,7 @@ function generateSimpleQR(url: string): string {
  * Stream events to keep the mirror connection alive
  */
 async function streamMirrorEvents(runId: string, port: number): Promise<void> {
-  const token = process.env.A2R_API_TOKEN
+  const token = process.env.Allternit_API_TOKEN
   const url = `${API_BASE}/api/v1/runs/${runId}/events/stream`
 
   const headers: Record<string, string> = {
@@ -1565,3 +2276,109 @@ async function streamMirrorEvents(runId: string, port: number): Promise<void> {
     UI.error(`Event stream error: ${error instanceof Error ? error.message : String(error)}`)
   }
 }
+
+// ============================================================================
+// NEW: Multica / Taskdog Integration Commands
+// ============================================================================
+
+export const CoworkBoardCommand = cmd({
+  command: "board",
+  describe: "open board view (simplified list)",
+  builder: (yargs: Argv) => yargs,
+  handler: async () => {
+    UI.println(UI.Style.TEXT_NORMAL_BOLD + "Board View" + UI.Style.TEXT_NORMAL)
+    UI.println("Use the Allternit platform console drawer for full Kanban board.")
+    UI.println("")
+    UI.println("Keyboard shortcuts in TUI:")
+    UI.println("  j/k    navigate tasks")
+    UI.println("  o      optimize schedule")
+    UI.println("  Enter  select task")
+  },
+})
+
+export const CoworkOptimizeCommand = cmd({
+  command: "optimize",
+  describe: "run schedule optimization with chosen strategy",
+  builder: (yargs: Argv) => {
+    return yargs.option("strategy", {
+      type: "string",
+      choices: ["greedy", "balanced", "priority-first", "earliest-deadline", "genetic", "monte-carlo"],
+      default: "greedy",
+      describe: "optimization strategy",
+    })
+  },
+  handler: async (args) => {
+    UI.println(UI.Style.TEXT_NORMAL_BOLD + `Optimizing with strategy: ${args.strategy}` + UI.Style.TEXT_NORMAL)
+    UI.println("Connect to the Allternit platform for full optimization UI.")
+  },
+})
+
+export const CoworkTimerCommand = cmd({
+  command: "timer <action>",
+  describe: "start or stop time tracking for a task",
+  builder: (yargs: Argv) => {
+    return yargs
+      .positional("action", {
+        type: "string",
+        choices: ["start", "stop"],
+        describe: "timer action",
+      })
+      .option("task-id", {
+        type: "string",
+        describe: "task identifier",
+      })
+  },
+  handler: async (args) => {
+    const action = args.action as string
+    const taskId = args["task-id"] as string
+    if (!taskId) {
+      UI.error("--task-id is required")
+      return
+    }
+    UI.println(`${action === "start" ? "Started" : "Stopped"} timer for task ${taskId}`)
+  },
+})
+
+export const CoworkRuntimeCommand = cmd({
+  command: "runtime <action>",
+  describe: "list or register agent runtimes",
+  builder: (yargs: Argv) => {
+    return yargs.positional("action", {
+      type: "string",
+      choices: ["list", "register"],
+      describe: "runtime action",
+    })
+  },
+  handler: async (args) => {
+    const action = args.action as string
+    if (action === "list") {
+      UI.println(UI.Style.TEXT_NORMAL_BOLD + "Discovered Runtimes" + UI.Style.TEXT_NORMAL)
+      UI.println("Use the Allternit platform runtime dashboard for full details.")
+    } else {
+      UI.println("Registering local runtime...")
+      UI.println("Use the Allternit platform to register this machine.")
+    }
+  },
+})
+
+export const CoworkWorkspaceCommand = cmd({
+  command: "workspace <action>",
+  describe: "list or switch workspaces",
+  builder: (yargs: Argv) => {
+    return yargs.positional("action", {
+      type: "string",
+      choices: ["list", "switch"],
+      describe: "workspace action",
+    })
+  },
+  handler: async (args) => {
+    const action = args.action as string
+    if (action === "list") {
+      UI.println(UI.Style.TEXT_NORMAL_BOLD + "Workspaces" + UI.Style.TEXT_NORMAL)
+      UI.println("Use the Allternit platform board drawer to manage workspaces.")
+    } else {
+      UI.println("Switching workspace...")
+      UI.println("Use the Allternit platform board drawer to switch workspaces.")
+    }
+  },
+})

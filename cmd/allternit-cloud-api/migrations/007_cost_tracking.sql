@@ -1,4 +1,4 @@
--- Cost tracking tables for A2R Cloud API
+-- Cost tracking tables for Allternit Cloud API
 -- Tracks costs per run, user budgets, and cost rates
 
 -- Cost rates table: Hourly pricing for different instance types

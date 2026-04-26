@@ -1,6 +1,6 @@
 import { Hono } from "hono"
 import { stream } from "hono/streaming"
-import { describeRoute, validator, resolver } from "hono-openapi"
+import { describeRoute, validator, resolver } from "@/runtime/server/openapi"
 import z from "zod/v4"
 import { Session } from "@/runtime/session"
 import { MessageV2 } from "@/runtime/session/message-v2"

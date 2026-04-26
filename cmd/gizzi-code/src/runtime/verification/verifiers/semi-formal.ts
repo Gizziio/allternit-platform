@@ -355,8 +355,8 @@ export class SemiFormalVerifier extends BaseVerifier<SemiFormalVerificationResul
     });
     
     // Get model
-    const defaultModel = await Provider.defaultModel();
-    const model = this.options.model || { providerId: (defaultModel as any).providerID || (defaultModel as any).providerId, modelId: (defaultModel as any).modelID || (defaultModel as any).modelId };
+    const defaultModel = await Provider.defaultModelConcrete();
+    const model = this.options.model || { providerId: defaultModel.providerID, modelId: defaultModel.modelID };
     const language = await Provider.getLanguage({ providerID: model.providerId, id: model.modelId } as any);
     
     // Import schema

@@ -18,7 +18,7 @@ import fs from "fs/promises"
 import os from "os"
 
 describe("OpenClaw Full Flow Integration", () => {
-  const testDir = "/tmp/a2r-openclaw-flow-test"
+  const testDir = "/tmp/allternit-openclaw-flow-test"
   const homeDir = os.homedir()
   
   beforeAll(async () => {

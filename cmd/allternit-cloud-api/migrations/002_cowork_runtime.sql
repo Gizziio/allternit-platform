@@ -1,4 +1,4 @@
--- Cowork Runtime tables for A2R Control Plane
+-- Cowork Runtime tables for Allternit Control Plane
 -- Provides run orchestration, job queue, scheduling, events, and checkpoints
 
 -- Runs table: Core run lifecycle management

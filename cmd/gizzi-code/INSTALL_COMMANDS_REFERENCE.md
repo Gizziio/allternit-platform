@@ -18,7 +18,7 @@ irm https://install.gizziio.com/install.ps1 | iex
 
 ### NPM
 ```bash
-npm install -g @a2r/gizzi-code
+npm install -g @allternit/gizzi-code
 ```
 
 ### Homebrew (macOS/Linux)
@@ -32,13 +32,13 @@ brew install gizzi-code
 
 | Component | Before | After |
 |-----------|--------|-------|
-| **Bash Script** | `APP=a2r` | `APP=gizzi-code` |
-| | `~/.a2r/bin` | `~/.gizzi/bin` |
+| **Bash Script** | `APP=allternit` | `APP=gizzi-code` |
+| | `~/.allternit/bin` | `~/.gizzi/bin` |
 | | `anomalyco/opencode` | `Gizziio/allternit-platform` |
-| | `a2r.dev/docs` | `docs.gizziio.com` |
+| | `allternit.dev/docs` | `docs.gizziio.com` |
 | **PowerShell** | `Gizziio/gizzi-code` | `Gizziio/allternit-platform` |
 | **Homebrew** | `gizzi.sh` | `docs.gizziio.com` |
-| | A2R ecosystem | Allternit ecosystem |
+| | Allternit ecosystem | Allternit ecosystem |
 
 ---
 
@@ -119,6 +119,6 @@ curl -fsSL https://install.gizziio.com/install | bash
 ~/.gizzi/bin/gizzi-code --version
 
 # Test NPM install
-npm install -g @a2r/gizzi-code
+npm install -g @allternit/gizzi-code
 gizzi-code --version
 ```

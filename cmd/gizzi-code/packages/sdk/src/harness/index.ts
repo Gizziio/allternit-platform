@@ -16,6 +16,7 @@ import type {
   ModelInfo,
   Message,
 } from './types';
+import { buildTierMap, scoreMessages, type TierMap } from './router.js';
 
 import {
   streamFromBYOK,
@@ -38,6 +39,7 @@ export * from './modes';
  */
 export class AllternitHarness {
   private config: HarnessConfig;
+  private tierMap: TierMap | null = null;
 
   constructor(config: HarnessConfig) {
     this.validateConfig(config);
@@ -88,9 +90,30 @@ export class AllternitHarness {
    * Main streaming interface
    * Routes to the appropriate mode handler
    */
+  /**
+   * Resolve auto-routing: score messages and pick provider+model from tier map.
+   * Built lazily on first use; cached for the lifetime of this harness instance.
+   */
+  private resolveRoute(request: StreamRequest): StreamRequest {
+    const isAuto = !request.provider || request.provider === 'auto';
+    if (!isAuto) return request;
+
+    if (this.config.mode !== 'byok' || !this.config.byok) {
+      throw new AllternitError('Auto-routing requires BYOK mode with at least one API key');
+    }
+
+    if (!this.tierMap) {
+      this.tierMap = buildTierMap(this.config.byok.keys);
+    }
+
+    const tier = scoreMessages(request.messages, request.tools);
+    const { provider, model } = this.tierMap[tier];
+    return { ...request, provider, model };
+  }
+
   async *stream(request: StreamRequest): AsyncGenerator<HarnessStreamChunk> {
-    // Inject system prompt if needed
-    const enrichedRequest = this.enrichRequest(request);
+    const routed = this.resolveRoute(request);
+    const enrichedRequest = this.enrichRequest(routed);
 
     switch (this.config.mode) {
       case 'byok':
@@ -130,7 +153,8 @@ export class AllternitHarness {
    * Non-streaming completion
    */
   async complete(request: StreamRequest): Promise<HarnessResponse> {
-    const enrichedRequest = this.enrichRequest(request);
+    const routed = this.resolveRoute(request);
+    const enrichedRequest = this.enrichRequest(routed);
 
     switch (this.config.mode) {
       case 'cloud': {

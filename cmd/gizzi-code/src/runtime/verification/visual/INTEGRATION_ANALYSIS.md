@@ -1,8 +1,8 @@
-# Visual Evidence + A2R Autoland: Integration Analysis
+# Visual Evidence + Allternit Autoland: Integration Analysis
 
 ## Executive Summary
 
-**Current State:** Two systems exist but are NOT fully integrated. The visual evidence capture system (TypeScript/gizzi-code) and A2R Autoland (Rust/0-substrate) operate independently.
+**Current State:** Two systems exist but are NOT fully integrated. The visual evidence capture system (TypeScript/gizzi-code) and Allternit Autoland (Rust/0-substrate) operate independently.
 
 **Gap:** The Rust autoland gate does NOT currently check visual verification before landing changes. The TypeScript adapter is ready but lacks a connection mechanism to the Rust substrate.
 
@@ -27,7 +27,7 @@ VisualCaptureManager
 Integration Points:
 ├── Turn/AgentLoop (via VerificationOrchestrator)
 ├── SessionProcessor (via SessionProcessorVisualAdapter)
-└── A2R Autoland (via autoland-adapter.ts) ← NOT CONNECTED
+└── Allternit Autoland (via autoland-adapter.ts) ← NOT CONNECTED
 ```
 
 **Usage Patterns:**
@@ -35,9 +35,9 @@ Integration Points:
 2. **On-Demand** - SessionProcessor can capture via adapter
 3. **Pre-Land** - Ready for autoland integration (not connected)
 
-### 2. A2R Autoland System (Rust)
+### 2. Allternit Autoland System (Rust)
 
-**Location:** `0-substrate/a2r-agent-system-rails/src/gate/gate.rs`
+**Location:** `0-substrate/allternit-agent-system-rails/src/gate/gate.rs`
 
 **Components:**
 ```
@@ -45,8 +45,8 @@ Gate
 ├── autoland_wih(wih_id, dry_run, git_commit)
 │   ├── Check WIH has PASS status
 │   ├── Calculate file impact (modified/added/deleted)
-│   ├── Backup files to .a2r/backups/
-│   ├── Copy files from .a2r/runner/{wih_id}/ to root
+│   ├── Backup files to .allternit/backups/
+│   ├── Copy files from .allternit/runner/{wih_id}/ to root
 │   ├── Emit GateAutolanded event
 │   └── Optional: git commit
 │
@@ -165,7 +165,7 @@ if status == "PASS" && autoland_on_pass {
 
 **Result:** Two runs with identical code may produce slightly different confidence scores.
 
-### A2R Autoland: Deterministic
+### Allternit Autoland: Deterministic
 
 **Deterministic Elements:**
 - PASS/FAIL check is binary
@@ -198,7 +198,7 @@ if status == "PASS" && autoland_on_pass {
 | SessionProcessor | Optional | autoCapture | Injected into LLM context |
 | Autoland (ready) | On WIH PASS | minConfidence | Blocking gate (not connected) |
 
-### A2R Autoland System
+### Allternit Autoland System
 
 | Path | Trigger | Configurable | Result |
 |------|---------|--------------|--------|
@@ -220,7 +220,7 @@ if status == "PASS" && autoland_on_pass {
 // In gate.rs wih_close()
 if status == "PASS" && autoland_on_pass {
     // Emit event for TypeScript to capture
-    self.emit(A2REvent {
+    self.emit(AllternitEvent {
         r#type: "VisualVerificationRequested",
         payload: json!({ "wih_id": wih_id, "timeout_ms": 30000 }),
     }).await?;
@@ -236,7 +236,7 @@ Bus.subscribe("VisualVerificationRequested", async (event) => {
   const evidence = await captureForWih(event.wih_id);
   
   // Write result to file that Rust polls
-  await fs.writeJson(`.a2r/visual-results/${event.wih_id}.json`, {
+  await fs.writeJson(`.allternit/visual-results/${event.wih_id}.json`, {
     passed: evidence.passed,
     confidence: evidence.confidence,
   });
@@ -308,7 +308,7 @@ Bus.subscribe("WIHClosedSigned", async (event) => {
     
     // Write visual gate file
     await fs.writeJson(
-      `.a2r/visual-gates/${event.properties.wih_id}.json`,
+      `.allternit/visual-gates/${event.properties.wih_id}.json`,
       {
         wih_id: event.properties.wih_id,
         passed: evidence.passed,
@@ -325,7 +325,7 @@ Bus.subscribe("WIHClosedSigned", async (event) => {
 pub async fn autoland_wih(&self, wih_id: &str, ...) -> Result<AutolandResult> {
     // Check for visual gate file
     let gate_path = self.root_dir
-        .join(".a2r")
+        .join(".allternit")
         .join("visual-gates")
         .join(format!("{}.json", wih_id));
     

@@ -9,7 +9,7 @@
 mod common;
 
 use common::TestApp;
-use a2r_cloud_api::db::cowork_models::*;
+use allternit_cloud_api::db::cowork_models::*;
 
 // ============================================================================
 // Run Lifecycle Tests

@@ -1,5 +1,5 @@
 import type { JSX } from "@opentui/solid"
-import { useTheme } from "@/cli/ui/tui/context/theme"
+import { useTheme } from "@/cli/ui/ink-app/context/theme"
 import { useGIZZITheme } from "@/cli/ui/components/gizzi/theme"
 
 export function GIZZIFrame(props: { children: JSX.Element; isHeightConstrained?: boolean }) {

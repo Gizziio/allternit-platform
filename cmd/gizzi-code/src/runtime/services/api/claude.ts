@@ -199,7 +199,7 @@ import { count } from '../../../utils/array.js'
 import { insertBlockAfterToolResults } from '../../../utils/contentArray.js'
 import { validateBoundedIntEnvVar } from '../../../utils/envValidation.js'
 import { safeParseJSON } from '../../../utils/json.js'
-import { getInferenceProfileBackingModel } from '../../../utils/model/bedrock.js'
+
 import {
   normalizeModelStringForAPI,
   parseUserSpecifiedModel,
@@ -749,6 +749,9 @@ export async function queryModelWithoutStreaming({
   return assistantMessage
 }
 
+import { queryOllamaWithStreaming } from './ollama.js'
+import { getModelProvider } from '../../../utils/model/providers.js'
+
 export async function* queryModelWithStreaming({
   messages,
   systemPrompt,
@@ -767,6 +770,18 @@ export async function* queryModelWithStreaming({
   StreamEvent | AssistantMessage | SystemAPIErrorMessage,
   void
 > {
+  const provider = getModelProvider(options.model)
+  
+  if (provider === 'ollama') {
+    return yield* queryOllamaWithStreaming({
+      messages,
+      systemPrompt: systemPrompt as string[],
+      thinkingConfig,
+      signal,
+      options,
+    })
+  }
+
   return yield* withStreamingVCR(messages, async function* () {
     yield* queryModel(
       messages,

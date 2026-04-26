@@ -1406,7 +1406,7 @@ export const terminalClerkCallback = <ThrowOnError extends boolean = false>(opti
 /**
  * List projects
  *
- * Retrieve a list of all projects managed by the A2R instance.
+ * Retrieve a list of all projects managed by the Allternit instance.
  */
 export const projectListRoot = <ThrowOnError extends boolean = false>(options?: Options<ProjectListRootData, ThrowOnError>) => (options?.client ?? client).get<ProjectListRootResponses, unknown, ThrowOnError>({ url: '/project', ...options });
 
@@ -1427,7 +1427,7 @@ export const projectInit = <ThrowOnError extends boolean = false>(options: Optio
 /**
  * List projects
  *
- * Retrieve a list of all projects managed by the A2R instance.
+ * Retrieve a list of all projects managed by the Allternit instance.
  */
 export const projectList = <ThrowOnError extends boolean = false>(options?: Options<ProjectListData, ThrowOnError>) => (options?.client ?? client).get<ProjectListResponses, unknown, ThrowOnError>({ url: '/project/list', ...options });
 
@@ -1637,7 +1637,7 @@ export const workspaceGet = <ThrowOnError extends boolean = false>(options?: Opt
 /**
  * Initialize workspace
  *
- * Create a new .gizzi/ workspace. format=layered creates the full A2R 5-layer structure (L1-COGNITIVE, L2-IDENTITY, L3-GOVERNANCE, L4-SKILLS). format=flat creates an OpenClaw-compatible flat structure (default).
+ * Create a new .gizzi/ workspace. format=layered creates the full Allternit 5-layer structure (L1-COGNITIVE, L2-IDENTITY, L3-GOVERNANCE, L4-SKILLS). format=flat creates an OpenClaw-compatible flat structure (default).
  */
 export const workspaceInit = <ThrowOnError extends boolean = false>(options: Options<WorkspaceInitData, ThrowOnError>) => (options.client ?? client).post<WorkspaceInitResponses, unknown, ThrowOnError>({
     url: '/workspace/init',

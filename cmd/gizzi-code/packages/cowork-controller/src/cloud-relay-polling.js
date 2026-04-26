@@ -286,5 +286,5 @@ export function createPollingCloudRelayClient(options) {
     return new PollingCloudRelayClient(options);
 }
 // Default relay URL
-export const DEFAULT_POLLING_RELAY_URL = 'https://cowork.a2r.com';
+export const DEFAULT_POLLING_RELAY_URL = 'https://cowork.allternit.com';
 export default PollingCloudRelayClient;

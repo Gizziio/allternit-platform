@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 // @ts-nocheck
 import { $ } from "bun";
-import { createA2R } from "@allternit/sdk";
+import { createAllternit } from "@allternit/sdk";
 import { parseArgs } from "util";
 import { Script } from "@allternit/script";
 export async function getLatestRelease(skip) {
@@ -122,10 +122,10 @@ function getSection(areas) {
     }
     return "Core";
 }
-async function summarizeCommit(a2r, message) {
+async function summarizeCommit(allternit, message) {
     console.log("summarizing commit:", message);
-    const session = await a2r.client.session.create();
-    const result = await a2r.client.session
+    const session = await allternit.client.session.create();
+    const result = await allternit.client.session
         .prompt({
         sessionID: session.data.id,
         model: { providerID: "opencode", modelID: "claude-sonnet-4-5" },
@@ -146,13 +146,13 @@ Commit: ${message}`,
         .then((x) => x.data?.parts?.find((y) => y.type === "text")?.text ?? message);
     return result.trim();
 }
-export async function generateChangelog(commits, a2r) {
+export async function generateChangelog(commits, allternit) {
     // Summarize commits in parallel with max 10 concurrent requests
     const BATCH_SIZE = 10;
     const summaries = [];
     for (let i = 0; i < commits.length; i += BATCH_SIZE) {
         const batch = commits.slice(i, i + BATCH_SIZE);
-        const results = await Promise.all(batch.map((c) => summarizeCommit(a2r, c.message)));
+        const results = await Promise.all(batch.map((c) => summarizeCommit(allternit, c.message)));
         summaries.push(...results);
     }
     const grouped = new Map();
@@ -200,10 +200,10 @@ export async function buildNotes(from, to) {
         return [];
     }
     console.log("generating changelog since " + from);
-    const a2r = await createA2R({ port: 0 });
+    const allternit = await createAllternit({ port: 0 });
     const notes = [];
     try {
-        const lines = await generateChangelog(commits, a2r);
+        const lines = await generateChangelog(commits, allternit);
         notes.push(...lines);
         console.log("---- Generated Changelog ----");
         console.log(notes.join("\n"));
@@ -222,7 +222,7 @@ export async function buildNotes(from, to) {
         }
     }
     finally {
-        await a2r.server.close();
+        await allternit.server.close();
     }
     console.log("changelog generation complete");
     const contributors = await getContributors(from, to);

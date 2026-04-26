@@ -196,7 +196,7 @@ The install experience now shows:
    ██║   ██║██║ ███╔╝   ███╔╝  ██║   ██║     ██║   ██║██║  ██║██╔══╝  
    ╚██████╔╝██║███████╗███████╗██║   ╚██████╗╚██████╔╝██████╔╝███████╗
     ╚═════╝ ╚═╝╚══════╝╚══════╝╚═╝    ╚═════╝ ╚═════╝ ╚═════╝ ╚══════╝
-              AI Terminal Interface for the A2R Ecosystem
+              AI Terminal Interface for the Allternit Ecosystem
 
 ● Checking dependencies...
 ✓ curl found

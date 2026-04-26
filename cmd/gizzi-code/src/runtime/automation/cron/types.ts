@@ -19,7 +19,8 @@ export type JobType =
   | "http"       // HTTP webhook
   | "agent"      // AI agent task
   | "cowork"     // Start cowork session
-  | "function";  // Internal function call
+  | "function"   // Internal function call
+  | "vault";     // Vault sync (Gmail, Calendar, Fireflies, live notes)
 
 export type JobStatus = 
   | "active"     // Job is scheduled and running
@@ -145,8 +146,8 @@ export interface CoworkJob extends BaseJob {
 export interface FunctionJob extends BaseJob {
   type: "function";
   config: {
-    module: string;        // Module path
-    function: string;      // Function name
+    module?: string;       // Deprecated: module paths (especially @/ aliases) do not work in compiled binaries. Use registerFunction() + function name instead.
+    function: string;      // Registered function name (see function-registry.ts)
     args: unknown[];       // Arguments to pass
   };
 }
@@ -336,6 +337,12 @@ export namespace CronTypes {
 // Service Configuration
 // ═══════════════════════════════════════════════════════════════════════════════
 
+export interface AgentQueueConfig {
+  agentId: string;
+  agentRole?: string;
+  schedule?: string | Schedule;
+}
+
 export interface CronServiceConfig {
   // Persistence
   dbPath?: string;
@@ -348,6 +355,9 @@ export interface CronServiceConfig {
   maxConcurrentJobs?: number;
   defaultTimeoutSeconds?: number;
   defaultMaxRetries?: number;
+  
+  // Agent queue worker
+  agentQueue?: AgentQueueConfig;
   
   // Callbacks
   onJobExecute?: (job: CronJob, run: CronRun) => Promise<void>;

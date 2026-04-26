@@ -204,7 +204,7 @@ export class GitHubActionsIntegration {
     }
     
     lines.push("---");
-    lines.push("*Powered by a2rchitech Semi-Formal Verification*");
+    lines.push("*Powered by allternit Semi-Formal Verification*");
     
     return lines.join("\n");
   }

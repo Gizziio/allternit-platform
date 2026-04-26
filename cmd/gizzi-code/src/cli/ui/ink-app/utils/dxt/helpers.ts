@@ -1,36 +1,64 @@
-import type { McpbManifest } from '@anthropic-ai/mcpb'
+/**
+ * MCPB Types (Locally defined to remove @anthropic-ai/mcpb dependency)
+ */
+export interface McpbAuthor {
+  name: string
+  email?: string
+  url?: string
+}
+
+export interface McpbServerConfig {
+  command: string
+  args?: string[]
+  env?: Record<string, string>
+}
+
+export interface McpbUserConfigurationOption {
+  key?: string
+  label?: string
+  title?: string
+  description?: string
+  type: 'string' | 'number' | 'boolean' | 'enum' | 'file' | 'directory'
+  options?: string[]
+  required?: boolean
+  sensitive?: boolean
+  multiple?: boolean
+  default?: string | number | boolean | string[]
+  min?: number
+  max?: number
+}
+
+export interface McpbManifest {
+  name: string
+  version: string
+  author: McpbAuthor
+  server?: McpbServerConfig
+  tools: unknown[]
+  user_config?: Record<string, McpbUserConfigurationOption>
+}
+
 import { errorMessage } from '../errors.js'
 import { jsonParse } from '../slowOperations.js'
 
 /**
  * Parses and validates a DXT manifest from a JSON object.
- *
- * Lazy-imports @anthropic-ai/mcpb: that package uses zod v3 which eagerly
- * creates 24 .bind(this) closures per schema instance (~300 instances between
- * schemas.js and schemas-loose.js). Deferring the import keeps ~700KB of bound
- * closures out of the startup heap for sessions that never touch .dxt/.mcpb.
  */
 export async function validateManifest(
   manifestJson: unknown,
 ): Promise<McpbManifest> {
-  const { McpbManifestSchema } = await import('@anthropic-ai/mcpb')
-  const parseResult = McpbManifestSchema.safeParse(manifestJson)
-
-  if (!parseResult.success) {
-    const errors = parseResult.error.flatten()
-    const errorMessages = [
-      ...Object.entries(errors.fieldErrors).map(
-        ([field, errs]) => `${field}: ${errs?.join(', ')}`,
-      ),
-      ...(errors.formErrors || []),
-    ]
-      .filter(Boolean)
-      .join('; ')
-
-    throw new Error(`Invalid manifest: ${errorMessages}`)
+  // Simple structural validation instead of Zod
+  if (!manifestJson || typeof manifestJson !== 'object') {
+    throw new Error('Invalid manifest: not an object')
   }
 
-  return parseResult.data
+  const manifest = manifestJson as Record<string, any>
+  if (typeof manifest.name !== 'string') throw new Error('Invalid manifest: name must be a string')
+  if (typeof manifest.version !== 'string') throw new Error('Invalid manifest: version must be a string')
+  if (!manifest.author || typeof manifest.author.name !== 'string') {
+    throw new Error('Invalid manifest: author.name must be a string')
+  }
+
+  return manifestJson as McpbManifest
 }
 
 /**

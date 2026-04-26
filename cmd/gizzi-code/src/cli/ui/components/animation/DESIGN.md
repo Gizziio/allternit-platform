@@ -1,8 +1,8 @@
-# A2R Animation System - Design Note
+# Allternit Animation System - Design Note
 
 ## Overview
 
-A deterministic, tick-driven animation system for A2R's terminal UI that eliminates per-component timers and unifies all motion under a single clock source.
+A deterministic, tick-driven animation system for Allternit's terminal UI that eliminates per-component timers and unifies all motion under a single clock source.
 
 ## Architecture
 
@@ -44,7 +44,7 @@ No `Date.now()`, no `setInterval`, no component-owned timers.
 src/ui/animation/
 ├── index.ts              # Public API exports
 ├── types.ts              # TypeScript types
-├── registry.ts           # AnimationRegistry + A2R defaults
+├── registry.ts           # AnimationRegistry + Allternit defaults
 ├── driver.ts             # AnimationDriver (core engine)
 ├── context.tsx           # SolidJS provider + hooks
 ├── DESIGN.md             # This document
@@ -61,7 +61,7 @@ src/ui/animation/
 | `once` | Stop at last frame | Completion indicators |
 | `pingpong` | Bounce back and forth | Scanner effects |
 
-## A2R Default Animations
+## Allternit Default Animations
 
 ### Status Bar Pulses
 
@@ -81,13 +81,13 @@ src/ui/animation/
 | `spinner.quadrant` | ◰◳◲◱ | 2 ticks |
 | `spinner.dots` | ⋯⋰⋮⋱ | 3 ticks |
 
-### A2R Signature Loaders
+### Allternit Signature Loaders
 
 | ID | Type | Width |
 |-----|------|-------|
-| `a2r.orbit_harness` | Procedural | 12 chars |
-| `a2r.rails_scan` | Predefined | 14 chars |
-| `a2r.dag_pulse` | Procedural | 5-12 chars |
+| `allternit.orbit_harness` | Procedural | 12 chars |
+| `allternit.rails_scan` | Predefined | 14 chars |
+| `allternit.dag_pulse` | Procedural | 5-12 chars |
 
 ## Usage
 
@@ -96,7 +96,7 @@ src/ui/animation/
 ```typescript
 import { AnimationRegistry, AnimationDriver } from "@/ui/animation"
 
-const registry = createA2RRegistry()
+const registry = createAllternitRegistry()
 const driver = new AnimationDriver(registry, {
   getTick: () => globalTick,
   animationsEnabled: () => kv.get("animations_enabled", true),
@@ -202,7 +202,7 @@ bun test src/ui/animation/__tests__/
 
 ## Alignment with Incumbent Patterns
 
-| Framework | Pattern | A2R Implementation |
+| Framework | Pattern | Allternit Implementation |
 |-----------|---------|-------------------|
 | Bubble Tea | Tick messages | Central tick counter |
 | Ratatui | TPS/FPS split | 20 TPS logic, native render |
@@ -210,7 +210,7 @@ bun test src/ui/animation/__tests__/
 
 ## Future Work
 
-- [ ] Background task dashboard using `a2r.dag_pulse`
+- [ ] Background task dashboard using `allternit.dag_pulse`
 - [ ] Orbital harness variants for different phases
 - [ ] Progress bars for known-duration operations
 - [ ] Web terminal scheduler (RAF-based)

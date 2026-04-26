@@ -116,11 +116,11 @@ describe("ContextPackBuilder", () => {
 
       const brainFile = l1?.files.find(f => f.path.includes("BRAIN.md"))
       expect(brainFile).toBeDefined()
-      expect(brainFile?.content).toContain("A2R Brain")
+      expect(brainFile?.content).toContain("Allternit Brain")
 
       const memoryFile = l1?.files.find(f => f.path.includes("MEMORY.md"))
       expect(memoryFile).toBeDefined()
-      expect(memoryFile?.content).toContain("A2R Memory Index")
+      expect(memoryFile?.content).toContain("Allternit Memory Index")
     })
 
     test("L2 contains IDENTITY.md and POLICY.md", async () => {
@@ -272,7 +272,7 @@ describe("ContextPackBuilder", () => {
       const pack = await ContextPackBuilder.build(tmp.path)
       const formatted = ContextPackBuilder.formatForLLM(pack)
 
-      expect(formatted).toContain("# A2R Context Pack")
+      expect(formatted).toContain("# Allternit Context Pack")
       expect(formatted).toContain(`**Workspace:** ${tmp.path}`)
       expect(formatted).toContain("**Session:** test-session")
       expect(formatted).toContain(`**Checksum:** ${pack.checksum}`)
@@ -352,7 +352,7 @@ describe("ContextPackBuilder", () => {
       const content = await ContextPackBuilder.loadBrain(tmp.path)
 
       expect(content).not.toBeNull()
-      expect(content).toContain("A2R Brain")
+      expect(content).toContain("Allternit Brain")
       expect(content).toContain("Task Graph")
     })
 

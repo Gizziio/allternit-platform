@@ -1,5 +1,5 @@
 /**
- * A2R Platform Auth Server — Clerk.com edition
+ * Allternit Platform Auth Server — Clerk.com edition
  *
  * Serves:
  *   GET  /.well-known/gizzi   → tells gizzi-code how to auth (method: "browser")

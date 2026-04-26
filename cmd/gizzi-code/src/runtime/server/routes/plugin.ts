@@ -9,7 +9,7 @@
 
 import { Hono } from "hono"
 import z from "zod/v4"
-import { validator } from "hono-openapi"
+import { validator } from "@/runtime/server/openapi"
 import { Config } from "@/runtime/context/config/config"
 import { Global } from "@/runtime/context/global"
 import { Filesystem } from "@/shared/util/filesystem"

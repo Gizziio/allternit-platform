@@ -1,5 +1,5 @@
 // packages/sdk/js/src/computer-use.ts
-class A2RComputerUseClient {
+class AllternitComputerUseClient {
   baseUrl;
   fetch;
   headers;
@@ -166,16 +166,16 @@ class A2RComputerUseClient {
   }
 }
 function createComputerUseClient(config) {
-  return new A2RComputerUseClient(config);
+  return new AllternitComputerUseClient(config);
 }
 function resolveComputerUseBaseUrl(url) {
   if (!url) {
-    return (process.env.A2R_BASE_URL || process.env.GIZZI_SERVER_URL || "http://localhost:4096").replace(/\/+$/g, "");
+    return (process.env.Allternit_BASE_URL || process.env.GIZZI_SERVER_URL || "http://localhost:4096").replace(/\/+$/g, "");
   }
   return String(url).replace(/\/+$/g, "");
 }
 export {
   resolveComputerUseBaseUrl,
   createComputerUseClient,
-  A2RComputerUseClient
+  AllternitComputerUseClient
 };

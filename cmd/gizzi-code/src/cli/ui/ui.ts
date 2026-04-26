@@ -1,6 +1,6 @@
 import z from "zod/v4"
 import { EOL } from "os"
-import { NamedError } from "@allternit/util/error"
+import { NamedError } from "@allternit/gizzi-util/error.js"
 import { logo as glyphs } from "@/cli/ui/logo"
 
 export namespace UI {

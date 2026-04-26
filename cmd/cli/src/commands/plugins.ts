@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { PluginRegistry, PluginLoader } from '@a2r/plugins';
+import { PluginRegistry, PluginLoader } from '@allternit/plugins';
 
 const registry = new PluginRegistry();
 const loader = new PluginLoader('./plugins');

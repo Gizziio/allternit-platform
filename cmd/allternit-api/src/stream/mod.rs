@@ -18,13 +18,14 @@ use std::sync::Arc;
 use tokio::sync::mpsc;
 use tracing::{debug, error, info, warn};
 
-use crate::rails::RailsState;
+use crate::AppState;
+use allternit_agent_system_rails::{project_dag, LedgerQuery};
 
 // ============================================================================
 // Routes
 // ============================================================================
 
-pub fn stream_router() -> Router<RailsState> {
+pub fn stream_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/ws/ledger", get(ledger_stream_handler))
         .route("/ws/workspace/:workspace_id/ledger", get(workspace_ledger_stream))
@@ -110,7 +111,7 @@ enum ClientMessage {
 async fn ledger_stream_handler(
     ws: WebSocketUpgrade,
     Query(params): Query<StreamQueryParams>,
-    State(state): State<RailsState>,
+    State(state): State<Arc<AppState>>,
 ) -> impl IntoResponse {
     info!(?params, "New ledger stream connection");
     ws.on_upgrade(move |socket| handle_ledger_socket(socket, state, params, None))
@@ -121,7 +122,7 @@ async fn workspace_ledger_stream(
     ws: WebSocketUpgrade,
     Path(workspace_id): Path<String>,
     Query(params): Query<StreamQueryParams>,
-    State(state): State<RailsState>,
+    State(state): State<Arc<AppState>>,
 ) -> impl IntoResponse {
     info!(workspace_id, ?params, "New workspace ledger stream connection");
     ws.on_upgrade(move |socket| handle_ledger_socket(socket, state, params, Some(workspace_id)))
@@ -132,7 +133,7 @@ async fn dag_event_stream(
     ws: WebSocketUpgrade,
     Path(dag_id): Path<String>,
     Query(params): Query<StreamQueryParams>,
-    State(state): State<RailsState>,
+    State(state): State<Arc<AppState>>,
 ) -> impl IntoResponse {
     info!(dag_id, ?params, "New DAG event stream connection");
     ws.on_upgrade(move |socket| handle_dag_socket(socket, state, dag_id, params))
@@ -144,7 +145,7 @@ async fn dag_event_stream(
 
 async fn handle_ledger_socket(
     socket: WebSocket,
-    state: RailsState,
+    state: Arc<AppState>,
     params: StreamQueryParams,
     _workspace_filter: Option<String>,
 ) {
@@ -184,10 +185,16 @@ async fn handle_ledger_socket(
     // Handle replay if requested
     if let Some(replay_count) = params.replay {
         if let Some(ref cursor) = params.cursor {
-            debug!(client_id, replay_count, cursor, "Replaying events");
+            debug!(
+                client_id, 
+                replay_count, 
+                cursor, 
+                event_types = ?params.event_types,
+                "Replaying events"
+            );
             
             // Query ledger for events since cursor
-            let query = a2r_agent_system_rails::LedgerQuery {
+            let query = allternit_agent_system_rails::LedgerQuery {
                 r#type: None,
                 types: None,
                 scope: None,
@@ -196,20 +203,20 @@ async fn handle_ledger_socket(
                 limit: Some(replay_count),
             };
             
-            match state.ledger.query(query).await {
+            match state.rails.ledger.query(query).await {
                 Ok(events) => {
                     let events_replayed = events.len();
                     
-                    for event in events {
+                    for event in &events {
                         let msg = ServerMessage::Event {
                             event_id: event.event_id.clone(),
                             event_type: event.r#type.clone(),
                             timestamp: event.ts.clone(),
                             payload: event.payload.clone(),
-                            scope: event.scope.map(|s| EventScopeResponse {
-                                dag_id: s.dag_id,
-                                wih_id: s.wih_id,
-                                run_id: s.run_id,
+                            scope: event.scope.as_ref().map(|s| EventScopeResponse {
+                                dag_id: s.dag_id.clone(),
+                                wih_id: s.wih_id.clone(),
+                                run_id: s.run_id.clone(),
                             }),
                         };
                         
@@ -313,7 +320,7 @@ async fn handle_ledger_socket(
 
 async fn handle_dag_socket(
     socket: WebSocket,
-    state: RailsState,
+    state: Arc<AppState>,
     dag_id: String,
     params: StreamQueryParams,
 ) {
@@ -334,8 +341,15 @@ async fn handle_dag_socket(
     }
     
     // Query current DAG state
-    match state.work_ops.get_dag("default", &dag_id).await {
-        Ok(Some(dag)) => {
+    match state.rails.ledger.query(LedgerQuery::default()).await {
+        Ok(events) => {
+            let dag = project_dag(&events, &dag_id);
+            
+            let status = dag.nodes.values()
+                .find(|n| n.parent_node_id.is_none())
+                .map(|n| n.status.clone())
+                .unwrap_or_else(|| "UNKNOWN".to_string());
+
             // Send current DAG state as initial event
             let state_msg = ServerMessage::Event {
                 event_id: format!("state-{}", dag_id),
@@ -343,7 +357,7 @@ async fn handle_dag_socket(
                 timestamp: chrono::Utc::now().to_rfc3339(),
                 payload: serde_json::json!({
                     "dag_id": dag.dag_id,
-                    "status": format!("{:?}", dag.status),
+                    "status": status,
                     "node_count": dag.nodes.len(),
                 }),
                 scope: Some(EventScopeResponse {
@@ -357,11 +371,8 @@ async fn handle_dag_socket(
                 let _ = tx.send(Message::Text(json)).await;
             }
         }
-        Ok(None) => {
-            warn!(dag_id, "DAG not found for stream");
-        }
         Err(e) => {
-            error!(dag_id, error = %e, "Failed to get DAG for stream");
+            error!(dag_id, error = %e, "Failed to get events for DAG stream");
         }
     }
     

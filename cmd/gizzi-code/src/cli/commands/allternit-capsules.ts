@@ -2,7 +2,7 @@ import { cmd } from "@/cli/commands/cmd"
 import { UI } from "@/cli/ui"
 import { createCapsuleController } from "@allternit/remote-control"
 
-export const A2rCapsulesCommand = cmd({
+export const AllternitCapsulesCommand = cmd({
   command: "capsules [action] [name]",
   describe: "Manage Allternit capsules",
   builder: (yargs) =>

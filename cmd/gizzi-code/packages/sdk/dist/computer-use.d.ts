@@ -49,7 +49,7 @@ export interface RequestOptions {
   headers?: Record<string, string>;
 }
 
-export declare class A2RComputerUseClient {
+export declare class AllternitComputerUseClient {
   readonly baseUrl: string;
   readonly fetch: typeof fetch;
   readonly headers: Record<string, string>;
@@ -67,7 +67,7 @@ export declare class A2RComputerUseClient {
   waitForRun(runId: string, options?: WaitForRunOptions): Promise<unknown>;
 }
 
-export declare function createComputerUseClient(config?: RequestOptions): A2RComputerUseClient;
+export declare function createComputerUseClient(config?: RequestOptions): AllternitComputerUseClient;
 export declare function resolveComputerUseBaseUrl(url?: string): string;
 
 export type EngineEventBatch = unknown;

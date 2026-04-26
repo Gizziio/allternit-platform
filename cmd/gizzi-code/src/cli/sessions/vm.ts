@@ -1,7 +1,7 @@
 /**
  * VM Session Implementation
  *
- * Provides a Session interface that executes commands through the A2R Desktop
+ * Provides a Session interface that executes commands through the Allternit Desktop
  * daemon via Unix socket. This enables VM-based command execution with proper
  * sandboxing and resource management.
  *
@@ -68,9 +68,9 @@ export interface VMSessionConfig {
 }
 
 /**
- * Default socket path for A2R Desktop daemon
+ * Default socket path for Allternit Desktop daemon
  */
-const DEFAULT_SOCKET_PATH = "/var/run/a2r/desktop-vm.sock"
+const DEFAULT_SOCKET_PATH = "/var/run/allternit/desktop-vm.sock"
 
 /**
  * Default connection timeout (30 seconds)
@@ -78,7 +78,7 @@ const DEFAULT_SOCKET_PATH = "/var/run/a2r/desktop-vm.sock"
 const DEFAULT_CONNECTION_TIMEOUT = 30000
 
 /**
- * VM Session implementation that connects to A2R Desktop daemon
+ * VM Session implementation that connects to Allternit Desktop daemon
  *
  * This session type provides VM-based command execution through a Unix socket
  * connection to the desktop daemon. It supports connection pooling for

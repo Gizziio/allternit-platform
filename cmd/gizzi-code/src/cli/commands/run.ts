@@ -8,8 +8,8 @@ import { Flag } from "@/runtime/context/flag/flag"
 import { bootstrap } from "@/cli/bootstrap"
 import { EOL } from "os"
 import { Filesystem } from "@/shared/util/filesystem"
-import { createA2RClient, type A2RClient } from "@a2r/sdk"
-type Client = A2RClient
+import { createAllternitClient, type AllternitClient } from "@allternit/sdk"
+type Client = AllternitClient
 
 // Local type definitions (SDK exports unknown)
 type ToolPart = {
@@ -868,7 +868,7 @@ export const RunCommand = cmd({
     }
 
     if (args.attach) {
-      const sdk = createA2RClient({ baseUrl: args.attach, directory })
+      const sdk = createAllternitClient({ baseUrl: args.attach, directory })
       return await execute(sdk)
     }
 
@@ -877,7 +877,7 @@ export const RunCommand = cmd({
         const request = new Request(input, init)
         return Server.App().fetch(request)
       }) as typeof globalThis.fetch
-      const sdk = createA2RClient({ baseUrl: "http://gizzi.internal", fetch: fetchFn })
+      const sdk = createAllternitClient({ baseUrl: "http://gizzi.internal", fetch: fetchFn })
       await execute(sdk)
     })
   },

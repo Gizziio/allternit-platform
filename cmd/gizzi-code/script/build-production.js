@@ -145,17 +145,22 @@ const solidPlugin = {
             }
             return { path: base };
         });
-        // Resolve @a2r workspace packages to their source or dist
-        build.onResolve({ filter: /^@a2r\/(plugin|script|sdk|util)/ }, (args) => {
+        // Resolve @allternit workspace packages to their source or dist
+        build.onResolve({ filter: /^@allternit\/(plugin|script|sdk|util|gizzi-util)/ }, (args) => {
             const parts = args.path.split("/");
             const name = parts[1];
             const subpath = parts.slice(2).join("/");
             const pkgDir = resolve("packages", name);
             if (subpath) {
-                // Try .js extension in dist
-                const path = resolve(pkgDir, "dist", subpath + ".js");
-                if (Bun.file(path).size > 0)
-                    return { path };
+                // 1. Try direct .js file
+                const jsPath = resolve(pkgDir, "dist", subpath + ".js");
+                if (Bun.file(jsPath).size > 0) return { path: jsPath };
+                
+                // 2. Try index.js if subpath is a directory
+                const indexPath = resolve(pkgDir, "dist", subpath, "index.js");
+                if (Bun.file(indexPath).size > 0) return { path: indexPath };
+
+                // 3. Fallback for subpaths that might already include .js but failed direct check
                 return { path: resolve(pkgDir, "dist", subpath) };
             }
             return { path: resolve(pkgDir, "dist/index.js") };
@@ -231,7 +236,7 @@ if (migrations.length > 0) {
 // Step 1: Bundle to single JS file
 console.log("🔨 Step 1a: Bundling worker...");
 const workerBundleResult = await Bun.build({
-    entrypoints: ["./src/cli/ui/tui/worker.ts"],
+    entrypoints: ["./src/cli/ui/ink-app/worker.ts"],
     target: "bun",
     sourcemap: "none",
     minify: { whitespace: true, syntax: true, identifiers: false },

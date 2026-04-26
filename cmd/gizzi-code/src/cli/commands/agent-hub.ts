@@ -5,11 +5,11 @@
  * Supports interactive TUI mode and direct template selection.
  *
  * Usage:
- *   a2r agent-hub                    # Interactive TUI
- *   a2r agent-hub list               # List all templates
- *   a2r agent-hub create <template>  # Create from template
- *   a2r agent-hub export <agent-id>  # Export agent
- *   a2r agent-hub import <file>      # Import agent
+ *   allternit agent-hub                    # Interactive TUI
+ *   allternit agent-hub list               # List all templates
+ *   allternit agent-hub create <template>  # Create from template
+ *   allternit agent-hub export <agent-id>  # Export agent
+ *   allternit agent-hub import <file>      # Import agent
  *
  * @module agent-hub-command
  */
@@ -98,7 +98,7 @@ export const AgentHubListCommand = cmd({
         }
       }
 
-      prompts.outro("Use 'a2r agent-hub create <template-id>' to create an agent")
+      prompts.outro("Use 'allternit agent-hub create <template-id>' to create an agent")
     })
   },
 })
@@ -143,7 +143,7 @@ export const AgentHubCreateCommand = cmd({
       
       if (!template) {
         prompts.log.error(`Template not found: ${templateId}`)
-        prompts.outro("Use 'a2r agent-hub list' to see available templates")
+        prompts.outro("Use 'allternit agent-hub list' to see available templates")
         process.exit(1)
       }
 

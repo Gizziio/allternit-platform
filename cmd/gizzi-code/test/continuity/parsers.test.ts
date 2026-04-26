@@ -5,7 +5,7 @@ import { mkdir, writeFile, rmdir } from "fs/promises"
 import path from "path"
 
 describe("Tool Parsers", () => {
-  const testDir = "/tmp/a2r-parser-test"
+  const testDir = "/tmp/allternit-parser-test"
   
   beforeAll(async () => {
     await mkdir(testDir, { recursive: true })

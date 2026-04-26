@@ -231,10 +231,10 @@ export class CoworkExecutor {
   }
 
   /**
-   * Execute in VM (Apple Virtualization or Firecracker via a2r-api).
+   * Execute in VM (Apple Virtualization or Firecracker via allternit-api).
    *
    * Priority:
-   *   1. GIZZI_SANDBOX_RUNTIME_URL → POST /sandbox/execute on the a2r-api Rust service
+   *   1. GIZZI_SANDBOX_RUNTIME_URL → POST /sandbox/execute on the allternit-api Rust service
    *      (this calls the real Firecracker/Apple VF drivers via ExecutionDriver trait)
    *   2. Configured runtimeEndpoint → generic HTTP runtime API
    *   3. Fallback: bubblewrap sandboxed local execution
@@ -255,7 +255,7 @@ export class CoworkExecutor {
     const driver = this.config.vmDriver ?? (process.platform === "darwin" ? "apple_vf" : "firecracker");
     log.info("Executing in VM", { driver, commands: config.commands.length });
 
-    // ── 1. a2r-api sandbox endpoint (real VM drivers) ────────────────────────
+    // ── 1. allternit-api sandbox endpoint (real VM drivers) ────────────────────────
     const sandboxRuntimeUrl = process.env.GIZZI_SANDBOX_RUNTIME_URL ?? this.config.runtimeEndpoint;
     if (sandboxRuntimeUrl) {
       await this.executeViaSandboxAPI(config, session, signal, sandboxRuntimeUrl);
@@ -268,9 +268,9 @@ export class CoworkExecutor {
   }
 
   /**
-   * Execute via the a2r-api sandbox endpoint.
+   * Execute via the allternit-api sandbox endpoint.
    *
-   * Request shape matches SandboxExecuteRequest in cmd/a2r-api/src/sandbox_routes.rs:
+   * Request shape matches SandboxExecuteRequest in cmd/allternit-api/src/sandbox_routes.rs:
    *   POST /sandbox/execute
    *   { code, language, workdir, env, timeout_secs, resources, network_enabled }
    *
@@ -318,7 +318,7 @@ export class CoworkExecutor {
     };
 
     const url = baseUrl.endsWith("/") ? `${baseUrl}sandbox/execute` : `${baseUrl}/sandbox/execute`;
-    log.info("calling a2r-api sandbox", { url, timeoutSecs });
+    log.info("calling allternit-api sandbox", { url, timeoutSecs });
 
     const response = await fetch(url, {
       method: "POST",
@@ -329,7 +329,7 @@ export class CoworkExecutor {
 
     if (!response.ok) {
       const text = await response.text().catch(() => response.statusText);
-      throw new Error(`a2r-api sandbox returned ${response.status}: ${text}`);
+      throw new Error(`allternit-api sandbox returned ${response.status}: ${text}`);
     }
 
     const result = await response.json() as {
@@ -351,7 +351,7 @@ export class CoworkExecutor {
       session.error = `VM execution failed with exit code ${result.exit_code}`;
     }
 
-    log.info("a2r-api sandbox complete", {
+    log.info("allternit-api sandbox complete", {
       exitCode: result.exit_code,
       durationMs: result.duration_ms,
       vmSessionId: result.session_id,

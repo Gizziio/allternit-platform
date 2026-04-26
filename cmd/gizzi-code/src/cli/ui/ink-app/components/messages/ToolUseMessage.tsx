@@ -1,20 +1,12 @@
-import React from 'react';
-import { Box, Text } from '../ink';
+import * as React from 'react'
+import { Box, Text } from '../ink'
 
-interface ToolUseMessageProps {
-  // TODO: Define props
-}
-
-/**
- * ToolUseMessage Component
- * 
- * TODO: Implement full functionality
- * This is a placeholder shim for the gizzi-specific implementation.
- */
-export default function ToolUseMessage(_props: ToolUseMessageProps): React.ReactElement {
+export function moduleExport(): React.ReactElement {
   return (
     <Box>
-      <Text>ToolUseMessage - Implementation pending</Text>
+      <Text>moduleExport</Text>
     </Box>
-  );
+  )
 }
+
+export default moduleExport

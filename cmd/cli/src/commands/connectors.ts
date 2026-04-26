@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { ConnectorRegistry } from '@a2r/mcp-connectors';
+import { ConnectorRegistry } from '@allternit/mcp-connectors';
 
 const registry = new ConnectorRegistry();
 

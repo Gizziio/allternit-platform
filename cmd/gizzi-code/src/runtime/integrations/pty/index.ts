@@ -5,7 +5,7 @@ import z from "zod/v4"
 import { Identifier } from "@/shared/id/id"
 import { Log } from "@/shared/util/log"
 import { Instance } from "@/runtime/context/project/instance"
-import { lazy } from "@a2r/util/lazy"
+import { lazy } from "@allternit/gizzi-util/lazy.js"
 import { Shell } from "@/runtime/integrations/shell/shell"
 import { Plugin } from "@/runtime/integrations/plugin"
 

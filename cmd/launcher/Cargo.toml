@@ -1,9 +1,9 @@
 [package]
-name = "a2r-platform-launcher"
+name = "allternit-platform-launcher"
 version = "0.1.0"
 edition = "2021"
-authors = ["A2rchitect Team"]
-description = "Single-binary launcher for A2R Platform"
+authors = ["allternit Team"]
+description = "Single-binary launcher for Allternit Platform"
 license = "MIT"
 
 [dependencies]
@@ -44,8 +44,3 @@ objc = "0.2"
 [target.'cfg(target_os = "windows")'.dependencies]
 winapi = { version = "0.3", features = ["shellapi", "winuser"] }
 
-[profile.release]
-opt-level = 3
-lto = true
-strip = true
-codegen-units = 1

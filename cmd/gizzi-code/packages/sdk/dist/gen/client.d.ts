@@ -1,10 +1,10 @@
 import { type Client, type ClientOptions } from "./client/index.js";
 import type { Event } from "./entity-types.js";
 
-export declare class A2RClient {
+export declare class AllternitClient {
   static readonly __registry: {
-    get(key?: string): A2RClient;
-    set(value: A2RClient, key?: string): void;
+    get(key?: string): AllternitClient;
+    set(value: AllternitClient, key?: string): void;
   };
   protected client: Client;
   constructor(args?: { client?: Client; key?: string });
@@ -17,13 +17,13 @@ export declare class A2RClient {
   ): AsyncIterableIterator<Extract<Event, { type: T }>>;
 }
 
-export declare function createA2RClient(config?: {
+export declare function createAllternitClient(config?: {
   baseUrl?: string;
   fetch?: typeof fetch;
   headers?: Record<string, string>;
   directory?: string;
   signal?: AbortSignal;
-}): A2RClient;
+}): AllternitClient;
 
 export * from "./types.gen.js";
 export type { Client, ClientOptions };

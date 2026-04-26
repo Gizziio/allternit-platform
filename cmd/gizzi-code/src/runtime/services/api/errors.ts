@@ -29,7 +29,6 @@ import {
   getDefaultMainLoopModelSetting,
   isNonCustomOpusModel,
 } from '../../../utils/model/model.js'
-import { getModelStrings } from '../../../utils/model/modelStrings.js'
 import { getAPIProvider } from '../../../utils/model/providers.js'
 import { getIsNonInteractiveSession } from '@/bootstrap/state.js'
 import {
@@ -80,8 +79,7 @@ export function isPromptTooLongMessage(msg: AssistantMessage): boolean {
 /**
  * Parse actual/limit token counts from a raw prompt-too-long API error
  * message like "prompt is too long: 137500 tokens > 135000 maximum".
- * The raw string may be wrapped in SDK prefixes or JSON envelopes, or
- * have different casing (Vertex), so this is intentionally lenient.
+ * The raw string may be wrapped in SDK prefixes or JSON envelopes.
  */
 export function parsePromptTooLongTokenCounts(rawMessage: string): {
   actualTokens: number | undefined
@@ -120,16 +118,7 @@ export function getPromptTooLongTokenGap(
 
 /**
  * Is this raw API error text a media-size rejection that stripImagesFromMessages
- * can fix? Reactive compact's summarize retry uses this to decide whether to
- * strip and retry (media error) or bail (anything else).
- *
- * Patterns MUST stay in sync with the getAssistantMessageFromError branches
- * that populate errorDetails (~L523 PDF, ~L560 image, ~L573 many-image) and
- * the classifyAPIError branches (~L929-946). The closed loop: errorDetails is
- * only set after those branches already matched these same substrings, so
- * isMediaSizeError(errorDetails) is tautologically true for that path. API
- * wording drift causes graceful degradation (errorDetails stays undefined,
- * caller short-circuits), not a false negative.
+ * can fix?
  */
 export function isMediaSizeError(raw: string): boolean {
   return (
@@ -141,9 +130,6 @@ export function isMediaSizeError(raw: string): boolean {
 
 /**
  * Message-level predicate: is this assistant message a media-size rejection?
- * Parallel to isPromptTooLongMessage. Checks errorDetails (the raw API error
- * string populated by the getAssistantMessageFromError branches at ~L523/560/573)
- * rather than content text, since media errors have per-variant content strings.
  */
 export function isMediaSizeErrorMessage(msg: AssistantMessage): boolean {
   return (
@@ -212,8 +198,6 @@ export function getOauthOrgNotAllowedErrorMessage(): string {
 
 /**
  * Check if we're in CCR (Gizzi Remote) mode.
- * In CCR mode, auth is handled via JWTs provided by the infrastructure,
- * not via /login. Transient auth errors should suggest retrying, not logging in.
  */
 function isCCRMode(): boolean {
   return isEnvTruthy(process.env.GIZZI_REMOTE)
@@ -398,28 +382,10 @@ export function isValidAPIMessage(value: unknown): value is BetaMessage {
   )
 }
 
-/** Lower-level error that AWS can return. */
-type AmazonError = {
-  Output?: {
-    __type?: string
-  }
-  Version?: string
-}
-
 /**
  * Given a response that doesn't look quite right, see if it contains any known error types we can extract.
  */
 export function extractUnknownErrorFormat(value: unknown): string | undefined {
-  // Check if value is a valid object first
-  if (!value || typeof value !== 'object') {
-    return undefined
-  }
-
-  // Amazon Bedrock routing errors
-  if ((value as AmazonError).Output?.__type) {
-    return (value as AmazonError).Output!.__type
-  }
-
   return undefined
 }
 
@@ -444,8 +410,6 @@ export function getAssistantMessageFromError(
   }
 
   // Check for image size/resize errors (thrown before API call during validation)
-  // Use getImageTooLargeErrorMessage() to show "esc esc" hint for CLI users
-  // but a generic message for SDK users (non-interactive mode)
   if (error instanceof ImageSizeError || error instanceof ImageResizeError) {
     return createAssistantAPIErrorMessage({
       content: getImageTooLargeErrorMessage(),
@@ -527,17 +491,12 @@ export function getAssistantMessageFromError(
 
       // If getRateLimitErrorMessage returned null, it means the fallback mechanism
       // will handle this silently (e.g., Opus -> Sonnet fallback for eligible users).
-      // Return NO_RESPONSE_REQUESTED so no error is shown to the user, but the
-      // message is still recorded in conversation history for Claude to see.
       return createAssistantAPIErrorMessage({
         content: NO_RESPONSE_REQUESTED,
         error: 'rate_limit',
       })
     }
 
-    // No quota headers — this is NOT a quota limit. Surface what the API actually
-    // said instead of a generic "Rate limit reached". Entitlement rejections
-    // (e.g. 1M context without Extra Usage) and infra capacity 429s land here.
     if (error.message.includes('Extra usage is required for long context')) {
       const hint = getIsNonInteractiveSession()
         ? 'enable extra usage at claude.ai/settings/usage, or use --model to switch to standard context'
@@ -558,15 +517,11 @@ export function getAssistantMessageFromError(
     })
   }
 
-  // Handle prompt too long errors (Vertex returns 413, direct API returns 400)
-  // Use case-insensitive check since Vertex returns "Prompt is too long" (capitalized)
+  // Handle prompt too long errors
   if (
     error instanceof Error &&
     error.message.toLowerCase().includes('prompt is too long')
   ) {
-    // Content stays generic (UI matches on exact string). The raw error with
-    // token counts goes into errorDetails — reactive compact's retry loop
-    // parses the gap from there via getPromptTooLongTokenGap.
     return createAssistantAPIErrorMessage({
       content: PROMPT_TOO_LONG_ERROR_MESSAGE,
       error: 'invalid_request',
@@ -597,9 +552,7 @@ export function getAssistantMessageFromError(
     })
   }
 
-  // Check for invalid PDF errors (e.g., HTML file renamed to .pdf)
-  // Without this handler, invalid PDF document blocks persist in conversation
-  // context and cause every subsequent API call to fail with 400.
+  // Check for invalid PDF errors
   if (
     error instanceof Error &&
     error.message.includes('The PDF specified was not valid')
@@ -610,7 +563,7 @@ export function getAssistantMessageFromError(
     })
   }
 
-  // Check for image size errors (e.g., "image exceeds 5 MB maximum: 5316852 bytes > 5242880 bytes")
+  // Check for image size errors
   if (
     error instanceof APIError &&
     error.status === 400 &&
@@ -623,7 +576,7 @@ export function getAssistantMessageFromError(
     })
   }
 
-  // Check for many-image dimension errors (API enforces stricter 2000px limit for many-image requests)
+  // Check for many-image dimension errors
   if (
     error instanceof APIError &&
     error.status === 400 &&
@@ -639,9 +592,7 @@ export function getAssistantMessageFromError(
     })
   }
 
-  // Server rejected the afk-mode beta header (plan does not include auto
-  // mode). AFK_MODE_BETA_HEADER is '' in non-TRANSCRIPT_CLASSIFIER builds,
-  // so the truthy guard keeps this inert there.
+  // Server rejected the afk-mode beta header
   if (
     AFK_MODE_BETA_HEADER &&
     error instanceof APIError &&
@@ -656,7 +607,6 @@ export function getAssistantMessageFromError(
   }
 
   // Check for request too large errors (413 status)
-  // This typically happens when a large PDF + conversation context exceeds the 32MB API limit
   if (error instanceof APIError && error.status === 413) {
     return createAssistantAPIErrorMessage({
       content: getRequestTooLargeErrorMessage(),
@@ -714,9 +664,7 @@ export function getAssistantMessageFromError(
     logEvent('tengu_unexpected_tool_result', {})
   }
 
-  // Duplicate tool_use IDs (CC-1212). ensureToolResultPairing strips these
-  // before send, so hitting this means a new corruption path slipped through.
-  // Log for root-causing, and give users a recovery path instead of deadlock.
+  // Duplicate tool_use IDs
   if (
     error instanceof APIError &&
     error.status === 400 &&
@@ -748,16 +696,13 @@ export function getAssistantMessageFromError(
     })
   }
 
-  // Check for invalid model name error for Ant users. Gizzi may be
-  // defaulting to a custom internal-only model for Ants, and there might be
-  // Ants using new or unknown org IDs that haven't been gated in.
+  // Check for invalid model name error for Ant users.
   if (
     process.env.USER_TYPE === 'ant' &&
     !process.env.ANTHROPIC_MODEL &&
     error instanceof Error &&
     error.message.toLowerCase().includes('invalid model name')
   ) {
-    // Get organization ID from config - only use OAuth account data when actively using OAuth
     const orgId = getOauthAccountInfo()?.organizationUuid
     const baseMsg = `[ANT-ONLY] Your org isn't gated into the \`${model}\` model. Either run \`claude\` with \`ANTHROPIC_MODEL=${getDefaultMainLoopModelSetting()}\``
     const msg = orgId
@@ -779,29 +724,19 @@ export function getAssistantMessageFromError(
       error: 'billing_error',
     })
   }
-  // "Organization has been disabled" — commonly a stale ANTHROPIC_API_KEY
-  // from a previous employer/project overriding subscription auth. Only handle
-  // the env-var case; apiKeyHelper and /login-managed keys mean the active
-  // auth's org is genuinely disabled with no dormant fallback to point at.
+
   if (
     error instanceof APIError &&
     error.status === 400 &&
     error.message.toLowerCase().includes('organization has been disabled')
   ) {
     const { source } = getAnthropicApiKeyWithSource()
-    // getAnthropicApiKeyWithSource conflates the env var with FD-passed keys
-    // under the same source value, and in CCR mode OAuth stays active despite
-    // the env var. The three guards ensure we only blame the env var when it's
-    // actually set and actually on the wire.
     if (
       source === 'ANTHROPIC_API_KEY' &&
       process.env.ANTHROPIC_API_KEY &&
       !isClaudeAISubscriber()
     ) {
       const hasStoredOAuth = getClaudeAIOAuthTokens()?.accessToken != null
-      // Not 'authentication_failed' — that triggers VS Code's showLogin(), but
-      // login can't fix this (approved env var keeps overriding OAuth). The fix
-      // is configuration-based (unset the var), so invalid_request is correct.
       return createAssistantAPIErrorMessage({
         error: 'invalid_request',
         content: hasStoredOAuth
@@ -815,7 +750,6 @@ export function getAssistantMessageFromError(
     error instanceof Error &&
     error.message.toLowerCase().includes('x-api-key')
   ) {
-    // In CCR mode, auth is via JWTs - this is likely a transient network issue
     if (isCCRMode()) {
       return createAssistantAPIErrorMessage({
         error: 'authentication_failed',
@@ -823,7 +757,6 @@ export function getAssistantMessageFromError(
       })
     }
 
-    // Check if the API key is from an external source
     const { source } = getAnthropicApiKeyWithSource()
     const isExternalSource =
       source === 'ANTHROPIC_API_KEY' || source === 'apiKeyHelper'
@@ -867,7 +800,6 @@ export function getAssistantMessageFromError(
     error instanceof APIError &&
     (error.status === 401 || error.status === 403)
   ) {
-    // In CCR mode, auth is via JWTs - this is likely a transient network issue
     if (isCCRMode()) {
       return createAssistantAPIErrorMessage({
         error: 'authentication_failed',
@@ -883,38 +815,16 @@ export function getAssistantMessageFromError(
     })
   }
 
-  // Bedrock errors like "403 You don't have access to the model with the specified model ID."
-  // don't contain the actual model ID
-  if (
-    isEnvTruthy(process.env.GIZZI_USE_BEDROCK) &&
-    error instanceof Error &&
-    error.message.toLowerCase().includes('model id')
-  ) {
-    const switchCmd = getIsNonInteractiveSession() ? '--model' : '/model'
-    const fallbackSuggestion = get3PModelFallbackSuggestion(model)
-    return createAssistantAPIErrorMessage({
-      content: fallbackSuggestion
-        ? `${API_ERROR_MESSAGE_PREFIX} (${model}): ${error.message}. Try ${switchCmd} to switch to ${fallbackSuggestion}.`
-        : `${API_ERROR_MESSAGE_PREFIX} (${model}): ${error.message}. Run ${switchCmd} to pick a different model.`,
-      error: 'invalid_request',
-    })
-  }
-
-  // 404 Not Found — usually means the selected model doesn't exist or isn't
-  // available. Guide the user to /model so they can pick a valid one.
-  // For 3P users, suggest a specific fallback model they can try.
+  // 404 Not Found
   if (error instanceof APIError && error.status === 404) {
     const switchCmd = getIsNonInteractiveSession() ? '--model' : '/model'
-    const fallbackSuggestion = get3PModelFallbackSuggestion(model)
     return createAssistantAPIErrorMessage({
-      content: fallbackSuggestion
-        ? `The model ${model} is not available on your ${getAPIProvider()} deployment. Try ${switchCmd} to switch to ${fallbackSuggestion}, or ask your admin to enable this model.`
-        : `There's an issue with the selected model (${model}). It may not exist or you may not have access to it. Run ${switchCmd} to pick a different model.`,
+      content: `There's an issue with the selected model (${model}). It may not exist or you may not have access to it. Run ${switchCmd} to pick a different model.`,
       error: 'invalid_request',
     })
   }
 
-  // Connection errors (non-timeout) — use formatAPIError for detailed messages
+  // Connection errors (non-timeout)
   if (error instanceof APIConnectionError) {
     return createAssistantAPIErrorMessage({
       content: `${API_ERROR_MESSAGE_PREFIX}: ${formatAPIError(error)}`,
@@ -935,33 +845,7 @@ export function getAssistantMessageFromError(
 }
 
 /**
- * For 3P users, suggest a fallback model when the selected model is unavailable.
- * Returns a model name suggestion, or undefined if no suggestion is applicable.
- */
-function get3PModelFallbackSuggestion(model: string): string | undefined {
-  if (getAPIProvider() === 'firstParty') {
-    return undefined
-  }
-  // @[MODEL LAUNCH]: Add a fallback suggestion chain for the new model → previous version for 3P
-  const m = model.toLowerCase()
-  // If the failing model looks like an Opus 4.6 variant, suggest the default Opus (4.1 for 3P)
-  if (m.includes('opus-4-6') || m.includes('opus_4_6')) {
-    return getModelStrings().opus41
-  }
-  // If the failing model looks like a Sonnet 4.6 variant, suggest Sonnet 4.5
-  if (m.includes('sonnet-4-6') || m.includes('sonnet_4_6')) {
-    return getModelStrings().sonnet45
-  }
-  // If the failing model looks like a Sonnet 4.5 variant, suggest Sonnet 4
-  if (m.includes('sonnet-4-5') || m.includes('sonnet_4_5')) {
-    return getModelStrings().sonnet40
-  }
-  return undefined
-}
-
-/**
  * Classifies an API error into a specific error type for analytics tracking.
- * Returns a standardized error type string suitable for Datadog tagging.
  */
 export function classifyAPIError(error: unknown): string {
   // Aborted requests
@@ -1131,15 +1015,6 @@ export function classifyAPIError(error: unknown): string {
     (error.status === 401 || error.status === 403)
   ) {
     return 'auth_error'
-  }
-
-  // Bedrock-specific errors
-  if (
-    isEnvTruthy(process.env.GIZZI_USE_BEDROCK) &&
-    error instanceof Error &&
-    error.message.toLowerCase().includes('model id')
-  ) {
-    return 'bedrock_model_access'
   }
 
   // Status code based fallbacks

@@ -2,7 +2,7 @@
 import { describe, expect, test } from "bun:test"
 import { ACP } from "../../src/acp/agent"
 import type { AgentSideConnection } from "@agentclientprotocol/sdk"
-import type { Event } from "@a2r/sdk"
+import type { Event } from "@allternit/sdk"
 import { Instance } from "../../src/project/instance"
 import { tmpdir } from "../fixture/fixture"
 

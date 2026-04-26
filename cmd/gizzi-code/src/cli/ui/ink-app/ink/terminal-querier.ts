@@ -36,7 +36,7 @@ export type TerminalQuery<T extends TerminalResponse = TerminalResponse> = {
 
 type DecrpmResponse = Extract<TerminalResponse, { type: 'decrpm' }>
 type Da1Response = Extract<TerminalResponse, { type: 'da1' }>
-type Da2Response = Extract<TerminalResponse, { type: 'da2' }>
+type Dallternitesponse = Extract<TerminalResponse, { type: 'da2' }>
 type KittyResponse = Extract<TerminalResponse, { type: 'kittyKeyboard' }>
 type CursorPosResponse = Extract<TerminalResponse, { type: 'cursorPosition' }>
 type OscResponse = Extract<TerminalResponse, { type: 'osc' }>
@@ -64,10 +64,10 @@ export function da1(): TerminalQuery<Da1Response> {
 }
 
 /** Secondary Device Attributes query (CSI > c). Returns terminal version. */
-export function da2(): TerminalQuery<Da2Response> {
+export function da2(): TerminalQuery<Dallternitesponse> {
   return {
     request: csi('>c'),
-    match: (r): r is Da2Response => r.type === 'da2',
+    match: (r): r is Dallternitesponse => r.type === 'da2',
   }
 }
 

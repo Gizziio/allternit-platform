@@ -1,5 +1,5 @@
 import { Hono } from "hono"
-import { describeRoute, validator, resolver } from "hono-openapi"
+import { describeRoute, validator, resolver } from "@/runtime/server/openapi"
 import z from "zod/v4"
 import { SessionSandbox } from "@/runtime/context/sandbox/session-sandbox"
 import { Sandbox } from "@/runtime/integrations/shell/sandbox"

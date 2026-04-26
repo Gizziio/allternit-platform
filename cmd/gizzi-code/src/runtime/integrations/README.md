@@ -6,7 +6,7 @@
 
 ### 1. Send a Message
 ```bash
-cd /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/cmd/gizzi-code
+cd /Users/macbook/Desktop/allternit-workspace/allternit/cmd/gizzi-code
 bun run src/cli/commands/ac.ts send "@validator Ready for review" --to validator
 ```
 
@@ -27,7 +27,7 @@ Open: http://localhost:5177/demo/agent-communication
 - ✅ **Git Bundles** - Create, validate, extract
 - ✅ **CLI Tool** - `ac` command for agents
 - ✅ **Loop Guard** - Prevents infinite agent chains
-- ✅ **Workspace State** - `.a2r/communication/` audit trail
+- ✅ **Workspace State** - `.allternit/communication/` audit trail
 
 ## Documentation
 
@@ -72,7 +72,7 @@ ac git bundle extract <id> <repo>
 
 ```bash
 # Core tests
-cd /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech
+cd /Users/macbook/Desktop/allternit-workspace/allternit
 bun run test-communication-core.ts
 
 # Future features

@@ -179,7 +179,7 @@ pub async fn create_token(
     }
     
     // Generate token
-    let token = format!("a2r_{}", generate_secure_random(48));
+    let token = format!("allternit_{}", generate_secure_random(48));
     let digest = md5::compute(token.as_bytes());
     let token_hash = format!("{:x}", digest);
     let token_id = format!("token_{}", generate_secure_random(16));

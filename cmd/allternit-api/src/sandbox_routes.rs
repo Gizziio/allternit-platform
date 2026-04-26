@@ -10,11 +10,11 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tracing::{debug, info, warn};
+use tracing::debug;
 
-use a2r_driver_interface::{
-    DriverCapabilities, ExecutionDriver, IsolationLevel, ResourceLimits, SpawnSpec,
-    TargetArch,
+use allternit_driver_interface::{
+    CommandSpec, ExecutionId,
+    PolicySpec, ResourceSpec, SpawnSpec, TenantId, EnvironmentSpec,
 };
 
 use crate::AppState;
@@ -105,27 +105,35 @@ async fn execute_handler(
     let handle = driver.spawn(spawn_spec).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to spawn: {}", e)))?;
     
-    // Execute command
-    let command = vec![
-        get_interpreter(&request.language),
-        "-c".to_string(),
-        request.code.clone(),
-    ];
+    // Build command spec
+    let command_spec = CommandSpec {
+        command: vec![
+            get_interpreter(&request.language),
+            "-c".to_string(),
+            request.code.clone(),
+        ],
+        env_vars: request.env.clone(),
+        working_dir: request.workdir.clone(),
+        stdin_data: None,
+        capture_stdout: true,
+        capture_stderr: true,
+    };
     
-    let timeout_ms = Some(request.timeout_secs * 1000);
-    
-    let result = driver.exec(handle, command, request.env, timeout_ms).await
+    let result = driver.exec(&handle, command_spec).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Execution failed: {}", e)))?;
     
     // Cleanup
-    let _ = driver.destroy(handle).await;
+    let _ = driver.destroy(&handle).await;
+    
+    let stdout = result.stdout.map(|v| String::from_utf8_lossy(&v).into_owned()).unwrap_or_default();
+    let stderr = result.stderr.map(|v| String::from_utf8_lossy(&v).into_owned()).unwrap_or_default();
     
     Ok(Json(SandboxExecuteResponse {
         exit_code: result.exit_code,
-        stdout: result.stdout,
-        stderr: result.stderr,
+        stdout,
+        stderr,
         duration_ms: result.duration_ms,
-        session_id: Some(handle.session_id.to_string()),
+        session_id: Some(handle.id.to_string()),
     }))
 }
 
@@ -149,7 +157,7 @@ async fn capabilities_handler(
     };
     
     let driver_type = format!("{:?}", caps.driver_type).to_lowercase();
-    let isolation_level = format!("{:?}", caps.isolation_level).to_lowercase();
+    let isolation_level = format!("{:?}", caps.isolation).to_lowercase();
     
     Ok(Json(SandboxCapabilitiesResponse {
         driver_type,
@@ -165,8 +173,8 @@ async fn capabilities_handler(
             "node-22".to_string(),
             "rust-stable".to_string(),
         ],
-        max_concurrent_sessions: caps.max_concurrent_executions,
-        supports_snapshots: caps.supports_snapshots,
+        max_concurrent_sessions: 10, // Default or obtain from elsewhere
+        supports_snapshots: caps.features.snapshot,
         supports_streaming: false, // TODO
     }))
 }
@@ -185,34 +193,35 @@ async fn health_handler(
 /// Build SpawnSpec from request
 fn build_spawn_spec(request: &SandboxExecuteRequest) -> Result<SpawnSpec, (StatusCode, String)> {
     let resources = if let Some(req) = &request.resources {
-        ResourceLimits {
-            cpu_cores: req.cpu_cores.unwrap_or(1.0),
-            memory_mb: req.memory_mb.unwrap_or(512),
+        ResourceSpec {
+            cpu_millis: (req.cpu_cores.unwrap_or(1.0) * 1000.0) as u32,
+            memory_mib: req.memory_mb.unwrap_or(512) as u32,
             ..Default::default()
         }
     } else {
-        ResourceLimits::development()
+        ResourceSpec::minimal()
     };
     
+    let tenant = TenantId::new(format!("api-{}", uuid::Uuid::new_v4()))
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let env = EnvironmentSpec {
+        image: "ubuntu-22.04-minimal".to_string(),
+        env_vars: request.env.clone(),
+        working_dir: request.workdir.clone(),
+        ..Default::default()
+    };
+
     Ok(SpawnSpec {
-        tenant_id: format!("api-{}", uuid::Uuid::new_v4()),
-        workspace_id: None,
-        arch: TargetArch::current(),
+        tenant,
+        project: None,
+        workspace: None,
+        run_id: Some(ExecutionId::new()),
+        env,
+        policy: PolicySpec::default_permissive(),
         resources,
-        rootfs: a2r_driver_interface::RootfsSpec {
-            base_image: "ubuntu-22.04-minimal".to_string(),
-            overlays: request.toolchains.clone(),
-            kernel_path: None,
-            kernel_args: None,
-        },
-        mounts: vec![],
-        env: std::collections::HashMap::new(),
-        network: a2r_driver_interface::NetworkPolicy {
-            allow_all: request.network_enabled,
-            ..Default::default()
-        },
-        chrome_session: false,
-        toolchains: request.toolchains.clone(),
+        envelope: None,
+        prewarm_pool: None,
     })
 }
 

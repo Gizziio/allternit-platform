@@ -415,7 +415,7 @@ export class SemiFormalVerifier {
   private async generateCertificate(
     context: string
   ): Promise<VerificationCertificate> {
-    const defaultModel = await Provider.defaultModel();
+    const defaultModel = await Provider.defaultModelConcrete();
     const modelDef = this.options.model ?? defaultModel;
     const modelInfo = await Provider.getModel(modelDef.providerID, modelDef.modelID);
     const language = await Provider.getLanguage(modelInfo) as LanguageModelV2;

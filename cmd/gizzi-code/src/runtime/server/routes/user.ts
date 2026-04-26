@@ -5,7 +5,7 @@
  */
 
 import { Hono } from "hono"
-import { describeRoute, resolver, validator } from "hono-openapi"
+import { describeRoute, resolver, validator } from "@/runtime/server/openapi"
 import z from "zod/v4"
 import { User } from "@/runtime/context/user"
 import { SettingsManager } from "@/runtime/context/settings"

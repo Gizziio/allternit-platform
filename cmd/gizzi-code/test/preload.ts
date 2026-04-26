@@ -23,11 +23,11 @@ process.env["OPENCODE_MODELS_PATH"] = path.join(import.meta.dir, "tool", "fixtur
 // This prevents tests from picking up real user configs/skills from ~/.claude/skills
 const testHome = path.join(dir, "home")
 await fs.mkdir(testHome, { recursive: true })
-process.env["A2R_TEST_HOME"] = testHome
+process.env["Allternit_TEST_HOME"] = testHome
 
 // Set test managed config directory to isolate tests from system managed settings
 const testManagedConfigDir = path.join(dir, "managed")
-process.env["A2R_TEST_MANAGED_CONFIG_DIR"] = testManagedConfigDir
+process.env["Allternit_TEST_MANAGED_CONFIG_DIR"] = testManagedConfigDir
 
 // Write the cache version file to prevent global/index.ts from clearing the cache
 // Path must match Global.Path.cache = $XDG_CACHE_HOME/gizzi-code

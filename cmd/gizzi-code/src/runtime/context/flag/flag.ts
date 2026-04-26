@@ -76,14 +76,14 @@ export namespace Flag {
   // When sandbox is on, allow outbound network (default true — agents need npm/pip/cargo)
   export const GIZZI_SANDBOX_ALLOW_NETWORK = !truthy("GIZZI_SANDBOX_BLOCK_NETWORK")
 
-  // Cowork VM runtime endpoint (a2r-api POST /sandbox/execute)
+  // Cowork VM runtime endpoint (allternit-api POST /sandbox/execute)
   export const GIZZI_SANDBOX_RUNTIME_URL = env("GIZZI_SANDBOX_RUNTIME_URL")
 
   // VM session mode — provision a full VM per gizzi-code session (like CC cloud sessions).
   // When set, every new agent session gets a dedicated VM. All Bash tool calls execute
   // inside the VM rather than on the host. Project dir is shared in via bind mount / VirtioFS.
   export const GIZZI_VM_SESSIONS = truthy("GIZZI_VM_SESSIONS")
-  // a2r-api base URL for VM session API (POST /vm-session etc.)
+  // allternit-api base URL for VM session API (POST /vm-session etc.)
   // Defaults to GIZZI_SANDBOX_RUNTIME_URL if not set separately.
   export const GIZZI_VM_API_URL = env("GIZZI_VM_API_URL") ?? env("GIZZI_SANDBOX_RUNTIME_URL")
 

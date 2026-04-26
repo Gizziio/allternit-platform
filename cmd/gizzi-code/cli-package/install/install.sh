@@ -352,7 +352,7 @@ main() {
     print_mascot
     printf "\n"
     printf "${BEIGE}${BOLD}              GIZZI CODE - AI Terminal Interface${RESET}\n"
-    printf "${DIM}                    for the A2R Ecosystem${RESET}\n"
+    printf "${DIM}                    for the Allternit Ecosystem${RESET}\n"
     printf "\n"
     
     # Parse arguments

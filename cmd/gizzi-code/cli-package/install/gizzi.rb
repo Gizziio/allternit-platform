@@ -1,13 +1,13 @@
 # Homebrew formula for Gizzi Code
-# Usage: brew tap a2r/gizzi-code && brew install gizzi-code
+# Usage: brew tap allternit/gizzi-code && brew install gizzi-code
 
 class GizziCode < Formula
-  desc "AI-powered terminal interface and runtime for the A2R ecosystem"
+  desc "AI-powered terminal interface and runtime for the Allternit ecosystem"
   homepage "https://gizzi.sh"
-  url "https://github.com/a2r/gizzi-code/archive/refs/tags/v1.0.0.tar.gz"
+  url "https://github.com/allternit/gizzi-code/archive/refs/tags/v1.0.0.tar.gz"
   sha256 "PLACEHOLDER_SHA256"
   license "MIT"
-  head "https://github.com/a2r/gizzi-code.git", branch: "main"
+  head "https://github.com/allternit/gizzi-code.git", branch: "main"
 
   # Bottles for different platforms
   bottle do

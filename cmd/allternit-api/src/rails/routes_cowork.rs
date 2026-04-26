@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::{error, info};
 
-use a2r_cowork_runtime::{
+use allternit_cowork_runtime::{
     Attachment, AttachmentState, ClientType, CreateRunSpec, PermissionSet, Run, RunId, RunMode,
     RunState,
 };
@@ -169,8 +169,8 @@ pub struct CheckpointResponse {
     pub created_at: String,
 }
 
-impl From<a2r_cowork_runtime::Checkpoint> for CheckpointResponse {
-    fn from(cp: a2r_cowork_runtime::Checkpoint) -> Self {
+impl From<allternit_cowork_runtime::Checkpoint> for CheckpointResponse {
+    fn from(cp: allternit_cowork_runtime::Checkpoint) -> Self {
         Self {
             id: cp.id,
             run_id: cp.run_id.to_string(),
@@ -205,8 +205,8 @@ impl IntoResponse for ErrorResponse {
     }
 }
 
-impl From<a2r_cowork_runtime::CoworkError> for ErrorResponse {
-    fn from(err: a2r_cowork_runtime::CoworkError) -> Self {
+impl From<allternit_cowork_runtime::CoworkError> for ErrorResponse {
+    fn from(err: allternit_cowork_runtime::CoworkError) -> Self {
         Self {
             error: err.to_string(),
             code: err.http_status_code(),

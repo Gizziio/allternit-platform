@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * A2R Cloud Backend Server
+ * Allternit Cloud Backend Server
  * 
  * WebSocket server that handles:
  * - Browser extension connections (BROWSER.* tool execution)
@@ -76,7 +76,7 @@ class CloudBackend {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
           status: 'ok',
-          service: 'A2R Cloud Backend',
+          service: 'Allternit Cloud Backend',
           connections: clients.size,
           sessions: sessions.size,
           uptime: process.uptime(),
@@ -104,7 +104,7 @@ class CloudBackend {
    */
   start(): void {
     this.httpServer.listen(PORT, HOST, () => {
-      console.log(`[Cloud] A2R Cloud Backend running on ${HOST}:${PORT}`);
+      console.log(`[Cloud] Allternit Cloud Backend running on ${HOST}:${PORT}`);
       console.log(`[Cloud] WebSocket endpoint: ws://${HOST}:${PORT}/ws/extension`);
     });
 
@@ -166,7 +166,7 @@ class CloudBackend {
         payload: {
           clientId,
           sessionId,
-          message: 'Welcome to A2R Cloud Backend',
+          message: 'Welcome to Allternit Cloud Backend',
         },
         timestamp: Date.now(),
       });

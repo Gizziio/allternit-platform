@@ -1,5 +1,5 @@
 import { Hono } from "hono"
-import { describeRoute, validator, resolver } from "hono-openapi"
+import { describeRoute, validator, resolver } from "@/runtime/server/openapi"
 import z from "zod/v4"
 import { Agent } from "@/runtime/loop/agent"
 import { AgentManager } from "@/runtime/loop/manager"

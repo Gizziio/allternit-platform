@@ -31,11 +31,6 @@ export function getCLISyspromptPrefix(options?: {
   isNonInteractive: boolean
   hasAppendSystemPrompt: boolean
 }): CLISyspromptPrefix {
-  const apiProvider = getAPIProvider()
-  if (apiProvider === 'vertex') {
-    return DEFAULT_PREFIX
-  }
-
   if (options?.isNonInteractive) {
     if (options.hasAppendSystemPrompt) {
       return AGENT_SDK_GIZZI_PRESET_PREFIX

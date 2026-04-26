@@ -15,24 +15,24 @@ curl -fsSL https://gizzi.sh/install.sh | bash
 ### 2. Homebrew (macOS)
 
 ```bash
-brew tap a2r/gizzi-code
+brew tap allternit/gizzi-code
 brew install gizzi-code
 ```
 
 ### 3. npm
 
 ```bash
-npm install -g @a2r/gizzi-code
+npm install -g @allternit/gizzi-code
 ```
 
 ### 4. Windows
 
 ```powershell
 # Winget
-winget install A2R.GizziCode
+winget install Allternit.GizziCode
 
 # Scoop
-scoop bucket add gizzi-code https://github.com/a2r/scoop-gizzi-code
+scoop bucket add gizzi-code https://github.com/allternit/scoop-gizzi-code
 scoop install gizzi-code
 ```
 
@@ -41,12 +41,12 @@ scoop install gizzi-code
 Download pre-built binaries:
 ```bash
 # macOS
-curl -LO https://github.com/a2r/gizzi-code/releases/latest/download/gizzi-code-macos
+curl -LO https://github.com/allternit/gizzi-code/releases/latest/download/gizzi-code-macos
 chmod +x gizzi-code-macos
 mv gizzi-code-macos /usr/local/bin/gizzi
 
 # Linux
-curl -LO https://github.com/a2r/gizzi-code/releases/latest/download/gizzi-code-linux
+curl -LO https://github.com/allternit/gizzi-code/releases/latest/download/gizzi-code-linux
 chmod +x gizzi-code-linux
 mv gizzi-code-linux /usr/local/bin/gizzi
 ```
@@ -105,7 +105,7 @@ npm run build:all
 
 2. GitHub Actions automatically:
    - Builds for all platforms (gizzi-code-*)
-   - Publishes to npm (@a2r/gizzi-code)
+   - Publishes to npm (@allternit/gizzi-code)
    - Creates GitHub release with binaries
 
 ### Manual
@@ -127,14 +127,14 @@ npm run build:all
 
 ```bash
 # Copy plist
-cp install/com.a2r.gizzi.plist ~/Library/LaunchAgents/
+cp install/com.allternit.gizzi.plist ~/Library/LaunchAgents/
 
 # Replace USERNAME with actual username
-sed -i '' "s/USERNAME/$USER/g" ~/Library/LaunchAgents/com.a2r.gizzi.plist
+sed -i '' "s/USERNAME/$USER/g" ~/Library/LaunchAgents/com.allternit.gizzi.plist
 
 # Load and start
-launchctl load ~/Library/LaunchAgents/com.a2r.gizzi.plist
-launchctl start com.a2r.gizzi
+launchctl load ~/Library/LaunchAgents/com.allternit.gizzi.plist
+launchctl start com.allternit.gizzi
 
 # Check status
 launchctl list | grep gizzi
@@ -188,14 +188,14 @@ cli-package/
 │   ├── install.sh              # curl | bash installer
 │   ├── gizzi.rb                # Homebrew formula (package: gizzi-code)
 │   ├── gizzi.service           # systemd service
-│   └── com.a2r.gizzi.plist     # macOS LaunchAgent
+│   └── com.allternit.gizzi.plist     # macOS LaunchAgent
 ├── install/winget/
-│   └── A2R.Gizzi.yaml          # Windows Package Manager
+│   └── Allternit.Gizzi.yaml          # Windows Package Manager
 ├── scripts/
 │   └── publish.sh              # Release script
 ├── .github/workflows/
 │   └── release.yml             # CI/CD workflow
-├── package.json                # npm: @a2r/gizzi-code
+├── package.json                # npm: @allternit/gizzi-code
 ├── README.md
 ├── INSTALLATION_METHODS.md
 └── PACKAGING_GUIDE.md          # This file
@@ -247,11 +247,11 @@ uname -m
 file $(which gizzi)
 
 # Reinstall via npm
-npm install -g @a2r/gizzi-code
+npm install -g @allternit/gizzi-code
 ```
 
 ## Support
 
 - Documentation: https://docs.gizzi.sh
-- Issues: https://github.com/a2r/gizzi-code/issues
-- Discussions: https://github.com/a2r/gizzi-code/discussions
+- Issues: https://github.com/allternit/gizzi-code/issues
+- Discussions: https://github.com/allternit/gizzi-code/discussions

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "name": "@a2r/sdk",
+  "name": "@allternit/gizzi-sdk",
   "version": "1.2.10",
   "type": "module",
   "license": "MIT",
@@ -26,5 +26,7 @@
       "types": "./dist/computer-use.d.ts"
     }
   },
-  "files": ["dist"]
+  "files": [
+    "dist"
+  ]
 }

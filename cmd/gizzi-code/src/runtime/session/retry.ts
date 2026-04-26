@@ -1,4 +1,4 @@
-import type { NamedError } from "@a2r/util/error"
+import type { NamedError } from "@allternit/gizzi-util/error.js"
 import { MessageV2 } from "@/runtime/session/message-v2"
 import { describeProviderError } from "@/shared/util/provider-error"
 

@@ -44,7 +44,7 @@ export interface VerificationServiceConfig {
 export const DEFAULT_CONFIG: VerificationServiceConfig = {
   mode: "auto",
   fileBased: {
-    evidenceDir: ".a2r/evidence",
+    evidenceDir: ".allternit/evidence",
     keepFiles: false,
   },
   grpc: {

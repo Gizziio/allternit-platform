@@ -1,5 +1,5 @@
 import { Hono } from "hono"
-import { describeRoute, resolver } from "hono-openapi"
+import { describeRoute, resolver } from "@/runtime/server/openapi"
 import { Vcs } from "@/runtime/context/project/vcs"
 
 export function VcsRoutes() {

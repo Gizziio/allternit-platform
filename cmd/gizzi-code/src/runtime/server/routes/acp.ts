@@ -8,7 +8,7 @@
  */
 
 import { Hono } from "hono"
-import { describeRoute, validator, resolver } from "hono-openapi"
+import { describeRoute, validator, resolver } from "@/runtime/server/openapi"
 import z from "zod/v4"
 import { errors } from "@/runtime/server/error"
 import { lazy } from "@/runtime/util/lazy"

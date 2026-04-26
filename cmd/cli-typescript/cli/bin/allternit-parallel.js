@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
-// packages/cli/bin/a2r-parallel.js
+// packages/cli/bin/allternit-parallel.js
 
 const { program } = require('commander');
 const fs = require('fs');
 const path = require('path');
 
 program
-  .name('a2r bg parallel')
+  .name('allternit bg parallel')
   .description('Execute parallel agent runs with Superconductor integration')
   .argument('<goal>', 'The goal to achieve in parallel')
   .option('-b, --backend <type>', 'Execution backend (local|selfhosted|superconductor)', 'local')

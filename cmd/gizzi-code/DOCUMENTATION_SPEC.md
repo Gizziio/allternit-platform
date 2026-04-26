@@ -30,9 +30,9 @@ This spec defines the documentation structure and content requirements for Gizzi
   - Upload to GitHub releases with version tags
   
 - [ ] **Step 2:** Fix `install` script (bash)
-  - Change `APP=a2r` → `APP=gizzi-code`
+  - Change `APP=allternit` → `APP=gizzi-code`
   - Change repo from `anomalyco/opencode` → `Gizziio/gizzi-code`
-  - Update install path from `~/.a2r/bin` → `~/.gizzi/bin`
+  - Update install path from `~/.allternit/bin` → `~/.gizzi/bin`
   - Deploy to `install.gizziio.com/install`
 
 - [ ] **Step 3:** Fix `install.ps1` (PowerShell)
@@ -45,7 +45,7 @@ This spec defines the documentation structure and content requirements for Gizzi
 
 - [ ] **Step 5:** Fix NPM
   - Either: Rename package to `@gizzi/gizzi-code`
-  - Or: Update docs to use `@a2r/gizzi-code`
+  - Or: Update docs to use `@allternit/gizzi-code`
   - Publish to npm registry
 
 ---

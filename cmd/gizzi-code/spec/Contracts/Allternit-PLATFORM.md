@@ -1,14 +1,14 @@
-# A2R Platform - .a2r Directory Specification
+# Allternit Platform - .allternit Directory Specification
 
-Complete specification for the `.a2r/` workspace directory - files, structure, lifecycle, and boot order.
+Complete specification for the `.allternit/` workspace directory - files, structure, lifecycle, and boot order.
 
 ## Overview
 
-The `.a2r/` directory is the heart of the A2R (Agent-to-Agent Runtime) platform. It maintains session state, receipts, handoffs, conventions, and evidence across tool invocations.
+The `.allternit/` directory is the heart of the Allternit (Agent-to-Agent Runtime) platform. It maintains session state, receipts, handoffs, conventions, and evidence across tool invocations.
 
 ```
 workspace/
-├── .a2r/                          # A2R platform directory
+├── .allternit/                          # Allternit platform directory
 │   ├── README.md                  # Human-readable overview
 │   ├── config.json                # Platform configuration
 │   ├── 
@@ -52,7 +52,7 @@ workspace/
 {
   "version": "1.0.0",
   "platform": {
-    "name": "a2r-shell",
+    "name": "allternit-shell",
     "version": "1.2.3"
   },
   "workspace": {
@@ -137,13 +137,13 @@ workspace/
 **Format**: Markdown
 
 ```markdown
-# A2R Handoff Pointer
+# Allternit Handoff Pointer
 
 Generated: 2026-02-24T10:00:00.000Z
 
 ## Current Baton
 
-.a2r/compact/compact-20260224-001.md
+.allternit/compact/compact-20260224-001.md
 
 ## Metadata
 
@@ -174,7 +174,7 @@ Contains 13 sections:
 8. Open TODOs
 9. DAG Tasks
 10. Next Actions
-11. A2R Conventions
+11. Allternit Conventions
 12. Evidence Pointers
 13. Limits Snapshot
 
@@ -336,11 +336,11 @@ Contains 13 sections:
 
 ## Boot Order
 
-When a tool starts in a workspace, the `.a2r/` directory is initialized in this order:
+When a tool starts in a workspace, the `.allternit/` directory is initialized in this order:
 
 ### Phase 1: Directory Structure (Pre-flight)
 ```
-Step 1: Create .a2r/ directory
+Step 1: Create .allternit/ directory
 Step 2: Create subdirectories:
         - receipts/
         - state/
@@ -405,7 +405,7 @@ Step 12: Trigger compaction when needed
            ▼
     ┌────────────────────────────────────────────────────┐
     │  Phase 1: Directory Structure                      │
-    │  • Create .a2r/ and all subdirectories             │
+    │  • Create .allternit/ and all subdirectories             │
     └──────┬─────────────────────────────────────────────┘
            │
            ▼
@@ -513,7 +513,7 @@ Session B (Target Tool)
 
 | File/Directory | Permissions | Owner | Notes |
 |----------------|-------------|-------|-------|
-| `.a2r/` | 755 | User | Group readable |
+| `.allternit/` | 755 | User | Group readable |
 | `config.json` | 644 | User | Contains session secrets |
 | `receipts/` | 755 | User | Append-only semantics |
 | `receipt.jsonl` | 644 | User | Never modify, only append |
@@ -536,9 +536,9 @@ Session B (Target Tool)
 
 ## Migration
 
-When upgrading A2R platform versions:
+When upgrading Allternit platform versions:
 
-1. **Backup** existing `.a2r/` directory
+1. **Backup** existing `.allternit/` directory
 2. **Read** existing `config.json` version
 3. **Migrate** schema if needed:
    - Update config.json format
@@ -551,14 +551,14 @@ When upgrading A2R platform versions:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `A2R_ENABLED` | Enable A2R platform | `true` |
-| `A2R_DIR` | Custom .a2r location | `.a2r` |
-| `A2R_THRESH_WARN` | Warn threshold | `0.70` |
-| `A2R_THRESH_COMPACT` | Compact threshold | `0.85` |
-| `A2R_THRESH_HANDOFF` | Handoff threshold | `0.92` |
-| `A2R_GATES_STRICT` | Strict CI gates | `false` |
-| `A2R_TELEMETRY` | Enable telemetry | `true` |
-| `A2R_RETENTION_DAYS` | File retention | `90` |
+| `Allternit_ENABLED` | Enable Allternit platform | `true` |
+| `Allternit_DIR` | Custom .allternit location | `.allternit` |
+| `Allternit_THRESH_WARN` | Warn threshold | `0.70` |
+| `Allternit_THRESH_COMPACT` | Compact threshold | `0.85` |
+| `Allternit_THRESH_HANDOFF` | Handoff threshold | `0.92` |
+| `Allternit_GATES_STRICT` | Strict CI gates | `false` |
+| `Allternit_TELEMETRY` | Enable telemetry | `true` |
+| `Allternit_RETENTION_DAYS` | File retention | `90` |
 
 ## Schema Versions
 

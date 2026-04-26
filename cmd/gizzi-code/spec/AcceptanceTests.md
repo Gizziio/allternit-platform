@@ -1,4 +1,4 @@
-# A2R Continuity + Guard Acceptance Tests
+# Allternit Continuity + Guard Acceptance Tests
 
 ## Overview
 These tests verify the continuity layer (session handoff) and guard policy (threshold-based actions) work correctly.
@@ -15,25 +15,25 @@ These tests verify the continuity layer (session handoff) and guard policy (thre
 ### Test 2: Warn Threshold (70%)
 **Given** `context_ratio = 0.70`  
 **When** guard policy evaluates  
-**Then** `A2R_GUARD_WARN` event is emitted  
+**Then** `Allternit_GUARD_WARN` event is emitted  
 **And** TUI shows "Compaction recommended" indicator  
 **And** no automatic compaction occurs
 
 ### Test 3: Compact Threshold (85%)
 **Given** `context_ratio = 0.85`  
 **When** guard policy evaluates  
-**Then** `A2R_GUARD_COMPACT` event is emitted  
+**Then** `Allternit_GUARD_COMPACT` event is emitted  
 **And** compaction runs automatically  
-**And** `/.a2r/compact/compact-YYYYMMDD-HHMM.md` is created  
-**And** `/.a2r/handoff/latest.md` is updated to point to new compact
+**And** `/.allternit/compact/compact-YYYYMMDD-HHMM.md` is created  
+**And** `/.allternit/handoff/latest.md` is updated to point to new compact
 
 ### Test 4: Fail-Closed Handoff Threshold (92%)
 **Given** `context_ratio = 0.92`  
 **When** guard policy evaluates  
 **Then** compaction runs first (if not fresh)  
-**Then** `A2R_GUARD_HANDOFF` event is emitted  
+**Then** `Allternit_GUARD_HANDOFF` event is emitted  
 **And** handoff to target runner is attempted  
-**And** if actuator unavailable, run halts with `A2R_GUARD_FAILCLOSED`
+**And** if actuator unavailable, run halts with `Allternit_GUARD_FAILCLOSED`
 
 ### Test 5: Handoff Preserves DAG
 **Given** a session at DAG node "implement-auth"  

@@ -1,6 +1,6 @@
 # Universal Visual Evidence Integration
 
-This document describes how visual evidence capture is integrated across ALL execution paths in the a2rchitech system.
+This document describes how visual evidence capture is integrated across ALL execution paths in the allternit system.
 
 ## Architecture Overview
 

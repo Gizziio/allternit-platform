@@ -55,17 +55,17 @@ describe("checkpoint", () => {
       expect(checkpoint.files["test.txt"].content).toBe("Hello, World!")
     })
 
-    test("excludes .a2r directory from snapshots", async () => {
+    test("excludes .allternit directory from snapshots", async () => {
       await using tmp = await tmpdir()
       await AgentWorkspace.initialize(tmp.path)
 
-      // Create a file in .a2r
-      const a2rFile = path.join(tmp.path, ".a2r", "test.txt")
-      await fs.writeFile(a2rFile, "should not be included", "utf-8")
+      // Create a file in .allternit
+      const allternitFile = path.join(tmp.path, ".allternit", "test.txt")
+      await fs.writeFile(allternitFile, "should not be included", "utf-8")
 
       const checkpoint = await Checkpoint.create(tmp.path, { reason: "test" })
 
-      expect(checkpoint.files[".a2r/test.txt"]).toBeUndefined()
+      expect(checkpoint.files[".allternit/test.txt"]).toBeUndefined()
     })
 
     test("excludes node_modules from snapshots", async () => {

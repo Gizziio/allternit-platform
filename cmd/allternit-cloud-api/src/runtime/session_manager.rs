@@ -24,8 +24,6 @@ pub struct SessionManager {
 /// Session state for a run
 #[derive(Debug)]
 struct SessionState {
-    /// Run ID
-    run_id: String,
     /// Attached clients
     clients: HashMap<String, ClientSession>,
     /// Event broadcast channel
@@ -35,10 +33,6 @@ struct SessionState {
 /// Client session
 #[derive(Debug, Clone)]
 struct ClientSession {
-    client_id: String,
-    client_type: ClientType,
-    user_id: Option<String>,
-    attached_at: chrono::DateTime<chrono::Utc>,
     cursor_sequence: i64,
 }
 
@@ -114,7 +108,6 @@ impl SessionManager {
         let session = sessions.entry(run_id.to_string()).or_insert_with(|| {
             let (tx, _) = tokio::sync::broadcast::channel(1000);
             SessionState {
-                run_id: run_id.to_string(),
                 clients: HashMap::new(),
                 event_tx: tx,
             }
@@ -122,10 +115,6 @@ impl SessionManager {
         
         // Add client to session
         let client = ClientSession {
-            client_id: client_id.clone(),
-            client_type,
-            user_id: user_id.clone(),
-            attached_at: now,
             cursor_sequence: 0,
         };
         session.clients.insert(client_id.clone(), client);

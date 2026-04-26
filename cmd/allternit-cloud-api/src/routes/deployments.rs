@@ -7,7 +7,7 @@ use axum::{
 use std::sync::Arc;
 use chrono::Utc;
 use uuid::Uuid;
-use tracing::{info, error, warn};
+use tracing::{info, error};
 
 use crate::{ApiError, ApiState, Deployment, DeploymentEvent};
 
@@ -265,7 +265,7 @@ async fn run_automated_deployment(
     }
 
     // Create Hetzner provider
-    let provider = a2r_cloud_hetzner::HetznerProvider::new(api_token);
+    let provider = allternit_cloud_hetzner::HetznerProvider::new(api_token);
 
     // Validate credentials
     match provider.validate_credentials().await {
@@ -283,13 +283,13 @@ async fn run_automated_deployment(
     }
 
     // Create deployment config
-    let deploy_config = a2r_cloud_hetzner::DeploymentConfig {
+    let deploy_config = allternit_cloud_hetzner::DeploymentConfig {
         instance_name: request.instance_name.clone(),
         instance_type_id: request.instance_type_id.clone(),
         region_id: request.region_id.clone(),
         storage_gb: request.storage_gb,
         control_plane_url: std::env::var("CONTROL_PLANE_URL")
-            .unwrap_or_else(|_| "wss://console.a2r.sh".to_string()),
+            .unwrap_or_else(|_| "wss://console.allternit.sh".to_string()),
         deployment_token: deployment_id.to_string(),
     };
 
@@ -301,7 +301,7 @@ async fn run_automated_deployment(
         Ok(result) => {
             info!("Deployment successful: {} ({})", result.server_name, result.instance_ip);
             
-            update_deployment_status(state, deployment_id, "installing", 60, "A2R runtime installed")
+            update_deployment_status(state, deployment_id, "installing", 60, "Allternit runtime installed")
                 .await?;
             
             update_deployment_status(state, deployment_id, "complete", 100, "Deployment complete")
@@ -332,7 +332,7 @@ async fn run_manual_deployment(
     info!("Starting manual deployment to {}:{}", ssh_host, ssh_port);
 
     // Test SSH connection first
-    let ssh_executor = a2r_cloud_ssh::SshExecutor::new();
+    let ssh_executor = allternit_cloud_ssh::SshExecutor::new();
     
     update_deployment_status(state, deployment_id, "provisioning", 20, "Testing SSH connection")
         .await?;
@@ -351,14 +351,14 @@ async fn run_manual_deployment(
         }
     }
 
-    // Install A2R runtime
-    update_deployment_status(state, deployment_id, "installing", 50, "Installing A2R runtime")
+    // Install Allternit runtime
+    update_deployment_status(state, deployment_id, "installing", 50, "Installing Allternit runtime")
         .await?;
 
     let control_plane_url = std::env::var("CONTROL_PLANE_URL")
-        .unwrap_or_else(|_| "wss://console.a2r.sh".to_string());
+        .unwrap_or_else(|_| "wss://console.allternit.sh".to_string());
 
-    match ssh_executor.install_a2r_runtime(
+    match ssh_executor.install_allternit_runtime(
         ssh_host,
         ssh_port,
         ssh_username,
@@ -367,14 +367,14 @@ async fn run_manual_deployment(
         deployment_id,
     ).await {
         Ok(output) => {
-            info!("A2R runtime installed successfully");
+            info!("Allternit runtime installed successfully");
             info!("Installation output: {}", output.stdout);
             
             update_deployment_status(state, deployment_id, "complete", 100, "Deployment complete")
                 .await?;
         }
         Err(e) => {
-            error!("A2R installation failed: {}", e);
+            error!("Allternit installation failed: {}", e);
             update_deployment_status(state, deployment_id, "failed", 0, &format!("Installation failed: {}", e))
                 .await?;
             return Err(ApiError::DeploymentFailed(e.to_string()));

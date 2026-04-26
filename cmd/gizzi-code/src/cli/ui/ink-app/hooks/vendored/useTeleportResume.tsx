@@ -1,20 +1,5 @@
-import React from 'react';
-import { Box, Text } from 'ink';
-
-interface useTeleportResumeProps {
-  // TODO: Define props
+export function useTeleportResume_tsx(): void {
+  // Not yet implemented
 }
 
-/**
- * useTeleportResume Component
- * 
- * TODO: Implement full functionality
- * This is a placeholder shim for the gizzi-specific implementation.
- */
-export default function useTeleportResume(_props: useTeleportResumeProps): React.ReactElement {
-  return (
-    <Box>
-      <Text>useTeleportResume - Implementation pending</Text>
-    </Box>
-  );
-}
+export default useTeleportResume_tsx

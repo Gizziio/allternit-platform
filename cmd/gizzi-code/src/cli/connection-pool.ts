@@ -50,14 +50,14 @@ export interface ConnectionPoolConfig {
 /**
  * Connection pool for daemon clients
  *
- * Manages a pool of reusable connections to the A2R Desktop daemon.
+ * Manages a pool of reusable connections to the Allternit Desktop daemon.
  * Automatically handles connection limits, health checking, and cleanup
  * of stale connections.
  *
  * @example
  * ```typescript
  * const pool = new ConnectionPool({
- *   socketPath: "/var/run/a2r/desktop-vm.sock",
+ *   socketPath: "/var/run/allternit/desktop-vm.sock",
  *   maxConnections: 5
  * })
  *

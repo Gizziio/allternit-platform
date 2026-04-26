@@ -59,13 +59,13 @@ impl FsCheckpointStore {
         Ok(Self { root })
     }
 
-    /// Create default checkpoint store (~/.a2r/wizard/)
+    /// Create default checkpoint store (~/.allternit/wizard/)
     pub fn default_store() -> Result<Self, CheckpointStoreError> {
         let home = std::env::var("HOME")
             .or_else(|_| std::env::var("USERPROFILE"))
             .unwrap_or_else(|_| ".".to_string());
         
-        let root = PathBuf::from(home).join(".a2r").join("wizard");
+        let root = PathBuf::from(home).join(".allternit").join("wizard");
         Self::new(root)
     }
 

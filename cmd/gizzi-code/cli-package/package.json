@@ -1,7 +1,7 @@
 {
-  "name": "@a2r/gizzi-code",
+  "name": "@allternit/gizzi-code-cli",
   "version": "1.0.0",
-  "description": "Gizzi Code - AI-powered terminal interface and runtime for the A2R ecosystem",
+  "description": "Gizzi Code - AI-powered terminal interface and runtime for the Allternit ecosystem",
   "keywords": [
     "gizzi",
     "gizzi-code",
@@ -11,15 +11,15 @@
     "cli",
     "agent",
     "shell",
-    "a2r"
+    "allternit"
   ],
   "homepage": "https://gizzi.sh",
   "repository": {
     "type": "git",
-    "url": "https://github.com/a2r/gizzi-code.git"
+    "url": "https://github.com/allternit/gizzi-code.git"
   },
   "license": "MIT",
-  "author": "A2R Technologies <team@a2r.io>",
+  "author": "Allternit Technologies <team@allternit.io>",
   "type": "module",
   "main": "./dist/gizzi.js",
   "bin": {

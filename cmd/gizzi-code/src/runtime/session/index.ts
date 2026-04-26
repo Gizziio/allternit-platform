@@ -1,4 +1,4 @@
-import { Slug } from "@a2r/util/slug"
+import { Slug } from "@allternit/gizzi-util/slug.js"
 import path from "path"
 import { BusEvent } from "@/shared/bus/bus-event"
 import { Bus } from "@/shared/bus"

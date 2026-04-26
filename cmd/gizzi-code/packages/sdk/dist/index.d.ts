@@ -8,7 +8,7 @@ export * from "./tools";
 
 export type AssetRef = string | { asset_id: string };
 
-export interface CreateA2RClientConfig {
+export interface CreateAllternitClientConfig {
   baseUrl?: string;
   fetch?: typeof fetch;
   headers?: Record<string, string>;
@@ -18,10 +18,10 @@ export interface CreateA2RClientConfig {
   [key: string]: unknown;
 }
 
-export declare class A2RClient {
+export declare class AllternitClient {
   static readonly __registry: {
-    get(key?: string): A2RClient;
-    set(value: A2RClient, key?: string): void;
+    get(key?: string): AllternitClient;
+    set(value: AllternitClient, key?: string): void;
   };
   constructor(args?: { client?: unknown; key?: string });
   [key: string]: any;
@@ -33,5 +33,5 @@ export declare class A2RClient {
   ): AsyncIterableIterator<Extract<Event, { type: T }>>;
 }
 
-export declare function createA2RClient(config?: CreateA2RClientConfig): A2RClient;
-export declare const createA2R: typeof createA2RClient;
+export declare function createAllternitClient(config?: CreateAllternitClientConfig): AllternitClient;
+export declare const createAllternit: typeof createAllternitClient;

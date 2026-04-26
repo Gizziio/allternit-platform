@@ -2,7 +2,7 @@ import { BusEvent } from "@/shared/bus/bus-event"
 import { Bus } from "@/shared/bus"
 import { spawn } from "bun"
 import z from "zod/v4"
-import { NamedError } from "@a2r/util/error"
+import { NamedError } from "@allternit/gizzi-util/error.js"
 import { Log } from "@/shared/util/log"
 
 const SUPPORTED_IDES = [

@@ -3,7 +3,7 @@
 //! Provides REST API endpoints for run lifecycle management.
 
 use axum::{
-    extract::{Path, Query, State},
+    extract::{Extension, Path, Query, State},
     Json,
 };
 use std::sync::Arc;
@@ -11,8 +11,9 @@ use serde::Deserialize;
 
 use crate::{
     ApiError, ApiState,
+    auth::middleware::AuthContext,
     db::cowork_models::*,
-    services::{RunService, EventStore, run_service::RunListFilter},
+    services::{run_service::RunListFilter},
 };
 
 /// Query parameters for listing runs
@@ -67,6 +68,7 @@ pub async fn create_run(
 
 pub async fn list_runs(
     State(state): State<Arc<ApiState>>,
+    Extension(auth_context): Extension<AuthContext>,
     Query(query): Query<ListRunsQuery>,
 ) -> Result<Json<Vec<RunSummary>>, ApiError> {
     let filter = RunListFilter {
@@ -79,7 +81,7 @@ pub async fn list_runs(
             vec![serde_json::from_str(&format!("\"{}\"", m)).unwrap_or(RunMode::Local)]
         }),
         owner_id: query.owner_id,
-        tenant_id: None,
+        tenant_id: Some(auth_context.user.user_id.clone()),
         schedule_id: None,
         runtime_id: None,
         since: None,

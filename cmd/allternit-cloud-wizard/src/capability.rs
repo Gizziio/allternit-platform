@@ -191,7 +191,7 @@ impl Default for CapabilityMatrix {
             auth_methods: AuthMethod::all().to_vec(),
             min_ram_mb: 2048,      // 2GB minimum
             min_disk_gb: 20,       // 20GB minimum
-            required_ports: vec![443, 8443],  // HTTPS + A2R port
+            required_ports: vec![443, 8443],  // HTTPS + Allternit port
         }
     }
 }

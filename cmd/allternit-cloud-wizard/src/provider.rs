@@ -316,7 +316,7 @@ impl ProviderDriver for HetznerDriver {
 
         // Create new SSH key
         let body = serde_json::json!({
-            "name": format!("a2r-key-{}", uuid::Uuid::new_v4()),
+            "name": format!("allternit-key-{}", uuid::Uuid::new_v4()),
             "public_key": public_key,
         });
 
@@ -643,7 +643,7 @@ impl ProviderDriver for DigitalOceanDriver {
 
         // Create new SSH key
         let body = serde_json::json!({
-            "name": format!("a2r-key-{}", uuid::Uuid::new_v4()),
+            "name": format!("allternit-key-{}", uuid::Uuid::new_v4()),
             "public_key": public_key,
         });
 

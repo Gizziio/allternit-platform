@@ -1,4 +1,4 @@
-# A2R Continuity Module
+# Allternit Continuity Module
 
 Session discovery, context extraction, and handoff management for cross-tool AI workflows.
 
@@ -34,7 +34,7 @@ The continuity module enables seamless session handoffs between different AI cod
                     │  - Decisions        │
                     │  - TODOs            │
                     │  - DAG Tasks        │
-                    │  - A2R Conventions  │
+                    │  - Allternit Conventions  │
                     └──────────┬──────────┘
                                │
                     ┌──────────▼──────────┐
@@ -99,7 +99,7 @@ Extracted fields:
 - **Commands Executed**: Categorized (build/test/lint/git/other)
 - **Errors Seen**: Errors encountered with recoverability
 - **Next Actions**: Concrete next steps
-- **A2R Conventions**: Project standards (inferred or explicit)
+- **Allternit Conventions**: Project standards (inferred or explicit)
 - **Limits**: Token usage and context ratios
 
 ### 3. Handoff Emitter (`src/continuity/handoff-emitter.ts`)
@@ -157,14 +157,14 @@ The handoff baton contains 13 sections:
 8. **Open TODOs** - Outstanding tasks
 9. **DAG Tasks (NEW)** - Structured workflow with dependencies
 10. **Next Actions** - Concrete next steps
-11. **A2R Conventions (NEW)** - Project standards
+11. **Allternit Conventions (NEW)** - Project standards
 12. **Evidence Pointers** - References to artifacts
 13. **Limits Snapshot** - Token usage and context ratios
 
 ### Example
 
 ```markdown
-# A2R Session Baton
+# Allternit Session Baton
 
 **Session:** sess-abc-123  
 **Tool:** opencode  
@@ -196,7 +196,7 @@ Implement session handoff feature with DAG task support
 
 ---
 
-## A2R Conventions
+## Allternit Conventions
 
 ### Code Style
 - Formatter: prettier
@@ -269,7 +269,7 @@ Validates the baton can be resumed:
 | Cursor | SQLite | Basic |
 | Gemini CLI | JSON | Basic |
 | Droid | JSON | Basic |
-| A2R Shell | SQLite | Native |
+| Allternit Shell | SQLite | Native |
 | **Kimi** | Custom | Basic |
 | **Qwen** | Custom | Basic |
 | **MiniMax** | Custom | Basic |
@@ -319,18 +319,18 @@ async function parseNewToolSession(
 }
 ```
 
-## A2R Conventions
+## Allternit Conventions
 
 Conventions can be defined in:
 
-- `.a2r/conventions.json`
-- `a2r.json`
-- `.a2r.json`
+- `.allternit/conventions.json`
+- `allternit.json`
+- `.allternit.json`
 
 Example:
 ```json
 {
-  "a2r": {
+  "allternit": {
     "file_naming": {
       "pattern": "kebab-case",
       "examples": ["my-file.ts", "another-util.ts"]
@@ -432,4 +432,4 @@ bun test test/continuity/gates.test.ts
 - [ ] Claude Code conversation parsing
 - [ ] Automatic session resumption in target tools
 - [ ] Cross-tool DAG task assignment
-- [ ] A2R conventions schema validation
+- [ ] Allternit conventions schema validation

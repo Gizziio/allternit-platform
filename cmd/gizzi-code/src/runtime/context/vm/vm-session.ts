@@ -1,7 +1,7 @@
 /**
  * VM Session Manager
  *
- * Manages per-gizzi-session VMs via the a2r-api /vm-session endpoints.
+ * Manages per-gizzi-session VMs via the allternit-api /vm-session endpoints.
  * This implements the same model as Claude Code cloud sessions:
  *
  *   Session start  → POST /vm-session   (provision a fresh VM, bootstrap tools + git clone)
@@ -18,7 +18,7 @@
  * Falls back to local subprocess execution when:
  *   - GIZZI_VM_SESSIONS is not set
  *   - GIZZI_VM_API_URL is not configured
- *   - The a2r-api returns vm_backed: false (no driver available)
+ *   - The allternit-api returns vm_backed: false (no driver available)
  */
 
 import { Log } from "@/shared/util/log"
@@ -32,7 +32,7 @@ import path from "path"
 const log = Log.create({ service: "vm-session" })
 
 export interface VmSessionState {
-  /** Session ID returned by a2r-api */
+  /** Session ID returned by allternit-api */
   sessionId: string
   /** True when a real microVM is backing this session */
   vmBacked: boolean
@@ -42,7 +42,7 @@ export interface VmSessionState {
   workspacePath: string
   /** True when workspace was git-cloned into the VM (vs bind-mounted) */
   gitCloned: boolean
-  /** a2r-api base URL used for this session */
+  /** allternit-api base URL used for this session */
   apiUrl: string
   createdAt: Date
   /** Bootstrap log from VM provisioning */
@@ -82,7 +82,7 @@ export namespace VmSession {
    * On first call:
    *   1. Detects git remote + branch from the project directory
    *   2. Reads the SSH key if present (for private repos)
-   *   3. Posts to a2r-api which spawns the VM and runs the bootstrap:
+   *   3. Posts to allternit-api which spawns the VM and runs the bootstrap:
    *      - Installs Node 22, Bun, pnpm, Python 3, Rust, build tools
    *      - Clones the repo at /workspace (if git remote found)
    *        OR bind-mounts the host dir via VirtioFS (if no remote / local)

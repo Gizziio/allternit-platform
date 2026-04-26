@@ -1,6 +1,6 @@
 # ACP (Agent Client Protocol) Implementation
 
-This directory contains a clean, protocol-compliant implementation of the [Agent Client Protocol](https://agentclientprotocol.com/) for a2r.
+This directory contains a clean, protocol-compliant implementation of the [Agent Client Protocol](https://agentclientprotocol.com/) for allternit.
 
 ## Architecture
 
@@ -21,7 +21,7 @@ The implementation follows a clean separation of concerns:
 
 - **`session.ts`** - Session state management
   - Creates and tracks ACP sessions
-  - Maps ACP sessions to internal a2r sessions
+  - Maps ACP sessions to internal allternit sessions
   - Maintains working directory context
   - Handles MCP server configurations
 
@@ -38,10 +38,10 @@ The implementation follows a clean separation of concerns:
 
 ```bash
 # Start the ACP server in the current directory
-a2r acp
+allternit acp
 
 # Start in a specific directory
-a2r acp --cwd /path/to/project
+allternit acp --cwd /path/to/project
 ```
 
 ### Question Tool Opt-In
@@ -49,7 +49,7 @@ a2r acp --cwd /path/to/project
 ACP excludes `QuestionTool` by default.
 
 ```bash
-A2R_ENABLE_QUESTION_TOOL=1 a2r acp
+Allternit_ENABLE_QUESTION_TOOL=1 allternit acp
 ```
 
 Enable this only for ACP clients that support interactive question prompts.
@@ -69,8 +69,8 @@ Add to your Zed configuration (`~/.config/zed/settings.json`):
 ```json
 {
   "agent_servers": {
-    "A2R": {
-      "command": "a2r",
+    "Allternit": {
+      "command": "allternit",
       "args": ["acp"]
     }
   }
@@ -124,7 +124,7 @@ This implementation follows the ACP specification v1:
 - **Session Persistence**: Save and restore full conversation history
 - **Mode Support**: Implement different operational modes (ask, code, etc.)
 - **Enhanced Permissions**: More sophisticated permission handling
-- **Terminal Integration**: Full terminal support via a2r's bash tool
+- **Terminal Integration**: Full terminal support via allternit's bash tool
 
 ## Testing
 
@@ -133,7 +133,7 @@ This implementation follows the ACP specification v1:
 bun test test/acp.test.ts
 
 # Test manually with stdio
-echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":1}}' | a2r acp
+echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":1}}' | allternit acp
 ```
 
 ## Design Decisions
@@ -158,9 +158,9 @@ Each component has a single responsibility:
 
 This makes the codebase maintainable and testable.
 
-### Mapping to A2R
+### Mapping to Allternit
 
-ACP sessions map cleanly to a2r's internal session model:
+ACP sessions map cleanly to allternit's internal session model:
 
 - ACP `session/new` → creates internal Session
 - ACP `session/prompt` → uses SessionPrompt.prompt()

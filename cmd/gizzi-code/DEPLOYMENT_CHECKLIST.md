@@ -229,7 +229,7 @@ After immediate deployment:
 2. **Publish to NPM**
    - Add NPM_TOKEN to GitHub Secrets
    - Trigger publish workflow
-   - Test: `npm install -g @a2r/gizzi-code`
+   - Test: `npm install -g @allternit/gizzi-code`
 
 3. **Submit Homebrew formula**
    - Calculate SHA256s from release binaries

@@ -3,7 +3,6 @@
 //! Uses Unix domain sockets for communication between the Rust control plane
 //! and the TypeScript cowork runtime.
 
-use super::*;
 use crate::db::cowork_models::*;
 use crate::error::ApiError;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};

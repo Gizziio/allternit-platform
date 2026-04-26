@@ -1,9 +1,9 @@
 import { eq, and } from "drizzle-orm"
 import { Database } from "@/runtime/session/storage/db"
-import { ControlAccountTable } from "./control.sql"
+import { ControlAccountTable } from "@/shared/control/control.sql"
 import z from "zod/v4"
 
-export * from "./control.sql"
+export * from "@/shared/control/control.sql"
 
 export namespace Control {
   export const Account = z.object({

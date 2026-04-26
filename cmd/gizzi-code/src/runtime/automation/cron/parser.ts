@@ -429,43 +429,70 @@ export function getNextRunTime(schedule: Schedule, timezone?: string, from = new
     return next;
   }
   
+  // Handle specific minute with interval hour (e.g., "0 */6 * * *")
+  if (minExpr !== "*" && hourExpr.startsWith("*/")) {
+    const targetMin = parseInt(minExpr, 10);
+    const hourInterval = parseInt(hourExpr.slice(2), 10);
+    if (!isNaN(targetMin) && !isNaN(hourInterval)) {
+      next.setMinutes(targetMin, 0, 0);
+      const currentHour = next.getHours();
+      let targetHour = Math.ceil((currentHour + 1) / hourInterval) * hourInterval;
+      if (targetHour >= 24) {
+        targetHour = 0;
+        next.setDate(next.getDate() + 1);
+      }
+      next.setHours(targetHour);
+      if (next <= from) {
+        // If still in the past, advance by the interval
+        next.setHours(next.getHours() + hourInterval);
+        if (next.getHours() >= 24 || next.getHours() < targetMin) {
+          next.setDate(next.getDate() + 1);
+          next.setHours(targetHour);
+        }
+      }
+      return next;
+    }
+  }
+
   // Handle specific minute/hour
   if (minExpr !== "*" && hourExpr !== "*") {
     const targetMin = parseInt(minExpr, 10);
     const targetHour = parseInt(hourExpr, 10);
     
-    next.setMinutes(targetMin, 0, 0);
-    next.setHours(targetHour);
-    
-    if (next <= from) {
-      // Move to next occurrence
-      if (dowExpr === "1-5") {
-        // Weekdays
-        const currentDow = next.getDay();
-        let daysToAdd = 1;
-        if (currentDow === 5) daysToAdd = 3; // Friday -> Monday
-        else if (currentDow === 6) daysToAdd = 2; // Saturday -> Monday
-        next.setDate(next.getDate() + daysToAdd);
-      } else if (dowExpr === "*" && dayExpr === "*") {
-        // Daily
-        next.setDate(next.getDate() + 1);
-      } else if (dayExpr.startsWith("*/")) {
-        // Every N days
-        const interval = parseInt(dayExpr.slice(2), 10);
-        next.setDate(next.getDate() + interval);
-      } else if (dowExpr !== "*") {
-        // Specific day of week
-        const targetDow = parseInt(dowExpr, 10);
-        const currentDow = next.getDay();
-        let daysToAdd = targetDow - currentDow;
-        if (daysToAdd <= 0) daysToAdd += 7;
-        next.setDate(next.getDate() + daysToAdd);
-      } else {
-        next.setDate(next.getDate() + 1);
+    if (!isNaN(targetMin) && !isNaN(targetHour)) {
+      next.setMinutes(targetMin, 0, 0);
+      next.setHours(targetHour);
+      
+      if (next <= from) {
+        // Move to next occurrence
+        if (dowExpr === "1-5") {
+          // Weekdays
+          const currentDow = next.getDay();
+          let daysToAdd = 1;
+          if (currentDow === 5) daysToAdd = 3; // Friday -> Monday
+          else if (currentDow === 6) daysToAdd = 2; // Saturday -> Monday
+          next.setDate(next.getDate() + daysToAdd);
+        } else if (dowExpr === "*" && dayExpr === "*") {
+          // Daily
+          next.setDate(next.getDate() + 1);
+        } else if (dayExpr.startsWith("*/")) {
+          // Every N days
+          const interval = parseInt(dayExpr.slice(2), 10);
+          next.setDate(next.getDate() + interval);
+        } else if (dowExpr !== "*") {
+          // Specific day of week
+          const targetDow = parseInt(dowExpr, 10);
+          const currentDow = next.getDay();
+          let daysToAdd = targetDow - currentDow;
+          if (daysToAdd <= 0) daysToAdd += 7;
+          next.setDate(next.getDate() + daysToAdd);
+        } else {
+          next.setDate(next.getDate() + 1);
+        }
       }
+      
+      return next;
     }
-    
-    return next;
   }
   
   // Fallback: next minute

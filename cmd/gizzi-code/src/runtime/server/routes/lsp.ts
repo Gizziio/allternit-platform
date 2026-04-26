@@ -1,5 +1,5 @@
 import { Hono } from "hono"
-import { describeRoute, resolver } from "hono-openapi"
+import { describeRoute, resolver } from "@/runtime/server/openapi"
 import { LSP } from "@/runtime/integrations/lsp"
 
 export function LspRoutes() {

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "name": "@a2r/plugin",
+  "name": "@allternit/plugin",
   "version": "1.2.10",
   "type": "module",
   "license": "MIT",
@@ -16,6 +16,6 @@
   },
   "files": ["dist"],
   "dependencies": {
-    "@a2r/sdk": "workspace:*"
+    "@allternit/sdk": "file:../../../../sdk/allternit-sdk"
   }
 }

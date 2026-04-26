@@ -1,10 +1,10 @@
 [package]
-name = "a2r-api"
+name = "allternit-api"
 version = "0.1.0"
 edition = "2021"
 
 [[bin]]
-name = "a2r-api"
+name = "allternit-api"
 path = "src/main.rs"
 
 [dependencies]
@@ -16,16 +16,24 @@ serde_json = "1"
 tracing = "0.1"
 tracing-subscriber = "0.3"
 tower = "0.4"
+reqwest = { version = "0.11", features = ["json", "stream"] }
+async-stream = "0.3"
+axum-extra = { version = "0.9", features = ["typed-header"] }
+urlencoding = "2.1"
+tokio-util = { version = "0.7", features = ["io"] }
 
 # Internal crates - Rails & Cowork
-a2r-agent-system-rails = { path = "../../Desktop/a2rchitech-workspace/a2rchitech/0-substrate/a2r-agent-system-rails" }
-a2r-cowork-runtime = { path = "../../1-kernel/cowork/a2r-cowork-runtime" }
-a2r-scheduler = { path = "../../1-kernel/cowork/a2r-scheduler" }
+allternit-agent-system-rails = { path = "../../domains/kernel/allternit-agent-system-rails" }
+allternit-cowork-runtime = { path = "../../infrastructure/executor/cowork/cowork/allternit-cowork-runtime" }
+allternit-cowork-scheduler = { path = "../../infrastructure/executor/cowork/cowork/allternit-cowork-scheduler" }
 
-# Internal crates - Execution (commented out - paths don't exist)
-# a2r-driver-interface = { path = "../../1-kernel/infrastructure/a2r-driver-interface" }
-# a2r-firecracker-driver = { path = "../../1-kernel/execution/a2r-firecracker-driver" }
-# a2r-session-manager = { path = "../../1-kernel/execution/a2r-session-manager" }
+# Internal crates - Execution
+allternit-driver-interface = { path = "../../domains/kernel/drivers/allternit-driver-interface" }
+allternit-firecracker-driver = { path = "../../domains/kernel/service/allternit-firecracker-driver" }
+allternit-session-manager = { path = "../../domains/kernel/service/allternit-session-manager" }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+allternit-apple-vf-driver = { path = "../../domains/kernel/service/allternit-apple-vf-driver" }
 
 # WebSocket
 tokio-tungstenite = "0.21"
@@ -52,5 +60,6 @@ printpdf = "0.6"
 [dev-dependencies]
 axum-test = "14"
 
-# Make this package independent from the root workspace
-[workspace]
+[features]
+default = ["vm-driver"]
+vm-driver = []

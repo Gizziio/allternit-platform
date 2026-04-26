@@ -11,7 +11,7 @@ Client-side workspace management using the 5-layer architecture.
 
 ```
 workspace/
-├── .a2r/                                    # A2R platform directory
+├── .allternit/                                    # Allternit platform directory
 │   ├── manifest.json                        # ← replaces config.json
 │   │
 │   ├── L1-COGNITIVE/                        # Task graph, memory, state
@@ -83,11 +83,11 @@ workspace/
 
 ## Boot Order (21-Phase)
 
-Based on the A2R engine boot sequence:
+Based on the Allternit engine boot sequence:
 
 ### Phase 1: Foundation (Layers 0-1)
 ```
-01. Create .a2r/ directory structure
+01. Create .allternit/ directory structure
 02. Write manifest.json (session ID, runner, thresholds)
 03. Create L1-COGNITIVE/brain/ + memory/ directories
 04. Initialize brain/state.json (empty DAG)
@@ -142,7 +142,7 @@ Based on the A2R engine boot sequence:
 Task graph in human-readable markdown:
 
 ```markdown
-# A2R Brain - Task Graph
+# Allternit Brain - Task Graph
 
 **Session:** sess-abc-123  
 **Runner:** opencode  
@@ -188,7 +188,7 @@ Same as old `receipts/receipt.jsonl`:
 Handoff pointer:
 
 ```markdown
-# A2R Handoff Pointer
+# Allternit Handoff Pointer
 
 **Generated:** 2026-02-24T10:00:00.000Z  
 **Session:** sess-abc-123  
@@ -219,7 +219,7 @@ Preferred: `claude_code` (but any compatible runner acceptable)
 Project conventions (converted from JSON):
 
 ```markdown
-# A2R Project Conventions
+# Allternit Project Conventions
 
 ## File Naming
 - **Pattern:** kebab-case
@@ -257,7 +257,7 @@ Replaces `config.json`:
 
 ```json
 {
-  "a2r_version": "2.0.0",
+  "allternit_version": "2.0.0",
   "manifest_version": "1.0.0",
   
   "workspace": {
@@ -394,11 +394,11 @@ New Agent Starts
 
 The 5-layer structure syncs with the kernel infrastructure:
 
-| Kernel Component | A2R Location | Sync Direction |
+| Kernel Component | Allternit Location | Sync Direction |
 |------------------|--------------|----------------|
 | `HistoryLedger` | `L1-COGNITIVE/memory/memory.jsonl` | Bidirectional |
-| `SkillRegistry` | `L4-SKILLS/` | Kernel → A2R |
-| `ContextPack` | `L1-COGNITIVE/brain/batons/*.md` | A2R → Kernel |
+| `SkillRegistry` | `L4-SKILLS/` | Kernel → Allternit |
+| `ContextPack` | `L1-COGNITIVE/brain/batons/*.md` | Allternit → Kernel |
 | `PolicyEngine` | `L2-IDENTITY/POLICY.md` + `L3-GOVERNANCE/` | Bidirectional |
 | `TaskGraph` | `L1-COGNITIVE/brain/taskgraph.json` | Bidirectional |
 
@@ -406,12 +406,12 @@ The 5-layer structure syncs with the kernel infrastructure:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `A2R_ENABLED` | Enable A2R platform | `true` |
-| `A2R_DIR` | Custom .a2r location | `.a2r` |
-| `A2R_LAYERS` | Enabled layers (comma list) | `L1,L2,L3,L4` |
-| `A2R_THRESH_WARN` | Warn threshold | `0.70` |
-| `A2R_THRESH_COMPACT` | Compact threshold | `0.85` |
-| `A2R_THRESH_HANDOFF` | Handoff threshold | `0.92` |
+| `Allternit_ENABLED` | Enable Allternit platform | `true` |
+| `Allternit_DIR` | Custom .allternit location | `.allternit` |
+| `Allternit_LAYERS` | Enabled layers (comma list) | `L1,L2,L3,L4` |
+| `Allternit_THRESH_WARN` | Warn threshold | `0.70` |
+| `Allternit_THRESH_COMPACT` | Compact threshold | `0.85` |
+| `Allternit_THRESH_HANDOFF` | Handoff threshold | `0.92` |
 
 ## Migration from Old Structure
 

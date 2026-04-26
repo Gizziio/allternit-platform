@@ -1,6 +1,6 @@
 import { BusEvent } from "@/shared/bus/bus-event"
 import z from "zod/v4"
-import { NamedError } from "@a2r/util/error"
+import { NamedError } from "@allternit/gizzi-util/error.js"
 import { APICallError, convertToModelMessages, LoadAPIKeyError, type ModelMessage, type UIMessage } from "ai"
 import { Identifier } from "@/shared/id/id"
 import { LSP } from "@/runtime/integrations/lsp"
@@ -319,8 +319,11 @@ export namespace MessageV2 {
   })
   export type User = z.infer<typeof User>
 
+  // zod/v4 can throw while building large discriminated unions that include
+  // nested discriminated unions from NamedError schemas. Keep runtime validation
+  // strict, but avoid the compiled-server crash seen on /v1/session/:id/message.
   export const Part = z
-    .discriminatedUnion("type", [
+    .union([
       TextPart,
       SubtaskPart,
       ReasoningPart,

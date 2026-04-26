@@ -62,7 +62,7 @@ fn calculate_next_run(cron_expr: &str, timezone: &str) -> Option<chrono::DateTim
     let tz: Tz = timezone.parse().unwrap_or(chrono_tz::UTC);
     
     // Get next occurrence in target timezone
-    let now = chrono::Utc::now().with_timezone(&tz);
+    let _now = chrono::Utc::now().with_timezone(&tz);
     schedule.upcoming(tz).next().map(|dt| dt.with_timezone(&chrono::Utc))
 }
 

@@ -1,16 +1,16 @@
 import { RequestError, type McpServer } from "@agentclientprotocol/sdk"
 import type { ACPSessionState } from "@/runtime/integrations/acp/types"
 import { Log } from "@/shared/util/log"
-import type { A2RClientLike } from "@/runtime/integrations/acp/types"
+import type { AllternitClientLike } from "@/runtime/integrations/acp/types"
 import { Session } from "@/runtime/session"
 
 const log = Log.create({ service: "acp-session-manager" })
 
 export class ACPSessionManager {
   private sessions = new Map<string, ACPSessionState>()
-  private sdk: A2RClientLike
+  private sdk: AllternitClientLike
 
-  constructor(sdk: A2RClientLike) {
+  constructor(sdk: AllternitClientLike) {
     this.sdk = sdk
   }
 

@@ -134,7 +134,7 @@ function Install-Npm {
     }
     
     try {
-        npm install -g @a2r/gizzi-code 2>&1 | Out-Null
+        npm install -g @allternit/gizzi-code 2>&1 | Out-Null
         Write-Success "Successfully installed via npm"
         return $true
     } catch {

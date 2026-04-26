@@ -84,6 +84,10 @@ export namespace Filesystem {
     await fsMkdir(p, { recursive: options?.recursive ?? true })
   }
 
+  export async function ensureDir(p: string): Promise<void> {
+    await fsMkdir(p, { recursive: true })
+  }
+
   export async function writeStream(
     p: string,
     stream: ReadableStream<Uint8Array> | Readable,

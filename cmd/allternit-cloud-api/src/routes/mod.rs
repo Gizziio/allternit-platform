@@ -11,3 +11,4 @@ pub mod providers;
 pub mod regions;
 pub mod runs;
 pub mod schedules;
+pub mod tasks;

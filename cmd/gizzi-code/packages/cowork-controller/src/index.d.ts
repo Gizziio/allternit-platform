@@ -1,7 +1,7 @@
 /**
  * Cowork Controller
  *
- * Central session management for A2R remote control.
+ * Central session management for Allternit remote control.
  * Manages multiple terminal session mirrors with multi-client support.
  *
  * Features:

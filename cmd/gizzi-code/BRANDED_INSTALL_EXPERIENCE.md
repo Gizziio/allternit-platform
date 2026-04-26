@@ -43,7 +43,7 @@ When user runs `curl -fsSL https://gizzi.sh/install | bash`:
    ▀ ▀  ▀ ▀   
 
               GIZZI CODE - AI Terminal Interface
-                    for the A2R Ecosystem
+                    for the Allternit Ecosystem
 
 ℹ Platform: macos
 ℹ Architecture: arm64

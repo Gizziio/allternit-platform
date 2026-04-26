@@ -2,7 +2,7 @@
 // @ts-nocheck
 
 import { $ } from "bun"
-import { Script } from "@a2r/script"
+import { Script } from "@allternit/script"
 
 const highlightsTemplate = `
 <!--

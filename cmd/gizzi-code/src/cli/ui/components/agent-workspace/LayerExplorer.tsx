@@ -1,6 +1,6 @@
 import type { JSX } from "solid-js"
 import { For, Show, createMemo } from "solid-js"
-import { useTheme } from "@/cli/ui/tui/context/theme"
+import { useTheme } from "@/cli/ui/ink-app/context/theme"
 
 type FileNode = {
   name: string

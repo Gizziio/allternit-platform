@@ -1,4 +1,4 @@
-//! A2R API Server
+//! Allternit API Server
 //!
 //! Provides endpoints for:
 //! - Visualization rendering (charts to SVG/PNG/PDF)
@@ -7,42 +7,30 @@
 //! - Cowork Runtime (persistent remote execution)
 //! - Event streaming (WebSocket)
 
-mod rails;
-mod sandbox_routes;
-mod stream;
-mod terminal_routes;
-mod viz_routes;
-mod vm_session_routes;
-
 use axum::Router;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tracing::info;
 
-use rails::{rails_router, RailsState};
-use sandbox_routes::sandbox_router;
-use stream::stream_router;
-use terminal_routes::terminal_router;
-use viz_routes::viz_router;
-use vm_session_routes::{new_vm_session_store, vm_session_router, VmSessionStore};
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+use tracing::warn;
 
-/// Application state
-pub struct AppState {
-    /// VM execution driver (Firecracker on Linux, Apple VF on macOS)
-    pub vm_driver: Option<Box<dyn a2r_driver_interface::ExecutionDriver>>,
-    /// Rails service state (Ledger, Gate, Leases, etc.)
-    pub rails: RailsState,
-    /// Persistent VM sessions — each gizzi-code session gets one VM that stays
-    /// alive for the entire session lifetime (not torn down between exec calls).
-    pub vm_sessions: VmSessionStore,
-}
+// Import from library
+use allternit_api::AppState;
+use allternit_api::chat_routes::chat_router;
+use allternit_api::rails::{rails_router, RailsState};
+use allternit_api::sandbox_routes::sandbox_router;
+use allternit_api::stream::stream_router;
+use allternit_api::terminal_routes::terminal_router;
+use allternit_api::viz_routes::viz_router;
+use allternit_api::vm_session_routes::{new_vm_session_store, vm_session_router};
 
 #[tokio::main]
 async fn main() {
     // Initialize tracing
     tracing_subscriber::fmt::init();
 
-    info!("A2R API Server starting...");
+    info!("Allternit API Server starting...");
     info!("Version: 0.1.0");
 
     // Initialize VM driver (platform-specific)
@@ -50,8 +38,8 @@ async fn main() {
 
     // Initialize Rails service state
     let data_dir = dirs::data_dir()
-        .map(|d| d.join("a2r"))
-        .unwrap_or_else(|| PathBuf::from("/var/lib/a2r"));
+        .map(|d| d.join("allternit"))
+        .unwrap_or_else(|| PathBuf::from("/var/lib/allternit"));
     
     let rails = RailsState::new(data_dir)
         .await
@@ -67,6 +55,7 @@ async fn main() {
     // Build router
     let app = Router::new()
         // Core API routes
+        .nest("/api", chat_router())
         .nest("/viz", viz_router())
         .nest("/sandbox", sandbox_router())
         // Persistent VM session API (one VM per gizzi-code agent session)
@@ -81,8 +70,12 @@ async fn main() {
         .route("/health", axum::routing::get(health_check))
         .with_state(state);
 
-    // Start server
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    // Start server — port from ALLTERNIT_API_PORT env var, default 8013
+    let port: u16 = std::env::var("ALLTERNIT_API_PORT")
+        .ok()
+        .and_then(|p| p.parse().ok())
+        .unwrap_or(8013);
+    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}")).await.unwrap();
     info!("Server listening on {}", listener.local_addr().unwrap());
     info!("API Documentation:");
     info!("  - Visualization:  GET /viz/*");
@@ -100,19 +93,29 @@ async fn main() {
 async fn health_check() -> impl axum::response::IntoResponse {
     axum::Json(serde_json::json!({
         "status": "healthy",
-        "service": "a2r-api",
+        "service": "allternit-api",
         "version": "0.1.0",
     }))
 }
 
 /// Initialize the appropriate VM driver for the platform
-async fn initialize_vm_driver() -> Option<Box<dyn a2r_driver_interface::ExecutionDriver>> {
+async fn initialize_vm_driver() -> Option<Box<dyn allternit_driver_interface::ExecutionDriver>> {
+    // Get packaged VM directory from desktop app (if available)
+    let vm_dir = std::env::var("ALLTERNIT_VM_DIR").ok().filter(|s| !s.is_empty());
+    if let Some(ref dir) = vm_dir {
+        info!("Using packaged VM directory: {}", dir);
+    }
+
     #[cfg(target_os = "linux")]
     {
-        use a2r_firecracker_driver::{FirecrackerConfig, FirecrackerDriver};
-        use tracing::warn;
+        use allternit_firecracker_driver::{FirecrackerConfig, FirecrackerDriver};
 
-        let config = FirecrackerConfig::default();
+        let mut config = FirecrackerConfig::default();
+        
+        // Use packaged VM directory if available
+        if let Some(dir) = vm_dir {
+            config.images_dir = std::path::PathBuf::from(dir);
+        }
 
         match FirecrackerDriver::new(config).await {
             Ok(driver) => {
@@ -129,9 +132,38 @@ async fn initialize_vm_driver() -> Option<Box<dyn a2r_driver_interface::Executio
 
     #[cfg(target_os = "macos")]
     {
-        // Apple VF driver not yet implemented
-        info!("Apple VF driver not yet implemented");
-        return None;
+        use allternit_apple_vf_driver::{AppleVFConfig, AppleVFDriver};
+
+        let mut config = AppleVFConfig::default();
+        
+        // Use packaged VM directory if available
+        if let Some(dir) = vm_dir {
+            config.vm_storage_dir = std::path::PathBuf::from(&dir).join("vms");
+            config.images_dir = std::path::PathBuf::from(&dir).join("images");
+        }
+
+        // Detect lume binary next to current executable
+        if let Ok(exe_path) = std::env::current_exe() {
+            if let Some(exe_dir) = exe_path.parent() {
+                let lume_path = exe_dir.join("lume");
+                if lume_path.exists() {
+                    info!("Found Lume binary at: {}", lume_path.display());
+                    config = config.with_lume_bin(lume_path);
+                }
+            }
+        }
+
+        match AppleVFDriver::with_config(config) {
+            Ok(driver) => {
+                info!("Apple VF driver initialized (powered by Lume)");
+                return Some(Box::new(driver));
+            }
+            Err(e) => {
+                warn!("Failed to initialize Apple VF driver: {}", e);
+                info!("Running without VM execution (visualization only)");
+                return None;
+            }
+        }
     }
 
     #[cfg(not(any(target_os = "linux", target_os = "macos")))]

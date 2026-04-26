@@ -18,7 +18,7 @@ import { lt } from '../../shared/utils/semver.js'
  *
  * Remote Control requires a claude.ai subscription (the bridge auths to CCR
  * with the claude.ai OAuth token). isClaudeAISubscriber() excludes
- * Bedrock/Vertex/Foundry, apiKeyHelper/gateway deployments, env-var API keys,
+ * apiKeyHelper/gateway deployments, env-var API keys,
  * and Console API logins — none of which have the OAuth token CCR needs.
  * See github.com/deshaw/anthropic-issues/issues/24.
  *

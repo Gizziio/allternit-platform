@@ -35,7 +35,7 @@ import { Command } from "@/runtime/loop/command"
 import { $, fileURLToPath, pathToFileURL } from "bun"
 import { ConfigMarkdown } from "@/runtime/context/config/markdown"
 import { SessionSummary } from "@/runtime/session/summary"
-import { NamedError } from "@a2r/util/error"
+import { NamedError } from "@allternit/gizzi-util/error.js"
 import { fn } from "@/shared/util/fn"
 import { SessionProcessor } from "@/runtime/session/processor"
 import { TaskTool } from "@/runtime/tools/builtins/task"
@@ -327,7 +327,22 @@ const message = await createUserMessage(input)
           history: msgs,
         })
 
-      const model = await Provider.getModel(lastUser.model.providerID, lastUser.model.modelID).catch(async (e) => {
+      // Resolve auto-routing before model lookup
+      const resolvedModelRef =
+        lastUser.model.providerID === "auto"
+          ? await Provider.resolveAuto(
+              msgs.map((m) => ({
+                role: m.info.role,
+                content: m.parts
+                  .filter((p): p is { type: "text"; text: string } & object => p.type === "text")
+                  .map((p) => p.text)
+                  .join(" "),
+              })),
+              sessionID,
+            )
+          : lastUser.model
+
+      const model = await Provider.getModel(resolvedModelRef.providerID, resolvedModelRef.modelID).catch(async (e) => {
         // Try fallback model if configured
         if (Flag.GIZZI_FALLBACK_MODEL) {
           const parsed = Provider.parseModel(Flag.GIZZI_FALLBACK_MODEL)

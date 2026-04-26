@@ -1,4 +1,4 @@
-//! A2R Cloud Deploy Wizard
+//! Allternit Cloud Deploy Wizard
 //!
 //! Enterprise-grade BYOC deployment wizard with:
 //! - Capability matrix enforcement

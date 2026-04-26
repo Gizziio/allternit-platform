@@ -4,9 +4,9 @@ Section: utils
 Priority: optional
 Architecture: amd64
 Depends: libc6 (>= 2.28)
-Maintainer: A2R Technologies <team@a2r.io>
-Description: AI-powered terminal interface for the A2R ecosystem
+Maintainer: Allternit Technologies <team@allternit.io>
+Description: AI-powered terminal interface for the Allternit ecosystem
  Gizzi Code is an AI-powered terminal interface and runtime
- for the A2R ecosystem, providing intelligent code assistance
+ for the Allternit ecosystem, providing intelligent code assistance
  and terminal automation.
 Homepage: https://gizzi.sh

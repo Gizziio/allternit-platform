@@ -11,7 +11,7 @@ use async_trait::async_trait;
 use chrono::Utc;
 use sqlx::SqlitePool;
 use std::sync::Arc;
-use tokio::time::{timeout, Duration};
+use tokio::time::Duration;
 use uuid::Uuid;
 
 /// Run service trait - defines the interface for run lifecycle management
@@ -338,7 +338,7 @@ impl RunService for RunServiceImpl {
         let run_id = Uuid::new_v4().to_string();
         let now = Utc::now();
         
-        let config_json = serde_json::to_value(&request.config)
+        let _config_json = serde_json::to_value(&request.config)
             .map_err(|e| ApiError::Internal(format!("Failed to serialize config: {}", e)))?;
         
         let run = sqlx::query_as::<_, Run>(

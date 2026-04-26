@@ -1,7 +1,7 @@
 import { cmd } from "@/cli/commands/cmd"
 import { UI } from "@/cli/ui"
 
-export const A2rCommand = cmd({
+export const AllternitCommand = cmd({
   command: "remote",
   describe: "Remote architecture commands",
   builder: (yargs) =>

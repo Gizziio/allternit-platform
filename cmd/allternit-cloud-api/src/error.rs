@@ -82,7 +82,7 @@ impl From<sqlx::migrate::MigrateError> for ApiError {
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         // Check if we're in production mode (don't expose internal details)
-        let is_production = std::env::var("A2R_API_DEVELOPMENT_MODE")
+        let is_production = std::env::var("Allternit_API_DEVELOPMENT_MODE")
             .map(|v| v != "true" && v != "1")
             .unwrap_or(true);
         

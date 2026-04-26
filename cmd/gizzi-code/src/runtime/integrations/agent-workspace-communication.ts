@@ -1,11 +1,11 @@
 /**
  * Agent Workspace Communication State
  * 
- * Manages communication state in .a2r/communication/
+ * Manages communication state in .allternit/communication/
  * Syncs with kernel and Rails receipt system.
  * 
  * Structure:
- * .a2r/communication/
+ * .allternit/communication/
  * ├── messages.jsonl          # Message audit trail
  * ├── channels.json           # Channel definitions
  * ├── mentions.jsonl          # @mention routing log
@@ -98,7 +98,7 @@ export namespace AgentWorkspaceCommunication {
     }
 
     workspacePath = Global.Path.data
-    communicationPath = path.join(workspacePath, '.a2r', 'communication')
+    communicationPath = path.join(workspacePath, '.allternit', 'communication')
 
     log.info('Initializing workspace communication', {
       workspacePath,

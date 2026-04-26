@@ -11,7 +11,7 @@ import { UninstallCommand } from "@/cli/commands/uninstall"
 import { ModelsCommand } from "@/cli/commands/models"
 import { UI } from "@/cli/ui"
 import { Installation } from "@/shared/installation"
-import { NamedError } from "@a2r/util/error"
+import { NamedError } from "@allternit/gizzi-util/error.js"
 import { FormatError } from "@/shared/error/format"
 import { ServeCommand } from "@/cli/commands/serve"
 import { Filesystem } from "@/shared/util/filesystem"
@@ -21,8 +21,8 @@ import { McpCommand } from "@/cli/commands/mcp"
 import { GithubCommand } from "@/cli/commands/github"
 import { ExportCommand } from "@/cli/commands/export"
 import { ImportCommand } from "@/cli/commands/import"
-import { AttachCommand } from "@/cli/ui/tui/attach"
-import { TuiThreadCommand } from "@/cli/ui/tui/thread"
+import { AttachCommand } from "@/cli/ui/ink-app/attach"
+import { TuiThreadCommand } from "@/cli/ui/ink-app/thread"
 import { AcpCommand } from "@/cli/commands/acp"
 import { EOL } from "os"
 import { WebCommand } from "@/cli/commands/web"
@@ -37,8 +37,10 @@ import { VerificationCommand } from "@/cli/commands/verification"
 import { AgentHubCommand } from "@/cli/commands/agent-hub"
 import { AcCommand } from "@/cli/commands/ac"
 import { CoworkCommand } from "@/cli/commands/cowork"
+import { CoworkTeamCommand } from "@/cli/commands/cowork-team"
 import { AgentCommand } from "@/cli/commands/agent"
 import { ProviderCommand } from "@/cli/commands/provider"
+import { RuntimeCommand } from "@/cli/commands/runtime"
 import path from "path"
 import { Global } from "@/runtime/context/global"
 import { JsonMigration } from "@/runtime/session/storage/json-migration"
@@ -150,8 +152,10 @@ const cli = yargs(hideBin(process.argv))
   .command(AgentHubCommand)
   .command(AcCommand)
   .command(CoworkCommand)
+  .command(CoworkTeamCommand)
   .command(AgentCommand)
   .command(ProviderCommand)
+  .command(RuntimeCommand)
   .fail((msg, err) => {
     if (
       msg?.startsWith("Unknown argument") ||

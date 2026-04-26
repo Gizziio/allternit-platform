@@ -1,5 +1,5 @@
 /**
- * A2R Platform Auth Server — Clerk.com edition
+ * Allternit Platform Auth Server — Clerk.com edition
  *
  * Serves:
  *   GET  /.well-known/gizzi   → tells gizzi-code how to auth (method: "browser")
@@ -60,7 +60,7 @@ function loginPage(callbackUrl) {
 <html>
 <head>
   <meta charset="utf-8"/>
-  <title>Sign in — A2R Platform</title>
+  <title>Sign in — Allternit Platform</title>
   <style>
     :root { color-scheme: light; }
     * { box-sizing: border-box; }
@@ -74,7 +74,7 @@ function loginPage(callbackUrl) {
 </head>
 <body>
 <div class="wrap">
-  <h1>A2R Platform</h1>
+  <h1>Allternit Platform</h1>
   <p>Sign in to connect gizzi-code to your account.</p>
   <div id="clerk-sign-in"></div>
   <div id="status"></div>
@@ -183,7 +183,7 @@ Bun.serve({
         return new Response("not found", { status: 404 });
     },
 });
-process.stderr.write(`\n  A2R Platform Auth Server (Clerk)  →  ${ORIGIN}\n`);
+process.stderr.write(`\n  Allternit Platform Auth Server (Clerk)  →  ${ORIGIN}\n`);
 process.stderr.write(`  Clerk frontend API: ${CLERK_FRONTEND_API}\n\n`);
 process.stderr.write(`  To run the full login flow:\n`);
 process.stderr.write(`    bun run dev connect login ${ORIGIN}\n\n`);

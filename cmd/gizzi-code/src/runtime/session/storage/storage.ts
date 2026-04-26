@@ -6,7 +6,7 @@ import { Filesystem } from "@/shared/util/filesystem"
 import { lazy } from "@/shared/util/lazy"
 import { Lock } from "@/shared/util/lock"
 import { $ } from "bun"
-import { NamedError } from "@a2r/util/error"
+import { NamedError } from "@allternit/gizzi-util/error.js"
 import z from "zod/v4"
 import { Glob } from "@/shared/util/glob"
 

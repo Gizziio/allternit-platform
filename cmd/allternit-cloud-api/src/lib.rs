@@ -1,4 +1,4 @@
-//! A2R Cloud API
+//! Allternit Cloud API
 //!
 //! Backend API for cloud deployment management.
 //! Provides REST endpoints and WebSocket event streaming.
@@ -23,9 +23,7 @@ use axum::{
 };
 use std::sync::Arc;
 use tokio::sync::broadcast;
-use tower_http::cors::{CorsLayer, Any};
-use tower::ServiceBuilder;
-use std::time::Duration;
+use tower_http::cors::CorsLayer;
 use axum::{
     extract::DefaultBodyLimit,
     http::{Method, header},
@@ -38,7 +36,7 @@ pub use websocket::DeploymentEvent;
 /// API application state
 pub struct ApiState {
     pub db: sqlx::SqlitePool,
-    pub ssh_executor: a2r_cloud_ssh::SshExecutor,
+    pub ssh_executor: allternit_cloud_ssh::SshExecutor,
     pub event_tx: broadcast::Sender<DeploymentEvent>,
     /// Shared event store for all operations
     pub event_store: Arc<dyn services::EventStore>,
@@ -103,6 +101,8 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         .route("/api/v1/approvals/:id/approve", post(routes::approvals::approve_request))
         .route("/api/v1/approvals/:id/deny", post(routes::approvals::deny_request))
         .route("/api/v1/approvals/:id/cancel", post(routes::approvals::cancel_request))
+        // Task endpoints
+        .merge(routes::tasks::task_routes())
         // WebSocket endpoint for run events
         .route("/ws/runs/:id", get(websocket::run_ws_handler))
         // Deployment endpoints (existing)
@@ -171,7 +171,7 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
         .with_state(state.clone());
 
     // Configure CORS
-    let cors = if std::env::var("A2R_API_DEVELOPMENT_MODE")
+    let cors = if std::env::var("Allternit_API_DEVELOPMENT_MODE")
         .map(|v| v == "true" || v == "1")
         .unwrap_or(false) {
         // Development: Allow all origins
@@ -179,7 +179,7 @@ pub fn create_router(state: Arc<ApiState>) -> Router {
     } else {
         // Production: Restrictive CORS
         let allowed_origins: Vec<_> = std::env::var("CORS_ALLOWED_ORIGINS")
-            .unwrap_or_else(|_| "http://localhost:3000,https://app.a2r.io".to_string())
+            .unwrap_or_else(|_| "http://localhost:3000,https://app.allternit.io".to_string())
             .split(',')
             .filter_map(|s| s.trim().parse::<axum::http::HeaderValue>().ok())
             .collect();

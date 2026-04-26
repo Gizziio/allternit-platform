@@ -31,7 +31,7 @@ export interface FileWriterConfig {
 }
 
 export const DEFAULT_FILE_WRITER_CONFIG: FileWriterConfig = {
-  evidenceDir: ".a2r/evidence",
+  evidenceDir: ".allternit/evidence",
   readySuffix: ".ready",
   evidenceSuffix: ".json",
   keepFiles: false,

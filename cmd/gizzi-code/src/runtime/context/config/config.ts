@@ -9,7 +9,7 @@ import { mergeDeep, pipe, unique } from "remeda"
 import { Global } from "@/runtime/context/global"
 import fs from "fs/promises"
 import { lazy } from "@/shared/util/lazy"
-import { NamedError } from "@a2r/util/error"
+import { NamedError } from "@allternit/gizzi-util/error.js"
 import { Flag } from "@/runtime/context/flag/flag"
 import { Auth } from "@/runtime/integrations/auth"
 import {
@@ -287,15 +287,17 @@ export namespace Config {
 
   export async function installDependencies(dir: string) {
     const pkg = path.join(dir, "package.json")
-    const targetVersion = Installation.isLocal() ? "*" : Installation.VERSION
+    const targetVersion = pluginDependencyVersion()
 
     const json = await Filesystem.readJson<{ dependencies?: Record<string, string> }>(pkg).catch(() => ({
       dependencies: {},
     }))
     json.dependencies = {
       ...json.dependencies,
-      "@a2r/plugin": `link:${path.join("/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/cmd/gizzi-code", "packages/plugin")}`,
+      "@allternit/plugin": targetVersion,
     }
+    delete json.dependencies["@allternit/gizzi-sdk"]
+    delete json.dependencies["@a2r/plugin"]
     await Filesystem.writeJson(pkg, json)
     await new Promise((resolve) => setTimeout(resolve, 3000))
 
@@ -345,26 +347,38 @@ export namespace Config {
 
     const parsed = await Filesystem.readJson<{ dependencies?: Record<string, string> }>(pkg).catch(() => null)
     const dependencies = parsed?.dependencies ?? {}
-    const depVersion = dependencies["@a2r/plugin"]
+    const depVersion = dependencies["@allternit/plugin"]
+    const deprecatedSdkVersion = dependencies["@allternit/gizzi-sdk"]
+    const legacyPluginVersion = dependencies["@a2r/plugin"]
     if (!depVersion) return true
+    if (deprecatedSdkVersion || legacyPluginVersion) return true
 
-    const targetVersion = Installation.isLocal() ? "latest" : Installation.VERSION
+    const targetVersion = pluginDependencyVersion()
     if (targetVersion === "latest") {
       // Skip npm registry check for workspace packages - they don't exist on npm
       // and will always return 404, causing unnecessary reinstalls
-      if (depVersion === "*" || depVersion === "workspace:*") {
+      if (depVersion === "*" || depVersion === "workspace:*" || depVersion.startsWith("file:")) {
         return false
       }
-      const isOutdated = await PackageRegistry.isOutdated("@a2r/plugin", depVersion, dir)
+      const isOutdated = await PackageRegistry.isOutdated("@allternit/plugin", depVersion, dir)
       if (!isOutdated) return false
       log.info("Cached version is outdated, proceeding with install", {
-        pkg: "@a2r/plugin",
+        pkg: "@allternit/plugin",
         cachedVersion: depVersion,
       })
       return true
     }
     if (depVersion === targetVersion) return false
     return true
+  }
+
+  function pluginDependencyVersion() {
+    const workspacePluginDir = path.resolve(process.cwd(), "packages/plugin")
+    if (existsSync(workspacePluginDir)) {
+      return `file:${workspacePluginDir}`
+    }
+
+    return Installation.isLocal() ? "workspace:*" : Installation.VERSION
   }
 
   function rel(item: string, patterns: string[]) {
@@ -1078,6 +1092,19 @@ export namespace Config {
       small_model: ModelId.describe(
         "Small model to use for tasks like title generation in the format of provider/model",
       ).optional(),
+      routing: z
+        .object({
+          tiers: z.object({
+            simple: ModelId.describe("Model for simple requests (greetings, short questions)"),
+            standard: ModelId.describe("Model for standard requests (general tasks)"),
+            complex: ModelId.describe("Model for complex requests (multi-step, technical)"),
+            reasoning: ModelId.describe("Model for reasoning requests (formal logic, planning)"),
+          }),
+        })
+        .optional()
+        .describe(
+          "Smart model routing config. Set model: auto to enable. Maps complexity tiers to models (format: provider/model).",
+        ),
       default_agent: z
         .string()
         .optional()

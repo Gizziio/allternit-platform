@@ -20,7 +20,7 @@
 import path from "path"
 import fs from "fs/promises"
 import { Hono } from "hono"
-import { describeRoute, resolver, validator } from "hono-openapi"
+import { describeRoute, resolver, validator } from "@/runtime/server/openapi"
 import z from "zod/v4"
 import { Instance } from "@/runtime/context/project/instance"
 import { Global } from "@/runtime/context/global"
@@ -79,7 +79,7 @@ export function WorkspaceRoutes() {
       "/init",
       describeRoute({
         summary: "Initialize workspace",
-        description: "Create a new .gizzi/ workspace. format=layered creates the full A2R 5-layer structure (L1-COGNITIVE, L2-IDENTITY, L3-GOVERNANCE, L4-SKILLS). format=flat creates an OpenClaw-compatible flat structure (default).",
+        description: "Create a new .gizzi/ workspace. format=layered creates the full Allternit 5-layer structure (L1-COGNITIVE, L2-IDENTITY, L3-GOVERNANCE, L4-SKILLS). format=flat creates an OpenClaw-compatible flat structure (default).",
         operationId: "workspace.init",
         responses: {
           200: { description: "Workspace initialized", content: { "application/json": { schema: resolver(z.any()) } } },

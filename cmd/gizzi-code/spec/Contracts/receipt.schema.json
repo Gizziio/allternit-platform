@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://a2r.dev/schemas/receipt.schema.json",
-  "title": "A2R Receipt (Tool Activity)",
+  "$id": "https://allternit.dev/schemas/receipt.schema.json",
+  "title": "Allternit Receipt (Tool Activity)",
   "description": "Append-only log of tool calls and results for evidence/audit",
   "type": "object",
   "required": ["version", "ts", "run_id", "dag_node_id", "tool", "kind", "status"],

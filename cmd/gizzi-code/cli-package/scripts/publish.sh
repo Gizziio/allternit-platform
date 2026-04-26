@@ -16,7 +16,7 @@ NC='\033[0m'
 # Configuration
 VERSION="${1:-patch}"
 NPM_REGISTRY="https://registry.npmjs.org"
-GITHUB_REPO="a2r/gizzi"
+GITHUB_REPO="allternit/gizzi"
 
 # Functions
 log_info() {

@@ -457,7 +457,7 @@ async fn destroy_hetzner_instance(instance: &CloudInstance) -> Result<(), ApiErr
 
 /// Helper function to get Hetzner client (for production use)
 #[allow(dead_code)]
-async fn get_hetzner_client(_provider_id: &str) -> Result<a2r_cloud_hetzner::HetznerClient, ApiError> {
+async fn get_hetzner_client(_provider_id: &str) -> Result<allternit_cloud_hetzner::HetznerClient, ApiError> {
     // In production, fetch credentials from database and create client
     // This is a placeholder for the actual implementation
     Err(ApiError::Internal(

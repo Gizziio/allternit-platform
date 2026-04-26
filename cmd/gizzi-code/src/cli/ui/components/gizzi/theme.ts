@@ -1,6 +1,6 @@
 import type { RGBA } from "@opentui/core"
 import { createMemo } from "solid-js"
-import { useTheme } from "@/cli/ui/tui/context/theme"
+import { useTheme } from "@/cli/ui/ink-app/context/theme"
 
 export type GIZZIRuntimeState =
   | "idle"

@@ -1,15 +1,15 @@
-import type { Hooks, PluginInput, Plugin as PluginInstance } from "@a2r/plugin"
+import type { Hooks, PluginInput, Plugin as PluginInstance } from "@allternit/plugin"
 import { Config } from "@/runtime/context/config/config"
 import { Bus } from "@/shared/bus"
 import { Log } from "@/shared/util/log"
-import { createA2RClient } from "@a2r/sdk"
+import { createAllternitClient } from "@allternit/sdk"
 import { Server } from "@/runtime/server/server"
 import { BunProc } from "@/shared/bun"
 import { Instance } from "@/runtime/context/project/instance"
 import { Flag } from "@/runtime/context/flag/flag"
 import { CodexAuthPlugin } from "@/runtime/integrations/plugin/codex"
 import { Session } from "@/runtime/session"
-import { NamedError } from "@a2r/util/error"
+import { NamedError } from "@allternit/gizzi-util/error.js"
 
 // Extend Hooks interface to include optional name property
 interface HooksWithName extends Hooks {
@@ -25,7 +25,7 @@ export namespace Plugin {
   const disabledPlugins = new Set<string>()
 
   const state = Instance.state(async () => {
-    const client = createA2RClient({
+    const client = createAllternitClient({
       baseUrl: "http://localhost:4096",
       directory: Instance.directory,
       fetch: ((input: URL | RequestInfo, init?: RequestInit) => Server.App().fetch(input as Request, init)) as typeof fetch,

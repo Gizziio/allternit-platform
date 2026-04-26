@@ -2,7 +2,7 @@
 /**
  * Cloud Relay Service Starter
  *
- * Starts the A2R Cloud Relay service for remote session access.
+ * Starts the Allternit Cloud Relay service for remote session access.
  *
  * Environment variables:
  *   RELAY_PORT - Port to listen on (default: 8443)
@@ -17,7 +17,7 @@ import { createCloudRelayService } from '../index';
 const port = parseInt(process.env.RELAY_PORT || '8443', 10);
 const host = process.env.RELAY_HOST || '0.0.0.0';
 const jwtSecret = process.env.RELAY_JWT_SECRET || 'change-me-in-production';
-console.log('🔃 Starting A2R Cloud Relay Service...');
+console.log('🔃 Starting Allternit Cloud Relay Service...');
 console.log(`   Port: ${port}`);
 console.log(`   Host: ${host}`);
 console.log('');

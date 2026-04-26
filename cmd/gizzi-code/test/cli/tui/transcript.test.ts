@@ -6,7 +6,7 @@ import {
   formatPart,
   formatTranscript,
 } from "../../../src/cli/cmd/tui/util/transcript"
-import type { AssistantMessage, Part, UserMessage } from "@a2r/sdk"
+import type { AssistantMessage, Part, UserMessage } from "@allternit/sdk"
 
 describe("transcript", () => {
   describe("formatAssistantHeader", () => {

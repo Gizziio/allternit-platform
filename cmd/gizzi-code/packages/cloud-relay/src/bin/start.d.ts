@@ -2,7 +2,7 @@
 /**
  * Cloud Relay Service Starter
  *
- * Starts the A2R Cloud Relay service for remote session access.
+ * Starts the Allternit Cloud Relay service for remote session access.
  *
  * Environment variables:
  *   RELAY_PORT - Port to listen on (default: 8443)

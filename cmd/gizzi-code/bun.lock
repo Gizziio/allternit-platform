@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "@a2r/gizzi-code",
+      "name": "@allternit/gizzi-code",
       "dependencies": {
         "@a2r/plugin": "workspace:*",
         "@a2r/script": "workspace:*",

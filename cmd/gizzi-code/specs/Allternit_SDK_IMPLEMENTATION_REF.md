@@ -1,4 +1,4 @@
-# @a2r/sdk — Platform SDK Specification
+# @allternit/sdk — Platform SDK Specification
 
 **Version:** 1.0.0-draft
 **Date:** 2026-03-15
@@ -8,7 +8,7 @@
 
 ## Overview
 
-`@a2r/sdk` is the nervous system of the A2R platform. It is the single typed interface through which all product surfaces (TUI, gizzi attach, A2R Desktop, thin-client, browser extensions, shell UIs, ACP adapters) communicate with the gizzi-code brain.
+`@allternit/sdk` is the nervous system of the Allternit platform. It is the single typed interface through which all product surfaces (TUI, gizzi attach, Allternit Desktop, thin-client, browser extensions, shell UIs, ACP adapters) communicate with the gizzi-code brain.
 
 It is NOT:
 - A renamed OpenCode SDK
@@ -33,12 +33,12 @@ export type Transport =
   | MockTransport   // Testing
 ```
 
-### `createA2RClient(options)`
+### `createAllternitClient(options)`
 
 ```typescript
-import { createA2RClient } from "@a2r/sdk"
+import { createAllternitClient } from "@allternit/sdk"
 
-const sdk = createA2RClient({
+const sdk = createAllternitClient({
   // For HTTP transport (remote surfaces)
   baseUrl?: string                          // e.g. "http://localhost:4096"
 
@@ -120,7 +120,7 @@ sdk.sessions.export(id: string): Promise<Blob>
 sdk.sessions.import(data: string | Blob): Promise<Session>
 ```
 
-**Session Continuity** (A2R-native):
+**Session Continuity** (Allternit-native):
 
 ```typescript
 // Get a handoff baton — cross-tool session transfer payload
@@ -202,7 +202,7 @@ sdk.agents.register(input: {
 
 sdk.agents.unregister(id: string): Promise<void>
 
-// Send a message to another agent (A2R inter-agent protocol)
+// Send a message to another agent (Allternit inter-agent protocol)
 sdk.agents.send(input: {
   toAgentId: string
   message: string
@@ -322,14 +322,14 @@ sdk.events.subscribe(options?: {
   signal?: AbortSignal
   filter?: EventFilter
 }): {
-  stream: AsyncGenerator<A2REvent>
+  stream: AsyncGenerator<AllternitEvent>
 }
 
 // Filter helpers
-sdk.events.filter<T extends A2REventType>(
-  stream: AsyncGenerator<A2REvent>,
+sdk.events.filter<T extends AllternitEventType>(
+  stream: AsyncGenerator<AllternitEvent>,
   type: T
-): AsyncGenerator<ExtractEvent<A2REvent, T>>
+): AsyncGenerator<ExtractEvent<AllternitEvent, T>>
 ```
 
 **Complete Event Type Map:**
@@ -832,15 +832,15 @@ sdk.lsp.completions(input: { file: string; line: number; col: number }): Promise
 
 ## Error Taxonomy
 
-All SDK errors extend `A2RError`:
+All SDK errors extend `AllternitError`:
 
 ```typescript
-class A2RError extends Error {
-  code: A2RErrorCode
+class AllternitError extends Error {
+  code: AllternitErrorCode
   context?: Record<string, unknown>
 }
 
-type A2RErrorCode =
+type AllternitErrorCode =
   // Transport
   | "ERR_NOT_CONNECTED"          // No server reachable
   | "ERR_AUTH_FAILED"            // Invalid credentials
@@ -885,10 +885,10 @@ type A2RErrorCode =
 
 ```typescript
 // worker.ts
-import { createA2RClient } from "@a2r/sdk"
+import { createAllternitClient } from "@allternit/sdk"
 import { Server } from "@/runtime/server/server"
 
-const sdk = createA2RClient({
+const sdk = createAllternitClient({
   baseUrl: "http://gizzi.internal",
   fetch: async (input, init) => {
     const req = new Request(input, init)
@@ -902,12 +902,12 @@ for await (const event of sdk.events.subscribe({ signal }).stream) {
 }
 ```
 
-### Remote surface (A2R Desktop, thin-client)
+### Remote surface (Allternit Desktop, thin-client)
 
 ```typescript
-import { createA2RClient } from "@a2r/sdk"
+import { createAllternitClient } from "@allternit/sdk"
 
-const sdk = createA2RClient({
+const sdk = createAllternitClient({
   baseUrl: "http://localhost:4096",
   auth: { username: "gizzi", password: process.env.GIZZI_SERVER_PASSWORD },
 })
@@ -918,10 +918,10 @@ const sessions = await sdk.sessions.list({ projectPath: "/my/project" })
 ### Browser extension
 
 ```typescript
-import { createA2RClient } from "@a2r/sdk"
+import { createAllternitClient } from "@allternit/sdk"
 
 // Discover via mDNS or user-provided URL
-const sdk = createA2RClient({ baseUrl: "http://gizzi.local:4096" })
+const sdk = createAllternitClient({ baseUrl: "http://gizzi.local:4096" })
 
 // Real-time event subscription
 const { stream } = sdk.events.subscribe()
@@ -937,8 +937,8 @@ for await (const event of stream) {
 ## Package Shape
 
 ```
-@a2r/sdk/
-  index.ts            ← createA2RClient, all types
+@allternit/sdk/
+  index.ts            ← createAllternitClient, all types
   transport/
     http.ts           ← HttpTransport (fetch + SSE)
     rpc.ts            ← RpcTransport (Bun worker IPC)
@@ -966,7 +966,7 @@ for await (const event of stream) {
   types/
     index.ts          ← re-exports all public types
     events.ts         ← full event union type
-    errors.ts         ← A2RError, A2RErrorCode
+    errors.ts         ← AllternitError, AllternitErrorCode
   version.ts          ← SDK_VERSION constant
 ```
 
@@ -978,11 +978,11 @@ for await (const event of stream) {
 - **MINOR** — new resource module or new method on existing module
 - **PATCH** — bug fix, transport fix, error message improvement
 - The SDK semver tracks gizzi-code releases independently
-- `@a2r/sdk` is published to npm as part of the A2R platform release
+- `@allternit/sdk` is published to npm as part of the Allternit platform release
 
 ---
 
-## What the Current `@a2r/sdk` Has vs What Needs Building
+## What the Current `@allternit/sdk` Has vs What Needs Building
 
 | Module | Current State | Gap |
 |--------|--------------|-----|
@@ -1014,8 +1014,8 @@ for await (const event of stream) {
 | `sdk.rateLimiter` | ✅ `src/runtime/integrations/rate-limiter/` | SDK resource layer missing |
 | Error taxonomy | ❌ Not defined | Build from scratch |
 | Event union type | ❌ Partial (`type Event = any`) | Build from BusEvent registry |
-| `@a2r/sdk/v2` stubs | ✅ **DONE** — all 7 import sites fixed | `packages/sdk/dist/v2/` can now be safely deleted |
-| ACP types using sdk/v2 | ✅ **DONE** — `GIZZIClient` → `A2RClientLike` | Complete |
+| `@allternit/sdk/v2` stubs | ✅ **DONE** — all 7 import sites fixed | `packages/sdk/dist/v2/` can now be safely deleted |
+| ACP types using sdk/v2 | ✅ **DONE** — `GIZZIClient` → `AllternitClientLike` | Complete |
 
 ---
 
@@ -1049,7 +1049,7 @@ Dynamic tool registration and discovery.
 ## Immediate Next Steps (Build Order)
 
 1. **`packages/sdk/dist/v2/` deletion** — all import sites already fixed. Safe to delete.
-2. **Build `@a2r/sdk` package skeleton** — transport layer first (`HttpTransport`, `RpcTransport`)
+2. **Build `@allternit/sdk` package skeleton** — transport layer first (`HttpTransport`, `RpcTransport`)
 3. **Build `sdk.events`** — typed event union + subscribe method. This unblocks the TUI.
 4. **Build `sdk.sessions`** — highest-use resource
 5. **Build `sdk.agents`** — communication runtime + mention router
@@ -1060,4 +1060,4 @@ Dynamic tool registration and discovery.
 
 *Generated from exhaustive codebase inventory of gizzi-code at `/cmd/gizzi-code/src/`.*
 *Inventory agent confirmed: 21 route files, 28+ tools, 130+ runtime TypeScript files, ~200k+ LOC.*
-*All `@a2r/sdk/v2` import sites fixed as of 2026-03-15.*
+*All `@allternit/sdk/v2` import sites fixed as of 2026-03-15.*

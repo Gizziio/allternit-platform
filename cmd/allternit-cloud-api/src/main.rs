@@ -1,8 +1,8 @@
-//! A2R Cloud API Server
+//! Allternit Cloud API Server
 //!
 //! Main entry point for the cloud deployment API.
 
-use a2r_cloud_api::{ApiState, init_db, services, runtime};
+use allternit_cloud_api::{ApiState, init_db, services, runtime};
 use std::sync::Arc;
 use tokio::sync::broadcast;
 
@@ -39,12 +39,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // Get configuration from environment
     let database_url = std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "sqlite://a2r-cloud.db".to_string());
+        .unwrap_or_else(|_| "sqlite://allternit-cloud.db".to_string());
     let bind_addr = std::env::var("BIND_ADDR")
         .unwrap_or_else(|_| "0.0.0.0:3001".to_string());
     
     // Validate environment in production
-    let is_production = !std::env::var("A2R_API_DEVELOPMENT_MODE")
+    let is_production = !std::env::var("Allternit_API_DEVELOPMENT_MODE")
         .map(|v| v == "true" || v == "1")
         .unwrap_or(false);
     
@@ -59,7 +59,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     
-    tracing::info!("Starting A2R Cloud API server");
+    tracing::info!("Starting Allternit Cloud API server");
     tracing::info!("Database: {}", database_url);
     tracing::info!("Bind address: {}", bind_addr);
     
@@ -69,7 +69,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("Database initialized");
     
     // Create broadcast channel for deployment events
-    let (event_tx, _event_rx) = broadcast::channel::<a2r_cloud_api::DeploymentEvent>(100);
+    let (event_tx, _event_rx) = broadcast::channel::<allternit_cloud_api::DeploymentEvent>(100);
     
     // Create shared services
     tracing::info!("Initializing shared services...");
@@ -93,7 +93,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("Shared services initialized");
     
     // Create rate limiter
-    let rate_limit_config = a2r_cloud_api::RateLimitConfig {
+    let rate_limit_config = allternit_cloud_api::RateLimitConfig {
         requests_per_minute: std::env::var("RATE_LIMIT_RPM")
             .ok()
             .and_then(|v| v.parse().ok())
@@ -101,12 +101,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         window: std::time::Duration::from_secs(60),
     };
     tracing::info!("Rate limiter initialized: {} req/min", rate_limit_config.requests_per_minute);
-    let rate_limiter = a2r_cloud_api::create_rate_limiter(rate_limit_config);
+    let rate_limiter = allternit_cloud_api::create_rate_limiter(rate_limit_config);
     
     // Create API state with shared services
     let state = Arc::new(ApiState {
         db,
-        ssh_executor: a2r_cloud_ssh::SshExecutor::new(),
+        ssh_executor: allternit_cloud_ssh::SshExecutor::new(),
         event_tx,
         event_store,
         run_service,
@@ -146,7 +146,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // Start server
     tracing::info!("Starting API server on {}", bind_addr);
-    a2r_cloud_api::start_server(state, &bind_addr).await?;
+    allternit_cloud_api::start_server(state, &bind_addr).await?;
     
     Ok(())
 }

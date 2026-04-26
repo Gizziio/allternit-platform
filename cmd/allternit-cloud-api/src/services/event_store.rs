@@ -8,7 +8,6 @@ use crate::error::ApiError;
 use async_trait::async_trait;
 use chrono::Utc;
 use sqlx::SqlitePool;
-use std::sync::Arc;
 use tokio::sync::broadcast;
 use uuid::Uuid;
 

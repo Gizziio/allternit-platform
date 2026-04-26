@@ -1,4 +1,4 @@
-# @a2r/sdk — The Nervous System Spec
+# @allternit/sdk — The Nervous System Spec
 
 **Version:** 1.0 (spec, not implementation)
 **Date:** 2026-03-15
@@ -8,8 +8,8 @@
 
 ## What This Is
 
-`@a2r/sdk` is the typed contract between Gizzi Code (the brain) and every surface
-that consumes it: TUI, A2R Desktop, browser extensions, thin-client, plugins, and
+`@allternit/sdk` is the typed contract between Gizzi Code (the brain) and every surface
+that consumes it: TUI, Allternit Desktop, browser extensions, thin-client, plugins, and
 external agents via ACP.
 
 It is **not** a generated HTTP client wrapper. It is not a renamed OpenCode fork.
@@ -28,7 +28,7 @@ the **transport foundation** underneath this SDK. The SDK is the layer above it.
    No `any`. No raw status codes. Real discriminated unions.
 3. **Generated types from the server, not handwritten.** OpenAPI spec → `types.gen.ts`.
    The server owns the shape. The SDK distributes it.
-4. **A2R primitives, not CRUD wrappers.** `sdk.sessions.run()` manages a full
+4. **Allternit primitives, not CRUD wrappers.** `sdk.sessions.run()` manages a full
    lifecycle. `sdk.events.on("message.part.delta")` is a first-class operation.
 5. **Published and versioned.** Semver. Changelog. Other surfaces pin to a version.
    Server changes that break the contract are a major version bump.
@@ -38,25 +38,25 @@ the **transport foundation** underneath this SDK. The SDK is the layer above it.
 ## Client Initialization
 
 ```typescript
-import { createA2RClient } from "@a2r/sdk"
+import { createAllternitClient } from "@allternit/sdk"
 
 // Auto-detect: local Bun Worker process → RPC (zero overhead)
 // Remote URL → HTTP
-const sdk = createA2RClient()
+const sdk = createAllternitClient()
 
 // Explicit local (same process as Gizzi Code server)
-const sdk = createA2RClient({ mode: "local" })
+const sdk = createAllternitClient({ mode: "local" })
 
-// Explicit remote (A2R Desktop, browser extension, external agent)
-const sdk = createA2RClient({
+// Explicit remote (Allternit Desktop, browser extension, external agent)
+const sdk = createAllternitClient({
   url: "https://my-gizzi.example.com",
   token: "...",
 })
 
 // With options
-const sdk = createA2RClient({
+const sdk = createAllternitClient({
   url: "http://localhost:4096",
-  headers: { "x-a2r-directory": "/path/to/workspace" },
+  headers: { "x-allternit-directory": "/path/to/workspace" },
   timeout: 30_000,
   retry: { attempts: 3, backoff: "exponential" },
 })
@@ -81,7 +81,7 @@ zero-overhead access and so does any other in-process consumer.
 Hono routes. Keep it, fix the v2 stub that was pointing nowhere.
 
 **Auto transport** is new. Logic: if `process` has the worker RPC client injected
-(the `_a2rRpcClient` or equivalent), use RPC. Otherwise use HTTP to `url`.
+(the `_allternitRpcClient` or equivalent), use RPC. Otherwise use HTTP to `url`.
 
 ---
 
@@ -107,7 +107,7 @@ sdk.sessions.run(
   opts: { prompt: string; files?: FilePart[]; tools?: ToolOverrides }
 ): AsyncIterable<SessionRunEvent>
 
-// Session continuity (A2R-native)
+// Session continuity (Allternit-native)
 sdk.sessions.resume(sessionID: string, opts?: ResumeOpts): Promise<Session>
 sdk.sessions.snapshot(sessionID: string): Promise<Snapshot>
 sdk.sessions.revert(sessionID: string, snapshotID: string): Promise<Session>
@@ -123,7 +123,7 @@ sdk.agents.create(opts: AgentCreateOpts): Promise<Agent>
 sdk.agents.update(agentID: string, opts: Partial<AgentCreateOpts>): Promise<Agent>
 sdk.agents.delete(agentID: string): Promise<void>
 
-// ACP (Agent Client Protocol) — A2R-native
+// ACP (Agent Client Protocol) — Allternit-native
 sdk.agents.communicate(agentID: string, message: ACPMessage): Promise<ACPResponse>
 sdk.agents.mention(agentID: string, context: MentionContext): Promise<void>
 ```
@@ -138,7 +138,7 @@ sdk.providers.auth.set(providerID: string, credentials: ProviderCredentials): Pr
 sdk.providers.auth.remove(providerID: string): Promise<void>
 ```
 
-### `sdk.memory` (A2R-native)
+### `sdk.memory` (Allternit-native)
 
 ```typescript
 // L1: Working memory (in-session context)
@@ -151,7 +151,7 @@ sdk.memory.l2.update(type: "soul" | "conventions" | "voice", content: string): P
 sdk.memory.l2.list(): Promise<MemoryFile[]>
 ```
 
-### `sdk.cron` (A2R-native)
+### `sdk.cron` (Allternit-native)
 
 ```typescript
 sdk.cron.list(): Promise<CronJob[]>
@@ -168,7 +168,7 @@ sdk.cron.status(jobID: string): Promise<CronStatus>
 sdk.cron.history(jobID: string): Promise<CronRun[]>
 ```
 
-### `sdk.skills` (A2R-native)
+### `sdk.skills` (Allternit-native)
 
 ```typescript
 sdk.skills.list(): Promise<Skill[]>
@@ -177,7 +177,7 @@ sdk.skills.execute(skillID: string, params: unknown): Promise<SkillResult>
 sdk.skills.register(skill: SkillDefinition): Promise<void>
 ```
 
-### `sdk.verification` (A2R-native)
+### `sdk.verification` (Allternit-native)
 
 ```typescript
 sdk.verification.verify(sessionID: string, opts?: VerifyOpts): Promise<VerificationResult>
@@ -228,7 +228,7 @@ All surfaces subscribe to the same typed event stream. No polling.
 
 ```typescript
 // Subscribe to all events
-const unsub = sdk.events.subscribe((event: A2REvent) => {
+const unsub = sdk.events.subscribe((event: AllternitEvent) => {
   console.log(event.type, event)
 })
 
@@ -247,7 +247,7 @@ unsub() // Unsubscribe
 ### Full Event Type Map
 
 ```typescript
-export type A2REvent =
+export type AllternitEvent =
   // Session lifecycle
   | { type: "session.created"; sessionID: string; session: Session }
   | { type: "session.updated"; sessionID: string; session: Session }
@@ -307,60 +307,60 @@ export type A2REvent =
 
 ```typescript
 // Base
-export class A2RError extends Error {
+export class AllternitError extends Error {
   code: string
   statusCode?: number
 }
 
 // Session errors
-export class SessionNotFoundError extends A2RError {
+export class SessionNotFoundError extends AllternitError {
   code = "SESSION_NOT_FOUND"
   sessionID: string
 }
-export class SessionBusyError extends A2RError {
+export class SessionBusyError extends AllternitError {
   code = "SESSION_BUSY"
   sessionID: string
 }
 
 // Provider / model errors
-export class ProviderAuthError extends A2RError {
+export class ProviderAuthError extends AllternitError {
   code = "PROVIDER_AUTH_REQUIRED"
   providerID: string
 }
-export class ModelNotFoundError extends A2RError {
+export class ModelNotFoundError extends AllternitError {
   code = "MODEL_NOT_FOUND"
   model: string
   provider: string
 }
-export class QuotaExceededError extends A2RError {
+export class QuotaExceededError extends AllternitError {
   code = "QUOTA_EXCEEDED"
   provider: string
 }
 
 // Agent loop errors
-export class LoopAbortedError extends A2RError {
+export class LoopAbortedError extends AllternitError {
   code = "LOOP_ABORTED"
   reason: string
 }
-export class OutputLengthExceededError extends A2RError {
+export class OutputLengthExceededError extends AllternitError {
   code = "OUTPUT_LENGTH_EXCEEDED"
 }
 
 // Permission errors
-export class PermissionDeniedError extends A2RError {
+export class PermissionDeniedError extends AllternitError {
   code = "PERMISSION_DENIED"
   tool: string
   pattern: string
 }
 
 // MCP errors
-export class McpConnectionError extends A2RError {
+export class McpConnectionError extends AllternitError {
   code = "MCP_CONNECTION_FAILED"
   server: string
 }
 
 // Verification errors
-export class VerificationError extends A2RError {
+export class VerificationError extends AllternitError {
   code = "VERIFICATION_FAILED"
   sessionID: string
 }
@@ -391,12 +391,12 @@ packages/sdk/
 │   │   └── instance.ts
 │   ├── events/
 │   │   ├── stream.ts         — SSE subscription with reconnect
-│   │   └── types.ts          — A2REvent discriminated union
+│   │   └── types.ts          — AllternitEvent discriminated union
 │   ├── errors/
 │   │   └── index.ts          — Full error taxonomy
 │   ├── types/
-│   │   └── index.ts          — Re-export from types.gen.ts + A2R-specific types
-│   └── index.ts              — createA2RClient, all exports
+│   │   └── index.ts          — Re-export from types.gen.ts + Allternit-specific types
+│   └── index.ts              — createAllternitClient, all exports
 ├── dist/                     — Generated (gitignored)
 │   ├── index.js
 │   ├── index.d.ts
@@ -410,14 +410,14 @@ packages/sdk/
 
 | Surface | Import | Mode |
 |---|---|---|
-| TUI (local) | `createA2RClient({ mode: "local" })` | RPC (in-process) |
-| TUI (attach to remote) | `createA2RClient({ url })` | HTTP |
-| A2R Desktop | `createA2RClient({ url: serverUrl, token })` | HTTP |
-| Browser extension | `createA2RClient({ url })` | HTTP |
-| Thin-client | `createA2RClient({ url })` | HTTP (replaces raw fetch) |
-| Plugin | `createA2RClient()` passed in | RPC or HTTP |
-| External agent (ACP) | `createA2RClient({ url })` | HTTP |
-| CLI commands | `createA2RClient()` | RPC or HTTP |
+| TUI (local) | `createAllternitClient({ mode: "local" })` | RPC (in-process) |
+| TUI (attach to remote) | `createAllternitClient({ url })` | HTTP |
+| Allternit Desktop | `createAllternitClient({ url: serverUrl, token })` | HTTP |
+| Browser extension | `createAllternitClient({ url })` | HTTP |
+| Thin-client | `createAllternitClient({ url })` | HTTP (replaces raw fetch) |
+| Plugin | `createAllternitClient()` passed in | RPC or HTTP |
+| External agent (ACP) | `createAllternitClient({ url })` | HTTP |
+| CLI commands | `createAllternitClient()` | RPC or HTTP |
 
 ---
 
@@ -444,7 +444,7 @@ packages/sdk/
 ## Implementation Phases
 
 ### Phase 0 — Immediate (1-2 days, unblocks TUI)
-Wire `@a2r/sdk/v2` to the real generated HTTP client (`sdk.gen.js`).
+Wire `@allternit/sdk/v2` to the real generated HTTP client (`sdk.gen.js`).
 All 45 stub functions replaced with real calls. TUI works.
 
 ### Phase 1 — SDK Foundation (1-2 weeks)
@@ -455,15 +455,15 @@ All 45 stub functions replaced with real calls. TUI works.
 - Add error taxonomy
 - Update TUI to use new SDK surface
 
-### Phase 2 — A2R Primitives (1 week)
+### Phase 2 — Allternit Primitives (1 week)
 - `sdk.sessions.run()` — full lifecycle management
 - `sdk.memory` — L1/L2 access
 - `sdk.verification` — verify + certificate
 - `sdk.cron` — full scheduling API
 
 ### Phase 3 — Surface Adoption (ongoing)
-- Thin-client migrates from raw HTTP to `@a2r/sdk`
-- A2R Desktop imports SDK for server connection
+- Thin-client migrates from raw HTTP to `@allternit/sdk`
+- Allternit Desktop imports SDK for server connection
 - Browser extension imports SDK
 - Plugins receive SDK client instance
 

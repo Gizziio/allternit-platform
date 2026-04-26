@@ -1,6 +1,6 @@
 # Visual Capture Auto-Trigger Flow
 
-This document describes how visual evidence capture is automatically triggered in the a2rchitech platform.
+This document describes how visual evidence capture is automatically triggered in the allternit platform.
 
 ## Architecture Flow
 

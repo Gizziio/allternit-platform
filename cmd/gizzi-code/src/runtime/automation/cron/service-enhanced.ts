@@ -16,6 +16,9 @@ import { calculateNextRun } from "./utils/timezone";
 import { withRetry, RetryableErrors, type RetryConfig } from "./utils/retry";
 import { AgentExecutor, type AgentExecutorConfig } from "./executors/agent-executor";
 import { CoworkExecutor, type CoworkExecutorConfig } from "./executors/cowork-executor";
+import { VaultSyncExecutor } from "./executors/vault-sync-executor";
+import { getFunction, listRegisteredFunctions, registerFunction } from "./executors/function-registry";
+import { runAgentQueueWorker } from "./workers/agent-queue";
 import type {
   CronJob,
   CronRun,
@@ -66,7 +69,7 @@ interface ServiceState {
 }
 
 const DEFAULT_CONFIG: ServiceState["config"] = {
-  dbPath: join(homedir(), ".a2r", "cron.db"),
+  dbPath: join(homedir(), ".allternit", "cron.db"),
   checkIntervalMs: 60000,
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   maxConcurrentJobs: 10,
@@ -125,6 +128,11 @@ export const CronServiceEnhanced = {
     }
     if (state.config.cowork) {
       state.executors.cowork = new CoworkExecutor(state.config.cowork);
+    }
+
+    // Auto-register agent queue worker if configured
+    if (state.config.agentQueue) {
+      this.registerAgentQueueJob(state.config.agentQueue);
     }
 
     // Schedule log rotation
@@ -399,6 +407,37 @@ export const CronServiceEnhanced = {
       log.info("Deleted job", { jobId: id });
     }
     return success;
+  },
+
+  registerAgentQueueJob(config: { agentId: string; agentRole?: string; schedule?: string | import("./types").Schedule }): CronJob {
+    if (!state.db) throw new Error("CronService not initialized");
+
+    // Check if already registered
+    const existing = state.db.getAllJobs().find((j) => j.name === "agent-queue-worker");
+    if (existing) {
+      log.info("Agent queue job already registered", { jobId: existing.id });
+      return existing;
+    }
+
+    // Register the worker function statically (safe for compiled binaries)
+    registerFunction("agent-queue-worker", runAgentQueueWorker as (...args: unknown[]) => unknown);
+
+    const schedule = config.schedule ?? "*/1 * * * *"; // Every minute by default
+
+    const job = this.create({
+      name: "agent-queue-worker",
+      description: "Polls task queue and claims pending items for agent execution",
+      type: "function",
+      schedule,
+      config: {
+        function: "agent-queue-worker",
+        args: [{ agentId: config.agentId, agentRole: config.agentRole }],
+      },
+      tags: ["agent", "queue", "builtin"],
+    });
+
+    log.info("Registered agent queue job", { jobId: job.id, agentId: config.agentId });
+    return job;
   },
 
   async run(id: string, triggeredByUser?: string): Promise<CronRun> {
@@ -683,6 +722,9 @@ export const CronServiceEnhanced = {
       case "function":
         await this._executeFunction(job, run, signal);
         break;
+      case "vault":
+        await this._executeVault(job, run, signal);
+        break;
       default: {
         // Exhaustiveness check - should never reach here if all job types are handled
         const _exhaustiveCheck: never = job;
@@ -750,22 +792,29 @@ export const CronServiceEnhanced = {
     }
   },
 
-  async _executeFunction(job: CronJob, run: CronRun, signal: AbortSignal): Promise<void> {
-    const config = job.config as { module: string; function: string; args: unknown[] };
+  async _executeFunction(job: CronJob, run: CronRun, _signal: AbortSignal): Promise<void> {
+    const config = job.config as { function: string; args: unknown[] };
+
+    const fn = getFunction(config.function);
+    if (!fn) {
+      throw new Error(
+        `Function "${config.function}" is not registered. ` +
+        `Available functions: ${listRegisteredFunctions().join(", ") || "none"}. ` +
+        `Register functions with registerFunction() before creating cron jobs.`
+      );
+    }
 
     try {
-      const mod = await import(config.module);
-      const fn = mod[config.function];
-
-      if (typeof fn !== "function") {
-        throw new Error(`Function ${config.function} not found in module ${config.module}`);
-      }
-
       const result = await fn(...config.args);
       run.output = JSON.stringify(result, null, 2);
     } catch (error) {
-      throw new Error(`Function execution failed: ${error}`);
+      throw new Error(`Function "${config.function}" execution failed: ${error instanceof Error ? error.message : String(error)}`);
     }
+  },
+
+  async _executeVault(job: CronJob, run: CronRun, signal: AbortSignal): Promise<void> {
+    const executor = new VaultSyncExecutor({})
+    await executor.execute(job, run, signal)
   },
 
   _scheduleNextRun(job: CronJob): void {

@@ -5,7 +5,7 @@ import {
 import { logError } from '../log.js'
 import { sequential } from '../sequential.js'
 import { getInitialSettings } from '../settings/settings.js'
-import { findFirstMatch, getBedrockInferenceProfiles } from './bedrock.js'
+
 import {
   ALL_MODEL_CONFIGS,
   CANONICAL_ID_TO_KEY,

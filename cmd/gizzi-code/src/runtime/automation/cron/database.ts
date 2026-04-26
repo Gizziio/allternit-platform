@@ -2,7 +2,7 @@
  * SQLite Database Layer for Cron Persistence
  * 
  * Uses Bun's built-in SQLite for zero-config durability.
- * All jobs and runs are persisted to ~/.a2r/cron.db
+ * All jobs and runs are persisted to ~/.allternit/cron.db
  */
 
 import { Database } from "bun:sqlite";
@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS jobs (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   description TEXT,
-  type TEXT NOT NULL CHECK(type IN ('shell', 'http', 'agent', 'cowork', 'function')),
+  type TEXT NOT NULL CHECK(type IN ('shell', 'http', 'agent', 'cowork', 'function', 'vault')),
   status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'paused', 'disabled', 'error')),
   
   -- Schedule

@@ -39,7 +39,7 @@ async fn handle_run_socket(
     state: Arc<ApiState>,
     run_id: String,
 ) {
-    use axum::extract::ws::{Message, CloseFrame};
+    use axum::extract::ws::Message;
     use futures::stream::StreamExt;
     
     tracing::info!("WebSocket connected for run: {}", run_id);
@@ -276,7 +276,6 @@ async fn handle_client_message(
             #[derive(serde::Deserialize)]
             struct Command {
                 command: String,
-                args: Option<serde_json::Value>,
             }
             
             let cmd: Command = serde_json::from_value(msg.payload)

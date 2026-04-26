@@ -78,7 +78,7 @@ async function getLanguageModel(modelId?: string) {
     const parsed = Provider.parseModel(modelId)
     return Provider.getLanguage(await Provider.getModel(parsed.providerID, parsed.modelID))
   }
-  const def = await Provider.defaultModel()
+  const def = await Provider.defaultModelConcrete()
   return Provider.getLanguage(await Provider.getModel(def.providerID, def.modelID))
 }
 

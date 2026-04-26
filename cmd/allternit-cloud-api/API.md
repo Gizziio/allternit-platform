@@ -42,7 +42,7 @@ Runs are the core execution units in the Cowork Runtime. A run represents a sing
 | Mode | Description |
 |------|-------------|
 | `local` | Local VM execution (Apple VF/Firecracker) |
-| `remote` | Remote VPS execution (a2r-node) |
+| `remote` | Remote VPS execution (allternit-node) |
 | `cloud` | Cloud-managed execution (Kubernetes, etc.) |
 
 ---

@@ -5,9 +5,9 @@ This plan integrates:
 1. **6 TUI UX improvements** (collapsible messages, search, bookmarks, etc.)
 2. **Usage Guard** from spec (context monitoring, compaction, handoff)
 3. **Existing infrastructure**:
-   - `a2r-usage` platform (in `/a2rchitech/6-ui/a2r-platform/src/a2r-usage/`)
-   - A2R CLI (in `/a2rchitech/7-apps/cli/`)
-   - a2r-shell TUI (current workspace)
+   - `allternit-usage` platform (in `/allternit/6-ui/allternit-platform/src/allternit-usage/`)
+   - Allternit CLI (in `/allternit/7-apps/cli/`)
+   - allternit-shell TUI (current workspace)
 
 **Strategy**: Fork/wrap existing code rather than rebuild.
 
@@ -15,30 +15,30 @@ This plan integrates:
 
 ## External Dependencies (Fork/Integrate)
 
-### 1. openusage → a2r-usage-collector
+### 1. openusage → allternit-usage-collector
 **Source**: External tool (opencode-stats, ccusage, tokscale patterns)
-**Location**: New crate `crates/a2r-usage-collector/`
+**Location**: New crate `crates/allternit-usage-collector/`
 **What to Fork**:
 - Provider-specific parsers (Claude, OpenCode, Codex, Copilot)
 - Token counting algorithms
 - OTel GenAI metrics format
 
 **Integration Points**:
-- Reads from: `~/.a2r/cache/usage/`
-- Writes to: `/.a2r/usage/usage-*.json`
+- Reads from: `~/.allternit/cache/usage/`
+- Writes to: `/.allternit/usage/usage-*.json`
 - Emits: OTel metrics to local collector
 
-### 2. cli-continues → a2r-continuity
+### 2. cli-continues → allternit-continuity
 **Source**: Handoff/resume mechanism
-**Location**: New crate `crates/a2r-continuity/`
+**Location**: New crate `crates/allternit-continuity/`
 **What to Fork**:
 - Session serialization format
 - Baton (handoff artifact) generation
 - Cross-runner resume protocol
 
 **Integration Points**:
-- Reads from: `/.a2r/state/state.json`, `/.a2r/handoff/latest.md`
-- Writes to: `/.a2r/compact/compact-*.md`
+- Reads from: `/.allternit/state/state.json`, `/.allternit/handoff/latest.md`
+- Writes to: `/.allternit/compact/compact-*.md`
 - Triggers: CLI exec for handoff
 
 ---
@@ -142,7 +142,7 @@ This plan integrates:
 - `src/cli/cmd/tui/routes/home.tsx` (modify)
 
 **Acceptance**:
-- [ ] Visual A2R logo illustration
+- [ ] Visual Allternit logo illustration
 - [ ] Clear CTA buttons
 - [ ] Quick-start templates
 - [ ] Progressive disclosure
@@ -151,17 +151,17 @@ This plan integrates:
 
 ### Stream 2: Usage Infrastructure (Fork/Integrate)
 
-#### Task: MoX-USAGE-001 | Fork openusage → a2r-usage-collector
+#### Task: MoX-USAGE-001 | Fork openusage → allternit-usage-collector
 **Status**: Ready
 **Duration**: 16h
 **Assignee**: TBD
 **Depends**: None
-**Files**: New crate `crates/a2r-usage-collector/`
+**Files**: New crate `crates/allternit-usage-collector/`
 
 **What to Port**:
 ```
 From: openusage/ccusage/tokscale patterns
-To: crates/a2r-usage-collector/
+To: crates/allternit-usage-collector/
   - src/parsers/
     - claude.rs      (ccusage patterns)
     - opencode.rs    (opencode stats)
@@ -175,7 +175,7 @@ To: crates/a2r-usage-collector/
 - [ ] Parses provider-specific usage data
 - [ ] Emits OTel GenAI metrics
 - [ ] Calculates context_ratio
-- [ ] Writes to `~/.a2r/cache/usage/`
+- [ ] Writes to `~/.allternit/cache/usage/`
 
 ---
 
@@ -197,17 +197,17 @@ To: crates/a2r-usage-collector/
 
 ### Stream 3: Continuity (Fork/Integrate)
 
-#### Task: MoX-CONT-001 | Fork cli-continues → a2r-continuity
+#### Task: MoX-CONT-001 | Fork cli-continues → allternit-continuity
 **Status**: Ready
 **Duration**: 20h
 **Assignee**: TBD
 **Depends**: None
-**Files**: New crate `crates/a2r-continuity/`
+**Files**: New crate `crates/allternit-continuity/`
 
 **What to Port**:
 ```
 From: cli-continues patterns
-To: crates/a2r-continuity/
+To: crates/allternit-continuity/
   - src/baton.rs      (SessionContext/Baton)
   - src/compact.rs    (Compaction engine)
   - src/handoff.rs    (Handoff actuator)
@@ -215,10 +215,10 @@ To: crates/a2r-continuity/
 ```
 
 **Artifacts**:
-- `/.a2r/receipts/receipt.jsonl` (append-only)
-- `/.a2r/state/state.json`
-- `/.a2r/handoff/latest.md`
-- `/.a2r/compact/compact-*.md`
+- `/.allternit/receipts/receipt.jsonl` (append-only)
+- `/.allternit/state/state.json`
+- `/.allternit/handoff/latest.md`
+- `/.allternit/compact/compact-*.md`
 
 **Acceptance**:
 - [ ] Can generate baton from session
@@ -237,7 +237,7 @@ To: crates/a2r-continuity/
 - `src/cli/cmd/tui/component/baton-viewer.tsx` (new)
 
 **Acceptance**:
-- [ ] Reads `/.a2r/handoff/latest.md`
+- [ ] Reads `/.allternit/handoff/latest.md`
 - [ ] Renders baton sections:
   - Objective
   - Progress summary
@@ -274,7 +274,7 @@ const DEFAULT_THRESHOLDS = {
 
 **Acceptance**:
 - [ ] Evaluates context_ratio against thresholds
-- [ ] Emits guard events (A2R_GUARD_WARN, etc.)
+- [ ] Emits guard events (Allternit_GUARD_WARN, etc.)
 - [ ] Triggers correct actions
 - [ ] Configurable thresholds
 
@@ -286,7 +286,7 @@ const DEFAULT_THRESHOLDS = {
 **Assignee**: TBD
 **Depends**: MoX-GUARD-001
 **Files**:
-- `src/ui/a2r/status-bar.tsx` (modify)
+- `src/ui/allternit/status-bar.tsx` (modify)
 
 **Display**:
 ```
@@ -313,7 +313,7 @@ Model: gpt-5.2 | Context: 63% ▲+4%/m | Guard: OK | Session: abc123
 **Assignee**: TBD
 **Depends**: MoX-GUARD-001
 **Files**:
-- `src/ui/a2r/guard-banner.tsx` (new)
+- `src/ui/allternit/guard-banner.tsx` (new)
 - `src/cli/cmd/tui/routes/session/index.tsx` (modify)
 
 **Banners**:

@@ -2,7 +2,7 @@ import { cmd } from "@/cli/commands/cmd"
 import { UI } from "@/cli/ui"
 import { createPluginController } from "@allternit/remote-control"
 
-export const A2rPluginsCommand = cmd({
+export const AllternitPluginsCommand = cmd({
   command: "plugins [action] [name]",
   describe: "Manage Allternit plugins",
   builder: (yargs) =>

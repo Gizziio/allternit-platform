@@ -134,7 +134,7 @@ describe("Continuity Types", () => {
       "cursor",
       "gemini_cli",
       "droid",
-      "a2r_shell",
+      "allternit_shell",
       "qwen",
       "kimi",
       "minimax",

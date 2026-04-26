@@ -1,7 +1,7 @@
 /**
- * A2R Cloud Relay Service
+ * Allternit Cloud Relay Service
  *
- * Enables remote access to A2R sessions from anywhere.
+ * Enables remote access to Allternit sessions from anywhere.
  * Works like Claude Code Remote Control - local sessions accessible via cloud relay.
  *
  * Architecture:

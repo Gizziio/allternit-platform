@@ -2,7 +2,7 @@
  * Agent-First Authentication System
  * 
  * API key-based authentication for AI agents.
- * Similar to agenthub's auth system but integrated with a2r rails.
+ * Similar to agenthub's auth system but integrated with allternit rails.
  * 
  * Features:
  * - API key generation per agent

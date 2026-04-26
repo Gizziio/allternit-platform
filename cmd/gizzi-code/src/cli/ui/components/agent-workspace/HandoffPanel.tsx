@@ -1,5 +1,5 @@
 import { Show, createMemo, For } from "solid-js"
-import { useTheme } from "@/cli/ui/tui/context/theme"
+import { useTheme } from "@/cli/ui/ink-app/context/theme"
 
 interface Checkpoint {
   id: string

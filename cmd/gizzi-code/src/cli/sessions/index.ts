@@ -2,7 +2,7 @@
  * CLI Sessions Module
  *
  * Provides session management for command execution with support for
- * VM-based execution through A2R Desktop daemon and local fallback.
+ * VM-based execution through Allternit Desktop daemon and local fallback.
  *
  * @packageDocumentation
  */

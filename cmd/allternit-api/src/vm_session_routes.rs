@@ -211,6 +211,7 @@ async fn create_session_handler(
 
     let workspace_path = "/workspace".to_string();
     let mut handle_id: Option<String> = None;
+    #[allow(unused_assignments)]
     let mut bootstrap_log = String::new();
     let mut git_cloned = false;
     let vm_backed;
@@ -220,7 +221,7 @@ async fn create_session_handler(
 
         #[cfg(feature = "vm-driver")]
         {
-            use a2r_driver_interface::{
+            use allternit_driver_interface::{
                 CommandSpec, EnvironmentSpec, MountSpec, MountType, NetworkPolicy, PolicySpec,
                 ResourceSpec, SpawnSpec, TenantId,
             };
@@ -913,7 +914,7 @@ ssh-keyscan -H github.com gitlab.com bitbucket.org >> /root/.ssh/known_hosts 2>/
     // ── Git config ────────────────────────────────────────────────────────────
     script.push_str(r#"
 echo "[gizzi-bootstrap] Configuring git..."
-git config --global user.email "gizzi@a2rchitech.local"
+git config --global user.email "gizzi@allternit.local"
 git config --global user.name "Gizzi Code"
 git config --global init.defaultBranch main
 git config --global core.autocrlf false
@@ -1137,7 +1138,7 @@ async fn exec_in_session_handler(
             // ── Real VM execution ──────────────────────────────────────────
             #[cfg(feature = "vm-driver")]
             {
-                use a2r_driver_interface::{CommandSpec, ExecutionHandle, ExecutionId, TenantId};
+                use allternit_driver_interface::{CommandSpec, ExecutionHandle, ExecutionId, TenantId};
 
                 let handle_uuid = Uuid::parse_str(handle_id)
                     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -1231,7 +1232,7 @@ async fn destroy_session_handler(
     if let (Some(driver), Some(handle_id)) = (state.vm_driver.as_ref(), &session.handle_id) {
         #[cfg(feature = "vm-driver")]
         {
-            use a2r_driver_interface::{ExecutionHandle, ExecutionId, TenantId};
+            use allternit_driver_interface::{ExecutionHandle, ExecutionId, TenantId};
 
             if let Ok(handle_uuid) = Uuid::parse_str(handle_id) {
                 let handle = ExecutionHandle {

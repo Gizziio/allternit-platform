@@ -10,7 +10,7 @@ import { Config } from "@/runtime/context/config/config"
 import { Global } from "@/runtime/context/global"
 import { Plugin } from "@/runtime/integrations/plugin"
 import { Instance } from "@/runtime/context/project/instance"
-import type { Hooks } from "@a2r/plugin"
+import type { Hooks } from "@allternit/plugin"
 
 type PluginAuth = NonNullable<Hooks["auth"]>
 

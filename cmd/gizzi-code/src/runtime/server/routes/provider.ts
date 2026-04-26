@@ -1,5 +1,5 @@
 import { Hono } from "hono"
-import { describeRoute, validator, resolver } from "hono-openapi"
+import { describeRoute, validator, resolver } from "@/runtime/server/openapi"
 import z from "zod/v4"
 import { Config } from "@/runtime/context/config/config"
 import { Provider } from "@/runtime/providers/provider"
@@ -52,6 +52,35 @@ export const ProviderRoutes = lazy(() =>
           connected: Object.keys(connected),
         })
       },
+    )
+    .get(
+      "/ollama/models",
+      describeRoute({
+        summary: "List local Ollama models",
+        description: "Fetch models available in the local Ollama instance",
+        operationId: "provider.ollama.models",
+        responses: {
+          200: {
+            description: "List of Ollama models",
+            content: {
+              "application/json": {
+                schema: resolver(z.any()),
+              },
+            },
+          },
+        },
+      }),
+      async (c) => {
+        try {
+          const baseUrl = process.env.OLLAMA_BASE_URL || 'http://127.0.0.1:11434';
+          const response = await fetch(`${baseUrl}/api/tags`);
+          if (!response.ok) throw new Error('Ollama not reachable');
+          const data = await response.json();
+          return c.json(data);
+        } catch (e) {
+          return c.json({ models: [] });
+        }
+      }
     )
     .get(
       "/auth",

@@ -100,7 +100,7 @@ export namespace MessageV2Ext {
   /**
    * Extended Part type that includes both Gizzi and Claude content types
    */
-  export const Part = z.discriminatedUnion("type", [
+  export const Part = z.union([
     // Gizzi types (re-exported for convenience)
     MessageV2.Part.options[0], // TextPart
     MessageV2.Part.options[1], // SubtaskPart

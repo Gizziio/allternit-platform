@@ -105,7 +105,7 @@ jobs:
           body: |
             ## Gizzi Code ${{ github.ref_name }}
 
-            AI-powered terminal interface for the A2R ecosystem.
+            AI-powered terminal interface for the Allternit ecosystem.
 
             ### Install
 

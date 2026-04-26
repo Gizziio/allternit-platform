@@ -10,7 +10,7 @@ import { Flag } from "./src/runtime/context/flag/flag"
 // Set required flags
 Flag.GIZZI_SERVER_PASSWORD = ""
 
-console.log("Starting A2R HTTP Server on port 4096...")
+console.log("Starting Allternit HTTP Server on port 4096...")
 
 const server = Server.listen({
   port: 4096,

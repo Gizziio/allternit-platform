@@ -1,13 +1,13 @@
 [package]
-name = "a2r-cloud-wizard"
+name = "allternit-cloud-wizard"
 version = "0.1.0"
 edition = "2021"
-description = "A2R Cloud Deploy Wizard - Enterprise BYOC deployment with preflight, verification, and failure handling"
+description = "Allternit Cloud Deploy Wizard - Enterprise BYOC deployment with preflight, verification, and failure handling"
 
 [dependencies]
-# A2R internal
-a2r-cloud-ssh = { path = "../a2r-cloud-ssh" }
-a2r-cloud-hetzner = { path = "../a2r-cloud-providers/hetzner" }
+# Allternit internal
+allternit-cloud-ssh = { path = "../../infrastructure/cloud/allternit-cloud-ssh" }
+allternit-cloud-hetzner = { path = "../../infrastructure/providers/hetzner" }
 
 # Web framework
 axum = { workspace = true }

@@ -1,7 +1,42 @@
-import type {
-  McpbManifest,
-  McpbUserConfigurationOption,
-} from '@anthropic-ai/mcpb'
+/**
+ * MCPB Types (Locally defined to remove @anthropic-ai/mcpb dependency)
+ */
+export interface McpbAuthor {
+  name: string
+  email?: string
+  url?: string
+}
+
+export interface McpbServerConfig {
+  command: string
+  args?: string[]
+  env?: Record<string, string>
+}
+
+export interface McpbManifest {
+  name: string
+  version: string
+  author: McpbAuthor
+  server?: McpbServerConfig
+  tools: unknown[]
+  user_config?: Record<string, McpbUserConfigurationOption>
+}
+
+export interface McpbUserConfigurationOption {
+  key?: string
+  label?: string
+  title?: string
+  description?: string
+  type: 'string' | 'number' | 'boolean' | 'enum' | 'file' | 'directory'
+  options?: string[]
+  required?: boolean
+  sensitive?: boolean
+  multiple?: boolean
+  default?: string | number | boolean | string[]
+  min?: number
+  max?: number
+}
+
 import axios from 'axios'
 import { createHash } from 'crypto'
 import { chmod, writeFile } from 'fs/promises'
@@ -415,26 +450,44 @@ async function generateMcpConfig(
   extractedPath: string,
   userConfig: UserConfigValues = {},
 ): Promise<McpServerConfig> {
-  // Lazy import: @anthropic-ai/mcpb barrel pulls in zod v3 schemas (~700KB of
-  // bound closures). See dxt/helpers.ts for details.
-  const { getMcpConfigForManifest } = await import('@anthropic-ai/mcpb')
-  const mcpConfig = await getMcpConfigForManifest({
-    manifest,
-    extensionPath: extractedPath,
-    systemDirs: getSystemDirectories(),
-    userConfig,
-    pathSeparator: '/',
-  })
-
-  if (!mcpConfig) {
-    const error = new Error(
-      `Failed to generate MCP server configuration from manifest "${manifest.name}"`,
-    )
-    logError(error)
-    throw error
+  if (!manifest.server) {
+    throw new Error('Manifest does not define a server')
   }
 
-  return mcpConfig as McpServerConfig
+  // Basic implementation of MCP config generation that doesn't depend on @anthropic-ai/mcpb
+  const command = manifest.server.command
+  const args = manifest.server.args || []
+  const env = { ...manifest.server.env }
+
+  // Simple substitution for user config values in args and env
+  const processedArgs = args.map(arg => {
+    let processed = arg
+    for (const [key, value] of Object.entries(userConfig)) {
+      processed = processed.replace(new RegExp(`\\$\\{user_config\\.${key}\\}`, 'g'), String(value))
+    }
+    // Also support relative paths for commands
+    if (processed.startsWith('./') || processed.startsWith('../')) {
+      return join(extractedPath, processed)
+    }
+    return processed
+  })
+
+  const processedEnv: Record<string, string> = {}
+  for (const [key, value] of Object.entries(env)) {
+    let processed = value
+    for (const [ukey, uvalue] of Object.entries(userConfig)) {
+      processed = processed.replace(new RegExp(`\\$\\{user_config\\.${ukey}\\}`, 'g'), String(uvalue))
+    }
+    processedEnv[key] = processed
+  }
+
+  const mcpConfig: McpServerConfig = {
+    command: command.startsWith('./') || command.startsWith('../') ? join(extractedPath, command) : command,
+    args: processedArgs,
+    env: processedEnv,
+  }
+
+  return mcpConfig
 }
 
 /**

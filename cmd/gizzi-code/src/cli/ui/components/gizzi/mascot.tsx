@@ -2,7 +2,7 @@ import { For, createMemo } from "solid-js"
 import { RGBA } from "@opentui/core"
 import { useMascotFrame } from "@/cli/ui/components/animation"
 import { useGIZZITheme } from "@/cli/ui/components/gizzi/theme"
-import { useTheme } from "@/cli/ui/tui/context/theme"
+import { useTheme } from "@/cli/ui/ink-app/context/theme"
 
 export type GIZZIMascotState =
   | "idle"

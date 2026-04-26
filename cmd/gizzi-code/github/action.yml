@@ -35,7 +35,7 @@ inputs:
     required: false
 
   oidc_base_url:
-    description: "Base URL for OIDC token exchange API. Only required when running a custom GitHub App install. Defaults to https://api.a2r.dev"
+    description: "Base URL for OIDC token exchange API. Only required when running a custom GitHub App install. Defaults to https://api.allternit.dev"
     required: false
 
 runs:
@@ -58,7 +58,7 @@ runs:
     - name: Install opencode
       if: steps.cache.outputs.cache-hit != 'true'
       shell: bash
-      run: curl -fsSL https://a2r.dev/install | bash
+      run: curl -fsSL https://allternit.dev/install | bash
 
     - name: Add opencode to PATH
       shell: bash

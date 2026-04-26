@@ -9,7 +9,7 @@ import { Instance } from "@/runtime/context/project/instance"
 import { Flag } from "@/runtime/context/flag/flag"
 import { CodexAuthPlugin } from "@/runtime/integrations/plugin/codex"
 import { Session } from "@/runtime/session/session"
-import { NamedError } from "@allternit/util/error"
+import { NamedError } from "@allternit/gizzi-util/error.js"
 
 // Extend Hooks interface to include optional name property
 interface HooksWithName extends Hooks {

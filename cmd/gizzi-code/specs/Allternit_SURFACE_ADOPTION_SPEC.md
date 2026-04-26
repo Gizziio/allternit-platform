@@ -1,15 +1,15 @@
-# A2R Surface Adoption Spec
+# Allternit Surface Adoption Spec
 
 **Version:** 1.0
 **Date:** 2026-03-15
 **Status:** Planning
-**Depends on:** `A2R_SDK_SPEC.md`, `A2R_API_ROUTING_SPEC.md`
+**Depends on:** `Allternit_SDK_SPEC.md`, `Allternit_API_ROUTING_SPEC.md`
 
 ---
 
 ## Overview
 
-Gizzi Code is the brain. `@a2r/sdk` is the nervous system. This spec defines how
+Gizzi Code is the brain. `@allternit/sdk` is the nervous system. This spec defines how
 each product surface connects to Gizzi Code via the SDK — replacing the current
 patchwork of raw HTTP, worker RPC, and disconnected subprocess launching.
 
@@ -19,46 +19,46 @@ patchwork of raw HTTP, worker RPC, and disconnected subprocess launching.
 
 ### TUI (Local)
 
-**Current state:** Uses `@a2r/sdk/v2` (stub — broken). Worker RPC works but is
+**Current state:** Uses `@allternit/sdk/v2` (stub — broken). Worker RPC works but is
 not exposed through the SDK.
 
 **Target:**
 ```typescript
 // src/cli/ui/tui/context/sdk.tsx
-import { createA2RClient } from "@a2r/sdk"
+import { createAllternitClient } from "@allternit/sdk"
 
 // When running locally (same Bun Worker process as server):
-const sdk = createA2RClient({ mode: "local" })
+const sdk = createAllternitClient({ mode: "local" })
 
 // When attaching to remote:
-const sdk = createA2RClient({ url: props.url })
+const sdk = createAllternitClient({ url: props.url })
 ```
 
 **Migration steps:**
 1. Fix v2 stub → real SDK (Phase 0, unblocks everything)
-2. Update `sdk.tsx` to use new `createA2RClient` API
+2. Update `sdk.tsx` to use new `createAllternitClient` API
 3. Update `sync.tsx` to use typed SDK resource methods
-4. Remove `@a2r/sdk/v2` import path everywhere
+4. Remove `@allternit/sdk/v2` import path everywhere
 
 **What changes:** Import path, method call signatures, event subscription.
 Worker thread and Hono server stay untouched.
 
 ---
 
-### A2R Desktop (Electron)
+### Allternit Desktop (Electron)
 
 **Current state:** Spawns Gizzi Code as a subprocess. No API connection after launch.
 Desktop is disconnected — it starts the server but can't talk to it.
 
 **Target:**
 ```typescript
-// In A2R Desktop (Electron main process or renderer)
-import { createA2RClient } from "@a2r/sdk"
+// In Allternit Desktop (Electron main process or renderer)
+import { createAllternitClient } from "@allternit/sdk"
 
 // Desktop knows the server URL (it spawned the process, it knows the port)
-const sdk = createA2RClient({
+const sdk = createAllternitClient({
   url: `http://localhost:${gizziPort}`,
-  headers: { "x-a2r-instance": instanceID }
+  headers: { "x-allternit-instance": instanceID }
 })
 
 // Subscribe to session updates (real-time sync)
@@ -74,8 +74,8 @@ for await (const event of sdk.sessions.run(session.id, { prompt: userInput })) {
 ```
 
 **What's needed:**
-- `@a2r/sdk` published to package registry (or workspace dep)
-- A2R Desktop adds `@a2r/sdk` to its dependencies
+- `@allternit/sdk` published to package registry (or workspace dep)
+- Allternit Desktop adds `@allternit/sdk` to its dependencies
 - Desktop IPC: main process holds SDK client, renderer queries via IPC
 - Event bridge: SDK events → Desktop state → UI re-render
 
@@ -93,9 +93,9 @@ Every server API change requires updating this file manually — no type safety.
 **Target:**
 ```typescript
 // Replace session-api.ts with SDK
-import { createA2RClient } from "@a2r/sdk"
+import { createAllternitClient } from "@allternit/sdk"
 
-const sdk = createA2RClient({ url: connectionManager.serverUrl })
+const sdk = createAllternitClient({ url: connectionManager.serverUrl })
 
 // session-api.ts becomes:
 export const sessions = sdk.sessions
@@ -103,7 +103,7 @@ export const events = sdk.events
 ```
 
 **Migration steps:**
-1. Add `@a2r/sdk` to thin-client dependencies
+1. Add `@allternit/sdk` to thin-client dependencies
 2. Replace `session-api.ts` with SDK wrapper
 3. Update all components that use `session-api.ts` to use SDK types
 4. Remove manual type mirroring — types come from SDK now
@@ -118,10 +118,10 @@ export const events = sdk.events
 
 **Target:**
 ```typescript
-import { createA2RClient } from "@a2r/sdk"
+import { createAllternitClient } from "@allternit/sdk"
 
 // Extension connects to user's local Gizzi Code instance or remote
-const sdk = createA2RClient({
+const sdk = createAllternitClient({
   url: await getGizziServerUrl(),  // From extension settings
   token: await getAuthToken()
 })
@@ -138,16 +138,16 @@ await sdk.sessions.run(sessionID, { prompt: capturedPageContent })
 
 ### Plugin System
 
-**Current state:** Plugins receive `createA2RClient` from the plugin integration.
+**Current state:** Plugins receive `createAllternitClient` from the plugin integration.
 The client they receive currently comes from the v2 stub path.
 
 **Target:**
 ```typescript
 // src/runtime/integrations/plugin/index.ts
-import { createA2RClient } from "@a2r/sdk"
+import { createAllternitClient } from "@allternit/sdk"
 
 // Plugin host creates a scoped SDK client for the plugin
-const pluginSDK = createA2RClient({ mode: "local" })
+const pluginSDK = createAllternitClient({ mode: "local" })
 
 // Plugin receives full SDK access (scoped by plugin permissions)
 plugin.init({ sdk: pluginSDK })
@@ -166,9 +166,9 @@ but uses the v2 stub internally.
 **Target:**
 ```typescript
 // An external agent (another AI system) connecting to Gizzi Code via ACP
-import { createA2RClient } from "@a2r/sdk"
+import { createAllternitClient } from "@allternit/sdk"
 
-const sdk = createA2RClient({ url: gizziServerUrl })
+const sdk = createAllternitClient({ url: gizziServerUrl })
 
 // External agent sends a message to a Gizzi session
 await sdk.agents.communicate(agentID, {
@@ -192,7 +192,7 @@ The SDK needs to be available to all surfaces. Options:
 // thin-client/package.json
 {
   "dependencies": {
-    "@a2r/sdk": "workspace:*"
+    "@allternit/sdk": "workspace:*"
   }
 }
 ```
@@ -200,17 +200,17 @@ Works within the monorepo. Surfaces outside the monorepo can't use it.
 
 ### Option B: Private npm registry (recommended)
 - Publish to GitHub Packages or a private npm registry
-- All surfaces (monorepo + external) can install `@a2r/sdk`
+- All surfaces (monorepo + external) can install `@allternit/sdk`
 - Version pinning works across repos
 - Changelog and semver enforced
 
 ### Option C: GitHub Packages (pragmatic start)
 ```json
 // .npmrc
-@a2r:registry=https://npm.pkg.github.com
+@allternit:registry=https://npm.pkg.github.com
 ```
 Free for public or private repos. Easy to set up. Surfaces add the `.npmrc` and
-can install `@a2r/sdk`.
+can install `@allternit/sdk`.
 
 **Recommendation:** Start with workspace dependency while building the SDK. Move
 to GitHub Packages when the surface adoption begins.
@@ -219,11 +219,11 @@ to GitHub Packages when the surface adoption begins.
 
 ## Shared Type Strategy
 
-All surface types come from `@a2r/sdk` — no separate type definitions per surface.
+All surface types come from `@allternit/sdk` — no separate type definitions per surface.
 
 ```typescript
 // Every surface imports types from the SDK
-import type { Session, Message, Agent, A2REvent } from "@a2r/sdk"
+import type { Session, Message, Agent, AllternitEvent } from "@allternit/sdk"
 
 // NOT from their own type files
 // NOT from raw API response shapes
@@ -260,9 +260,9 @@ With surface adoption:
 ## Success Criteria
 
 The nervous system is working when:
-- [ ] TUI uses `@a2r/sdk` (not v2 stub)
-- [ ] Thin-client uses `@a2r/sdk` (not raw HTTP)
-- [ ] A2R Desktop has a live SDK connection to Gizzi Code
+- [ ] TUI uses `@allternit/sdk` (not v2 stub)
+- [ ] Thin-client uses `@allternit/sdk` (not raw HTTP)
+- [ ] Allternit Desktop has a live SDK connection to Gizzi Code
 - [ ] `session.updated` event propagates to all connected surfaces simultaneously
 - [ ] Adding a new API field requires changing exactly one file: the Hono route
 - [ ] SDK publishes to package registry with semver

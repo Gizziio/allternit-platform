@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { Workspace } from '@a2r/gizziclaw';
+import { Workspace } from '@allternit/gizziclaw';
 
 export const agentCommand = new Command('agent')
   .description('Manage GizziClaw agents')

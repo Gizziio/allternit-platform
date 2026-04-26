@@ -2,15 +2,15 @@
  * Cron CLI Commands
  * 
  * Commands:
- * - a2r cron list              List all scheduled jobs
- * - a2r cron add               Add a new job (interactive)
- * - a2r cron remove <id>       Remove a job
- * - a2r cron run <id>          Run a job immediately
- * - a2r cron pause <id>        Pause a job
- * - a2r cron resume <id>       Resume a job
- * - a2r cron status            Show daemon status
- * - a2r cron start             Start the cron daemon
- * - a2r cron stop              Stop the cron daemon
+ * - allternit cron list              List all scheduled jobs
+ * - allternit cron add               Add a new job (interactive)
+ * - allternit cron remove <id>       Remove a job
+ * - allternit cron run <id>          Run a job immediately
+ * - allternit cron pause <id>        Pause a job
+ * - allternit cron resume <id>       Resume a job
+ * - allternit cron status            Show daemon status
+ * - allternit cron start             Start the cron daemon
+ * - allternit cron stop              Stop the cron daemon
  */
 
 import { startDaemon, getRemoteStatus, stopRemoteDaemon } from "@/runtime/automation/cron";

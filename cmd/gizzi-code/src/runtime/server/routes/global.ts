@@ -1,5 +1,5 @@
 import { Hono } from "hono"
-import { describeRoute, resolver, validator } from "hono-openapi"
+import { describeRoute, resolver, validator } from "@/runtime/server/openapi"
 import { streamSSE } from "hono/streaming"
 import z from "zod/v4"
 import { BusEvent } from "@/shared/bus/bus-event"

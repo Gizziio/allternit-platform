@@ -1,6 +1,6 @@
 /**
  * @allternit/remote-control
- * Shared remote control package for A2R architecture
+ * Shared remote control package for Allternit architecture
  *
  * Usage:
  * ```typescript

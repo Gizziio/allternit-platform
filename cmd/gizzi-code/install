@@ -275,7 +275,7 @@ download_with_progress() {
     fi
 
     local tmp_dir=${TMPDIR:-/tmp}
-    local basename="${tmp_dir}/a2r_install_$$"
+    local basename="${tmp_dir}/allternit_install_$$"
     local tracefile="${basename}.trace"
 
     rm -f "$tracefile"
@@ -325,8 +325,8 @@ download_with_progress() {
 }
 
 download_and_install() {
-    print_message info "\n${MUTED}Installing ${NC}a2r ${MUTED}version: ${NC}$specific_version"
-    local tmp_dir="${TMPDIR:-/tmp}/a2r_install_$$"
+    print_message info "\n${MUTED}Installing ${NC}allternit ${MUTED}version: ${NC}$specific_version"
+    local tmp_dir="${TMPDIR:-/tmp}/allternit_install_$$"
     mkdir -p "$tmp_dir"
 
     if [[ "$os" == "windows" ]] || ! [ -t 2 ] || ! download_with_progress "$url" "$tmp_dir/$filename"; then
@@ -340,15 +340,15 @@ download_and_install() {
         unzip -q "$tmp_dir/$filename" -d "$tmp_dir"
     fi
 
-    mv "$tmp_dir/a2r" "$INSTALL_DIR"
-    chmod 755 "${INSTALL_DIR}/a2r"
+    mv "$tmp_dir/allternit" "$INSTALL_DIR"
+    chmod 755 "${INSTALL_DIR}/allternit"
     rm -rf "$tmp_dir"
 }
 
 install_from_binary() {
-    print_message info "\n${MUTED}Installing ${NC}a2r ${MUTED}from: ${NC}$binary_path"
-    cp "$binary_path" "${INSTALL_DIR}/a2r"
-    chmod 755 "${INSTALL_DIR}/a2r"
+    print_message info "\n${MUTED}Installing ${NC}allternit ${MUTED}from: ${NC}$binary_path"
+    cp "$binary_path" "${INSTALL_DIR}/allternit"
+    chmod 755 "${INSTALL_DIR}/allternit"
 }
 
 if [ -n "$binary_path" ]; then

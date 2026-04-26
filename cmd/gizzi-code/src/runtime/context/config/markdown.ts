@@ -1,4 +1,4 @@
-import { NamedError } from "@a2r/util/error"
+import { NamedError } from "@allternit/gizzi-util/error.js"
 import matter from "gray-matter"
 import { z } from "zod/v4"
 import { Filesystem } from "@/shared/util/filesystem"

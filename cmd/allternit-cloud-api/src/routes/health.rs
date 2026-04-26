@@ -140,20 +140,20 @@ pub async fn metrics(
         }
     };
     
-    // a2r_runs_total - Total number of runs
+    // allternit_runs_total - Total number of runs
     let runs_total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM runs")
         .fetch_one(&state.db)
         .await
         .unwrap_or(0);
     add_metric(
-        "a2r_runs_total",
+        "allternit_runs_total",
         "Total number of runs",
         "counter",
         &runs_total.to_string(),
         None,
     );
     
-    // a2r_runs_active - Currently active runs
+    // allternit_runs_active - Currently active runs
     let runs_active: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM runs WHERE status IN ('pending', 'provisioning', 'running')"
     )
@@ -161,40 +161,40 @@ pub async fn metrics(
     .await
     .unwrap_or(0);
     add_metric(
-        "a2r_runs_active",
+        "allternit_runs_active",
         "Number of currently active runs",
         "gauge",
         &runs_active.to_string(),
         None,
     );
     
-    // a2r_cloud_instances - Number of cloud instances
+    // allternit_cloud_instances - Number of cloud instances
     let instances: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM instances")
         .fetch_one(&state.db)
         .await
         .unwrap_or(0);
     add_metric(
-        "a2r_cloud_instances",
+        "allternit_cloud_instances",
         "Number of cloud instances",
         "gauge",
         &instances.to_string(),
         None,
     );
     
-    // a2r_deployments_total - Total number of deployments
+    // allternit_deployments_total - Total number of deployments
     let deployments_total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM deployments")
         .fetch_one(&state.db)
         .await
         .unwrap_or(0);
     add_metric(
-        "a2r_deployments_total",
+        "allternit_deployments_total",
         "Total number of deployments",
         "counter",
         &deployments_total.to_string(),
         None,
     );
     
-    // a2r_deployments_active - Active deployments
+    // allternit_deployments_active - Active deployments
     let deployments_active: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM deployments WHERE status IN ('pending', 'provisioning', 'installing')"
     )
@@ -202,17 +202,17 @@ pub async fn metrics(
     .await
     .unwrap_or(0);
     add_metric(
-        "a2r_deployments_active",
+        "allternit_deployments_active",
         "Number of active deployments",
         "gauge",
         &deployments_active.to_string(),
         None,
     );
     
-    // a2r_api_requests_total - API request counter (placeholder for future implementation)
+    // allternit_api_requests_total - API request counter (placeholder for future implementation)
     // In a real implementation, this would be tracked via middleware
     add_metric(
-        "a2r_api_requests_total",
+        "allternit_api_requests_total",
         "Total number of API requests",
         "counter",
         "0",

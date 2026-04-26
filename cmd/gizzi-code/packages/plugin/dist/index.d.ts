@@ -1,9 +1,9 @@
-import type { A2RClient } from "@a2r/sdk"
+import type { AllternitClient } from "@allternit/sdk"
 
 // ── PluginInput ────────────────────────────────────────────────────────────────
 
 export interface PluginInput {
-  client: A2RClient
+  client: AllternitClient
   project: string
   worktree: string
   directory: string

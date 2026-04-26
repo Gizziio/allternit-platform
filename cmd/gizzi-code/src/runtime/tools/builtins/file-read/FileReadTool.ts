@@ -532,7 +532,7 @@ export const FileReadTool = buildTool({
     // Killswitch pattern: GB can disable if the stub message confuses
     // the model externally.
     // 3P default: killswitch off = dedup enabled. Client-side only — no
-    // server support needed, safe for Bedrock/Vertex/Foundry.
+    // server support needed.
     const dedupKillswitch = getFeatureValue_CACHED_MAY_BE_STALE(
       'tengu_read_dedup_killswitch',
       false,

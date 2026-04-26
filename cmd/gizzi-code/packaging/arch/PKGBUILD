@@ -1,8 +1,8 @@
-# Maintainer: A2R Technologies <team@a2r.io>
+# Maintainer: Allternit Technologies <team@allternit.io>
 pkgname=gizzi-code
 pkgver=1.0.0
 pkgrel=1
-pkgdesc="AI-powered terminal interface for the A2R ecosystem"
+pkgdesc="AI-powered terminal interface for the Allternit ecosystem"
 arch=('x86_64' 'aarch64')
 url="https://gizzi.sh"
 license=('MIT')

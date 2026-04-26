@@ -213,62 +213,13 @@ export {
 export * as ACP from '@agentclientprotocol/sdk';
 
 // ============================================================================
-// Backward Compatibility
+// HTTP Client (generated from OpenAPI spec)
 // ============================================================================
 
-import { AllternitHarness } from './harness/index.js';
-import type { HarnessConfig } from './harness/types.js';
-
-/**
- * Create an Allternit client for backward compatibility.
- * This wraps the AllternitHarness with a simpler client interface.
- * 
- * @deprecated Use AllternitHarness directly for new code
- */
-export function createAllternitClient(config: {
-  baseUrl?: string;
-  directory?: string;
-  apiKey?: string;
-}): AllternitClient {
-  return new AllternitClient(config);
-}
-
-/**
- * Simple client wrapper for backward compatibility.
- */
-export class AllternitClient {
-  private harness: AllternitHarness;
-  private config: { baseUrl?: string; directory?: string; apiKey?: string };
-
-  constructor(config: { baseUrl?: string; directory?: string; apiKey?: string }) {
-    this.config = config;
-    
-    // Create harness config from client config
-    const harnessConfig: HarnessConfig = config.apiKey
-      ? {
-          mode: 'byok',
-          byok: {
-            anthropic: { apiKey: config.apiKey },
-          },
-        }
-      : {
-          mode: 'local',
-          local: {
-            baseURL: config.baseUrl || 'http://localhost:11434',
-          },
-        };
-    
-    this.harness = new AllternitHarness(harnessConfig);
-  }
-
-  async connect(): Promise<void> {
-    // No-op for compatibility
-  }
-
-  async disconnect(): Promise<void> {
-    // No-op for compatibility
-  }
-}
+// Re-export the generated HTTP client — this is what acp.ts and other consumers
+// need for session management, globalEvents, prompt(), etc.
+export { createAllternitClient, AllternitClient } from '../dist/gen/allternit-client.js';
+export type { Event } from '../dist/gen/entity-types.js';
 
 // ============================================================================
 // Version
@@ -277,14 +228,3 @@ export class AllternitClient {
 export const VERSION = '1.0.0';
 export const SDK_NAME = '@allternit/sdk';
 export const ACP_VERSION = '0.14.1'; // Matching @agentclientprotocol/sdk version
-
-// A2R Client exports (stub)
-export function createA2RClient(config?: any): any {
-  return {
-    connect: () => Promise.resolve(),
-    disconnect: () => Promise.resolve(),
-    send: () => Promise.resolve(),
-    receive: () => Promise.resolve(),
-  };
-}
-export const A2RClient = createA2RClient;

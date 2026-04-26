@@ -116,6 +116,6 @@ export declare class PollingCloudRelayClient {
  * Create a polling cloud relay client
  */
 export declare function createPollingCloudRelayClient(options: PollingRelayOptions): PollingCloudRelayClient;
-export declare const DEFAULT_POLLING_RELAY_URL = "https://cowork.a2r.com";
+export declare const DEFAULT_POLLING_RELAY_URL = "https://cowork.allternit.com";
 export default PollingCloudRelayClient;
 //# sourceMappingURL=cloud-relay-polling.d.ts.map

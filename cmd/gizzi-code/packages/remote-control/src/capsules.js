@@ -1,6 +1,6 @@
 /**
  * Capsule Remote Control
- * Controls A2R capsules (containerized agents)
+ * Controls Allternit capsules (containerized agents)
  */
 export class CapsuleController {
     apiBaseUrl;

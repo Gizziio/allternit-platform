@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 
 export const runCommand = new Command('run')
-  .description('Run a command in A2R environment')
+  .description('Run a command in Allternit environment')
   .argument('<command...>', 'Command to run')
   .option('-w, --workdir <dir>', 'Working directory')
   .option('-e, --env <env...>', 'Environment variables (KEY=value)', [])

@@ -6,7 +6,7 @@ import { Log } from "@/shared/util/log"
 import { BunProc } from "@/shared/bun"
 import { Plugin } from "@/runtime/integrations/plugin"
 import { ModelsDev } from "@/runtime/providers/adapters/models"
-import { NamedError } from "@a2r/util/error"
+import { NamedError } from "@allternit/gizzi-util/error.js"
 import { Auth } from "@/runtime/integrations/auth"
 import { Env } from "@/runtime/context/env"
 import { Instance } from "@/runtime/context/project/instance"
@@ -25,6 +25,7 @@ import { BUNDLED_PROVIDERS, NoSuchModelError, type SDK, type LanguageModelV2 } f
 import { CUSTOM_LOADERS } from "@/runtime/providers/adapters/loaders"
 import type { CustomModelLoader } from "@/runtime/providers/types"
 import { Discovery } from "@/runtime/providers/discovery"
+import { SubprocessLanguageModel } from "@/runtime/providers/adapters/loaders/subprocess"
 
 export namespace Provider {
   const log = Log.create({ service: "provider" })
@@ -665,6 +666,14 @@ export namespace Provider {
     if (s.models.has(key)) return s.models.get(key)!
 
     const provider = s.providers[model.providerID]
+
+    // Subprocess providers (claude-cli, llm, aichat, etc.) — bypass HTTP SDK entirely
+    if (provider?.auth_type === "subprocess" && provider.subprocess_cmd) {
+      const language = new SubprocessLanguageModel(provider.subprocess_cmd, model.api.id) as unknown as LanguageModelV2
+      s.models.set(key, language)
+      return language
+    }
+
     const sdk = await getSDK(model)
 
     try {
@@ -765,14 +774,40 @@ export namespace Provider {
   export async function defaultModel() {
     const cfg = await Config.get()
     const providers = await list()
-    if (cfg.model) {
+
+    // Explicit model config takes priority (lets users pin a specific model)
+    if (cfg.model && cfg.model !== "auto" && cfg.model !== "auto/auto") {
       const parsed = parseModel(cfg.model)
-      const configuredProvider = providers[parsed.providerID]
-      if (configuredProvider?.models?.[parsed.modelID]) return parsed
-      log.warn("configured default model not found, falling back", {
-        providerID: parsed.providerID,
-        modelID: parsed.modelID,
-      })
+      if (parsed.providerID !== "auto") {
+        const configuredProvider = providers[parsed.providerID]
+        if (configuredProvider?.models?.[parsed.modelID]) return parsed
+        log.warn("configured default model not found, using auto-routing", {
+          providerID: parsed.providerID,
+          modelID: parsed.modelID,
+        })
+      }
+    }
+
+    // Default: auto-route. Works as long as any provider is authenticated.
+    // resolveAuto() picks the cheapest capable model per request at runtime.
+    if (Object.keys(providers).length > 0) {
+      return { providerID: "auto", modelID: "auto" }
+    }
+
+    // Nothing authenticated yet — tell the user
+    throw new Error("No providers found. Run `gizzi auth add` to connect a provider.")
+  }
+
+  /** @deprecated kept for callers that need a concrete model ref for display purposes */
+  export async function defaultModelConcrete() {
+    const cfg = await Config.get()
+    const providers = await list()
+    if (cfg.model && cfg.model !== "auto" && cfg.model !== "auto/auto") {
+      const parsed = parseModel(cfg.model)
+      if (parsed.providerID !== "auto") {
+        const provider = providers[parsed.providerID]
+        if (provider?.models?.[parsed.modelID]) return parsed
+      }
     }
 
     const recent = (await Filesystem.readJson<{ recent?: { providerID: string; modelID: string }[] }>(
@@ -806,10 +841,10 @@ export namespace Provider {
     "gpt4": "openai/gpt-4.1",
     "o3": "openai/o3",
     "o4-mini": "openai/o4-mini",
+    "auto": "auto/auto",
   }
 
   export function parseModel(model: string) {
-    // Check for shorthand aliases
     const aliased = MODEL_ALIASES[model.toLowerCase()]
     if (aliased) model = aliased
 
@@ -818,6 +853,147 @@ export namespace Provider {
       providerID: providerID,
       modelID: rest.join("/"),
     }
+  }
+
+  // Per-session tier history for momentum (sessionID → last 5 tiers)
+  const sessionMomentum = new Map<string, string[]>()
+
+  // Cached auto-tier map — key is sorted provider IDs, invalidates when auth changes
+  let autoTiersCache: {
+    key: string
+    tiers: Record<"simple" | "standard" | "complex" | "reasoning", { providerID: string; modelID: string }>
+  } | null = null
+
+  export async function buildAutoTiers(): Promise<
+    Record<"simple" | "standard" | "complex" | "reasoning", { providerID: string; modelID: string }>
+  > {
+    const providers = await list()
+
+    // Cache key: sorted provider IDs — changes when a new provider is authenticated
+    const cacheKey = Object.keys(providers).sort().join(",")
+    if (autoTiersCache?.key === cacheKey) return autoTiersCache.tiers
+
+    // Flatten all active toolcall-capable models across available providers
+    type Candidate = { providerID: string; modelID: string; costScore: number; isReasoning: boolean }
+    const candidates: Candidate[] = []
+
+    for (const [providerID, provider] of Object.entries(providers)) {
+      for (const [modelID, model] of Object.entries(provider.models)) {
+        if (model.status !== "active") continue
+        if (!model.capabilities.toolcall) continue
+        // cost.input/output are $ per 1M tokens; 0 = unknown (free/local)
+        const costScore = model.cost.input + model.cost.output * 3
+        candidates.push({
+          providerID,
+          modelID,
+          costScore,
+          isReasoning: model.capabilities.reasoning,
+        })
+      }
+    }
+
+    if (candidates.length === 0) {
+      const fallback = await defaultModel()
+      return { simple: fallback, standard: fallback, complex: fallback, reasoning: fallback }
+    }
+
+    // Separate known-reasoning models; sort the rest by cost ascending
+    const reasoningCandidates = candidates.filter((c) => c.isReasoning)
+    const general = candidates
+      .filter((c) => !c.isReasoning && c.costScore > 0)
+      .sort((a, b) => a.costScore - b.costScore)
+    const free = candidates.filter((c) => !c.isReasoning && c.costScore === 0)
+
+    // Build cost percentile buckets from priced models
+    const count = general.length
+    const p25 = Math.floor(count * 0.25)
+    const p50 = Math.floor(count * 0.5)
+    const p75 = Math.floor(count * 0.75)
+
+    const pick = (arr: Candidate[]): Candidate | undefined => arr[0]
+
+    const simplePick =
+      pick(general.slice(0, Math.max(1, p25))) ??
+      pick(free) ??
+      pick(candidates)
+
+    const standardPick =
+      pick(general.slice(p25, Math.max(p25 + 1, p50))) ??
+      simplePick!
+
+    const complexPick =
+      pick(sort(general.slice(p50, Math.max(p50 + 1, p75)).map((c) => ({
+        id: c.modelID,
+        providerID: c.providerID,
+      } as any))).map((m: any) => general.find((c) => c.modelID === m.id)!).filter(Boolean)) ??
+      pick(general.slice(p50, Math.max(p50 + 1, p75))) ??
+      standardPick!
+
+    // Reasoning: prefer flagged reasoning models (sorted by cost desc = most capable)
+    const reasoningPick =
+      pick(reasoningCandidates.sort((a, b) => b.costScore - a.costScore)) ??
+      pick(general.slice(p75).reverse()) ??
+      complexPick!
+
+    const tiers = {
+      simple:    { providerID: simplePick!.providerID,    modelID: simplePick!.modelID },
+      standard:  { providerID: standardPick!.providerID,  modelID: standardPick!.modelID },
+      complex:   { providerID: complexPick!.providerID,   modelID: complexPick!.modelID },
+      reasoning: { providerID: reasoningPick!.providerID, modelID: reasoningPick!.modelID },
+    }
+
+    log.info("auto-tiers built", {
+      simple:    `${tiers.simple.providerID}/${tiers.simple.modelID}`,
+      standard:  `${tiers.standard.providerID}/${tiers.standard.modelID}`,
+      complex:   `${tiers.complex.providerID}/${tiers.complex.modelID}`,
+      reasoning: `${tiers.reasoning.providerID}/${tiers.reasoning.modelID}`,
+    })
+
+    autoTiersCache = { key: cacheKey, tiers }
+    return tiers
+  }
+
+  export async function resolveAuto(
+    messages: Array<{ role: string; content?: unknown }>,
+    sessionID: string,
+    tools?: Array<Record<string, unknown>>,
+    toolChoice?: unknown,
+  ): Promise<{ providerID: string; modelID: string }> {
+    const { scoreRequest } = await import("@allternit/request-scorer")
+    const cfg = await Config.get()
+
+    // Build tier map: prefer explicit config, otherwise auto-detect from available models
+    const tierMap = cfg.routing
+      ? {
+          simple:    parseModel(cfg.routing.tiers.simple),
+          standard:  parseModel(cfg.routing.tiers.standard),
+          complex:   parseModel(cfg.routing.tiers.complex),
+          reasoning: parseModel(cfg.routing.tiers.reasoning),
+        }
+      : await buildAutoTiers()
+
+    const recentTiers = (sessionMomentum.get(sessionID) ?? []) as any[]
+    const result = scoreRequest(
+      { messages: messages as any, tools: tools as any, tool_choice: toolChoice },
+      undefined,
+      recentTiers.length > 0 ? { recentTiers } : undefined,
+    )
+
+    const resolved = tierMap[result.tier as keyof typeof tierMap]
+
+    // Record tier for next turn's momentum
+    sessionMomentum.set(sessionID, [result.tier, ...recentTiers].slice(0, 5))
+
+    log.info("auto-routed", {
+      tier: result.tier,
+      score: result.score,
+      confidence: result.confidence,
+      reason: result.reason,
+      model: `${resolved.providerID}/${resolved.modelID}`,
+      configSource: cfg.routing ? "manual" : "auto",
+    })
+
+    return resolved
   }
 
   export const ModelNotFoundError = NamedError.create(

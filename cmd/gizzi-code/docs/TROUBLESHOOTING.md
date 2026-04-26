@@ -14,7 +14,7 @@ The gizzi-code TUI hangs or freezes when trying to open. This is typically cause
 Run the fix script before starting gizzi-code:
 
 ```bash
-cd /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/cmd/gizzi-code
+cd /Users/macbook/Desktop/allternit-workspace/allternit/cmd/gizzi-code
 bun run fix:hang
 ```
 
@@ -97,7 +97,7 @@ tail -f /Users/macbook/.local/share/gizzi-code/log/dev.log
    ```
 4. **Reinstall dependencies**:
    ```bash
-   cd /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/cmd/gizzi-code
+   cd /Users/macbook/Desktop/allternit-workspace/allternit/cmd/gizzi-code
    rm -rf node_modules
    bun install
    ```

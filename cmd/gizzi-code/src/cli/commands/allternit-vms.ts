@@ -2,7 +2,7 @@ import { cmd } from "@/cli/commands/cmd"
 import { UI } from "@/cli/ui"
 import { createVMController } from "@allternit/remote-control"
 
-export const A2rVMCommand = cmd({
+export const AllternitVMCommand = cmd({
   command: "vms [action] [name]",
   describe: "Manage Allternit virtual machines",
   builder: (yargs) =>

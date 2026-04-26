@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { describe, expect, test } from "bun:test"
-import type { Part, SessionStatus } from "@a2r/sdk"
-import { resolveFixtureState, resolveRuntimeState } from "../../src/ui/a2r/status-runtime"
+import type { Part, SessionStatus } from "@allternit/sdk"
+import { resolveFixtureState, resolveRuntimeState } from "../../src/ui/allternit/status-runtime"
 
 function status(type: SessionStatus["type"]): SessionStatus {
   return { type } as SessionStatus
@@ -11,7 +11,7 @@ function part(value: Partial<Part> & { type: Part["type"] }): Part {
   return value as Part
 }
 
-describe("A2R status runtime resolver", () => {
+describe("Allternit status runtime resolver", () => {
   test("keeps queued idle as connecting", () => {
     expect(resolveRuntimeState(status("idle"), [], true)).toBe("connecting")
   })
@@ -67,7 +67,7 @@ describe("A2R status runtime resolver", () => {
   })
 })
 
-describe("A2R status fixture resolver", () => {
+describe("Allternit status fixture resolver", () => {
   test("returns undefined for off/empty fixture mode", () => {
     expect(resolveFixtureState("", Date.now(), Date.now())).toBeUndefined()
     expect(resolveFixtureState("off", Date.now(), Date.now())).toBeUndefined()

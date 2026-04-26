@@ -3,8 +3,8 @@ import { Plugin } from "@/runtime/integrations/plugin"
 import { map, filter, pipe, fromEntries, mapValues } from "remeda"
 import z from "zod/v4"
 import { fn } from "@/shared/util/fn"
-import type { AuthOuathResult, Hooks } from "@a2r/plugin"
-import { NamedError } from "@a2r/util/error"
+import type { AuthOuathResult, Hooks } from "@allternit/plugin"
+import { NamedError } from "@allternit/gizzi-util/error.js"
 import { Auth } from "@/runtime/integrations/auth"
 
 export namespace ProviderAuth {

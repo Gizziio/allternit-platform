@@ -230,7 +230,7 @@ const PTL_RETRY_MARKER = '[earlier conversation truncated for compaction retry]'
 /**
  * Drops the oldest API-round groups from messages until tokenGap is covered.
  * Falls back to dropping 20% of groups when the gap is unparseable (some
- * Vertex/Bedrock error formats). Returns null when nothing can be dropped
+ * error formats). Returns null when nothing can be dropped
  * without leaving an empty summarize set.
  *
  * This is the last-resort escape hatch for CC-1180 — when the compact request

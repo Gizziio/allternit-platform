@@ -2,7 +2,7 @@ import { cmd } from "@/cli/commands/cmd"
 import { UI } from "@/cli/ui"
 import { createSessionManager } from "@allternit/remote-control"
 
-export const A2rSessionsCommand = cmd({
+export const AllternitSessionsCommand = cmd({
   command: "sessions [action] [id]",
   describe: "Manage Allternit remote sessions",
   builder: (yargs) =>

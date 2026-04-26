@@ -93,10 +93,17 @@ export interface Tool {
 }
 
 export interface StreamRequest {
-  /** Provider identifier: 'anthropic', 'openai', 'google', 'ollama', etc. */
-  provider: string;
-  /** Model identifier */
-  model: string;
+  /**
+   * Provider identifier: 'anthropic', 'openai', 'google', etc.
+   * Pass 'auto' or omit entirely to let the harness route to the cheapest
+   * model capable of handling this request.
+   */
+  provider?: string;
+  /**
+   * Model identifier. Ignored when provider is 'auto' or omitted —
+   * the router picks the model.
+   */
+  model?: string;
   /** Messages in the conversation */
   messages: Message[];
   /** Sampling temperature (0.0 - 1.0) */

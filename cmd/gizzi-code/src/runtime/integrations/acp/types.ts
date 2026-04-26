@@ -1,5 +1,5 @@
 import type { McpServer } from "@agentclientprotocol/sdk"
-import type { A2RClient } from "@a2r/sdk"
+import type { AllternitClient } from "@allternit/sdk"
 
 export interface ACPSessionState {
   id: string
@@ -14,11 +14,11 @@ export interface ACPSessionState {
   modeId?: string
 }
 
-// Use the real A2RClient type
-export type A2RClientLike = A2RClient
+// Use the real AllternitClient type
+export type AllternitClientLike = AllternitClient
 
 export interface ACPConfig {
-  sdk: A2RClientLike
+  sdk: AllternitClientLike
   defaultModel?: {
     providerID: string
     modelID: string

@@ -1,4 +1,4 @@
--- Initial database schema for A2R Cloud API
+-- Initial database schema for Allternit Cloud API
 
 -- Deployments table
 CREATE TABLE IF NOT EXISTS deployments (

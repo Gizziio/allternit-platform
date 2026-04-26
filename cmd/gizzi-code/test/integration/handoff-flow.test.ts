@@ -13,7 +13,7 @@ import path from "path"
 import type { SessionSource } from "@/continuity/types"
 
 describe("Handoff Flow Integration", () => {
-  const testDir = "/tmp/a2r-handoff-integration-test"
+  const testDir = "/tmp/allternit-handoff-integration-test"
   
   beforeAll(async () => {
     await mkdir(testDir, { recursive: true })
@@ -158,7 +158,7 @@ describe("Handoff Flow Integration", () => {
     
     // Present to user (format for display)
     const presentation = await ResumeSession.present(resumeContext, resumeValidation)
-    expect(presentation).toContain("A2R SESSION HANDOFF BATON")
+    expect(presentation).toContain("Allternit SESSION HANDOFF BATON")
     expect(presentation).toContain(context.objective)
     
     // Note: continueSession would require fully valid context

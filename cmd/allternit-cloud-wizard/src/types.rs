@@ -3,7 +3,7 @@
 //! Request and response types for the deployment wizard.
 
 use serde::{Deserialize, Serialize};
-use a2r_cloud_core::{Region, InstanceType, PricingInfo, DeploymentStatus};
+use allternit_cloud_core::{Region, InstanceType, PricingInfo, DeploymentStatus};
 
 /// Wizard step
 #[derive(Debug, Clone, Serialize, Deserialize)]

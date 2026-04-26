@@ -1,4 +1,4 @@
-# A2R File Consolidation Summary
+# Allternit File Consolidation Summary
 
 ## Before (Flat Structure) → After (5-Layer)
 
@@ -6,20 +6,20 @@
 
 | Old Path | New Path | Layer | Notes |
 |----------|----------|-------|-------|
-| `.a2r/config.json` | `.a2r/manifest.json` | Meta | Updated schema |
-| `.a2r/receipts/receipt.jsonl` | `.a2r/L1-COGNITIVE/memory/memory.jsonl` | L1 | Same format |
-| `.a2r/state/state.json` | `.a2r/L1-COGNITIVE/brain/state.json` | L1 | Same format |
-| `.a2r/handoff/latest.md` | `.a2r/L1-COGNITIVE/memory/handoff.md` | L1 | Same format |
-| `.a2r/compact/*.md` | `.a2r/L1-COGNITIVE/brain/batons/*.md` | L1 | Same format |
-| `.a2r/conventions.json` | `.a2r/L2-IDENTITY/CONVENTIONS.md` | L2 | Markdown conversion |
-| `.a2r/usage/*.json` | `.a2r/L1-COGNITIVE/memory/usage/*.json` | L1 | Same format |
-| `.a2r/checkpoints/*.json` | `.a2r/L1-COGNITIVE/memory/checkpoints/*.json` | L1 | Same format |
+| `.allternit/config.json` | `.allternit/manifest.json` | Meta | Updated schema |
+| `.allternit/receipts/receipt.jsonl` | `.allternit/L1-COGNITIVE/memory/memory.jsonl` | L1 | Same format |
+| `.allternit/state/state.json` | `.allternit/L1-COGNITIVE/brain/state.json` | L1 | Same format |
+| `.allternit/handoff/latest.md` | `.allternit/L1-COGNITIVE/memory/handoff.md` | L1 | Same format |
+| `.allternit/compact/*.md` | `.allternit/L1-COGNITIVE/brain/batons/*.md` | L1 | Same format |
+| `.allternit/conventions.json` | `.allternit/L2-IDENTITY/CONVENTIONS.md` | L2 | Markdown conversion |
+| `.allternit/usage/*.json` | `.allternit/L1-COGNITIVE/memory/usage/*.json` | L1 | Same format |
+| `.allternit/checkpoints/*.json` | `.allternit/L1-COGNITIVE/memory/checkpoints/*.json` | L1 | Same format |
 
 ### Visual Comparison
 
 **BEFORE (Flat - scattered):**
 ```
-.a2r/
+.allternit/
 ├── config.json
 ├── receipts/receipt.jsonl
 ├── state/state.json
@@ -32,7 +32,7 @@
 
 **AFTER (5-Layer - organized):**
 ```
-.a2r/
+.allternit/
 ├── manifest.json
 │
 ├── L1-COGNITIVE/

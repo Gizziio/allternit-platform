@@ -2974,7 +2974,7 @@ var globalHealth = (options) => (options?.client ?? client2).get({ url: "/global
 var globalEvent = (options) => (options?.client ?? client2).sse.get({ url: "/global/event", ...options });
 var globalVersion = (options) => (options?.client ?? client2).get({ url: "/global/version", ...options });
 
-// packages/sdk/dist/gen/a2r-client.ts
+// packages/sdk/dist/gen/allternit-client.ts
 class HeyApiClient {
   client;
   constructor(args) {
@@ -2988,7 +2988,7 @@ class HeyApiRegistry {
   get(key) {
     const instance = this.instances.get(key ?? this.defaultKey);
     if (!instance) {
-      throw new Error(`No SDK client found. Create one with "new A2RClient()" to fix this error.`);
+      throw new Error(`No SDK client found. Create one with "new AllternitClient()" to fix this error.`);
     }
     return instance;
   }
@@ -3874,11 +3874,11 @@ class Workspace extends HeyApiClient {
   }
 }
 
-class A2RClient extends HeyApiClient {
+class AllternitClient extends HeyApiClient {
   static __registry = new HeyApiRegistry;
   constructor(args) {
     super(args);
-    A2RClient.__registry.set(this, args?.key);
+    AllternitClient.__registry.set(this, args?.key);
   }
   _agent;
   get agent() {
@@ -4038,7 +4038,7 @@ class A2RClient extends HeyApiClient {
     }
   }
 }
-function createA2RClient(config) {
+function createAllternitClient(config) {
   if (!config?.fetch) {
     const customFetch = (req) => {
       req.timeout = false;
@@ -4052,7 +4052,7 @@ function createA2RClient(config) {
     config.headers = { ...config.headers, "x-opencode-directory": encodedDirectory };
   }
   const clientInstance = createClient(config);
-  return new A2RClient({ client: clientInstance });
+  return new AllternitClient({ client: clientInstance });
 }
 // packages/sdk/dist/gen/core/bodySerializer.gen.ts
 var jsonBodySerializer4 = {
@@ -5472,7 +5472,7 @@ var workspaceSkills2 = (options) => (options?.client ?? client3).get({ url: "/wo
 var globalHealth2 = (options) => (options?.client ?? client3).get({ url: "/global/health", ...options });
 var globalEvent2 = (options) => (options?.client ?? client3).sse.get({ url: "/global/event", ...options });
 var globalVersion2 = (options) => (options?.client ?? client3).get({ url: "/global/version", ...options });
-// packages/sdk/dist/gen/a2r-client.js
+// packages/sdk/dist/gen/allternit-client.js
 var jsonBodySerializer5 = {
   bodySerializer: (body) => JSON.stringify(body, (_key, value) => typeof value === "bigint" ? value.toString() : value)
 };
@@ -6889,7 +6889,7 @@ class HeyApiRegistry2 {
   get(key) {
     const instance = this.instances.get(key ?? this.defaultKey);
     if (!instance) {
-      throw new Error(`No SDK client found. Create one with "new A2RClient()" to fix this error.`);
+      throw new Error(`No SDK client found. Create one with "new AllternitClient()" to fix this error.`);
     }
     return instance;
   }
@@ -7775,11 +7775,11 @@ class Workspace2 extends HeyApiClient2 {
   }
 }
 
-class A2RClient2 extends HeyApiClient2 {
+class AllternitClient2 extends HeyApiClient2 {
   static __registry = new HeyApiRegistry2;
   constructor(args) {
     super(args);
-    A2RClient2.__registry.set(this, args?.key);
+    AllternitClient2.__registry.set(this, args?.key);
   }
   _agent;
   get agent() {
@@ -7939,7 +7939,7 @@ class A2RClient2 extends HeyApiClient2 {
     }
   }
 }
-function createA2RClient2(config) {
+function createAllternitClient2(config) {
   if (!config?.fetch) {
     const customFetch = (req) => {
       req.timeout = false;
@@ -7953,7 +7953,7 @@ function createA2RClient2(config) {
     config.headers = { ...config.headers, "x-opencode-directory": encodedDirectory };
   }
   const clientInstance = createClient5(config);
-  return new A2RClient2({ client: clientInstance });
+  return new AllternitClient2({ client: clientInstance });
 }
 export {
   workspaceSkills2 as workspaceSkills,
@@ -8127,8 +8127,8 @@ export {
   cronCreate2 as cronCreate,
   cronCleanupSession2 as cronCleanupSession,
   cronAllRuns2 as cronAllRuns,
-  createA2RClient,
-  createA2RClient2 as createA2R,
+  createAllternitClient,
+  createAllternitClient2 as createAllternit,
   configUpdate2 as configUpdate,
   configProviders2 as configProviders,
   configGet2 as configGet,
@@ -8149,5 +8149,5 @@ export {
   agentList2 as agentList,
   agentGet2 as agentGet,
   agentCreate2 as agentCreate,
-  A2RClient
+  AllternitClient
 };

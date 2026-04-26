@@ -19,7 +19,7 @@ use std::cmp::Ordering;
 pub enum RunMode {
     /// Local VM execution (Apple VF/Firecracker)
     Local,
-    /// Remote VPS execution (a2r-node)
+    /// Remote VPS execution (allternit-node)
     Remote,
     /// Cloud-managed execution (Kubernetes, etc.)
     Cloud,
@@ -710,4 +710,299 @@ pub struct ApprovalResponse {
     pub approved: bool,
     pub message: Option<String>,
     pub modified_params: Option<serde_json::Value>,
+}
+
+// ============================================================================
+// Task Models
+// ============================================================================
+
+/// Task status in the workflow
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case")]
+pub enum TaskStatus {
+    Backlog,
+    Todo,
+    InProgress,
+    InReview,
+    Done,
+}
+
+impl Default for TaskStatus {
+    fn default() -> Self {
+        TaskStatus::Backlog
+    }
+}
+
+/// Assignee type for tasks
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
+pub enum AssigneeType {
+    Human,
+    Agent,
+}
+
+impl Default for AssigneeType {
+    fn default() -> Self {
+        AssigneeType::Human
+    }
+}
+
+/// Risk level for tasks
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
+pub enum TaskRisk {
+    Low,
+    Medium,
+    High,
+}
+
+impl Default for TaskRisk {
+    fn default() -> Self {
+        TaskRisk::Low
+    }
+}
+
+/// Task queue status for agent worker queue
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
+pub enum TaskQueueStatus {
+    Pending,
+    Claimed,
+    Running,
+    Completed,
+    Failed,
+    Cancelled,
+}
+
+impl Default for TaskQueueStatus {
+    fn default() -> Self {
+        TaskQueueStatus::Pending
+    }
+}
+
+/// Task record - core work item
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
+pub struct Task {
+    pub id: String,
+    pub workspace_id: String,
+    pub tenant_id: Option<String>,
+    pub owner_id: Option<String>,
+    pub title: String,
+    pub description: Option<String>,
+    pub status: TaskStatus,
+    pub priority: i32,
+    pub estimated_minutes: Option<i32>,
+    pub deadline: Option<DateTime<Utc>>,
+    pub assignee_type: Option<AssigneeType>,
+    pub assignee_id: Option<String>,
+    pub assignee_name: Option<String>,
+    pub assignee_avatar: Option<String>,
+    pub dependencies: Option<sqlx::types::Json<Vec<String>>>,
+    pub optimize_rank: Option<i32>,
+    pub risk: Option<TaskRisk>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Task comment record
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TaskComment {
+    pub id: String,
+    pub task_id: String,
+    pub author: String,
+    pub author_avatar: Option<String>,
+    pub body: String,
+    pub created_at: DateTime<Utc>,
+}
+
+/// Task assignment audit record
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
+pub struct TaskAssignment {
+    pub id: String,
+    pub task_id: String,
+    pub assignee_type: AssigneeType,
+    pub assignee_id: String,
+    pub assignee_name: Option<String>,
+    pub assigned_by: Option<String>,
+    pub assigned_at: DateTime<Utc>,
+}
+
+/// Task queue entry for agent worker queue
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
+pub struct TaskQueueEntry {
+    pub id: String,
+    pub task_id: String,
+    pub agent_id: Option<String>,
+    pub agent_role: Option<String>,
+    pub status: TaskQueueStatus,
+    pub claimed_at: Option<DateTime<Utc>>,
+    pub started_at: Option<DateTime<Utc>>,
+    pub completed_at: Option<DateTime<Utc>>,
+    pub result: Option<sqlx::types::Json<serde_json::Value>>,
+    pub error: Option<String>,
+    pub retry_count: i32,
+    pub max_retries: i32,
+    pub created_at: DateTime<Utc>,
+}
+
+/// Task event audit record (append-only)
+#[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
+pub struct TaskEvent {
+    pub id: i64,
+    pub task_id: String,
+    pub event_type: String,
+    pub payload: Option<sqlx::types::Json<serde_json::Value>>,
+    pub source_client: Option<String>,
+    pub created_at: DateTime<Utc>,
+}
+
+// ============================================================================
+// Task Request/Response DTOs
+// ============================================================================
+
+/// Create task request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateTaskRequest {
+    pub workspace_id: String,
+    pub title: String,
+    pub description: Option<String>,
+    pub status: Option<TaskStatus>,
+    pub priority: Option<i32>,
+    pub estimated_minutes: Option<i32>,
+    pub deadline: Option<DateTime<Utc>>,
+    pub assignee_type: Option<AssigneeType>,
+    pub assignee_id: Option<String>,
+    pub assignee_name: Option<String>,
+    pub assignee_avatar: Option<String>,
+    pub dependencies: Option<Vec<String>>,
+    pub risk: Option<TaskRisk>,
+}
+
+/// Update task request
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UpdateTaskRequest {
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub status: Option<TaskStatus>,
+    pub priority: Option<i32>,
+    pub estimated_minutes: Option<i32>,
+    pub deadline: Option<DateTime<Utc>>,
+    pub assignee_type: Option<AssigneeType>,
+    pub assignee_id: Option<String>,
+    pub assignee_name: Option<String>,
+    pub assignee_avatar: Option<String>,
+    pub dependencies: Option<Vec<String>>,
+    pub risk: Option<TaskRisk>,
+}
+
+/// Assign task request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AssignTaskRequest {
+    pub assignee_type: AssigneeType,
+    pub assignee_id: String,
+    pub assignee_name: Option<String>,
+    pub assignee_avatar: Option<String>,
+}
+
+/// Create comment request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateCommentRequest {
+    pub author: String,
+    pub author_avatar: Option<String>,
+    pub body: String,
+}
+
+/// Task response DTO
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TaskResponse {
+    pub id: String,
+    pub workspace_id: String,
+    pub title: String,
+    pub description: Option<String>,
+    pub status: String,
+    pub priority: i32,
+    pub estimated_minutes: Option<i32>,
+    pub deadline: Option<String>,
+    pub assignee_type: Option<String>,
+    pub assignee_id: Option<String>,
+    pub assignee_name: Option<String>,
+    pub assignee_avatar: Option<String>,
+    pub dependencies: Vec<String>,
+    pub optimize_rank: Option<i32>,
+    pub risk: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// Comment response DTO
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CommentResponse {
+    pub id: String,
+    pub task_id: String,
+    pub author: String,
+    pub author_avatar: Option<String>,
+    pub body: String,
+    pub created_at: String,
+}
+
+/// Filter options for listing tasks
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct TaskListFilter {
+    pub tenant_id: Option<String>,
+    pub workspace_id: Option<String>,
+    pub status: Option<Vec<TaskStatus>>,
+    pub assignee_id: Option<String>,
+    pub priority_min: Option<i32>,
+    pub priority_max: Option<i32>,
+    pub limit: Option<i64>,
+    pub offset: Option<i64>,
+}
+
+impl From<Task> for TaskResponse {
+    fn from(task: Task) -> Self {
+        Self {
+            id: task.id,
+            workspace_id: task.workspace_id,
+            title: task.title,
+            description: task.description,
+            status: serde_json::to_value(&task.status)
+                .ok()
+                .and_then(|v| v.as_str().map(|s| s.to_string()))
+                .unwrap_or_else(|| "backlog".to_string()),
+            priority: task.priority,
+            estimated_minutes: task.estimated_minutes,
+            deadline: task.deadline.map(|d| d.to_rfc3339()),
+            assignee_type: task.assignee_type
+                .and_then(|a| serde_json::to_value(&a).ok())
+                .and_then(|v| v.as_str().map(|s| s.to_string())),
+            assignee_id: task.assignee_id,
+            assignee_name: task.assignee_name,
+            assignee_avatar: task.assignee_avatar,
+            dependencies: task.dependencies.map(|d| d.0).unwrap_or_default(),
+            optimize_rank: task.optimize_rank,
+            risk: task.risk
+                .and_then(|r| serde_json::to_value(&r).ok())
+                .and_then(|v| v.as_str().map(|s| s.to_string())),
+            created_at: task.created_at.to_rfc3339(),
+            updated_at: task.updated_at.to_rfc3339(),
+        }
+    }
+}
+
+impl From<TaskComment> for CommentResponse {
+    fn from(comment: TaskComment) -> Self {
+        Self {
+            id: comment.id,
+            task_id: comment.task_id,
+            author: comment.author,
+            author_avatar: comment.author_avatar,
+            body: comment.body,
+            created_at: comment.created_at.to_rfc3339(),
+        }
+    }
 }

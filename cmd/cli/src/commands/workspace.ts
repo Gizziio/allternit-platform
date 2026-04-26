@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { Workspace, createWorkspaceDirs } from '@a2r/gizziclaw';
+import { Workspace, createWorkspaceDirs } from '@allternit/gizziclaw';
 
 export const workspaceCommand = new Command('workspace')
   .description('Manage agent workspaces')

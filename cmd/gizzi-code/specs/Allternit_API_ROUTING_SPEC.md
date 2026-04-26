@@ -1,9 +1,9 @@
-# A2R API + Routing Overhaul Spec
+# Allternit API + Routing Overhaul Spec
 
 **Version:** 1.0
 **Date:** 2026-03-15
 **Status:** Planning — not yet built
-**Related:** `A2R_SDK_SPEC.md`
+**Related:** `Allternit_SDK_SPEC.md`
 
 ---
 
@@ -152,7 +152,7 @@ POST   /v1/provider/auth/:id/oauth/verify    — complete OAuth flow
 
 Events emitted: `provider.connected`, `provider.disconnected`, `provider.auth.required`
 
-### `/v1/memory` (A2R-native, new route)
+### `/v1/memory` (Allternit-native, new route)
 
 ```
 GET    /v1/memory/l2            — list L2 memory files
@@ -238,7 +238,7 @@ Events emitted: `instance.sync`, `server.instance.disposed`
 ### `/v1/event` (SSE — not JSON)
 
 ```
-GET    /v1/event                — SSE stream of all A2REvents
+GET    /v1/event                — SSE stream of all AllternitEvents
 ```
 
 Returns `text/event-stream`. Each event is `data: <JSON>\n\n`.
@@ -263,7 +263,7 @@ Every route returns:
 // Error
 {
   "error": {
-    "code": string,         // A2R error code (see SDK error taxonomy)
+    "code": string,         // Allternit error code (see SDK error taxonomy)
     "message": string,      // Human-readable
     "details"?: unknown     // Optional structured details
   }
@@ -341,7 +341,7 @@ Fix surface code before shipping
 - Merge `/global` + `/tui` into `/v1/instance/sync`
 - Clarify and migrate `/project` scope
 
-### Phase 3 — New routes for missing A2R resources
+### Phase 3 — New routes for missing Allternit resources
 - Add `/v1/memory` (L1/L2)
 - Add `/v1/verification` (expose existing verification system)
 - Ensure all routes emit correct GlobalBus events
@@ -357,7 +357,7 @@ Fix surface code before shipping
 Once this is done:
 - Every SDK resource has a real route backing it
 - OpenAPI spec is complete and accurate
-- `types.gen.ts` reflects the full A2R platform API
+- `types.gen.ts` reflects the full Allternit platform API
 - Every surface gets the same typed access
 - Adding a new resource = new route + SDK resource + auto-typed for all surfaces
 - No more route drift between what exists and what's documented

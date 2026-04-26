@@ -1,14 +1,14 @@
-# A2R Specification
+# Allternit Specification
 
-Specification documents for the A2R (Agent-to-Agent Runtime) platform.
+Specification documents for the Allternit (Agent-to-Agent Runtime) platform.
 
-> **Note on Naming**: The `agent_workspace` module (client-side) was formerly called `a2r_engine`. 
+> **Note on Naming**: The `agent_workspace` module (client-side) was formerly called `allternit_engine`. 
 > It is the companion to the kernel, not a replacement. The kernel maintains authoritative state;
 > agent_workspace maintains the distilled markdown view.
 
 ## Overview
 
-The A2R platform enables seamless session handoffs between AI coding tools through the agent_workspace module:
+The Allternit platform enables seamless session handoffs between AI coding tools through the agent_workspace module:
 
 1. **Session Discovery** - Find sessions across tools
 2. **Context Preservation** - Extract meaningful state
@@ -21,17 +21,17 @@ The A2R platform enables seamless session handoffs between AI coding tools throu
 
 | Document | Description |
 |----------|-------------|
-| [`Contracts/A2R-PLATFORM.md`](Contracts/A2R-PLATFORM.md) | Complete `.a2r/` directory specification, boot order, file lifecycle |
+| [`Contracts/Allternit-PLATFORM.md`](Contracts/Allternit-PLATFORM.md) | Complete `.allternit/` directory specification, boot order, file lifecycle |
 | [`Contracts/CONTINUITY.md`](Contracts/CONTINUITY.md) | Continuity module architecture, components, integration |
 
 ### Core Concepts
 
-#### .a2r Directory
+#### .allternit Directory
 
-The `.a2r/` directory in a workspace maintains all session state:
+The `.allternit/` directory in a workspace maintains all session state:
 
 ```
-.a2r/
+.allternit/
 ├── config.json              # Platform configuration
 ├── receipts/
 │   └── receipt.jsonl        # Append-only activity log
@@ -48,7 +48,7 @@ The `.a2r/` directory in a workspace maintains all session state:
     └── dag.json             # DAG task graph (optional)
 ```
 
-**See**: [`Contracts/A2R-PLATFORM.md`](Contracts/A2R-PLATFORM.md) for complete specification.
+**See**: [`Contracts/Allternit-PLATFORM.md`](Contracts/Allternit-PLATFORM.md) for complete specification.
 
 #### Baton Format
 
@@ -64,7 +64,7 @@ Handoff batons contain 13 sections:
 8. Open TODOs
 9. **DAG Tasks** (structured workflow)
 10. Next Actions
-11. **A2R Conventions** (project standards)
+11. **Allternit Conventions** (project standards)
 12. Evidence Pointers
 13. Limits Snapshot
 
@@ -82,7 +82,7 @@ Three validation gates ensure handoff quality:
 
 ### Boot Order
 
-When a tool starts, `.a2r/` initializes in 4 phases:
+When a tool starts, `.allternit/` initializes in 4 phases:
 
 ```
 Phase 1: Directory Structure
@@ -107,7 +107,7 @@ Phase 4: Runtime
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│                     A2R PLATFORM                             │
+│                     Allternit PLATFORM                             │
 ├──────────────────────────────────────────────────────────────┤
 │                                                              │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
@@ -119,7 +119,7 @@ Phase 4: Runtime
 │                           │                                  │
 │                           ▼                                  │
 │                  ┌────────────────┐                         │
-│                  │     .a2r/      │                         │
+│                  │     .allternit/      │                         │
 │                  │   Directory    │                         │
 │                  └────────────────┘                         │
 │                           │                                  │
@@ -180,7 +180,7 @@ bun test test/continuity/dag-tasks.test.ts
 | Copilot | ✅ Supported | Basic |
 | Cursor | ✅ Supported | Basic (SQLite ready) |
 | Gemini CLI | ✅ Supported | Basic |
-| A2R Shell | ✅ Native | Full |
+| Allternit Shell | ✅ Native | Full |
 | Kimi | ✅ Supported | JSON parser |
 | Qwen | ✅ Supported | JSON parser |
 | MiniMax | ✅ Supported | JSON parser |
@@ -243,6 +243,6 @@ if (latestBaton) {
 
 ## See Also
 
-- [A2R Platform Spec](Contracts/A2R-PLATFORM.md) - Complete `.a2r/` specification
+- [Allternit Platform Spec](Contracts/Allternit-PLATFORM.md) - Complete `.allternit/` specification
 - [Continuity Spec](Contracts/CONTINUITY.md) - Continuity module details
 - [Acceptance Tests](AcceptanceTests.md) - Platform acceptance criteria

@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://a2r.dev/schemas/session-context.schema.json",
-  "title": "A2R Session Context (Baton)",
+  "$id": "https://allternit.dev/schemas/session-context.schema.json",
+  "title": "Allternit Session Context (Baton)",
   "description": "Portable session state for handoff between runners/tools. Emitted during compaction/handoff events.",
   "type": "object",
   "required": [
@@ -34,12 +34,12 @@
     "source_tool": {
       "type": "string",
       "description": "Tool that generated this context",
-      "enum": ["opencode", "claude_code", "codex", "copilot", "a2r_shell", "unknown"]
+      "enum": ["opencode", "claude_code", "codex", "copilot", "allternit_shell", "unknown"]
     },
     "target_tool": {
       "type": "string",
       "description": "Intended recipient tool for handoff",
-      "enum": ["opencode", "claude_code", "codex", "copilot", "a2r_shell", "any"]
+      "enum": ["opencode", "claude_code", "codex", "copilot", "allternit_shell", "any"]
     },
     "workspace_path": {
       "type": "string",

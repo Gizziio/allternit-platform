@@ -47,7 +47,7 @@ const DEFAULTS = {
   type: "auto" as const,
   autoStartDesktop: false,
   vmReadyTimeout: 60000,
-  desktopExecutable: "a2r-desktop",
+  desktopExecutable: "allternit-desktop",
 }
 
 /**
@@ -192,7 +192,7 @@ export async function createSession(config: SessionConfig = {}): Promise<Session
       if (autoStartDesktop) {
         await launchDesktopApp(desktopExecutable)
         const ready = await waitForVMReady(
-          config.vmConfig?.socketPath ?? "/var/run/a2r/desktop-vm.sock",
+          config.vmConfig?.socketPath ?? "/var/run/allternit/desktop-vm.sock",
           vmReadyTimeout
         )
         if (ready) {
@@ -234,7 +234,7 @@ export async function createSession(config: SessionConfig = {}): Promise<Session
   if (autoStartDesktop) {
     await launchDesktopApp(desktopExecutable)
     const ready = await waitForVMReady(
-      config.vmConfig?.socketPath ?? "/var/run/a2r/desktop-vm.sock",
+      config.vmConfig?.socketPath ?? "/var/run/allternit/desktop-vm.sock",
       vmReadyTimeout
     )
     if (ready) {
@@ -247,7 +247,7 @@ export async function createSession(config: SessionConfig = {}): Promise<Session
     if (shouldStart) {
       await launchDesktopApp(desktopExecutable)
       const ready = await waitForVMReady(
-        config.vmConfig?.socketPath ?? "/var/run/a2r/desktop-vm.sock",
+        config.vmConfig?.socketPath ?? "/var/run/allternit/desktop-vm.sock",
         vmReadyTimeout
       )
       if (ready) {

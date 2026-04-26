@@ -1,6 +1,6 @@
-//! A2R Platform Single-Binary Launcher
+//! Allternit Platform Single-Binary Launcher
 //! 
-//! This launcher embeds the entire A2R Platform (Rust API + UI assets) as bytes
+//! This launcher embeds the entire Allternit Platform (Rust API + UI assets) as bytes
 //! and self-extracts to a temp directory on first run. This gives users a true
 //! single-file executable that "just works" when double-clicked.
 
@@ -16,7 +16,7 @@ use tower_http::services::ServeDir;
 
 // Embed the API binary and UI assets at compile time
 // These are compressed and embedded into the final binary
-static EMBEDDED_API: &[u8] = include_bytes!("../../api/embed/a2rchitech-api");
+static EMBEDDED_API: &[u8] = include_bytes!("../../api/embed/allternit-api");
 static UI_ASSETS: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/../shell-ui/dist");
 
 const API_PORT: u16 = 3010;
@@ -30,7 +30,7 @@ struct LauncherState {
 #[tokio::main]
 async fn main() -> Result<()> {
     println!("╔══════════════════════════════════════╗");
-    println!("║     A2R Platform Launcher v0.1.0     ║");
+    println!("║     Allternit Platform Launcher v0.1.0     ║");
     println!("╚══════════════════════════════════════╝");
     println!();
 
@@ -49,7 +49,7 @@ async fn main() -> Result<()> {
     println!("   ✓ UI ready");
 
     // Start API server
-    println!("🚀 Starting A2R Platform...");
+    println!("🚀 Starting Allternit Platform...");
     let api_process = start_api_server(&api_path).context("Failed to start API")?;
     
     let state = Arc::new(LauncherState {
@@ -68,7 +68,7 @@ async fn main() -> Result<()> {
     println!("   ✓ UI server online");
 
     println!();
-    println!("✅ A2R Platform is ready!");
+    println!("✅ Allternit Platform is ready!");
     println!();
     println!("   API:  http://127.0.0.1:{}", API_PORT);
     println!("   UI:   http://127.0.0.1:{}", UI_PORT);
@@ -103,7 +103,7 @@ fn create_temp_dir() -> Result<PathBuf> {
     // Use a consistent directory name so we don't re-extract every time
     let cache_dir = dirs::cache_dir()
         .or_else(|| std::env::temp_dir().into())
-        .join("a2r-platform");
+        .join("allternit-platform");
     
     std::fs::create_dir_all(&cache_dir)?;
     Ok(cache_dir)
@@ -112,9 +112,9 @@ fn create_temp_dir() -> Result<PathBuf> {
 /// Extract the embedded API binary
 fn extract_api_binary(temp_dir: &PathBuf) -> Result<PathBuf> {
     let api_path = temp_dir.join(if cfg!(windows) {
-        "a2rchitech-api.exe"
+        "allternit-api.exe"
     } else {
-        "a2rchitech-api"
+        "allternit-api"
     });
 
     // Check if already extracted (compare checksum or just check existence)
@@ -167,8 +167,8 @@ fn extract_ui_assets(temp_dir: &PathBuf) -> Result<()> {
 /// Start the Rust API server
 fn start_api_server(api_path: &PathBuf) -> Result<Child> {
     let child = Command::new(api_path)
-        .env("A2R_OPERATOR_URL", format!("http://127.0.0.1:{}", API_PORT))
-        .env("A2R_DATA_DIR", api_path.parent().unwrap().join("data"))
+        .env("Allternit_OPERATOR_URL", format!("http://127.0.0.1:{}", API_PORT))
+        .env("Allternit_DATA_DIR", api_path.parent().unwrap().join("data"))
         .env("RUST_LOG", "info")
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

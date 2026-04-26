@@ -1,10 +1,10 @@
 //! Rails HTTP client implementation
 //!
-//! Implements the RailsClient trait from a2r-cowork-runtime
-//! to communicate with the A2R Rails service.
+//! Implements the RailsClient trait from allternit-cowork-runtime
+//! to communicate with the Allternit Rails service.
 
 use async_trait::async_trait;
-use a2r_cowork_runtime::{
+use allternit_cowork_runtime::{
     CreateJobSpec, CreateRunSpec, CoworkEvent, JobId, JobState, RunId, RunState,
 };
 use std::sync::Arc;
@@ -121,7 +121,7 @@ impl RailsHttpClient {
 }
 
 #[async_trait]
-impl a2r_cowork_runtime::RailsClient for RailsHttpClient {
+impl allternit_cowork_runtime::RailsClient for RailsHttpClient {
     async fn create_dag(&self, run_id: RunId, spec: &CreateRunSpec) -> anyhow::Result<String> {
         info!(run_id = %run_id, "Creating DAG in Rails");
 
@@ -293,6 +293,6 @@ impl a2r_cowork_runtime::RailsClient for RailsHttpClient {
 pub fn create_rails_client(
     base_url: impl Into<String>,
     workspace_id: impl Into<String>,
-) -> Arc<dyn a2r_cowork_runtime::RailsClient> {
+) -> Arc<dyn allternit_cowork_runtime::RailsClient> {
     Arc::new(RailsHttpClient::new(base_url, workspace_id))
 }

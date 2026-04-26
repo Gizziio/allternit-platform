@@ -4,7 +4,7 @@ import { cmd } from "@/cli/commands/cmd"
 import { AgentSideConnection, ndJsonStream } from "@agentclientprotocol/sdk"
 import { ACP } from "@/runtime/integrations/acp/agent"
 import { Server } from "@/runtime/server/server"
-import { createA2RClient } from "@a2r/sdk"
+import { createAllternitClient } from "@allternit/sdk"
 import { withNetworkOptions, resolveNetworkOptions } from "@/cli/network"
 
 const log = Log.create({ service: "acp-command" })
@@ -25,7 +25,7 @@ export const AcpCommand = cmd({
       const opts = await resolveNetworkOptions(args)
       const server = Server.listen(opts)
 
-      const sdk = createA2RClient({
+      const sdk = createAllternitClient({
         baseUrl: `http://${server.hostname}:${server.port}`,
       })
 

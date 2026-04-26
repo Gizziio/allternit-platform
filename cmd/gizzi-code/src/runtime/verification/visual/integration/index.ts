@@ -33,7 +33,7 @@ export {
   type SessionVisualContext,
 } from "./session-processor-adapter";
 
-// A2R Autoland integration
+// Allternit Autoland integration
 export {
   configure as configureVisualAutoland,
   setVisualManager as setVisualManagerForAutoland,

@@ -74,7 +74,7 @@ describe("BootSequence", () => {
 
       // Verify manifest exists
       const manifest = await fs.readFile(paths.manifest, "utf-8")
-      expect(JSON.parse(manifest).platform).toBe("a2r")
+      expect(JSON.parse(manifest).platform).toBe("allternit")
     })
 
     test("uses provided sessionId", async () => {
@@ -168,7 +168,7 @@ describe("BootSequence", () => {
       const result = await BootSequence.execute({ workspace: tmp.path })
 
       expect(result.paths).toBeDefined()
-      expect(result.paths?.root).toBe(path.join(tmp.path, ".a2r"))
+      expect(result.paths?.root).toBe(path.join(tmp.path, ".allternit"))
       expect(result.paths?.manifest).toContain("manifest.json")
     })
 

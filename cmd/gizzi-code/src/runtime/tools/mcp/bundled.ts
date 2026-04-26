@@ -1,7 +1,7 @@
 /**
  * Bundled MCP Servers
  *
- * These MCP servers ship out of the box with all a2rchitech products.
+ * These MCP servers ship out of the box with all allternit products.
  * They are always available without user configuration, mirroring how
  * Claude Code bundles first-party MCP tools.
  *
@@ -18,7 +18,7 @@ import type { Config } from "@/runtime/context/config/config"
 import path from "path"
 
 /**
- * Resolve the superpowers MCP server path relative to the a2rchitech
+ * Resolve the superpowers MCP server path relative to the allternit
  * monorepo root. Works whether gizzi is run from the repo root or from
  * cmd/gizzi-code/.
  */
@@ -45,14 +45,19 @@ export const BUNDLED_MCP_SERVERS: Record<string, Config.Mcp> = {
 /**
  * Merge bundled MCP servers with user-defined config.
  * User config takes precedence — any key defined by the user overrides the bundled entry.
+ *
+ * Set GIZZI_DISABLE_BUNDLED_MCPS=1 to skip all bundled servers (e.g. when running
+ * as a headless API server where MCP tool latency is unacceptable).
  */
 export function withBundledMcpServers(
   userMcp: Record<string, Config.Mcp | false | undefined> = {},
 ): Record<string, Config.Mcp> {
   const merged: Record<string, Config.Mcp> = {}
 
-  for (const [key, server] of Object.entries(BUNDLED_MCP_SERVERS)) {
-    merged[key] = server
+  if (!process.env.GIZZI_DISABLE_BUNDLED_MCPS) {
+    for (const [key, server] of Object.entries(BUNDLED_MCP_SERVERS)) {
+      merged[key] = server
+    }
   }
 
   for (const [key, server] of Object.entries(userMcp)) {

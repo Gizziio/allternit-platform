@@ -58,21 +58,21 @@ find test/ -name "*.bak" -type f -delete
 
 ## 🎯 PRIORITY 3: REBRANDING COMPLETION
 
-### 3.1 A2R → Gizzi References
-**Status:** 120 files still reference A2R
+### 3.1 Allternit → Gizzi References
+**Status:** 120 files still reference Allternit
 **Areas to check:**
-- Command names (a2r-capsules, a2r-plugins, etc.)
+- Command names (allternit-capsules, allternit-plugins, etc.)
 - Package references
 - Documentation
 - CLI help text
 
 ### 3.2 Update CLI Commands
 **Commands to rename:**
-- `a2r-capsules` → `gizzi-capsules`
-- `a2r-plugins` → `gizzi-plugins`
-- `a2r-sessions` → `gizzi-sessions`
-- `a2r-vms` → `gizzi-vms`
-- `a2r` → `gizzi` (keep alias)
+- `allternit-capsules` → `gizzi-capsules`
+- `allternit-plugins` → `gizzi-plugins`
+- `allternit-sessions` → `gizzi-sessions`
+- `allternit-vms` → `gizzi-vms`
+- `allternit` → `gizzi` (keep alias)
 
 ---
 
@@ -196,7 +196,7 @@ curl -fsSL https://install.gizziio.com/install.ps1 | cat
 
 ### Short Term (This Week)
 1. ⬜ Publish npm package
-2. ⬜ Complete rebranding (A2R → Gizzi)
+2. ⬜ Complete rebranding (Allternit → Gizzi)
 3. ⬜ Create API documentation
 4. ⬜ Write CLI command reference
 5. ⬜ Add Gizzi mascot to docs

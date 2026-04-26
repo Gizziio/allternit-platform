@@ -2,8 +2,8 @@
 //!
 //! Application state for the deployment wizard.
 
-use a2r_cloud_core::ProviderRegistry;
-use a2r_cloud_deploy::DeploymentTracker;
+use allternit_cloud_core::ProviderRegistry;
+use allternit_cloud_deploy::DeploymentTracker;
 
 /// Wizard application state
 pub struct WizardAppState {

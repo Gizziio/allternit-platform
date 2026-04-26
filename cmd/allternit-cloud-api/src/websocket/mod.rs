@@ -12,7 +12,6 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::ApiState;
-use crate::auth::middleware::AuthContext;
 
 /// Query parameters for WebSocket connection (for token-based auth)
 #[derive(Debug, Deserialize)]
@@ -54,7 +53,7 @@ pub async fn ws_handler(
         validate_ws_token(&state.db, &token).await
     } else {
         // In development mode, allow connections without token
-        std::env::var("A2R_API_DEVELOPMENT_MODE")
+        std::env::var("Allternit_API_DEVELOPMENT_MODE")
             .map(|v| v == "true" || v == "1")
             .unwrap_or(false)
     };

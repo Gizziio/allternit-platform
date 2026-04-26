@@ -179,7 +179,7 @@ export class EnhancedVerifier {
 // ============================================================================
 
 /**
- * Implements the Builder-Validator pattern from a2rchitech's AGENTS.md
+ * Implements the Builder-Validator pattern from allternit's AGENTS.md
  * 
  * Builder produces artifacts → Validator gates completion
  */

@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { VMSessionManager } from '@a2r/vm-sessions';
+import { VMSessionManager } from '@allternit/vm-sessions';
 
 const vmManager = new VMSessionManager();
 

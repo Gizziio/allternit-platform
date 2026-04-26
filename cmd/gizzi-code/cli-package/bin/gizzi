@@ -54,7 +54,7 @@ if (existsSync(binaryPath)) {
   
   if (!existsSync(scriptPath)) {
     console.error('Error: Gizzi binary not found.');
-    console.error('Please reinstall: npm install -g @a2r/gizzi');
+    console.error('Please reinstall: npm install -g @allternit/gizzi');
     process.exit(1);
   }
   

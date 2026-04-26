@@ -1,21 +1,21 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.singleton.1.5.0.schema.json
 
-PackageIdentifier: A2R.GizziCode
+PackageIdentifier: Allternit.GizziCode
 PackageVersion: 1.0.0
 PackageLocale: en-US
-Publisher: A2R Technologies
-PublisherUrl: https://a2r.io
-PublisherSupportUrl: https://github.com/a2r/gizzi-code/issues
+Publisher: Allternit Technologies
+PublisherUrl: https://allternit.io
+PublisherSupportUrl: https://github.com/allternit/gizzi-code/issues
 PackageName: Gizzi Code
 PackageUrl: https://gizzi.sh
 License: MIT
-LicenseUrl: https://github.com/a2r/gizzi-code/blob/main/LICENSE
-Copyright: Copyright (c) 2024 A2R Technologies
-ShortDescription: AI-powered terminal interface and runtime for the A2R ecosystem
+LicenseUrl: https://github.com/allternit/gizzi-code/blob/main/LICENSE
+Copyright: Copyright (c) 2024 Allternit Technologies
+ShortDescription: AI-powered terminal interface and runtime for the Allternit ecosystem
 Description: |
   Gizzi Code is an AI-powered terminal interface (TUI) that provides 
   intelligent agent capabilities and seamless integration with 
-  the A2R ecosystem.
+  the Allternit ecosystem.
 Moniker: gizzi
 Tags:
   - ai
@@ -25,11 +25,11 @@ Tags:
   - agent
   - shell
   - gizzi
-  - a2r
+  - allternit
 Commands:
   - gizzi
 ReleaseNotes: |
   Initial release of Gizzi Code CLI
-ReleaseNotesUrl: https://github.com/a2r/gizzi-code/releases/tag/v1.0.0
+ReleaseNotesUrl: https://github.com/allternit/gizzi-code/releases/tag/v1.0.0
 ManifestType: singleton
 ManifestVersion: 1.5.0

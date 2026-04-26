@@ -547,8 +547,8 @@ description: Permission skill.
     },
   })
 
-  const home = process.env.A2R_TEST_HOME
-  process.env.A2R_TEST_HOME = tmp.path
+  const home = process.env.Allternit_TEST_HOME
+  process.env.Allternit_TEST_HOME = tmp.path
 
   try {
     await Instance.provide({
@@ -561,7 +561,7 @@ description: Permission skill.
       },
     })
   } finally {
-    process.env.A2R_TEST_HOME = home
+    process.env.Allternit_TEST_HOME = home
   }
 })
 
